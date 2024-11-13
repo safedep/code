@@ -1,2 +1,2 @@
-# code
+# Code
 SafeDep Code Analysis Framework
