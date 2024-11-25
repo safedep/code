@@ -25,7 +25,7 @@ various use-cases faster and more efficiently. The key building blocks are:
 
 Common plugins include
 
-- Import Resolver: Ability to resolve imports and load them
+- Import Resolver: Ability to resolve imports and load the file for analysis
 
 Like most analysis systems, higher level of abstractions are built on top
 of lower level abstractions. This means, the analysis plugins that produce
