@@ -1,9 +1,9 @@
 # ADR
 
 We are not building a static analysis tool that requires an intermediate
-representation of code for generalised query and analysis. We are building
-a system for lightweight discovery, parsing and analysis of code for software
-supply chain security use-cases.
+representation of code for generalised query and analysis for vulnerabilities.
+We are building a system for lightweight discovery, parsing and analysis of
+code for software supply chain security use-cases.
 
 Supply chain use-cases include:
 
