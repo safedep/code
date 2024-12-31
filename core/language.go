@@ -19,6 +19,6 @@ type Language interface {
 	// Name returns the name of the language
 	Meta() LanguageMeta
 
-	// Parser returns a TreeSitter based parser for the language
-	Parser() (sitter.Parser, error)
+	// Tree Sitter Language
+	Language() *sitter.Language
 }
