@@ -30,3 +30,9 @@ func (l *pythonLanguage) Meta() core.LanguageMeta {
 func (l *pythonLanguage) Language() *sitter.Language {
 	return python.GetLanguage()
 }
+
+func (l *pythonLanguage) Resolvers() core.LanguageResolvers {
+	return &pythonResolvers{
+		language: l,
+	}
+}
