@@ -18,7 +18,7 @@ type parserWrapper struct {
 
 type parseTree struct {
 	tree *sitter.Tree
-	data []byte
+	data *[]byte
 	file core.File
 	lang core.Language
 }
@@ -52,9 +52,10 @@ func (p *parserWrapper) Parse(ctx context.Context, file core.File) (core.ParseTr
 		return nil, fmt.Errorf("failed to parse file: %w", err)
 	}
 
+	// We must guarantee that none of the pointers are nil
 	return &parseTree{
 		tree: tree,
-		data: data,
+		data: &data,
 		file: file,
 		lang: p.lang,
 	}, nil
@@ -64,7 +65,7 @@ func (t *parseTree) Tree() *sitter.Tree {
 	return t.tree
 }
 
-func (t *parseTree) Data() ([]byte, error) {
+func (t *parseTree) Data() (*[]byte, error) {
 	return t.data, nil
 }
 

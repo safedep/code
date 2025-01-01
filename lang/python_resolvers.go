@@ -54,7 +54,7 @@ func (r *pythonResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
 	}
 
-	qx := ts.NewQueryExecutor(r.language.Language(), data)
+	qx := ts.NewQueryExecutor(r.language.Language(), *data)
 	matches, err := qx.Execute(tree.Tree().RootNode(), pythonImportQuery)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute query: %w", err)

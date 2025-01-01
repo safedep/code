@@ -15,8 +15,8 @@ type ParseTree interface {
 	Tree() *sitter.Tree
 
 	// Data returns the raw data of the source file
-	// from which the tree was created
-	Data() ([]byte, error)
+	// from which the tree was created.
+	Data() (*[]byte, error)
 
 	// The file from which the tree was created
 	File() (File, error)

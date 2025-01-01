@@ -24,34 +24,22 @@ type ImportNode struct {
 
 // NewImportNode creates a new ImportNode instance
 // using the import statement node from the tree-sitter parser
-func NewImportNode(content []byte) *ImportNode {
+func NewImportNode(content Content) *ImportNode {
 	return &ImportNode{
 		Node: Node{content},
 	}
 }
 
 func (i *ImportNode) ModuleName() string {
-	if i.moduleNameNode == nil {
-		return ""
-	}
-
-	return i.moduleNameNode.Content(i.content)
+	return i.contentForNode(i.moduleNameNode)
 }
 
 func (i *ImportNode) ModuleItem() string {
-	if i.moduleItemNode == nil {
-		return ""
-	}
-
-	return i.moduleItemNode.Content(i.content)
+	return i.contentForNode(i.moduleItemNode)
 }
 
 func (i *ImportNode) ModuleAlias() string {
-	if i.moduleAliasNode == nil {
-		return ""
-	}
-
-	return i.moduleAliasNode.Content(i.content)
+	return i.contentForNode(i.moduleAliasNode)
 }
 
 func (i *ImportNode) SetModuleNameNode(node *sitter.Node) {
