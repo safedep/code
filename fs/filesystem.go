@@ -101,6 +101,12 @@ func (fs *localFileSystem) Enumerate(ctx context.Context, callback func(core.Fil
 
 func (fs *localFileSystem) findFileInDir(ctx context.Context, dir, name string, isImport bool) (core.File, error) {
 	fullPath := filepath.Join(dir, name)
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("find cancelled by context: %w", ctx.Err())
+	default:
+	}
+
 	if st, err := os.Stat(fullPath); err == nil && !st.IsDir() {
 		relPath, err := filepath.Rel(dir, fullPath)
 		if err != nil {

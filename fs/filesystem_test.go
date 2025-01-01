@@ -143,7 +143,6 @@ func TestLocalFileSystem(t *testing.T) {
 			}
 
 			fs, _ := NewLocalFileSystem(config)
-
 			file, err := fs.Find(context.Background(), "file-3.txt")
 
 			assert.Error(t, err)
