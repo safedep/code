@@ -20,4 +20,7 @@ type ParseTree interface {
 
 	// The file from which the tree was created
 	File() (File, error)
+
+	// The language used to parse the tree
+	Language() (Language, error)
 }

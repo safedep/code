@@ -24,6 +24,9 @@ type ObjectOrientedLanguageResolvers interface {
 	// especially when a language does not support object oriented
 	// programming. This is at the cost of analyzers having to
 	// check for the supported resolvers before using them.
+
+	// Placeholder operation, remove when adding real operations
+	Nop() error
 }
 
 // LanguageMeta is exposes metadata about a language

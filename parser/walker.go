@@ -16,7 +16,7 @@ type walkingParser struct {
 var _ core.TreeWalker = (*walkingParser)(nil)
 
 func NewWalkingParser(walker core.SourceWalker, language core.Language) (*walkingParser, error) {
-	parser, err := NewParser(language.Language())
+	parser, err := NewParser(language)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create parser: %w", err)
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/safedep/code/fs"
 	"github.com/safedep/code/lang"
 	"github.com/safedep/code/parser"
+	"github.com/safedep/code/plugin"
 	"github.com/safedep/dry/log"
 )
 
@@ -38,31 +39,31 @@ func main() {
 	}
 }
 
-type treeVisitor struct{}
+// Example tree plugin
+type exampleTreePlugin struct{}
 
-func (v *treeVisitor) VisitTree(language core.Language, tree core.ParseTree) error {
+// Verify contract
+var _ core.TreePlugin = (*exampleTreePlugin)(nil)
+
+func (p *exampleTreePlugin) Name() string {
+	return "exampleTreePlugin"
+}
+
+// Example plugin handler that actually performs the analysis
+// on a parse tree
+func (p *exampleTreePlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) error {
+	lang, err := tree.Language()
+	if err != nil {
+		return fmt.Errorf("failed to get language: %w", err)
+	}
+
 	file, err := tree.File()
 	if err != nil {
 		return fmt.Errorf("failed to get file: %w", err)
 	}
 
-	log.Infof("Visiting tree for language: %s file: %s",
-		language.Meta().Name, file.Name())
-
-	// Example of how consumers of ISP can check if a language resolver supports
-	// a specific interface.
-	if or, ok := language.Resolvers().(core.ObjectOrientedLanguageResolvers); ok {
-		fmt.Printf("Language resolver supports OO: %v\n", or)
-	}
-
-	imports, err := language.Resolvers().ResolveImports(tree)
-	if err != nil {
-		return fmt.Errorf("failed to resolve imports: %w", err)
-	}
-
-	for _, imp := range imports {
-		log.Infof("Import: %s", imp.String())
-	}
+	fmt.Printf("Analyzing tree for language: %s file: %s\n",
+		lang.Meta().Name, file.Name())
 
 	return nil
 }
@@ -91,10 +92,12 @@ func run() error {
 		return fmt.Errorf("failed to create tree walker: %w", err)
 	}
 
-	err = treeWalker.Walk(context.Background(), fileSystem, &treeVisitor{})
+	pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+		&exampleTreePlugin{},
+	})
 	if err != nil {
-		return fmt.Errorf("failed to walk parse trees: %w", err)
+		return fmt.Errorf("failed to create plugin executor: %w", err)
 	}
 
-	return nil
+	return pluginExecutor.Execute(context.Background(), fileSystem)
 }
