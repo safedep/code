@@ -29,11 +29,23 @@ type ObjectOrientedLanguageResolvers interface {
 	Nop() error
 }
 
+type LanguageCode string
+
+const (
+	LanguageCodePython LanguageCode = "python"
+)
+
 // LanguageMeta is exposes metadata about a language
 // implementation for the framework
 type LanguageMeta struct {
 	// Name of the language
 	Name string
+
+	// Code of the language, used for internal comparisons
+	Code LanguageCode
+
+	// Flag to indicate if the language is object oriented
+	ObjectOriented bool
 
 	// Supported file extensions
 	SourceFileExtensions []string
