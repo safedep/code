@@ -10,6 +10,7 @@ import (
 	"github.com/safedep/code/lang"
 	"github.com/safedep/code/parser"
 	"github.com/safedep/code/plugin"
+	"github.com/safedep/code/plugin/python_dependency_usage"
 	"github.com/safedep/dry/log"
 )
 
@@ -94,6 +95,7 @@ func run() error {
 
 	pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
 		&exampleTreePlugin{},
+		&python_dependency_usage.DependencyUsagePlugin{},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create plugin executor: %w", err)
