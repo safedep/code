@@ -23,6 +23,8 @@ func (l *pythonLanguage) Name() string {
 func (l *pythonLanguage) Meta() core.LanguageMeta {
 	return core.LanguageMeta{
 		Name:                 pythonLanguageName,
+		Code:                 core.LanguageCodePython,
+		ObjectOriented:       true,
 		SourceFileExtensions: []string{".py"},
 	}
 }
