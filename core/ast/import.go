@@ -20,6 +20,9 @@ type ImportNode struct {
 
 	// The alias of the import in the current scope
 	moduleAliasNode *sitter.Node
+
+	// Whether the import is a wildcard import
+	isWildcardImport bool
 }
 
 // NewImportNode creates a new ImportNode instance
@@ -42,6 +45,10 @@ func (i *ImportNode) ModuleAlias() string {
 	return i.contentForNode(i.moduleAliasNode)
 }
 
+func (i *ImportNode) IsWildcardImport() bool {
+	return i.isWildcardImport
+}
+
 func (i *ImportNode) SetModuleNameNode(node *sitter.Node) {
 	i.moduleNameNode = node
 }
@@ -54,7 +61,11 @@ func (i *ImportNode) SetModuleAliasNode(node *sitter.Node) {
 	i.moduleAliasNode = node
 }
 
+func (i *ImportNode) SetIsWildcardImport(isWildcardImport bool) {
+	i.isWildcardImport = isWildcardImport
+}
+
 func (i *ImportNode) String() string {
-	return fmt.Sprintf("ImportNode{ModuleName: %s, ModuleItem: %s, ModuleAlias: %s}",
-		i.ModuleName(), i.ModuleItem(), i.ModuleAlias())
+	return fmt.Sprintf("ImportNode{ModuleName: %s, ModuleItem: %s, ModuleAlias: %s, WildcardImport: %t}",
+		i.ModuleName(), i.ModuleItem(), i.ModuleAlias(), i.IsWildcardImport())
 }

@@ -40,6 +40,14 @@ const pythonImportQuery = `
 		name: (aliased_import
 			name: ((dotted_name) @submodule_name)
 			alias: (identifier) @submodule_alias))
+		
+  (import_from_statement
+		module_name: (dotted_name) @module_name
+		(wildcard_import) @wildcard_import)
+
+	(import_from_statement
+		module_name: (relative_import) @module_name
+		(wildcard_import) @wildcard_import)
 	`
 
 type pythonResolvers struct {
@@ -68,7 +76,12 @@ func (r *pythonResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode
 		node.SetModuleNameNode(m.Captures[0].Node)
 
 		if len(m.Captures) > 1 {
-			node.SetModuleItemNode(m.Captures[1].Node)
+			if m.Captures[1].Node.Type() == "wildcard_import" {
+				node.SetIsWildcardImport(true)
+			} else {
+				node.SetIsWildcardImport(false)
+				node.SetModuleItemNode(m.Captures[1].Node)
+			}
 		}
 
 		if len(m.Captures) > 2 {
