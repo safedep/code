@@ -1,6 +1,7 @@
-package python_dependency_usage
+package depsusage
 
-// Ignored when parsing AST, since imports are already resolved
+// TS nodes Ignored when parsing AST
+// eg. comment is useless, imports are already resolved
 var ignoredTypesList = []string{"comment", "import_statement", "import_from_statement"}
 var ignoredTypes = make(map[string]bool)
 

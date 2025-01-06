@@ -49,6 +49,10 @@ func (i *ImportNode) IsWildcardImport() bool {
 	return i.isWildcardImport
 }
 
+func (i *ImportNode) GetModuleNameNode() *sitter.Node {
+	return i.moduleNameNode
+}
+
 func (i *ImportNode) SetModuleNameNode(node *sitter.Node) {
 	i.moduleNameNode = node
 }

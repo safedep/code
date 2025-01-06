@@ -6,10 +6,10 @@ import sys
 print(sys.argv)
 
 # 2. Importing a specific item from a module
+from math import sqrt
 from langchain_community import llms
 from datetime import datetime
 # print(datetime.now())
-from math import sqrt
 print(sqrt(16))
 
 # 3. Importing a module/submodule/item with an alias
@@ -41,9 +41,10 @@ nmd = namedtuple('Person', ['name', 'age'])
 
 # 6. Importing a function from a submodule
 from oauthlib.oauth2 import WebApplicationClient
-from json.decoder import JSONDecodeError
-from urllib.parse import urlparse
-print(urlparse('https://example.com'))
+from json.encoder.implementation import JSONEncoder
+from urllib.parse import urlsplit
+print(JSONEncoder().encode({'a': 1, 'b': 2}))
+print(urlsplit('https://example.com'))
 
 # 7. Importing a module conditionally
 try:
@@ -58,6 +59,7 @@ except ImportError:
 # 8. Importing all functions from a module / submodule
 from seaborn import * 
 from flask.helpers import *
+from xyz.pqr.mno import *
 
 # @TODO - How to resolve such usage ? -----------
 # 9. Importing a module/submodule for side effects only (no specific usage) 

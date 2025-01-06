@@ -87,7 +87,6 @@ func (r *pythonResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode
 		if len(m.Captures) > 2 {
 			node.SetModuleAliasNode(m.Captures[2].Node)
 		}
-
 		imports = append(imports, node)
 		return nil
 	})

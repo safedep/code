@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/safedep/code/core"
 )
@@ -28,6 +29,10 @@ func (v *treeVisitor) VisitTree(language core.Language, tree core.ParseTree) err
 		file, err := tree.File()
 		if err != nil {
 			return fmt.Errorf("failed to get file from tree: %w", err)
+		}
+
+		if !slices.Contains(plugin.SupportedLanguages(), language.Meta().Code) {
+			continue
 		}
 
 		if filePlugin, ok := plugin.(core.FilePlugin); ok {
