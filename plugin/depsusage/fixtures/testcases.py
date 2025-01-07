@@ -55,7 +55,7 @@ except ImportError:
     import simplejson as smpjson
     smpjson.dumps({'a': 1, 'b': 2})
 
-# @TODO - How to resolve such usage ? -----------
+# @TODO - How to resolve wildcards? These are marked as used by default for now
 # 8. Importing all functions from a module / submodule
 from seaborn import * 
 from flask.helpers import *

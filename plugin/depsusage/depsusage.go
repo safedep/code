@@ -93,7 +93,7 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 	cursor := sitter.NewTreeCursor(tree.Tree().RootNode())
 	defer cursor.Close()
 
-	traverse(cursor, func(n *sitter.Node) error {
+	err = traverse(cursor, func(n *sitter.Node) error {
 		nodeType := n.Type()
 		content := n.Content(*treeData)
 		identifierKey := string(content)
@@ -105,9 +105,11 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 				return err
 			}
 		}
-
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
