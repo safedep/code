@@ -6,20 +6,22 @@ import (
 	"strings"
 
 	"github.com/safedep/code/core"
-	"github.com/safedep/code/pkg"
+	"github.com/safedep/code/pkg/helpers"
 	"github.com/safedep/dry/log"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
+type DependencyUsageCallback func(*UsageEvidence) error
+
 type dependencyUsagePlugin struct {
 	// Callback function which is called with the usage evidence
-	usageCallback func(evidence *UsageEvidence)
+	usageCallback DependencyUsageCallback
 }
 
 // Verify contract
 var _ core.TreePlugin = (*dependencyUsagePlugin)(nil)
 
-func NewDependencyUsagePlugin(usageCallback func(evidence *UsageEvidence)) *dependencyUsagePlugin {
+func NewDependencyUsagePlugin(usageCallback DependencyUsageCallback) *dependencyUsagePlugin {
 	return &dependencyUsagePlugin{
 		usageCallback: usageCallback,
 	}
@@ -56,7 +58,7 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 
 	moduleIdentifiers := make(map[string]*identifierItem)
 	for _, imp := range imports {
-		baseModuleName := pkg.GetBaseModuleName(imp.ModuleName())
+		baseModuleName := GetBaseModuleName(imp.ModuleName())
 
 		itemName := imp.ModuleItem()
 
@@ -74,10 +76,12 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 			// @TODO - This is false positive case for wildcard imports
 			// If it is a wildcard import, mark the module as used by default
 			evidence := newUsageEvidence(baseModuleName, wildcardIdentifier, wildcardIdentifier, itemName, file.Name(), uint(imp.GetModuleNameNode().StartPoint().Row)+1, true)
-			p.usageCallback(evidence)
+			if err := p.usageCallback(evidence); err != nil {
+				return err
+			}
 			continue
 		}
-		identifierKey := pkg.GetFirstNonEmptyString(imp.ModuleAlias(), imp.ModuleItem(), imp.ModuleName())
+		identifierKey := helpers.GetFirstNonEmptyString(imp.ModuleAlias(), imp.ModuleItem(), imp.ModuleName())
 		moduleIdentifiers[identifierKey] = newIdentifierItem(baseModuleName, identifierKey, imp.ModuleAlias(), itemName)
 	}
 
@@ -89,7 +93,7 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 	cursor := sitter.NewTreeCursor(tree.Tree().RootNode())
 	defer cursor.Close()
 
-	traverse(cursor, func(n *sitter.Node) {
+	traverse(cursor, func(n *sitter.Node) error {
 		nodeType := n.Type()
 		content := n.Content(*treeData)
 		identifierKey := string(content)
@@ -97,16 +101,23 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 
 		if nodeType == "identifier" && exists {
 			evidence := newUsageEvidence(identifier.Module, identifier.Identifier, identifier.Alias, identifier.ItemName, file.Name(), uint(n.StartPoint().Row)+1, false)
-			p.usageCallback(evidence)
+			if err := p.usageCallback(evidence); err != nil {
+				return err
+			}
 		}
+
+		return nil
 	})
 	return nil
 }
 
-func traverse(cursor *sitter.TreeCursor, visit func(node *sitter.Node)) {
+func traverse(cursor *sitter.TreeCursor, visit func(node *sitter.Node) error) error {
 	for {
 		// Call the visit function for the current node
-		visit(cursor.CurrentNode())
+		err := visit(cursor.CurrentNode())
+		if err != nil {
+			return err
+		}
 
 		// No need to traverse inside if the node is of an ignored type
 		if _, ignored := ignoredTypes[cursor.CurrentNode().Type()]; !ignored {
@@ -120,7 +131,7 @@ func traverse(cursor *sitter.TreeCursor, visit func(node *sitter.Node)) {
 		for !cursor.GoToNextSibling() {
 			// If no siblings, go to the parent and repeat
 			if !cursor.GoToParent() {
-				return // Exit traversal if back at the root
+				return nil // Exit traversal if back at the root
 			}
 		}
 	}

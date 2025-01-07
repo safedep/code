@@ -10,6 +10,7 @@ import (
 	"github.com/safedep/code/lang"
 	"github.com/safedep/code/parser"
 	"github.com/safedep/code/plugin"
+	"github.com/safedep/code/plugin/depsusage"
 	"github.com/safedep/dry/log"
 )
 
@@ -39,41 +40,6 @@ func main() {
 	}
 }
 
-// Example tree plugin
-type exampleTreePlugin struct{}
-
-// Verify contract
-var _ core.TreePlugin = (*exampleTreePlugin)(nil)
-
-func (p *exampleTreePlugin) Name() string {
-	return "exampleTreePlugin"
-}
-
-var supportedLanguages = []core.LanguageCode{core.LanguageCodePython}
-
-func (p *exampleTreePlugin) SupportedLanguages() []core.LanguageCode {
-	return supportedLanguages
-}
-
-// Example plugin handler that actually performs the analysis
-// on a parse tree
-func (p *exampleTreePlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) error {
-	lang, err := tree.Language()
-	if err != nil {
-		return fmt.Errorf("failed to get language: %w", err)
-	}
-
-	file, err := tree.File()
-	if err != nil {
-		return fmt.Errorf("failed to get file: %w", err)
-	}
-
-	log.Debugf("examplePlugin - Analyzing tree for language: %s, file: %s\n",
-		lang.Meta().Code, file.Name())
-
-	return nil
-}
-
 func run() error {
 	fileSystem, err := fs.NewLocalFileSystem(fs.LocalFileSystemConfig{
 		AppDirectories: []string{dirToWalk},
@@ -98,8 +64,14 @@ func run() error {
 		return fmt.Errorf("failed to create tree walker: %w", err)
 	}
 
+	// consume usage evidences
+	var usageCallback depsusage.DependencyUsageCallback = func(evidence *depsusage.UsageEvidence) error {
+		fmt.Println(evidence)
+		return nil
+	}
+
 	pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
-		&exampleTreePlugin{},
+		depsusage.NewDependencyUsagePlugin(usageCallback),
 	})
 
 	if err != nil {

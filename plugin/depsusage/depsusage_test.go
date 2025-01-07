@@ -2,6 +2,7 @@ package depsusage
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/safedep/code/core"
@@ -45,36 +46,21 @@ var testcases = []DepsTestcase{
 	},
 }
 
-func TestDepsusage(t *testing.T) {
+func TestDepsusageEvidences(t *testing.T) {
 	// run for each testcase
 	for _, testcase := range testcases {
 		t.Run(string(testcase.Language), func(t *testing.T) {
-			fileSystem, err := fs.NewLocalFileSystem(fs.LocalFileSystemConfig{
-				AppDirectories: []string{testcase.FilePath},
-			})
+			filePaths := []string{testcase.FilePath}
+			treeWalker, fileSystem, err := setupPluginContext(filePaths)
 
 			if err != nil {
-				t.Fatalf("failed to create file system: %v", err)
-			}
-
-			language, err := lang.GetLanguage(string(testcase.Language))
-			if err != nil {
-				t.Fatalf("failed to get language: %v", err)
-			}
-
-			walker, err := fs.NewSourceWalker(fs.SourceWalkerConfig{}, language)
-			if err != nil {
-				t.Fatalf("failed to create source walker: %v", err)
-			}
-
-			treeWalker, err := parser.NewWalkingParser(walker, language)
-			if err != nil {
-				t.Fatalf("failed to create tree walker: %v", err)
+				t.Fatalf("failed to setup plugin context: %v", err)
 			}
 
 			evidences := []UsageEvidence{}
-			usageCallback := func(evidence *UsageEvidence) {
+			var usageCallback DependencyUsageCallback = func(evidence *UsageEvidence) error {
 				evidences = append(evidences, *evidence)
+				return nil
 			}
 
 			pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
@@ -85,7 +71,7 @@ func TestDepsusage(t *testing.T) {
 				t.Fatalf("failed to create plugin executor: %v", err)
 			}
 
-			err = pluginExecutor.Execute(context.Background(), fileSystem)
+			err = pluginExecutor.Execute(context.Background(), *fileSystem)
 			if err != nil {
 				t.Fatalf("failed to execute depsusage via plugin executor: %v", err)
 			}
@@ -93,4 +79,60 @@ func TestDepsusage(t *testing.T) {
 			assert.Equal(t, testcase.ExpectedEvicences, evidences)
 		})
 	}
+}
+
+func TestAbortedDepsusage(t *testing.T) {
+	t.Run("AbortExecutionForCallbackError", func(t *testing.T) {
+		filePaths := []string{"fixtures/testcases.py"}
+		treeWalker, fileSystem, err := setupPluginContext(filePaths)
+
+		if err != nil {
+			t.Fatalf("failed to setup plugin context: %v", err)
+		}
+
+		var usageCallback DependencyUsageCallback = func(evidence *UsageEvidence) error {
+			return fmt.Errorf("aborting due to user err")
+		}
+
+		pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+			NewDependencyUsagePlugin(usageCallback),
+		})
+
+		if err != nil {
+			t.Fatalf("failed to create plugin executor: %v", err)
+		}
+
+		err = pluginExecutor.Execute(context.Background(), *fileSystem)
+
+		assert.Error(t, err)
+	})
+}
+
+func setupPluginContext(filePaths []string) (*parser.WalkingParser, *core.ImportAwareFileSystem, error) {
+	fileSystem, err := fs.NewLocalFileSystem(fs.LocalFileSystemConfig{
+		AppDirectories: filePaths,
+	})
+
+	var treeWalker *parser.WalkingParser
+
+	if err != nil {
+		return treeWalker, nil, fmt.Errorf("failed to create file system: %w", err)
+	}
+
+	language, err := lang.GetLanguage(string(core.LanguageCodePython))
+	if err != nil {
+		return treeWalker, nil, fmt.Errorf("failed to get language: %w", err)
+	}
+
+	walker, err := fs.NewSourceWalker(fs.SourceWalkerConfig{}, language)
+	if err != nil {
+		return treeWalker, nil, fmt.Errorf("failed to create source walker: %w", err)
+	}
+
+	treeWalker, err = parser.NewWalkingParser(walker, language)
+	if err != nil {
+		return treeWalker, nil, fmt.Errorf("failed to create tree walker: %w", err)
+	}
+
+	return treeWalker, &fileSystem, nil
 }
