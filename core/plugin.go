@@ -5,6 +5,8 @@ import "context"
 // Plugin is the contract for a base plugin
 type Plugin interface {
 	Name() string
+
+	SupportedLanguages() []LanguageCode
 }
 
 // TreePlugin is the contract for a plugin that can analyze a
