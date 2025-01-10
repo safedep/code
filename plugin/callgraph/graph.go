@@ -21,13 +21,18 @@ func newGraphNode(namespace string) *graphNode {
 }
 
 type CallGraph struct {
-	FileName    string
-	Nodes       map[string]*graphNode
-	Assignments AssignmentGraph
+	FileName                     string
+	Nodes                        map[string]*graphNode
+	assignments                  AssignmentGraph
+	importedIdentifierNamespaces map[string]string
 }
 
-func NewCallGraph(fileName string) *CallGraph {
-	return &CallGraph{FileName: fileName, Nodes: make(map[string]*graphNode), Assignments: *NewAssignmentGraph()}
+func NewCallGraph(fileName string, importedIdentifierNamespaces map[string]string) *CallGraph {
+	cg := &CallGraph{FileName: fileName, Nodes: make(map[string]*graphNode), assignments: *NewAssignmentGraph(), importedIdentifierNamespaces: importedIdentifierNamespaces}
+	for identifier, namespace := range importedIdentifierNamespaces {
+		cg.assignments.AddAssignment(identifier, namespace)
+	}
+	return cg
 }
 
 // AddEdge adds an edge from one function to another

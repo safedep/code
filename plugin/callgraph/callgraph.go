@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/safedep/code/core"
+	"github.com/safedep/code/core/ast"
 	"github.com/safedep/code/pkg/helpers"
 	"github.com/safedep/dry/log"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -56,9 +57,6 @@ func (p *callgraphPlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) 
 		return fmt.Errorf("failed to get tree data: %w", err)
 	}
 
-	fmt.Println()
-
-	// Build the call graph
 	cg, err := buildCallGraph(tree, lang, treeData, file.Name())
 
 	if err != nil {
@@ -70,48 +68,40 @@ func (p *callgraphPlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) 
 
 // buildCallGraph builds a call graph from the syntax tree
 func buildCallGraph(tree core.ParseTree, lang core.Language, treeData *[]byte, filePath string) (*CallGraph, error) {
-	callGraph := NewCallGraph(filePath)
-	rootNode := tree.Tree().RootNode()
+	astRootNode := tree.Tree().RootNode()
+
 	imports, err := lang.Resolvers().ResolveImports(tree)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve imports: %w", err)
 	}
 
-	identifierToModuleNamespace := make(map[string]string)
-	for _, imp := range imports {
-		if imp.IsWildcardImport() {
-			continue
-		}
-		itemNamespace := imp.ModuleItem()
-		if itemNamespace == "" {
-			itemNamespace = imp.ModuleName()
-		} else {
-			itemNamespace = imp.ModuleName() + namespaceSeparator + itemNamespace
-		}
+	// Required to map identifiers to imported modules as assignments
+	importedIdentifierNamespaces := parseImportedIdentifierNamespaces(imports)
 
-		identifierKey := helpers.GetFirstNonEmptyString(imp.ModuleAlias(), imp.ModuleItem(), imp.ModuleName())
-		identifierToModuleNamespace[identifierKey] = itemNamespace
-	}
-	fmt.Println("Imports (identifier => namespace):")
-	for identifier, moduleNamespace := range identifierToModuleNamespace {
-		fmt.Printf("%s => %s\n", identifier, moduleNamespace)
+	fmt.Println()
+	fmt.Println("Imported identifier => namespace:")
+	for identifier, namespace := range importedIdentifierNamespaces {
+		fmt.Printf("  %s => %s\n", identifier, namespace)
 	}
 	fmt.Println()
+
+	callGraph := NewCallGraph(filePath, importedIdentifierNamespaces)
 
 	// Add root node to the call graph
 	callGraph.Nodes[filePath] = newGraphNode(filePath)
 
-	traverseTree(rootNode, treeData, callGraph, identifierToModuleNamespace, filePath, filePath, "", false)
+	traverseTree(astRootNode, treeData, callGraph, filePath, filePath, "", false)
 	fmt.Println()
 
 	return callGraph, nil
 }
 
-func traverseTree(node *sitter.Node, treeData *[]byte, callGraph *CallGraph, identifierToModuleNamespace map[string]string, filePath string, currentNamespace string, classNamespace string, insideClass bool) {
+func traverseTree(node *sitter.Node, treeData *[]byte, callGraph *CallGraph, filePath string, currentNamespace string, classNamespace string, insideClass bool) {
 	if node == nil {
 		return
 	}
 	fmt.Println("Traverse ", node.Type(), "with content:", node.Content(*treeData), "with namespace:", currentNamespace)
+
 	switch node.Type() {
 	case "function_definition":
 		nameNode := node.ChildByFieldName("name")
@@ -143,9 +133,9 @@ func traverseTree(node *sitter.Node, treeData *[]byte, callGraph *CallGraph, ide
 		rightNode := node.ChildByFieldName("right")
 		if leftNode != nil && rightNode != nil {
 			leftVar := leftNode.Content(*treeData)
-			rightTargets := resolveTargets(rightNode, *treeData, currentNamespace, identifierToModuleNamespace, callGraph)
+			rightTargets := resolveTargets(rightNode, *treeData, currentNamespace, callGraph)
 			for _, rightTarget := range rightTargets {
-				callGraph.Assignments.AddAssignment(leftVar, rightTarget)
+				callGraph.assignments.AddAssignment(leftVar, rightTarget)
 				fmt.Printf("Assignment: %s -> %s\n", leftVar, rightTarget)
 			}
 		}
@@ -157,17 +147,23 @@ func traverseTree(node *sitter.Node, treeData *[]byte, callGraph *CallGraph, ide
 			if baseNode != nil && attributeNode != nil {
 				// Resolve base object using the assignment graph at different scopes
 				fmt.Printf("Try resolving target call %s.%s at %s\n", baseNode.Content(*treeData), attributeNode.Content(*treeData), currentNamespace)
-				baseTargets := resolveTargets(baseNode, *treeData, currentNamespace, identifierToModuleNamespace, callGraph)
+				baseTargets := resolveTargets(baseNode, *treeData, currentNamespace, callGraph)
+				fmt.Printf("Processing fn call as %s.%s() on base targets : %v \n", baseNode.Content(*treeData), attributeNode.Content(*treeData), baseTargets)
+
 				for _, baseTarget := range baseTargets {
 					fmt.Printf("Processing fn call as %s.%s() on base as %s \n", baseNode.Content(*treeData), attributeNode.Content(*treeData), baseTarget)
 					attributeName := attributeNode.Content(*treeData)
 					targetNamespace := baseTarget + namespaceSeparator + attributeName
 					_, existed := callGraph.Nodes[targetNamespace]
-					fmt.Printf("Attr %s resolved to %s, exists: %t\n", node.Content(*treeData), targetNamespace, existed)
+					fmt.Printf("Attr %s resolved to %s, exists: %t\n", attributeName, targetNamespace, existed)
 
 					// Check if resolved target exists in the call graph
 					if _, exists := callGraph.Nodes[targetNamespace]; exists && targetNamespace != "" {
+						fmt.Println("Add attr edge from", currentNamespace, "to", targetNamespace)
 						callGraph.AddEdge(currentNamespace, targetNamespace)
+					} else if _, exists := callGraph.importedIdentifierNamespaces[baseTarget]; exists {
+						fmt.Println("Add attr edge from", currentNamespace, "to module namespace", baseTarget+namespaceSeparator+attributeName)
+						callGraph.AddEdge(currentNamespace, baseTarget+namespaceSeparator+attributeName)
 					}
 				}
 			}
@@ -182,14 +178,13 @@ func traverseTree(node *sitter.Node, treeData *[]byte, callGraph *CallGraph, ide
 
 			// Search for the call target node at different scopes in the graph
 			// eg. namespace - nestNestedFn.py//nestParent//nestChild, callTarget - outerfn1
-			// try searching for outerfn1 in identifierToModuleNamespace with all scope levels
+			// try searching for outerfn1 in graph with all scope levels
 			// eg. search nestNestedFn.py//nestParent//nestChild//outerfn1
 			// then nestNestedFn.py//nestParent//outerfn1 then nestNestedFn.py//outerfn1 and so on
 			// if not found, then use currentNamespace to build it
 			// like, nestNestedFn.py//nestParent//nestChild//outerfn1
 
-			var found bool
-			var targetNamespace string
+			targetNamespaces := []string{}
 			for i := strings.Count(currentNamespace, namespaceSeparator) + 1; i >= 0; i-- {
 				searchNamespace := strings.Join(strings.Split(currentNamespace, namespaceSeparator)[:i], namespaceSeparator) + namespaceSeparator + callTarget
 				if i == 0 {
@@ -198,31 +193,34 @@ func traverseTree(node *sitter.Node, treeData *[]byte, callGraph *CallGraph, ide
 				fmt.Printf("searching %s in scoped - %s\n", callTarget, searchNamespace)
 				// check in graph
 				if _, exists := callGraph.Nodes[searchNamespace]; exists {
-					targetNamespace = searchNamespace
-					found = true
+					targetNamespaces = append(targetNamespaces, searchNamespace)
 					break
 				}
 			}
-			if !found {
-				// check in identifierToModuleNamespace
-				if moduleNamespace, exists := identifierToModuleNamespace[callTarget]; exists {
-					targetNamespace = moduleNamespace
-				} else if insideClass {
-					targetNamespace = classNamespace + namespaceSeparator + callTarget
+			if len(targetNamespaces) == 0 {
+				if assignedNamespaces := callGraph.assignments.Resolve(callTarget); len(assignedNamespaces) > 0 {
+					fmt.Println("Resolve imported target for", callTarget, ":", assignedNamespaces)
+					targetNamespaces = assignedNamespaces
 				} else {
-					targetNamespace = currentNamespace + namespaceSeparator + callTarget
+					if insideClass {
+						targetNamespaces = []string{classNamespace + namespaceSeparator + callTarget}
+					} else {
+						targetNamespaces = []string{currentNamespace + namespaceSeparator + callTarget}
+					}
 				}
 			}
 
 			// Add edge for function call
-			fmt.Println("Adding edge from", currentNamespace, "to", targetNamespace)
-			callGraph.AddEdge(currentNamespace, targetNamespace)
+			for _, targetNamespace := range targetNamespaces {
+				fmt.Println("Adding edge from", currentNamespace, "to", targetNamespace)
+				callGraph.AddEdge(currentNamespace, targetNamespace)
+			}
 		}
 	}
 
 	// Recursively analyze children
 	for i := 0; i < int(node.ChildCount()); i++ {
-		traverseTree(node.Child(i), treeData, callGraph, identifierToModuleNamespace, filePath, currentNamespace, classNamespace, insideClass)
+		traverseTree(node.Child(i), treeData, callGraph, filePath, currentNamespace, classNamespace, insideClass)
 	}
 }
 
@@ -230,7 +228,6 @@ func resolveTargets(
 	node *sitter.Node,
 	treeData []byte,
 	currentNamespace string,
-	identifierToModuleNamespace map[string]string,
 	callGraph *CallGraph,
 ) []string {
 	if node == nil {
@@ -242,7 +239,7 @@ func resolveTargets(
 	if node.Type() == "identifier" {
 		identifier := node.Content(treeData)
 		// Check if the identifier maps to something in the assignment graph
-		resolvedTargets := callGraph.Assignments.Resolve(identifier)
+		resolvedTargets := callGraph.assignments.Resolve(identifier)
 		fmt.Println("Resolved targets for", identifier, ":", resolvedTargets)
 		if len(resolvedTargets) > 0 {
 			return resolvedTargets
@@ -275,7 +272,7 @@ func resolveTargets(
 		baseNode := node.ChildByFieldName("object")
 		attributeNode := node.ChildByFieldName("attribute")
 		if baseNode != nil && attributeNode != nil {
-			var baseTarget []string = resolveTargets(baseNode, treeData, currentNamespace, identifierToModuleNamespace, callGraph)
+			var baseTarget []string = resolveTargets(baseNode, treeData, currentNamespace, callGraph)
 			attributeName := attributeNode.Content(treeData)
 			var resolvedTargets []string
 			for _, base := range baseTarget {
@@ -287,4 +284,28 @@ func resolveTargets(
 
 	// Handle other expressions as fallbacks (e.g., literals, complex expressions)
 	return []string{node.Content(treeData)}
+}
+
+// Fetches namespaces for imported identifiers
+// eg. import pprint is parsed as:
+// pprint -> pprint
+// eg. from os import listdir as listdirfn, chmod is parsed as:
+// listdirfn -> os//listdir
+// chmod -> os//chmod
+func parseImportedIdentifierNamespaces(imports []*ast.ImportNode) map[string]string {
+	importedIdentifierNamespaces := make(map[string]string)
+	for _, imp := range imports {
+		if imp.IsWildcardImport() {
+			continue
+		}
+		itemNamespace := imp.ModuleItem()
+		if itemNamespace == "" {
+			itemNamespace = imp.ModuleName()
+		} else {
+			itemNamespace = imp.ModuleName() + namespaceSeparator + itemNamespace
+		}
+		identifierKey := helpers.GetFirstNonEmptyString(imp.ModuleAlias(), imp.ModuleItem(), imp.ModuleName())
+		importedIdentifierNamespaces[identifierKey] = itemNamespace
+	}
+	return importedIdentifierNamespaces
 }
