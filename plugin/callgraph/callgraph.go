@@ -65,9 +65,7 @@ func (p *callgraphPlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) 
 		return fmt.Errorf("failed to build call graph: %w", err)
 	}
 
-	p.callgraphCallback(cg)
-
-	return nil
+	return p.callgraphCallback(cg)
 }
 
 // buildCallGraph builds a call graph from the syntax tree
