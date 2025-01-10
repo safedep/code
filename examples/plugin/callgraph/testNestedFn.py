@@ -1,4 +1,4 @@
-from pprint import pprint as pprintfn
+import pprint
 from xyzprintmodule import xyzprint, xyzprint2
 from os import listdir as listdirfn, chmod
 
@@ -24,11 +24,11 @@ def nestParent():
       xyzprint2("nestGrandChildUseless")
 
     def nestGrandChild():
-      xyzprint2("nestGrandChild")
+      pprint.pp("nestGrandChild")
       parentScopedFn()
       outerfn2()
       childScopedFn()
-      
+
     nestGrandChild()
 
   outerfn1()

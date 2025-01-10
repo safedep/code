@@ -14,6 +14,7 @@ def bar():
   xyzprint("bar")
   pass
 
+# unused
 def baz():
   xyzprint2("baz")
   pass
@@ -22,7 +23,8 @@ xyz = foo
 print("GG")
 
 xyz = bar
-xyz()
+
+xyz() # current analysis will simulate both foo() & bar() calls
 
 def nestParent():
   def nestChild():
