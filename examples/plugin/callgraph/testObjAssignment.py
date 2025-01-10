@@ -7,8 +7,17 @@ class ClassA:
   def method1(self):
     printxyz2("GG")
 
+
+class ClassB:
+  def __init__(self):
+    pxyz("init")
+
+  def method1(self):
+    printxyz2("GG")
+
 def main():
   x = ClassA()
+  x = ClassB()
   y = x
   y.method1()
 main()
