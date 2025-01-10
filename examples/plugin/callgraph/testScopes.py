@@ -1,5 +1,5 @@
 from pprint import pprint
-from xyzprintmodule import xprint, xyzprint, xyzprint2, xyzprint3
+from xyzprintmodule import xyzprint as xprint, xyzprint, xyzprint2, xyzprint3
 
 def fn1():
   xprint("very outer fn1")

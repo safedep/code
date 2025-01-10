@@ -1,5 +1,10 @@
 import pprint
-from xyzprintmodule import xyzprint, xyzprint2
+from xyzprintmodule import xyzprint, xyzprint2, xyzprint3 as pxyz3
+
+customprintxyz = pxyz3
+customprintxyz = xyzprint2
+customprintxyz("GG")
+
 
 def foo():
   pprint.pprint("foo")
