@@ -112,12 +112,10 @@ func traverseTree(node *sitter.Node, treeData *[]byte, callGraph *CallGraph, fil
 			} else {
 				currentNamespace = currentNamespace + namespaceSeparator + funcName
 			}
-			fmt.Printf("Current funcdef namespace for %s - %s\n", funcName, currentNamespace)
 
 			if _, exists := callGraph.Nodes[currentNamespace]; !exists {
 				callGraph.Nodes[currentNamespace] = newGraphNode(currentNamespace)
-				//@TODO - Class -> __init__ edge needed ?
-				//@TODO - If needed, should make it language agnostic, (__init__ ) must be obtained from lang. For java, it would be classname itself, etc
+				//@TODO - Class Constructor edge must be language agnostic, (__init__ ) must be obtained from lang. For java, it would be classname itself, etc
 				if insideClass && funcName == "__init__" {
 					callGraph.AddEdge(classNamespace, currentNamespace)
 				}
@@ -136,7 +134,6 @@ func traverseTree(node *sitter.Node, treeData *[]byte, callGraph *CallGraph, fil
 			rightTargets := resolveTargets(rightNode, *treeData, currentNamespace, callGraph)
 			for _, rightTarget := range rightTargets {
 				callGraph.assignments.AddAssignment(leftVar, rightTarget)
-				fmt.Printf("Assignment: %s -> %s\n", leftVar, rightTarget)
 			}
 		}
 	case "attribute":
@@ -198,16 +195,19 @@ func traverseTree(node *sitter.Node, treeData *[]byte, callGraph *CallGraph, fil
 				}
 			}
 			if len(targetNamespaces) == 0 {
+				// If namespace not found in available scopes in the graph, try to resolve it from imported namespaces
 				if assignedNamespaces := callGraph.assignments.Resolve(callTarget); len(assignedNamespaces) > 0 {
 					fmt.Println("Resolve imported target for", callTarget, ":", assignedNamespaces)
 					targetNamespaces = assignedNamespaces
-				} else {
-					if insideClass {
-						targetNamespaces = []string{classNamespace + namespaceSeparator + callTarget}
-					} else {
-						targetNamespaces = []string{currentNamespace + namespaceSeparator + callTarget}
-					}
 				}
+				// else {
+				// // @TODO - rethink this
+				// 	if insideClass {
+				// 		targetNamespaces = []string{classNamespace + namespaceSeparator + callTarget}
+				// 	} else {
+				// 		targetNamespaces = []string{currentNamespace + namespaceSeparator + callTarget}
+				// 	}
+				// }
 			}
 
 			// Add edge for function call
@@ -240,7 +240,6 @@ func resolveTargets(
 		identifier := node.Content(treeData)
 		// Check if the identifier maps to something in the assignment graph
 		resolvedTargets := callGraph.assignments.Resolve(identifier)
-		fmt.Println("Resolved targets for", identifier, ":", resolvedTargets)
 		if len(resolvedTargets) > 0 {
 			return resolvedTargets
 		}
