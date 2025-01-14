@@ -90,13 +90,11 @@ func ExecuteQueries(queriesRequest QueriesRequest, data *[]byte, tree core.Parse
 
 	for _, queryItem := range queriesRequest.queryItems {
 		matches, err := qx.Execute(tree.Tree().RootNode(), queryItem.query)
-
 		if err != nil {
 			return err
 		}
 
 		err = matches.ForEach(queryItem.cb)
-
 		if err != nil {
 			return err
 		}

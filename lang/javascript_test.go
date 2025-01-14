@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/safedep/code/core"
-	"github.com/safedep/code/core/ast"
 	"github.com/safedep/code/fs"
 	"github.com/safedep/code/parser"
 	"github.com/stretchr/testify/assert"
@@ -30,37 +29,37 @@ func TestJavascriptLanguageMeta(t *testing.T) {
 
 type ImportExpectations struct {
 	filePath string
-	imports  []ast.ImportJsonString
+	imports  []string
 }
 
 var importExpectations = []ImportExpectations{
 	{
 		filePath: "fixtures/imports.js",
-		imports: []ast.ImportJsonString{
-			"{ModuleName: express, ModuleItem: , ModuleAlias: express, WildcardImport: false}",
-			"{ModuleName: dotenv, ModuleItem: , ModuleAlias: DotEnv, WildcardImport: false}",
-			"{ModuleName: buffer, ModuleItem: , ModuleAlias: buffer, WildcardImport: false}",
-			"{ModuleName: cluster, ModuleItem: , ModuleAlias: Cluster, WildcardImport: false}",
-			"{ModuleName: @gilbarbara/eslint-config, ModuleItem: , ModuleAlias: EslintConfig, WildcardImport: false}",
-			"{ModuleName: ./config.js, ModuleItem: , ModuleAlias: config, WildcardImport: false}",
-			"{ModuleName: ./utils.js, ModuleItem: , ModuleAlias: utils, WildcardImport: false}",
-			"{ModuleName: ../utils/helper.js, ModuleItem: , ModuleAlias: helper, WildcardImport: false}",
-			"{ModuleName: ../utils/sideeffects.js, ModuleItem: , ModuleAlias: sideffects, WildcardImport: false}",
-			"{ModuleName: ./data1.json, ModuleItem: , ModuleAlias: jsonData, WildcardImport: false}",
-			"{ModuleName: ./data2.json, ModuleItem: , ModuleAlias: jsonData2, WildcardImport: false}",
-			"{ModuleName: lodash, ModuleItem: , ModuleAlias: lodash, WildcardImport: false}",
-			"{ModuleName: ./math-utils, ModuleItem: , ModuleAlias: mathUtils, WildcardImport: false}",
-			"{ModuleName: ./dynamic-module.js, ModuleItem: , ModuleAlias: dynamicModule, WildcardImport: false}",
-			"{ModuleName: react-dom, ModuleItem: , ModuleAlias: ReactDOM, WildcardImport: false}",
-			"{ModuleName: react-dom, ModuleItem: render, ModuleAlias: render, WildcardImport: false}",
-			"{ModuleName: react-dom, ModuleItem: flushSync, ModuleAlias: flushIt, WildcardImport: false}",
-			"{ModuleName: constants, ModuleItem: EADDRINUSE, ModuleAlias: EADDRINUSE, WildcardImport: false}",
-			"{ModuleName: constants, ModuleItem: EACCES, ModuleAlias: EACCES, WildcardImport: false}",
-			"{ModuleName: constants, ModuleItem: EAGAIN, ModuleAlias: EAGAIN, WildcardImport: false}",
-			"{ModuleName: chalk/ansi-styles, ModuleItem: hex, ModuleAlias: hex, WildcardImport: false}",
-			"{ModuleName: virtual-dom, ModuleItem: patch, ModuleAlias: patch, WildcardImport: false}",
-			"{ModuleName: react, ModuleItem: useState, ModuleAlias: useMyState, WildcardImport: false}",
-			"{ModuleName: @xyz/pqr, ModuleItem: foo, ModuleAlias: fooAlias, WildcardImport: false}",
+		imports: []string{
+			"ImportNode{ModuleName: express, ModuleItem: , ModuleAlias: express, WildcardImport: false}",
+			"ImportNode{ModuleName: dotenv, ModuleItem: , ModuleAlias: DotEnv, WildcardImport: false}",
+			"ImportNode{ModuleName: buffer, ModuleItem: , ModuleAlias: buffer, WildcardImport: false}",
+			"ImportNode{ModuleName: cluster, ModuleItem: , ModuleAlias: Cluster, WildcardImport: false}",
+			"ImportNode{ModuleName: @gilbarbara/eslint-config, ModuleItem: , ModuleAlias: EslintConfig, WildcardImport: false}",
+			"ImportNode{ModuleName: ./config.js, ModuleItem: , ModuleAlias: config, WildcardImport: false}",
+			"ImportNode{ModuleName: ./utils.js, ModuleItem: , ModuleAlias: utils, WildcardImport: false}",
+			"ImportNode{ModuleName: ../utils/helper.js, ModuleItem: , ModuleAlias: helper, WildcardImport: false}",
+			"ImportNode{ModuleName: ../utils/sideeffects.js, ModuleItem: , ModuleAlias: sideffects, WildcardImport: false}",
+			"ImportNode{ModuleName: ./data1.json, ModuleItem: , ModuleAlias: jsonData, WildcardImport: false}",
+			"ImportNode{ModuleName: ./data2.json, ModuleItem: , ModuleAlias: jsonData2, WildcardImport: false}",
+			"ImportNode{ModuleName: lodash, ModuleItem: , ModuleAlias: lodash, WildcardImport: false}",
+			"ImportNode{ModuleName: ./math-utils, ModuleItem: , ModuleAlias: mathUtils, WildcardImport: false}",
+			"ImportNode{ModuleName: ./dynamic-module.js, ModuleItem: , ModuleAlias: dynamicModule, WildcardImport: false}",
+			"ImportNode{ModuleName: react-dom, ModuleItem: , ModuleAlias: ReactDOM, WildcardImport: false}",
+			"ImportNode{ModuleName: react-dom, ModuleItem: render, ModuleAlias: render, WildcardImport: false}",
+			"ImportNode{ModuleName: react-dom, ModuleItem: flushSync, ModuleAlias: flushIt, WildcardImport: false}",
+			"ImportNode{ModuleName: constants, ModuleItem: EADDRINUSE, ModuleAlias: EADDRINUSE, WildcardImport: false}",
+			"ImportNode{ModuleName: constants, ModuleItem: EACCES, ModuleAlias: EACCES, WildcardImport: false}",
+			"ImportNode{ModuleName: constants, ModuleItem: EAGAIN, ModuleAlias: EAGAIN, WildcardImport: false}",
+			"ImportNode{ModuleName: chalk/ansi-styles, ModuleItem: hex, ModuleAlias: hex, WildcardImport: false}",
+			"ImportNode{ModuleName: virtual-dom, ModuleItem: patch, ModuleAlias: patch, WildcardImport: false}",
+			"ImportNode{ModuleName: react, ModuleItem: useState, ModuleAlias: useMyState, WildcardImport: false}",
+			"ImportNode{ModuleName: @xyz/pqr, ModuleItem: foo, ModuleAlias: fooAlias, WildcardImport: false}",
 		},
 	},
 }
@@ -75,7 +74,7 @@ func TestJavascriptLanguageResolvers(t *testing.T) {
 	t.Run("ResolveImports", func(t *testing.T) {
 		l := &javascriptLanguage{}
 
-		importExpectationsMapper := make(map[string][]ast.ImportJsonString)
+		importExpectationsMapper := make(map[string][]string)
 		importFilePaths := []string{}
 		for _, ie := range importExpectations {
 			importFilePaths = append(importFilePaths, ie.filePath)
@@ -102,7 +101,7 @@ func TestJavascriptLanguageResolvers(t *testing.T) {
 
 			assert.Equal(t, len(expectedImports), len(imports))
 			for i, expectedImport := range expectedImports {
-				assert.Equal(t, expectedImport, imports[i].JsonString())
+				assert.Equal(t, expectedImport, imports[i].String())
 			}
 
 			return err
