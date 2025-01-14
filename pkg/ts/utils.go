@@ -3,6 +3,7 @@ package ts
 import (
 	"fmt"
 
+	"github.com/safedep/code/core"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -57,4 +58,46 @@ func (e *sitterQueryExecutor) Execute(node *sitter.Node, query string) (*queryMa
 	cursor.Exec(q, node)
 
 	return &queryMatchWrapper{cursor: cursor, source: e.source}, nil
+}
+
+type QueryMatchProcessor func(*sitter.QueryMatch) error
+type QueryItem struct {
+	query string
+	cb    QueryMatchProcessor
+}
+
+func NewQueryItem(query string, cb QueryMatchProcessor) QueryItem {
+	return QueryItem{
+		query: query,
+		cb:    cb,
+	}
+}
+
+type QueriesRequest struct {
+	language   core.Language
+	queryItems []QueryItem
+}
+
+func NewQueriesRequest(language core.Language, queryItems []QueryItem) QueriesRequest {
+	return QueriesRequest{
+		language:   language,
+		queryItems: queryItems,
+	}
+}
+
+func ExecuteQueries(queriesRequest QueriesRequest, data *[]byte, tree core.ParseTree) error {
+	qx := NewQueryExecutor(queriesRequest.language.Language(), *data)
+
+	for _, queryItem := range queriesRequest.queryItems {
+		matches, err := qx.Execute(tree.Tree().RootNode(), queryItem.query)
+		if err != nil {
+			return err
+		}
+
+		err = matches.ForEach(queryItem.cb)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

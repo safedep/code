@@ -29,7 +29,8 @@ type ImportNode struct {
 // using the import statement node from the tree-sitter parser
 func NewImportNode(content Content) *ImportNode {
 	return &ImportNode{
-		Node: Node{content},
+		Node:             Node{content},
+		isWildcardImport: false,
 	}
 }
 

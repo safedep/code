@@ -49,7 +49,7 @@ func (p *exampleTreePlugin) Name() string {
 	return "exampleTreePlugin"
 }
 
-var supportedLanguages = []core.LanguageCode{core.LanguageCodePython}
+var supportedLanguages = []core.LanguageCode{core.LanguageCodePython, core.LanguageCodeJavascript}
 
 func (p *exampleTreePlugin) SupportedLanguages() []core.LanguageCode {
 	return supportedLanguages
