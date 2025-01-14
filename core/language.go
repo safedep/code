@@ -32,7 +32,8 @@ type ObjectOrientedLanguageResolvers interface {
 type LanguageCode string
 
 const (
-	LanguageCodePython LanguageCode = "python"
+	LanguageCodePython     LanguageCode = "python"
+	LanguageCodeJavascript LanguageCode = "javascript"
 )
 
 // LanguageMeta is exposes metadata about a language

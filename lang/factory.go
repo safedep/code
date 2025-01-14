@@ -10,6 +10,9 @@ var languages = map[string]func() (core.Language, error){
 	"python": func() (core.Language, error) {
 		return NewPythonLanguage()
 	},
+	"javascript": func() (core.Language, error) {
+		return NewJavascriptLanguage()
+	},
 }
 
 func GetLanguage(name string) (core.Language, error) {

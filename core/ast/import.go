@@ -29,7 +29,8 @@ type ImportNode struct {
 // using the import statement node from the tree-sitter parser
 func NewImportNode(content Content) *ImportNode {
 	return &ImportNode{
-		Node: Node{content},
+		Node:             Node{content},
+		isWildcardImport: false,
 	}
 }
 
@@ -72,4 +73,12 @@ func (i *ImportNode) SetIsWildcardImport(isWildcardImport bool) {
 func (i *ImportNode) String() string {
 	return fmt.Sprintf("ImportNode{ModuleName: %s, ModuleItem: %s, ModuleAlias: %s, WildcardImport: %t}",
 		i.ModuleName(), i.ModuleItem(), i.ModuleAlias(), i.IsWildcardImport())
+}
+
+type ImportJsonString string
+
+func (i *ImportNode) JsonString() ImportJsonString {
+	str := fmt.Sprintf("{ModuleName: %s, ModuleItem: %s, ModuleAlias: %s, WildcardImport: %t}",
+		i.ModuleName(), i.ModuleItem(), i.ModuleAlias(), i.IsWildcardImport())
+	return ImportJsonString(str)
 }
