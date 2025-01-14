@@ -27,13 +27,6 @@ const wholeModuleImportQuery = `
 			(namespace_import (identifier) @module_alias))
 		source: (string (string_fragment) @module_name))
 	
-	(lexical_declaration
-		(variable_declarator
-			name: (identifier) @module_alias
-			value: (call_expression
-				function: (identifier)
-				arguments: (arguments (string (string_fragment) @module_name)))))
-	
 	; const xyz = await import('xyz)
 	(lexical_declaration
 		(variable_declarator
@@ -44,14 +37,13 @@ const wholeModuleImportQuery = `
 					arguments: (arguments (string (string_fragment) @module_name))))))
 `
 
-const specifiedItemImportQuery = `
-	(import_statement
-		(import_clause
-			(named_imports 
-				(import_specifier 
-					name: (identifier) @module_item 
-					alias: (identifier)? @module_alias)))
-		source: (string (string_fragment) @module_name))
+const requireModuleQuery = `
+	(lexical_declaration
+	(variable_declarator
+		name: (identifier) @module_alias
+		value: (call_expression
+			function: (identifier) @require_function
+			arguments: (arguments (string (string_fragment) @module_name)))))
 	
 	(lexical_declaration
 		(variable_declarator
@@ -60,7 +52,7 @@ const specifiedItemImportQuery = `
 					key: (property_identifier) @module_item
 					value: (identifier) @module_alias))
 			value: (call_expression
-				function: (identifier)
+				function: (identifier) @require_function
 				arguments: (arguments (string (string_fragment) @module_name)))))
 
 	(lexical_declaration
@@ -68,8 +60,18 @@ const specifiedItemImportQuery = `
 			name: (object_pattern
 				(shorthand_property_identifier_pattern) @module_item)
 			value: (call_expression
-				function: (identifier)
+				function: (identifier) @require_function
 				arguments: (arguments (string (string_fragment) @module_name)))))
+`
+
+const specifiedItemImportQuery = `
+	(import_statement
+		(import_clause
+			(named_imports 
+				(import_specifier 
+					name: (identifier) @module_item 
+					alias: (identifier)? @module_alias)))
+		source: (string (string_fragment) @module_name))
 `
 
 func (r *javascriptResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, error) {
@@ -104,6 +106,41 @@ func (r *javascriptResolvers) ResolveImports(tree core.ParseTree) ([]*ast.Import
 					}
 				}
 			}
+			imports = append(imports, node)
+			return nil
+		}),
+		ts.NewQueryItem(requireModuleQuery, func(m *sitter.QueryMatch) error {
+			if len(m.Captures) < 3 {
+				return nil
+			}
+
+			node := ast.NewImportNode(data)
+
+			identifierCaptures := []sitter.QueryCapture{}
+			for _, capture := range m.Captures {
+				switch capture.Node.Type() {
+				case "string_fragment":
+					node.SetModuleNameNode(capture.Node)
+				case "identifier", "shorthand_property_identifier_pattern", "property_identifier":
+					identifierCaptures = append(identifierCaptures, capture)
+				}
+			}
+
+			if len(identifierCaptures) < 2 || identifierCaptures[len(identifierCaptures)-1].Node.Content(*data) != "require" {
+				return nil
+			}
+
+			// Skip the last identifier ie. require
+			for _, capture := range identifierCaptures[:len(identifierCaptures)-1] {
+				switch capture.Node.Type() {
+				case "identifier":
+					node.SetModuleAliasNode(capture.Node)
+				case "shorthand_property_identifier_pattern", "property_identifier":
+					node.SetModuleItemNode(capture.Node)
+					node.SetModuleAliasNode(capture.Node)
+				}
+			}
+
 			imports = append(imports, node)
 			return nil
 		}),

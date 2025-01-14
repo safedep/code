@@ -41,5 +41,5 @@ import { hex } from 'chalk/ansi-styles';
 const { patch } = require('virtual-dom');
 
 // Aliased named import
-import { useState as useMyState } from 'react';
-const { foo: fooAlias } = require('@xyz/pqr');
+import { useEffect, useState as useMyState } from 'react';
+const { bar, foo: fooAlias } = require('@xyz/pqr');
