@@ -66,11 +66,11 @@ func run() error {
 		return fmt.Errorf("failed to create tree walker: %w", err)
 	}
 
-	// consume usage evidences
-	var stripCommentsCallback stripcomments.StripCommentsCallback = func(f core.File, r io.Reader) error {
+	// consume stripped file contents
+	var stripCommentsCallback stripcomments.StripCommentsCallback = func(ctx context.Context, strippedData *stripcomments.StripCommentsPluginData) error {
 		// Print File contents
-		fmt.Println(f.Name(), ", Stripped --------------------------")
-		_, err := io.Copy(os.Stdout, r)
+		fmt.Println(strippedData.File.Name(), "Stripped --------------------------")
+		_, err := io.Copy(os.Stdout, strippedData.Reader)
 		fmt.Println("\n-------------------------------------------------------------------------------")
 		if err != nil {
 			return fmt.Errorf("failed to copy file contents: %w", err)

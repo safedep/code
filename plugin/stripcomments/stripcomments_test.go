@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/safedep/code/core"
-	"github.com/safedep/code/pkg/helpers"
+	"github.com/safedep/code/pkg/test"
 	"github.com/safedep/code/plugin"
 	"github.com/stretchr/testify/assert"
 )
@@ -37,12 +37,12 @@ func TestStripComments(t *testing.T) {
 	for _, testcase := range testcases {
 		t.Run(fmt.Sprintf("%s (%s)", testcase.CommentedFilePath, testcase.Language), func(t *testing.T) {
 			filePaths := []string{testcase.CommentedFilePath}
-			treeWalker, fileSystem, err := helpers.SetupBasicPluginContext(filePaths, testcase.Language)
+			treeWalker, fileSystem, err := test.SetupBasicPluginContext(filePaths, testcase.Language)
 			assert.NoError(t, err)
 
 			readers := []io.Reader{}
-			var stripCommentsCallback StripCommentsCallback = func(f core.File, r io.Reader) error {
-				readers = append(readers, r)
+			var stripCommentsCallback StripCommentsCallback = func(ctx context.Context, strippedData *StripCommentsPluginData) error {
+				readers = append(readers, strippedData.Reader)
 				return nil
 			}
 

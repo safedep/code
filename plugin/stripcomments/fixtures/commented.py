@@ -11,11 +11,18 @@ def func(arg: str):
     Docstring inside func
     '''
     print("func-", arg) ###### comment here
+    def nested_func():
+        """
+        Docstring inside nested func
+        """
+        print("nested_func")#
+        pass
+    nested_func()
     pass
 
 # print("Commented out code")
 print("log1")#
-func("some string don't mistake it for comment - # this is valid code")
+func("don't mistake this string for comment - # this is valid code")
 func("""some str""")##
 
 class MyClass:
@@ -23,10 +30,12 @@ class MyClass:
     Docstring inside class
     """
     def __init__(self, arg: str):
+        '''Docstring inside class function'''
         print("MyClass-", arg)
         pass
     print("log7")
     pass
+
 """
 All these are valid expressions
 """

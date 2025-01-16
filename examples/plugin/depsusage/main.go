@@ -65,7 +65,7 @@ func run() error {
 	}
 
 	// consume usage evidences
-	var usageCallback depsusage.DependencyUsageCallback = func(evidence *depsusage.UsageEvidence) error {
+	var usageCallback depsusage.DependencyUsageCallback = func(ctx context.Context, evidence *depsusage.UsageEvidence) error {
 		fmt.Println(evidence)
 		return nil
 	}

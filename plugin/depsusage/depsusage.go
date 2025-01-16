@@ -11,7 +11,7 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-type DependencyUsageCallback func(*UsageEvidence) error
+type DependencyUsageCallback core.PluginCallback[*UsageEvidence]
 
 type dependencyUsagePlugin struct {
 	// Callback function which is called with the usage evidence
@@ -21,6 +21,9 @@ type dependencyUsagePlugin struct {
 // Verify contract
 var _ core.TreePlugin = (*dependencyUsagePlugin)(nil)
 
+// depsusage plugin collects the usage evidence for the imported dependencies.
+// It uses tree-sitter to parse the imported dependency-identifier relations in the
+// source code and verify the usage of dependencies based on identifier usage.
 func NewDependencyUsagePlugin(usageCallback DependencyUsageCallback) *dependencyUsagePlugin {
 	return &dependencyUsagePlugin{
 		usageCallback: usageCallback,
@@ -76,7 +79,7 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 			// @TODO - This is false positive case for wildcard imports
 			// If it is a wildcard import, mark the module as used by default
 			evidence := newUsageEvidence(baseModuleName, wildcardIdentifier, wildcardIdentifier, itemName, file.Name(), uint(imp.GetModuleNameNode().StartPoint().Row)+1, true)
-			if err := p.usageCallback(evidence); err != nil {
+			if err := p.usageCallback(ctx, evidence); err != nil {
 				return err
 			}
 			continue
@@ -101,7 +104,7 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 
 		if nodeType == "identifier" && exists {
 			evidence := newUsageEvidence(identifier.Module, identifier.Identifier, identifier.Alias, identifier.ItemName, file.Name(), uint(n.StartPoint().Row)+1, false)
-			if err := p.usageCallback(evidence); err != nil {
+			if err := p.usageCallback(ctx, evidence); err != nil {
 				return err
 			}
 		}

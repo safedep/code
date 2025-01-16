@@ -1,4 +1,4 @@
-package helpers
+package test
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"github.com/safedep/code/parser"
 )
 
+// SetupBasicPluginContext sets up a basic plugin context for testing plugins.
 func SetupBasicPluginContext(filePaths []string, languageCode core.LanguageCode) (core.TreeWalker, core.ImportAwareFileSystem, error) {
 	fileSystem, err := fs.NewLocalFileSystem(fs.LocalFileSystemConfig{
 		AppDirectories: filePaths,
