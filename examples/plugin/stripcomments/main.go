@@ -4,13 +4,15 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/fs"
 	"github.com/safedep/code/lang"
 	"github.com/safedep/code/parser"
 	"github.com/safedep/code/plugin"
-	"github.com/safedep/code/plugin/depsusage"
+	"github.com/safedep/code/plugin/stripcomments"
 	"github.com/safedep/dry/log"
 )
 
@@ -64,14 +66,20 @@ func run() error {
 		return fmt.Errorf("failed to create tree walker: %w", err)
 	}
 
-	// consume usage evidences
-	var usageCallback depsusage.DependencyUsageCallback = func(ctx context.Context, evidence *depsusage.UsageEvidence) error {
-		fmt.Println(evidence)
+	// consume stripped file contents
+	var stripCommentsCallback stripcomments.StripCommentsCallback = func(ctx context.Context, strippedData *stripcomments.StripCommentsPluginData) error {
+		// Print File contents
+		fmt.Println(strippedData.File.Name(), "Stripped --------------------------")
+		_, err := io.Copy(os.Stdout, strippedData.Reader)
+		fmt.Println("\n-------------------------------------------------------------------------------")
+		if err != nil {
+			return fmt.Errorf("failed to copy file contents: %w", err)
+		}
 		return nil
 	}
 
 	pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
-		depsusage.NewDependencyUsagePlugin(usageCallback),
+		stripcomments.NewStripCommentsPlugin(stripCommentsCallback),
 	})
 
 	if err != nil {

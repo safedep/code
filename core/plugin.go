@@ -9,6 +9,9 @@ type Plugin interface {
 	SupportedLanguages() []LanguageCode
 }
 
+// PluginCallback is the contract for a callback function provided by any plugin
+type PluginCallback[T any] func(context.Context, T) error
+
 // TreePlugin is the contract for a plugin that can analyze a
 // a parse tree (CST in Tree Sitter)
 type TreePlugin interface {
