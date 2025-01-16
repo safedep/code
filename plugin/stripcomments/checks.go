@@ -11,13 +11,11 @@ type isCommentNodeCheck func(node *sitter.Node) bool
 
 // Verify contract
 var _ isCommentNodeCheck = isJavascriptCommentNode
+var _ isCommentNodeCheck = isPythonCommentNode
 
 func isJavascriptCommentNode(node *sitter.Node) bool {
 	return node.Type() == "comment"
 }
-
-// Verify contract
-var _ isCommentNodeCheck = isPythonCommentNode
 
 func isPythonCommentNode(node *sitter.Node) bool {
 	if node.Type() == "comment" {
