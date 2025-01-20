@@ -17,6 +17,16 @@ type localFile struct {
 	isImport bool
 }
 
+type readerFile struct {
+	reader   io.Reader
+	path     string
+	name     string
+	isImport bool
+}
+
+var _ core.File = &localFile{}
+var _ core.File = &readerFile{}
+
 func (f *localFile) Name() string {
 	return f.path
 }
@@ -30,6 +40,31 @@ func (f *localFile) IsApp() bool {
 }
 
 func (f *localFile) IsImport() bool {
+	return f.isImport
+}
+
+func NewReaderFile(reader io.Reader, path string, isImport bool) *readerFile {
+	return &readerFile{
+		reader:   reader,
+		path:     path,
+		name:     filepath.Base(path),
+		isImport: isImport,
+	}
+}
+
+func (f *readerFile) Name() string {
+	return f.name
+}
+
+func (f *readerFile) Reader() (io.ReadCloser, error) {
+	return io.NopCloser(f.reader), nil
+}
+
+func (f *readerFile) IsApp() bool {
+	return !f.isImport
+}
+
+func (f *readerFile) IsImport() bool {
 	return f.isImport
 }
 

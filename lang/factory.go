@@ -2,6 +2,8 @@ package lang
 
 import (
 	"fmt"
+	"path/filepath"
+	"slices"
 
 	"github.com/safedep/code/core"
 )
@@ -21,4 +23,20 @@ func GetLanguage(name string) (core.Language, error) {
 	}
 
 	return nil, fmt.Errorf("language not found: %s", name)
+}
+
+func ResolveLanguage(filePath string) (core.Language, error) {
+	extension := filepath.Ext(filePath)
+
+	for _, f := range languages {
+		l, err := f()
+		if err != nil {
+			return nil, err
+		}
+
+		if slices.Contains(l.Meta().SourceFileExtensions, extension) {
+			return l, nil
+		}
+	}
+	return nil, fmt.Errorf("language not found for file: %s", filePath)
 }
