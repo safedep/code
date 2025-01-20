@@ -43,7 +43,12 @@ func (f *localFile) IsImport() bool {
 	return f.isImport
 }
 
-func NewReaderFile(reader io.Reader, path string, isImport bool) *readerFile {
+// NewFileFromReader creates a new readerFile for provided io.Reader
+// with the given path and isImport flag. readerFile is an implementation of core.File
+// which is used to represent a file in the Code analysis framework
+//
+// This is required when you want to analyze a standalone file eg. an artifact file
+func NewFileFromReader(reader io.Reader, path string, isImport bool) *readerFile {
 	return &readerFile{
 		reader:   reader,
 		path:     path,
