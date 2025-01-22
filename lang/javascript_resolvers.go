@@ -16,7 +16,7 @@ type javascriptResolvers struct {
 
 var _ core.LanguageResolvers = (*javascriptResolvers)(nil)
 
-const wholeModuleImportQuery = `
+const jsWholeModuleImportQuery = `
 	(import_statement
 		(import_clause
 			(identifier) @module_alias)
@@ -37,7 +37,7 @@ const wholeModuleImportQuery = `
 					arguments: (arguments (string (string_fragment) @module_name))))))
 `
 
-const requireModuleQuery = `
+const jsRequireModuleQuery = `
 	(lexical_declaration
 	(variable_declarator
 		name: (identifier) @module_alias
@@ -64,7 +64,7 @@ const requireModuleQuery = `
 				arguments: (arguments (string (string_fragment) @module_name)))))
 `
 
-const specifiedItemImportQuery = `
+const jsSpecifiedItemImportQuery = `
 	(import_statement
 		(import_clause
 			(named_imports 
@@ -83,14 +83,14 @@ func (r *javascriptResolvers) ResolveImports(tree core.ParseTree) ([]*ast.Import
 	var imports []*ast.ImportNode
 
 	queryRequestItems := []ts.QueryItem{
-		ts.NewQueryItem(wholeModuleImportQuery, func(m *sitter.QueryMatch) error {
+		ts.NewQueryItem(jsWholeModuleImportQuery, func(m *sitter.QueryMatch) error {
 			node := ast.NewImportNode(data)
 			node.SetModuleAliasNode(m.Captures[0].Node)
 			node.SetModuleNameNode(m.Captures[1].Node)
 			imports = append(imports, node)
 			return nil
 		}),
-		ts.NewQueryItem(specifiedItemImportQuery, func(m *sitter.QueryMatch) error {
+		ts.NewQueryItem(jsSpecifiedItemImportQuery, func(m *sitter.QueryMatch) error {
 			node := ast.NewImportNode(data)
 			alreadyEncounteredIdentifier := false
 			for _, capture := range m.Captures {
@@ -109,7 +109,7 @@ func (r *javascriptResolvers) ResolveImports(tree core.ParseTree) ([]*ast.Import
 			imports = append(imports, node)
 			return nil
 		}),
-		ts.NewQueryItem(requireModuleQuery, func(m *sitter.QueryMatch) error {
+		ts.NewQueryItem(jsRequireModuleQuery, func(m *sitter.QueryMatch) error {
 			if len(m.Captures) < 3 {
 				return nil
 			}
@@ -147,10 +147,14 @@ func (r *javascriptResolvers) ResolveImports(tree core.ParseTree) ([]*ast.Import
 	}
 
 	err = ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
-
 	if err != nil {
 		return nil, err
 	}
 
 	return imports, err
+}
+
+func (r *javascriptResolvers) ResolvePackageHint(moduleName string) (string, error) {
+	// @TODO - Implement this -
+	return "", nil
 }

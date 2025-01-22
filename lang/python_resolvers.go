@@ -9,38 +9,15 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-const pythonImportQuery = `
+const pyWholeModuleImportQuery = `
 	(import_statement
 		name: ((dotted_name) @module_name))
 
-	(import_from_statement
-		module_name: (dotted_name) @module_name
-		name: (dotted_name
-			(identifier) @submodule_name @submodule_alias))
-
-	(import_from_statement
-		module_name: (relative_import) @module_name
-		name: (dotted_name
-			(identifier) @submodule_name @submodule_alias))
-
 	(import_statement
 		name: (aliased_import
-			name: ((dotted_name) @module_name @submodule_name)
-			alias: (identifier) @submodule_alias))
+			name: ((dotted_name) @module_name)
+			alias: (identifier) @module_alias))
 
-	(import_from_statement
-		module_name: (dotted_name) @module_name
-		name: (aliased_import
-			name: (dotted_name
-				(identifier) @submodule_name)
-			 alias: (identifier) @submodule_alias))
-
-	(import_from_statement
-		module_name: (relative_import) @module_name
-		name: (aliased_import
-			name: ((dotted_name) @submodule_name)
-			alias: (identifier) @submodule_alias))
-		
   (import_from_statement
 		module_name: (dotted_name) @module_name
 		(wildcard_import) @wildcard_import)
@@ -48,6 +25,30 @@ const pythonImportQuery = `
 	(import_from_statement
 		module_name: (relative_import) @module_name
 		(wildcard_import) @wildcard_import)
+`
+const pyItemImportQuery = `
+	(import_from_statement
+		module_name: (dotted_name) @module_name
+		name: (dotted_name
+			(identifier) @module_item @module_item_alias))
+
+	(import_from_statement
+		module_name: (relative_import) @module_name
+		name: (dotted_name
+			(identifier) @module_item @module_item_alias))
+
+	(import_from_statement
+		module_name: (dotted_name) @module_name
+		name: (aliased_import
+			name: (dotted_name
+				(identifier) @module_item)
+			 alias: (identifier) @module_item_alias))
+
+	(import_from_statement
+		module_name: (relative_import) @module_name
+		name: (aliased_import
+			name: ((dotted_name) @module_item)
+			alias: (identifier) @module_item_alias))
 	`
 
 type pythonResolvers struct {
@@ -62,34 +63,49 @@ func (r *pythonResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
 	}
 
-	qx := ts.NewQueryExecutor(r.language.Language(), *data)
-	matches, err := qx.Execute(tree.Tree().RootNode(), pythonImportQuery)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute query: %w", err)
-	}
-
-	defer matches.Close()
-
 	var imports []*ast.ImportNode
-	err = matches.ForEach(func(m *sitter.QueryMatch) error {
-		node := ast.NewImportNode(data)
-		node.SetModuleNameNode(m.Captures[0].Node)
 
-		if len(m.Captures) > 1 {
-			if m.Captures[1].Node.Type() == "wildcard_import" {
+	queryRequestItems := []ts.QueryItem{
+		ts.NewQueryItem(pyWholeModuleImportQuery, func(m *sitter.QueryMatch) error {
+			node := ast.NewImportNode(data)
+			node.SetModuleNameNode(m.Captures[0].Node)
+
+			if len(m.Captures) > 1 && m.Captures[1].Node.Type() == "wildcard_import" {
 				node.SetIsWildcardImport(true)
 			} else {
-				node.SetIsWildcardImport(false)
-				node.SetModuleItemNode(m.Captures[1].Node)
+				node.SetModuleAliasNode(m.Captures[0].Node)
+				if len(m.Captures) > 1 {
+					node.SetModuleAliasNode(m.Captures[1].Node)
+				}
 			}
-		}
-
-		if len(m.Captures) > 2 {
+			imports = append(imports, node)
+			return nil
+		}),
+		ts.NewQueryItem(pyItemImportQuery, func(m *sitter.QueryMatch) error {
+			node := ast.NewImportNode(data)
+			node.SetModuleNameNode(m.Captures[0].Node)
+			node.SetModuleItemNode(m.Captures[1].Node)
 			node.SetModuleAliasNode(m.Captures[2].Node)
-		}
-		imports = append(imports, node)
-		return nil
-	})
+			// print node type and contents of all captures
+			// fmt.Println("Node", m.Captures[0].Node.Content(*data))
+			// for _, capture := range m.Captures {
+			// 	fmt.Printf("Capture: %s, %s\n", capture.Node.Type(), capture.Node.Content(*data))
+			// }
+
+			imports = append(imports, node)
+			return nil
+		}),
+	}
+
+	err = ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	if err != nil {
+		return nil, err
+	}
 
 	return imports, err
+}
+
+func (r *pythonResolvers) ResolvePackageHint(moduleName string) (string, error) {
+	// @TODO - Implement this -
+	return "", nil
 }

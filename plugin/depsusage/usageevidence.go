@@ -6,53 +6,59 @@ import (
 
 // identifierItem represents an item from module for usage evidence
 type identifierItem struct {
-	Module     string
-	Identifier string
-	Alias      string
-	ItemName   string
+	Module      string
+	Item        string
+	Alias       string
+	Identifier  string
+	PackageHint string
 }
 
-func newIdentifierItem(module string, identifier string, alias string, itemName string) *identifierItem {
+func newIdentifierItem(module string, item string, alias string, identifier string, packageHint string) *identifierItem {
 	return &identifierItem{
-		Module:     module,
-		Identifier: identifier,
-		Alias:      alias,
-		ItemName:   itemName,
+		Module:      module,
+		Item:        item,
+		Alias:       alias,
+		Identifier:  identifier,
+		PackageHint: packageHint,
 	}
 }
 
 func (i *identifierItem) String() string {
-	return fmt.Sprintf("IdentifierItem: Module: %s, Identifier: %s, Alias: %s, ItemName: %s", i.Module, i.Identifier, i.Alias, i.ItemName)
+	return fmt.Sprintf("IdentifierItem: Module: %s, Identifier: %s, Alias: %s, ItemName: %s", i.Module, i.Identifier, i.Alias, i.Item)
 }
 
 // UsageEvidence represents the evidence of usage of a module item in a file
 type UsageEvidence struct {
+	PackageHint string
+
 	Module          string
-	Identifier      string
+	ModuleItem      string
 	Alias           string
-	ItemName        string
-	FilePath        string
-	Line            uint
 	IsWildCardUsage bool
+
+	Identifier string
+	FilePath   string
+	Line       uint
 }
 
 const wildcardIdentifier = "*"
 
-func newUsageEvidence(module string, identifier string, alias string, itemName string, filePath string, line uint, isWildCardUsage bool) *UsageEvidence {
+func newUsageEvidence(packageHint string, module string, itemName string, alias string, isWildCardUsage bool, identifier string, filePath string, line uint) *UsageEvidence {
 	return &UsageEvidence{
+		PackageHint:     packageHint,
 		Module:          module,
-		Identifier:      identifier,
+		ModuleItem:      itemName,
 		Alias:           alias,
-		ItemName:        itemName,
+		IsWildCardUsage: isWildCardUsage,
+		Identifier:      identifier,
 		FilePath:        filePath,
 		Line:            line,
-		IsWildCardUsage: isWildCardUsage,
 	}
 }
 
 func (e *UsageEvidence) String() string {
 	if e.IsWildCardUsage {
-		return fmt.Sprintf("UsageEvidence (WildCardUsage) - Module: %s, Identifier: %s, Alias: %s, ItemName: %s, File: %s, Line: %d", e.Module, e.Identifier, e.Alias, e.ItemName, e.FilePath, e.Line)
+		return fmt.Sprintf("UsageEvidence (WildCardUsage) - PackageHint: %s, Module: %s, ModuleItem: %s, Alias: %s, Identifier: %s, FilePath: %s, Line: %d", e.PackageHint, e.Module, e.ModuleItem, e.Alias, e.Identifier, e.FilePath, e.Line)
 	}
-	return fmt.Sprintf("UsageEvidence - Module: %s, Identifier: %s, Alias: %s, ItemName: %s, File: %s, Line: %d", e.Module, e.Identifier, e.Alias, e.ItemName, e.FilePath, e.Line)
+	return fmt.Sprintf("UsageEvidence - PackageHint: %s, Module: %s, ModuleItem: %s, Alias: %s, Identifier: %s, FilePath: %s, Line: %d", e.PackageHint, e.Module, e.ModuleItem, e.Alias, e.Identifier, e.FilePath, e.Line)
 }

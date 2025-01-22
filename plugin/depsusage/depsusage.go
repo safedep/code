@@ -3,7 +3,6 @@ package depsusage
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/pkg/helpers"
@@ -61,31 +60,22 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 
 	moduleIdentifiers := make(map[string]*identifierItem)
 	for _, imp := range imports {
-		baseModuleName := GetBaseModuleName(imp.ModuleName())
-
-		itemName := imp.ModuleItem()
-
-		// In case of wildcard imports, ModuleItem isn't explicitly specified hence derived from modulename
-		if imp.IsWildcardImport() {
-			itemName = imp.ModuleName()
-		}
-
-		// Remove the base module name (if present) from item name
-		if strings.HasPrefix(itemName, baseModuleName+".") {
-			itemName = itemName[len(baseModuleName)+1:]
+		packageHint, err := lang.Resolvers().ResolvePackageHint(imp.ModuleName())
+		if err != nil {
+			return fmt.Errorf("failed to resolve packageHint: %w", err)
 		}
 
 		if imp.IsWildcardImport() {
 			// @TODO - This is false positive case for wildcard imports
 			// If it is a wildcard import, mark the module as used by default
-			evidence := newUsageEvidence(baseModuleName, wildcardIdentifier, wildcardIdentifier, itemName, file.Name(), uint(imp.GetModuleNameNode().StartPoint().Row)+1, true)
+			evidence := newUsageEvidence(packageHint, imp.ModuleName(), imp.ModuleItem(), imp.ModuleAlias(), true, wildcardIdentifier, file.Name(), uint(imp.GetModuleNameNode().StartPoint().Row)+1)
 			if err := p.usageCallback(ctx, evidence); err != nil {
-				return err
+				return fmt.Errorf("failed to call usage callback for wildcard import: %w", err)
 			}
-			continue
+		} else {
+			identifierKey := helpers.GetFirstNonEmptyString(imp.ModuleAlias(), imp.ModuleItem(), imp.ModuleName())
+			moduleIdentifiers[identifierKey] = newIdentifierItem(imp.ModuleName(), imp.ModuleItem(), imp.ModuleAlias(), identifierKey, packageHint)
 		}
-		identifierKey := helpers.GetFirstNonEmptyString(imp.ModuleAlias(), imp.ModuleItem(), imp.ModuleName())
-		moduleIdentifiers[identifierKey] = newIdentifierItem(baseModuleName, identifierKey, imp.ModuleAlias(), itemName)
 	}
 
 	treeData, err := tree.Data()
@@ -100,12 +90,12 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 		nodeType := n.Type()
 		content := n.Content(*treeData)
 		identifierKey := string(content)
-		identifier, exists := moduleIdentifiers[identifierKey]
+		identifiedItem, exists := moduleIdentifiers[identifierKey]
 
 		if nodeType == "identifier" && exists {
-			evidence := newUsageEvidence(identifier.Module, identifier.Identifier, identifier.Alias, identifier.ItemName, file.Name(), uint(n.StartPoint().Row)+1, false)
+			evidence := newUsageEvidence(identifiedItem.PackageHint, identifiedItem.Module, identifiedItem.Item, identifiedItem.Alias, false, identifierKey, file.Name(), uint(n.StartPoint().Row)+1)
 			if err := p.usageCallback(ctx, evidence); err != nil {
-				return err
+				return fmt.Errorf("failed to call usage callback: %w", err)
 			}
 		}
 		return nil
