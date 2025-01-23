@@ -29,26 +29,36 @@ func (i *identifierItem) String() string {
 
 // UsageEvidence represents the evidence of usage of a module item in a file
 type UsageEvidence struct {
-	PackageHint string
+	PackageHint string // PackageHint: A hint of what could be the package containing this module
 
-	Module          string
-	ModuleItem      string
-	Alias           string
+	// ModuleName: The module name taken directly from the ImportNode
+	ModuleName string
+
+	// The imported item name taken directly from the ImportNode
+	ModuleItem string
+
+	// The import alias name taken directly from the ImportNode
+	ModuleAlias string
+
+	// Whether the usage is a wildcard usage
 	IsWildCardUsage bool
 
+	// The identifier which led to this usage evidence
 	Identifier string
-	FilePath   string
-	Line       uint
-}
 
-const wildcardIdentifier = "*"
+	// File path where the usage was found
+	FilePath string
+
+	// Line number where the usage was found
+	Line uint
+}
 
 func newUsageEvidence(packageHint string, module string, itemName string, alias string, isWildCardUsage bool, identifier string, filePath string, line uint) *UsageEvidence {
 	return &UsageEvidence{
 		PackageHint:     packageHint,
-		Module:          module,
+		ModuleName:      module,
 		ModuleItem:      itemName,
-		Alias:           alias,
+		ModuleAlias:     alias,
 		IsWildCardUsage: isWildCardUsage,
 		Identifier:      identifier,
 		FilePath:        filePath,
@@ -58,7 +68,7 @@ func newUsageEvidence(packageHint string, module string, itemName string, alias 
 
 func (e *UsageEvidence) String() string {
 	if e.IsWildCardUsage {
-		return fmt.Sprintf("UsageEvidence (WildCardUsage) - PackageHint: %s, Module: %s, ModuleItem: %s, Alias: %s, Identifier: %s, FilePath: %s, Line: %d", e.PackageHint, e.Module, e.ModuleItem, e.Alias, e.Identifier, e.FilePath, e.Line)
+		return fmt.Sprintf("UsageEvidence (WildCardUsage) - PackageHint: %s, Module: %s, ModuleItem: %s, Alias: %s, Identifier: %s, FilePath: %s, Line: %d", e.PackageHint, e.ModuleName, e.ModuleItem, e.ModuleAlias, e.Identifier, e.FilePath, e.Line)
 	}
-	return fmt.Sprintf("UsageEvidence - PackageHint: %s, Module: %s, ModuleItem: %s, Alias: %s, Identifier: %s, FilePath: %s, Line: %d", e.PackageHint, e.Module, e.ModuleItem, e.Alias, e.Identifier, e.FilePath, e.Line)
+	return fmt.Sprintf("UsageEvidence - PackageHint: %s, Module: %s, ModuleItem: %s, Alias: %s, Identifier: %s, FilePath: %s, Line: %d", e.PackageHint, e.ModuleName, e.ModuleItem, e.ModuleAlias, e.Identifier, e.FilePath, e.Line)
 }

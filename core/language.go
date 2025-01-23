@@ -12,11 +12,6 @@ type LanguageResolvers interface {
 	// ResolveImports returns a list of import statements
 	// identified from the parse tree
 	ResolveImports(tree ParseTree) ([]*ast.ImportNode, error)
-
-	// ResolvePackageHint returns the package name hint for an imported module
-	//
-	// eg. for a python module "foo.bar" it should return "foo"
-	ResolvePackageHint(moduleName string) (string, error)
 }
 
 // ObjectOrientedLanguageResolvers define the additional contract

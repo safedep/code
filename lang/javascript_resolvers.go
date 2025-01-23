@@ -153,8 +153,3 @@ func (r *javascriptResolvers) ResolveImports(tree core.ParseTree) ([]*ast.Import
 
 	return imports, err
 }
-
-func (r *javascriptResolvers) ResolvePackageHint(moduleName string) (string, error) {
-	// @TODO - Implement this -
-	return "", nil
-}

@@ -60,15 +60,12 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 
 	moduleIdentifiers := make(map[string]*identifierItem)
 	for _, imp := range imports {
-		packageHint, err := lang.Resolvers().ResolvePackageHint(imp.ModuleName())
-		if err != nil {
-			return fmt.Errorf("failed to resolve packageHint: %w", err)
-		}
+		packageHint := resolvePackageHint(imp.ModuleName(), lang)
 
 		if imp.IsWildcardImport() {
 			// @TODO - This is false positive case for wildcard imports
 			// If it is a wildcard import, mark the module as used by default
-			evidence := newUsageEvidence(packageHint, imp.ModuleName(), imp.ModuleItem(), imp.ModuleAlias(), true, wildcardIdentifier, file.Name(), uint(imp.GetModuleNameNode().StartPoint().Row)+1)
+			evidence := newUsageEvidence(packageHint, imp.ModuleName(), imp.ModuleItem(), imp.ModuleAlias(), true, "", file.Name(), uint(imp.GetModuleNameNode().StartPoint().Row)+1)
 			if err := p.usageCallback(ctx, evidence); err != nil {
 				return fmt.Errorf("failed to call usage callback for wildcard import: %w", err)
 			}

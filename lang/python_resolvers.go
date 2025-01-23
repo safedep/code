@@ -104,8 +104,3 @@ func (r *pythonResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode
 
 	return imports, err
 }
-
-func (r *pythonResolvers) ResolvePackageHint(moduleName string) (string, error) {
-	// @TODO - Implement this -
-	return "", nil
-}
