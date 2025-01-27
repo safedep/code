@@ -7,6 +7,7 @@ import (
 	"io"
 
 	"github.com/safedep/code/core"
+	"github.com/safedep/code/pkg/ds"
 	"github.com/safedep/dry/log"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -92,26 +93,55 @@ func stripComments(node *sitter.Node, source []byte, output *bytes.Buffer, lang 
 		return
 	}
 
-	// Skip comment nodes
-	if isCommentNode(node, lang) {
-		return
-	}
+	stack := ds.NewStack[*sitter.Node]()
+	stack.Push(node)
 
-	// Preserve leading whitespace and newlines for non-comment nodes
-	start := node.StartByte()
-	end := node.EndByte()
-	if node.ChildCount() == 0 {
-		output.Write(source[start:end])
-	} else {
-		for i := 0; i < int(node.ChildCount()); i++ {
-			child := node.Child(i)
-			stripComments(child, source, output, lang)
-			if i < int(node.ChildCount())-1 {
-				// Add whitespace or newlines between current and next node, as per the source
-				intermediateStart := node.Child(i).EndByte()
-				intermediateEnd := node.Child(i + 1).StartByte()
-				output.Write(source[intermediateStart:intermediateEnd])
+	var prevNode *sitter.Node = nil
+
+	for !stack.IsEmpty() {
+		currentNode, _ := stack.Pop()
+
+		if prevNode != nil {
+			prevStart := prevNode.StartByte()
+			prevEnd := prevNode.EndByte()
+			currStart := currentNode.StartByte()
+
+			// Copy leading whitespace and newlines between parent's start and first child's start
+			// eg. Python Hierarchy: match_statement -> cases block -> case -> ...
+			// match str:
+			// 	 case "hello":
+			// 	 	 print("Hello")
+			// Here, the whitespace between "str:" and "case" is preserved since "case" is a child of cases 'block' which starts just after "str:"
+			//
+			// Note - prevNode.Child() consumes lesser time than currentNode.Parent()
+			if prevNode.Child(0) == currentNode && prevStart < currStart {
+				output.Write(source[prevStart:currStart])
+			}
+
+			// Preserve whitespace and newlines between previous node's end and current node
+			if currStart > prevEnd {
+				output.Write(source[prevEnd:currStart])
 			}
 		}
+
+		// Skip comment nodes
+		if isCommentNode(currentNode, lang) {
+			prevNode = currentNode
+			continue
+		}
+
+		if currentNode.ChildCount() == 0 {
+			start := currentNode.StartByte()
+			end := currentNode.EndByte()
+			output.Write(source[start:end])
+		} else {
+			// Push children onto the stack in reverse order due to LIFO nature
+			for i := int(currentNode.ChildCount()) - 1; i >= 0; i-- {
+				child := currentNode.Child(i)
+				stack.Push(child)
+			}
+		}
+
+		prevNode = currentNode
 	}
 }

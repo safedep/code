@@ -6,10 +6,13 @@ os.homedir();
 const x = 1; 
 
 
-function test() { 
-  console.log('test'); 
+
+function sum(a, b) {
+
+  return a + b; 
 }
-test()
+sum(5, 10);
+
 
 console.log('This is valid code');
 
@@ -24,4 +27,17 @@ class Test {
     console.log(arg1); 
     console.log(arg2); 
   }
+}
+
+switch ("red") {
+  case 'blue':
+    console.log('Color is blue'); 
+    break;
+  case 'red':
+    
+    console.log('Color is red'); 
+    break;
+  default:
+    console.log('Unknown color'); 
+    
 }

@@ -10,10 +10,13 @@ Multi line comment docstring
 console.log('This is a commented out code');
 console.log('This is a commented out code');
 */
-function test() { 
-  console.log('test'); // This is a single line comment
+// Function with commented-out parts
+function sum(a, b) {
+// const temp = a + b;
+  return a + b; /* This is the actual sum operation */
 }
-test()
+sum(5, 10);
+
 // console.log('This is a commented out code');
 console.log('This is valid code');
 // console.log('This is a commented out code');
@@ -35,6 +38,19 @@ class Test {
     console.log(arg1); /**/
     console.log(arg2); /// 
   }
+}
+
+switch ("red") {
+  case 'blue':
+    console.log('Color is blue'); // Comment inside case
+    break;
+  case 'red':
+    /* This is the red color block */
+    console.log('Color is red'); // Comment inside case for red
+    break;
+  default:
+    console.log('Unknown color'); // Default case
+    // console.log('Color is unknown');
 }
 
 
