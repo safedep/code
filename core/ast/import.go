@@ -8,7 +8,7 @@ import (
 
 // ImportNode represents an import statement in a source file
 // This is a language agnostic representation of an import statement.
-// Not all attributes may be present in all languages.
+// Not all attributes may be present in all languages
 type ImportNode struct {
 	Node
 

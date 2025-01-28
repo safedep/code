@@ -27,12 +27,7 @@ func TestJavascriptLanguageMeta(t *testing.T) {
 	})
 }
 
-type ImportExpectations struct {
-	filePath string
-	imports  []string
-}
-
-var importExpectations = []ImportExpectations{
+var javascriptImportExpectations = []ImportExpectations{
 	{
 		filePath: "fixtures/imports.js",
 		imports: []string{
@@ -78,7 +73,7 @@ func TestJavascriptLanguageResolvers(t *testing.T) {
 
 		importExpectationsMapper := make(map[string][]string)
 		importFilePaths := []string{}
-		for _, ie := range importExpectations {
+		for _, ie := range javascriptImportExpectations {
 			importFilePaths = append(importFilePaths, ie.filePath)
 			importExpectationsMapper[ie.filePath] = ie.imports
 		}
