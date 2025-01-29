@@ -41,7 +41,7 @@ var (
 		{Name: "identifier", Type: field.TypeString, Nullable: true},
 		{Name: "usage_file_path", Type: field.TypeString},
 		{Name: "line", Type: field.TypeUint},
-		{Name: "usage_evidence_code_file", Type: field.TypeInt},
+		{Name: "usage_evidence_used_in", Type: field.TypeInt},
 	}
 	// UsageEvidencesTable holds the schema information for the "usage_evidences" table.
 	UsageEvidencesTable = &schema.Table{
@@ -50,7 +50,7 @@ var (
 		PrimaryKey: []*schema.Column{UsageEvidencesColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "usage_evidences_code_files_code_file",
+				Symbol:     "usage_evidences_code_files_used_in",
 				Columns:    []*schema.Column{UsageEvidencesColumns[9]},
 				RefColumns: []*schema.Column{CodeFilesColumns[0]},
 				OnDelete:   schema.NoAction,

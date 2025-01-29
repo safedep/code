@@ -639,15 +639,15 @@ func (c *UsageEvidenceClient) GetX(ctx context.Context, id int) *UsageEvidence {
 	return obj
 }
 
-// QueryCodeFile queries the code_file edge of a UsageEvidence.
-func (c *UsageEvidenceClient) QueryCodeFile(ue *UsageEvidence) *CodeFileQuery {
+// QueryUsedIn queries the used_in edge of a UsageEvidence.
+func (c *UsageEvidenceClient) QueryUsedIn(ue *UsageEvidence) *CodeFileQuery {
 	query := (&CodeFileClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := ue.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(usageevidence.Table, usageevidence.FieldID, id),
 			sqlgraph.To(codefile.Table, codefile.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, usageevidence.CodeFileTable, usageevidence.CodeFileColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, usageevidence.UsedInTable, usageevidence.UsedInColumn),
 		)
 		fromV = sqlgraph.Neighbors(ue.driver.Dialect(), step)
 		return fromV, nil

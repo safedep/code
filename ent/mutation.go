@@ -967,8 +967,8 @@ type UsageEvidenceMutation struct {
 	_Line            *uint
 	add_Line         *int
 	clearedFields    map[string]struct{}
-	code_file        *int
-	clearedcode_file bool
+	used_in          *int
+	clearedused_in   bool
 	done             bool
 	oldValue         func(context.Context) (*UsageEvidence, error)
 	predicates       []predicate.UsageEvidence
@@ -1445,43 +1445,43 @@ func (m *UsageEvidenceMutation) ResetLine() {
 	m.add_Line = nil
 }
 
-// SetCodeFileID sets the "code_file" edge to the CodeFile entity by id.
-func (m *UsageEvidenceMutation) SetCodeFileID(id int) {
-	m.code_file = &id
+// SetUsedInID sets the "used_in" edge to the CodeFile entity by id.
+func (m *UsageEvidenceMutation) SetUsedInID(id int) {
+	m.used_in = &id
 }
 
-// ClearCodeFile clears the "code_file" edge to the CodeFile entity.
-func (m *UsageEvidenceMutation) ClearCodeFile() {
-	m.clearedcode_file = true
+// ClearUsedIn clears the "used_in" edge to the CodeFile entity.
+func (m *UsageEvidenceMutation) ClearUsedIn() {
+	m.clearedused_in = true
 }
 
-// CodeFileCleared reports if the "code_file" edge to the CodeFile entity was cleared.
-func (m *UsageEvidenceMutation) CodeFileCleared() bool {
-	return m.clearedcode_file
+// UsedInCleared reports if the "used_in" edge to the CodeFile entity was cleared.
+func (m *UsageEvidenceMutation) UsedInCleared() bool {
+	return m.clearedused_in
 }
 
-// CodeFileID returns the "code_file" edge ID in the mutation.
-func (m *UsageEvidenceMutation) CodeFileID() (id int, exists bool) {
-	if m.code_file != nil {
-		return *m.code_file, true
+// UsedInID returns the "used_in" edge ID in the mutation.
+func (m *UsageEvidenceMutation) UsedInID() (id int, exists bool) {
+	if m.used_in != nil {
+		return *m.used_in, true
 	}
 	return
 }
 
-// CodeFileIDs returns the "code_file" edge IDs in the mutation.
+// UsedInIDs returns the "used_in" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// CodeFileID instead. It exists only for internal usage by the builders.
-func (m *UsageEvidenceMutation) CodeFileIDs() (ids []int) {
-	if id := m.code_file; id != nil {
+// UsedInID instead. It exists only for internal usage by the builders.
+func (m *UsageEvidenceMutation) UsedInIDs() (ids []int) {
+	if id := m.used_in; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetCodeFile resets all changes to the "code_file" edge.
-func (m *UsageEvidenceMutation) ResetCodeFile() {
-	m.code_file = nil
-	m.clearedcode_file = false
+// ResetUsedIn resets all changes to the "used_in" edge.
+func (m *UsageEvidenceMutation) ResetUsedIn() {
+	m.used_in = nil
+	m.clearedused_in = false
 }
 
 // Where appends a list predicates to the UsageEvidenceMutation builder.
@@ -1785,8 +1785,8 @@ func (m *UsageEvidenceMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UsageEvidenceMutation) AddedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.code_file != nil {
-		edges = append(edges, usageevidence.EdgeCodeFile)
+	if m.used_in != nil {
+		edges = append(edges, usageevidence.EdgeUsedIn)
 	}
 	return edges
 }
@@ -1795,8 +1795,8 @@ func (m *UsageEvidenceMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *UsageEvidenceMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case usageevidence.EdgeCodeFile:
-		if id := m.code_file; id != nil {
+	case usageevidence.EdgeUsedIn:
+		if id := m.used_in; id != nil {
 			return []ent.Value{*id}
 		}
 	}
@@ -1818,8 +1818,8 @@ func (m *UsageEvidenceMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UsageEvidenceMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.clearedcode_file {
-		edges = append(edges, usageevidence.EdgeCodeFile)
+	if m.clearedused_in {
+		edges = append(edges, usageevidence.EdgeUsedIn)
 	}
 	return edges
 }
@@ -1828,8 +1828,8 @@ func (m *UsageEvidenceMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *UsageEvidenceMutation) EdgeCleared(name string) bool {
 	switch name {
-	case usageevidence.EdgeCodeFile:
-		return m.clearedcode_file
+	case usageevidence.EdgeUsedIn:
+		return m.clearedused_in
 	}
 	return false
 }
@@ -1838,8 +1838,8 @@ func (m *UsageEvidenceMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *UsageEvidenceMutation) ClearEdge(name string) error {
 	switch name {
-	case usageevidence.EdgeCodeFile:
-		m.ClearCodeFile()
+	case usageevidence.EdgeUsedIn:
+		m.ClearUsedIn()
 		return nil
 	}
 	return fmt.Errorf("unknown UsageEvidence unique edge %s", name)
@@ -1849,8 +1849,8 @@ func (m *UsageEvidenceMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *UsageEvidenceMutation) ResetEdge(name string) error {
 	switch name {
-	case usageevidence.EdgeCodeFile:
-		m.ResetCodeFile()
+	case usageevidence.EdgeUsedIn:
+		m.ResetUsedIn()
 		return nil
 	}
 	return fmt.Errorf("unknown UsageEvidence edge %s", name)

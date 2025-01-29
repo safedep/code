@@ -422,13 +422,13 @@ func (cfq *CodeFileQuery) loadUsageEvidences(ctx context.Context, query *UsageEv
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.usage_evidence_code_file
+		fk := n.usage_evidence_used_in
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "usage_evidence_code_file" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "usage_evidence_used_in" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "usage_evidence_code_file" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "usage_evidence_used_in" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

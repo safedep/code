@@ -24,7 +24,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "usageevidence" package.
 	UsageEvidencesInverseTable = "usage_evidences"
 	// UsageEvidencesColumn is the table column denoting the usage_evidences relation/edge.
-	UsageEvidencesColumn = "usage_evidence_code_file"
+	UsageEvidencesColumn = "usage_evidence_used_in"
 )
 
 // Columns holds all SQL columns for codefile fields.

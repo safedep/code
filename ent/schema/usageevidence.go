@@ -29,7 +29,7 @@ func (UsageEvidence) Fields() []ent.Field {
 func (UsageEvidence) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.
-			To("code_file", CodeFile.Type).
+			To("used_in", CodeFile.Type).
 			Unique().
 			Required(),
 	}

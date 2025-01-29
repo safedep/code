@@ -35,29 +35,29 @@ type UsageEvidence struct {
 	Line uint `json:"Line,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UsageEvidenceQuery when eager-loading is set.
-	Edges                    UsageEvidenceEdges `json:"edges"`
-	usage_evidence_code_file *int
-	selectValues             sql.SelectValues
+	Edges                  UsageEvidenceEdges `json:"edges"`
+	usage_evidence_used_in *int
+	selectValues           sql.SelectValues
 }
 
 // UsageEvidenceEdges holds the relations/edges for other nodes in the graph.
 type UsageEvidenceEdges struct {
-	// CodeFile holds the value of the code_file edge.
-	CodeFile *CodeFile `json:"code_file,omitempty"`
+	// UsedIn holds the value of the used_in edge.
+	UsedIn *CodeFile `json:"used_in,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
 }
 
-// CodeFileOrErr returns the CodeFile value or an error if the edge
+// UsedInOrErr returns the UsedIn value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e UsageEvidenceEdges) CodeFileOrErr() (*CodeFile, error) {
-	if e.CodeFile != nil {
-		return e.CodeFile, nil
+func (e UsageEvidenceEdges) UsedInOrErr() (*CodeFile, error) {
+	if e.UsedIn != nil {
+		return e.UsedIn, nil
 	} else if e.loadedTypes[0] {
 		return nil, &NotFoundError{label: codefile.Label}
 	}
-	return nil, &NotLoadedError{edge: "code_file"}
+	return nil, &NotLoadedError{edge: "used_in"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -71,7 +71,7 @@ func (*UsageEvidence) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case usageevidence.FieldPackageHint, usageevidence.FieldModuleName, usageevidence.FieldModuleItem, usageevidence.FieldModuleAlias, usageevidence.FieldIdentifier, usageevidence.FieldUsageFilePath:
 			values[i] = new(sql.NullString)
-		case usageevidence.ForeignKeys[0]: // usage_evidence_code_file
+		case usageevidence.ForeignKeys[0]: // usage_evidence_used_in
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -148,10 +148,10 @@ func (ue *UsageEvidence) assignValues(columns []string, values []any) error {
 			}
 		case usageevidence.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for edge-field usage_evidence_code_file", value)
+				return fmt.Errorf("unexpected type %T for edge-field usage_evidence_used_in", value)
 			} else if value.Valid {
-				ue.usage_evidence_code_file = new(int)
-				*ue.usage_evidence_code_file = int(value.Int64)
+				ue.usage_evidence_used_in = new(int)
+				*ue.usage_evidence_used_in = int(value.Int64)
 			}
 		default:
 			ue.selectValues.Set(columns[i], values[i])
@@ -166,9 +166,9 @@ func (ue *UsageEvidence) Value(name string) (ent.Value, error) {
 	return ue.selectValues.Get(name)
 }
 
-// QueryCodeFile queries the "code_file" edge of the UsageEvidence entity.
-func (ue *UsageEvidence) QueryCodeFile() *CodeFileQuery {
-	return NewUsageEvidenceClient(ue.config).QueryCodeFile(ue)
+// QueryUsedIn queries the "used_in" edge of the UsageEvidence entity.
+func (ue *UsageEvidence) QueryUsedIn() *CodeFileQuery {
+	return NewUsageEvidenceClient(ue.config).QueryUsedIn(ue)
 }
 
 // Update returns a builder for updating this UsageEvidence.

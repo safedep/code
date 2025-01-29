@@ -28,17 +28,17 @@ const (
 	FieldUsageFilePath = "usage_file_path"
 	// FieldLine holds the string denoting the line field in the database.
 	FieldLine = "line"
-	// EdgeCodeFile holds the string denoting the code_file edge name in mutations.
-	EdgeCodeFile = "code_file"
+	// EdgeUsedIn holds the string denoting the used_in edge name in mutations.
+	EdgeUsedIn = "used_in"
 	// Table holds the table name of the usageevidence in the database.
 	Table = "usage_evidences"
-	// CodeFileTable is the table that holds the code_file relation/edge.
-	CodeFileTable = "usage_evidences"
-	// CodeFileInverseTable is the table name for the CodeFile entity.
+	// UsedInTable is the table that holds the used_in relation/edge.
+	UsedInTable = "usage_evidences"
+	// UsedInInverseTable is the table name for the CodeFile entity.
 	// It exists in this package in order to avoid circular dependency with the "codefile" package.
-	CodeFileInverseTable = "code_files"
-	// CodeFileColumn is the table column denoting the code_file relation/edge.
-	CodeFileColumn = "usage_evidence_code_file"
+	UsedInInverseTable = "code_files"
+	// UsedInColumn is the table column denoting the used_in relation/edge.
+	UsedInColumn = "usage_evidence_used_in"
 )
 
 // Columns holds all SQL columns for usageevidence fields.
@@ -57,7 +57,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "usage_evidences"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"usage_evidence_code_file",
+	"usage_evidence_used_in",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -128,16 +128,16 @@ func ByLine(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLine, opts...).ToFunc()
 }
 
-// ByCodeFileField orders the results by code_file field.
-func ByCodeFileField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByUsedInField orders the results by used_in field.
+func ByUsedInField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newCodeFileStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborTerms(s, newUsedInStep(), sql.OrderByField(field, opts...))
 	}
 }
-func newCodeFileStep() *sqlgraph.Step {
+func newUsedInStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(CodeFileInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, false, CodeFileTable, CodeFileColumn),
+		sqlgraph.To(UsedInInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, UsedInTable, UsedInColumn),
 	)
 }

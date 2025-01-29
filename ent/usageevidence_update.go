@@ -177,15 +177,15 @@ func (ueu *UsageEvidenceUpdate) AddLine(u int) *UsageEvidenceUpdate {
 	return ueu
 }
 
-// SetCodeFileID sets the "code_file" edge to the CodeFile entity by ID.
-func (ueu *UsageEvidenceUpdate) SetCodeFileID(id int) *UsageEvidenceUpdate {
-	ueu.mutation.SetCodeFileID(id)
+// SetUsedInID sets the "used_in" edge to the CodeFile entity by ID.
+func (ueu *UsageEvidenceUpdate) SetUsedInID(id int) *UsageEvidenceUpdate {
+	ueu.mutation.SetUsedInID(id)
 	return ueu
 }
 
-// SetCodeFile sets the "code_file" edge to the CodeFile entity.
-func (ueu *UsageEvidenceUpdate) SetCodeFile(c *CodeFile) *UsageEvidenceUpdate {
-	return ueu.SetCodeFileID(c.ID)
+// SetUsedIn sets the "used_in" edge to the CodeFile entity.
+func (ueu *UsageEvidenceUpdate) SetUsedIn(c *CodeFile) *UsageEvidenceUpdate {
+	return ueu.SetUsedInID(c.ID)
 }
 
 // Mutation returns the UsageEvidenceMutation object of the builder.
@@ -193,9 +193,9 @@ func (ueu *UsageEvidenceUpdate) Mutation() *UsageEvidenceMutation {
 	return ueu.mutation
 }
 
-// ClearCodeFile clears the "code_file" edge to the CodeFile entity.
-func (ueu *UsageEvidenceUpdate) ClearCodeFile() *UsageEvidenceUpdate {
-	ueu.mutation.ClearCodeFile()
+// ClearUsedIn clears the "used_in" edge to the CodeFile entity.
+func (ueu *UsageEvidenceUpdate) ClearUsedIn() *UsageEvidenceUpdate {
+	ueu.mutation.ClearUsedIn()
 	return ueu
 }
 
@@ -228,8 +228,8 @@ func (ueu *UsageEvidenceUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (ueu *UsageEvidenceUpdate) check() error {
-	if ueu.mutation.CodeFileCleared() && len(ueu.mutation.CodeFileIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "UsageEvidence.code_file"`)
+	if ueu.mutation.UsedInCleared() && len(ueu.mutation.UsedInIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "UsageEvidence.used_in"`)
 	}
 	return nil
 }
@@ -288,12 +288,12 @@ func (ueu *UsageEvidenceUpdate) sqlSave(ctx context.Context) (n int, err error) 
 	if value, ok := ueu.mutation.AddedLine(); ok {
 		_spec.AddField(usageevidence.FieldLine, field.TypeUint, value)
 	}
-	if ueu.mutation.CodeFileCleared() {
+	if ueu.mutation.UsedInCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   usageevidence.CodeFileTable,
-			Columns: []string{usageevidence.CodeFileColumn},
+			Table:   usageevidence.UsedInTable,
+			Columns: []string{usageevidence.UsedInColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(codefile.FieldID, field.TypeInt),
@@ -301,12 +301,12 @@ func (ueu *UsageEvidenceUpdate) sqlSave(ctx context.Context) (n int, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ueu.mutation.CodeFileIDs(); len(nodes) > 0 {
+	if nodes := ueu.mutation.UsedInIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   usageevidence.CodeFileTable,
-			Columns: []string{usageevidence.CodeFileColumn},
+			Table:   usageevidence.UsedInTable,
+			Columns: []string{usageevidence.UsedInColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(codefile.FieldID, field.TypeInt),
@@ -486,15 +486,15 @@ func (ueuo *UsageEvidenceUpdateOne) AddLine(u int) *UsageEvidenceUpdateOne {
 	return ueuo
 }
 
-// SetCodeFileID sets the "code_file" edge to the CodeFile entity by ID.
-func (ueuo *UsageEvidenceUpdateOne) SetCodeFileID(id int) *UsageEvidenceUpdateOne {
-	ueuo.mutation.SetCodeFileID(id)
+// SetUsedInID sets the "used_in" edge to the CodeFile entity by ID.
+func (ueuo *UsageEvidenceUpdateOne) SetUsedInID(id int) *UsageEvidenceUpdateOne {
+	ueuo.mutation.SetUsedInID(id)
 	return ueuo
 }
 
-// SetCodeFile sets the "code_file" edge to the CodeFile entity.
-func (ueuo *UsageEvidenceUpdateOne) SetCodeFile(c *CodeFile) *UsageEvidenceUpdateOne {
-	return ueuo.SetCodeFileID(c.ID)
+// SetUsedIn sets the "used_in" edge to the CodeFile entity.
+func (ueuo *UsageEvidenceUpdateOne) SetUsedIn(c *CodeFile) *UsageEvidenceUpdateOne {
+	return ueuo.SetUsedInID(c.ID)
 }
 
 // Mutation returns the UsageEvidenceMutation object of the builder.
@@ -502,9 +502,9 @@ func (ueuo *UsageEvidenceUpdateOne) Mutation() *UsageEvidenceMutation {
 	return ueuo.mutation
 }
 
-// ClearCodeFile clears the "code_file" edge to the CodeFile entity.
-func (ueuo *UsageEvidenceUpdateOne) ClearCodeFile() *UsageEvidenceUpdateOne {
-	ueuo.mutation.ClearCodeFile()
+// ClearUsedIn clears the "used_in" edge to the CodeFile entity.
+func (ueuo *UsageEvidenceUpdateOne) ClearUsedIn() *UsageEvidenceUpdateOne {
+	ueuo.mutation.ClearUsedIn()
 	return ueuo
 }
 
@@ -550,8 +550,8 @@ func (ueuo *UsageEvidenceUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (ueuo *UsageEvidenceUpdateOne) check() error {
-	if ueuo.mutation.CodeFileCleared() && len(ueuo.mutation.CodeFileIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "UsageEvidence.code_file"`)
+	if ueuo.mutation.UsedInCleared() && len(ueuo.mutation.UsedInIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "UsageEvidence.used_in"`)
 	}
 	return nil
 }
@@ -627,12 +627,12 @@ func (ueuo *UsageEvidenceUpdateOne) sqlSave(ctx context.Context) (_node *UsageEv
 	if value, ok := ueuo.mutation.AddedLine(); ok {
 		_spec.AddField(usageevidence.FieldLine, field.TypeUint, value)
 	}
-	if ueuo.mutation.CodeFileCleared() {
+	if ueuo.mutation.UsedInCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   usageevidence.CodeFileTable,
-			Columns: []string{usageevidence.CodeFileColumn},
+			Table:   usageevidence.UsedInTable,
+			Columns: []string{usageevidence.UsedInColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(codefile.FieldID, field.TypeInt),
@@ -640,12 +640,12 @@ func (ueuo *UsageEvidenceUpdateOne) sqlSave(ctx context.Context) (_node *UsageEv
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := ueuo.mutation.CodeFileIDs(); len(nodes) > 0 {
+	if nodes := ueuo.mutation.UsedInIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   usageevidence.CodeFileTable,
-			Columns: []string{usageevidence.CodeFileColumn},
+			Table:   usageevidence.UsedInTable,
+			Columns: []string{usageevidence.UsedInColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(codefile.FieldID, field.TypeInt),

@@ -84,7 +84,6 @@ func saveCallGraph(ctx context.Context, cg callgraph.CallGraph, codeAnalysisStor
 }
 
 func saveUsageEvidence(ctx context.Context, evidence *depsusage.UsageEvidence, codeAnalysisStorage core.CodeAnalysisStorage) error {
-	fmt.Println("saving", evidence)
 	client, err := codeAnalysisStorage.Client()
 	if err != nil {
 		return err
@@ -112,7 +111,7 @@ func saveUsageEvidence(ctx context.Context, evidence *depsusage.UsageEvidence, c
 		}
 	}
 
-	createdCf, err := client.UsageEvidence.
+	_, err = client.UsageEvidence.
 		Create().
 		SetPackageHint(evidence.PackageHint).
 		SetModuleName(evidence.ModuleName).
@@ -122,13 +121,13 @@ func saveUsageEvidence(ctx context.Context, evidence *depsusage.UsageEvidence, c
 		SetIdentifier(evidence.Identifier).
 		SetUsageFilePath(filePath).
 		SetLine(evidence.Line).
-		SetCodeFile(cf).
+		SetUsedIn(cf).
 		Save(ctx)
 	if err != nil {
 		fmt.Println(err)
 		return fmt.Errorf("failed to create UsageEvidence: %w", err)
 	}
-	fmt.Println("Created", createdCf.ID, createdCf.PackageHint)
+
 	return nil
 }
 

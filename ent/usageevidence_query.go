@@ -19,12 +19,12 @@ import (
 // UsageEvidenceQuery is the builder for querying UsageEvidence entities.
 type UsageEvidenceQuery struct {
 	config
-	ctx          *QueryContext
-	order        []usageevidence.OrderOption
-	inters       []Interceptor
-	predicates   []predicate.UsageEvidence
-	withCodeFile *CodeFileQuery
-	withFKs      bool
+	ctx        *QueryContext
+	order      []usageevidence.OrderOption
+	inters     []Interceptor
+	predicates []predicate.UsageEvidence
+	withUsedIn *CodeFileQuery
+	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -61,8 +61,8 @@ func (ueq *UsageEvidenceQuery) Order(o ...usageevidence.OrderOption) *UsageEvide
 	return ueq
 }
 
-// QueryCodeFile chains the current query on the "code_file" edge.
-func (ueq *UsageEvidenceQuery) QueryCodeFile() *CodeFileQuery {
+// QueryUsedIn chains the current query on the "used_in" edge.
+func (ueq *UsageEvidenceQuery) QueryUsedIn() *CodeFileQuery {
 	query := (&CodeFileClient{config: ueq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := ueq.prepareQuery(ctx); err != nil {
@@ -75,7 +75,7 @@ func (ueq *UsageEvidenceQuery) QueryCodeFile() *CodeFileQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(usageevidence.Table, usageevidence.FieldID, selector),
 			sqlgraph.To(codefile.Table, codefile.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, usageevidence.CodeFileTable, usageevidence.CodeFileColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, usageevidence.UsedInTable, usageevidence.UsedInColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(ueq.driver.Dialect(), step)
 		return fromU, nil
@@ -270,26 +270,26 @@ func (ueq *UsageEvidenceQuery) Clone() *UsageEvidenceQuery {
 		return nil
 	}
 	return &UsageEvidenceQuery{
-		config:       ueq.config,
-		ctx:          ueq.ctx.Clone(),
-		order:        append([]usageevidence.OrderOption{}, ueq.order...),
-		inters:       append([]Interceptor{}, ueq.inters...),
-		predicates:   append([]predicate.UsageEvidence{}, ueq.predicates...),
-		withCodeFile: ueq.withCodeFile.Clone(),
+		config:     ueq.config,
+		ctx:        ueq.ctx.Clone(),
+		order:      append([]usageevidence.OrderOption{}, ueq.order...),
+		inters:     append([]Interceptor{}, ueq.inters...),
+		predicates: append([]predicate.UsageEvidence{}, ueq.predicates...),
+		withUsedIn: ueq.withUsedIn.Clone(),
 		// clone intermediate query.
 		sql:  ueq.sql.Clone(),
 		path: ueq.path,
 	}
 }
 
-// WithCodeFile tells the query-builder to eager-load the nodes that are connected to
-// the "code_file" edge. The optional arguments are used to configure the query builder of the edge.
-func (ueq *UsageEvidenceQuery) WithCodeFile(opts ...func(*CodeFileQuery)) *UsageEvidenceQuery {
+// WithUsedIn tells the query-builder to eager-load the nodes that are connected to
+// the "used_in" edge. The optional arguments are used to configure the query builder of the edge.
+func (ueq *UsageEvidenceQuery) WithUsedIn(opts ...func(*CodeFileQuery)) *UsageEvidenceQuery {
 	query := (&CodeFileClient{config: ueq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	ueq.withCodeFile = query
+	ueq.withUsedIn = query
 	return ueq
 }
 
@@ -373,10 +373,10 @@ func (ueq *UsageEvidenceQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 		withFKs     = ueq.withFKs
 		_spec       = ueq.querySpec()
 		loadedTypes = [1]bool{
-			ueq.withCodeFile != nil,
+			ueq.withUsedIn != nil,
 		}
 	)
-	if ueq.withCodeFile != nil {
+	if ueq.withUsedIn != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -400,23 +400,23 @@ func (ueq *UsageEvidenceQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := ueq.withCodeFile; query != nil {
-		if err := ueq.loadCodeFile(ctx, query, nodes, nil,
-			func(n *UsageEvidence, e *CodeFile) { n.Edges.CodeFile = e }); err != nil {
+	if query := ueq.withUsedIn; query != nil {
+		if err := ueq.loadUsedIn(ctx, query, nodes, nil,
+			func(n *UsageEvidence, e *CodeFile) { n.Edges.UsedIn = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (ueq *UsageEvidenceQuery) loadCodeFile(ctx context.Context, query *CodeFileQuery, nodes []*UsageEvidence, init func(*UsageEvidence), assign func(*UsageEvidence, *CodeFile)) error {
+func (ueq *UsageEvidenceQuery) loadUsedIn(ctx context.Context, query *CodeFileQuery, nodes []*UsageEvidence, init func(*UsageEvidence), assign func(*UsageEvidence, *CodeFile)) error {
 	ids := make([]int, 0, len(nodes))
 	nodeids := make(map[int][]*UsageEvidence)
 	for i := range nodes {
-		if nodes[i].usage_evidence_code_file == nil {
+		if nodes[i].usage_evidence_used_in == nil {
 			continue
 		}
-		fk := *nodes[i].usage_evidence_code_file
+		fk := *nodes[i].usage_evidence_used_in
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -433,7 +433,7 @@ func (ueq *UsageEvidenceQuery) loadCodeFile(ctx context.Context, query *CodeFile
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "usage_evidence_code_file" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "usage_evidence_used_in" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

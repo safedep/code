@@ -108,15 +108,15 @@ func (uec *UsageEvidenceCreate) SetLine(u uint) *UsageEvidenceCreate {
 	return uec
 }
 
-// SetCodeFileID sets the "code_file" edge to the CodeFile entity by ID.
-func (uec *UsageEvidenceCreate) SetCodeFileID(id int) *UsageEvidenceCreate {
-	uec.mutation.SetCodeFileID(id)
+// SetUsedInID sets the "used_in" edge to the CodeFile entity by ID.
+func (uec *UsageEvidenceCreate) SetUsedInID(id int) *UsageEvidenceCreate {
+	uec.mutation.SetUsedInID(id)
 	return uec
 }
 
-// SetCodeFile sets the "code_file" edge to the CodeFile entity.
-func (uec *UsageEvidenceCreate) SetCodeFile(c *CodeFile) *UsageEvidenceCreate {
-	return uec.SetCodeFileID(c.ID)
+// SetUsedIn sets the "used_in" edge to the CodeFile entity.
+func (uec *UsageEvidenceCreate) SetUsedIn(c *CodeFile) *UsageEvidenceCreate {
+	return uec.SetUsedInID(c.ID)
 }
 
 // Mutation returns the UsageEvidenceMutation object of the builder.
@@ -171,8 +171,8 @@ func (uec *UsageEvidenceCreate) check() error {
 	if _, ok := uec.mutation.Line(); !ok {
 		return &ValidationError{Name: "Line", err: errors.New(`ent: missing required field "UsageEvidence.Line"`)}
 	}
-	if len(uec.mutation.CodeFileIDs()) == 0 {
-		return &ValidationError{Name: "code_file", err: errors.New(`ent: missing required edge "UsageEvidence.code_file"`)}
+	if len(uec.mutation.UsedInIDs()) == 0 {
+		return &ValidationError{Name: "used_in", err: errors.New(`ent: missing required edge "UsageEvidence.used_in"`)}
 	}
 	return nil
 }
@@ -232,12 +232,12 @@ func (uec *UsageEvidenceCreate) createSpec() (*UsageEvidence, *sqlgraph.CreateSp
 		_spec.SetField(usageevidence.FieldLine, field.TypeUint, value)
 		_node.Line = value
 	}
-	if nodes := uec.mutation.CodeFileIDs(); len(nodes) > 0 {
+	if nodes := uec.mutation.UsedInIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: false,
-			Table:   usageevidence.CodeFileTable,
-			Columns: []string{usageevidence.CodeFileColumn},
+			Table:   usageevidence.UsedInTable,
+			Columns: []string{usageevidence.UsedInColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(codefile.FieldID, field.TypeInt),
@@ -246,7 +246,7 @@ func (uec *UsageEvidenceCreate) createSpec() (*UsageEvidence, *sqlgraph.CreateSp
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.usage_evidence_code_file = &nodes[0]
+		_node.usage_evidence_used_in = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

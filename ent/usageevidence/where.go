@@ -583,21 +583,21 @@ func LineLTE(v uint) predicate.UsageEvidence {
 	return predicate.UsageEvidence(sql.FieldLTE(FieldLine, v))
 }
 
-// HasCodeFile applies the HasEdge predicate on the "code_file" edge.
-func HasCodeFile() predicate.UsageEvidence {
+// HasUsedIn applies the HasEdge predicate on the "used_in" edge.
+func HasUsedIn() predicate.UsageEvidence {
 	return predicate.UsageEvidence(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, CodeFileTable, CodeFileColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, UsedInTable, UsedInColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasCodeFileWith applies the HasEdge predicate on the "code_file" edge with a given conditions (other predicates).
-func HasCodeFileWith(preds ...predicate.CodeFile) predicate.UsageEvidence {
+// HasUsedInWith applies the HasEdge predicate on the "used_in" edge with a given conditions (other predicates).
+func HasUsedInWith(preds ...predicate.CodeFile) predicate.UsageEvidence {
 	return predicate.UsageEvidence(func(s *sql.Selector) {
-		step := newCodeFileStep()
+		step := newUsedInStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

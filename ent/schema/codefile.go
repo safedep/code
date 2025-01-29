@@ -25,6 +25,6 @@ func (CodeFile) Fields() []ent.Field {
 func (CodeFile) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("usage_evidences", UsageEvidence.Type).
-			Ref("code_file"),
+			Ref("used_in"),
 	}
 }
