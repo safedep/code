@@ -62,7 +62,6 @@ func (cg *CallGraph) DFS() []string {
 }
 
 func (cg *CallGraph) dfsUtil(startNode string, visited map[string]bool, result *[]string, depth int) {
-	fmt.Println("DFS Util:", startNode)
 	if visited[startNode] {
 		// append that not going inside this on prev level
 		*result = append(*result, fmt.Sprintf("%s Stopped at %s", strings.Repeat("|", depth), startNode))

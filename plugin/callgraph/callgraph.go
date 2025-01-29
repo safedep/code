@@ -100,7 +100,7 @@ func traverseTree(node *sitter.Node, treeData *[]byte, callGraph *CallGraph, fil
 	if node == nil {
 		return
 	}
-	fmt.Println("Traverse ", node.Type(), "with content:", node.Content(*treeData), "with namespace:", currentNamespace)
+	// fmt.Println("Traverse ", node.Type(), "with content:", node.Content(*treeData), "with namespace:", currentNamespace)
 
 	switch node.Type() {
 	case "function_definition":

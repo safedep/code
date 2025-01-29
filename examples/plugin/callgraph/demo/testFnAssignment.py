@@ -20,7 +20,7 @@ def baz():
   pass
 
 xyz = foo
-print("GG")
+print("GG") # Not yet aliased to core llibrary function already available in python runtime
 
 xyz = bar
 
