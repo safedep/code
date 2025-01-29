@@ -6,14 +6,13 @@ import (
 	"io"
 
 	"github.com/safedep/code/core"
+	"github.com/safedep/code/lang"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
 // Parser wraps TreeSitter parser for a language
 // to provide common concerns
 type parserWrapper struct {
-	lang   core.Language
-	parser *sitter.Parser
 }
 
 type parseTree struct {
@@ -26,14 +25,8 @@ type parseTree struct {
 var _ core.Parser = (*parserWrapper)(nil)
 var _ core.ParseTree = (*parseTree)(nil)
 
-func NewParser(lang core.Language) (*parserWrapper, error) {
-	parser := sitter.NewParser()
-	parser.SetLanguage(lang.Language())
-
-	return &parserWrapper{
-		lang:   lang,
-		parser: parser,
-	}, nil
+func NewParser() (*parserWrapper, error) {
+	return &parserWrapper{}, nil
 }
 
 func (p *parserWrapper) Parse(ctx context.Context, file core.File) (core.ParseTree, error) {
@@ -47,7 +40,15 @@ func (p *parserWrapper) Parse(ctx context.Context, file core.File) (core.ParseTr
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
-	tree, err := p.parser.ParseCtx(ctx, nil, data)
+	language, exists := lang.ResolveLanguageFromPath(file.Name())
+	if !exists {
+		return nil, fmt.Errorf("failed to resolve language from file path")
+	}
+
+	parser := sitter.NewParser()
+	parser.SetLanguage(language.Language())
+
+	tree, err := parser.ParseCtx(ctx, nil, data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse file: %w", err)
 	}
@@ -57,7 +58,7 @@ func (p *parserWrapper) Parse(ctx context.Context, file core.File) (core.ParseTr
 		tree: tree,
 		data: &data,
 		file: file,
-		lang: p.lang,
+		lang: language,
 	}, nil
 }
 
