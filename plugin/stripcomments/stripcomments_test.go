@@ -37,7 +37,7 @@ func TestStripComments(t *testing.T) {
 	for _, testcase := range testcases {
 		t.Run(fmt.Sprintf("%s (%s)", testcase.CommentedFilePath, testcase.Language), func(t *testing.T) {
 			filePaths := []string{testcase.CommentedFilePath}
-			treeWalker, fileSystem, err := test.SetupBasicPluginContext(filePaths, testcase.Language)
+			treeWalker, fileSystem, err := test.SetupBasicPluginContext(filePaths, []core.LanguageCode{testcase.Language})
 			assert.NoError(t, err)
 
 			readers := []io.Reader{}

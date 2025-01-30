@@ -13,7 +13,7 @@ type SourceWalkerConfig struct {
 }
 
 type sourceWalker struct {
-	lang   core.Language
+	langs  []core.Language
 	config SourceWalkerConfig
 }
 
@@ -22,9 +22,9 @@ var _ core.SourceWalker = (*sourceWalker)(nil)
 // NewSourceWalker creates a new source walker that
 // can walk the source files in a file system based on
 // language specific rules.
-func NewSourceWalker(config SourceWalkerConfig, lang core.Language) (*sourceWalker, error) {
+func NewSourceWalker(config SourceWalkerConfig, langs []core.Language) (*sourceWalker, error) {
 	return &sourceWalker{
-		lang:   lang,
+		langs:  langs,
 		config: config,
 	}, nil
 }
@@ -35,7 +35,7 @@ func (s *sourceWalker) Walk(ctx context.Context, fs core.ImportAwareFileSystem, 
 			return nil
 		}
 
-		return visitor.VisitFile(s.lang, f)
+		return visitor.VisitFile(f)
 	}
 
 	err := fs.EnumerateApp(ctx, enumFunc)
@@ -54,16 +54,12 @@ func (s *sourceWalker) Walk(ctx context.Context, fs core.ImportAwareFileSystem, 
 }
 
 func (s *sourceWalker) validSourceFile(f core.File) bool {
-	exts := s.lang.Meta().SourceFileExtensions
-	if len(exts) == 0 {
-		return true
-	}
-
-	for _, ext := range exts {
-		if strings.HasSuffix(f.Name(), ext) {
-			return true
+	for _, lang := range s.langs {
+		for _, ext := range lang.Meta().SourceFileExtensions {
+			if strings.HasSuffix(f.Name(), ext) {
+				return true
+			}
 		}
 	}
-
 	return false
 }

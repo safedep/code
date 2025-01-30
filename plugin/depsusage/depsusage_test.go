@@ -49,7 +49,7 @@ func TestDepsusageEvidences(t *testing.T) {
 	for _, testcase := range testcases {
 		t.Run(string(testcase.Language), func(t *testing.T) {
 			filePaths := []string{testcase.FilePath}
-			treeWalker, fileSystem, err := test.SetupBasicPluginContext(filePaths, testcase.Language)
+			treeWalker, fileSystem, err := test.SetupBasicPluginContext(filePaths, []core.LanguageCode{testcase.Language})
 			assert.NoError(t, err)
 
 			evidences := []UsageEvidence{}
@@ -77,7 +77,7 @@ func TestDepsusageEvidences(t *testing.T) {
 func TestAbortedDepsusage(t *testing.T) {
 	t.Run("AbortExecutionForWildcardEvidence", func(t *testing.T) {
 		filePaths := []string{"fixtures/testcases.py"}
-		treeWalker, fileSystem, err := test.SetupBasicPluginContext(filePaths, core.LanguageCodePython)
+		treeWalker, fileSystem, err := test.SetupBasicPluginContext(filePaths, []core.LanguageCode{core.LanguageCodePython})
 
 		if err != nil {
 			t.Fatalf("failed to setup plugin context: %v", err)
@@ -105,7 +105,7 @@ func TestAbortedDepsusage(t *testing.T) {
 
 	t.Run("AbortExecutionForAstEvidence", func(t *testing.T) {
 		filePaths := []string{"fixtures/testcases.py"}
-		treeWalker, fileSystem, err := test.SetupBasicPluginContext(filePaths, core.LanguageCodePython)
+		treeWalker, fileSystem, err := test.SetupBasicPluginContext(filePaths, []core.LanguageCode{core.LanguageCodePython})
 		assert.NoError(t, err)
 
 		var usageCallback DependencyUsageCallback = func(ctx context.Context, evidence *UsageEvidence) error {

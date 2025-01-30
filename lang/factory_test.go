@@ -7,11 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type ImportExpectations struct {
-	filePath string
-	imports  []string
-}
-
 var resolveLanguageTestcases = []struct {
 	filePath             string
 	exists               bool

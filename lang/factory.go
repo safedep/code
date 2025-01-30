@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/safedep/code/core"
+	"github.com/safedep/dry/log"
 )
 
 var languages = map[string]func() (core.Language, error){
@@ -15,6 +16,19 @@ var languages = map[string]func() (core.Language, error){
 	"javascript": func() (core.Language, error) {
 		return NewJavascriptLanguage()
 	},
+}
+
+func AllLanguages() ([]core.Language, error) {
+	langs := make([]core.Language, 0, len(languages))
+	for _, getLang := range languages {
+		lang, err := getLang()
+		if err != nil {
+			log.Debugf("failed to get language: %v", err)
+			return nil, err
+		}
+		langs = append(langs, lang)
+	}
+	return langs, nil
 }
 
 func GetLanguage(name string) (core.Language, error) {

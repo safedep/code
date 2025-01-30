@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"strings"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/fs"
@@ -14,14 +15,24 @@ import (
 
 var (
 	dirToWalk string
-	language  string
+	languages arrayFlags
 )
+
+type arrayFlags []string
+
+func (a *arrayFlags) String() string {
+	return strings.Join(*a, ", ")
+}
+func (a *arrayFlags) Set(value string) error {
+	*a = append(*a, value)
+	return nil
+}
 
 func init() {
 	log.InitZapLogger("walker", "dev")
 
 	flag.StringVar(&dirToWalk, "dir", "", "Directory to walk")
-	flag.StringVar(&language, "lang", "python", "Language to use for parsing files")
+	flag.Var(&languages, "lang", "Languages to use for parsing files")
 
 	flag.Parse()
 }
@@ -40,10 +51,15 @@ func main() {
 
 type treeVisitor struct{}
 
-func (v *treeVisitor) VisitTree(language core.Language, tree core.ParseTree) error {
+func (v *treeVisitor) VisitTree(tree core.ParseTree) error {
 	file, err := tree.File()
 	if err != nil {
 		return fmt.Errorf("failed to get file: %w", err)
+	}
+
+	language, err := tree.Language()
+	if err != nil {
+		return fmt.Errorf("failed to get language: %w", err)
 	}
 
 	log.Infof("Visiting tree for language: %s file: %s",
@@ -76,17 +92,28 @@ func run() error {
 		return fmt.Errorf("failed to create local filesystem: %w", err)
 	}
 
-	language, err := lang.GetLanguage(language)
-	if err != nil {
-		return fmt.Errorf("failed to get language: %w", err)
+	var filteredLanguages []core.Language
+	if len(languages) == 0 {
+		filteredLanguages, err = lang.AllLanguages()
+		if err != nil {
+			return fmt.Errorf("failed to get all languages: %w", err)
+		}
+	} else {
+		for _, language := range languages {
+			lang, err := lang.GetLanguage(language)
+			if err != nil {
+				return fmt.Errorf("failed to get language: %w", err)
+			}
+			filteredLanguages = append(filteredLanguages, lang)
+		}
 	}
 
-	walker, err := fs.NewSourceWalker(fs.SourceWalkerConfig{}, language)
+	walker, err := fs.NewSourceWalker(fs.SourceWalkerConfig{}, filteredLanguages)
 	if err != nil {
 		return fmt.Errorf("failed to create source walker: %w", err)
 	}
 
-	treeWalker, err := parser.NewWalkingParser(walker, language)
+	treeWalker, err := parser.NewWalkingParser(walker, filteredLanguages)
 	if err != nil {
 		return fmt.Errorf("failed to create tree walker: %w", err)
 	}

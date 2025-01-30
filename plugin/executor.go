@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/safedep/code/core"
+	"github.com/safedep/code/lang"
 )
 
 type PluginExecutor interface {
@@ -24,14 +25,15 @@ type treeVisitor struct {
 	ctx     context.Context
 }
 
-func (v *treeVisitor) VisitTree(language core.Language, tree core.ParseTree) error {
+func (v *treeVisitor) VisitTree(tree core.ParseTree) error {
 	for _, plugin := range v.plugins {
 		file, err := tree.File()
 		if err != nil {
 			return fmt.Errorf("failed to get file from tree: %w", err)
 		}
 
-		if !slices.Contains(plugin.SupportedLanguages(), language.Meta().Code) {
+		language, exists := lang.ResolveLanguageFromPath(file.Name())
+		if !exists || !slices.Contains(plugin.SupportedLanguages(), language.Meta().Code) {
 			continue
 		}
 
