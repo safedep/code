@@ -18,17 +18,17 @@ var languages = map[string]func() (core.Language, error){
 	},
 }
 
-func AllLanguages() []core.Language {
+func AllLanguages() ([]core.Language, error) {
 	langs := make([]core.Language, 0, len(languages))
 	for _, getLang := range languages {
 		lang, err := getLang()
 		if err != nil {
 			log.Debugf("failed to get language: %v", err)
-			continue
+			return nil, err
 		}
 		langs = append(langs, lang)
 	}
-	return langs
+	return langs, nil
 }
 
 func GetLanguage(name string) (core.Language, error) {

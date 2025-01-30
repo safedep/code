@@ -13,6 +13,7 @@ import (
 // Parser wraps TreeSitter parser for a language
 // to provide common concerns
 type parserWrapper struct {
+	langParsers map[core.LanguageCode]*sitter.Parser
 }
 
 type parseTree struct {
@@ -25,8 +26,17 @@ type parseTree struct {
 var _ core.Parser = (*parserWrapper)(nil)
 var _ core.ParseTree = (*parseTree)(nil)
 
-func NewParser() (*parserWrapper, error) {
-	return &parserWrapper{}, nil
+// NewParser creates a new parserWrapper which can parse files only for the given languages using TreeSitter
+func NewParser(languages []core.Language) (*parserWrapper, error) {
+	langParsers := make(map[core.LanguageCode]*sitter.Parser)
+	for _, lang := range languages {
+		parser := sitter.NewParser()
+		parser.SetLanguage(lang.Language())
+		langParsers[lang.Meta().Code] = parser
+	}
+	return &parserWrapper{
+		langParsers: langParsers,
+	}, nil
 }
 
 func (p *parserWrapper) Parse(ctx context.Context, file core.File) (core.ParseTree, error) {
@@ -45,8 +55,10 @@ func (p *parserWrapper) Parse(ctx context.Context, file core.File) (core.ParseTr
 		return nil, fmt.Errorf("failed to resolve language from file path")
 	}
 
-	parser := sitter.NewParser()
-	parser.SetLanguage(language.Language())
+	parser, exists := p.langParsers[language.Meta().Code]
+	if !exists {
+		return nil, fmt.Errorf("language not provisioned for parsing")
+	}
 
 	tree, err := parser.ParseCtx(ctx, nil, data)
 	if err != nil {

@@ -14,8 +14,8 @@ type walkingParser struct {
 
 var _ core.TreeWalker = (*walkingParser)(nil)
 
-func NewWalkingParser(walker core.SourceWalker) (*walkingParser, error) {
-	parser, err := NewParser()
+func NewWalkingParser(walker core.SourceWalker, languages []core.Language) (*walkingParser, error) {
+	parser, err := NewParser(languages)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create parser: %w", err)
 	}
@@ -35,11 +35,11 @@ type sourceVisitor struct {
 	visitor core.TreeVisitor
 }
 
-func (v *sourceVisitor) VisitFile(langs []core.Language, f core.File) error {
+func (v *sourceVisitor) VisitFile(f core.File) error {
 	parseTree, err := v.parser.Parse(context.Background(), f)
 	if err != nil {
 		return fmt.Errorf("failed to parse file: %w", err)
 	}
 
-	return v.visitor.VisitTree(langs, parseTree)
+	return v.visitor.VisitTree(parseTree)
 }

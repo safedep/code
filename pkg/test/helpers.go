@@ -27,12 +27,13 @@ func SetupBasicPluginContext(filePaths []string, languageCodes []core.LanguageCo
 		}
 		languages = append(languages, language)
 	}
+
 	walker, err := fs.NewSourceWalker(fs.SourceWalkerConfig{}, languages)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create source walker: %w", err)
 	}
 
-	treeWalker, err := parser.NewWalkingParser(walker)
+	treeWalker, err := parser.NewWalkingParser(walker, languages)
 	if err != nil {
 		return treeWalker, nil, fmt.Errorf("failed to create tree walker: %w", err)
 	}

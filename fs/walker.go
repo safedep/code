@@ -35,7 +35,7 @@ func (s *sourceWalker) Walk(ctx context.Context, fs core.ImportAwareFileSystem, 
 			return nil
 		}
 
-		return visitor.VisitFile(s.langs, f)
+		return visitor.VisitFile(f)
 	}
 
 	err := fs.EnumerateApp(ctx, enumFunc)

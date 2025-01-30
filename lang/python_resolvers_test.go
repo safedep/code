@@ -58,7 +58,10 @@ func TestPythonLanguageResolvers(t *testing.T) {
 			importExpectationsMapper[ie.filePath] = ie.imports
 		}
 
-		fileParser, err := parser.NewParser()
+		pythonLanugage, err := lang.NewPythonLanguage()
+		assert.NoError(t, err)
+
+		fileParser, err := parser.NewParser([]core.Language{pythonLanugage})
 		assert.NoError(t, err)
 
 		fileSystem, err := fs.NewLocalFileSystem(fs.LocalFileSystemConfig{

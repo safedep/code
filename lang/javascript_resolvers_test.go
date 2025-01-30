@@ -64,7 +64,10 @@ func TestJavascriptLanguageResolvers(t *testing.T) {
 			importExpectationsMapper[ie.filePath] = ie.imports
 		}
 
-		fileParser, err := parser.NewParser()
+		javascriptLanguage, err := lang.NewJavascriptLanguage()
+		assert.NoError(t, err)
+
+		fileParser, err := parser.NewParser([]core.Language{javascriptLanguage})
 		assert.NoError(t, err)
 
 		fileSystem, err := fs.NewLocalFileSystem(fs.LocalFileSystemConfig{

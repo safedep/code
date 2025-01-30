@@ -62,7 +62,10 @@ func run() error {
 
 	var filteredLanguages []core.Language
 	if len(languages) == 0 {
-		filteredLanguages = lang.AllLanguages()
+		filteredLanguages, err = lang.AllLanguages()
+		if err != nil {
+			return fmt.Errorf("failed to get all languages: %w", err)
+		}
 	} else {
 		for _, language := range languages {
 			lang, err := lang.GetLanguage(language)
@@ -78,7 +81,7 @@ func run() error {
 		return fmt.Errorf("failed to create source walker: %w", err)
 	}
 
-	treeWalker, err := parser.NewWalkingParser(walker)
+	treeWalker, err := parser.NewWalkingParser(walker, filteredLanguages)
 	if err != nil {
 		return fmt.Errorf("failed to create tree walker: %w", err)
 	}

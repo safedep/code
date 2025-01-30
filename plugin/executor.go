@@ -25,7 +25,7 @@ type treeVisitor struct {
 	ctx     context.Context
 }
 
-func (v *treeVisitor) VisitTree(languages []core.Language, tree core.ParseTree) error {
+func (v *treeVisitor) VisitTree(tree core.ParseTree) error {
 	for _, plugin := range v.plugins {
 		file, err := tree.File()
 		if err != nil {
