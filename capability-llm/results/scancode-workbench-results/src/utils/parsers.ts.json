@@ -1,0 +1,17 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "export function parseIfValidJson(str: unknown) {"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "const parsedObj = JSON.parse(str);"
+                }
+            ]
+        }
+    ]
+}

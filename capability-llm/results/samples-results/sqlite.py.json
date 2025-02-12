@@ -1,0 +1,37 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "db:sqlite",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "import sqlite3"
+                },
+                {
+                    "line_no": 3,
+                    "line_content": "conn = sqlite3.connect('example.db')"
+                },
+                {
+                    "line_no": 4,
+                    "line_content": "cursor = conn.cursor()"
+                },
+                {
+                    "line_no": 5,
+                    "line_content": "cursor.execute(\"CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, data TEXT)\")"
+                },
+                {
+                    "line_no": 6,
+                    "line_content": "cursor.execute(\"INSERT INTO test (data) VALUES (?)\", (\"Hello, World!\",))"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "conn.commit()"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "conn.close()"
+                }
+            ]
+        }
+    ]
+}

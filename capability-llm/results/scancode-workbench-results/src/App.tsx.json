@@ -1,0 +1,47 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "import React from \"react\";"
+                },
+                {
+                    "line_no": 2,
+                    "line_content": "import { HashRouter, Route, Routes } from \"react-router-dom\";"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "import Layout from \"./components/Layout/Layout\";"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:template",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "import React from \"react\";"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "import DropZone from \"./components/DropZone/DropZone\";"
+                },
+                {
+                    "line_no": 25,
+                    "line_content": "import CopyrightInfoDash from \"./pages/CopyrightInfoDash/CopyrightInfoDash\";"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "import { ROUTES } from \"./constants/routes\";"
+                }
+            ]
+        }
+    ]
+}

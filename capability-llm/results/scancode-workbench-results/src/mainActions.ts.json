@@ -1,0 +1,35 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "dialog.showSaveDialog(mainWindow, {"
+                }
+            ]
+        },
+        {
+            "capability_id": "db:sqlite",
+            "evidence": [
+                {
+                    "line_no": 22,
+                    "line_content": "filters: ["
+                },
+                {
+                    "line_no": 24,
+                    "line_content": "extensions: [\"sqlite\"],"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "const defaultSqlitePath = figureOutDefaultSqliteFilePath(jsonFilePath);"
+                }
+            ]
+        }
+    ]
+}

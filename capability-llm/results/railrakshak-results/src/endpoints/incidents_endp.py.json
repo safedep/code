@@ -1,0 +1,79 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "aws:s3",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "s3 = boto3.resource("
+                },
+                {
+                    "line_no": 20,
+                    "line_content": "bucket = s3.Bucket(S3_BUCKET_NAME)"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "from src.config import AWS_KEY, SECRET_KEY_AWS, S3_BUCKET_NAME"
+                }
+            ]
+        },
+        {
+            "capability_id": "ml:inference",
+            "evidence": [
+                {
+                    "line_no": 23,
+                    "line_content": "model = YOLO(\"./assets/last.pt\")"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:api",
+            "evidence": [
+                {
+                    "line_no": 26,
+                    "line_content": "router = APIRouter("
+                }
+            ]
+        },
+        {
+            "capability_id": "db:sql",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "from src.database.notifications_db import create_notification"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "from src.database.incident_db import (create_incident, fetch_all_incidents, fetch_incidents_by_dept_and_station, delete_incident_by_id)"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "import io"
+                }
+            ]
+        },
+        {
+            "capability_id": "random:management",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "import random"
+                },
+                {
+                    "line_no": 32,
+                    "line_content": "if random.random() < 0.5:"
+                }
+            ]
+        }
+    ]
+}

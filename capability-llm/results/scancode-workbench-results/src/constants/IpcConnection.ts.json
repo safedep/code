@@ -1,0 +1,43 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "JSON: \"open-json-file\""
+                },
+                {
+                    "line_no": 34,
+                    "line_content": "jsonFilePath: string;"
+                }
+            ]
+        },
+        {
+            "capability_id": "db:sqlite",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "SQLITE_PATH_FOR_JSON: \"choose-sqlite-path-for-json-file\""
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "SQLITE: \"open-sqlite-file\""
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "SAVE_SQLITE: \"save-sqlite-file\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "SAVE_SQLITE: \"save-sqlite-file\""
+                }
+            ]
+        }
+    ]
+}

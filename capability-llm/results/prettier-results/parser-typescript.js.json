@@ -1,0 +1,40 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "var fs=_interopDefault(require(\"fs\"))"
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "var os=_interopDefault(require(\"os\"))"
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "var crypto=_interopDefault(require(\"crypto\"))"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "const r=new SyntaxError(e+\" (\"+t.start.line+\":\"+t.start.column+\")\")"
+                }
+            ]
+        }
+    ]
+}

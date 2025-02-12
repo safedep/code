@@ -1,0 +1,60 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "load_dotenv()"
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "PORT = os.getenv('FLASK_RUN_PORT') or 5002"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "NGROK_AUTHTOKEN = os.getenv('NGROK_AUTHTOKEN')"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "NGROK_DOMAIN = os.environ.get('NGROK_DOMAIN')"
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "tunnel_url = ngrok.connect(PORT, bind_tls=True, hostname=NGROK_DOMAIN).public_url"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "app = Flask(__name__)"
+                },
+                {
+                    "line_no": 23,
+                    "line_content": "@app.route(\"/whatsapp\", methods=[\"GET\", \"POST\"])"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 20,
+                    "line_content": "print(f\"Ingress established at {tunnel_url}\")"
+                },
+                {
+                    "line_no": 26,
+                    "line_content": "print(request.values)"
+                }
+            ]
+        }
+    ]
+}

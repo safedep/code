@@ -1,0 +1,1587 @@
+{
+    "files": {
+        "samples-results/sqlite.py": {
+            "capabilities": [
+                {
+                    "capability_id": "db:sqlite",
+                    "evidence": [
+                        {
+                            "line_no": 1,
+                            "line_content": "import sqlite3"
+                        },
+                        {
+                            "line_no": 3,
+                            "line_content": "conn = sqlite3.connect('example.db')"
+                        },
+                        {
+                            "line_no": 4,
+                            "line_content": "cursor = conn.cursor()"
+                        },
+                        {
+                            "line_no": 5,
+                            "line_content": "cursor.execute(\"CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, data TEXT)\")"
+                        },
+                        {
+                            "line_no": 6,
+                            "line_content": "cursor.execute(\"INSERT INTO test (data) VALUES (?)\", (\"Hello, World!\",))"
+                        },
+                        {
+                            "line_no": 7,
+                            "line_content": "conn.commit()"
+                        },
+                        {
+                            "line_no": 8,
+                            "line_content": "conn.close()"
+                        }
+                    ]
+                }
+            ]
+        },
+        "samples-results/empty.py": {
+            "capabilities": []
+        },
+        "samples-results/cloudLlm.js": {
+            "capabilities": [
+                {
+                    "capability_id": "env:config",
+                    "evidence": [
+                        {
+                            "line_no": 6,
+                            "line_content": "openai.apiKey = process.env.OPENAI_API_KEY;"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "aws:s3",
+                    "evidence": [
+                        {
+                            "line_no": 9,
+                            "line_content": "const s3 = new AWS.S3();"
+                        },
+                        {
+                            "line_no": 15,
+                            "line_content": "await s3.putObject(params).promise();"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "gcp:storage",
+                    "evidence": [
+                        {
+                            "line_no": 10,
+                            "line_content": "const gcs = new Storage();"
+                        },
+                        {
+                            "line_no": 26,
+                            "line_content": "await gcs.bucket(bucketName).upload(filename);"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "ml:llm",
+                    "evidence": [
+                        {
+                            "line_no": 5,
+                            "line_content": "const openai = require('openai');"
+                        },
+                        {
+                            "line_no": 6,
+                            "line_content": "openai.apiKey = process.env.OPENAI_API_KEY;"
+                        }
+                    ]
+                }
+            ]
+        },
+        "samples-results/netFs.js": {
+            "capabilities": [
+                {
+                    "capability_id": "network:http",
+                    "evidence": [
+                        {
+                            "line_no": 3,
+                            "line_content": "https.get('https://api.example.com/data-fss', (resp) => {"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "io:streaming",
+                    "evidence": [
+                        {
+                            "line_no": 6,
+                            "line_content": "resp.on('data', (chunk) => {"
+                        },
+                        {
+                            "line_no": 10,
+                            "line_content": "resp.on('end', () => {"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "file:manipulation",
+                    "evidence": [
+                        {
+                            "line_no": 11,
+                            "line_content": "fs.writeFileSync('output.txt', data);"
+                        }
+                    ]
+                }
+            ]
+        },
+        "railrakshak-results/crowd_server.py": {
+            "capabilities": [
+                {
+                    "capability_id": "ml:framework",
+                    "evidence": [
+                        {
+                            "line_no": 6,
+                            "line_content": "import ultralytics"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "ml:inference",
+                    "evidence": [
+                        {
+                            "line_no": 21,
+                            "line_content": "model = ultralytics.YOLO('yolov8x.pt')"
+                        },
+                        {
+                            "line_no": 51,
+                            "line_content": "results = model(\"rtmp://127.0.0.1/mystream\", stream=True, save=False)"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "web:framework",
+                    "evidence": [
+                        {
+                            "line_no": 2,
+                            "line_content": "from fastapi import FastAPI, WebSocket, WebSocketDisconnect"
+                        },
+                        {
+                            "line_no": 10,
+                            "line_content": "app = FastAPI()"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "network:sockets",
+                    "evidence": [
+                        {
+                            "line_no": 2,
+                            "line_content": "from fastapi import FastAPI, WebSocket, WebSocketDisconnect"
+                        },
+                        {
+                            "line_no": 35,
+                            "line_content": "class WebSocketConnection:"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "ml:framework",
+                    "evidence": [
+                        {
+                            "line_no": 22,
+                            "line_content": "print(f\"YOLO model loaded !\")"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "io:streaming",
+                    "evidence": [
+                        {
+                            "line_no": 51,
+                            "line_content": "results = model(\"rtmp://127.0.0.1/mystream\", stream=True, save=False)"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "web:api",
+                    "evidence": [
+                        {
+                            "line_no": 10,
+                            "line_content": "app = FastAPI()"
+                        },
+                        {
+                            "line_no": 12,
+                            "line_content": "app.add_middleware("
+                        }
+                    ]
+                }
+            ]
+        },
+        "railrakshak-results/chat-server/main.py": {
+            "capabilities": [
+                {
+                    "capability_id": "env:config",
+                    "evidence": [
+                        {
+                            "line_no": 7,
+                            "line_content": "load_dotenv()"
+                        },
+                        {
+                            "line_no": 9,
+                            "line_content": "PORT = os.getenv('FLASK_RUN_PORT') or 5002"
+                        },
+                        {
+                            "line_no": 10,
+                            "line_content": "NGROK_AUTHTOKEN = os.getenv('NGROK_AUTHTOKEN')"
+                        },
+                        {
+                            "line_no": 11,
+                            "line_content": "NGROK_DOMAIN = os.environ.get('NGROK_DOMAIN')"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "network:http",
+                    "evidence": [
+                        {
+                            "line_no": 18,
+                            "line_content": "tunnel_url = ngrok.connect(PORT, bind_tls=True, hostname=NGROK_DOMAIN).public_url"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "web:framework",
+                    "evidence": [
+                        {
+                            "line_no": 13,
+                            "line_content": "app = Flask(__name__)"
+                        },
+                        {
+                            "line_no": 23,
+                            "line_content": "@app.route(\"/whatsapp\", methods=[\"GET\", \"POST\"])"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "io:streaming",
+                    "evidence": [
+                        {
+                            "line_no": 20,
+                            "line_content": "print(f\"Ingress established at {tunnel_url}\")"
+                        },
+                        {
+                            "line_no": 26,
+                            "line_content": "print(request.values)"
+                        }
+                    ]
+                }
+            ]
+        },
+        "railrakshak-results/chat-server/utils.py": {
+            "capabilities": [
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 3,
+                            "line_content": "import string"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "data:randomization",
+                    "evidence": [
+                        {
+                            "line_no": 2,
+                            "line_content": "import random"
+                        },
+                        {
+                            "line_no": 9,
+                            "line_content": "return ''.join(random.choice(characters) for _ in range(length))"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "string:manipulation",
+                    "evidence": [
+                        {
+                            "line_no": 22,
+                            "line_content": "lowercase_input = input_string.lower()"
+                        },
+                        {
+                            "line_no": 26,
+                            "line_content": "if init_str.lower() in lowercase_input:"
+                        }
+                    ]
+                }
+            ]
+        },
+        "railrakshak-results/src/establish_db_connection.py": {
+            "capabilities": [
+                {
+                    "capability_id": "db:mongodb",
+                    "evidence": [
+                        {
+                            "line_no": 1,
+                            "line_content": "from pymongo import MongoClient"
+                        },
+                        {
+                            "line_no": 5,
+                            "line_content": "client = MongoClient(f\"mongodb+srv://{USERNAME}:{PASSWORD}@{DB_URL}/?retryWrites=true&w=majority\")"
+                        },
+                        {
+                            "line_no": 9,
+                            "line_content": "database = client.RailRakshak"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "env:config",
+                    "evidence": [
+                        {
+                            "line_no": 2,
+                            "line_content": "from src.config import DB_URL, USERNAME, PASSWORD"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "network:dns",
+                    "evidence": [
+                        {
+                            "line_no": 5,
+                            "line_content": "client = MongoClient(f\"mongodb+srv://{USERNAME}:{PASSWORD}@{DB_URL}/?retryWrites=true&w=majority\")"
+                        }
+                    ]
+                }
+            ]
+        },
+        "railrakshak-results/src/database/auth_db.py": {
+            "capabilities": [
+                {
+                    "capability_id": "db:mongodb",
+                    "evidence": [
+                        {
+                            "line_no": 4,
+                            "line_content": "admins = database.Admins"
+                        },
+                        {
+                            "line_no": 5,
+                            "line_content": "admins.create_index([(\"id\", ASCENDING)], unique=True)"
+                        },
+                        {
+                            "line_no": 7,
+                            "line_content": "staffs = database.Staffs"
+                        },
+                        {
+                            "line_no": 8,
+                            "line_content": "staffs.create_index([(\"id\", ASCENDING)], unique=True)"
+                        },
+                        {
+                            "line_no": 10,
+                            "line_content": "users = database.Users"
+                        },
+                        {
+                            "line_no": 11,
+                            "line_content": "users.create_index([(\"mobile\", ASCENDING)], unique=True)"
+                        },
+                        {
+                            "line_no": 20,
+                            "line_content": "document = admins.find_one({\"id\": admin.id})"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "crypto:hashing",
+                    "evidence": [
+                        {
+                            "line_no": 12,
+                            "line_content": "pwd_context = CryptContext(schemes=[\"bcrypt\"],deprecated=\"auto\")"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "time:management",
+                    "evidence": [
+                        {
+                            "line_no": 17,
+                            "line_content": "id += chr(random.randint(65,90))"
+                        },
+                        {
+                            "line_no": 18,
+                            "line_content": "id += str(random.randint(0,9))"
+                        }
+                    ]
+                }
+            ]
+        },
+        "railrakshak-results/src/endpoints/incidents_endp.py": {
+            "capabilities": [
+                {
+                    "capability_id": "aws:s3",
+                    "evidence": [
+                        {
+                            "line_no": 14,
+                            "line_content": "s3 = boto3.resource("
+                        },
+                        {
+                            "line_no": 20,
+                            "line_content": "bucket = s3.Bucket(S3_BUCKET_NAME)"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "env:config",
+                    "evidence": [
+                        {
+                            "line_no": 10,
+                            "line_content": "from src.config import AWS_KEY, SECRET_KEY_AWS, S3_BUCKET_NAME"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "ml:inference",
+                    "evidence": [
+                        {
+                            "line_no": 23,
+                            "line_content": "model = YOLO(\"./assets/last.pt\")"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "web:api",
+                    "evidence": [
+                        {
+                            "line_no": 26,
+                            "line_content": "router = APIRouter("
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "db:sql",
+                    "evidence": [
+                        {
+                            "line_no": 7,
+                            "line_content": "from src.database.notifications_db import create_notification"
+                        },
+                        {
+                            "line_no": 8,
+                            "line_content": "from src.database.incident_db import (create_incident, fetch_all_incidents, fetch_incidents_by_dept_and_station, delete_incident_by_id)"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "io:streaming",
+                    "evidence": [
+                        {
+                            "line_no": 13,
+                            "line_content": "import io"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "random:management",
+                    "evidence": [
+                        {
+                            "line_no": 17,
+                            "line_content": "import random"
+                        },
+                        {
+                            "line_no": 32,
+                            "line_content": "if random.random() < 0.5:"
+                        }
+                    ]
+                }
+            ]
+        },
+        "railrakshak-results/src/models/tasks_model.py": {
+            "capabilities": [
+                {
+                    "capability_id": "time:management",
+                    "evidence": [
+                        {
+                            "line_no": 8,
+                            "line_content": "import datetime"
+                        },
+                        {
+                            "line_no": 15,
+                            "line_content": "last_modified: str = Form(default=datetime.datetime.now())"
+                        },
+                        {
+                            "line_no": 16,
+                            "line_content": "created_at: str = Form(default=datetime.datetime.now())"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "web:api",
+                    "evidence": [
+                        {
+                            "line_no": 2,
+                            "line_content": "from fastapi import Form"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 1,
+                            "line_content": "from pydantic import BaseModel"
+                        },
+                        {
+                            "line_no": 6,
+                            "line_content": "class Task(BaseModel):"
+                        },
+                        {
+                            "line_no": 27,
+                            "line_content": "class IncidentToTask(BaseModel):"
+                        }
+                    ]
+                }
+            ]
+        },
+        "scancode-workbench-results/forge.config.js": {
+            "capabilities": [
+                {
+                    "capability_id": "file:read",
+                    "evidence": [
+                        {
+                            "line_no": 2,
+                            "line_content": "const { version } = require(\"./package.json\");"
+                        },
+                        {
+                            "line_no": 4,
+                            "line_content": "const { addMetaDataFilesToPackage, buildPackageArchive } = require(\"./package-utils\");"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 2,
+                            "line_content": "const { version } = require(\"./package.json\");"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "env:config",
+                    "evidence": [
+                        {
+                            "line_no": 17,
+                            "line_content": "const ARCHIVE_DIR = \"dist\";"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "file:manipulation",
+                    "evidence": [
+                        {
+                            "line_no": 6,
+                            "line_content": "const MetaDataFiles = ["
+                        },
+                        {
+                            "line_no": 12,
+                            "line_content": "\"workbench.ABOUT\""
+                        }
+                    ]
+                }
+            ]
+        },
+        "scancode-workbench-results/src/main.ts": {
+            "capabilities": [
+                {
+                    "capability_id": "db:sqlite",
+                    "evidence": [
+                        {
+                            "line_no": 1,
+                            "line_content": "import sqlite3 from \"sqlite3\";"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "web:template",
+                    "evidence": [
+                        {
+                            "line_no": 9,
+                            "line_content": "import getTemplate from \"./mainMenu\";"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "env:config",
+                    "evidence": [
+                        {
+                            "line_no": 26,
+                            "line_content": "const isDev = !app.isPackaged;"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "process:management",
+                    "evidence": [
+                        {
+                            "line_no": 30,
+                            "line_content": "if (require(\"electron-squirrel-startup\")) {"
+                        },
+                        {
+                            "line_no": 31,
+                            "line_content": "app.quit();"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "system:info",
+                    "evidence": [
+                        {
+                            "line_no": 38,
+                            "line_content": "app.getAppPath()"
+                        }
+                    ]
+                }
+            ]
+        },
+        "scancode-workbench-results/src/App.tsx": {
+            "capabilities": [
+                {
+                    "capability_id": "web:framework",
+                    "evidence": [
+                        {
+                            "line_no": 1,
+                            "line_content": "import React from \"react\";"
+                        },
+                        {
+                            "line_no": 2,
+                            "line_content": "import { HashRouter, Route, Routes } from \"react-router-dom\";"
+                        },
+                        {
+                            "line_no": 8,
+                            "line_content": "import Layout from \"./components/Layout/Layout\";"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "web:template",
+                    "evidence": [
+                        {
+                            "line_no": 1,
+                            "line_content": "import React from \"react\";"
+                        },
+                        {
+                            "line_no": 7,
+                            "line_content": "import DropZone from \"./components/DropZone/DropZone\";"
+                        },
+                        {
+                            "line_no": 25,
+                            "line_content": "import CopyrightInfoDash from \"./pages/CopyrightInfoDash/CopyrightInfoDash\";"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 11,
+                            "line_content": "import { ROUTES } from \"./constants/routes\";"
+                        }
+                    ]
+                }
+            ]
+        },
+        "scancode-workbench-results/src/renderer.ts": {
+            "capabilities": [
+                {
+                    "capability_id": "web:framework",
+                    "evidence": [
+                        {
+                            "line_no": 14,
+                            "line_content": "import { renderReactApp } from \"./reactApp\";"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "system:info",
+                    "evidence": [
+                        {
+                            "line_no": 4,
+                            "line_content": "* To learn more about the differences between the \"main\" and the \"renderer\" context in"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "env:config",
+                    "evidence": [
+                        {
+                            "line_no": 12,
+                            "line_content": "* By default, Node.js integration in this file is disabled. When enabling Node.js integration"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "io:streaming",
+                    "evidence": [
+                        {
+                            "line_no": 6,
+                            "line_content": "https://electronjs.org/docs/tutorial/application-architecture#main-and-renderer-processes"
+                        }
+                    ]
+                }
+            ]
+        },
+        "scancode-workbench-results/src/mainActions.ts": {
+            "capabilities": [
+                {
+                    "capability_id": "file:manipulation",
+                    "evidence": [
+                        {
+                            "line_no": 19,
+                            "line_content": "dialog.showSaveDialog(mainWindow, {"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "db:sqlite",
+                    "evidence": [
+                        {
+                            "line_no": 22,
+                            "line_content": "filters: ["
+                        },
+                        {
+                            "line_no": 24,
+                            "line_content": "extensions: [\"sqlite\"],"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 16,
+                            "line_content": "const defaultSqlitePath = figureOutDefaultSqliteFilePath(jsonFilePath);"
+                        }
+                    ]
+                }
+            ]
+        },
+        "scancode-workbench-results/src/contexts/dbContext.tsx": {
+            "capabilities": [
+                {
+                    "capability_id": "file:manipulation",
+                    "evidence": [
+                        {
+                            "line_no": 2,
+                            "line_content": "import * as electronFs from \"fs\""
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "time:management",
+                    "evidence": [
+                        {
+                            "line_no": 3,
+                            "line_content": "import moment from \"moment\""
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "web:framework",
+                    "evidence": [
+                        {
+                            "line_no": 4,
+                            "line_content": "import React, { createContext, useContext, useEffect, useState } from \"react\""
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "web:framework",
+                    "evidence": [
+                        {
+                            "line_no": 5,
+                            "line_content": "import { useNavigate } from \"react-router-dom\""
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "web:api",
+                    "evidence": [
+                        {
+                            "line_no": 6,
+                            "line_content": "import { toast } from \"react-toastify\""
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 8,
+                            "line_content": "import packageJson from \"../../package.json\""
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "db:sqlite",
+                    "evidence": [
+                        {
+                            "line_no": 15,
+                            "line_content": "import { WorkbenchDB } from \"../services/workbenchDB\""
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "db:sqlite",
+                    "evidence": [
+                        {
+                            "line_no": 16,
+                            "line_content": "import { isSqliteSchemaOutdated } from \"../utils/checks\""
+                        }
+                    ]
+                }
+            ]
+        },
+        "scancode-workbench-results/src/constants/params.ts": {
+            "capabilities": [
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 1,
+                            "line_content": "export const QUERY_KEYS = {"
+                        },
+                        {
+                            "line_no": 2,
+                            "line_content": "PACKAGE: \"pkg-identifier\","
+                        },
+                        {
+                            "line_no": 3,
+                            "line_content": "LICENSE_DETECTION: \"license-identifier\","
+                        },
+                        {
+                            "line_no": 4,
+                            "line_content": "LICENSE_CLUE_EXPRESSION: \"license-clue-expression\","
+                        },
+                        {
+                            "line_no": 5,
+                            "line_content": "LICENSE_CLUE_FILE_PATH: \"license-clue-file-path\","
+                        },
+                        {
+                            "line_no": 6,
+                            "line_content": "LICENSE_CLUE_FILE_CLUE_IDX: \"license-clue-file-clue-idx\""
+                        }
+                    ]
+                }
+            ]
+        },
+        "scancode-workbench-results/src/constants/IpcConnection.ts": {
+            "capabilities": [
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 13,
+                            "line_content": "JSON: \"open-json-file\""
+                        },
+                        {
+                            "line_no": 34,
+                            "line_content": "jsonFilePath: string;"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "db:sqlite",
+                    "evidence": [
+                        {
+                            "line_no": 14,
+                            "line_content": "SQLITE_PATH_FOR_JSON: \"choose-sqlite-path-for-json-file\""
+                        },
+                        {
+                            "line_no": 15,
+                            "line_content": "SQLITE: \"open-sqlite-file\""
+                        },
+                        {
+                            "line_no": 16,
+                            "line_content": "SAVE_SQLITE: \"save-sqlite-file\""
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "io:streaming",
+                    "evidence": [
+                        {
+                            "line_no": 16,
+                            "line_content": "SAVE_SQLITE: \"save-sqlite-file\""
+                        }
+                    ]
+                }
+            ]
+        },
+        "scancode-workbench-results/src/utils/logger.ts": {
+            "capabilities": [
+                {
+                    "capability_id": "time:management",
+                    "evidence": [
+                        {
+                            "line_no": 16,
+                            "line_content": "const currentTime = new Date().getTime();"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "io:streaming",
+                    "evidence": [
+                        {
+                            "line_no": 6,
+                            "line_content": "if (debugClasses.has(debugClass)) console.log(...args);"
+                        },
+                        {
+                            "line_no": 18,
+                            "line_content": "console.log(id, ...args);"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 2,
+                            "line_content": "const debugClasses = new Set(["
+                        },
+                        {
+                            "line_no": 11,
+                            "line_content": "const lastLogs: { [key: string]: number } = {};"
+                        }
+                    ]
+                }
+            ]
+        },
+        "scancode-workbench-results/src/utils/paths.ts": {
+            "capabilities": [
+                {
+                    "capability_id": "file:manipulation",
+                    "evidence": [
+                        {
+                            "line_no": 1,
+                            "line_content": "export const figureOutDefaultSqliteFilePath = (jsonFilePath: string) =>"
+                        },
+                        {
+                            "line_no": 2,
+                            "line_content": "jsonFilePath.substring(0, jsonFilePath.lastIndexOf(\".\")) + \".sqlite\";"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "file:read",
+                    "evidence": [
+                        {
+                            "line_no": 5,
+                            "line_content": "export function getPathDepth(filePath: string) {"
+                        },
+                        {
+                            "line_no": 6,
+                            "line_content": "const separatorRegExp = /[\\\\/]/g;"
+                        },
+                        {
+                            "line_no": 7,
+                            "line_content": "const depth = (filePath.match(separatorRegExp) || []).length;"
+                        }
+                    ]
+                }
+            ]
+        },
+        "scancode-workbench-results/src/utils/parsers.ts": {
+            "capabilities": [
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 6,
+                            "line_content": "export function parseIfValidJson(str: unknown) {"
+                        },
+                        {
+                            "line_no": 10,
+                            "line_content": "const parsedObj = JSON.parse(str);"
+                        }
+                    ]
+                }
+            ]
+        },
+        "scancode-workbench-results/src/pages/PageNotFound.tsx": {
+            "capabilities": [
+                {
+                    "capability_id": "web:framework",
+                    "evidence": [
+                        {
+                            "line_no": 1,
+                            "line_content": "import React from \"react\";"
+                        },
+                        {
+                            "line_no": 2,
+                            "line_content": "import { Link } from \"react-router-dom\";"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "web:template",
+                    "evidence": [
+                        {
+                            "line_no": 6,
+                            "line_content": "const PageNotFound = () => {"
+                        },
+                        {
+                            "line_no": 7,
+                            "line_content": "  return ("
+                        },
+                        {
+                            "line_no": 8,
+                            "line_content": "    <div className=\"text-center\">"
+                        },
+                        {
+                            "line_no": 22,
+                            "line_content": "};"
+                        }
+                    ]
+                }
+            ]
+        },
+        "scancode-workbench-results/src/pages/ScanInfo/InfoEntry.tsx": {
+            "capabilities": [
+                {
+                    "capability_id": "web:framework",
+                    "evidence": [
+                        {
+                            "line_no": 1,
+                            "line_content": "import React, { FunctionComponent, PropsWithChildren } from \"react\";"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "web:template",
+                    "evidence": [
+                        {
+                            "line_no": 7,
+                            "line_content": "if (!props.show || !props.children) return <></>;"
+                        },
+                        {
+                            "line_no": 9,
+                            "line_content": "<tr>"
+                        },
+                        {
+                            "line_no": 10,
+                            "line_content": "<td>{props.name}</td>"
+                        },
+                        {
+                            "line_no": 11,
+                            "line_content": "<td>{props.children}</td>"
+                        },
+                        {
+                            "line_no": 12,
+                            "line_content": "</tr>"
+                        }
+                    ]
+                }
+            ]
+        },
+        "scancode-workbench-results/src/pages/ScanInfo/ScanInfo.tsx": {
+            "capabilities": [
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 3,
+                            "line_content": "import ReactJson from \"@microlink/react-json-view\";"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "web:framework",
+                    "evidence": [
+                        {
+                            "line_no": 1,
+                            "line_content": "import React from \"react\";"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "db:nosql",
+                    "evidence": [
+                        {
+                            "line_no": 8,
+                            "line_content": "import { useWorkbenchDB } from \"../../contexts/dbContext\";"
+                        }
+                    ]
+                }
+            ]
+        },
+        "scancode-workbench-results/src/services/historyStore.ts": {
+            "capabilities": [
+                {
+                    "capability_id": "time:management",
+                    "evidence": [
+                        {
+                            "line_no": 1,
+                            "line_content": "import moment from \"moment\";"
+                        },
+                        {
+                            "line_no": 10,
+                            "line_content": "return Number(moment(b.opened_at)) - Number(moment(a.opened_at));"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 7,
+                            "line_content": "const history = JSON.parse(window.localStorage.getItem(HISTORY_STORE_KEY) || \"[]\") as HistoryItem[];"
+                        },
+                        {
+                            "line_no": 13,
+                            "line_content": "return JSON.parse(window.localStorage.getItem(HISTORY_STORE_KEY) || \"[]\") as HistoryItem[];"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "env:config",
+                    "evidence": [
+                        {
+                            "line_no": 6,
+                            "line_content": "window.localStorage.getItem(HISTORY_STORE_KEY)"
+                        },
+                        {
+                            "line_no": 7,
+                            "line_content": "const history = JSON.parse(window.localStorage.getItem(HISTORY_STORE_KEY) || \"[]\") as HistoryItem[];"
+                        },
+                        {
+                            "line_no": 13,
+                            "line_content": "return JSON.parse(window.localStorage.getItem(HISTORY_STORE_KEY) || \"[]\") as HistoryItem[];"
+                        }
+                    ]
+                }
+            ]
+        },
+        "scancode-workbench-results/src/services/models/packages.ts": {
+            "capabilities": [
+                {
+                    "capability_id": "db:sql",
+                    "evidence": [
+                        {
+                            "line_no": 13,
+                            "line_content": "import { Sequelize, DataTypes, Model } from \"sequelize\";"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 14,
+                            "line_content": "import { jsonDataType } from \"./databaseUtils\";"
+                        }
+                    ]
+                }
+            ]
+        },
+        "scancode-workbench-results/src/services/models/database.ts": {
+            "capabilities": [
+                {
+                    "capability_id": "db:sql",
+                    "evidence": [
+                        {
+                            "line_no": 12,
+                            "line_content": "import { Model, ModelStatic, Sequelize } from \"sequelize\";"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "db:sqlite",
+                    "evidence": [
+                        {
+                            "line_no": 12,
+                            "line_content": "import { Model, ModelStatic, Sequelize } from \"sequelize\";"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 14,
+                            "line_content": "import headerModel, { HeaderAttributes } from \"./header\";"
+                        },
+                        {
+                            "line_no": 15,
+                            "line_content": "import fileModel, { FileAttributes } from \"./file\";"
+                        },
+                        {
+                            "line_no": 16,
+                            "line_content": "import licenseExpressionModel, { LicenseExpressionAttributes, OptionalLice"
+                        }
+                    ]
+                }
+            ]
+        },
+        "prettier-results/parser-glimmer.js": {
+            "capabilities": []
+        },
+        "prettier-results/parser-flow.js": {
+            "capabilities": [
+                {
+                    "capability_id": "file:read",
+                    "evidence": [
+                        {
+                            "line_no": 1,
+                            "line_content": "var fs=_interopDefault(require(\"fs\"));"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 8,
+                            "line_content": "function createError(t,e){const r=new SyntaxError(t+\" (\"+e.start.line+\":\"+e.start.column+\")\");"
+                        }
+                    ]
+                }
+            ]
+        },
+        "prettier-results/parser-vue.js": {
+            "capabilities": [
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 1,
+                            "line_content": "\"use strict\";"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "web:template",
+                    "evidence": [
+                        {
+                            "line_no": 2,
+                            "line_content": "function makeMap(e,t){const n=Object.create(null),a=e.split(\",\");for(let e=0;e<a.length;e++)n[a[e]]=!0;return t?e=>n[e.toLowerCase()]:e=>n[e]}"
+                        },
+                        {
+                            "line_no": 3,
+                            "line_content": "const no=()=>!1,isNonPhrasingTag=makeMap(\"address,article,aside,base,blockquote,body,caption,col,colgroup,dd,details,dialog,div,dl,dt,fieldset,figcaption,figure,footer,form,h1,h2,h3,h4,h5,h6,head,header,hgroup,hr,html,legend,li,menuitem,meta,optgroup,option,param,rp,rt,source,style,summary,tbody,td,tfoot,th,thead,title,tr,track\");"
+                        },
+                        {
+                            "line_no": 9,
+                            "line_content": "const isPlainTextElement=makeMap(\"script,style,textarea\",!0)"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 4,
+                            "line_content": "attribute=/^\\s*([^\\s\"'<>/=]+)(?:\\s*(=)\\s*(?:\"([^\"]*)\"+|'([^']*)'+|([^\\s\"'=<>`]+))?/,"
+                        },
+                        {
+                            "line_no": 5,
+                            "line_content": "ncname=\"[a-zA-Z_][\\\\w\\\\-\\\\.]*\",qnameCapture=`((?:${ncname}\\\\:)?${ncname})`,startTagOpen=new RegExp(`^<${qnameCapture}`),"
+                        },
+                        {
+                            "line_no": 6,
+                            "line_content": "startTagClose=/^\\s*(\\/?)>/,endTag=new RegExp(`^<\\\\/${qnameCapture}[^>]*>`),doctype=/^<!DOCTYPE [^>]+>/i,comment=/^<!--/,conditionalComment=/^<!\\\\[/;"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "testing:automation",
+                    "evidence": [
+                        {
+                            "line_no": 7,
+                            "line_content": "let IS_REGEX_CAPTURING_BROKEN=!1;"
+                        },
+                        {
+                            "line_no": 8,
+                            "line_content": "\"x\".replace(/x(.)?/g,(e,t)=>{IS_REGEX_CAPTURING_BROKEN=\"\"===t});"
+                        }
+                    ]
+                }
+            ]
+        },
+        "prettier-results/parser-postcss.js": {
+            "capabilities": []
+        },
+        "prettier-results/parser-babylon.js": {
+            "capabilities": [
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 2,
+                            "line_content": "const s=new SyntaxError(t+\" (\"+e.start.line+\":\"+e.start.column+\")\");"
+                        },
+                        {
+                            "line_no": 34,
+                            "line_content": "var i={sourceType:\"script\",sourceFilename:void 0,startLine:1,allowReturnOutsideFunction:!1,allowImportExportEverywhere:!1,allowSuperOutsideMethod:!1,plugins:[],strictMode:null,ranges:!1,tokens:!1};"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "env:config",
+                    "evidence": [
+                        {
+                            "line_no": 26,
+                            "line_content": "return t&&t.__esModule&&Object.prototype.hasOwnProperty.call(t,\"default\")?t.default:t"
+                        }
+                    ]
+                }
+            ]
+        },
+        "prettier-results/parser-markdown.js": {
+            "capabilities": [
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 1,
+                            "line_content": "var util=_interopDefault(require(\"util\"))"
+                        },
+                        {
+                            "line_no": 24,
+                            "line_content": "function unwrapExports(r){return r&&r.__esModule&&Object.prototype.hasOwnProperty.call(r,\"default\")?r.default:r}"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "file:manipulation",
+                    "evidence": [
+                        {
+                            "line_no": 1,
+                            "line_content": "var path=_interopDefault(require(\"path\"))"
+                        }
+                    ]
+                }
+            ]
+        },
+        "prettier-results/parser-parse5.js": {
+            "capabilities": [
+                {
+                    "capability_id": "io:streaming",
+                    "evidence": [
+                        {
+                            "line_no": 2,
+                            "line_content": "var require$$0=_interopDefault(require(\"stream\"));"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 1,
+                            "line_content": "\"use strict\";"
+                        }
+                    ]
+                }
+            ]
+        },
+        "prettier-results/parser-typescript.js": {
+            "capabilities": [
+                {
+                    "capability_id": "file:manipulation",
+                    "evidence": [
+                        {
+                            "line_no": 2,
+                            "line_content": "var fs=_interopDefault(require(\"fs\"))"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "system:info",
+                    "evidence": [
+                        {
+                            "line_no": 2,
+                            "line_content": "var os=_interopDefault(require(\"os\"))"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "crypto:hashing",
+                    "evidence": [
+                        {
+                            "line_no": 2,
+                            "line_content": "var crypto=_interopDefault(require(\"crypto\"))"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 14,
+                            "line_content": "const r=new SyntaxError(e+\" (\"+t.start.line+\":\"+t.start.column+\")\")"
+                        }
+                    ]
+                }
+            ]
+        },
+        "prettier-results/parser-graphql.js": {
+            "capabilities": [
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 2,
+                            "line_content": "function createError(e,n){const r=new SyntaxError(e+\" (\"+n.start.line+\":\"+n.start.column+\")\");return r.loc=n,r}"
+                        },
+                        {
+                            "line_no": 22,
+                            "line_content": "n.getLocation=function(e,n){var r=/\\r\\n|[\\n\\r]/g,t=1,i=n+1,o=void 0;for(;(o=r.exec(e.body))&&o.index<n;)t+=1,i=n+1-(o.index+o[0].length);return{line:t,column:i}}"
+                        }
+                    ]
+                }
+            ]
+        },
+        "prettier-results/index.js": {
+            "capabilities": [
+                {
+                    "capability_id": "file:manipulation",
+                    "evidence": [
+                        {
+                            "line_no": 5,
+                            "line_content": "var fs = _interopDefault(require('fs'));"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "file:read",
+                    "evidence": [
+                        {
+                            "line_no": 5,
+                            "line_content": "var fs = _interopDefault(require('fs'));"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "env:config",
+                    "evidence": [
+                        {
+                            "line_no": 10,
+                            "line_content": "var os = _interopDefault(require('os'));"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "system:info",
+                    "evidence": [
+                        {
+                            "line_no": 10,
+                            "line_content": "var os = _interopDefault(require('os'));"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 7,
+                            "line_content": "var util = _interopDefault(require('util'));"
+                        }
+                    ]
+                }
+            ]
+        },
+        "prettier-results/bin-prettier.js": {
+            "capabilities": [
+                {
+                    "capability_id": "file:read",
+                    "evidence": [
+                        {
+                            "line_no": 6,
+                            "line_content": "var fs = _interopDefault(require('fs'));"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "file:manipulation",
+                    "evidence": [
+                        {
+                            "line_no": 6,
+                            "line_content": "var fs = _interopDefault(require('fs'));"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "io:streaming",
+                    "evidence": [
+                        {
+                            "line_no": 14,
+                            "line_content": "var readline = _interopDefault(require('readline'));"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "system:info",
+                    "evidence": [
+                        {
+                            "line_no": 10,
+                            "line_content": "var os = _interopDefault(require('os'));"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 12,
+                            "line_content": "var url = _interopDefault(require('url'));"
+                        }
+                    ]
+                }
+            ]
+        },
+        "prettier-results/third-party.js": {
+            "capabilities": [
+                {
+                    "capability_id": "io:streaming",
+                    "evidence": [
+                        {
+                            "line_no": 4,
+                            "line_content": "var stream = _interopDefault(require('stream'));"
+                        },
+                        {
+                            "line_no": 31,
+                            "line_content": "const PassThrough = stream.PassThrough;"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "system:info",
+                    "evidence": [
+                        {
+                            "line_no": 5,
+                            "line_content": "var os = _interopDefault(require('os'));"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "file:manipulation",
+                    "evidence": [
+                        {
+                            "line_no": 7,
+                            "line_content": "var fs = _interopDefault(require('fs'));"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "file:read",
+                    "evidence": [
+                        {
+                            "line_no": 7,
+                            "line_content": "var fs = _interopDefault(require('fs'));"
+                        }
+                    ]
+                },
+                {
+                    "capability_id": "data:serialization",
+                    "evidence": [
+                        {
+                            "line_no": 8,
+                            "line_content": "var util = _interopDefault(require('util'));"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,33 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "export const QUERY_KEYS = {"
+                },
+                {
+                    "line_no": 2,
+                    "line_content": "PACKAGE: \"pkg-identifier\","
+                },
+                {
+                    "line_no": 3,
+                    "line_content": "LICENSE_DETECTION: \"license-identifier\","
+                },
+                {
+                    "line_no": 4,
+                    "line_content": "LICENSE_CLUE_EXPRESSION: \"license-clue-expression\","
+                },
+                {
+                    "line_no": 5,
+                    "line_content": "LICENSE_CLUE_FILE_PATH: \"license-clue-file-path\","
+                },
+                {
+                    "line_no": 6,
+                    "line_content": "LICENSE_CLUE_FILE_CLUE_IDX: \"license-clue-file-clue-idx\""
+                }
+            ]
+        }
+    ]
+}

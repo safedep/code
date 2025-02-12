@@ -1,0 +1,34 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "export const figureOutDefaultSqliteFilePath = (jsonFilePath: string) =>"
+                },
+                {
+                    "line_no": 2,
+                    "line_content": "jsonFilePath.substring(0, jsonFilePath.lastIndexOf(\".\")) + \".sqlite\";"
+                }
+            ]
+        },
+        {
+            "capability_id": "file:read",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "export function getPathDepth(filePath: string) {"
+                },
+                {
+                    "line_no": 6,
+                    "line_content": "const separatorRegExp = /[\\\\/]/g;"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "const depth = (filePath.match(separatorRegExp) || []).length;"
+                }
+            ]
+        }
+    ]
+}

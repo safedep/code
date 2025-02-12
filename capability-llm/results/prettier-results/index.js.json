@@ -1,0 +1,49 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "var fs = _interopDefault(require('fs'));"
+                }
+            ]
+        },
+        {
+            "capability_id": "file:read",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "var fs = _interopDefault(require('fs'));"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "var os = _interopDefault(require('os'));"
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "var os = _interopDefault(require('os'));"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "var util = _interopDefault(require('util'));"
+                }
+            ]
+        }
+    ]
+}

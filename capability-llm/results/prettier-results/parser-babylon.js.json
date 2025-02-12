@@ -1,0 +1,26 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "const s=new SyntaxError(t+\" (\"+e.start.line+\":\"+e.start.column+\")\");"
+                },
+                {
+                    "line_no": 34,
+                    "line_content": "var i={sourceType:\"script\",sourceFilename:void 0,startLine:1,allowReturnOutsideFunction:!1,allowImportExportEverywhere:!1,allowSuperOutsideMethod:!1,plugins:[],strictMode:null,ranges:!1,tokens:!1};"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 26,
+                    "line_content": "return t&&t.__esModule&&Object.prototype.hasOwnProperty.call(t,\"default\")?t.default:t"
+                }
+            ]
+        }
+    ]
+}

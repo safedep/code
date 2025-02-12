@@ -1,0 +1,59 @@
+System Library Capabilities:
+file:manipulation – Creating, writing, deleting, or modifying files
+file:read – Reading files or directories
+network:http – HTTP requests and responses
+network:sockets – Socket-level communication
+network:dns – DNS lookups and resolutions
+process:management – Spawning, killing, or managing processes
+threading:management – Thread creation and synchronization
+crypto:hashing – Hashing operations (e.g., MD5, SHA)
+crypto:encryption – Data encryption and decryption
+
+env:config – Reading or modifying environment variables
+io:streaming – Input/output stream operations
+time:management – Time and date manipulation
+system:info – System information retrieval (e.g., OS version)
+data:serialization – Data formatting and serialization (e.g., JSON, YAML, Protobuf)
+
+3rd Party Dependencies Capabilities:
+db:sql – SQL database operations
+db:nosql – NoSQL database operations
+
+db:mongodb - MongoDB operations
+db:dynamodb - DynamoDB operations
+db:sqlite - Sqlite DB operations
+db:redis - Redis DB operations
+
+aws – General AWS SDK usage
+aws:s3 – S3 storage operations
+aws:lambda – AWS Lambda functions
+aws:sqs – Simple Queue Service operations
+aws:dynamodb – DynamoDB database operations
+
+gcp – General Google Cloud usage
+gcp:storage – Google Cloud Storage operations
+gcp:pubsub – Pub/Sub messaging
+gcp:bigquery – BigQuery data analysis
+
+azure – General Microsoft Azure usage
+azure:blob – Blob storage operations
+azure:functions – Azure Functions (serverless)
+
+ml:framework – General machine learning frameworks
+ml:llm – Large Language Model operations (e.g., OpenAI, LangChain)
+ml:inference – Model inference or prediction
+ml:training – Model training operations
+
+web:framework – General web development frameworks
+web:api – API creation and management
+web:template – Templating engines
+
+auth:oauth – OAuth authentication processes
+auth:jwt – JSON Web Token (JWT) handling
+msg:queue – Message queue usage (e.g., Kafka, RabbitMQ, SQS)
+scraping:web – Web scraping and automation (e.g., BeautifulSoup, Selenium)
+container:management – Containerization tools (e.g., Docker, Kubernetes)
+monitoring:metrics – Monitoring and observability (e.g., Prometheus, Datadog)
+devops:ci_cd – Continuous Integration/Deployment tools
+testing:automation – Automated testing frameworks (e.g., PyTest, JUnit)
+cache:management – Caching mechanisms (e.g., Redis, Memcached)

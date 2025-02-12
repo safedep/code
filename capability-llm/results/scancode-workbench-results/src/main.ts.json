@@ -1,0 +1,53 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "db:sqlite",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "import sqlite3 from \"sqlite3\";"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:template",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "import getTemplate from \"./mainMenu\";"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 26,
+                    "line_content": "const isDev = !app.isPackaged;"
+                }
+            ]
+        },
+        {
+            "capability_id": "process:management",
+            "evidence": [
+                {
+                    "line_no": 30,
+                    "line_content": "if (require(\"electron-squirrel-startup\")) {"
+                },
+                {
+                    "line_no": 31,
+                    "line_content": "app.quit();"
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 38,
+                    "line_content": "app.getAppPath()"
+                }
+            ]
+        }
+    ]
+}

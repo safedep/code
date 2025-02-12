@@ -1,0 +1,52 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "openai.apiKey = process.env.OPENAI_API_KEY;"
+                }
+            ]
+        },
+        {
+            "capability_id": "aws:s3",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "const s3 = new AWS.S3();"
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "await s3.putObject(params).promise();"
+                }
+            ]
+        },
+        {
+            "capability_id": "gcp:storage",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "const gcs = new Storage();"
+                },
+                {
+                    "line_no": 26,
+                    "line_content": "await gcs.bucket(bucketName).upload(filename);"
+                }
+            ]
+        },
+        {
+            "capability_id": "ml:llm",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "const openai = require('openai');"
+                },
+                {
+                    "line_no": 6,
+                    "line_content": "openai.apiKey = process.env.OPENAI_API_KEY;"
+                }
+            ]
+        }
+    ]
+}

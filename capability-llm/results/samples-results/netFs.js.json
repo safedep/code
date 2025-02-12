@@ -1,0 +1,35 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "https.get('https://api.example.com/data-fss', (resp) => {"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "resp.on('data', (chunk) => {"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "resp.on('end', () => {"
+                }
+            ]
+        },
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "fs.writeFileSync('output.txt', data);"
+                }
+            ]
+        }
+    ]
+}

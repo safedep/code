@@ -1,0 +1,22 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "db:sql",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "import { Sequelize, DataTypes, Model } from \"sequelize\";"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "import { jsonDataType } from \"./databaseUtils\";"
+                }
+            ]
+        }
+    ]
+}

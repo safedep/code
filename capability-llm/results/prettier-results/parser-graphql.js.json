@@ -1,0 +1,17 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "function createError(e,n){const r=new SyntaxError(e+\" (\"+n.start.line+\":\"+n.start.column+\")\");return r.loc=n,r}"
+                },
+                {
+                    "line_no": 22,
+                    "line_content": "n.getLocation=function(e,n){var r=/\\r\\n|[\\n\\r]/g,t=1,i=n+1,o=void 0;for(;(o=r.exec(e.body))&&o.index<n;)t+=1,i=n+1-(o.index+o[0].length);return{line:t,column:i}}"
+                }
+            ]
+        }
+    ]
+}

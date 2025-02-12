@@ -1,0 +1,47 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "import moment from \"moment\";"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "return Number(moment(b.opened_at)) - Number(moment(a.opened_at));"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "const history = JSON.parse(window.localStorage.getItem(HISTORY_STORE_KEY) || \"[]\") as HistoryItem[];"
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "return JSON.parse(window.localStorage.getItem(HISTORY_STORE_KEY) || \"[]\") as HistoryItem[];"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "window.localStorage.getItem(HISTORY_STORE_KEY)"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "const history = JSON.parse(window.localStorage.getItem(HISTORY_STORE_KEY) || \"[]\") as HistoryItem[];"
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "return JSON.parse(window.localStorage.getItem(HISTORY_STORE_KEY) || \"[]\") as HistoryItem[];"
+                }
+            ]
+        }
+    ]
+}

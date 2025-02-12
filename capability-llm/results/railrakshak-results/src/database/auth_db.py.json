@@ -1,0 +1,59 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "db:mongodb",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "admins = database.Admins"
+                },
+                {
+                    "line_no": 5,
+                    "line_content": "admins.create_index([(\"id\", ASCENDING)], unique=True)"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "staffs = database.Staffs"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "staffs.create_index([(\"id\", ASCENDING)], unique=True)"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "users = database.Users"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "users.create_index([(\"mobile\", ASCENDING)], unique=True)"
+                },
+                {
+                    "line_no": 20,
+                    "line_content": "document = admins.find_one({\"id\": admin.id})"
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "pwd_context = CryptContext(schemes=[\"bcrypt\"],deprecated=\"auto\")"
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "id += chr(random.randint(65,90))"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "id += str(random.randint(0,9))"
+                }
+            ]
+        }
+    ]
+}

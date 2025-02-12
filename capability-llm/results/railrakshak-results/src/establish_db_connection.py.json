@@ -1,0 +1,39 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "db:mongodb",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "from pymongo import MongoClient"
+                },
+                {
+                    "line_no": 5,
+                    "line_content": "client = MongoClient(f\"mongodb+srv://{USERNAME}:{PASSWORD}@{DB_URL}/?retryWrites=true&w=majority\")"
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "database = client.RailRakshak"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "from src.config import DB_URL, USERNAME, PASSWORD"
+                }
+            ]
+        },
+        {
+            "capability_id": "network:dns",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "client = MongoClient(f\"mongodb+srv://{USERNAME}:{PASSWORD}@{DB_URL}/?retryWrites=true&w=majority\")"
+                }
+            ]
+        }
+    ]
+}

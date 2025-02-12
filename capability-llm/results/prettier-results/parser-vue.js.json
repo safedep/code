@@ -1,0 +1,60 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "\"use strict\";"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:template",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "function makeMap(e,t){const n=Object.create(null),a=e.split(\",\");for(let e=0;e<a.length;e++)n[a[e]]=!0;return t?e=>n[e.toLowerCase()]:e=>n[e]}"
+                },
+                {
+                    "line_no": 3,
+                    "line_content": "const no=()=>!1,isNonPhrasingTag=makeMap(\"address,article,aside,base,blockquote,body,caption,col,colgroup,dd,details,dialog,div,dl,dt,fieldset,figcaption,figure,footer,form,h1,h2,h3,h4,h5,h6,head,header,hgroup,hr,html,legend,li,menuitem,meta,optgroup,option,param,rp,rt,source,style,summary,tbody,td,tfoot,th,thead,title,tr,track\");"
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "const isPlainTextElement=makeMap(\"script,style,textarea\",!0)"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "attribute=/^\\s*([^\\s\"'<>/=]+)(?:\\s*(=)\\s*(?:\"([^\"]*)\"+|'([^']*)'+|([^\\s\"'=<>`]+))?/,"
+                },
+                {
+                    "line_no": 5,
+                    "line_content": "ncname=\"[a-zA-Z_][\\\\w\\\\-\\\\.]*\",qnameCapture=`((?:${ncname}\\\\:)?${ncname})`,startTagOpen=new RegExp(`^<${qnameCapture}`),"
+                },
+                {
+                    "line_no": 6,
+                    "line_content": "startTagClose=/^\\s*(\\/?)>/,endTag=new RegExp(`^<\\\\/${qnameCapture}[^>]*>`),doctype=/^<!DOCTYPE [^>]+>/i,comment=/^<!--/,conditionalComment=/^<!\\\\[/;"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "let IS_REGEX_CAPTURING_BROKEN=!1;"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "\"x\".replace(/x(.)?/g,(e,t)=>{IS_REGEX_CAPTURING_BROKEN=\"\"===t});"
+                }
+            ]
+        }
+    ]
+}

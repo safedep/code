@@ -1,0 +1,39 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "const currentTime = new Date().getTime();"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "if (debugClasses.has(debugClass)) console.log(...args);"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "console.log(id, ...args);"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "const debugClasses = new Set(["
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "const lastLogs: { [key: string]: number } = {};"
+                }
+            ]
+        }
+    ]
+}

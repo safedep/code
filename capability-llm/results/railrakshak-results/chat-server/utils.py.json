@@ -1,0 +1,39 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "import string"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:randomization",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "import random"
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "return ''.join(random.choice(characters) for _ in range(length))"
+                }
+            ]
+        },
+        {
+            "capability_id": "string:manipulation",
+            "evidence": [
+                {
+                    "line_no": 22,
+                    "line_content": "lowercase_input = input_string.lower()"
+                },
+                {
+                    "line_no": 26,
+                    "line_content": "if init_str.lower() in lowercase_input:"
+                }
+            ]
+        }
+    ]
+}

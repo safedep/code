@@ -1,0 +1,83 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "ml:framework",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "import ultralytics"
+                }
+            ]
+        },
+        {
+            "capability_id": "ml:inference",
+            "evidence": [
+                {
+                    "line_no": 21,
+                    "line_content": "model = ultralytics.YOLO('yolov8x.pt')"
+                },
+                {
+                    "line_no": 51,
+                    "line_content": "results = model(\"rtmp://127.0.0.1/mystream\", stream=True, save=False)"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "from fastapi import FastAPI, WebSocket, WebSocketDisconnect"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "app = FastAPI()"
+                }
+            ]
+        },
+        {
+            "capability_id": "network:sockets",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "from fastapi import FastAPI, WebSocket, WebSocketDisconnect"
+                },
+                {
+                    "line_no": 35,
+                    "line_content": "class WebSocketConnection:"
+                }
+            ]
+        },
+        {
+            "capability_id": "ml:framework",
+            "evidence": [
+                {
+                    "line_no": 22,
+                    "line_content": "print(f\"YOLO model loaded !\")"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 51,
+                    "line_content": "results = model(\"rtmp://127.0.0.1/mystream\", stream=True, save=False)"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:api",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "app = FastAPI()"
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "app.add_middleware("
+                }
+            ]
+        }
+    ]
+}

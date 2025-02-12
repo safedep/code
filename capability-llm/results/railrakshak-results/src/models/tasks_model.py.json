@@ -1,0 +1,47 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "import datetime"
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "last_modified: str = Form(default=datetime.datetime.now())"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "created_at: str = Form(default=datetime.datetime.now())"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:api",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "from fastapi import Form"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "from pydantic import BaseModel"
+                },
+                {
+                    "line_no": 6,
+                    "line_content": "class Task(BaseModel):"
+                },
+                {
+                    "line_no": 27,
+                    "line_content": "class IncidentToTask(BaseModel):"
+                }
+            ]
+        }
+    ]
+}

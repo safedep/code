@@ -1,0 +1,26 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "var util=_interopDefault(require(\"util\"))"
+                },
+                {
+                    "line_no": 24,
+                    "line_content": "function unwrapExports(r){return r&&r.__esModule&&Object.prototype.hasOwnProperty.call(r,\"default\")?r.default:r}"
+                }
+            ]
+        },
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "var path=_interopDefault(require(\"path\"))"
+                }
+            ]
+        }
+    ]
+}

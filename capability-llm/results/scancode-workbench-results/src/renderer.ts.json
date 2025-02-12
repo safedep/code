@@ -1,0 +1,40 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "import { renderReactApp } from \"./reactApp\";"
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "* To learn more about the differences between the \"main\" and the \"renderer\" context in"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "* By default, Node.js integration in this file is disabled. When enabling Node.js integration"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "https://electronjs.org/docs/tutorial/application-architecture#main-and-renderer-processes"
+                }
+            ]
+        }
+    ]
+}
