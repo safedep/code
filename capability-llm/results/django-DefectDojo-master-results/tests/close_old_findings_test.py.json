@@ -1,0 +1,90 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "import sys"
+                }
+            ]
+        },
+        {
+            "capability_id": "file:read",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "from pathlib import Path"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "dir_path = Path(os.path.realpath(__file__)).parent"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "import os"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "dir_path = Path(os.path.realpath(__file__)).parent"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "import unittest"
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "from base_test_class import BaseTestCase, on_exception_html_source_logger, set_suite_settings"
+                },
+                {
+                    "line_no": 14,
+                    "line_content": "from product_test import ProductTest"
+                },
+                {
+                    "line_no": 23,
+                    "line_content": "class CloseOldTest(BaseTestCase):"
+                }
+            ]
+        },
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "from selenium.common.exceptions import TimeoutException"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "from selenium.webdriver.common.by import By"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "from selenium.webdriver.support.ui import Select, WebDriverWait"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "from selenium.webdriver.support.expected_conditions as EC"
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "dir_path = Path(os.path.realpath(__file__)).parent"
+                }
+            ]
+        }
+    ]
+}

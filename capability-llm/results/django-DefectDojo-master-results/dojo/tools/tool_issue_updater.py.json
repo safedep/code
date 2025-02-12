@@ -1,0 +1,59 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "web:api",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "from dojo.celery import app"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "@dojo_async_task"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "@dojo_async_task"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "@app.task"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "def async_tool_issue_update(finding, *args, **kwargs):"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "def tool_issue_updater(finding, *args, **kwargs):"
+                },
+                {
+                    "line_no": 22,
+                    "line_content": "SonarQubeApiUpdater().update_sonarqube_finding(finding)"
+                },
+                {
+                    "line_no": 25,
+                    "line_content": "def update_findings_from_source_issues(**kwargs):"
+                }
+            ]
+        },
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "@dojo_async_task"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "@dojo_async_task"
+                }
+            ]
+        }
+    ]
+}

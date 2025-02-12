@@ -1,0 +1,22 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "const ForkTsCheckerWebpackPlugin = require(\"fork-ts-checker-webpack-plugin\");"
+                }
+            ]
+        },
+        {
+            "capability_id": "devops:ci_cd",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "module.exports = [new ForkTsCheckerWebpackPlugin()];"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,67 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "logging:management",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "logger = logging.getLogger(__name__)"
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "logger.debug(\"\\n\\nDebug Print Log: testing 'create product type' \\n\")"
+                }
+            ]
+        },
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "driver = self.driver"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "driver.get(self.base_url + \"product/type\")"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "driver.find_element(By.ID, \"dropdownMenu1\").click()"
+                },
+                {
+                    "line_no": 19,
+                    "line_content": "driver.find_element(By.LINK_TEXT, \"Add Product Type\").click()"
+                },
+                {
+                    "line_no": 20,
+                    "line_content": "driver.find_element(By.ID, \"id_name\").clear()"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "driver.find_element(By.ID, \"id_name\").send_keys(\"Product test type\")"
+                },
+                {
+                    "line_no": 22,
+                    "line_content": "driver.find_element(By.ID, \"id_critical_product\").click()"
+                },
+                {
+                    "line_no": 23,
+                    "line_content": "driver.find_element(By.CSS_SELECTOR, \"input.btn.btn-primary\").click()"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "class ProductTypeTest(BaseTestCase):"
+                },
+                {
+                    "line_no": 25,
+                    "line_content": "self.assertTrue(self.is_success_message_present(text=\"Product type added successfully.\"))"
+                }
+            ]
+        }
+    ]
+}

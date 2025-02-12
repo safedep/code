@@ -1,0 +1,52 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:sockets",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "s = socket.socket()"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "s.connect((address, port))"
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 25,
+                    "line_content": "zap = ZAPv2(proxies={\"http\": \"http://127.0.0.1:8080\", \"https\": \"http://127.0.0.1:8080\"})"
+                }
+            ]
+        },
+        {
+            "capability_id": "logging",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "logger = logging.getLogger(__name__)"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "logger.info(\"Checking if ZAP is running, connecting to ZAP on http://\" + address + \":\" + str(port))"
+                },
+                {
+                    "line_no": 23,
+                    "line_content": "logger.info(\"Error connecting to ZAP, exiting.\")"
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "import time"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,30 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "__version__ = \"2.43.1\""
+                },
+                {
+                    "line_no": 6,
+                    "line_content": "__url__ = \"https://github.com/DefectDojo/django-DefectDojo\""
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "__docs__ = \"https://documentation.defectdojo.com\""
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "from .celery import app as celery_app  # noqa: F401"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,56 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "file:read",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "dir_path = Path(os.path.realpath(__file__)).parent"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "# Username and password will be gotten from environ"
+                }
+            ]
+        },
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 23,
+                    "line_content": "driver.find_element(By.ID, \"products_wrapper\")"
+                },
+                {
+                    "line_no": 24,
+                    "line_content": "driver.find_element(By.LINK_TEXT, \"QA Test\").click()"
+                },
+                {
+                    "line_no": 26,
+                    "line_content": "driver.find_element(By.PARTIAL_LINK_TEXT, \"Findings\").click()"
+                },
+                {
+                    "line_no": 28,
+                    "line_content": "driver.find_element(By.LINK_TEXT, \"Import Scan Results\").click("
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "class IBMAppScanTest(BaseTestCase):"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "def test_import_ibm_app_scan_result(self):"
+                }
+            ]
+        }
+    ]
+}

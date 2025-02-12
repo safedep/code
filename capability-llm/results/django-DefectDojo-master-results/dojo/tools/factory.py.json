@@ -1,0 +1,40 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "from django.conf import settings"
+                }
+            ]
+        },
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "from pathlib import Path"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "import re"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "from django.conf import settings"
+                }
+            ]
+        }
+    ]
+}

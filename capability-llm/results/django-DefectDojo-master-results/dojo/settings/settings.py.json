@@ -1,0 +1,30 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "# See https://documentation.defectdojo.com/getting_started/configuration/ for options"
+                }
+            ]
+        },
+        {
+            "capability_id": "file:read",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "include("
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "    \"settings.dist.py\","
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "    optional(\"local_settings.py\"),"
+                }
+            ]
+        }
+    ]
+}

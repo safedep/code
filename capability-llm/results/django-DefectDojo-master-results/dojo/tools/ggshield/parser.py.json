@@ -1,0 +1,35 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "import json"
+                },
+                {
+                    "line_no": 24,
+                    "line_content": "json_data = json.load(filename)"
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "from dateutil import parser"
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "import hashlib"
+                }
+            ]
+        }
+    ]
+}

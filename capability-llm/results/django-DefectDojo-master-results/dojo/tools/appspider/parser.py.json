@@ -1,0 +1,31 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "file:read",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "vscan = ElementTree.parse(filename)"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "root = vscan.getroot()"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "from dojo.models import Endpoint, Finding"
+                }
+            ]
+        }
+    ]
+}

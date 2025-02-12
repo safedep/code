@@ -1,0 +1,75 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "from selenium.common.exceptions import TimeoutException"
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "from selenium.webdriver.common.by import By"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "from selenium.webdriver.support import expected_conditions as EC"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "from selenium.webdriver.support.ui import Select, WebDriverWait"
+                },
+                {
+                    "line_no": 23,
+                    "line_content": "driver.get(self.base_url + \"user\")"
+                },
+                {
+                    "line_no": 25,
+                    "line_content": "driver.find_element(By.LINK_TEXT, \"propersahm\").click()"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "import unittest"
+                },
+                {
+                    "line_no": 6,
+                    "line_content": "from base_test_class import BaseTestCase"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "from product_test import ProductTest"
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "from user_test import UserTest"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "class ProductMemberTest(BaseTestCase):"
+                },
+                {
+                    "line_no": 19,
+                    "line_content": "def test_user_add_product_member(self):"
+                }
+            ]
+        },
+        {
+            "capability_id": "logging:usage",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "import logging"
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "logger = logging.getLogger(__name__)"
+                }
+            ]
+        }
+    ]
+}

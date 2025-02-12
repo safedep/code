@@ -1,0 +1,26 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "os.environ.setdefault(\"DJANGO_SETTINGS_MODULE\", \"dojo.settings.settings\")"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "from django.core.management import execute_from_command_line"
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "execute_from_command_line(sys.argv)"
+                }
+            ]
+        }
+    ]
+}

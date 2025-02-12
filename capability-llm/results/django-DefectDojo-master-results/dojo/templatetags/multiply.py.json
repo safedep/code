@@ -1,0 +1,21 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "web:template",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "from django import template"
+                },
+                {
+                    "line_no": 3,
+                    "line_content": "register = template.Library()"
+                },
+                {
+                    "line_no": 6,
+                    "line_content": "@register.filter"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,47 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "driver.get(self.base_url + \"user\")"
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "driver.get(self.base_url + \"calendar\")"
+                }
+            ]
+        },
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "driver.find_element(By.CSS_SELECTOR, \"input.btn.btn-primary\").click()"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "class VariousPagesTest(BaseTestCase):"
+                },
+                {
+                    "line_no": 19,
+                    "line_content": "suite = unittest.TestSuite()"
+                },
+                {
+                    "line_no": 27,
+                    "line_content": "runner = unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)"
+                },
+                {
+                    "line_no": 28,
+                    "line_content": "ret = not runner.run(suite()).wasSuccessful()"
+                }
+            ]
+        }
+    ]
+}

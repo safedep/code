@@ -1,0 +1,90 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 20,
+                    "line_content": "from django.contrib import messages"
+                },
+                {
+                    "line_no": 23,
+                    "line_content": "from django.db.models import Case, Count, IntegerField, Q, Sum, Value, When"
+                },
+                {
+                    "line_no": 26,
+                    "line_content": "from django.shortcuts import get_object_or_404, render"
+                },
+                {
+                    "line_no": 27,
+                    "line_content": "from django.urls import reverse"
+                },
+                {
+                    "line_no": 28,
+                    "line_content": "from django.utils import timezone"
+                },
+                {
+                    "line_no": 32,
+                    "line_content": "from django.views.decorators.cache import cache_page"
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "from calendar import monthrange"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "from datetime import date, datetime, timedelta"
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "from dateutil.relativedelta import relativedelta"
+                }
+            ]
+        },
+        {
+            "capability_id": "auth:oauth",
+            "evidence": [
+                {
+                    "line_no": 36,
+                    "line_content": "from dojo.authorization.authorization import user_has_permission_or_403"
+                },
+                {
+                    "line_no": 37,
+                    "line_content": "from dojo.authorization.roles_permissions import Permissions"
+                }
+            ]
+        },
+        {
+            "capability_id": "db:sql",
+            "evidence": [
+                {
+                    "line_no": 23,
+                    "line_content": "from django.db.models import Case, Count, IntegerField, Q, Sum, Value, When"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:template",
+            "evidence": [
+                {
+                    "line_no": 26,
+                    "line_content": "from django.shortcuts import get_object_or_404, render"
+                }
+            ]
+        },
+        {
+            "capability_id": "cache:management",
+            "evidence": [
+                {
+                    "line_no": 32,
+                    "line_content": "from django.views.decorators.cache import cache_page"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,39 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "import json"
+                },
+                {
+                    "line_no": 48,
+                    "line_content": "tree = json.load(file)"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "import logging"
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "logger = logging.getLogger(__name__)"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:template",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "DESCRIPTION_TEMPLATE = \"\"\"**{title}**"
+                }
+            ]
+        }
+    ]
+}

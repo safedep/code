@@ -1,0 +1,87 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "from datetime import date, datetime"
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "from django.utils import timezone"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "from dateutil.relativedelta import relativedelta"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "from django.conf import settings"
+                },
+                {
+                    "line_no": 2,
+                    "line_content": "import os"
+                }
+            ]
+        },
+        {
+            "capability_id": "auth:oauth",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "from django.contrib.auth.models import Permission"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "from django.contrib.auth.password_validation import validate_password"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "import pickle"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:template",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "from django.utils.safestring import mark_safe"
+                }
+            ]
+        },
+        {
+            "capability_id": "db:sql",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "from django.db.models import Count, Q"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "from django import forms"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "from django.utils.translation import gettext_lazy as _"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,46 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "f = open(\"selenium_page_source.html\", \"w\", encoding=\"utf-8\")"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "f.writelines(self.driver.page_source)"
+                }
+            ]
+        },
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "from selenium import webdriver"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "from selenium.common.exceptions import NoAlertPresentException, NoSuchElementException"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "from selenium.webdriver.chrome.options import Options"
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "from selenium.webdriver.common.by import By"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "from selenium.webdriver.support import expected_conditions as EC"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "from selenium.webdriver.support.ui import WebDriverWait"
+                }
+            ]
+        }
+    ]
+}

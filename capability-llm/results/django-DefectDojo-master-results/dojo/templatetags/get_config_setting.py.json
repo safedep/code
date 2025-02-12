@@ -1,0 +1,38 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "from django.conf import settings"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "if hasattr(settings, config_setting):"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "return bool(getattr(settings, config_setting, None))"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:template",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "from django import template"
+                },
+                {
+                    "line_no": 4,
+                    "line_content": "register = template.Library()"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "@register.filter"
+                }
+            ]
+        }
+    ]
+}

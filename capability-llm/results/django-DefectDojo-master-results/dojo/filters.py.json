@@ -1,0 +1,65 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "from datetime import datetime, timedelta"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "from django.utils import timezone"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "from django.db.models import JSONField, Q"
+                }
+            ]
+        },
+        {
+            "capability_id": "db:sql",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "from django.forms import HiddenInput"
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "from django.db.models import JSONField, Q"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:api",
+            "evidence": [
+                {
+                    "line_no": 33,
+                    "line_content": "from django_filters import rest_framework as filters"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "from django import forms"
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "from django.apps import apps"
+                },
+                {
+                    "line_no": 14,
+                    "line_content": "from django.conf import settings"
+                }
+            ]
+        }
+    ]
+}

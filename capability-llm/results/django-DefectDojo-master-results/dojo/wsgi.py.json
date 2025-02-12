@@ -1,0 +1,35 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "from django.core.wsgi import get_wsgi_application"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "import os"
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "os.environ.get('DJANGO_SETTINGS_MODULE')"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "import logging"
+                }
+            ]
+        }
+    ]
+}

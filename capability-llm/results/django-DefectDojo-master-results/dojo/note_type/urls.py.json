@@ -1,0 +1,42 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "from django.urls import re_path"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:api",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "from dojo.note_type import views"
+                },
+                {
+                    "line_no": 6,
+                    "line_content": "re_path(r\"^note_type$\","
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "re_path(r\"^note/type/(?P<ntid>\\d+)/edit$\","
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "re_path(r\"^note/type/(?P<ntid>\\d+)/disable$\","
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "re_path(r\"^note/type/(?P<ntid>\\d+)/enable$\","
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "re_path(r\"^add_note_type$\","
+                }
+            ]
+        }
+    ]
+}

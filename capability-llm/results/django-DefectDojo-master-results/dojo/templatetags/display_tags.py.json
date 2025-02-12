@@ -1,0 +1,114 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "web:template",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "from django import template"
+                }
+            ]
+        },
+        {
+            "capability_id": "auth:oauth",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "from django.contrib.auth.models import User"
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "import datetime"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "import dateutil.relativedelta"
+                },
+                {
+                    "line_no": 28,
+                    "line_content": "from django.utils import timezone"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "from ast import literal_eval"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 21,
+                    "line_content": "from django.conf import settings"
+                },
+                {
+                    "line_no": 23,
+                    "line_content": "from django.db.models import Case, IntegerField, Sum, Value, When"
+                }
+            ]
+        },
+        {
+            "capability_id": "db:sql",
+            "evidence": [
+                {
+                    "line_no": 22,
+                    "line_content": "from django.contrib.contenttypes.models import ContentType"
+                },
+                {
+                    "line_no": 23,
+                    "line_content": "from django.db.models import Case, IntegerField, Sum, Value, When"
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:base64",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "import base64"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:template",
+            "evidence": [
+                {
+                    "line_no": 26,
+                    "line_content": "from django.template.defaultfilters import stringfilter"
+                },
+                {
+                    "line_no": 32,
+                    "line_content": "from django.utils.safestring import mark_safe"
+                }
+            ]
+        },
+        {
+            "capability_id": "logging",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "import logging"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:mimetypes",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "import mimetypes"
+                }
+            ]
+        }
+    ]
+}

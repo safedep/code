@@ -1,0 +1,26 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "import json"
+                },
+                {
+                    "line_no": 38,
+                    "line_content": "data = json.load(scan_file)"
+                }
+            ]
+        },
+        {
+            "capability_id": "file:read",
+            "evidence": [
+                {
+                    "line_no": 38,
+                    "line_content": "data = json.load(scan_file)"
+                }
+            ]
+        }
+    ]
+}

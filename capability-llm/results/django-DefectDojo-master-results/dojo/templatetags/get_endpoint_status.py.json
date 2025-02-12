@@ -1,0 +1,58 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "db:sql",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "from django.db.models import Q"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "from dojo.models import Endpoint_Status"
+                },
+                {
+                    "line_no": 26,
+                    "line_content": "return finding.endpoints.filter("
+                },
+                {
+                    "line_no": 37,
+                    "line_content": "return finding.endpoints.filter("
+                },
+                {
+                    "line_no": 47,
+                    "line_content": "status = Endpoint_Status.objects.get(endpoint=endpoint, finding"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:template",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "from django import template"
+                },
+                {
+                    "line_no": 6,
+                    "line_content": "register = template.Library()"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "@register.filter(name=\"has_endpoints\")"
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "@register.filter(name=\"get_vulnerable_endpoints\")"
+                },
+                {
+                    "line_no": 24,
+                    "line_content": "@register.filter(name=\"get_mitigated_endpoints\")"
+                },
+                {
+                    "line_no": 46,
+                    "line_content": "@register.filter"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,96 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "import time"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "time.sleep(0.5)"
+                },
+                {
+                    "line_no": 25,
+                    "line_content": "time.sleep(1)"
+                },
+                {
+                    "line_no": 30,
+                    "line_content": "time.sleep(1)"
+                }
+            ]
+        },
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "from selenium.webdriver.common.by import By"
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "elems = driver.find_elements(By.NAME, \"collapsible\")"
+                },
+                {
+                    "line_no": 20,
+                    "line_content": "if not driver.find_element(By.ID, \"add_note\").is_displayed():"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "self.uncollapse_all(driver)"
+                },
+                {
+                    "line_no": 22,
+                    "line_content": "driver.find_element(By.ID, \"id_entry\").send_keys(\"Test public note\")"
+                },
+                {
+                    "line_no": 23,
+                    "line_content": "driver.find_element(By.ID, \"add_note\").click()"
+                },
+                {
+                    "line_no": 24,
+                    "line_content": "if not driver.find_element(By.ID, \"add_note\").is_displayed():"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "import unittest"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "from base_test_class import BaseTestCase"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "from product_test import ProductTest"
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "class NoteTest(BaseTestCase):"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "import logging"
+                },
+                {
+                    "line_no": 2,
+                    "line_content": "import sys"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "logger = logging.getLogger(__name__)"
+                }
+            ]
+        }
+    ]
+}

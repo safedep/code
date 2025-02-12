@@ -1,0 +1,55 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "from unittest import TestCase"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "class AnnouncementBannerTest(BaseTestCase):"
+                }
+            ]
+        },
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "from selenium.webdriver.common.by import By"
+                },
+                {
+                    "line_no": 4,
+                    "line_content": "from selenium.webdriver.support.ui import Select"
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "driver = self.driver"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "driver.get(self.base_url + 'configure_announcement')"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "if self.is_element_by_css_selector_present('input.btn.btn-danger'):"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "driver.find_element(By.CSS_SELECTOR, 'input.btn.btn-danger').click()"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:api",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "driver.get(self.base_url + 'configure_announcement')"
+                }
+            ]
+        }
+    ]
+}

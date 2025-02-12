@@ -1,0 +1,71 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "from selenium.webdriver.common.by import By"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "from selenium.webdriver.common.keys import Keys"
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "from selenium.webdriver.support.ui import Select"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "self.old_page = self.browser.find_element(By.TAG_NAME, \"html\")"
+                },
+                {
+                    "line_no": 22,
+                    "line_content": "new_page = self.browser.find_element(By.TAG_NAME, \"html\")"
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "import time"
+                },
+                {
+                    "line_no": 14,
+                    "line_content": "self.timeout = time.time() + timeout"
+                },
+                {
+                    "line_no": 27,
+                    "line_content": "while time.time() < self.timeout:"
+                },
+                {
+                    "line_no": 29,
+                    "line_content": "time.sleep(0.2)"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "import unittest"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "from base_test_class import BaseTestCase, on_exception_html_source_logger, set_suite_settings"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "from notifications_test import NotificationTest"
+                },
+                {
+                    "line_no": 38,
+                    "line_content": "class ProductTest(BaseTestCase):"
+                }
+            ]
+        }
+    ]
+}

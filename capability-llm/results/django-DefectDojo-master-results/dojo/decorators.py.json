@@ -1,0 +1,106 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "logging:management",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "import logging"
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "logger = logging.getLogger(__name__)"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "logger.debug(\"dojo_async_task %s: running task in the foreground as sync=True has been found as kwarg\", func)"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "logger.debug(\"user: %s\", user)"
+                },
+                {
+                    "line_no": 24,
+                    "line_content": "logger.debug(\"dojo_async_task %s: running task in the foreground as block_execution is set to True for %s\", func, user)"
+                },
+                {
+                    "line_no": 27,
+                    "line_content": "logger.debug(\"dojo_async_task %s: no current user, running ta"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "from django.conf import settings"
+                }
+            ]
+        },
+        {
+            "capability_id": "db:sql",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "from django.db import models"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "from dojo.models import Dojo_User, Finding"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "from django.conf import settings"
+                },
+                {
+                    "line_no": 5,
+                    "line_content": "from django.db import models"
+                },
+                {
+                    "line_no": 6,
+                    "line_content": "from django_ratelimit import UNSAFE"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "from django_ratelimit.core import is_ratelimited"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "from django_ratelimit.exceptions import Ratelimited"
+                }
+            ]
+        },
+        {
+            "capability_id": "auth:ratelimit",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "from django_ratelimit import UNSAFE"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "from django_ratelimit.core import is_ratelimited"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "from django_ratelimit.exceptions import Ratelimited"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 27,
+                    "line_content": "logger.debug(\"dojo_async_task %s: no current user, running ta"
+                }
+            ]
+        }
+    ]
+}

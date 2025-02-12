@@ -1,0 +1,62 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "from selenium.webdriver.common.by import By"
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "from selenium.webdriver.common.keys import Keys"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "from selenium.webdriver.support.ui import Select"
+                },
+                {
+                    "line_no": 22,
+                    "line_content": "driver.find_element(By.PARTIAL_LINK_TEXT, \"Ad Hoc Engagement\").click()"
+                },
+                {
+                    "line_no": 24,
+                    "line_content": "driver.find_element(By.PARTIAL_LINK_TEXT, \"Pen Test\").click()"
+                },
+                {
+                    "line_no": 26,
+                    "line_content": "driver.find_element(By.ID, \"select_all\").click()"
+                },
+                {
+                    "line_no": 29,
+                    "line_content": "driver.find_element(By.ID, \"dropdownMenu2\").click()"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "import unittest"
+                },
+                {
+                    "line_no": 5,
+                    "line_content": "from base_test_class import BaseTestCase, on_exception_html_source_logger"
+                },
+                {
+                    "line_no": 6,
+                    "line_content": "from product_test import ProductTest, WaitForPageLoad"
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "class TestUnitTest(BaseTestCase):"
+                },
+                {
+                    "line_no": 14,
+                    "line_content": "def test_view_test(self):"
+                }
+            ]
+        }
+    ]
+}

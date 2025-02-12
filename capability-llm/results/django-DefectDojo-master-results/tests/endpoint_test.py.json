@@ -1,0 +1,71 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "from selenium.webdriver.common.by import By"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "from selenium.webdriver.support.ui import Select"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "driver.find_element(By.ID, \"dropdownMenu1\").click()"
+                },
+                {
+                    "line_no": 23,
+                    "line_content": "driver.find_element(By.LINK_TEXT, \"New Endpoint\").click()"
+                },
+                {
+                    "line_no": 26,
+                    "line_content": "driver.find_element(By.ID, \"id_endpoint\").clear()"
+                },
+                {
+                    "line_no": 27,
+                    "line_content": "driver.find_element(By.ID, \"id_endpoint\").send_keys(\"moving.com.rnd\")"
+                },
+                {
+                    "line_no": 29,
+                    "line_content": "Select(driver.find_element("
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "# Username and password will be gotten from environ"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "import unittest"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "class EndpointTest(BaseTestCase):"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "from selenium.webdriver.common.by import By"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "from selenium.webdriver.support.ui import Select"
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "def test_create_endpoint(self):"
+                }
+            ]
+        }
+    ]
+}

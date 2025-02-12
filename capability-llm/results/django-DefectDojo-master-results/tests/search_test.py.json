@@ -1,0 +1,66 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "from selenium.webdriver.common.by import By"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "class SearchTests(BaseTestCase):"
+                },
+                {
+                    "line_no": 14,
+                    "line_content": "driver.find_element(By.ID, \"simple_search\").clear()"
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "driver.find_element(By.ID, \"simple_search\").send_keys(\"finding\")"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "driver.find_element(By.ID, \"simple_search_submit\").click()"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "driver.find_element(By.ID, \"simple_search\").clear()"
+                },
+                {
+                    "line_no": 22,
+                    "line_content": "driver.find_element(By.ID, \"simple_search\").send_keys(\"vulnerability_id:CVE-2020-12345\")"
+                },
+                {
+                    "line_no": 23,
+                    "line_content": "driver.find_element(By.ID, \"simple_search_submit\").click()"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "import unittest"
+                },
+                {
+                    "line_no": 5,
+                    "line_content": "from base_test_class import BaseTestCase"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "class SearchTests(BaseTestCase):"
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "def test_search(self):"
+                },
+                {
+                    "line_no": 19,
+                    "line_content": "def test_search_vulnerability_id(self):"
+                }
+            ]
+        }
+    ]
+}

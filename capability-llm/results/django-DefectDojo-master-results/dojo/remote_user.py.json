@@ -1,0 +1,94 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "logging",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "logger = logging.getLogger(__name__)"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "from django.conf import settings"
+                },
+                {
+                    "line_no": 4,
+                    "line_content": "from django.contrib.auth.backends import RemoteUserBackend as OriginalRemoteUserBackend"
+                },
+                {
+                    "line_no": 5,
+                    "line_content": "from django.contrib.auth.middleware import RemoteUserMiddleware as OriginalRemoteUserMiddleware"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "class RemoteUserAuthentication(OriginalRemoteUserAuthentication):"
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 20,
+                    "line_content": "if IPAddress(request.META[\"REMOTE_ADDR\"]) in settings.AUTH_REMOTEUSER_TRUSTED_PROXY:"
+                }
+            ]
+        },
+        {
+            "capability_id": "auth:oauth",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "from django.contrib.auth.backends import RemoteUserBackend as OriginalRemoteUserBackend"
+                },
+                {
+                    "line_no": 5,
+                    "line_content": "from django.contrib.auth.middleware import RemoteUserMiddleware as OriginalRemoteUserMiddleware"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "class RemoteUserAuthentication(OriginalRemoteUserAuthentication):"
+                },
+                {
+                    "line_no": 25,
+                    "line_content": "return super()."
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "from django.conf import settings"
+                },
+                {
+                    "line_no": 20,
+                    "line_content": "if IPAddress(request.META[\"REMOTE_ADDR\"]) in settings.AUTH_REMOTEUSER_TRUSTED_PROXY:"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "self.header = settings.AUTH_REMOTEUSER_USERNAME_HEADER"
+                }
+            ]
+        },
+        {
+            "capability_id": "db:sql",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "from dojo.models import Dojo_Group"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "from dojo.pipeline import assign_user_to_groups, cleanup_old_groups_for_user"
+                }
+            ]
+        }
+    ]
+}

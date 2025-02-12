@@ -1,0 +1,56 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "import hashlib"
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "from datetime import datetime"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "find_date = datetime.now()"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "lines = filename.read()"
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "if isinstance(lines, bytes):"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "lines = lines.decode(\"utf-8\")"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 24,
+                    "line_content": "warnings = lines.split(\"\\n\\n\")"
+                },
+                {
+                    "line_no": 27,
+                    "line_content": "gem_report_fields = warning.split(\"\\n\")"
+                }
+            ]
+        }
+    ]
+}

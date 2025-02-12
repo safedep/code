@@ -1,0 +1,22 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "import json"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "import logging"
+                }
+            ]
+        }
+    ]
+}

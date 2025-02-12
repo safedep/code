@@ -1,0 +1,68 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "driver.find_element(By.ID, \"id_username\").send_keys(os.environ[\"DD_ADMIN_USER\"])"
+                },
+                {
+                    "line_no": 14,
+                    "line_content": "driver.find_element(By.ID, \"id_password\").send_keys(os.environ[\"DD_ADMIN_PASSWORD\"])"
+                }
+            ]
+        },
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "from selenium.webdriver.common.by import By"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "class RegulationTest(BaseTestCase):"
+                },
+                {
+                    "line_no": 19,
+                    "line_content": "driver.find_element(By.ID, \"id_username\").clear()"
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "driver.find_element(By.ID, \"id_password\").clear()"
+                },
+                {
+                    "line_no": 23,
+                    "line_content": "driver.find_element(By.CSS_SELECTOR, \"button.btn.btn-success\").click()"
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "driver.get(self.base_url + \"login\")"
+                },
+                {
+                    "line_no": 26,
+                    "line_content": "driver.get(self.base_url + \"regulations\")"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "from base_test_class import BaseTestCase"
+                },
+                {
+                    "line_no": 24,
+                    "line_content": "def test_create_regulation(self):"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,72 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "dir_path = Path(os.path.realpath(__file__)).parent"
+                }
+            ]
+        },
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "from selenium.webdriver.common.action_chains import ActionChains"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "from selenium.webdriver.common.by import By"
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "from selenium.webdriver.support import expected_conditions as EC"
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "from selenium.webdriver.support.ui import Select, WebDriverWait"
+                },
+                {
+                    "line_no": 19,
+                    "line_content": "in_use = driver.find_element(By.ID, \"sortable2\")"
+                },
+                {
+                    "line_no": 20,
+                    "line_content": "available_widgets = driver.find_element(By.ID, \"sortable1\").find_elements(By.TAG_NAME, \"li\")"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "ActionChains(driver).drag_and_drop(widget, in_use).perform()"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "from base_test_class import BaseTestCase"
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "from product_test import ProductTest"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "class ReportBuilderTest(BaseTestCase):"
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "dir_path = Path(os.path.realpath(__file__)).parent"
+                }
+            ]
+        }
+    ]
+}

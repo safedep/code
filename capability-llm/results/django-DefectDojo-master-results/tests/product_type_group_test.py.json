@@ -1,0 +1,67 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "from selenium.common.exceptions import TimeoutException"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "from selenium.webdriver.common.by import By"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "from selenium.webdriver.support import expected_conditions as EC"
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "from selenium.webdriver.support.ui import Select, WebDriverWait"
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "driver.find_element(By.ID, \"dropdownMenuAddProductTypeGroup\").click()"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "driver.find_element(By.ID, \"addProductTypeGroup\").click()"
+                },
+                {
+                    "line_no": 19,
+                    "line_content": "WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.ID, \"id_product_types\")))"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "import unittest"
+                },
+                {
+                    "line_no": 5,
+                    "line_content": "from base_test_class import BaseTestCase"
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "class ProductTypeGroupTest(BaseTestCase):"
+                },
+                {
+                    "line_no": 14,
+                    "line_content": "def test_group_add_product_type_group(self):"
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.ID, \"id_product_types\")))"
+                }
+            ]
+        }
+    ]
+}

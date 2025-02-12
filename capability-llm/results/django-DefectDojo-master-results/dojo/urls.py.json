@@ -1,0 +1,60 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "from django.conf import settings"
+                },
+                {
+                    "line_no": 4,
+                    "line_content": "from django.conf.urls import include"
+                },
+                {
+                    "line_no": 5,
+                    "line_content": "from django.contrib import admin"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "from django.urls import re_path"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:api",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "from drf_spectacular.views import SpectacularSwaggerView"
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "from rest_framework.authtoken import views as tokenviews"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "from rest_framework.routers import DefaultRouter"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "from drf_spectacular.views import SpectacularSwaggerView"
+                }
+            ]
+        },
+        {
+            "capability_id": "auth:jwt",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "from rest_framework.authtoken import views as tokenviews"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,39 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "from django.contrib import admin"
+                },
+                {
+                    "line_no": 3,
+                    "line_content": "from polymorphic.admin import PolymorphicChildModelAdmin, PolymorphicParentModelAdmin"
+                }
+            ]
+        },
+        {
+            "capability_id": "db:sql",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "from auditlog.models import LogEntry"
+                },
+                {
+                    "line_no": 5,
+                    "line_content": "from dojo.models import ("
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "from dojo.models import ("
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,63 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "auth:permissions",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "from dojo.authorization.authorization import user_has_configuration_permission as configuration_permission"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "from dojo.authorization.authorization import user_has_global_permission, user_has_permission"
+                },
+                {
+                    "line_no": 20,
+                    "line_content": "return user_has_permission(crum.get_current_user(), obj, Permissions[permission])"
+                },
+                {
+                    "line_no": 25,
+                    "line_content": "return user_has_global_permission(crum.get_current_user(), Permissions[permission])"
+                },
+                {
+                    "line_no": 30,
+                    "line_content": "return configuration_permission(user, permission)"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:template",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "register = template.Library()"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "@register.filter"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "@register.filter"
+                },
+                {
+                    "line_no": 26,
+                    "line_content": "@register.filter"
+                }
+            ]
+        },
+        {
+            "capability_id": "cache:management",
+            "evidence": [
+                {
+                    "line_no": 34,
+                    "line_content": "@cache_for_request"
+                },
+                {
+                    "line_no": 36,
+                    "line_content": "return user.user_permissions.all()"
+                }
+            ]
+        }
+    ]
+}

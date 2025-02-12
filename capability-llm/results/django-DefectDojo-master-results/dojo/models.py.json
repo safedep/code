@@ -1,0 +1,99 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "import hashlib"
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "from datetime import datetime"
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "from dateutil.relativedelta import relativedelta"
+                },
+                {
+                    "line_no": 33,
+                    "line_content": "from django.utils import timezone"
+                }
+            ]
+        },
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "from pathlib import Path"
+                },
+                {
+                    "line_no": 27,
+                    "line_content": "from django.core.files.base import ContentFile"
+                }
+            ]
+        },
+        {
+            "capability_id": "auth:jwt",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "from django.contrib.auth import get_user_model"
+                },
+                {
+                    "line_no": 20,
+                    "line_content": "from django.contrib.auth.models import Group"
+                }
+            ]
+        },
+        {
+            "capability_id": "db:sql",
+            "evidence": [
+                {
+                    "line_no": 24,
+                    "line_content": "from django.db import connection, models"
+                },
+                {
+                    "line_no": 25,
+                    "line_content": "from django.db.models import Count, JSONField, Q"
+                },
+                {
+                    "line_no": 26,
+                    "line_content": "from django.db.models.expressions import Case, When"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 25,
+                    "line_content": "from django.db.models import Count, JSONField, Q"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "from django import forms"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "from django.conf import settings"
+                },
+                {
+                    "line_no": 28,
+                    "line_content": "from django.urls import reverse"
+                }
+            ]
+        }
+    ]
+}

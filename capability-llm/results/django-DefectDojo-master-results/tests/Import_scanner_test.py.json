@@ -1,0 +1,73 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "shutil.rmtree(self.repo_path)"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "Path(self.repo_path).mkdir()"
+                }
+            ]
+        },
+        {
+            "capability_id": "file:read",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "from pathlib import Path"
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "dir_path = Path(os.path.realpath(__file__)).parent"
+                },
+                {
+                    "line_no": 26,
+                    "line_content": "tool_path = Path(dir_path[:-5] + \"dojo/tools\")"
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 20,
+                    "line_content": "git.Repo.clone_from(\"https://github.com/DefectDojo/sample-scan-files\", self.repo_path)"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "from base_test_class import BaseTestCase"
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "from product_test import ProductTest"
+                },
+                {
+                    "line_no": 28,
+                    "line_content": "tools = sor"
+                }
+            ]
+        },
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "from selenium.webdriver.common.by import By"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "from selenium.webdriver.support.ui import Select"
+                }
+            ]
+        }
+    ]
+}

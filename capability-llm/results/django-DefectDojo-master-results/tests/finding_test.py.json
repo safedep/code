@@ -1,0 +1,90 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "logging",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "import logging"
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "logger = logging.getLogger(__name__)"
+                }
+            ]
+        },
+        {
+            "capability_id": "file:read",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "import os"
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "dir_path = Path(os.path.realpath(__file__)).parent"
+                }
+            ]
+        },
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "import sys"
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "import time"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "import unittest"
+                },
+                {
+                    "line_no": 19,
+                    "line_content": "class FindingTest(BaseTestCase):"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "def test_list_findings_all(self):"
+                },
+                {
+                    "line_no": 22,
+                    "line_content": "return self.test_list_findings(\"finding\")"
+                }
+            ]
+        },
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "from selenium.common.exceptions import TimeoutException"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "from selenium.webdriver.common.by import By"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "from selenium.webdriver.support import expected_conditions as EC"
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "from selenium.webdriver.support.ui import Select, WebDriverWait"
+                }
+            ]
+        }
+    ]
+}

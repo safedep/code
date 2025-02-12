@@ -1,0 +1,35 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "from django.conf import settings"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "from django.core.checks import Error"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "f\"Configuration error in HASHCODE_FIELDS_PER_SCANNER: Element {field} is not in the allowed list HASHCODE_ALLOWED_FIELDS for {scanner}.\""
+                },
+                {
+                    "line_no": 14,
+                    "line_content": "hint=f'Check configuration [\"HASHCODE_FIELDS_PER_SCANNER\"][\"{scanner}\"] value',"
+                }
+            ]
+        }
+    ]
+}

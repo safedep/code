@@ -1,0 +1,58 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "import datetime"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "from django.conf import settings"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "from defusedxml import ElementTree as etree"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:template",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "import html2text"
+                }
+            ]
+        },
+        {
+            "capability_id": "monitoring:metrics",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "logger = logging.getLogger(__name__)"
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "from cvss import CVSS3"
+                }
+            ]
+        }
+    ]
+}

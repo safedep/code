@@ -1,0 +1,51 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "from selenium.common.exceptions import NoSuchElementException"
+                },
+                {
+                    "line_no": 6,
+                    "line_content": "from selenium.webdriver import ActionChains"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "from selenium.webdriver.common.by import By"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "from selenium.webdriver.support import expected_conditions as EC"
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "from selenium.webdriver.support.ui import WebDriverWait"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "import unittest"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "class NotificationTest(BaseTestCase):"
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "driver.get(self.base_url + \"system_settings\")"
+                }
+            ]
+        }
+    ]
+}

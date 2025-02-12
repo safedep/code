@@ -1,0 +1,26 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "import json"
+                },
+                {
+                    "line_no": 14,
+                    "line_content": "tree = json.load(json_output)"
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "import hashlib"
+                }
+            ]
+        }
+    ]
+}

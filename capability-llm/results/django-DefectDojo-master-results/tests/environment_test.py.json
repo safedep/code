@@ -1,0 +1,55 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "driver.find_element(By.ID, \"id_username\").send_keys(os.environ[\"DD_ADMIN_USER\"])"
+                },
+                {
+                    "line_no": 14,
+                    "line_content": "driver.find_element(By.ID, \"id_password\").send_keys(os.environ[\"DD_ADMIN_PASSWORD\"])"
+                }
+            ]
+        },
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "from selenium.webdriver.common.by import By"
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "class EnvironmentTest(BaseTestCase):"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "driver.get(self.base_url + \"login\")"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "driver.find_element(By.ID, \"dropdownMenu1\").click()"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "import unittest"
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "class EnvironmentTest(BaseTestCase):"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "def test_create_environment(self):"
+                }
+            ]
+        }
+    ]
+}

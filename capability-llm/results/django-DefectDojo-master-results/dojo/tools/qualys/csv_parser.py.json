@@ -1,0 +1,57 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "file:read",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "content = csv_file.read()"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "content = content.decode(\"utf-8\")"
+                },
+                {
+                    "line_no": 19,
+                    "line_content": "csv_reader = csv.DictReader(io.StringIO(content), delimiter=\",\", quotechar='\"',)"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "csv_reader = csv.DictReader(io.StringIO(content), delimiter=\",\", quotechar='\"',)"
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "from datetime import datetime"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "from dateutil import parser"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "from django.conf import settings"
+                }
+            ]
+        }
+    ]
+}

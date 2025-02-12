@@ -1,0 +1,57 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "from django.conf import settings"
+                },
+                {
+                    "line_no": 27,
+                    "line_content": "env = environ.Env()"
+                },
+                {
+                    "line_no": 29,
+                    "line_content": "root = environ.Path(__file__) - 3  # Three folders back"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "import json"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "from pathlib import Path"
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "from datetime import timedelta"
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "import os"
+                }
+            ]
+        }
+    ]
+}

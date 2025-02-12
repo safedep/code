@@ -1,0 +1,30 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "file:read",
+            "evidence": [
+                {
+                    "line_no": 24,
+                    "line_content": "if filename.name.lower().endswith(\".xml\"):"
+                },
+                {
+                    "line_no": 26,
+                    "line_content": "if filename.name.lower().endswith(\".json\"):"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 27,
+                    "line_content": "return NiktoXMLParser().process_xml(filename, test)"
+                },
+                {
+                    "line_no": 29,
+                    "line_content": "return NiktoJSONParser().process_json(filename, test)"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,62 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "from selenium.webdriver.common.by import By"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "from selenium.webdriver.support.ui import Select"
+                },
+                {
+                    "line_no": 14,
+                    "line_content": "def goto_add_api_scan_configuration(self, driver):"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "driver.find_element(By.CSS_SELECTOR, \".dropdown-toggle.pull-left\").click()"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "driver.find_element(By.LINK_TEXT, \"Add Scan API Configuration\").click()"
+                },
+                {
+                    "line_no": 23,
+                    "line_content": "driver.find_element(By.ID, \"link_tt_edgescan_scan\").text"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "import unittest"
+                },
+                {
+                    "line_no": 4,
+                    "line_content": "from base_test_class import BaseTestCase, on_exception_html_source_logger"
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "class ToolConfigTest(BaseTestCase):"
+                },
+                {
+                    "line_no": 19,
+                    "line_content": "@on_exception_html_source_logger"
+                },
+                {
+                    "line_no": 20,
+                    "line_content": "def test_list_api_scan_configuration_tt_and_tc_missing(self):"
+                },
+                {
+                    "line_no": 24,
+                    "line_content": "self.assertEqual(driver.find_element(By.ID, \"link_tt_edgescan_scan\").text, \"Parser Edgescan Scan requires created tool type Edgescan"
+                }
+            ]
+        }
+    ]
+}

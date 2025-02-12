@@ -1,0 +1,69 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "# Do so by copying the file dojo/settings/settings.dist.py to"
+                },
+                {
+                    "line_no": 4,
+                    "line_content": "# dojo/settings/settings.py; Otherwise, the following import will not work"
+                }
+            ]
+        },
+        {
+            "capability_id": "file:read",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "# Do so by copying the file dojo/settings/settings.dist.py to"
+                },
+                {
+                    "line_no": 4,
+                    "line_content": "# dojo/settings/settings.py; Otherwise, the following import will not work"
+                }
+            ]
+        },
+        {
+            "capability_id": "db:sqlite",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "\"ENGINE\": \"django.db.backends.sqlite3\","
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "\"NAME\": \"unittest.sqlite\","
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "# In order to run the unit tests, it is required to create a settings file"
+                },
+                {
+                    "line_no": 5,
+                    "line_content": "from .settings import *  # noqa: F403"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "# In order to run the unit tests, it is required to create a settings file"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "\"ENGINE\": \"django.db.backends.sqlite3\","
+                }
+            ]
+        }
+    ]
+}

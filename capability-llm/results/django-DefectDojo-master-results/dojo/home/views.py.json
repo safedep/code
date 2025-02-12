@@ -1,0 +1,86 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "from django.http import HttpRequest, HttpResponse, HttpResponseRedirect"
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "from django.shortcuts import render"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "from django.urls import reverse"
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "from datetime import timedelta"
+                },
+                {
+                    "line_no": 6,
+                    "line_content": "from django.utils import timezone"
+                }
+            ]
+        },
+        {
+            "capability_id": "db:sql",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "from django.db.models import Count, Q"
+                },
+                {
+                    "line_no": 25,
+                    "line_content": "engagements = get_authorized_engagements(Permissions.Engagement_View).distinct()"
+                }
+            ]
+        },
+        {
+            "capability_id": "auth:jwt",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "from dojo.authorization.authorization import user_has_configuration_permission"
+                },
+                {
+                    "line_no": 14,
+                    "line_content": "from dojo.authorization.roles_permissions import Permissions"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "from dojo.engagement.queries import get_authorized_engagements"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "from dojo.finding.queries import get_authorized_findings"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:template",
+            "evidence": [
+                {
+                    "line_no": 22,
+                    "line_content": "def dashboard(request: HttpRequest) -> HttpResponse:"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "from django.shortcuts import render"
+                }
+            ]
+        }
+    ]
+}

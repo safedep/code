@@ -1,0 +1,107 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "import os"
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "from pathlib import Path"
+                }
+            ]
+        },
+        {
+            "capability_id": "file:read",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "import pathlib"
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "import calendar as tcalendar"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "from datetime import date, datetime, timedelta"
+                },
+                {
+                    "line_no": 5,
+                    "line_content": "from calendar import monthrange"
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "import hashlib"
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:encryption",
+            "evidence": [
+                {
+                    "line_no": 27,
+                    "line_content": "from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes"
+                },
+                {
+                    "line_no": 26,
+                    "line_content": "from cryptography.hazmat.backends import default_backend"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "import mimetypes"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 30,
+                    "line_content": "from django.conf import settings"
+                },
+                {
+                    "line_no": 31,
+                    "line_content": "from django.contrib import messages"
+                },
+                {
+                    "line_no": 32,
+                    "line_content": "from django.contrib.auth.signals import user_logged_in, user_logged_out, user_login_failed"
+                },
+                {
+                    "line_no": 33,
+                    "line_content": "from django.core.paginator import Paginator"
+                },
+                {
+                    "line_no": 34,
+                    "line_content": "from django.db.models import Case, Count, IntegerField, Q, Sum, Value, When"
+                },
+                {
+                    "line_no": 35,
+                    "line_content": "from django.db.models.query import QuerySet"
+                },
+                {
+                    "line_no": 36,
+                    "line_content": "from django.db.models.signals import post_save"
+                }
+            ]
+        }
+    ]
+}

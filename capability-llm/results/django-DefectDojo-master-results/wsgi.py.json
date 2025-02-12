@@ -1,0 +1,35 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "from django.core.wsgi import get_wsgi_application"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:api",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "from django.urls import get_resolver"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "from dojo.settings.settings import ROOT_URLCONF"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "# We defer to a DJANGO_SETTINGS_MODULE already in the environment."
+                }
+            ]
+        }
+    ]
+}

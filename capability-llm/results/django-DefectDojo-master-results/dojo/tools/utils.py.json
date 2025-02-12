@@ -1,0 +1,17 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "import json"
+                },
+                {
+                    "line_no": 22,
+                    "line_content": "cwe = json.loads(cwe_node)"
+                }
+            ]
+        }
+    ]
+}

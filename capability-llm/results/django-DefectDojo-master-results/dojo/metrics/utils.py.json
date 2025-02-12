@@ -1,0 +1,76 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 3,
+                    "line_content": "from datetime import date, datetime, timedelta"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "from django.utils import timezone"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "from dateutil.relativedelta import relativedelta"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "from django.contrib import messages"
+                },
+                {
+                    "line_no": 20,
+                    "line_content": "from django.db.models import Case, Count, F, IntegerField, Q, Sum, Value, When"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "from django.db.models.functions import Coalesce, ExtractDay, Now, TruncMonth, TruncWeek"
+                },
+                {
+                    "line_no": 22,
+                    "line_content": "from django.db.models.query import QuerySet"
+                },
+                {
+                    "line_no": 23,
+                    "line_content": "from django.http import HttpRequest"
+                },
+                {
+                    "line_no": 24,
+                    "line_content": "from django.utils.translation import gettext as _"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "from typing import Any, NamedTuple, TypeVar"
+                }
+            ]
+        },
+        {
+            "capability_id": "db:sql",
+            "evidence": [
+                {
+                    "line_no": 20,
+                    "line_content": "from django.db.models import Case, Count, F, IntegerField, Q, Sum, Value, When"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "from django.db.models.functions import Coalesce, ExtractDay, Now, TruncMonth, TruncWeek"
+                },
+                {
+                    "line_no": 22,
+                    "line_content": "from django.db.models.query import QuerySet"
+                }
+            ]
+        }
+    ]
+}

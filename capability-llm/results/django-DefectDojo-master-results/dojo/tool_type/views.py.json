@@ -1,0 +1,94 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "from django.contrib import messages"
+                },
+                {
+                    "line_no": 6,
+                    "line_content": "from django.http import HttpResponseRedirect"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "from django.shortcuts import render"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "from django.urls import reverse"
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "from django.utils.translation import gettext as _"
+                }
+            ]
+        },
+        {
+            "capability_id": "auth:oauth",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "from dojo.authorization.authorization_decorators import user_is_configuration_authorized"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:template",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "from django.shortcuts import render"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "tform = ToolTypeForm(request.POST, instance=Tool_Type())"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "from django.utils.translation import gettext as _"
+                }
+            ]
+        },
+        {
+            "capability_id": "db:sql",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "from dojo.models import Tool_Type"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "tform = ToolTypeForm(request.POST, instance=Tool_Type())"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "if tform.is_valid():"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "tform.save()"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "from django.http import HttpResponseRedirect"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "return HttpResponseRedirect(reverse(\"tool_type\""
+                }
+            ]
+        }
+    ]
+}

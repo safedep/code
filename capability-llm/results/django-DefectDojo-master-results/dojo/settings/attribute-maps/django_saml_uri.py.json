@@ -1,0 +1,33 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "MAP = {"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "\"identifier\": \"urn:oasis:names:tc:SAML:2.0:attrname-format:uri\","
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "\"fro\": {"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "},"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "\"to\": {"
+                },
+                {
+                    "line_no": 22,
+                    "line_content": "},"
+                }
+            ]
+        }
+    ]
+}

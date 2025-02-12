@@ -1,0 +1,61 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "from django.db.models import signals"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "from django.dispatch import receiver"
+                }
+            ]
+        },
+        {
+            "capability_id": "db:sql",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "from django.db.models import signals"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "from dojo.utils import get_system_setting"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "import contextlib"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "with contextlib.suppress(AttributeError):"
+                }
+            ]
+        },
+        {
+            "capability_id": "third_party:async_execution",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "from dojo.product import helpers as async_product_funcs"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "async_product_funcs.propagate_tags_on_product(instance.id, countdown=5)"
+                }
+            ]
+        }
+    ]
+}

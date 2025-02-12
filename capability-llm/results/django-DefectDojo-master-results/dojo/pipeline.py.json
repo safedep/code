@@ -1,0 +1,47 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "auth:oauth",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "from social_core.backends.azuread_tenant import AzureADTenantOAuth2"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "from social_core.backends.google import GoogleOAuth2"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "def social_uid(backend, details, response, *args, **kwargs):"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "if settings.AZUREAD_TENANT_OAUTH2_ENABLED and isinstance(backend, AzureADTenantOAuth2):"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "from django.conf import settings"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "if settings.AZUREAD_TENANT_OAUTH2_ENABLED and isinstance(backend, AzureADTenantOAuth2):"
+                }
+            ]
+        },
+        {
+            "capability_id": "logging",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "logger = logging.getLogger(__name__)"
+                }
+            ]
+        }
+    ]
+}

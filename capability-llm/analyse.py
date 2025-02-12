@@ -94,7 +94,8 @@ scanFolders = []
 # scanFolders.append("samples")
 # scanFolders.append("railrakshak")
 # scanFolders.append("prettier")
-scanFolders.append("scancode-workbench")
+# scanFolders.append("scancode-workbench")
+# scanFolders.append("django-DefectDojo-master")
 
 os.makedirs("results", exist_ok=True)
 

@@ -1,0 +1,31 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "process:management",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "result = subprocess.run(cmd, cwd=cwd, env=env, capture_"
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "This solution is largely based on the Playwright's browser dependencies script at"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "result = subprocess.run(cmd, cwd=cwd, env=env, capture_"
+                }
+            ]
+        }
+    ]
+}

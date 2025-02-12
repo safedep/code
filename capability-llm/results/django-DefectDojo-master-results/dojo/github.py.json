@@ -1,0 +1,73 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "web:template",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "from django.template.loader import render_to_string"
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 26,
+                    "line_content": "g_ctx = Github(github_conf.api_key)"
+                },
+                {
+                    "line_no": 27,
+                    "line_content": "repo = g_ctx.get_repo(github_product.git_project)"
+                },
+                {
+                    "line_no": 28,
+                    "line_content": "issue = repo.get_issue(int(g_issue.issue_id"
+                }
+            ]
+        },
+        {
+            "capability_id": "db:sql",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "if GITHUB_PKey.objects.filter(product=prod).count() == 0:"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "github_product = GITHUB_PKey.objects.get(product=prod)"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "g_issue = GITHUB_Issue.objects.get(finding=find)"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "from dojo.utils import get_system_setting"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "if not get_system_setting(\"enable_github\"):"
+                }
+            ]
+        },
+        {
+            "capability_id": "monitoring:metrics",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "logger = logging.getLogger(__name__)"
+                },
+                {
+                    "line_no": 19,
+                    "line_content": "logger.error(\"Unable to get project key\")"
+                }
+            ]
+        }
+    ]
+}

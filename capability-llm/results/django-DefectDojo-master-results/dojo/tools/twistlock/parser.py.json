@@ -1,0 +1,57 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "import io"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "import json"
+                },
+                {
+                    "line_no": 44,
+                    "line_content": "data_vulnerability_id = row.get(\"CVE ID\", \"\")"
+                }
+            ]
+        },
+        {
+            "capability_id": "logging:management",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "import logging"
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "logger = logging.getLogger(__name__)"
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "import hashlib"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "import json"
+                }
+            ]
+        }
+    ]
+}

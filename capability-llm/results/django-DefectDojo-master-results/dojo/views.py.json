@@ -1,0 +1,82 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "auth:permissions",
+            "evidence": [
+                {
+                    "line_no": 26,
+                    "line_content": "user_has_configuration_permission_or_403,"
+                },
+                {
+                    "line_no": 27,
+                    "line_content": "user_has_permission,"
+                },
+                {
+                    "line_no": 28,
+                    "line_content": "user_has_permission_or_403,"
+                }
+            ]
+        },
+        {
+            "capability_id": "db:sql",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "from django.contrib.contenttypes.models import ContentType"
+                },
+                {
+                    "line_no": 30,
+                    "line_content": "from dojo.models import Endpoint, Engagement, FileUpload, Finding, Product, Test"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:template",
+            "evidence": [
+                {
+                    "line_no": 23,
+                    "line_content": "from django.shortcuts import get_object_or_404, render"
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "from django.conf import settings"
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "from django.contrib import messages"
+                },
+                {
+                    "line_no": 24,
+                    "line_content": "from django.urls import reverse"
+                }
+            ]
+        },
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 30,
+                    "line_content": "from dojo.models import Endpoint, Engagement, FileUpload, Finding, Product, Test"
+                },
+                {
+                    "line_no": 31,
+                    "line_content": "from dojo.utils import Product_Tab, generate_file_response, get_page_items"
+                }
+            ]
+        },
+        {
+            "capability_id": "logging",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "logger = logging.getLogger(__name__)"
+                }
+            ]
+        }
+    ]
+}

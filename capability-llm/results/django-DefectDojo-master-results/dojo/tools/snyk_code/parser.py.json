@@ -1,0 +1,13 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 1,
+                    "line_content": "import json"
+                }
+            ]
+        }
+    ]
+}

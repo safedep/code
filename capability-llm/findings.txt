@@ -1,6 +1,12 @@
+Total -> 740 files, start at 1:27 pm
+160 files -> 19 minutes
+
+** sometimes it identifies a capability solely based on import, however it can be proven wrong if its not actually used
+
 ** some useless capabilities introduced by LLM -
 string:manipulation
 random:management
+time:management
 
 ** minified json files from prettier are not at all relevant
 
@@ -142,3 +148,47 @@ still it gives -
                 }
 
 
+** bit unstable with web framework related capabilities
+{
+                    "capability_id": "web:framework",
+                    "evidence": [
+                        {
+                            "line_no": 3,
+                            "line_content": "from django.conf import settings"
+                        },
+                        {
+                            "line_no": 4,
+                            "line_content": "from django.contrib import messages"
+                        },
+                        {
+                            "line_no": 5,
+                            "line_content": "from django.core.exceptions import PermissionDenied"
+                        },
+                        {
+                            "line_no": 6,
+                            "line_content": "from django.http import HttpRequest, HttpResponse"
+                        },
+                        {
+                            "line_no": 7,
+                            "line_content": "from django.shortcuts import render"
+                        },
+                        {
+                            "line_no": 8,
+                            "line_content": "from django.views import View"
+                        }
+                    ]
+                }
+                
+{
+                    "capability_id": "env:config",
+                    "evidence": [
+                        {
+                            "line_no": 7,
+                            "line_content": "import logging"
+                        },
+                        {
+                            "line_no": 9,
+                            "line_content": "logger = logging.getLogger(__name__)"
+                        }
+                    ]
+                },

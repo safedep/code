@@ -1,0 +1,50 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "scraping:web",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "from selenium.webdriver.common.by import By"
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "from selenium.webdriver.common.keys import Keys"
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "from selenium.webdriver.support.ui import Select"
+                },
+                {
+                    "line_no": 19,
+                    "line_content": "driver.find_element(By.ID, \"products_wrapper\")"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "driver.find_element(By.LINK_TEXT, product_name).click()"
+                },
+                {
+                    "line_no": 23,
+                    "line_content": "driver.find_element(By.PARTIAL_LINK_TEXT, \"Engagement\").click()"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 2,
+                    "line_content": "import unittest"
+                },
+                {
+                    "line_no": 4,
+                    "line_content": "from base_test_class import BaseTestCase"
+                },
+                {
+                    "line_no": 5,
+                    "line_content": "from product_test import ProductTest, WaitForPageLoad"
+                }
+            ]
+        }
+    ]
+}
