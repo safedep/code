@@ -1,0 +1,13 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 20,
+                    "line_content": "return \"format(\" + strconv.FormatInt(int64(i), 10) + \")\""
+                }
+            ]
+        }
+    ]
+}

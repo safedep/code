@@ -1,0 +1,49 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "crypto:encryption",
+            "evidence": [
+                {
+                    "line_no": 20,
+                    "line_content": "\"github.com/minio/minio-go/v7/pkg/encrypt\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "\"encoding/json\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"io\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "\"time\""
+                }
+            ]
+        }
+    ]
+}

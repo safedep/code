@@ -1,0 +1,71 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"encoding/json\""
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:encryption",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"encoding/base64\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "\"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "\"sync\""
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "\"sync/atomic\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:ldap",
+            "evidence": [
+                {
+                    "line_no": 20,
+                    "line_content": "libldap \"github.com/go-ldap/ldap/v3\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "\"bytes\""
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"errors\""
+                }
+            ]
+        }
+    ]
+}

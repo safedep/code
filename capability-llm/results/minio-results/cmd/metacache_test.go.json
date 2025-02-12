@@ -1,0 +1,13 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "var metaCacheTestsetTimestamp = time.Now()"
+                }
+            ]
+        }
+    ]
+}

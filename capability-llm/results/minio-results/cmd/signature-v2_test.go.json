@@ -1,0 +1,44 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "\"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:url",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"net/url\""
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"os\""
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "\"testing\""
+                },
+                {
+                    "line_no": 22,
+                    "line_content": "func TestResourceListSorting(t *testing.T) {"
+                }
+            ]
+        }
+    ]
+}

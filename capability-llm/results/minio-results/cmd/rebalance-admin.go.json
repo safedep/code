@@ -1,0 +1,34 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "NumObjects  uint64        `json:\"objects\"`"
+                },
+                {
+                    "line_no": 14,
+                    "line_content": "NumVersions uint64        `json:\"versions\"`"
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "Bytes       uint64        `json:\"bytes\"`"
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "import ("
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "time"
+                }
+            ]
+        }
+    ]
+}

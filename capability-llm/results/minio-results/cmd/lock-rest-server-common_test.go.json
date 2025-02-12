@@ -1,0 +1,22 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"sync\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:sockets",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "\"github.com/minio/minio/internal/dsync\""
+                }
+            ]
+        }
+    ]
+}

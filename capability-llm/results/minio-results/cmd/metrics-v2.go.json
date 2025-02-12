@@ -1,0 +1,53 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "\"sync\""
+                },
+                {
+                    "line_no": 14,
+                    "line_content": "\"sync/atomic\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "\"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"runtime\""
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:encryption",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "\"github.com/minio/kms-go/kes\""
+                }
+            ]
+        }
+    ]
+}

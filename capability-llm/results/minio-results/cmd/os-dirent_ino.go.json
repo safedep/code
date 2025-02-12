@@ -1,0 +1,34 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 20,
+                    "line_content": "import \"syscall\""
+                },
+                {
+                    "line_no": 24,
+                    "line_content": "func direntInode(dirent *syscall.Dirent) uint64 {"
+                },
+                {
+                    "line_no": 25,
+                    "line_content": "return dirent.Ino"
+                }
+            ]
+        },
+        {
+            "capability_id": "file:read",
+            "evidence": [
+                {
+                    "line_no": 24,
+                    "line_content": "func direntInode(dirent *syscall.Dirent) uint64 {"
+                },
+                {
+                    "line_no": 25,
+                    "line_content": "return dirent.Ino"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,39 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "\"net/http\""
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "xhttp \"github.com/minio/minio/internal/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "monitoring:metrics",
+            "evidence": [
+                {
+                    "line_no": 22,
+                    "line_content": "\"github.com/prometheus/client_golang/prometheus\""
+                }
+            ]
+        },
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "\"sync\""
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "\"sync/atomic\""
+                }
+            ]
+        }
+    ]
+}

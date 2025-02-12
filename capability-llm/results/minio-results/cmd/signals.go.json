@@ -1,0 +1,71 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "\"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"os\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"time\""
+                },
+                {
+                    "line_no": 23,
+                    "line_content": "const shutdownTimeout = time.Mi"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"os\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "\"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "monitoring:metrics",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "\"github.com/coreos/go-systemd/v22/daemon\""
+                }
+            ]
+        },
+        {
+            "capability_id": "monitoring:logging",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "\"github.com/minio/minio/internal/logger\""
+                }
+            ]
+        }
+    ]
+}

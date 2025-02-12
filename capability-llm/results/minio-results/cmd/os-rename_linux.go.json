@@ -1,0 +1,13 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 21,
+                    "line_content": "return syscall.Rename(src, dst)"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,13 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "var minioReleaseInfoURL = MinioReleaseURL + \"minio.sha256sum\""
+                }
+            ]
+        }
+    ]
+}

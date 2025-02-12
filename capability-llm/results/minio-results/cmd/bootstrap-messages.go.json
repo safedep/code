@@ -1,0 +1,35 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "import (sync)"
+                },
+                {
+                    "line_no": 26,
+                    "line_content": "mu   sync.RWMutex"
+                }
+            ]
+        },
+        {
+            "capability_id": "3rd_party:gcp:pubsub",
+            "evidence": [
+                {
+                    "line_no": 23,
+                    "line_content": "import (\"github.com/minio/minio/internal/pubsub\")"
+                }
+            ]
+        },
+        {
+            "capability_id": "3rd_party:aws:s3",
+            "evidence": [
+                {
+                    "line_no": 22,
+                    "line_content": "import (\"github.com/minio/madmin-go/v3\")"
+                }
+            ]
+        }
+    ]
+}

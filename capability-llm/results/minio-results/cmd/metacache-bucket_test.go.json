@@ -1,0 +1,13 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "func Benchmark_bucketMetacache_findCache(b *testing.B) {"
+                }
+            ]
+        }
+    ]
+}

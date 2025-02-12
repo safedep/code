@@ -1,0 +1,22 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "file:read",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "readMode = os.O_RDONLY"
+                }
+            ]
+        },
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "writeMode = os.O_SYNC"
+                }
+            ]
+        }
+    ]
+}

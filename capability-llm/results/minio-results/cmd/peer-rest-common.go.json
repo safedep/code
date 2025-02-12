@@ -1,0 +1,22 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "import \"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "peerRESTVersion = \"v39\" // add more flags to speedtest API"
+                }
+            ]
+        }
+    ]
+}

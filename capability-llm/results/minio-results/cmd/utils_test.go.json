@@ -1,0 +1,40 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "\"encoding/json\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "\"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:sockets",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "\"net/url\""
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 22,
+                    "line_content": "\"testing\""
+                }
+            ]
+        }
+    ]
+}

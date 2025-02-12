@@ -1,0 +1,48 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "import \"encoding/json\""
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "import \"github.com/minio/minio/internal/config\""
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "import \"github.com/minio/minio/internal/config/compress\""
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "import xldap \"github.com/minio/minio/internal/config/identity/ldap\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "import \"path\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:manipulation",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "import \"errors\""
+                }
+            ]
+        }
+    ]
+}

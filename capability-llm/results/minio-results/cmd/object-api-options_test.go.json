@@ -1,0 +1,35 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"net/http\""
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "\"net/http/httptest\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 23,
+                    "line_content": "xhttp \"github.com/minio/minio/internal/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "\"testing\""
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,60 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "import ("
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "\"github.com/tinylib/msgp/msgp\""
+                }
+            ]
+        },
+        {
+            "capability_id": "aws",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "\"github.com/minio/madmin-go/v3\""
+                }
+            ]
+        },
+        {
+            "capability_id": "aws:s3",
+            "evidence": [
+                {
+                    "line_no": 36,
+                    "line_content": "z.Tiers = make(map[string]madmin.TierConfig, zb0002)"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "func (z *TierConfigMgr) DecodeMsg(dc *msgp.Reader) (err error) {"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "zb0001, err = dc.ReadMapHeader()"
+                },
+                {
+                    "line_no": 20,
+                    "line_content": "field, err = dc.ReadMapKeyPtr()"
+                },
+                {
+                    "line_no": 30,
+                    "line_content": "zb0002, err = dc.ReadMapHeader()"
+                },
+                {
+                    "line_no": 39,
+                    "line_content": "za0001, err = dc.ReadString()"
+                }
+            ]
+        }
+    ]
+}

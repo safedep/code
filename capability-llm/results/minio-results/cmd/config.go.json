@@ -1,0 +1,26 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"encoding/json\""
+                },
+                {
+                    "line_no": 22,
+                    "line_content": "jsoniter \"github.com/json-iterator/go\""
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 23,
+                    "line_content": "\"github.com/minio/minio/internal/config\""
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,44 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "import \"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "import \"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "3rd_party:aws:s3",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "import \"github.com/minio/madmin-go/v3\""
+                },
+                {
+                    "line_no": 19,
+                    "line_content": "import \"github.com/minio/minio/internal/bucket/replication\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 20,
+                    "line_content": "import \"github.com/minio/minio/internal/http\""
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,44 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "import ( \"net/http\""
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "\"net/http/httptest\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "\"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"bytes\""
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "\"testing\""
+                }
+            ]
+        }
+    ]
+}

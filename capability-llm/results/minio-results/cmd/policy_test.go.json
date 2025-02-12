@@ -1,0 +1,26 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "aws:s3",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "miniogopolicy \"github.com/minio/minio-go/v7/pkg/policy\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"github.com/minio/pkg/v3/policy\""
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "\"github.com/minio/pkg/v3/policy/condition\""
+                }
+            ]
+        }
+    ]
+}

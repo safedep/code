@@ -1,0 +1,44 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "\"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "\"github.com/klauspost/compress/gzhttp\""
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "\"github.com/klauspost/compress/gzip\""
+                }
+            ]
+        },
+        {
+            "capability_id": "logging:management",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"github.com/minio/minio/internal/logger\""
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"github.com/minio/mux\""
+                }
+            ]
+        }
+    ]
+}

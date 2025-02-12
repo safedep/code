@@ -1,0 +1,53 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:sockets",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "\"net\""
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"github.com/minio/mux\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"github.com/minio/pkg/v3/wildcard\""
+                }
+            ]
+        },
+        {
+            "capability_id": "web:api",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"net/http\""
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "\"github.com/rs/cors\""
+                }
+            ]
+        }
+    ]
+}

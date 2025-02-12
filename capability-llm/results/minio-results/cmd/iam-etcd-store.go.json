@@ -1,0 +1,62 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"encoding/json\""
+                },
+                {
+                    "line_no": 26,
+                    "line_content": "jsoniter \"github.com/json-iterator/go\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "\"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "\"sync\""
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 27,
+                    "line_content": "\"github.com/minio/minio/internal/config\""
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"path\""
+                }
+            ]
+        },
+        {
+            "capability_id": "aws:s3",
+            "evidence": [
+                {
+                    "line_no": 25,
+                    "line_content": "\"github.com/minio/minio-go/v7/pkg/set\""
+                }
+            ]
+        }
+    ]
+}

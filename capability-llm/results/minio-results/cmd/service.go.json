@@ -1,0 +1,31 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"runtime\""
+                }
+            ]
+        },
+        {
+            "capability_id": "process:management",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"os/exec\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "\"xioutil \\\"github.com/minio/minio/internal/ioutil\\\"\""
+                }
+            ]
+        }
+    ]
+}

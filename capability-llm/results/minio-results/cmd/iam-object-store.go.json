@@ -1,0 +1,31 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 20,
+                    "line_content": "jsoniter \"github.com/json-iterator/go\""
+                }
+            ]
+        },
+        {
+            "capability_id": "aws:s3",
+            "evidence": [
+                {
+                    "line_no": 21,
+                    "line_content": "\"github.com/minio/madmin-go/v3\""
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 22,
+                    "line_content": "\"github.com/minio/minio/internal/config\""
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,235 @@
+Error details when trying to process minio/cmd/erasure-metadata-utils_test.go with output results/minio-results/cmd/erasure-metadata-utils_test.go.json and prompt - Analyze the following code and identify program dependencies and capabilities. Provide the results in JSON format, including capability IDs and evidence details (line numbers and corresponding code snippets).
+
+
+Code:
+// Copyright (c) 2015-2021 MinIO, Inc.
+//
+// This file is part of MinIO Object Storage stack
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+package cmd
+
+import (
+	"context"
+	"encoding/hex"
+	"fmt"
+	"math/rand"
+	"reflect"
+	"testing"
+)
+
+// Tests caclculating disk count.
+func TestDiskCount(t *testing.T) {
+	testCases := []struct {
+		disks     []StorageAPI
+		diskCount int
+	}{
+		//
+
+Some example capabilities, you may also add more capabilities if required which follow the same format:
+System Library Capabilities:
+file:manipulation – Creating, writing, deleting, or modifying files
+file:read – Reading files or directories
+network:http – HTTP requests and responses
+network:sockets – Socket-level communication
+network:dns – DNS lookups and resolutions
+process:management – Spawning, killing, or managing processes
+threading:management – Thread creation and synchronization
+crypto:hashing – Hashing operations (e.g., MD5, SHA)
+crypto:encryption – Data encryption and decryption
+
+env:config – Reading or modifying environment variables
+io:streaming – Input/output stream operations
+time:management – Time and date manipulation
+system:info – System information retrieval (e.g., OS version)
+data:serialization – Data formatting and serialization (e.g., JSON, YAML, Protobuf)
+
+3rd Party Dependencies Capabilities:
+db:sql – SQL database operations
+db:nosql – NoSQL database operations
+
+db:mongodb - MongoDB operations
+db:dynamodb - DynamoDB operations
+db:sqlite - Sqlite DB operations
+db:redis - Redis DB operations
+
+aws – General AWS SDK usage
+aws:s3 – S3 storage operations
+aws:lambda – AWS Lambda functions
+aws:sqs – Simple Queue Service operations
+aws:dynamodb – DynamoDB database operations
+
+gcp – General Google Cloud usage
+gcp:storage – Google Cloud Storage operations
+gcp:pubsub – Pub/Sub messaging
+gcp:bigquery – BigQuery data analysis
+
+azure – General Microsoft Azure usage
+azure:blob – Blob storage operations
+azure:functions – Azure Functions (serverless)
+
+ml:framework – General machine learning frameworks
+ml:llm – Large Language Model operations (e.g., OpenAI, LangChain)
+ml:inference – Model inference or prediction
+ml:training – Model training operations
+
+web:framework – General web development frameworks
+web:api – API creation and management
+web:template – Templating engines
+
+auth:oauth – OAuth authentication processes
+auth:jwt – JSON Web Token (JWT) handling
+msg:queue – Message queue usage (e.g., Kafka, RabbitMQ, SQS)
+scraping:web – Web scraping and automation (e.g., BeautifulSoup, Selenium)
+container:management – Containerization tools (e.g., Docker, Kubernetes)
+monitoring:metrics – Monitoring and observability (e.g., Prometheus, Datadog)
+devops:ci_cd – Continuous Integration/Deployment tools
+testing:automation – Automated testing frameworks (e.g., PyTest, JUnit)
+cache:management – Caching mechanisms (e.g., Redis, Memcached)
+
+Provide the results **strictly in JSON format**, without any additional explanation or text and only with capabilities that are strongly identified in the code. Ensure that the JSON format is valid and characters like "" are properly escaped.
+
+Return the output **only** in the following JSON format:
+{
+  'capabilities': [
+    {
+      'capability_id': "network:http",
+      'evidence': [
+        {
+          "line_no": 55,
+          "line_content": "response = requests.get("https://api.example.com/data")"
+        }
+      ]
+    },
+    ...
+  ]
+} 
+ abd err for results/minio-results/cmd/erasure-metadata-utils_test.go.json: Expecting ':' delimiter: line 22 column 18 (char 407) 
+
+
+Error details when trying to process minio/cmd/lock-rest-server-common.go with output results/minio-results/cmd/lock-rest-server-common.go.json and prompt - Analyze the following code and identify program dependencies and capabilities. Provide the results in JSON format, including capability IDs and evidence details (line numbers and corresponding code snippets).
+
+
+Code:
+// Copyright (c) 2015-2021 MinIO, Inc.
+//
+// This file is part of MinIO Object Storage stack
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+package cmd
+
+import (
+	"errors"
+)
+
+var (
+	errLockConflict       = errors.New("lock conflict")
+	errLockNotInitialized = errors.New("lock not initialized")
+	errLockNotFound       = errors.New("lock not found")
+)
+
+Some example capabilities, you may also add more capabilities if required which follow the same format:
+System Library Capabilities:
+file:manipulation – Creating, writing, deleting, or modifying files
+file:read – Reading files or directories
+network:http – HTTP requests and responses
+network:sockets – Socket-level communication
+network:dns – DNS lookups and resolutions
+process:management – Spawning, killing, or managing processes
+threading:management – Thread creation and synchronization
+crypto:hashing – Hashing operations (e.g., MD5, SHA)
+crypto:encryption – Data encryption and decryption
+
+env:config – Reading or modifying environment variables
+io:streaming – Input/output stream operations
+time:management – Time and date manipulation
+system:info – System information retrieval (e.g., OS version)
+data:serialization – Data formatting and serialization (e.g., JSON, YAML, Protobuf)
+
+3rd Party Dependencies Capabilities:
+db:sql – SQL database operations
+db:nosql – NoSQL database operations
+
+db:mongodb - MongoDB operations
+db:dynamodb - DynamoDB operations
+db:sqlite - Sqlite DB operations
+db:redis - Redis DB operations
+
+aws – General AWS SDK usage
+aws:s3 – S3 storage operations
+aws:lambda – AWS Lambda functions
+aws:sqs – Simple Queue Service operations
+aws:dynamodb – DynamoDB database operations
+
+gcp – General Google Cloud usage
+gcp:storage – Google Cloud Storage operations
+gcp:pubsub – Pub/Sub messaging
+gcp:bigquery – BigQuery data analysis
+
+azure – General Microsoft Azure usage
+azure:blob – Blob storage operations
+azure:functions – Azure Functions (serverless)
+
+ml:framework – General machine learning frameworks
+ml:llm – Large Language Model operations (e.g., OpenAI, LangChain)
+ml:inference – Model inference or prediction
+ml:training – Model training operations
+
+web:framework – General web development frameworks
+web:api – API creation and management
+web:template – Templating engines
+
+auth:oauth – OAuth authentication processes
+auth:jwt – JSON Web Token (JWT) handling
+msg:queue – Message queue usage (e.g., Kafka, RabbitMQ, SQS)
+scraping:web – Web scraping and automation (e.g., BeautifulSoup, Selenium)
+container:management – Containerization tools (e.g., Docker, Kubernetes)
+monitoring:metrics – Monitoring and observability (e.g., Prometheus, Datadog)
+devops:ci_cd – Continuous Integration/Deployment tools
+testing:automation – Automated testing frameworks (e.g., PyTest, JUnit)
+cache:management – Caching mechanisms (e.g., Redis, Memcached)
+
+Provide the results **strictly in JSON format**, without any additional explanation or text and only with capabilities that are strongly identified in the code. Ensure that the JSON format is valid and characters like "" are properly escaped.
+
+Return the output **only** in the following JSON format:
+{
+  'capabilities': [
+    {
+      'capability_id': "network:http",
+      'evidence': [
+        {
+          "line_no": 55,
+          "line_content": "response = requests.get("https://api.example.com/data")"
+        }
+      ]
+    },
+    ...
+  ]
+} 
+ abd err for results/minio-results/cmd/lock-rest-server-common.go.json: Expecting ':' delimiter: line 16 column 41 (char 370) 
+
+

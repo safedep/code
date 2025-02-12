@@ -1,0 +1,49 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "\"io\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "\"xhttp \\\"github.com/minio/minio/internal/http\\\"\""
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"context\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "\"strings\""
+                }
+            ]
+        },
+        {
+            "capability_id": "auth:jwt",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "\"errors\""
+                }
+            ]
+        }
+    ]
+}

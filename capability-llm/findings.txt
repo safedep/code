@@ -1,3 +1,8 @@
+go - minio
+Total -> 442 files
+160 files -> 17 minutes
+
+python - django-DefectDojo
 Total -> 740 files, start at 1:27 pm
 160 files -> 19 minutes
 
@@ -9,6 +14,22 @@ random:management
 time:management
 
 ** minified json files from prettier are not at all relevant
+
+** incorrect identification & unnecessary introduction of new capabilities
+
+{
+                    "capability_id": "3rd_party:aws:s3",
+                    "evidence": [
+                        {
+                            "line_no": 18,
+                            "line_content": "import \"github.com/minio/madmin-go/v3\""
+                        },
+                        {
+                            "line_no": 19,
+                            "line_content": "import \"github.com/minio/minio/internal/bucket/replication\""
+                        }
+                    ]
+                }
 
 ** misunderstood file manipulation & file path resolution -
 "scancode-workbench-results/src/utils/paths.ts": {

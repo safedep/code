@@ -1,0 +1,40 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"encoding/json\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "\"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "cache:management",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "\"github.com/minio/minio/internal/cachevalue\""
+                }
+            ]
+        },
+        {
+            "capability_id": "monitoring:metrics",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "\"github.com/minio/minio/internal/logger\""
+                }
+            ]
+        }
+    ]
+}

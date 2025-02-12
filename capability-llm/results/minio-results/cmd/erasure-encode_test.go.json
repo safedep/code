@@ -1,0 +1,40 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "crypto:encryption",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "\"crypto/rand\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"io\""
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"testing\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "\"github.com/dustin/go-humanize\""
+                }
+            ]
+        }
+    ]
+}

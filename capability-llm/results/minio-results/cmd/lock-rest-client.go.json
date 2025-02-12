@@ -1,0 +1,30 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:sockets",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "import ("
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "\"github.com/minio/minio/internal/grid\""
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "import ("
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "\"github.com/minio/minio/internal/dsync\""
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,31 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "aws:s3",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "\"github.com/minio/minio/internal/bucket/lifecycle\""
+                }
+            ]
+        }
+    ]
+}

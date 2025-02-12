@@ -1,0 +1,80 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 21,
+                    "line_content": "\"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "\"io\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "\"encoding/xml\""
+                }
+            ]
+        },
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 24,
+                    "line_content": "\"sync\""
+                },
+                {
+                    "line_no": 25,
+                    "line_content": "\"sync/atomic\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 26,
+                    "line_content": "\"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 30,
+                    "line_content": "\"github.com/google/uuid\""
+                }
+            ]
+        },
+        {
+            "capability_id": "aws:s3",
+            "evidence": [
+                {
+                    "line_no": 32,
+                    "line_content": "\"github.com/minio/minio-go/v7/pkg/tags\""
+                }
+            ]
+        },
+        {
+            "capability_id": "monitoring:metrics",
+            "evidence": [
+                {
+                    "line_no": 31,
+                    "line_content": "\"github.com/minio/madmin-go/v3\""
+                }
+            ]
+        }
+    ]
+}

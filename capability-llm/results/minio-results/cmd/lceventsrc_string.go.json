@@ -1,0 +1,13 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 29,
+                    "line_content": "const _lcEventSrc_name = \"NoneHealScannerDecomRebals3HeadObjects3GetObjects3ListObjectss3PutObjects3CopyObjects3CompleteMultipartUpload\""
+                }
+            ]
+        }
+    ]
+}

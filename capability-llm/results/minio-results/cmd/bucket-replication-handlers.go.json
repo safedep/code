@@ -1,0 +1,69 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "import ("
+                },
+                {
+                    "line_no": 14,
+                    "line_content": "\"encoding/json\""
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "\"encoding/xml\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "\"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "\"io\""
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "\"bytes\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 20,
+                    "line_content": "\"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "aws:s3",
+            "evidence": [
+                {
+                    "line_no": 23,
+                    "line_content": "\"github.com/minio/minio-go/v7\""
+                },
+                {
+                    "line_no": 25,
+                    "line_content": "\"github.com/minio/minio/internal/bucket/object/lock\""
+                },
+                {
+                    "line_no": 26,
+                    "line_content": "\"github.com/minio/minio\""
+                }
+            ]
+        }
+    ]
+}

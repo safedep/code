@@ -1,0 +1,31 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "\"runtime\""
+                }
+            ]
+        },
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "\"testing\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"time\""
+                }
+            ]
+        }
+    ]
+}

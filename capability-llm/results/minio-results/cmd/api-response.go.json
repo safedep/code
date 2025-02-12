@@ -1,0 +1,70 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "crypto:encryption",
+            "evidence": [
+                {
+                    "line_no": 21,
+                    "line_content": "\"encoding/base64\""
+                },
+                {
+                    "line_no": 22,
+                    "line_content": "\"encoding/xml\""
+                },
+                {
+                    "line_no": 27,
+                    "line_content": "\"github.com/minio/minio/internal/crypto\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 22,
+                    "line_content": "\"encoding/xml\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 23,
+                    "line_content": "\"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:url",
+            "evidence": [
+                {
+                    "line_no": 24,
+                    "line_content": "\"net/url\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 28,
+                    "line_content": "\"github.com/minio/minio/internal/amztime\""
+                },
+                {
+                    "line_no": 30,
+                    "line_content": "\"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 20,
+                    "line_content": "\"context\""
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "\"hash/crc32\""
+                }
+            ]
+        },
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"github.com/minio/pkg/v3/sync/errgroup\""
+                }
+            ]
+        }
+    ]
+}

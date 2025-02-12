@@ -1,0 +1,93 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 30,
+                    "line_content": "os"
+                },
+                {
+                    "line_no": 32,
+                    "line_content": "path/filepath"
+                }
+            ]
+        },
+        {
+            "capability_id": "file:read",
+            "evidence": [
+                {
+                    "line_no": 30,
+                    "line_content": "os"
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 24,
+                    "line_content": "net/http"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 21,
+                    "line_content": "io"
+                },
+                {
+                    "line_no": 20,
+                    "line_content": "bufio"
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "crypto"
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:encryption",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "crypto/tls"
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 41,
+                    "line_content": "time"
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 35,
+                    "line_content": "runtime"
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 20,
+                    "line_content": "encoding/hex"
+                }
+            ]
+        }
+    ]
+}

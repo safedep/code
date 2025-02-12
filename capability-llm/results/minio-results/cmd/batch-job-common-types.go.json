@@ -1,0 +1,31 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"gopkg.in/yaml.v3\""
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"github.com/dustin/go-humanize\""
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"github.com/minio/pkg/v3/wildcard\""
+                }
+            ]
+        }
+    ]
+}

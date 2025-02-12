@@ -1,0 +1,58 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "\"encoding/json\""
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "\"github.com/minio/minio/internal/config\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"io/fs\""
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"os\""
+                }
+            ]
+        },
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"sync\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 25,
+                    "line_content": "\"github.com/dustin/go-humanize\""
+                }
+            ]
+        }
+    ]
+}

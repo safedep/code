@@ -1,0 +1,46 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "\"github.com/tinylib/msgp/msgp\""
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "bts, err := v.MarshalMsg(nil)"
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "left, err := v.UnmarshalMsg(bts)"
+                },
+                {
+                    "line_no": 28,
+                    "line_content": "bts, _ = v.MarshalMsg(bts[0:0])"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "\"testing\""
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "func TestMarshalUnmarshalhealingTracker(t *testing.T) {"
+                },
+                {
+                    "line_no": 22,
+                    "line_content": "func BenchmarkMarshalMsghealingTracker(b *testing.B) {"
+                },
+                {
+                    "line_no": 29,
+                    "line_content": "func BenchmarkAppendMsghealingTracker(b *testing.B) {"
+                }
+            ]
+        }
+    ]
+}

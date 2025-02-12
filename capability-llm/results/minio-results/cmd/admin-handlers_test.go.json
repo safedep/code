@@ -1,0 +1,62 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"encoding/json\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "\"net/http\""
+                },
+                {
+                    "line_no": 14,
+                    "line_content": "\"net/http/httptest\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"io\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "\"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "\"sync\""
+                }
+            ]
+        },
+        {
+            "capability_id": "auth:management",
+            "evidence": [
+                {
+                    "line_no": 21,
+                    "line_content": "\"github.com/minio/minio/internal/auth\""
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "\"github.com/minio/pkg/v3/ellipses\""
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "func TestCreateServerEndpoints(t *testing.T) {"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,26 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "monitoring:metrics",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"github.com/prometheus/client_golang/prometheus\""
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "\"github.com/prometheus/client_golang/prometheus/collectors\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "\"strings\""
+                }
+            ]
+        }
+    ]
+}

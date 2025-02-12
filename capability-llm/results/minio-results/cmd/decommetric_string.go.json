@@ -1,0 +1,13 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "return \"decomMetric(\" + strconv.FormatInt(int64(i), 10) + \")\""
+                }
+            ]
+        }
+    ]
+}

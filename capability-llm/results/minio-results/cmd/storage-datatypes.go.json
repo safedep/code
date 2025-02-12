@@ -1,0 +1,40 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "crypto:encryption",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"github.com/minio/minio/internal/crypto\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "\"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"github.com/minio/minio/internal/ioutil\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "//go:generate msgp -file=$GOFILE"
+                }
+            ]
+        }
+    ]
+}

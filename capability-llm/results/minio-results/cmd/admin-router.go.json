@@ -1,0 +1,58 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "\"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "\"github.com/klauspost/compress/gzhttp\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"github.com/klauspost/compress/gzip\""
+                }
+            ]
+        },
+        {
+            "capability_id": "monitoring:metrics",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"github.com/minio/madmin-go/v3\""
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"github.com/minio/minio/internal/logger\""
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "\"github.com/minio/mux\""
+                }
+            ]
+        }
+    ]
+}

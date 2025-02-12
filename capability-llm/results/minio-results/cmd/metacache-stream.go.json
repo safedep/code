@@ -1,0 +1,76 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "jsoniter \"github.com/json-iterator/go\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"io\""
+                }
+            ]
+        },
+        {
+            "capability_id": "compression:decompression",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "s2 \"github.com/klauspost/compress/s2\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "\"github.com/tinylib/msgp/msgp\""
+                }
+            ]
+        },
+        {
+            "capability_id": "file:read",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "xioutil \"github.com/minio/minio/internal/ioutil\""
+                }
+            ]
+        },
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"sync\""
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "\"context\""
+                }
+            ]
+        },
+        {
+            "capability_id": "error:handling",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "\"errors\""
+                }
+            ]
+        }
+    ]
+}

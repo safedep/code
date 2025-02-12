@@ -1,0 +1,46 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "import (\n\t\"github.com/tinylib/msgp/msgp\"\n)"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "// DecodeMsg implements msgp.Decodable"
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "func (z *allTierStats) DecodeMsg(dc *msgp.Reader) (err error) {"
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "zb0001, err = dc.ReadMapHeader()"
+                },
+                {
+                    "line_no": 20,
+                    "line_content": "field, err = dc.ReadMapKeyPtr()"
+                },
+                {
+                    "line_no": 27,
+                    "line_content": "zb0002, err = dc.ReadMapHeader()"
+                },
+                {
+                    "line_no": 35,
+                    "line_content": "za0001, err = dc.ReadString()"
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 4,
+                    "line_content": "import (\n\t\"time\"\n)"
+                }
+            ]
+        }
+    ]
+}

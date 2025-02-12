@@ -1,0 +1,70 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "logging:management",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "func proxyLogIf(ctx context.Context, err error, errKind ...interface{}) {"
+                },
+                {
+                    "line_no": 9,
+                    "line_content": "logger.LogIf(ctx, \"proxy\", err, errKind...)"
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "func replLogIf(ctx context.Context, err error, errKind ...interface{}) {"
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "logger.LogIf(ctx, \"replication\", err, errKind...)"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "func replLogOnceIf(ctx context.Context, err error, id string, errKind ...interface{}) {"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "logger.LogOnceIf(ctx, \"replication\", err, id, errKind...)"
+                },
+                {
+                    "line_no": 20,
+                    "line_content": "func iamLogOnceIf(ctx context.Context, err error, id string, errKind ...interface{}) {"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "logger.LogOnceIf(ctx, \"iam\", err, id, errKind...)"
+                },
+                {
+                    "line_no": 24,
+                    "line_content": "func iamLogIf(ctx context.Context, err error, errKind ...interface{}) {"
+                },
+                {
+                    "line_no": 25,
+                    "line_content": "if !errors.Is(err, grid.ErrDisconnected) {"
+                },
+                {
+                    "line_no": 26,
+                    "line_content": "logger.LogIf(ctx, \"iam\", err, errKind...)"
+                },
+                {
+                    "line_no": 30,
+                    "line_content": "func iamLogEvent(ctx context.Context, msg string, args ...interface{}) {"
+                },
+                {
+                    "line_no": 31,
+                    "line_content": "logger.Event(ctx, \"iam\", msg, args...)"
+                }
+            ]
+        },
+        {
+            "capability_id": "system:error_handling",
+            "evidence": [
+                {
+                    "line_no": 25,
+                    "line_content": "if !errors.Is(err, grid.ErrDisconnected) {"
+                }
+            ]
+        }
+    ]
+}

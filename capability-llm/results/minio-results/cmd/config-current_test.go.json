@@ -1,0 +1,35 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "\"github.com/minio/minio/internal/config\""
+                }
+            ]
+        },
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "ctx, cancel := context.WithCancel(context.Background())"
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "defer cancel()"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "func TestServerConfig(t *testing.T) {"
+                }
+            ]
+        }
+    ]
+}

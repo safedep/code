@@ -1,0 +1,70 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "crypto:encryption",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "crand \"crypto/rand\""
+                },
+                {
+                    "line_no": 7,
+                    "line_content": "\"crypto/rsa\""
+                },
+                {
+                    "line_no": 8,
+                    "line_content": "\"crypto/x509\""
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "\"hash/crc32\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"encoding/json\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "\"net/http\""
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "\"net/url\""
+                }
+            ]
+        },
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "\"os\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "\"io\""
+                }
+            ]
+        }
+    ]
+}

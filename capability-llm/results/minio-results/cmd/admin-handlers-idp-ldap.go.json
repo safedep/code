@@ -1,0 +1,49 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "\"encoding/json\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "\"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "auth:jwt",
+            "evidence": [
+                {
+                    "line_no": 22,
+                    "line_content": "\"github.com/minio/minio/internal/auth\""
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 23,
+                    "line_content": "\"github.com/minio/mux\""
+                }
+            ]
+        },
+        {
+            "capability_id": "auth:ldap",
+            "evidence": [
+                {
+                    "line_no": 24,
+                    "line_content": "\"github.com/minio/pkg/v3/ldap\""
+                }
+            ]
+        }
+    ]
+}

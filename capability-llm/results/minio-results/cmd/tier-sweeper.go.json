@@ -1,0 +1,17 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "aws:s3",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "This file is part of MinIO Object Storage stack"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "github.com/minio/minio/internal/bucket/lifecycle"
+                }
+            ]
+        }
+    ]
+}

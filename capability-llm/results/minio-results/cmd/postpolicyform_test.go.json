@@ -1,0 +1,26 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "import ("
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "  \"encoding/base64\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": " \"http request handler\""
+                }
+            ]
+        }
+    ]
+}

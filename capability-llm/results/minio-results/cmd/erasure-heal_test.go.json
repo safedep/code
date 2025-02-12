@@ -1,0 +1,31 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "\"io\""
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:encryption",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "\"crypto/rand\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 55,
+                    "line_content": "reconstruction in this"
+                }
+            ]
+        }
+    ]
+}

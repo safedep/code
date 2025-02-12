@@ -1,0 +1,22 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:string",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "return \"Credential"
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"time\""
+                }
+            ]
+        }
+    ]
+}

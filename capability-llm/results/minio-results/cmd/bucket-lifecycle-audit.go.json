@@ -1,0 +1,22 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "import ("
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 5,
+                    "line_content": "// This file is part of MinIO Object Storage stack"
+                }
+            ]
+        }
+    ]
+}

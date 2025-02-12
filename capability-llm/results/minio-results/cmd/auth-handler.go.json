@@ -1,0 +1,66 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"crypto/subtle\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"encoding/base64\""
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "\"encoding/hex\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "\"io\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "\"net/http\""
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "\"net/url\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 21,
+                    "line_content": "\"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "auth",
+            "evidence": [
+                {
+                    "line_no": 24,
+                    "line_content": "\"github.com/minio/minio/internal/auth\""
+                }
+            ]
+        }
+    ]
+}

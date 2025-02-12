@@ -1,0 +1,80 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "\"github.com/cespare/xxhash/v2\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 20,
+                    "line_content": "jsoniter \"github.com/json-iterator/go\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "\"io\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "\"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "\"strings\""
+                }
+            ]
+        },
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "\"sync\""
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"encoding/hex\""
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "\"encoding/binary\""
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "\"github.com/google/uuid\""
+                }
+            ]
+        }
+    ]
+}

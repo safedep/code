@@ -1,0 +1,52 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "process:management",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "func main() {"
+                },
+                {
+                    "line_no": 19,
+                    "line_content": "minio.Main(os.Args)"
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "minio.Main(os.Args)"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "minio.Main(os.Args)"
+                }
+            ]
+        },
+        {
+            "capability_id": "aws:s3",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "_ \"github.com/minio/minio/internal/init\""
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "minio \"github.com/minio/minio/cmd\""
+                },
+                {
+                    "line_no": 19,
+                    "line_content": "minio.Main(os.Args)"
+                }
+            ]
+        }
+    ]
+}

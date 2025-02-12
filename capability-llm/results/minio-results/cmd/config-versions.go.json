@@ -1,0 +1,40 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "auth:management",
+            "evidence": [
+                {
+                    "line_no": 6,
+                    "line_content": "\"github.com/minio/minio/internal/auth\""
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "\"github.com/minio/minio/internal/config\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "\"github.com/minio/minio/internal/config/compress\""
+                }
+            ]
+        },
+        {
+            "capability_id": "auth:ldap",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "xldap \"github.com/minio/minio/internal/config/identity/ldap\""
+                }
+            ]
+        }
+    ]
+}

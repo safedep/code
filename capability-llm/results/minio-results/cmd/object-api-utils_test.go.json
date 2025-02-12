@@ -1,0 +1,62 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "\"net/http\""
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "\"net/http/httptest\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "\"encoding/hex\""
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "\"math/rand\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"io\""
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 21,
+                    "line_content": "\"runtime\""
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 23,
+                    "line_content": "\"testing\""
+                }
+            ]
+        }
+    ]
+}

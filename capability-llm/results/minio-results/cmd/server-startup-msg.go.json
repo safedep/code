@@ -1,0 +1,40 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:sockets",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "import \"net\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "import \"net/url\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:dns",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "xnet \"github.com/minio/pkg/v3/net\""
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "import \"github.com/minio/minio/internal/logger\""
+                }
+            ]
+        }
+    ]
+}

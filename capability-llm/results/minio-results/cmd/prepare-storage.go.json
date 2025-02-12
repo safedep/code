@@ -1,0 +1,80 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "import \"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "import \"net/http\""
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "import \"net/url\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "import \"fmt\""
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "import \"path/filepath\""
+                }
+            ]
+        },
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "import \"sync\""
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "import \"github.com/dustin/go-humanize\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 20,
+                    "line_content": "xhttp \"github.com/minio/minio/internal/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "monitoring:metrics",
+            "evidence": [
+                {
+                    "line_no": 21,
+                    "line_content": "import \"github.com/minio/minio/internal/logger\""
+                }
+            ]
+        }
+    ]
+}

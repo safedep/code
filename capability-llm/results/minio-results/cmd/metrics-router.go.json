@@ -1,0 +1,48 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "\"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"github.com/minio/pkg/v3/env\""
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "\"github.com/minio/mux\""
+                }
+            ]
+        },
+        {
+            "capability_id": "monitoring:metrics",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "const ("
+                },
+                {
+                    "line_no": 14,
+                    "line_content": "prometheusMetricsPathLegacy = \"/prometheus/metrics\""
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "prometheusMetricsV2ClusterPath = \"/v2/metrics/cluster\""
+                }
+            ]
+        }
+    ]
+}

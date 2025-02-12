@@ -1,0 +1,40 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "logging",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "\"github.com/minio/minio/internal/logger\""
+                }
+            ]
+        },
+        {
+            "capability_id": "web:framework",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "\"github.com/minio/mux\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "\"github.com/minio/pkg/v3/policy\""
+                }
+            ]
+        }
+    ]
+}

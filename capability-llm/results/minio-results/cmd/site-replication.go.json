@@ -1,0 +1,79 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"encoding/base64\""
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "\"encoding/binary\""
+                },
+                {
+                    "line_no": 14,
+                    "line_content": "\"encoding/json\""
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "\"encoding/xml\""
+                }
+            ]
+        },
+        {
+            "capability_id": "errors:handling",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "\"errors\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"bytes\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 24,
+                    "line_content": "\"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 20,
+                    "line_content": "\"runtime\""
+                }
+            ]
+        },
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 23,
+                    "line_content": "\"sync\""
+                }
+            ]
+        },
+        {
+            "capability_id": "auth:management",
+            "evidence": [
+                {
+                    "line_no": 32,
+                    "line_content": "\"github.com/minio/madmin\""
+                }
+            ]
+        }
+    ]
+}

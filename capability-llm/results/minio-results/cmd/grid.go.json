@@ -1,0 +1,49 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "crypto:encryption",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "\"crypto/tls\""
+                }
+            ]
+        },
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"sync/atomic\""
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:encryption",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "\"github.com/minio/minio/internal/fips\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "\"github.com/minio/minio/internal/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "\"github.com/minio/minio/internal/rest\""
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,13 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "3rd_party:dependency",
+            "evidence": [
+                {
+                    "line_no": 7,
+                    "line_content": "\"github.com/minio/minio-go/v7/pkg/set\""
+                }
+            ]
+        }
+    ]
+}

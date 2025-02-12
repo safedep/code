@@ -1,0 +1,48 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"sync\""
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "\"sync/atomic\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "\"unsafe\""
+                }
+            ]
+        },
+        {
+            "capability_id": "aws:s3",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "\"github.com/minio/madmin-go/v3\""
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "\"github.com/minio/minio/internal/bucket/lifecycle\""
+                }
+            ]
+        }
+    ]
+}

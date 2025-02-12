@@ -1,0 +1,13 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "aws:s3",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "\"github.com/minio/minio/internal/bucket/replication\""
+                }
+            ]
+        }
+    ]
+}

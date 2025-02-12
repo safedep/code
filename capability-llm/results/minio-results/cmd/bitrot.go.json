@@ -1,0 +1,47 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "import ("
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "\"hash\""
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "\"github.com/minio/highwayhash\""
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "\"github.com/minio/minio/internal/hash/sha256\""
+                },
+                {
+                    "line_no": 19,
+                    "line_content": "\"golang.org/x/crypto/blake2b\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "\"io\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"encoding/hex\""
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,40 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "\"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"github.com/minio/minio/internal/hash\""
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "var errConfigNotFound = errors.New(\"config file not found\")"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "\"io\""
+                }
+            ]
+        }
+    ]
+}

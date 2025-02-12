@@ -1,0 +1,43 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "const _authType_name = \"UnknownAnonymousPresignedPresignedV2PostPolicyStreamingSignedSignedSignedV2JWTSTSStreamingSignedTrailerStreamingUnsignedTrailer\""
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "var _authType_index = [...]uint8{0, 7, 16, 25, 36, 46, 61, 67, 75, 78, 81, 103, 127}"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "_ = x[authTypeStreamingSigned-5]"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "_ = x[authTypeStreamingSignedTrailer-10]"
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "_ = x[authTypeStreamingUnsignedTrailer-11]"
+                }
+            ]
+        },
+        {
+            "capability_id": "auth:jwt",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "_ = x[authTypeJWT-8]"
+                }
+            ]
+        }
+    ]
+}

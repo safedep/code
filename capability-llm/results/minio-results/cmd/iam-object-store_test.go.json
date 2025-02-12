@@ -1,0 +1,21 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "import ("
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "\"testing\""
+                },
+                {
+                    "line_no": 15,
+                    "line_content": "func TestSplitPath(t *testing.T) {"
+                }
+            ]
+        }
+    ]
+}

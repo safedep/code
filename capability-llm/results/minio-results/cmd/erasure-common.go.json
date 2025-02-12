@@ -1,0 +1,39 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "var wg sync.WaitGroup"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "var mu sync.Mutex"
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "r := rand.New(rand.NewSource(time.Now"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "func (er erasureObjects) getOnlineDisks() (newDisks []StorageAPI) {"
+                },
+                {
+                    "line_no": 14,
+                    "line_content": "disks := er.getDisks()"
+                }
+            ]
+        }
+    ]
+}

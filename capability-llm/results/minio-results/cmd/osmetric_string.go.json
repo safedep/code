@@ -1,0 +1,83 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "_ = x[osMetricRemoveAll-0]"
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "_ = x[osMetricMkdirAll-1]"
+                },
+                {
+                    "line_no": 11,
+                    "line_content": "_ = x[osMetricMkdir-2]"
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "_ = x[osMetricRename-3]"
+                },
+                {
+                    "line_no": 13,
+                    "line_content": "_ = x[osMetricOpenFileW-4]"
+                },
+                {
+                    "line_no": 17,
+                    "line_content": "_ = x[osMetricRemove-11]"
+                },
+                {
+                    "line_no": 21,
+                    "line_content": "_ = x[osMetricCreate-14]"
+                }
+            ]
+        },
+        {
+            "capability_id": "file:read",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "_ = x[osMetricOpenFileR-5]"
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "_ = x[osMetricOpen-8]"
+                },
+                {
+                    "line_no": 23,
+                    "line_content": "_ = x[osMetricReadDirent-15]"
+                },
+                {
+                    "line_no": 19,
+                    "line_content": "_ = x[osMetricStat-12]"
+                },
+                {
+                    "line_no": 20,
+                    "line_content": "_ = x[osMetricAccess-13]"
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "_ = x[osMetricOpenFileWFd-6]"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "_ = x[osMetricLstat-10]"
+                },
+                {
+                    "line_no": 22,
+                    "line_content": "_ = x[osMetricFdatasync-16]"
+                },
+                {
+                    "line_no": 24,
+                    "line_content": "_ = x[osMetricSync-17]"
+                }
+            ]
+        }
+    ]
+}

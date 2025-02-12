@@ -1,0 +1,49 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "import \"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "import \"runtime\""
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "import \"testing\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "import \"fmt\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "import \"context\""
+                }
+            ]
+        }
+    ]
+}

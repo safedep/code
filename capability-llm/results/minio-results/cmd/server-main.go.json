@@ -1,0 +1,71 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "\"io\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:sockets",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "\"net\""
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 21,
+                    "line_content": "\"runtime\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 26,
+                    "line_content": "\"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "process:management",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "\"os\""
+                },
+                {
+                    "line_no": 25,
+                    "line_content": "\"syscall\""
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"encoding/hex\""
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "\"os\""
+                }
+            ]
+        }
+    ]
+}

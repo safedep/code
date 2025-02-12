@@ -1,0 +1,58 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"io\""
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "\"os\""
+                }
+            ]
+        },
+        {
+            "capability_id": "file:manipulation",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "pathutil \"path\""
+                }
+            ]
+        },
+        {
+            "capability_id": "threading:management",
+            "evidence": [
+                {
+                    "line_no": 16,
+                    "line_content": "\"sync\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "\"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 23,
+                    "line_content": "xioutil \"github.com/minio/minio/internal/ioutil\""
+                }
+            ]
+        }
+    ]
+}

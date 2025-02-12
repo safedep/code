@@ -83,8 +83,16 @@ Return the output **only** in the following JSON format:
 
     # print("cleaned", cleaned_result)
 
-    with open(output_path, 'w') as outfile:
-        json.dump(json.loads(cleaned_result), outfile, indent=4)
+    try:
+      with open(output_path, 'w') as outfile:
+          json.dump(json.loads(cleaned_result), outfile, indent=4)
+    except Exception as e:
+      print("Error saving", output_path, e)
+      # store log in errors 
+      with open("errors.log", 'a') as error_log:
+        # write prompt and other details to log
+        error_log.write(f"Error details when trying to process {file_path} with output {output_path} and prompt - {prompt} \n abd err for {output_path}: {e} \n\n\n")
+      
 
 
 mergeOnly = False
@@ -96,6 +104,7 @@ scanFolders = []
 # scanFolders.append("prettier")
 # scanFolders.append("scancode-workbench")
 # scanFolders.append("django-DefectDojo-master")
+# scanFolders.append("minio")
 
 os.makedirs("results", exist_ok=True)
 

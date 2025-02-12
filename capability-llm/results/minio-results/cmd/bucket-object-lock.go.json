@@ -1,0 +1,44 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "import \"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "auth",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "import \"github.com/minio/minio/internal/auth\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "import objectlock \"github.com/minio/minio/internal/bucket/object/lock\""
+                }
+            ]
+        },
+        {
+            "capability_id": "aws:s3",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "import objectlock \"github.com/minio/minio/internal/bucket/object/lock\""
+                },
+                {
+                    "line_no": 10,
+                    "line_content": "import \"github.com/minio/minio/internal/bucket/replication\""
+                }
+            ]
+        }
+    ]
+}

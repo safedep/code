@@ -1,0 +1,71 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "\"github.com/minio/minio/internal/config\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:sockets",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"net\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:dns",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"net\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"net/url\""
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 12,
+                    "line_content": "\"runtime\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "\"strings\""
+                }
+            ]
+        },
+        {
+            "capability_id": "3rd_party:library",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "\"github.com/minio/minio-go/v7/pkg/set\""
+                },
+                {
+                    "line_no": 19,
+                    "line_content": "\"github.com/minio/minio/internal/logger\""
+                }
+            ]
+        }
+    ]
+}

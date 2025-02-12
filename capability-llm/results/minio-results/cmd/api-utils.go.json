@@ -1,0 +1,35 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 9,
+                    "line_content": "\"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"runtime\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 14,
+                    "line_content": "func shouldEscape(c byte) bool {"
+                },
+                {
+                    "line_no": 18,
+                    "line_content": "case '-', '_', '.',"
+                }
+            ]
+        }
+    ]
+}

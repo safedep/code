@@ -1,0 +1,67 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "import \"encoding/xml\""
+                }
+            ]
+        },
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 17,
+                    "line_content": "import \"encoding/base64\""
+                }
+            ]
+        },
+        {
+            "capability_id": "io:streaming",
+            "evidence": [
+                {
+                    "line_no": 19,
+                    "line_content": "import \"io\""
+                }
+            ]
+        },
+        {
+            "capability_id": "network:http",
+            "evidence": [
+                {
+                    "line_no": 20,
+                    "line_content": "import \"net/http\""
+                }
+            ]
+        },
+        {
+            "capability_id": "system:info",
+            "evidence": [
+                {
+                    "line_no": 25,
+                    "line_content": "import \"github.com/dustin/go-humanize\""
+                }
+            ]
+        },
+        {
+            "capability_id": "aws:s3",
+            "evidence": [
+                {
+                    "line_no": 26,
+                    "line_content": "import \"github.com/minio/madmin-go/v3\""
+                }
+            ]
+        },
+        {
+            "capability_id": "aws:s3",
+            "evidence": [
+                {
+                    "line_no": 27,
+                    "line_content": "import \"github.com/minio/minio/internal/bucket/versioning\""
+                }
+            ]
+        }
+    ]
+}

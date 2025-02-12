@@ -1,0 +1,13 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 21,
+                    "line_content": "var testUUID = uuid.MustParse(\"f5c58c61-7175-4018-ab5e-a94fe9c2de4e\")"
+                }
+            ]
+        }
+    ]
+}

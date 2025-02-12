@@ -1,0 +1,58 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "network:sockets",
+            "evidence": [
+                {
+                    "line_no": 13,
+                    "line_content": "\"net\""
+                }
+            ]
+        },
+        {
+            "capability_id": "env:config",
+            "evidence": [
+                {
+                    "line_no": 15,
+                    "line_content": "\"os\""
+                }
+            ]
+        },
+        {
+            "capability_id": "time:management",
+            "evidence": [
+                {
+                    "line_no": 18,
+                    "line_content": "\"time\""
+                }
+            ]
+        },
+        {
+            "capability_id": "auth:jwt",
+            "evidence": [
+                {
+                    "line_no": 23,
+                    "line_content": "\"github.com/minio/minio/internal/auth\""
+                }
+            ]
+        },
+        {
+            "capability_id": "crypto:hashing",
+            "evidence": [
+                {
+                    "line_no": 11,
+                    "line_content": "\"crypto/subtle\""
+                }
+            ]
+        },
+        {
+            "capability_id": "monitoring:metrics",
+            "evidence": [
+                {
+                    "line_no": 24,
+                    "line_content": "\"github.com/minio/minio/internal/logger\""
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,30 @@
+{
+    "capabilities": [
+        {
+            "capability_id": "data:serialization",
+            "evidence": [
+                {
+                    "line_no": 10,
+                    "line_content": "\"gopkg.in/yaml.v3\""
+                },
+                {
+                    "line_no": 16,
+                    "line_content": "expireYaml := `"
+                }
+            ]
+        },
+        {
+            "capability_id": "testing:automation",
+            "evidence": [
+                {
+                    "line_no": 8,
+                    "line_content": "\"testing\""
+                },
+                {
+                    "line_no": 12,
+                    "line_content": "func TestParseBatchJobExpire(t *testing.T) {"
+                }
+            ]
+        }
+    ]
+}
