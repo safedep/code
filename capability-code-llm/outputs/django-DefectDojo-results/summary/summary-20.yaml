@@ -1,0 +1,298 @@
+
+selenium:
+  selenium.webdriver.support.ui.Select:
+    - Select(driver.find_element(By.ID, "id_role"))
+    - Select(driver.find_element(By.ID, "id_role"))
+    - Select(element)
+    - Select(driver.find_element(By.ID, "id_role"))
+    - Select(driver.find_element(By.ID, "id_role"))
+    - Select(element)
+    - Select(driver.find_element(By.ID, "id_role"))
+    - Select(driver.find_element(By.ID, "id_role"))
+    - Select(driver.find_element(By.ID, "id_report_type"))
+    - Select(driver.find_element(By.ID, "id_include_finding_notes"))
+    - Select(driver.find_element(By.ID, "id_include_executive_summary"))
+    - Select(driver.find_element(By.ID, "id_include_executive_summary"))
+    - Select(driver.find_element(By.ID, "id_include_table_of_contents"))
+    - Select(driver.find_element(By.ID, "id_include_finding_notes"))
+    - Select(driver.find_element(By.ID, "id_include_executive_summary"))
+    - Select(driver.find_element(By.ID, "id_include_table_of_contents"))
+    - Select(driver.find_element(By.ID, "id_include_finding_notes"))
+    - Select(driver.find_element(By.ID, "id_include_executive_summary"))
+    - Select(driver.find_element(By.ID, "id_include_table_of_contents"))
+    - Select(driver.find_element(By.ID, "id_include_finding_notes"))
+    - Select(driver.find_element(By.ID, "id_include_executive_summary"))
+    - Select(driver.find_element(By.ID, "id_include_table_of_contents"))
+    - Select(driver.find_element(By.ID, "id_include_finding_notes"))
+    - Select(driver.find_element(By.ID, "id_include_executive_summary"))
+    - Select(driver.find_element(By.ID, "id_include_table_of_contents"))
+    - Select(driver.find_element(By.ID, "id_include_finding_notes"))
+    - Select(driver.find_element(By.ID, "id_include_executive_summary"))
+    - Select(driver.find_element(By.ID, "id_include_table_of_contents"))
+    - Select(driver.find_element(By.ID, "id_lead"))
+    - Select(driver.find_element(By.ID, "id_status"))
+    - Select(driver.find_element(By.ID, "id_test_type"))
+    - Select(driver.find_element(By.ID, "id_environment"))
+    - Select(driver.find_element(By.ID, "id_environment"))
+    - Select(driver.find_element(By.ID, "id_severity"))
+    - Select(driver.find_element(By.ID, "id_finding_action"))
+    - Select(driver.find_element(By.ID, "id_findings_to_merge"))
+    - Select(driver.find_element(By.ID, "id_authentication_type"))
+    - Select(driver.find_element(By.ID, "id_tool_configuration"))
+    - Select(driver.find_element(By.ID, "id_role"))
+  selenium.webdriver.chrome.options.Options:
+    - Options()
+  selenium.webdriver:
+    - desired = webdriver.DesiredCapabilities.CHROME
+    - webdriver.Chrome(\n                os.environ["CHROMEDRIVER"],\n                chrome_options=dd_driver_options,\n                desired_capabilities=desired,\n            )
+    - def __init__(self, webdriver):\n        self._webdriver = webdriver
+    - self._webdriver = webdriver
+  selenium.webdriver.support.expected_conditions aliased as EC:
+    - EC.presence_of_element_located((By.ID, wrapper_id))
+    - EC.alert_is_present()
+    - EC.alert_is_present()
+    - EC.alert_is_present()
+    - EC.presence_of_element_located((By.ID, "id_reviewers"))
+    - EC.presence_of_element_located((By.ID, "id_users"))
+    - EC.visibility_of_element_located((By.LINK_TEXT, "Notifications"))
+    - EC.presence_of_element_located((By.ID, "id_products"))
+    - EC.presence_of_element_located((By.ID, "id_groups"))
+    - EC.presence_of_element_located((By.ID, "id_products"))
+    - EC.presence_of_element_located((By.ID, "id_users"))
+    - EC.presence_of_element_located((By.ID, "id_product_types"))
+    - EC.presence_of_element_located((By.ID, "id_groups"))
+    - EC.presence_of_element_located((By.ID, "id_product_types"))
+    - EC.presence_of_element_located((By.ID, "id_users"))
+    - EC.visibility_of_element_located((By.ID, "show-filters"))
+    - EC.visibility_of_element_located((By.XPATH, "//label[@for='id_include_finding_notes']"))
+  selenium.common.exceptions.NoSuchElementException:
+    - try:\n            self.driver.find_element(By.ID, id)\n            return True\n        except NoSuchElementException:\n            return False
+    - self.assertRaises(NoSuchElementException)
+    - driver = self.driver\n\n        self.disable_notification()\n        driver.get(self.base_url + "notifications")\n        in_place = False\n        try:\n            driver.find_element(By.XPATH, f"//...
+    - driver = self.driver\n\n        self.enable_notification()\n        driver.get(self.base_url + "notifications")\n        try:\n            driver.find_element(By.XPATH, f"//input[@name='product_added'...
+    - driver = self.driver\n\n        self.disable_notification()\n        driver.get(self.base_url + "notifications/system")\n        in_place = False\n        try:\n            driver.find_element(By.XPAT...
+    - driver = self.driver\n\n        self.enable_notification()\n        in_place = False\n        try:\n            driver.find_element(By.XPATH, f"//input[@name='product_added' and @value='{self.type}']"...
+    - driver = self.driver\n\n        self.disable_notification()\n        driver.get(self.base_url + "notifications/template")\n        in_place = False\n        try:\n            driver.find_element(By.XP...
+    - driver = self.driver\n\n        self.enable_notification()\n        driver.get(self.base_url + "notifications/template")\n        try:\n            driver.find_element(By.XPATH, f"//input[@name='produ...
+    - self.assertRaises(NoSuchElementException)
+  selenium.common.exceptions.NoAlertPresentException:
+    - try:\n            self.driver.switch_to_alert()\n        except NoAlertPresentException:\n            return False\n        return True
+  selenium.common.exceptions.TimeoutException:
+    - logger.debug("removing previous findings...")\n        driver = self.driver\n        driver.get(self.base_url + "finding?page=1")\n\n        if self.element_exists_by_id("no_findings"):\n            t...
+    - logger.debug("removing previous findings...")\n        driver = self.driver\n        driver.get(self.base_url + "finding?page=1")\n\n        if self.element_exists_by_id("no_findings"):\n            t...
+    - logger.debug("removing previous findings...")\n        driver = self.driver\n        driver.get(self.base_url + "finding?page=1")\n\n        if self.element_exists_by_id("no_findings"):\n            t...
+    - driver = self.driver\n        # Navigate to All Finding page\n        self.goto_all_findings_list(driver)\n        # Select and click on the particular finding to edit\n        driver.find_element(By....
+    - driver = self.driver\n        # Navigate to Group Management page\n        driver.get(self.base_url + "group")\n        # Select and click on the particular group to view\n        driver.find_element(...
+    - driver = self.navigate_to_group_view()\n        # Open the menu to add product groups and click the 'Add' button\n        driver.find_element(By.ID, "dropdownMenuAddProductGroup").click()\n        dri...
+    - driver = self.driver\n        # Navigate to the product page\n        self.goto_product_overview(driver)\n        # Select and click on the particular product to view\n        driver.find_element(By.L...
+    - driver.find_element(By.ID, "dropdownMenuAddProductMember").click()\n            driver.find_element(By.ID, "addProductMember").click()\n            # Select the product 'QA Test'\n            try:\n  ...
+    - driver.find_element(By.ID, "dropdownMenuAddProductMember").click()\n            driver.find_element(By.ID, "addProductMember").click()\n            # Select the user 'propersahm'\n            try:\n  ...
+    - driver = self.navigate_to_group_view()\n        # Open the menu to add product type groups and click the 'Add' button\n        driver.find_element(By.ID, "dropdownMenuAddProductTypeGroup").click()\n  ...
+    - driver = self.driver\n        # Navigate to the product type page\n        driver.get(self.base_url + "product/type")\n        driver.find_element(By.ID, "dropdownMenuProductType").click()\n        dr...
+    - driver.find_element(By.ID, "dropdownMenuAddProductTypeMember").click()\n            driver.find_element(By.ID, "addProductTypeMember").click()\n            # Select the product type 'Research and Deve...
+    - driver.find_element(By.ID, "dropdownMenuAddProductTypeMember").click()\n            driver.find_element(By.ID, "addProductTypeMember").click()\n            # Select the user 'propersahm'\n            ...
+
+sys:
+  sys:
+    - inspect.getmembers(\n            sys.modules[SERIALIZER_DEFS_MODULE], _is_model_serializer,\n        )
+    - sys.exc_info()
+    - sys.exc_info()
+    - sys.exc_info()
+    - sys.exc_info()
+    - sys.exit(f"Group {group_name} already exists, migration aborted")
+    - sys.exit("No superuser found, migration aborted")
+    - sys.exit("Group has no auth_group, migration aborted")
+    - sys.exit("There are no defectDojo_enagagement_survey tables to migrate.")
+    - int(sys.maxsize / 10)
+    - int(sys.maxsize / 10)
+    - int(sys.maxsize / 10)
+    - int(sys.maxsize / 10)
+    - int(sys.maxsize / 10)
+    - execute_from_command_line(sys.argv)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(ret)
+    - sys.exit(0)
+
+:
+  .forms.ChoiceQuestionForm:
+    - return ChoiceQuestionForm
+  .api_client.SonarQubeAPI:
+    - SonarQubeAPI(tool_config=config.tool_configuration)
+  .importer.BlackduckImporter:
+    - BlackduckImporter()
+  .prefetcher._Prefetcher:
+    - _Prefetcher()
+  .forms.TextQuestionForm:
+    - return TextQuestionForm
+  .api_client.BlackduckAPI:
+    - BlackduckAPI(tool_config)
+  .importer.SonarQubeApiImporter:
+    - SonarQubeApiImporter()
+    - SonarQubeApiImporter.prepare_client(finding.test)
+    - SonarQubeApiImporter.prepare_client(finding.test)
+  .tasks.celery_status:
+    - celery_status.apply_async()
+  .utils._get_prefetchable_fields:
+    - _get_prefetchable_fields(\n                        serializer_classes[path](),\n                    )
+  ..views:
+    - re_path(r"^cred/add", views.new_cred, name="add_cred")
+    - re_path(r"^cred/(?P<ttid>\d+)/view$", views.view_cred_details, name="view_cred_details")
+    - re_path(r"^cred/(?P<ttid>\d+)/edit$", views.edit_cred, name="edit_cred")
+    - re_path(r"^cred/(?P<ttid>\d+)/delete$", views.delete_cred, name="delete_cred")
+    - re_path(r"^cred$", views.cred, name="cred")
+    - re_path(r"^product/(?P<pid>\d+)/cred/add$", views.new_cred_product, name="new_cred_product")
+    - re_path(r"^product/(?P<pid>\d+)/cred/all$", views.all_cred_product, name="all_cred_product")
+    - re_path(r"^product/(?P<pid>\d+)/cred/(?P<ttid>\d+)/edit$", views.edit_cred_product, name="edit_cred_product")
+    - re_path(r"^product/(?P<pid>\d+)/cred/(?P<ttid>\d+)/view$", views.view_cred_product, name="view_cred_product")
+    - re_path(r"^product/(?P<pid>\d+)/cred/(?P<ttid>\d+)/delete$", views.delete_cred_product, name="delete_cred_product")
+    - re_path(r"^engagement/(?P<eid>\d+)/cred/add$", views.new_cred_product_engagement, name="new_cred_product_engagement")
+    - re_path(r"^engagement/(?P<eid>\d+)/cred/(?P<ttid>\d+)/view$", views.view_cred_product_engagement,\n        name="view_cred_product_engagement")
+    - re_path(r"^engagement/(?P<eid>\d+)/cred/(?P<ttid>\d+)/delete$", views.delete_cred_engagement,\n        name="delete_cred_engagement")
+    - re_path(r"^test/(?P<tid>\d+)/cred/add$", views.new_cred_engagement_test, name="new_cred_engagement_test")
+    - re_path(r"^test/(?P<tid>\d+)/cred/(?P<ttid>\d+)/view$", views.view_cred_engagement_test,\n        name="view_cred_engagement_test")
+    - re_path(r"^test/(?P<tid>\d+)/cred/(?P<ttid>\d+)/delete$", views.delete_cred_test, name="delete_cred_test")
+    - re_path(r"^finding/(?P<fid>\d+)/cred/add$", views.new_cred_finding, name="new_cred_finding")
+    - re_path(r"^finding/(?P<fid>\d+)/cred/(?P<ttid>\d+)/view$", views.view_cred_finding, name="view_cred_finding")
+    - re_path(r"^finding/(?P<fid>\d+)/cred/(?P<ttid>\d+)/delete$", views.delete_cred_finding, name="delete_cred_finding")
+    - re_path(r"^github-webhook", views.webhook, name="github_web_hook")
+    - re_path(r"^github/add", views.new_github, name="add_github")
+    - re_path(r"^github/(?P<tid>\d+)/delete$", views.delete_github,\n        name="delete_github")
+    - re_path(r"^github$", views.github, name="github")
+    - re_path(r"^webhook/(?P<secret>[\w-]+)$", views.webhook, name="web_hook_secret")
+    - re_path(r"^webhook/", views.webhook, name="web_hook")
+    - re_path(r"^jira/webhook/(?P<secret>[\w-]+)$", views.webhook, name="jira_web_hook_secret")
+    - re_path(r"^jira/webhook/", views.webhook, name="jira_web_hook")
+    - views.NewJiraView.as_view()
+    - views.AdvancedJiraView.as_view()
+    - views.EditJiraView.as_view()
+    - views.DeleteJiraView.as_view()
+    - views.ListJiraView.as_view()
+    - re_path(r"^notes/(?P<id>\d+)/delete/(?P<page>[\w-]+)/(?P<objid>\d+)$", views.delete_note, name="delete_note")
+    - re_path(r"^notes/(?P<id>\d+)/edit/(?P<page>[\w-]+)/(?P<objid>\d+)$", views.edit_note, name="edit_note")
+    - re_path(r"^notes/(?P<id>\d+)/history/(?P<page>[\w-]+)/(?P<objid>\d+)$", views.note_history, name="note_history")
+    - views.PersonalNotificationsView.as_view()
+    - views.SystemNotificationsView.as_view()
+    - views.PersonalNotificationsView.as_view()
+    - views.TemplateNotificationsView.as_view()
+    - views.ListNotificationWebhooksView.as_view()
+    - views.AddNotificationWebhooksView.as_view()
+    - views.EditNotificationWebhooksView.as_view()
+    - views.DeleteNotificationWebhooksView.as_view()
+    - re_path(r"^product/(?P<pid>\d+)/object/add$", views.new_object, name="new_object")
+    - re_path(r"^product/(?P<pid>\d+)/object/(?P<ttid>\d+)/edit$", views.edit_object, name="edit_object")
+    - re_path(r"^product/(?P<pid>\d+)/object/view$", views.view_objects, name="view_objects")
+    - re_path(r"^product/(?P<pid>\d+)/object/(?P<ttid>\d+)/delete$", views.delete_object,\n        name="delete_object")
+    - re_path(r"^regulations/add", views.new_regulation, name="new_regulation")
+    - re_path(r"^regulations/(?P<ttid>\d+)/edit$", views.edit_regulations,\n        name="edit_regulations")
+    - re_path(r"^regulations$", views.regulations, name="regulations")
+    - re_path(r"^sla_config/add", views.new_sla_config, name="new_sla_config")
+    - re_path(r"^sla_config/(?P<slaid>\d+)/edit$", views.edit_sla_config, name="edit_sla_config")
+    - re_path(r"^sla_config$", views.sla_config, name="sla_config")
+    - re_path(r"^tool_config/add", views.new_tool_config, name="add_tool_config")
+    - re_path(r"^tool_config/(?P<ttid>\d+)/edit$", views.edit_tool_config,\n        name="edit_tool_config")
+    - re_path(r"^tool_config$", views.tool_config, name="tool_config")
+    - re_path(r"^product/(?P<pid>\d+)/tool_product/add$", views.new_tool_product, name="new_tool_product")
+    - re_path(r"^product/(?P<pid>\d+)/tool_product/all$", views.all_tool_product, name="all_tool_product")
+    - re_path(r"^product/(?P<pid>\d+)/tool_product/(?P<ttid>\d+)/edit$", views.edit_tool_product, name="edit_tool_product")
+    - re_path(r"^product/(?P<pid>\d+)/tool_product/(?P<ttid>\d+)/delete$", views.delete_tool_product,\n        name="delete_tool_product")
+    - re_path(r"^tool_type/add", views.new_tool_type, name="add_tool_type")
+    - re_path(r"^tool_type/(?P<ttid>\d+)/edit$", views.edit_tool_type,\n        name="edit_tool_type")
+    - re_path(r"^tool_type$", views.tool_type, name="tool_type")
+  .importer.BlackduckApiImporter:
+    - BlackduckApiImporter()
+  .importer.VulnersImporter:
+    - VulnersImporter()
+    - VulnersImporter()
+  .importer.BlackduckBinaryAnalysisImporter:
+    - BlackduckBinaryAnalysisImporter()
+  .importer.BlackduckCRImporter:
+    - BlackduckCRImporter()
+  .parser_xml.SSLyzeXMLParser:
+    - SSLyzeXMLParser()
+  .parser_json.SSLyzeJSONParser:
+    - SSLyzeJSONParser()
+  ..utils:
+    - utils._is_many_to_many_relation(field_meta)
+  .importer.CobaltApiImporter:
+    - CobaltApiImporter()
+  .importer.BugcrowdApiImporter:
+    - BugcrowdApiImporter()
+  .importer.EdgescanImporter:
+    - EdgescanImporter()
+  .api_client.VulnersAPI:
+    - VulnersAPI(tool_config)
+  .settings aliased as :
+    - 
+  .api_client.BugcrowdAPI:
+    - BugcrowdAPI(tool_config)
+  .api_client.CobaltAPI:
+    - CobaltAPI(tool_config)
+  .api_client.EdgescanAPI:
+    - EdgescanAPI(tool_config)
+  .model.BlackduckFinding:
+    - def parse_findings(self, report: Path) -> Iterable[BlackduckFinding]:\n        while False:\n            yield None
+    - def parse_findings(self, report: Path) -> Iterable[BlackduckFinding]:\n        if not issubclass(type(report), Path):\n            report = Path(report.temporary_file_path())\n\n        if zipfile.is_...
+    - BlackduckFinding(\n                    cve,\n                    security_issue_dict.get("Description"),\n                    security_issue_dict.get("Security Risk"),\n                    security_is...
+  .model.BlackduckBinaryAnalysisFinding:
+    - def parse_findings(self, report: Path) -> Iterable[BlackduckBinaryAnalysisFinding]:\n        while False:\n            yield None
+    - def parse_findings(self, report: Path) -> Iterable[BlackduckBinaryAnalysisFinding]:\n        orig_report_name = Path(report.name)\n        if not issubclass(type(report), Path):\n            report = Path(report.temporary_file_path())\n\n        return self._process_csvfile(report, orig_report_name)
+    - BlackduckBinaryAnalysisFinding(\n                    orig_report_name,\n                    vuln_dict.get("Component"),\n                    vuln_dict.get("Version"),\n                    vuln_dict.ge...
+
+pytz:
+  pytz:
+    - pytz.timezone(get_system_setting("time_zone"))
+  pytz.timezone:
+    - timezone(get_system_setting("time_zone"))
+    - timezone(get_system_setting("time_zone"))
+    - timezone(get_system_setting("time_zone"))
+    - timezone(get_system_setting("time_zone"))
+    - timezone(get_system_setting("time_zone"))
+    - timezone(get_system_setting("time_zone"))
+  pytz.all_timezones:
+    - models.CharField(max_length=50,\n                                 choices=[(tz, tz) for tz in all_timezones],\n                                 default="UTC", blank=False)
+
+titlecase:
+  titlecase.titlecase:
+    - titlecase(self.title[:511])
+
+hashlib:
+  hashlib:
+    - hashlib.sha256(fields_to_hash.casefold().encode("utf-8").strip())
+    - hashlib.sha256(\n                    "|".join(\n                        [\n                            finding.title,\n                            str(finding.impact),\n                            str...
+    - hashlib.sha256(\n                (sev + "|" + region + "|" + result_extended).encode("utf-8"),\n            )
+    - hashlib.sha256(\n                (sev + "|" + region + "|" + result_extended).encode("utf-8"),\n            )
+    - hashlib.sha256(unique_id_from_tool.encode("utf-8"))
+    - hashlib.sha256(unique_id_from_tool.encode("utf-8"))
+    - hashlib.md5(\n                f"{title} | {i.vuln_source}".encode(),\n            )
+    - hashlib.sha256(\n                f"{file_path + object_sha1 + title}".encode(),\n            )
+    - hashlib.md5(\n                    (finding.title + "|" + finding.description).encode("utf-8"),\n                )
+    - hashlib.md5(fingerprint.encode("utf-8"))
+    - hashlib.sha256(\n                    (vuln_id + date + package_name + package_version).encode(\n                        "utf-8",\n                    ),\n                )

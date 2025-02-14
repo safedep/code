@@ -1,0 +1,367 @@
+
+re:
+  re:
+    - re.search(r" (/[^/ ]*)+/?", text)
+    - re.compile(r"^[a-zA-Z0-9_\s+-.]*$")
+    - re.search(\n            r"^(.*?)(?:(<h2>See</h2>)|(<b>References</b>))",\n            raw_html,\n            re.DOTALL,\n        )
+    - re.search(\n            r"^(.*?)(?:(<h2>See</h2>)|(<b>References</b>))",\n            raw_html,\n            re.DOTALL,\n        )
+    - re.search(r"CWE-(\d+)", raw_html)
+    - re.compile(r"^--->\n\n(.+)\n\n<---\n\n(.+)$", re.DOTALL)
+    - re.compile(r"^--->\n\n(.+)\n\n<---\n\n(.+)$", re.DOTALL)
+    - re.compile(\n        r"^HTTP/2 Request Headers:\n\n(.+)\r\nHTTP/2 Response Headers:\n\n(.+)$", re.DOTALL)
+    - re.compile(\n        r"^HTTP/2 Request Headers:\n\n(.+)\r\nHTTP/2 Response Headers:\n\n(.+)$", re.DOTALL)
+    - re.compile(r"\[\[markup\]\]|\[\[|\]\]")
+    - re.compile(r"CVE-[0-9]+-[0-9]+", re.IGNORECASE)
+    - re.compile(r"CVE-[0-9]+-[0-9]+", re.IGNORECASE)
+    - re.findall(r"^CWE-[0-9]{1,4}", title)
+    - re.search(r"\[(.*?)\]", title_text)
+    - re.sub(r"\[.*\]\s", "", title_text)
+    - re.search(r"\[(.*?)\]", title_text)
+    - re.sub(r"\[.*\]\s", "", title_text)
+    - re.search(r"CVE-\d{4}-\d{4,9}", vuln_id, re.IGNORECASE)
+    - re.search(r"CVE-\d{4}-\d{4,9}", vuln_id, re.IGNORECASE)
+    - re.search(\n            r"([^\@]+?)\[\@([^=]*?)=\'([^\']*?)\'", subnode_xpath_expr,\n        )
+    - re.findall(r"CWE-(\d+)", x.text)
+    - re.search(r"(?<=\[)(.*)(\])", location)
+    - re.sub(r"[ \t]+", " ", (\n                "".join(container.itertext())\n                .strip()\n                .replace("Snip", "\n<-------------- Snip -------------->")\n                .replace("\t", "")\n            ))
+    - re.sub(r"\s+", " ", value)
+    - re.sub(r"\s+", " ", a_tag.text.strip())
+    - re.search(r"CWE-([0-9]*)", cleaned_item, re.IGNORECASE)
+    - re.search(r"CWE-([0-9]*)", cleaned_item, re.IGNORECASE)
+    - re.search(r"CWE-([0-9]*)", cwe_html, re.IGNORECASE)
+    - re.search(r"CWE-([0-9]*)", cwe_html, re.IGNORECASE)
+    - re.findall(r"\d+", cwe)
+    - re.sub(r" \([0-9]*\)$", "", title)
+    - re.findall(r"CVE-\d{4}-\d{4,10}", title)
+    - re.match(r"\{.*\}", element.tag)
+    - re.compile(r"CVE-\d{4}-\d{4,7}")
+    - re.match(r"^(CWE-)?(\d+)", cwe_field)
+    - re.sub(\n            r"^CVE-\d{4}-\d{4,7}", "", stripped_name,\n        )
+    - re.sub(r"^CWE-\d+\:", "", stripped_name)
+    - re.sub(r"^CWE-\d+", "", stripped_name)
+    - re.match(regex, scan.tag)
+    - re.compile(r"\((.*)\)")
+    - re.compile(settings.PARSER_EXCLUDE)
+    - re.match(regex, root.tag)
+    - re.match(r".*/(.*):", name, re.IGNORECASE)
+    - re.match(r".*/(.*):", name, re.IGNORECASE)
+    - re.match(r"CWE-\d+", value, re.IGNORECASE)
+    - re.match(r"CWE-\d+", value, re.IGNORECASE)
+    - re.match(r"(.*):(.*)", artifact_general["name"], re.IGNORECASE)
+    - re.match(r"(.*):(.*)", artifact_general["name"], re.IGNORECASE)
+    - re.match(r".*\/(.*)$", str(path), re.IGNORECASE)
+    - re.match(r".*\/(.*)$", str(path), re.IGNORECASE)
+    - re.match(r".*sha256__(.*).tar", path, re.IGNORECASE)
+    - re.match(r".*sha256__(.*).tar", path, re.IGNORECASE)
+    - re.match(r"(.*)-", fullname, re.IGNORECASE)
+    - re.match(r"(.*)-", fullname, re.IGNORECASE)
+    - re.match(r".*-(.*).jar", fullname, re.IGNORECASE)
+    - re.match(r".*-(.*).jar", fullname, re.IGNORECASE)
+    - re.match(r"(.*):", fullname, re.IGNORECASE)
+    - re.match(r"(.*):", fullname, re.IGNORECASE)
+    - re.match(r".*:(.*)", fullname, re.IGNORECASE)
+    - re.match(r".*:(.*)", fullname, re.IGNORECASE)
+    - re.match(r"(.*)-", fullname, re.IGNORECASE)
+    - re.match(r"(.*)-", fullname, re.IGNORECASE)
+    - re.match(r".*-(.*).js", fullname, re.IGNORECASE)
+    - re.match(r".*-(.*).js", fullname, re.IGNORECASE)
+    - re.match(r"([a-z]+://[a-z\d\.:]+):([a-z\d\.\-]+)", name, re.IGNORECASE)
+    - re.match(r"([a-z]+://[a-z\d\.:]+):([a-z\d\.\-]+)", name, re.IGNORECASE)
+    - re.match(r"CWE-\d+", value, re.IGNORECASE)
+    - re.match(r"CWE-\d+", value, re.IGNORECASE)
+    - re.search(r"CWE-(\d+)", val, re.IGNORECASE)
+    - re.search(r"CWE-(\d+)", val, re.IGNORECASE)
+    - re.match(r"(cwe|CWE)-([0-9]+)", metadata.get("cwe"))
+    - re.sub(\n                                                r"[^A-Za-z0-9]+",\n                                                "-",\n                                                service.get("name").lower(),\n                                            )
+    - re.split(\n                r"(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s", description,\n            )
+    - re.sub(r"[a-f0-9]{64}", "censored_by_npm_audit", path)
+    - re.match(r"\{.*\}", element.tag)
+    - re.findall(cve_pattern, column_value)
+    - re.search(\n                                r"\[(POP-\d+)\].+", issue["message"],\n                            )
+    - re.search(vector_pattern, cvss_base)
+    - re.search(\n                    vector_pattern, cvss_temporal,\n                )
+    - re.search(r"CWE-([0-9]*)", cwe, re.IGNORECASE)
+    - re.search(r"CWE-([0-9]*)", cwe, re.IGNORECASE)
+    - re.search(CWE_REGEX, value, re.IGNORECASE)
+    - re.search(CWE_REGEX, value, re.IGNORECASE)
+    - re.search(r"(CVE-[0-9]+-[0-9]+)", val, re.IGNORECASE)
+    - re.search(r"(CVE-[0-9]+-[0-9]+)", val, re.IGNORECASE)
+    - re.findall(cwe_pattern, message)
+    - re.findall(cvss_pattern, message)
+    - re.findall(component_pattern, message)
+    - re.findall(cve_pattern, message)
+    - re.findall(cve_pattern, message)
+    - re.findall(cve_pattern, message)
+    - re.findall(cve_pattern, message)
+    - re.search(r"CWE-([0-9]*)", vuln_references, re.IGNORECASE)
+    - re.search(r"CWE-([0-9]*)", vuln_references, re.IGNORECASE)
+    - re.sub(r"(?<=\))(.*?)(?=\[)", "\n", reference)
+    - re.findall(\n            r"CVE-[0-9]+-[0-9]+", val.upper(), re.IGNORECASE,\n        )
+    - re.findall(\n            r"CVE-[0-9]+-[0-9]+", val.upper(), re.IGNORECASE,\n        )
+    - re.findall(r"cpe:/[^\n\ ]+", val)
+    - re.sub(r"[^A-Za-z0-9\-\+]+", "", protocol)
+    - re.sub(\n                                r"[^A-Za-z0-9\-\+]+",\n                                "",\n                                item.attrib.get("protocol", protocol),\n                            )
+    - re.compile(r"([a-zA-Z-_]+)([0-9]+)")
+    - re.compile(r"([a-zA-Z-_]+)([0-9]+)")
+    - re.search(regex_search, reference)
+    - re.search(r"CWE-(\d+)", val, re.IGNORECASE)
+    - re.search(r"CWE-(\d+)", val, re.IGNORECASE)
+    - re.search(r"CWE-(\d+)", val, re.IGNORECASE)
+    - re.search(r"CWE-(\d+)", val, re.IGNORECASE)
+    - re.split(\n            reference_heading_regex,\n            whitehat_sentinel_description["description"],\n        )
+    - re.sub(r"<.+>", "", solution_html)
+    - re.findall(r'(<a href=")(https://\S+)">', text_to_search)
+    - re.sub(r"<p>|</p>", "", html_string)
+    - re.search(r"CVE-\d{4}-\d{4,7}", description)
+    - re.findall(r"\d", password)
+    - re.findall(r"[A-Z]", password)
+    - re.findall(r"[a-z]", password)
+    - re.findall(r'[(){}\[\]|~!@#$%^&*_\-+=;:\'",\`<>\./?]', password)
+    - re.compile(r'"([^"]+)"|(\S+)')
+    - re.compile(r"\s{2,}")
+    - re.compile(r"(?:\A|\s)@(\w+)\b")
+    - re.fullmatch(system_settings.default_group_email_pattern, instance.email)
+    - re.sub(pattern, "", fix)
+    - re.compile(tool.replace("_", " "))
+    - re.sub(pattern, "", temp)
+    - re.compile(temp_tool)
+    - re.compile(".*" + temp_test + ".*")
+    - re.compile(r"processed, a total of")
+    - re.search(text, body.text)
+    - re.search(accepted_javascript_messages, entry["message"])
+    - re.escape(targetURL)
+    - re.escape(loginUrl)
+
+fieldsignals:
+  fieldsignals.pre_save_changed:
+    - pre_save_changed.connect(\n    pre_save_finding_status_change,\n    sender=Finding,\n    fields=[\n        "id",\n        "active",\n        "verified",\n        "false_p",\n        "is_mitigated",\n ...
+
+binascii:
+  binascii:
+    - binascii.b2a_hex(encrypted_text)
+    - binascii.a2b_hex(encrypted_text)
+    - binascii.b2a_hex(encrypted_value)
+    - binascii.b2a_hex(iv)
+    - binascii.b2a_hex(\n            hashlib.sha256(db_key.encode("utf-8")).digest().rstrip())
+    - binascii.a2b_hex(encrypted_values[1])
+
+tempfile:
+  tempfile.NamedTemporaryFile:
+    - NamedTemporaryFile()
+    - NamedTemporaryFile()
+
+lxml:
+  lxml.etree:
+    - etree.HTMLParser()
+    - etree.fromstring(vuln_details, parser)
+    - def _get_endpoints_title_severity_mapping(self, tree: etree.ElementTree) -> dict[str, str]:\n        """\n        Construct a dict that contains mappings of endpoints and severities by a a title key.\...
+    - def _get_content(self, container: etree.Element):\n        # quick exit in case container is not found\n        s = ""\n        if container is None or (isinstance(container, list) and len(list) == 0)...
+    - def _format_bulleted_lists(self, finding_details: dict, div_element: etree.ElementTree) -> tuple[str, list[str]]:\n        """Create a mapping of bulleted lists with links into a formatted list, as we...
+    - def _set_or_append_content(self, finding_details: dict, header: str, div_element: etree.ElementTree) -> None:\n        """Determine whether we should set or append content in a given place."""\n      ...
+    - def _parse_elements_by_h3_element(self, issue: etree.Element, finding_details: dict) -> None:\n        for header_element in issue.xpath("h3"):\n            if (div_element := header_element.getnext()...
+    - def get_items(self, tree: etree.ElementTree, test):\n        finding_details = self._get_endpoints_title_severity_mapping(tree)\n        for issue in tree.xpath(self.vulnerability_list_xpath):\n      ...
+    - etree.HTMLParser()
+    - etree.parse(file, parser)
+    - etree.tostring(\n            vuln_details, pretty_print=True,\n        )
+    - etree.HTMLParser()
+    - etree.fromstring(issue_detail["htmlDesc"], parser)
+  lxml.html:
+    - html.parse(filename)
+
+polymorphic:
+  polymorphic.admin.PolymorphicParentModelAdmin:
+    - class QuestionParentAdmin(PolymorphicParentModelAdmin):\n\n    """Question parent model admin"""\n\n    base_model = Question\n    child_models = (\n        TextQuestion,\n        ChoiceQuestion,\n    )
+    - class AnswerParentAdmin(PolymorphicParentModelAdmin):\n\n    """The parent model admin for answer"""\n\n    list_display = (\n        "answered_survey",\n        "question",\n    )\n\n    base_model = Answer\n    child_models = (\n        TextAnswer,\n        ChoiceAnswer,\n    )
+  polymorphic.base.ManagerInheritanceWarning:
+    - warnings.catch_warnings(action="ignore", category=ManagerInheritanceWarning)
+    - warnings.catch_warnings(action="ignore", category=ManagerInheritanceWarning)
+    - warnings.catch_warnings(action="ignore", category=ManagerInheritanceWarning)
+    - warnings.catch_warnings(action="ignore", category=ManagerInheritanceWarning)
+  polymorphic.models.PolymorphicModel:
+    - class Question(PolymorphicModel, TimeStampedModel):\n\n        """Represents a question."""\n\n        class Meta:\n            ordering = ["order"]\n\n        order = models.PositiveIntegerField(defa...
+    - class Answer(PolymorphicModel, TimeStampedModel):\n\n        """Base Answer model"""\n\n        question = models.ForeignKey(Question, on_delete=models.CASCADE)\n\n        answered_survey = models.For...
+  polymorphic.managers.PolymorphicManager:
+    - PolymorphicManager()
+    - PolymorphicManager()
+    - PolymorphicManager()
+    - PolymorphicManager()
+    - PolymorphicManager()
+    - PolymorphicManager()
+  polymorphic.admin.PolymorphicChildModelAdmin:
+    - class QuestionChildAdmin(PolymorphicChildModelAdmin):\n\n    """Base admin class for all child models of Question"""\n\n    base_model = Question
+    - class AnswerChildAdmin(PolymorphicChildModelAdmin):\n\n    """Base admin class for all child Answer models"""\n\n    base_model = Answer
+
+itertools:
+  itertools:
+    - itertools.chain.from_iterable(map(flatten, elem))
+    - itertools.chain.from_iterable([vulnerability_id.split(",") for vulnerability_id in value])
+  itertools.chain:
+    - chain(result_list, finding_ids)
+    - chain(iterable, [None] * (num_cols - 1))
+  itertools.starmap:
+    - starmap(self.format_additional_description, addendum.items())
+  itertools.groupby:
+    - groupby(\n                        list_vulns, key=lambda vuln: vuln["OSV"]["aliases"][0],\n                    )
+  itertools.islice:
+    - islice(elems, 1)
+
+crum:
+  crum:
+    - crum.get_current_user()
+    - crum.get_current_user()
+    - crum.get_current_user()
+    - crum.get_current_user()
+    - crum.get_current_request()
+    - crum.get_current_user()
+    - crum.get_current_request()
+  crum.get_current_user:
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+  crum.impersonate:
+    - impersonate(Dojo_User.objects.get(username="admin"))
+  crum.get_current_request:
+    - get_current_request()
+
+imagekit:
+  imagekit.processors.ResizeToFill:
+    - ResizeToFill(100, 100)
+    - ResizeToFill(640, 480)
+    - ResizeToFill(800, 600)
+    - ResizeToFill(1024, 768)
+  imagekit.ImageSpec:
+    - class Thumbnail(ImageSpec):\n        processors = [ResizeToFill(100, 100)]\n        format = "JPEG"\n        options = {"quality": 70}
+    - class Small(ImageSpec):\n        processors = [ResizeToFill(640, 480)]\n        format = "JPEG"\n        options = {"quality": 100}
+    - class Medium(ImageSpec):\n        processors = [ResizeToFill(800, 600)]\n        format = "JPEG"\n        options = {"quality": 100}
+    - class Large(ImageSpec):\n        processors = [ResizeToFill(1024, 768)]\n        format = "JPEG"\n        options = {"quality": 100}
+    - class Original(ImageSpec):\n        format = "JPEG"\n        options = {"quality": 100}
+
+django_extensions:
+  django_extensions.db.models.TimeStampedModel:
+    - class Test_Import(TimeStampedModel):\n\n    IMPORT_TYPE = "import"\n    REIMPORT_TYPE = "reimport"\n\n    test = models.ForeignKey(Test, editable=False, null=False, blank=False, on_delete=models.CASCA...
+    - class Test_Import_Finding_Action(TimeStampedModel):\n    test_import = models.ForeignKey(Test_Import, editable=False, null=False, blank=False, on_delete=models.CASCADE)\n    finding = models.ForeignKe...
+    - class Finding_Group(TimeStampedModel):\n\n    GROUP_BY_OPTIONS = [("component_name", "Component Name"),\n                        ("component_name+component_version", "Component Name + Version"),\n    ...
+    - class Question(PolymorphicModel, TimeStampedModel):\n\n        """Represents a question."""\n\n        class Meta:\n            ordering = ["order"]\n\n        order = models.PositiveIntegerField(defa...
+    - class Choice(TimeStampedModel):\n\n    """Model to store the choices for multi choice questions"""\n\n    order = models.PositiveIntegerField(default=1)\n\n    label = models.TextField(default="")\n\n    class Meta:\n        ordering = ["order"]\n\n    def __str__(self):\n        return self.label
+    - class Answer(PolymorphicModel, TimeStampedModel):\n\n        """Base Answer model"""\n\n        question = models.ForeignKey(Question, on_delete=models.CASCADE)\n\n        answered_survey = models.For...
+
+cryptography:
+  cryptography.hazmat.primitives.ciphers.modes:
+    - modes.OFB(iv)
+    - modes.OFB(iv)
+  cryptography.hazmat.backends.default_backend:
+    - default_backend()
+    - default_backend()
+  cryptography.hazmat.primitives.ciphers.Cipher:
+    - Cipher(algorithms.AES(key), modes.OFB(iv), backend=backend)
+    - Cipher(algorithms.AES(key), modes.OFB(iv), backend=backend)
+  cryptography.hazmat.primitives.ciphers.algorithms:
+    - algorithms.AES(key)
+    - algorithms.AES(key)
+
+asteval:
+  asteval.Interpreter:
+    - Interpreter()
+
+json:
+  json.decoder.JSONDecodeError:
+    - content = filename.read()\n        try:\n            data = json.loads(str(content, "utf-8"))\n        except (JSONDecodeError, TypeError):\n            data = json.loads(content)\n\n        find_date...
+    - content = filename.read()\n        try:\n            data = json.loads(str(content, "utf-8"))\n        except (JSONDecodeError, TypeError):\n            data = json.loads(content)\n\n        find_date...
+    - try:\n                return json.loads(tool_config.extras)\n            except (JSONDecodeError, TypeError):\n                msg = "JSON not provided in Extras field."\n                raise ValueError(msg)
+    - try:\n            data = json.load(filename)\n        except JSONDecodeError:\n            msg = "Invalid JSON format. Are you sure you used --json option ?"\n            raise ValueError(msg)\n      ...
+    - if json_file is None:\n            return None\n        try:\n            tree = json.load(json_file)\n        except JSONDecodeError:\n            msg = "Invalid format"\n            raise ValueError(msg)\n\n        return tree
+  json:
+    - json.loads(data)
+    - json.dumps(\n                self, sort_keys=True, indent=4, separators=(",", ": "),\n            )
+    - json.dumps(self)
+    - json.loads(data)
+    - json.loads(str(data, "utf-8"))
+    - json.loads(data)
+    - json.dumps(data)
+    - json.dumps(data)
+    - json.dumps(meta, indent=4)
+    - requests.post(\n                    url=req_url,\n                    auth=HTTPBasicAuth(jira_instance.username, jira_instance.password),\n                    json=json_data,\n                    timeout=settings.REQUESTS_TIMEOUT,\n                )
+    - json.loads(request.body.decode("utf-8"))
+    - json.dumps(parsed, indent=4)
+    - jira._session.get(url).json()
+    - jira._session.get(key_url).json()
+    - json.loads(\n                requests.get(\n                    "https://raw.githubusercontent.com/ozh/github-colors/master/colors.json",\n                    timeout=settings.REQUESTS_TIMEOUT,\n                ).text,\n            )
+    - json.loads(res.text)
+    - requests.request(\n            method="POST",\n            url=endpoint.url,\n            headers=headers,\n            json=data,\n            timeout=self.system_settings.webhooks_notifications_timeout,\n        )
+    - json = forms.CharField()
+    - json.loads(jdata)
+    - json.loads(json_data)
+    - json.loads(env("DD_CELERY_BROKER_TRANSPORT_OPTIONS"))
+    - json.loads(env("DD_HASHCODE_FIELDS_PER_SCANNER"))
+    - json.loads(env("DD_DEDUPLICATION_ALGORITHM_PER_PARSER"))
+    - json.dumps(value)
+    - json.load(filename)
+    - json.load(filename)
+    - json.loads(str(content, "utf-8"))
+    - json.loads(content)
+    - json.load(file)
+    - json.loads(str(content, "utf-8"))
+    - json.loads(content)
+    - json.load(filename)
+    - json.load(file)
+    - json.load(file)
+    - json.load(file)
+    - json.loads(tool_config.extras)
+    - response.json()
+    - json.load(file)
+    - json.load(file)
+    - json.load(file)
+    - json.load(json_output)
+    - json.load(json_output)
+    - json.load(file)
+    - json.load(filename)
+    - json.load(file)
+    - json.loads(issue)
+    - json.load(file)

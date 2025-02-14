@@ -1,0 +1,130 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "data:multiselectfield",
+      "evidence": [
+        {
+          "snippet": "MultiSelectField(choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION, blank=True,\n        verbose_name=_(\"SLA breach\"),\n        help_text=_(\"Get notified of (upcoming) SLA breaches\"))"
+        },
+        {
+          "snippet": "MultiSelectField(choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION, blank=True,\n        verbose_name=_(\"Risk Acceptance Expiration\"),\n        help_text=_(\"Get notified of (upcoming) Risk Acceptance expiries\"))"
+        },
+        {
+          "snippet": "MultiSelectField(choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION, blank=True,\n        verbose_name=_(\"SLA breach (combined)\"),\n        help_text=_(\"Get notified of (upcoming) SLA breaches (a message per project)\"))"
+        }
+      ]
+    },
+    {
+      "capability_id": "data:sanitization",
+      "evidence": [
+        {
+          "snippet": "CSSSanitizer(allowed_css_properties=[\"color\", \"font-weight\"])"
+        },
+        {
+          "snippet": "bleach.clean(\n        message,\n        attributes=allowed_attributes,\n        css_sanitizer=CSSSanitizer(allowed_css_properties=[\"color\", \"font-weight\"])"
+        },
+        {
+          "snippet": "bleach.clean(markdown_text, tags=markdown_tags, attributes=markdown_attrs, css_sanitizer=markdown_styles)"
+        },
+        {
+          "snippet": "bleach.clean(\n                    value,\n                    attributes=allowed_attributes,\n                    css_sanitizer=CSSSanitizer(allowed_css_properties=[\"color\", \"font-weight\"])"
+        },
+        {
+          "snippet": "bleach.clean(link, tags={\"a\"}, attributes={\"a\": [\"href\", \"target\", \"title\"]})"
+        }
+      ]
+    },
+    {
+      "capability_id": "data:xml_parsing",
+      "evidence": [
+        {
+          "snippet": "defusedxml.ElementTree.parse(filename)"
+        },
+        {
+          "snippet": "ElementTree.fromstring(zip_data.get(audit_file).decode(\"utf-8\"))"
+        },
+        {
+          "snippet": "etree.parse(xml_output, etree.XMLParser())"
+        },
+        {
+          "snippet": "ET.parse(filename)"
+        },
+        {
+          "snippet": "ET.tostring(pattern.find(\"Details\"), method=\"text\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "testing:automation",
+      "evidence": [
+        {
+          "snippet": "ProductTest(\"test_create_product\")"
+        },
+        {
+          "snippet": "ProductTest(\"test_delete_product\")"
+        },
+        {
+          "snippet": "ProductTest(\"test_add_product_finding\")"
+        },
+        {
+          "snippet": "WaitForPageLoad(driver, timeout=30)"
+        },
+        {
+          "snippet": "WaitForPageLoad(driver, timeout=50)"
+        }
+      ]
+    },
+    {
+      "capability_id": "compatibility:python_version_handling",
+      "evidence": [
+        {
+          "snippet": "isinstance(data, six.string_types)"
+        },
+        {
+          "snippet": "six.iteritems(self.options)"
+        }
+      ]
+    },
+    {
+      "capability_id": "time:management",
+      "evidence": [
+        {
+          "snippet": "relativedelta(end_date, start_date)"
+        },
+        {
+          "snippet": "relativedelta(days=expiration_delta_days)"
+        },
+        {
+          "snippet": "relativedelta(weeks=i)"
+        },
+        {
+          "snippet": "relativedelta(weeks=1, weekday=MO(1))"
+        },
+        {
+          "snippet": "parser.parse(data[\"Generated\"], dayfirst=True)"
+        }
+      ]
+    },
+    {
+      "capability_id": "scraping:web",
+      "evidence": [
+        {
+          "snippet": "WebDriverWait(self.driver, 30)"
+        },
+        {
+          "snippet": "driver.find_element(By.ID, \"id_name\").send_keys(Keys.TAB, \"Updated Description: \")"
+        },
+        {
+          "snippet": "ActionChains(driver)"
+        },
+        {
+          "snippet": "driver.find_element(By.CSS_SELECTOR, \".dropdown-toggle.pull-left\")"
+        },
+        {
+          "snippet": "driver.find_elements(By.XPATH, '//*[@id=\"open_findings\"]/tbody/tr')"
+        }
+      ]
+    }
+  ]
+}

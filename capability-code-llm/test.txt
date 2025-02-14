@@ -1,0 +1,306 @@
+package main
+
+import (
+	"context"
+	"flag"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/ai/azopenai"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/safedep/code/core"
+	"github.com/safedep/code/fs"
+	"github.com/safedep/code/lang"
+	"github.com/safedep/code/parser"
+	"github.com/safedep/code/plugin"
+	"github.com/safedep/code/plugin/depsusage"
+	"github.com/safedep/dry/log"
+)
+
+var (
+	dirToWalk string
+	languages arrayFlags
+)
+
+type arrayFlags []string
+
+func (a *arrayFlags) String() string {
+	return strings.Join(*a, ", ")
+}
+func (a *arrayFlags) Set(value string) error {
+	*a = append(*a, value)
+	return nil
+}
+
+func init() {
+	log.InitZapLogger("walker", "dev")
+
+	flag.StringVar(&dirToWalk, "dir", "", "Directory to walk")
+	flag.Var(&languages, "lang", "Languages to use for parsing files")
+
+	flag.Parse()
+}
+
+func main() {
+	if dirToWalk == "" {
+		flag.Usage()
+		return
+	}
+
+	err := run()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func run() error {
+	fileSystem, err := fs.NewLocalFileSystem(fs.LocalFileSystemConfig{
+		AppDirectories: []string{dirToWalk},
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to create local filesystem: %w", err)
+	}
+
+	var filteredLanguages []core.Language
+	if len(languages) == 0 {
+		filteredLanguages, err = lang.AllLanguages()
+		if err != nil {
+			return fmt.Errorf("failed to get all languages: %w", err)
+		}
+	} else {
+		for _, language := range languages {
+			lang, err := lang.GetLanguage(language)
+			if err != nil {
+				return fmt.Errorf("failed to get language: %w", err)
+			}
+			filteredLanguages = append(filteredLanguages, lang)
+		}
+	}
+
+	walker, err := fs.NewSourceWalker(fs.SourceWalkerConfig{}, filteredLanguages)
+	if err != nil {
+		return fmt.Errorf("failed to create source walker: %w", err)
+	}
+
+	treeWalker, err := parser.NewWalkingParser(walker, filteredLanguages)
+	if err != nil {
+		return fmt.Errorf("failed to create tree walker: %w", err)
+	}
+
+	packageWiseUniqueIdentifierWiseUsage := make(map[string]map[string][]depsusage.UsageEvidence)
+
+	// consume usage evidences
+	var usageCallback depsusage.DependencyUsageCallback = func(ctx context.Context, evidence *depsusage.UsageEvidence) error {
+		// fmt.Println(evidence)
+		if packageWiseUniqueIdentifierWiseUsage[evidence.PackageHint] == nil {
+			packageWiseUniqueIdentifierWiseUsage[evidence.PackageHint] = make(map[string][]depsusage.UsageEvidence)
+		}
+		packageWiseUniqueIdentifierWiseUsage[evidence.PackageHint][evidence.Identifier] = append(packageWiseUniqueIdentifierWiseUsage[evidence.PackageHint][evidence.Identifier], *evidence)
+		return nil
+	}
+
+	pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+		depsusage.NewDependencyUsagePlugin(usageCallback),
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to create plugin executor: %w", err)
+	}
+
+	err = pluginExecutor.Execute(context.Background(), fileSystem)
+	if err != nil {
+		return fmt.Errorf("failed to execute plugin: %w", err)
+	}
+
+	resultsDir := strings.TrimSuffix(dirToWalk, "/") + "-results"
+	summaryFile := resultsDir + "/summary.yaml"
+	ensureDirExists(resultsDir)
+	ensureFileExists(summaryFile)
+
+	collector, err := NewOutputCollector(resultsDir, "summary", "yaml", 2000)
+	if err != nil {
+		fmt.Println("Error creating OutputCollector:", err)
+		return err
+	}
+
+	currentSummaryFile, err := os.OpenFile(summaryFile, os.O_RDWR, 0644)
+
+	for packageHint, uniqueIdentifierWiseUsage := range packageWiseUniqueIdentifierWiseUsage {
+
+		// append package name
+		_, err = currentSummaryFile.WriteString("\n" + packageHint + ":\n")
+		if err != nil {
+			return fmt.Errorf("failed to write newline: %w", err)
+		}
+
+		for usedIdentifier, usages := range uniqueIdentifierWiseUsage {
+			importNamespace := usages[0].ModuleName
+			originalIdentifier := usages[0].ModuleName
+			if usages[0].ModuleItem != "" {
+				originalIdentifier = usages[0].ModuleItem
+				importNamespace += "." + usages[0].ModuleItem
+			}
+			if usedIdentifier != originalIdentifier {
+				importNamespace += " aliased as " + usages[0].ModuleAlias
+			}
+
+			// append unique identifier
+			_, err = currentSummaryFile.WriteString("  " + importNamespace + ":\n")
+			if err != nil {
+				return fmt.Errorf("failed to write newline: %w", err)
+			}
+
+			for _, evidence := range usages {
+				info, err := currentSummaryFile.Stat()
+				if err != nil {
+					return fmt.Errorf("failed to get file info: %w", err)
+				}
+				fmt.Println("File size:", info.Size())
+
+				snippet := strings.ReplaceAll(evidence.EvidenceSnippet, "\n", "\\n")
+				_, err = currentSummaryFile.WriteString("    - " + snippet + "\n")
+				if err != nil {
+					return fmt.Errorf("failed to write newline: %w", err)
+				}
+			}
+		}
+	}
+
+	// Prepare prompt with yaml format
+	// packagehint:
+	// 		- : ""
+	fmt.Println("Summary has been written to", summaryFile)
+	// infer(summaryFile, resultsFile)
+	return nil
+}
+
+func infer(summaryFile, resultsFile string) {
+	b, err := os.ReadFile(summaryFile) // just pass the file name
+	if err != nil {
+		fmt.Print(err)
+	}
+	str := string(b)
+	prompt := generatePrompt(&str)
+	fmt.Println("Prompt:", prompt)
+
+	azureOpenAIKey := os.Getenv("OPENAI_API_KEY")
+	azureOpenaiBaseUrl := os.Getenv("OPENAI_BASE_URL")
+	modelDeploymentID := "gpt-4o"
+
+	if azureOpenAIKey == "" || azureOpenaiBaseUrl == "" {
+		fmt.Println("Error: OPENAI_API_KEY and OPENAI_BASE_URL environment variables must be set.")
+		return
+	}
+
+	fmt.Println("Setup Azure OpenAI API client for", modelDeploymentID, "@", azureOpenaiBaseUrl)
+
+	// use github.com/Azure/azure-sdk-for-go/sdk/ai/azopenai package to interact with OpenAI API
+
+	// create a new client
+	keyCredential := azcore.NewKeyCredential(azureOpenAIKey)
+	client, err := azopenai.NewClientWithKeyCredential(azureOpenaiBaseUrl, keyCredential, nil)
+	if err != nil {
+		fmt.Println("Error creating client:", err)
+		return
+	}
+	fmt.Println("Client created", client)
+
+	resp, err := client.GetChatCompletions(context.Background(), azopenai.ChatCompletionsOptions{
+		Messages: []azopenai.ChatRequestMessageClassification{
+			&azopenai.ChatRequestSystemMessage{Content: azopenai.NewChatRequestSystemMessageContent("You are a code analysis expert assistant")},
+
+			&azopenai.ChatRequestUserMessage{Content: azopenai.NewChatRequestUserMessageContent(prompt)},
+		},
+		DeploymentName: &modelDeploymentID,
+	}, nil)
+
+	if err != nil {
+		// TODO: Update the following line with your application specific error handling logic
+		fmt.Printf("ERROR: %s", err)
+		return
+	}
+
+	if len(resp.Choices) == 0 || resp.Choices[0].Message == nil || resp.Choices[0].Message.Content == nil {
+		fmt.Println("No response, blank results.")
+		return
+	}
+
+	response := *resp.Choices[0].Message.Content
+	fmt.Println("Inference -", response)
+
+	response = strings.TrimPrefix(response, "```json")
+	response = strings.TrimSuffix(response, "```")
+
+	err = os.WriteFile(resultsFile, []byte(response), 0644)
+	if err != nil {
+		fmt.Println("Error writing to", resultsFile, err)
+		return
+	}
+}
+
+var knownCapabilities = ""
+
+func generatePrompt(code_content *string) string {
+
+	promptFormatStr := `Analyze the following code usage and identify program dependencies and capabilities. Provide the results in JSON format, including capability IDs and corresponding code snippets) For every capability, limit number of code snippets to maximum 5. Identify only capabilities that strongly match the code usage snippets
+
+
+Some key usage snippets to consider
+{%s}
+
+Some example capabilities:
+{%s}
+
+you may also add more capabilities if strongly required which follow the same format.
+
+Provide the results **strictly in JSON format**, without any additional explanation or text and only with capabilities that are strongly identified in the code. Ensure that the JSON format is valid and characters like "" are properly escaped.
+
+Return the output **only** in the following JSON format:
+{{
+  'capabilities': [
+    {{
+      'capability_id': "network:http",
+      'evidence': [
+        {{
+          "snippet": "response = requests.get(\"https://api.example.com/data\")"
+        }}
+      ]
+    }},
+    ...
+  ]
+}}`
+	return fmt.Sprintf(promptFormatStr, *code_content, knownCapabilities)
+}
+
+func init() {
+	// read capabilities.txt into knownCapabilities
+	b, err := os.ReadFile("capabilities.txt")
+	if err != nil {
+		panic(err)
+	}
+	knownCapabilities = string(b)
+}
+
+func ensureDirExists(dirPath string) error {
+	_, err := os.Stat(dirPath)
+	if os.IsNotExist(err) {
+		err = os.MkdirAll(dirPath, 0755)
+		if err != nil {
+			return fmt.Errorf("failed to create %s directory: %w", dirPath, err)
+		}
+	}
+	return nil
+}
+func ensureFileExists(filePath string) error {
+	_, err := os.Stat(filePath)
+	if os.IsNotExist(err) {
+		file, err := os.Create(filePath)
+		if err != nil {
+			return fmt.Errorf("failed to create %s file: %w", filePath, err)
+		}
+		file.Close()
+	}
+	return nil
+}

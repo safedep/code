@@ -3,10 +3,10 @@ package depsusage
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/pkg/helpers"
-	"github.com/safedep/dry/log"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -50,8 +50,8 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 		return fmt.Errorf("failed to get file: %w", err)
 	}
 
-	log.Debugf("depsusage - Analyzing tree for language: %s, file: %s\n",
-		lang.Meta().Code, file.Name())
+	// log.Debugf("depsusage - Analyzing tree for language: %s, file: %s\n",
+	// 	lang.Meta().Code, file.Name())
 
 	imports, err := lang.Resolvers().ResolveImports(tree)
 	if err != nil {
@@ -65,7 +65,7 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 		if imp.IsWildcardImport() {
 			// @TODO - This is false positive case for wildcard imports
 			// If it is a wildcard import, mark the module as used by default
-			evidence := newUsageEvidence(packageHint, imp.ModuleName(), imp.ModuleItem(), imp.ModuleAlias(), true, "", file.Name(), uint(imp.GetModuleNameNode().StartPoint().Row)+1)
+			evidence := newUsageEvidence(packageHint, imp.ModuleName(), imp.ModuleItem(), imp.ModuleAlias(), true, "", file.Name(), uint(imp.GetModuleNameNode().StartPoint().Row)+1, "")
 			if err := p.usageCallback(ctx, evidence); err != nil {
 				return fmt.Errorf("failed to call usage callback for wildcard import: %w", err)
 			}
@@ -85,15 +85,33 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 
 	err = traverse(cursor, func(n *sitter.Node) error {
 		nodeType := n.Type()
-		content := n.Content(*treeData)
-		identifierKey := string(content)
+		identifierKey := n.Content(*treeData)
 		identifiedItem, exists := moduleIdentifiers[identifierKey]
 
 		if nodeType == "identifier" && exists {
-			evidence := newUsageEvidence(identifiedItem.PackageHint, identifiedItem.Module, identifiedItem.Item, identifiedItem.Alias, false, identifierKey, file.Name(), uint(n.StartPoint().Row)+1)
+			// pr := n.Parent()
+			// pr2 := pr.Parent()
+			// pr3 := pr2.Parent()
+			// pr4 := pr3.Parent()
+
+			// fmt.Println("Found evidence for: identifier", identifierKey)
+			// fmt.Println("Parent", pr.Type(), pr.Content(*treeData))
+			// fmt.Println("Parent-l2", pr2.Type(), pr2.Content(*treeData))
+			// fmt.Println("Parent-l3", pr3.Type(), pr3.Content(*treeData))
+			// if pr4 != nil {
+			// 	fmt.Println("Parent-l4", pr4.Type(), pr4.Content(*treeData))
+			// 	pr5 := pr4.Parent()
+			// 	if pr5 != nil {
+			// 		fmt.Println("Parent-l5", pr5.Type(), pr5.Content(*treeData))
+			// 	}
+			// }
+
+			evidenceSnippet := getEvidenceSnippet(n, treeData)
+			evidence := newUsageEvidence(identifiedItem.PackageHint, identifiedItem.Module, identifiedItem.Item, identifiedItem.Alias, false, identifierKey, file.Name(), uint(n.StartPoint().Row)+1, evidenceSnippet)
 			if err := p.usageCallback(ctx, evidence); err != nil {
 				return fmt.Errorf("failed to call usage callback: %w", err)
 			}
+
 		}
 		return nil
 	})
@@ -127,4 +145,16 @@ func traverse(cursor *sitter.TreeCursor, visit func(node *sitter.Node) error) er
 			}
 		}
 	}
+}
+
+var evidenceStatementTypes = []string{"expression_statement", "assignment", "call", "return_statement", "import_statement", "import_from_statement", "class_definition", "function_definition", "block", "module"}
+
+func getEvidenceSnippet(node *sitter.Node, treeData *[]byte) string {
+	for node != nil {
+		if slices.Contains(evidenceStatementTypes, node.Type()) {
+			return node.Content(*treeData)
+		}
+		node = node.Parent()
+	}
+	return ""
 }

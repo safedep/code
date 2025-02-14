@@ -1,0 +1,85 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "testing:automation",
+      "evidence": [
+        {
+          "snippet": "class DedupeTest(BaseTestCase):"
+        },
+        {
+          "snippet": "class EndpointTest(BaseTestCase):\n\n    def test_create_endpoint(self):\n        driver = self.driver\n        driver.get(self.base_url + \"login\")"
+        },
+        {
+          "snippet": "class EnvironmentTest(BaseTestCase):\n\n    def login_page(self):\n        driver = self.driver\n        driver.get(self.base_url + \"login\")"
+        },
+        {
+          "snippet": "class ProductTest(BaseTestCase):\n\n    @on_exception_html_source_logger\n    def test_create_product(self):\n        self.delete_product_if_exists()\n        driver = self.driver\n        driver.get(self.base_url + \"product\")"
+        },
+        {
+          "snippet": "class SearchTests(BaseTestCase):\n\n    def test_search(self):\n        driver = self.goto_some_page()\n        driver.find_element(By.ID, \"search_bar\").send_keys(\"sample\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "scraping:web",
+      "evidence": [
+        {
+          "snippet": "driver.get(self.base_url + \"login\")\n        driver.find_element(By.ID, \"id_username\").clear()"
+        },
+        {
+          "snippet": "driver = self.driver\n        elems = driver.find_elements(By.NAME, \"collapsible\")\n        for elem in elems:\n            elem.click()"
+        },
+        {
+          "snippet": "driver.find_element(By.ID, \"id_password\").send_keys(password)"
+        },
+        {
+          "snippet": "driver.get(self.base_url + \"product_view\")\n        driver.find_element(By.ID, \"dropdownMenu\").click()"
+        },
+        {
+          "snippet": "driver.find_element(By.CSS_SELECTOR, \".dropdown-toggle\").click()"
+        }
+      ]
+    },
+    {
+      "capability_id": "logging:debug",
+      "evidence": [
+        {
+          "snippet": "logger.debug(\"\\n\\nDebug Print Log: testing 'create product type' \\n\")"
+        },
+        {
+          "snippet": "logger.debug(\"\\n\\nDebug Print Log: testing 'create product' \\n\")"
+        },
+        {
+          "snippet": "logger.debug(\"Expected duplicates: {}\".format(expected_number_of_duplicates))"
+        },
+        {
+          "snippet": "logger.debug(\"Checked for duplicate test cases.\")"
+        },
+        {
+          "snippet": "logger.debug(\"Deleting findings encountered an error!\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "decorators:exception_handling",
+      "evidence": [
+        {
+          "snippet": "@on_exception_html_source_logger\n    def test_delete_findings(self):"
+        },
+        {
+          "snippet": "@on_exception_html_source_logger\n    def test_create_product(self):"
+        },
+        {
+          "snippet": "@on_exception_html_source_logger\n    def test_create_product_type(self):"
+        },
+        {
+          "snippet": "@on_exception_html_source_logger\n    def test_delete_product_type(self):"
+        },
+        {
+          "snippet": "@decorator_function\n    def handle_exceptions(self):"
+        }
+      ]
+    }
+  ]
+}

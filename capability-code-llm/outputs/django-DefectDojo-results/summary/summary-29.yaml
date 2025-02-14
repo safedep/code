@@ -1,0 +1,332 @@
+
+dojo:
+  dojo.risk_acceptance.queries.get_authorized_risk_acceptances:
+    - get_authorized_risk_acceptances(Permissions.Risk_Acceptance)
+  dojo.finding.views.duplicate_cluster:
+    - duplicate_cluster(request, finding)
+  dojo.forms.AddChoicesForm:
+    - AddChoicesForm()
+    - AddChoicesForm(request.POST)
+  dojo.filters.FindingFilterWithoutObjectLookups:
+    - finding_filter_class = FindingFilterWithoutObjectLookups if filter_string_matching else FindingFilter
+    - finding_filter_class = FindingFilterWithoutObjectLookups if filter_string_matching else FindingFilter
+    - finding_filter_class = FindingFilterWithoutObjectLookups if filter_string_matching else FindingFilter
+  dojo.user.queries.get_authorized_users_for_product_and_product_type:
+    - get_authorized_users_for_product_and_product_type(None, product, Permissions.Product_View)
+    - get_authorized_users_for_product_and_product_type(None, product, Permissions.Product_View)
+    - get_authorized_users_for_product_and_product_type(None, finding.test.engagement.product, Permissions.Finding_Edit)
+    - get_authorized_users_for_product_and_product_type(\n                users,\n                self.product,\n                Permissions.Product_View,\n            )
+  dojo.forms.Delete_Product_MemberForm:
+    - Delete_Product_MemberForm(request.POST, instance=technology)
+    - Delete_Product_MemberForm(instance=member)
+    - Delete_Product_MemberForm(request.POST, instance=member)
+  dojo.api_v2.views.NotificationsViewSet:
+    - v2_api.register(r"notifications", NotificationsViewSet, basename="notifications")
+  dojo.api_v2.views.QuestionnaireQuestionViewSet:
+    - v2_api.register(r"questionnaire_questions", QuestionnaireQuestionViewSet, basename="question")
+  dojo.forms.ManageFileFormSet:
+    - ManageFileFormSet(queryset=obj.files.all())
+    - ManageFileFormSet(\n            request.POST, request.FILES, queryset=obj.files.all())
+  dojo.notes.helper.delete_related_notes:
+    - delete_related_notes(instance)
+    - delete_related_notes(instance)
+    - delete_related_notes(instance)
+    - delete_related_notes(instance)
+    - delete_related_notes(instance)
+    - delete_related_notes(instance)
+  dojo.utils.get_current_user:
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+    - get_current_user()
+  dojo.endpoint.utils.clean_hosts_run:
+    - clean_hosts_run(apps=apps, change=(request.method == "POST"))
+    - clean_hosts_run(apps=apps, change=bool(options.get("dry_run")))
+  dojo.finding_group.queries.get_authorized_finding_groups:
+    - get_authorized_finding_groups(Permissions.Finding_Group_View)
+  dojo.filters.QuestionnaireFilter:
+    - QuestionnaireFilter(request.GET, queryset=surveys)
+  dojo.api_v2.views.ImportScanView:
+    - v2_api.register(r"import-scan", ImportScanView, basename="importscan")
+  dojo.api_v2.views.LanguageViewSet:
+    - v2_api.register(r"languages", LanguageViewSet, basename="languages")
+  dojo.models.Answer:
+    - base_model = Answer
+    - base_model = Answer
+    - admin.site.register(Answer, AnswerParentAdmin)
+    - Answer.objects.select_subclasses()
+    - model = Answer
+    - model = Answer
+    - Answer.objects.none()
+    - Answer.objects.all()
+    - Answer.polymorphic.filter(\n                question__in=[\n                    question.id for question in Question.polymorphic.filter(engagement_survey=survey.survey)],\n                answered_survey=survey)
+    - Answer.objects.filter(\n                question__in=[question.id for question in Question.polymorphic.filter(engagement_survey=survey.survey)],\n                answered_survey=survey)
+  dojo.models.Cred_Mapping:
+    - model = Cred_Mapping
+    - Cred_Mapping.objects.none()
+    - Cred_Mapping.objects.none()
+    - Cred_Mapping.objects.all()
+    - Cred_Mapping.objects.filter(product=prod)
+    - Cred_Mapping.objects.select_related("product")
+    - Cred_Mapping.objects.select_related("cred_id")
+    - Cred_Mapping.objects.select_related("cred_id")
+    - Cred_Mapping.objects.filter(\n        cred_id=cred.cred_id.id, product=cred.engagement.product.id)
+    - Cred_Mapping.objects.select_related("cred_id")
+    - Cred_Mapping.objects.filter(\n        cred_id=cred.cred_id.id,\n        product=cred.test.engagement.product.id)
+    - Cred_Mapping.objects.select_related("cred_id")
+    - Cred_Mapping.objects.filter(\n        cred_id=cred.cred_id.id,\n        product=cred.finding.test.engagement.product.id)
+    - Cred_Mapping.objects.select_related("cred_id")
+    - Cred_Mapping.objects.select_related("cred_id")
+    - Cred_Mapping.objects.filter(\n            product=eng.product)
+    - Cred_Mapping.objects.filter(\n                cred_id=tform.cleaned_data["cred_id"].id, product=pid)
+    - Cred_Mapping.objects.filter(\n            product=eng.product)
+    - Cred_Mapping.objects.filter(\n                pk=tform.cleaned_data["cred_user"].id,\n                product=eng.product.id)
+    - Cred_Mapping.objects.filter(\n                cred_id=cred_user.cred_id, engagement=eng.id)
+    - Cred_Mapping.objects.filter(\n            product=eng.product)
+    - Cred_Mapping.objects.filter(\n            engagement=test.engagement)
+    - Cred_Mapping.objects.filter(\n                pk=tform.cleaned_data["cred_user"].id,\n                engagement=test.engagement.id)
+    - Cred_Mapping.objects.filter(\n                cred_id=cred_user.cred_id, test=test.id)
+    - Cred_Mapping.objects.filter(\n            engagement=test.engagement)
+    - Cred_Mapping.objects.filter(\n            engagement=finding.test.engagement)
+    - Cred_Mapping.objects.filter(\n                pk=tform.cleaned_data["cred_user"].id,\n                engagement=finding.test.engagement.id)
+    - Cred_Mapping.objects.filter(\n                cred_id=cred_user.cred_id, finding=finding.id)
+    - Cred_Mapping.objects.filter(\n            engagement=finding.test.engagement)
+    - Cred_Mapping.objects.filter(pk=ttid)
+    - Cred_Mapping.objects.filter(\n                    cred_id=cred.cred_id)
+    - Cred_Mapping.objects.filter(\n                cred_id=cred.cred_id)
+    - Cred_Mapping.objects.filter(\n                cred_id=cred.cred_id)
+    - Cred_Mapping.objects.filter(\n                    cred_id=cred.cred_id)
+    - Cred_Mapping.objects.filter(\n            product=eng.product)
+    - Cred_Mapping.objects.filter(\n            engagement=eng.id)
+    - Cred_Mapping.objects.filter(\n            product=eng.product)
+    - Cred_Mapping.objects.filter(\n            engagement=eng.id)
+    - Cred_Mapping.objects.filter(\n        engagement=eng)
+    - Cred_Mapping.objects.filter(\n            engagement=eng)
+    - Cred_Mapping.objects.filter(\n                        pk=cred_form.cleaned_data["cred_user"].id,\n                        engagement=eid)
+    - Cred_Mapping.objects.filter(\n                    engagement=engagement,\n                )
+    - Cred_Mapping.objects.filter(\n                pk=cred_user.id,\n                engagement=context.get("engagement"),\n            )
+    - model = Cred_Mapping
+    - Cred_Mapping.objects.filter(test=finding.test.id)
+    - Cred_Mapping.objects.filter(engagement=finding.test.engagement.id)
+    - Cred_Mapping.objects.filter(finding=finding.id)
+    - Cred_Mapping.objects.all()
+    - model = Cred_Mapping
+    - model = Cred_Mapping
+    - Cred_Mapping.objects.filter(engagement=test.engagement)
+    - Cred_Mapping.objects.filter(test=test)
+  dojo.filters.TestImportFindingActionFilter:
+    - TestImportFindingActionFilter(request.GET, test_import_finding_actions)
+  dojo.utils.max_safe:
+    - max_safe(\n                [self.scan_date.date(), self.test.engagement.target_end],\n            )
+    - max_safe([self.scan_date, self.test.target_end])
+  dojo.authorization.authorization.user_has_configuration_permission aliased as configuration_permission:
+    - configuration_permission(user, permission)
+  dojo.api_v2.views.RiskAcceptanceViewSet:
+    - v2_api.register(r"risk_acceptance", RiskAcceptanceViewSet, basename="risk_acceptance")
+  dojo.api_v2.views.AppAnalysisViewSet:
+    - v2_api.register(r"technologies", AppAnalysisViewSet, basename="app_analysis")
+  dojo.api_v2.views.ToolConfigurationsViewSet:
+    - v2_api.register(r"tool_configurations", ToolConfigurationsViewSet, basename="tool_configuration")
+  dojo.forms.UserContactInfoForm:
+    - UserContactInfoForm()
+    - UserContactInfoForm(instance=user_contact)
+    - UserContactInfoForm(request.POST, instance=user_contact)
+    - UserContactInfoForm()
+    - UserContactInfoForm(request.POST)
+    - UserContactInfoForm()
+    - UserContactInfoForm(instance=user_contact)
+    - UserContactInfoForm(request.POST)
+    - UserContactInfoForm(request.POST, instance=user_contact)
+  dojo.tools.aws_prowler_v3plus.prowler_v4.AWSProwlerV4Parser:
+    - AWSProwlerV4Parser()
+  dojo.models.NOTIFICATION_CHOICES:
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - enabled = ["alert"]\n    for choice in NOTIFICATION_CHOICES:\n        if get_system_setting(f"enable_{choice[0]}_notifications"):\n            enabled.append(choice[0])\n    return enabled
+  dojo.forms.ImportEndpointMetaForm:
+    - ImportEndpointMetaForm()
+    - ImportEndpointMetaForm(request.POST, request.FILES)
+  dojo.models.GITHUB_Issue:
+    - GITHUB_Issue.objects.filter(finding=finding)
+    - GITHUB_Issue.objects.filter(finding=finding)
+    - model = GITHUB_Issue
+    - GITHUB_Issue.objects.get(finding=find)
+    - GITHUB_Issue.objects.get(finding=find)
+    - GITHUB_Issue.objects.get(finding=find)
+    - GITHUB_Issue(issue_id=issue.number, issue_url=issue.html_url, finding=find)
+  dojo.sla_config.helpers.update_sla_expiration_dates_sla_config_async:
+    - update_sla_expiration_dates_sla_config_async(self, tuple(severities), products)
+  dojo.forms.EditNoteTypeForm:
+    - EditNoteTypeForm(instance=nt, is_single=is_single)
+    - EditNoteTypeForm(request.POST, instance=nt, is_single=is_single)
+  dojo.forms.ProductForm:
+    - ProductForm(initial=initial)
+    - ProductForm(request.POST, instance=Product())
+    - ProductForm(request.POST, instance=product)
+    - ProductForm(instance=product)
+  dojo.filters.EndpointReportFilter:
+    - EndpointReportFilter(request.GET, queryset=endpoints)
+  dojo.tools.generic.csv_parser.GenericCSVParser:
+    - GenericCSVParser()
+    - GenericCSVParser()
+    - GenericCSVParser()
+  dojo.tools.qualys.csv_parser:
+    - csv_parser.parse_csv(file)
+  dojo.tools.api_sonarqube.updater_from_source.SonarQubeApiUpdaterFromSource:
+    - SonarQubeApiUpdaterFromSource()
+    - SonarQubeApiUpdaterFromSource()
+  dojo.forms.Delete_Product_Type_GroupForm:
+    - Delete_Product_Type_GroupForm(instance=group)
+    - Delete_Product_Type_GroupForm(request.POST, instance=group)
+  dojo.models.JIRA_Issue:
+    - model = JIRA_Issue
+    - JIRA_Issue.objects.none()
+    - model = JIRA_Issue
+    - JIRA_Issue.objects.filter(jira_id=jira_issue_new.id, jira_key=jira_issue_key_new)
+    - isinstance(obj, JIRA_Issue)
+    - try:\n            return obj.jira_issue\n        except JIRA_Issue.DoesNotExist:\n            return None
+    - JIRA_Issue(jira_id=new_issue.id, jira_key=new_issue.key, jira_project=jira_project)
+    - JIRA_Issue(\n                jira_id=new_issue.id,\n                jira_key=new_issue.key,\n                engagement=engagement,\n                jira_project=jira_project)
+    - JIRA_Issue.objects.filter(jira_id=jira_id, jira_key=jira_issue_key)
+    - JIRA_Issue(\n        jira_id=existing_jira_issue.id,\n        jira_key=existing_jira_issue.key,\n        finding=finding,\n        jira_project=jira_project)
+    - JIRA_Issue(\n        jira_id=existing_jira_issue.id,\n        jira_key=existing_jira_issue.key,\n        finding_group=finding_group,\n        jira_project=jira_project)
+    - JIRA_Issue.objects.none()
+    - JIRA_Issue.objects.all()
+    - JIRA_Issue.objects.get(jira_id=jid)
+    - JIRA_Issue.objects.get(jira_id=jid)
+    - self.count_the_duplicates(JIRA_Issue, "jira_id")
+    - JIRA_Issue.objects.all()
+    - JIRA_Issue.objects.all()
+  dojo.risk_acceptance.api aliased as ra_api:
+    - class EngagementViewSet(\n    PrefetchDojoModelViewSet,\n    ra_api.AcceptedRisksMixin,\n):\n    serializer_class = serializers.EngagementSerializer\n    queryset = Engagement.objects.none()\n    filt...
+    - class FindingViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    mixins.UpdateModelMixin,\n    mixins.DestroyModelMixin,\n    mixins.CreateModelMixin,\n    ra_api.Accep...
+    - class TestsViewSet(\n    PrefetchDojoModelViewSet,\n    ra_api.AcceptedRisksMixin,\n):\n    serializer_class = serializers.TestSerializer\n    queryset = Test.objects.none()\n    filter_backends = (Dj...
+    - return ra_api.AcceptedRiskSerializer
+  dojo.forms.AddEndpointForm:
+    - AddEndpointForm(product=product)
+    - AddEndpointForm(request.POST, product=product)
+    - AddEndpointForm()
+    - AddEndpointForm(request.POST)
+  dojo.metrics.utils.finding_queries:
+    - finding_queries(prod_type, request)
+  dojo.templatetags.display_tags.asvs_calc_level:
+    - asvs_calc_level(benchmarks[i])
+  dojo.forms.Product_API_Scan_ConfigurationForm:
+    - Product_API_Scan_ConfigurationForm(request.POST)
+    - Product_API_Scan_ConfigurationForm()
+    - Product_API_Scan_ConfigurationForm(request.POST, instance=product_api_scan_configuration)
+    - Product_API_Scan_ConfigurationForm(instance=product_api_scan_configuration)
+    - Product_API_Scan_ConfigurationForm(request.POST)
+  dojo.forms.Edit_Product_Group_Form:
+    - Edit_Product_Group_Form(instance=group)
+    - Edit_Product_Group_Form(request.POST, instance=group)
+  dojo.forms.EditChoiceQuestionForm:
+    - EditChoiceQuestionForm(instance=question)
+    - EditChoiceQuestionForm(request.POST, instance=question)
+  dojo.tools.awssecurityhub.inspector.Inspector:
+    - Inspector()
+  dojo.tools.tenable.csv_format.TenableCSVParser:
+    - TenableCSVParser()
+  dojo.finding.views.reset_finding_duplicate_status_internal:
+    - reset_finding_duplicate_status_internal(\n            request.user, pk,\n        )
+  dojo.test.queries.get_authorized_test_imports:
+    - get_authorized_test_imports(\n            Permissions.Test_View,\n        )
+  dojo.filters.EngagementDirectFilter:
+    - filter_class = EngagementDirectFilterWithoutObjectLookups if filter_string_matching else EngagementDirectFilter
+  dojo.utils.do_dedupe_finding:
+    - do_dedupe_finding(finding, *args, **kwargs)
+    - do_dedupe_finding(f)
+  dojo.forms.DeleteFindingForm:
+    - DeleteFindingForm(request.POST, instance=finding)
+  dojo.tools.cyclonedx.json_parser.CycloneDXJSONParser:
+    - CycloneDXJSONParser()
+  dojo.sla_config.urls.urlpatterns aliased as sla_urls:
+    - ur += sla_urls
+  dojo.models.SLA_Configuration:
+    - model = SLA_Configuration
+    - SLA_Configuration.objects.none()
+    - SLA_Configuration.objects.all()
+    - SLA_Configuration.objects.all()
+    - model = SLA_Configuration
+    - model = SLA_Configuration
+    - super(SLA_Configuration, sla_config)
+    - SLA_Configuration.objects.filter(id=prod.sla_configuration_id)
+    - super(SLA_Configuration, sla_config)
+    - SLA_Configuration()
+    - SLA_Configuration.objects.get(pk=slaid)
+    - SLA_Configuration.objects.all()
+  dojo.group.queries.get_authorized_groups:
+    - get_authorized_groups(Permissions.Group_View)
+    - get_authorized_groups(Permissions.Group_View)
+    - get_authorized_groups(Permissions.Group_View)
+    - get_authorized_groups(Permissions.Group_View)
+    - get_authorized_groups(Permissions.Group_View)
+    - get_authorized_groups(Permissions.Group_View)
+  dojo.forms.EditPlannedRemediationDateFindingForm:
+    - EditPlannedRemediationDateFindingForm(request.POST)
+    - EditPlannedRemediationDateFindingForm(finding=finding)
+  dojo.forms.PromoteFindingForm:
+    - PromoteFindingForm(request.POST, product=test.engagement.product)
+    - PromoteFindingForm(\n            initial={\n                "title": finding.title,\n                "product_tab": product_tab,\n                "date": finding.date,\n                "severity": fin...
+  dojo.notifications.urls.urlpatterns aliased as notifications_urls:
+    - ur += notifications_urls
+  dojo.models.User:
+    - model = User
+    - User.objects.all()
+    - User.objects.all()
+    - User.objects.all()
+    - User.objects.none()
+    - User.objects.all()
+    - User.objects.get_or_create(\n                        username="System",\n                    )
+    - model = User
+    - model = User
+    - User.objects.get_or_create(username="JIRA")
+    - User.objects.get_or_create(username="JIRA")
+    - User.objects.get_or_create(username="JIRA")
+    - User.objects.get_or_create(username="JIRA")
+    - User.objects.get_or_create(username="JIRA")
+    - User.objects.get_or_create(username="JIRA")
+    - User.objects.get(username="JIRA")
+    - def _accept_risks(accepted_risks: list[AcceptedRisk], base_findings: QuerySet, owner: User):\n    accepted = []\n    for risk in accepted_risks:\n        vulnerability_ids = Vulnerability_Id.objects \...
+    - User.objects.all()
+    - User.objects.filter(username=username)
+    - User.objects.filter(is_active=True, username=username)
+    - receiver(post_save, sender=User)
+  dojo.finding.queries.get_authorized_stub_findings:
+    - get_authorized_stub_findings(\n            Permissions.Finding_View,\n        )
+  dojo.utils.add_field_errors_to_response:
+    - add_field_errors_to_response(context["form"])
+    - add_field_errors_to_response(context["jform"])
+    - add_field_errors_to_response(context["gform"])
+    - add_field_errors_to_response(jform)
+    - add_field_errors_to_response(form)
+    - add_field_errors_to_response(context["form"])
+    - add_field_errors_to_response(context["jform"])
+    - add_field_errors_to_response(context["gform"])
+    - add_field_errors_to_response(context["form"])
+    - add_field_errors_to_response(context["jform"])
+  dojo.models.Benchmark_Product_Summary:
+    - model = Benchmark_Product_Summary
+    - model = Benchmark_Product_Summary
+    - Benchmark_Product_Summary.objects.filter(product=prod, publish=True,\n                                                          benchmark_type__enabled=True)
+  dojo.authorization.authorization.user_has_configuration_permission:

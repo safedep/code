@@ -1,0 +1,206 @@
+
+dojo:
+  dojo.models.Notification_Webhooks:
+    - Notification_Webhooks.objects.all()
+    - model = Notification_Webhooks
+    - model = Notification_Webhooks
+    - error = None\n            if endpoint.status not in [\n                Notification_Webhooks.Status.STATUS_ACTIVE,\n                Notification_Webhooks.Status.STATUS_ACTIVE_TMP,\n            ]:\n   ...
+    - error = None\n            if endpoint.status not in [\n                Notification_Webhooks.Status.STATUS_ACTIVE,\n                Notification_Webhooks.Status.STATUS_ACTIVE_TMP,\n            ]:\n   ...
+    - endpoint.status = Notification_Webhooks.Status.STATUS_INACTIVE_PERMANENT
+    - if endpoint.status == Notification_Webhooks.Status.STATUS_ACTIVE:\n                        endpoint.first_error = now\n                    endpoint.status = Notification_Webhooks.Status.STATUS_INACTIV...
+    - endpoint.status = Notification_Webhooks.Status.STATUS_INACTIVE_TMP
+    - endpoint.status = Notification_Webhooks.Status.STATUS_INACTIVE_PERMANENT
+    - def _get_webhook_endpoints(\n        self,\n        user: Dojo_User | None = None,\n    ) -> QuerySet[Notification_Webhooks]:\n        endpoints = Notification_Webhooks.objects.filter(owner=user)\n   ...
+    - Notification_Webhooks.objects.filter(owner=user)
+    - Notification_Webhooks.objects.none()
+    - def _generate_request_details(\n        self,\n        endpoint: Notification_Webhooks,\n        event: str | None = None,\n        **kwargs: dict,\n    ) -> tuple[dict, dict]:\n        headers = {\n ...
+    - def _webhooks_notification_request(\n        self,\n        endpoint: Notification_Webhooks,\n        event: str | None = None,\n        **kwargs: dict,\n    ) -> requests.Response:\n        headers, ...
+    - def _test_webhooks_notification(self, endpoint: Notification_Webhooks) -> None:\n        res = self._webhooks_notification_request(\n            endpoint,\n            "ping",\n            description...
+    - Notification_Webhooks.objects.get(pk=endpoint_id)
+    - endpoint = Notification_Webhooks.objects.get(pk=endpoint_id)\n        # User already changed status of endpoint\n        if endpoint.status != Notification_Webhooks.Status.STATUS_INACTIVE_TMP:\n      ...
+    - endpoint.status = Notification_Webhooks.Status.STATUS_ACTIVE_TMP
+    - logger.debug(\n            f"Webhook endpoint '{endpoint.name}' reactivated to '{Notification_Webhooks.Status.STATUS_ACTIVE_TMP}'",\n        )
+    - Notification_Webhooks.objects.filter(\n        status=Notification_Webhooks.Status.STATUS_ACTIVE_TMP,\n        last_error__lt=get_current_datetime() - timedelta(hours=24),\n    )
+    - Notification_Webhooks.objects.filter(\n        status=Notification_Webhooks.Status.STATUS_ACTIVE_TMP,\n        last_error__lt=get_current_datetime() - timedelta(hours=24),\n    )
+    - endpoint.status = Notification_Webhooks.Status.STATUS_ACTIVE
+    - endpoint.note = f"Reactivation from {Notification_Webhooks.Status.STATUS_ACTIVE_TMP}"
+    - logger.debug(\n            f"Webhook endpoint '{endpoint.name}' reactivated from '{Notification_Webhooks.Status.STATUS_ACTIVE_TMP}' to '{Notification_Webhooks.Status.STATUS_ACTIVE}'",\n        )
+    - logger.debug(\n            f"Webhook endpoint '{endpoint.name}' reactivated from '{Notification_Webhooks.Status.STATUS_ACTIVE_TMP}' to '{Notification_Webhooks.Status.STATUS_ACTIVE}'",\n        )
+    - Notification_Webhooks.objects.filter(\n        status=Notification_Webhooks.Status.STATUS_INACTIVE_TMP,\n        last_error__lt=get_current_datetime() - timedelta(minutes=5),\n    )
+    - Notification_Webhooks.objects.filter(\n        status=Notification_Webhooks.Status.STATUS_INACTIVE_TMP,\n        last_error__lt=get_current_datetime() - timedelta(minutes=5),\n    )
+    - def get_initial_context(self, request: HttpRequest, nwhs: Notification_Webhooks):\n        return {\n            "name": "Notification Webhook List",\n            "metric": False,\n            "user": request.user,\n            "nwhs": nwhs,\n        }
+    - Notification_Webhooks.objects.all()
+    - nwh.status = Notification_Webhooks.Status.STATUS_ACTIVE
+    - get_object_or_404(Notification_Webhooks, id=nwhid)
+    - def get_initial_context(self, request: HttpRequest, nwh: Notification_Webhooks):\n        return {\n            "name": "Edit Notification Webhook",\n            "user": request.user,\n            "form": self.get_form(request, instance=nwh),\n            "nwh": nwh,\n        }
+    - def process_form(self, request: HttpRequest, nwh: Notification_Webhooks, context: dict):\n        form = context["form"]\n        if "deactivate_webhook" in request.POST:  # TODO: add this to API as w...
+    - nwh.status = Notification_Webhooks.Status.STATUS_INACTIVE_PERMANENT
+    - nwh.status = Notification_Webhooks.Status.STATUS_ACTIVE
+    - get_object_or_404(Notification_Webhooks, id=nwhid)
+    - def get_initial_context(self, request: HttpRequest, nwh: Notification_Webhooks):\n        return {\n            "form": self.get_form(request, instance=nwh),\n            "nwh": nwh,\n        }
+    - def process_form(self, request: HttpRequest, nwh: Notification_Webhooks, context: dict):\n        form = context["form"]\n        if form.is_valid():\n            nwh.delete()\n            messages.ad...
+  dojo.forms.JIRAEngagementForm:
+    - JIRAEngagementForm(instance=engagement)
+    - JIRAEngagementForm(request.POST, instance=engagement)
+    - JIRAEngagementForm()
+  dojo.filters.MetricsFindingFilter:
+    - def get_metrics_finding_filter_class() -> type[MetricsFindingFilter | MetricsFindingFilterWithoutObjectLookups]:\n    if get_system_setting("filter_string_matching", False):\n        return MetricsFindingFilterWithoutObjectLookups\n    return MetricsFindingFilter
+    - return MetricsFindingFilter
+    - finding_filter_class = MetricsFindingFilterWithoutObjectLookups if filter_string_matching else MetricsFindingFilter
+  dojo.endpoint.urls.urlpatterns aliased as endpoint_urls:
+    - ur += endpoint_urls
+  dojo.jira_link.queries.get_authorized_jira_issues:
+    - get_authorized_jira_issues(Permissions.Product_View)
+  dojo.product.queries.get_authorized_languages:
+    - get_authorized_languages(Permissions.Language_View)
+  dojo.utils.dojo_crypto_encrypt:
+    - dojo_crypto_encrypt(\n                tform.cleaned_data["password"])
+    - dojo_crypto_encrypt(\n                tform.cleaned_data["password"])
+    - dojo_crypto_encrypt(tform.cleaned_data["password"])
+    - dojo_crypto_encrypt(tform.cleaned_data["ssh"])
+  dojo.decorators.dojo_model_to_id:
+    - import logging\nfrom time import strftime\n\nfrom django.conf import settings\nfrom django.db.models.query_utils import Q\nfrom django.db.models.signals import post_delete, pre_delete\nfrom django.db....
+    - import io\nimport json\nimport logging\nfrom pathlib import Path\nfrom typing import Any\n\nimport requests\nfrom django.conf import settings\nfrom django.contrib import messages\nfrom django.template...
+    - import io\nimport json\nimport logging\nfrom pathlib import Path\nfrom typing import Any\n\nimport requests\nfrom django.conf import settings\nfrom django.contrib import messages\nfrom django.template...
+    - import io\nimport json\nimport logging\nfrom pathlib import Path\nfrom typing import Any\n\nimport requests\nfrom django.conf import settings\nfrom django.contrib import messages\nfrom django.template...
+    - import io\nimport json\nimport logging\nfrom pathlib import Path\nfrom typing import Any\n\nimport requests\nfrom django.conf import settings\nfrom django.contrib import messages\nfrom django.template...
+    - import io\nimport json\nimport logging\nfrom pathlib import Path\nfrom typing import Any\n\nimport requests\nfrom django.conf import settings\nfrom django.contrib import messages\nfrom django.template...
+    - import io\nimport json\nimport logging\nfrom pathlib import Path\nfrom typing import Any\n\nimport requests\nfrom django.conf import settings\nfrom django.contrib import messages\nfrom django.template...
+    - import io\nimport json\nimport logging\nfrom pathlib import Path\nfrom typing import Any\n\nimport requests\nfrom django.conf import settings\nfrom django.contrib import messages\nfrom django.template...
+    - dojo_model_to_id(parameter=1)
+    - import io\nimport json\nimport logging\nfrom pathlib import Path\nfrom typing import Any\n\nimport requests\nfrom django.conf import settings\nfrom django.contrib import messages\nfrom django.template...
+    - dojo_model_to_id(parameter=1)
+    - import logging\nfrom functools import wraps\n\nfrom django.core.management.base import BaseCommand\n\nfrom dojo.celery import app\n\n# from dojo.utils import get_system_setting, do_dedupe_finding, doj...
+    - from dojo.celery import app\nfrom dojo.decorators import dojo_async_task, dojo_model_from_id, dojo_model_to_id\nfrom dojo.tools.api_sonarqube.parser import SCAN_SONARQUBE_API\n\n\ndef async_tool_issue...
+    - import binascii\nimport calendar as tcalendar\nimport hashlib\nimport importlib\nimport logging\nimport mimetypes\nimport os\nimport pathlib\nimport re\nfrom calendar import monthrange\nfrom collectio...
+    - import binascii\nimport calendar as tcalendar\nimport hashlib\nimport importlib\nimport logging\nimport mimetypes\nimport os\nimport pathlib\nimport re\nfrom calendar import monthrange\nfrom collectio...
+    - import binascii\nimport calendar as tcalendar\nimport hashlib\nimport importlib\nimport logging\nimport mimetypes\nimport os\nimport pathlib\nimport re\nfrom calendar import monthrange\nfrom collectio...
+    - import binascii\nimport calendar as tcalendar\nimport hashlib\nimport importlib\nimport logging\nimport mimetypes\nimport os\nimport pathlib\nimport re\nfrom calendar import monthrange\nfrom collectio...
+    - import binascii\nimport calendar as tcalendar\nimport hashlib\nimport importlib\nimport logging\nimport mimetypes\nimport os\nimport pathlib\nimport re\nfrom calendar import monthrange\nfrom collectio...
+    - import binascii\nimport calendar as tcalendar\nimport hashlib\nimport importlib\nimport logging\nimport mimetypes\nimport os\nimport pathlib\nimport re\nfrom calendar import monthrange\nfrom collectio...
+  dojo.forms.Add_Product_MemberForm:
+    - Add_Product_MemberForm(initial={"product": product.id})
+    - Add_Product_MemberForm(request.POST, initial={"product": product.id})
+  dojo.reports.widgets.report_widget_factory:
+    - report_widget_factory(json_data=request.POST["json"], request=request, host=self.host,\n                                                      user=self.request.user, finding_notes=False, finding_images=False)
+    - report_widget_factory(json_data=request.POST["json"], request=request, host=self.host,\n                              user=request.user, finding_notes=self.finding_notes,\n                              finding_images=self.finding_images)
+  dojo.forms.Delete_Eng_Survey_Form:
+    - Delete_Eng_Survey_Form(instance=survey)
+    - Delete_Eng_Survey_Form(request.POST, instance=survey)
+  dojo.api_v2.views.SonarqubeIssueViewSet:
+    - v2_api.register(r"sonarqube_issues", SonarqubeIssueViewSet, basename="sonarqube_issue")
+  dojo.models.Sonarqube_Issue_Transition:
+    - model = Sonarqube_Issue_Transition
+    - Sonarqube_Issue_Transition.objects.none()
+    - Sonarqube_Issue_Transition.objects.all()
+    - Sonarqube_Issue_Transition.objects.create(\n                    sonarqube_issue=finding.sonarqube_issue,\n                    # not sure if this is needed, but looks like the original author decided t...
+  dojo.forms.NotificationsForm:
+    - NotificationsForm(*args, **kwargs)
+  dojo.models.Engagement_Presets:
+    - model = Engagement_Presets
+    - Engagement_Presets.objects.none()
+    - Engagement_Presets.objects.filter(product=product)
+    - model = Engagement_Presets
+    - model = Engagement_Presets
+    - Engagement_Presets.objects.none()
+    - Engagement_Presets.objects.all()
+    - Engagement_Presets.objects.all()
+    - Engagement_Presets.objects.annotate(\n        product__prod_type__member=Exists(authorized_product_type_roles),\n        product__member=Exists(authorized_product_roles),\n        product__prod_type__...
+    - Engagement_Presets.objects.filter(product=prod)
+    - get_object_or_404(Engagement_Presets, id=eid)
+    - get_object_or_404(Engagement_Presets, id=eid)
+  dojo.utils.redirect_to_return_url_or_else:
+    - redirect_to_return_url_or_else(request, reverse("view_engagements", args=(product.id, )))
+    - redirect_to_return_url_or_else(request, reverse("view_engagement", args=(eid, )))
+    - redirect_to_return_url_or_else(request, reverse("view_risk_acceptance", args=(eid, raid)))
+    - redirect_to_return_url_or_else(request, reverse("view_risk_acceptance", args=(eid, raid)))
+    - redirect_to_return_url_or_else(request, reverse("view_risk_acceptance", args=(eid, raid)))
+    - redirect_to_return_url_or_else(request, reverse("view_finding", args=(finding_id,)))
+    - redirect_to_return_url_or_else(request, reverse("view_test", args=(finding.test.id,)))
+    - redirect_to_return_url_or_else(\n                request, reverse("view_test", args=(test.id,)),\n            )
+    - redirect_to_return_url_or_else(\n        request, reverse("view_finding", args=(finding.id,)),\n    )
+    - redirect_to_return_url_or_else(\n        request, reverse("view_finding", args=(finding.id,)),\n    )
+    - redirect_to_return_url_or_else(\n        request, reverse("view_finding", args=(finding.id,)),\n    )
+    - redirect_to_return_url_or_else(request, None)
+    - redirect_to_return_url_or_else(\n                request, reverse("view_finding", args=(duplicate.id,)),\n            )
+    - redirect_to_return_url_or_else(\n        request, reverse("view_finding", args=(duplicate.id,)),\n    )
+    - redirect_to_return_url_or_else(\n            request, reverse("view_finding", args=(duplicate_id,)),\n        )
+    - redirect_to_return_url_or_else(\n        request, reverse("view_finding", args=(checked_duplicate_id,)),\n    )
+    - redirect_to_return_url_or_else(\n        request, reverse("view_finding", args=(finding_id,)),\n    )
+    - redirect_to_return_url_or_else(request, reverse("view_group", args=(group_id,)))
+    - redirect_to_return_url_or_else(request, reverse("groups"))
+    - redirect_to_return_url_or_else(request, reverse("view_group", args=(group.id,)))
+    - redirect_to_return_url_or_else(request, reverse("view_test", args=(test_id,)))
+    - redirect_to_return_url_or_else(request, reverse("view_engagement", args=(engagement.id, )))
+  dojo.forms.FindingFormID:
+    - FindingFormID(request.POST, instance=finding)
+  dojo.tools.api_edgescan.api_client.EdgescanAPI:
+    - SCAN_APIS = {\n                "Bugcrowd API": BugcrowdAPI,\n                "BlackDuck API": BlackduckAPI,\n                "Cobalt.io": CobaltAPI,\n                "Edgescan": EdgescanAPI,\n                "SonarQube": SonarQubeAPI,\n                "Vulners": VulnersAPI,\n             }
+  dojo.authorization.authorization.user_has_configuration_permission_or_403:
+    - user_has_configuration_permission_or_403(request.user, "dojo.delete_development_environment")
+    - user_has_configuration_permission_or_403(request.user, "dojo.delete_regulation")
+    - user_has_configuration_permission_or_403(\n                    request.user, "dojo.delete_sla_configuration")
+    - user_has_configuration_permission_or_403(request.user, "auth.view_user")
+  dojo.forms.FindingBulkUpdateForm:
+    - FindingBulkUpdateForm(request.GET)
+    - FindingBulkUpdateForm(request.POST)
+    - FindingBulkUpdateForm(request.GET)
+  dojo.models.Test:
+    - model = Test
+    - model = Test
+    - Test.objects.all()
+    - Test.objects.all()
+    - model = Test
+    - Test.objects.all()
+    - Test.objects.all()
+    - Test.objects.all()
+    - Test.objects.none()
+    - return Test
+    - Test.objects.none()
+    - Test.objects.none()
+    - user_is_authorized(Test, Permissions.Test_Edit, "tid")
+    - get_object_or_404(Test, pk=tid)
+    - get_object_or_404(Test, id=id)
+    - user_is_authorized(Test, Permissions.Test_Edit, "tid")
+    - Test.objects.filter(\n            engagement__in=engagements,\n        )
+    - def get_filtered_tests(\n        self,\n        request: HttpRequest,\n        queryset: list[Test],\n        engagement: Engagement,\n    ):\n        filter_string_matching = get_system_setting("filt...
+    - Test.objects.filter(engagement=eng)
+    - Test.objects.filter(engagement=eng)
+    - Test.tags.tag_model.objects.all()
+    - Test.tags.tag_model.objects.all()
+    - Test.objects.none()
+    - Test.tags.tag_model.objects.all()
+    - Test.tags.tag_model.objects.all()
+    - Test.tags.tag_model.objects.all()
+    - Test.tags.tag_model.objects.all()
+    - Test.tags.tag_model.objects.all()
+    - Test.tags.tag_model.objects.all()
+    - Test.tags.tag_model.objects.all()
+    - model = Test
+    - model = Test
+    - model = Test
+    - receiver(pre_delete, sender=Test)
+    - receiver(post_delete, sender=Test)
+    - get_object_or_404(Test, id=finding.test.id)
+    - user_is_authorized(Test, Permissions.Finding_Add, "tid")
+    - get_object_or_404(Test, id=tid)
+    - model = Test
+    - model = Test
+    - Test.objects.none()
+    - self.process_object_fields("test", "test_id", Test, data)
+    - def get_target_test_if_exists(\n        self,\n        test_id: int = 0,\n        test_title: str | None = None,\n        scan_type: str | None = None,\n        engagement: Engagement = None,\n       ...
+    - get_object_or_none(Test, pk=test_id)
+    - get_last_object_or_none(Test, engagement=engagement, title=test_title, scan_type=scan_type)
+    - get_last_object_or_none(Test, engagement=engagement, scan_type=scan_type)
+    - def get_findings(scan_type: str, test: Test) -> list[Finding]:\n        """\n        Stub function to make the hinting happier. The actual class\n        is loosely obligated to have this function def...
+    - def process_scan(\n        self,\n        scan: TemporaryUploadedFile,\n        *args: list,\n        **kwargs: dict,\n    ) -> tuple[Test, int, int, int, int, int, Test_Import]:\n        """\n       ...
+    - isinstance(self.test, Test)
+    - def parse_dynamic_test_type_tests(\n        self,\n        scan: TemporaryUploadedFile,\n        parser: Parser,\n    ) -> list[Test]:\n        """Use the API configuration object to get the tests to ...
+    - def parse_dynamic_test_type_findings_from_tests(\n        self,\n        tests: list[Test],\n    ) -> list[Finding]:\n        """\n        Currently we only support import one Test\n        so for par...
+    - def create_test(\n        self,\n        test_type_name: str,\n    ) -> Test:\n        """\n        Create a fresh test object to be used by the importer. This\n        new test will be attached to th...
+    - Test.objects.create(\n            title=self.test_title,\n            engagement=self.engagement,\n            lead=self.lead,\n            environment=self.environment,\n            test_type=self.ge...
+    - def process_scan(\n        self,\n        scan: TemporaryUploadedFile,\n        *args: list,\n        **kwargs: dict,\n    ) -> tuple[Test, int, int, int, int, int, Test_Import]:\n        """\n       ...
+    - self.validate(\n            "test",\n            expected_types=[Test],\n            required=True,\n            default=None,\n            **kwargs,\n        )
+    - def process_scan(\n        self,\n        scan: TemporaryUploadedFile,\n        *args: list,\n        **kwargs: dict,\n    ) -> tuple[Test, int, int, int, int, int, Test_Import]:\n        """\n       ...
+    - self.test: Test | None = self.validate_test(*args, **kwargs)
+    - def validate_test(\n        self,\n        *args: list,\n        **kwargs: dict,\n    ) -> Test | None:\n        return self.validate(\n            "test",\n            expected_types=[Test],\n            required=False,\n            default=None,\n            **kwargs,\n        )

@@ -1,0 +1,257 @@
+
+django:
+  django.http.HttpResponseRedirect:
+    - HttpResponseRedirect(reverse("view_product", args=(technology.product.id,)))
+    - HttpResponseRedirect(reverse("add_meta_data", args=(pid,)))
+    - HttpResponseRedirect(reverse("view_product", args=(pid,)))
+    - HttpResponseRedirect(reverse("view_product", args=(pid,)))
+    - HttpResponseRedirect(reverse("view_test", args=(test.id,)))
+    - HttpResponseRedirect(reverse("add_findings", args=(test.id,)))
+    - HttpResponseRedirect(reverse("engagement_presets", args=(pid,)))
+    - HttpResponseRedirect(reverse("engagement_presets", args=(pid,)))
+    - HttpResponseRedirect(reverse("engagement_presets", args=(pid,)))
+    - HttpResponseRedirect(reverse("view_product", args=(pid,)))
+    - HttpResponseRedirect(reverse("view_product", args=(pid,)))
+    - HttpResponseRedirect(reverse("view_user", args=(member.user.id,)))
+    - HttpResponseRedirect(reverse("view_product", args=(member.product.id,)))
+    - HttpResponseRedirect(reverse("view_user", args=(member.user.id,)))
+    - HttpResponseRedirect(reverse("product"))
+    - HttpResponseRedirect(reverse("view_product", args=(member.product.id,)))
+    - HttpResponseRedirect(reverse("add_api_scan_configuration", args=(pid,)))
+    - HttpResponseRedirect(reverse("view_api_scan_configurations", args=(pid,)))
+    - HttpResponseRedirect(reverse("view_api_scan_configurations", args=(pid,)))
+    - HttpResponseRedirect(reverse("view_api_scan_configurations", args=(pid,)))
+    - HttpResponseRedirect(reverse("view_group", args=(group.group.id,)))
+    - HttpResponseRedirect(reverse("view_product", args=(group.product.id,)))
+    - HttpResponseRedirect(reverse("view_group", args=(group.group.id,)))
+    - HttpResponseRedirect(reverse("view_product", args=(group.product.id,)))
+    - HttpResponseRedirect(reverse("view_product", args=(pid,)))
+    - HttpResponseRedirect(reverse("product_type"))
+    - HttpResponseRedirect(reverse("product_type"))
+    - HttpResponseRedirect(reverse("product_type"))
+    - HttpResponseRedirect(reverse("view_product_type", args=(ptid, )))
+    - HttpResponseRedirect(reverse("view_user", args=(member.user.id, )))
+    - HttpResponseRedirect(reverse("view_product_type", args=(member.product_type.id, )))
+    - HttpResponseRedirect(reverse("view_user", args=(member.user.id, )))
+    - HttpResponseRedirect(reverse("view_product_type", args=(member.product_type.id, )))
+    - HttpResponseRedirect(reverse("view_product_type", args=(member.product_type.id, )))
+    - HttpResponseRedirect(reverse("view_user", args=(member.user.id, )))
+    - HttpResponseRedirect(reverse("product_type"))
+    - HttpResponseRedirect(reverse("view_product_type", args=(member.product_type.id, )))
+    - HttpResponseRedirect(reverse("view_product_type", args=(ptid,)))
+    - HttpResponseRedirect(reverse("view_group", args=(group.group.id,)))
+    - HttpResponseRedirect(reverse("view_product_type", args=(group.product_type.id,)))
+    - HttpResponseRedirect(reverse("view_group", args=(group.group.id, )))
+    - HttpResponseRedirect(reverse("view_product_type", args=(group.product_type.id, )))
+    - HttpResponseRedirect(reverse("regulations"))
+    - HttpResponseRedirect(reverse("regulations"))
+    - HttpResponseRedirect(reverse("regulations"))
+    - HttpResponseRedirect(reverse("sla_config"))
+    - HttpResponseRedirect(reverse("sla_config"))
+    - HttpResponseRedirect(reverse("sla_config"))
+    - HttpResponseRedirect(reverse("sla_config"))
+    - HttpResponseRedirect(reverse("view_engagement", args=(engagement.id, )))
+    - HttpResponseRedirect(reverse("view_engagement", args=(engagement.id, )))
+    - HttpResponseRedirect(reverse("view_engagement", args=(engagement.id,)))
+    - HttpResponseRedirect(reverse("answer_questionnaire", args=(eid, survey.id)))
+    - HttpResponseRedirect(reverse("view_engagement", args=(eid,)))
+    - HttpResponseRedirect(reverse("edit_questionnaire", args=(survey.id,)))
+    - HttpResponseRedirect(reverse("edit_questionnaire_questions", args=(survey.id,)))
+    - HttpResponseRedirect(reverse("questionnaire"))
+    - HttpResponseRedirect(reverse("edit_questionnaire_questions", args=(survey.id,)))
+    - HttpResponseRedirect(reverse("questionnaire"))
+    - HttpResponseRedirect(reverse("questionnaire"))
+    - HttpResponseRedirect(reverse("questionnaire"))
+    - HttpResponseRedirect(reverse("questions"))
+    - HttpResponseRedirect(reverse("questions"))
+    - HttpResponseRedirect(reverse("questions"))
+    - HttpResponseRedirect(reverse("dashboard"))
+    - HttpResponseRedirect(reverse("questionnaire"))
+    - HttpResponseRedirect(reverse("survey"))
+    - HttpResponseRedirect(reverse("questionnaire"))
+    - HttpResponseRedirect(\n                reverse("dashboard"))
+    - HttpResponseRedirect(reverse("edit_engagement", args=(engagement.id, )))
+    - HttpResponseRedirect(reverse("view_engagement", args=(engagement.id,)))
+    - HttpResponseRedirect(reverse("view_engagement", args=(test.engagement.id,)))
+    - HttpResponseRedirect(reverse("view_engagement", args=(eng.id,)))
+    - HttpResponseRedirect(reverse("view_test", args=(test.id,)))
+    - HttpResponseRedirect(reverse("add_findings", args=(test.id,)))
+    - HttpResponseRedirect(reverse("view_test", args=(test.id,)))
+    - def success_redirect(\n        self,\n        context: dict,\n    ) -> HttpResponseRedirect:\n        """Redirect the user to a place that indicates a successful import"""\n        return HttpResponseRedirect(reverse("view_test", args=(context.get("test").id, )))
+    - HttpResponseRedirect(reverse("view_test", args=(context.get("test").id, )))
+    - def failure_redirect(\n        self,\n        context: dict,\n    ) -> HttpResponseRedirect:\n        """Redirect the user to a place that indicates a failed import"""\n        return HttpResponseRedi...
+    - HttpResponseRedirect(reverse(\n            "re_import_scan_results",\n            args=(context.get("test").id, ),\n        ))
+    - HttpResponseRedirect(reverse("test_type"))
+    - HttpResponseRedirect(reverse("test_type"))
+    - HttpResponseRedirect(reverse("tool_config"))
+    - HttpResponseRedirect(reverse("tool_config"))
+    - HttpResponseRedirect(\n                reverse("all_tool_product", args=(pid, )))
+    - HttpResponseRedirect(reverse("all_tool_product", args=(pid, )))
+    - HttpResponseRedirect(reverse("all_tool_product", args=(pid, )))
+    - HttpResponseRedirect(reverse("tool_type"))
+    - HttpResponseRedirect(reverse("tool_type"))
+    - HttpResponseRedirect("/saml2/login")
+    - HttpResponseRedirect("{}?{}".format(reverse("social:begin", args=[social_auth]),\n                                                   urlencode({"next": request.GET.get("next")})))
+    - HttpResponseRedirect(reverse("social:begin", args=[social_auth]))
+    - HttpResponseRedirect(reverse("login"))
+    - HttpResponseRedirect("alerts")
+    - HttpResponseRedirect(reverse("view_profile"))
+    - HttpResponseRedirect(reverse("view_user", args=(user.id,)))
+    - HttpResponseRedirect(reverse("edit_user", args=(user.id,)))
+    - HttpResponseRedirect(reverse("users"))
+    - HttpResponseRedirect(reverse("view_user", args=(uid, )))
+    - HttpResponseRedirect(reverse("view_user", args=(uid, )))
+    - HttpResponseRedirect(reverse("view_user", args=(uid,)))
+    - HttpResponseRedirect(reverse("view_user", args=(uid,)))
+    - HttpResponseRedirect(redirect_to)
+    - HttpResponseRedirect(reverse(obj_vars[0], args=(oid, )))
+  django.views.View:
+    - class ViewEngagement(View):\n\n    def get_template(self):\n        return "dojo/view_eng.html"\n\n    def get_risks_accepted(self, eng):\n        return eng.risk_acceptance.all().select_related("owne...
+    - class ImportScanResultsView(View):\n    def get_template(self) -> str:\n        """Returns the template that will be presented to the user"""\n        return "dojo/import_scan_results.html"\n\n    def...
+    - class ListFindings(View, BaseListFindings):\n    def get_initial_context(self, request: HttpRequest):\n        context = {\n            "filter_name": self.get_filter_name(),\n            "show_produc...
+    - class ViewFinding(View):\n    def get_finding(self, finding_id: int):\n        finding_qs = prefetch_for_findings(Finding.objects.all(), exclude_untouched=False)\n        return get_object_or_404(find...
+    - class EditFinding(View):\n    def get_finding(self, finding_id: int):\n        return get_object_or_404(Finding, id=finding_id)\n\n    def get_request_response(self, finding: Finding):\n        req_re...
+    - class DeleteFinding(View):\n    def get_finding(self, finding_id: int):\n        return get_object_or_404(Finding, id=finding_id)\n\n    def process_form(self, request: HttpRequest, finding: Finding, ...
+    - class ListGroups(View):\n    def get_groups(self):\n        return get_authorized_groups(Permissions.Group_View)\n\n    def get_initial_context(self, request: HttpRequest, groups: QuerySet[Dojo_Group]...
+    - class ViewGroup(View):\n    def get_group(self, group_id: int):\n        return get_object_or_404(Dojo_Group, id=group_id)\n\n    def get_initial_context(self, group: Dojo_Group):\n        return {\n ...
+    - class EditGroup(View):\n    def get_group(self, group_id: int):\n        return get_object_or_404(Dojo_Group, id=group_id)\n\n    def get_global_role(self, group: Dojo_Group):\n        # Try to pull t...
+    - class DeleteGroup(View):\n    def get_group(self, group_id: int):\n        return get_object_or_404(Dojo_Group, id=group_id)\n\n    def get_group_form(self, request: HttpRequest, group: Dojo_Group):\n...
+    - class AddGroup(View):\n    def get_group_form(self, request: HttpRequest):\n        # Set up the args for the form\n        args = [request.POST] if request.method == "POST" else []\n        # Set the...
+    - class NewJiraView(View):\n    def get_template(self):\n        return "dojo/new_jira.html"\n\n    def get_fallback_template(self):\n        return "dojo/new_jira_advanced.html"\n\n    def get_form_cla...
+    - class AdvancedJiraView(View):\n    def get_template(self):\n        return "dojo/new_jira_advanced.html"\n\n    def get_form_class(self):\n        return AdvancedJIRAForm\n\n    def get(self, request)...
+    - class EditJiraView(View):\n    def get_template(self):\n        return "dojo/edit_jira.html"\n\n    def get_form_class(self):\n        return AdvancedJIRAForm\n\n    def get(self, request, jid=None):\...
+    - class ListJiraView(View):\n    def get_template(self):\n        return "dojo/jira.html"\n\n    def get(self, request):\n        if not user_has_configuration_permission(request.user, "dojo.view_jira_i...
+    - class DeleteJiraView(View):\n    def get_template(self):\n        return "dojo/delete_jira.html"\n\n    def get_form_class(self):\n        return DeleteJIRAInstanceForm\n\n    def get(self, request, t...
+    - class SystemNotificationsView(View):\n    def get_notifications(self, request: HttpRequest):\n        try:\n            notifications = Notifications.objects.get(user=None, product__isnull=True, templ...
+    - class NotificationWebhooksView(View):\n    def get_webhook_manager_instance(self) -> NotificationManagerHelpers:\n        return WebhookNotificationManger()\n\n    def check_webhooks_enabled(self):\n ...
+    - class AdHocFindingView(View):\n    def get_product(self, product_id: int):\n        return get_object_or_404(Product, id=product_id)\n\n    def get_test_type(self):\n        test_type, _nil = Test_Typ...
+    - class ReportBuilder(View):\n    def get(self, request: HttpRequest) -> HttpResponse:\n        add_breadcrumb(title="Report Builder", top_level=True, request=request)\n        return render(request, se...
+    - class CustomReport(View):\n    def post(self, request: HttpRequest) -> HttpResponse:\n        # saving the report\n        form = self.get_form(request)\n        if form.is_valid():\n            self....
+    - class QuickReportView(View):\n    def add_findings_data(self):\n        return self.findings\n\n    def get_template(self):\n        return "dojo/finding_pdf_report.html"\n\n    def get(self, request)...
+    - class CSVExportView(View):\n    def add_findings_data(self):\n        return self.findings\n\n    def add_extra_headers(self):\n        pass\n\n    def add_extra_values(self):\n        pass\n\n    def...
+    - class ExcelExportView(View):\n\n    def add_findings_data(self):\n        return self.findings\n\n    def add_extra_headers(self):\n        pass\n\n    def add_extra_values(self):\n        pass\n\n   ...
+    - class ExistingEngagementEmptySurveyView(View):\n    def get(self, request, esid):\n        survey = get_object_or_404(Answered_Survey, id=esid)\n        if survey.engagement:\n            # If the que...
+    - class SystemSettingsView(View):\n    def permission_check(\n        self,\n        request: HttpRequest,\n    ) -> None:\n        if not request.user.is_superuser:\n            raise PermissionDenied\...
+    - class ViewTest(View):\n    def get_test(self, test_id: int):\n        test_prefetched = get_authorized_tests(Permissions.Test_View)\n        test_prefetched = test_prefetched.annotate(total_reimport_c...
+    - class AddFindingView(View):\n    def get_test(self, test_id: int):\n        return get_object_or_404(Test, id=test_id)\n\n    def get_initial_context(self, request: HttpRequest, test: Test):\n        ...
+    - class ReImportScanResultsView(View):\n    def get_template(self) -> str:\n        """Returns the template that will be presented to the user"""\n        return "dojo/import_scan_results.html"\n\n    d...
+  django.utils.timezone.make_aware:
+    - make_aware(max_test_start_date)
+  django.db.models.Model:
+    - isinstance(value, Model)
+    - isinstance(value[0], Model)
+  django.db.models.signals:
+    - receiver(signals.m2m_changed, sender=Product.tags.through)
+    - receiver(signals.m2m_changed, sender=Endpoint.tags.through)
+    - receiver(signals.m2m_changed, sender=Engagement.tags.through)
+    - receiver(signals.m2m_changed, sender=Test.tags.through)
+    - receiver(signals.m2m_changed, sender=Finding.tags.through)
+    - receiver(signals.post_save, sender=Endpoint)
+    - receiver(signals.post_save, sender=Engagement)
+    - receiver(signals.post_save, sender=Test)
+    - receiver(signals.post_save, sender=Finding)
+  django.contrib.auth.logout:
+    - logout(request)
+  django.utils.http.is_safe_url aliased as url_has_allowed_host_and_scheme:
+    - url_has_allowed_host_and_scheme(url, allowed_hosts=None)
+  django.db.models.expressions.Value:
+    - Value("")
+    - Value(1)
+    - Value(1)
+    - Value(0)
+    - Value(1)
+    - Value(0)
+    - Value(1)
+    - Value(0)
+    - Value(1)
+    - Value(0)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value("")
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+    - Value(1)
+  django.forms.modelformset_factory:
+    - modelformset_factory(FileUpload, extra=3, max_num=10, fields=["title", "file"], can_delete=True, formset=BaseManageFileFormSet)
+  django.db.utils.OperationalError:
+    - logger.warning('This command will remove field "sonarqube_config" in model "Test" to be able to finish migration 0120_sonarqube_test_and_clean')\n            try:\n                with connection.sche...
+  django.utils.deconstruct.deconstructible:
+    - import base64\nimport copy\nimport hashlib\nimport logging\nimport re\nimport warnings\nfrom contextlib import suppress\nfrom datetime import datetime\nfrom pathlib import Path\nfrom uuid import uuid4...
+  django.utils.timezone.now:
+    - now()
+    - timezone.now()
+    - timezone.now()
+    - timezone.now()
+    - timezone.now()
+    - timezone.now()
+    - timezone.now()
+    - models.DateTimeField(null=False, editable=False, default=now)
+    - now()
+  django.urls.reverse_lazy:
+    - reverse_lazy("forgot_username_done")
+  django.views.decorators.http.require_POST:
+    - # #  findings\nimport base64\nimport contextlib\nimport copy\nimport json\nimport logging\nimport mimetypes\nfrom collections import OrderedDict, defaultdict\nfrom itertools import chain\n\nfrom djang...
+    - # #  findings\nimport base64\nimport contextlib\nimport copy\nimport json\nimport logging\nimport mimetypes\nfrom collections import OrderedDict, defaultdict\nfrom itertools import chain\n\nfrom djang...
+    - # #  findings\nimport base64\nimport contextlib\nimport copy\nimport json\nimport logging\nimport mimetypes\nfrom collections import OrderedDict, defaultdict\nfrom itertools import chain\n\nfrom djang...
+    - # #  findings\nimport base64\nimport contextlib\nimport copy\nimport json\nimport logging\nimport mimetypes\nfrom collections import OrderedDict, defaultdict\nfrom itertools import chain\n\nfrom djang...
+    - # #  findings\nimport base64\nimport contextlib\nimport copy\nimport json\nimport logging\nimport mimetypes\nfrom collections import OrderedDict, defaultdict\nfrom itertools import chain\n\nfrom djang...
+    - # Standard library imports\nimport datetime\nimport json\nimport logging\n\n# Third party imports\nfrom django.contrib import messages\nfrom django.contrib.admin.utils import NestedObjects\nfrom djang...
+  django.core.validators:
+    - forms.CharField(widget=forms.PasswordInput,\n        required=True,\n        validators=[validate_password],\n        help_text="")
+    - forms.CharField(widget=forms.PasswordInput,\n        required=True,\n        validators=[validate_password],\n        help_text="Password must match the new password entered above.")
+    - forms.CharField(widget=forms.PasswordInput,\n        required=settings.REQUIRE_PASSWORD_ON_USER,\n        validators=[validate_password],\n        help_text="")
+    - forms.CharField(required=False, label="Linked JIRA Issue",\n                validators=[validators.RegexValidator(\n                    regex=r"^[A-Z][A-Z_0-9]+-\d+$",\n                    message="JIRA issue key must be in XXXX-nnnn format ([A-Z][A-Z_0-9]+-\\d+)")])
+    - validators.RegexValidator(\n                    regex=r"^[A-Z][A-Z_0-9]+-\d+$",\n                    message="JIRA issue key must be in XXXX-nnnn format ([A-Z][A-Z_0-9]+-\\d+)")
+  django.core.serializers.serialize:
+    - serialize("json", [finding])
+    - serialize("json", [finding])
+    - serialize("json", [finding])
+    - serialize("json", [finding])
+    - serialize("json", [finding])
+  django.db.models.functions.TruncWeek:
+    - db_method: TruncWeek | TruncMonth
+    - WEEK = ("weeks", TruncWeek)
+  django.db.models.functions.TruncMonth:
+    - db_method: TruncWeek | TruncMonth
+    - MONTH = ("months", TruncMonth)
+  django.contrib.auth.signals.user_logged_out:
+    - receiver(user_logged_out)
+  django.utils.translation.gettext:
+    - gettext("Announcement Configuration")
+    - gettext("Password must be at least %s characters long.")
+    - gettext("Password must be less than %s characters long.")
+    - gettext("Password must contain at least 1 digit, 0-9.")
+    - gettext("Password must contain at least 1 uppercase letter, A-Z.")
+    - gettext("Password must contain at least 1 lowercase letter, a-z.")
+    - gettext("The password must contain at least 1 special character, "\n            + """()[]{}|`~!@#$%^&*_-+=;:'",<>./?.""")
+  django.db.connection:
+    - add_breadcrumb(title="Components", top_level=True, request=request)\n    separator = ", "\n    # Get components ordered by component_name and concat component versions\n    # to the same row\n\n    co...
+    - connection.cursor()
+    - connection.cursor()
+    - connection.cursor()
+    - db_type = connection.vendor
+    - prod = get_object_or_404(Product, id=pid)\n    product_tab = Product_Tab(prod, title=_("Product"), tab="components")\n    separator = ", "\n\n    # Get components ordered by component_name and concat ...
+  django.db.migrations:

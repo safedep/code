@@ -1,0 +1,311 @@
+
+dojo:
+  dojo.models.Languages:
+    - Languages.objects.annotate(\n        product__prod_type__member=Exists(authorized_product_type_roles),\n        product__member=Exists(authorized_product_roles),\n        product__prod_type__authorize...
+    - Languages.objects.filter(product=prod)
+    - Languages.objects.filter(product=prod)
+    - Languages.objects.filter(language__language__icontains=keywords_query)
+    - Languages.objects.filter(\n        language__language__iexact=language, product=product)
+    - Languages(language=language_type, product=product, files=files, code=code)
+  dojo.utils.get_setting:
+    - get_setting("ASYNC_OBJECT_DELETE")
+    - get_setting("ASYNC_OBJECT_DELETE")
+    - get_setting("ASYNC_OBJECT_DELETE")
+    - get_setting("ASYNC_OBJECT_DELETE")
+    - get_setting("DELETE_PREVIEW")
+    - get_setting("ASYNC_OBJECT_DELETE")
+    - get_setting("DELETE_PREVIEW")
+    - get_setting("DELETE_PREVIEW")
+    - get_setting("DELETE_PREVIEW")
+    - get_setting("DELETE_PREVIEW")
+    - get_setting("DELETE_PREVIEW")
+    - get_setting("ASYNC_OBJECT_DELETE")
+    - get_setting("DELETE_PREVIEW")
+    - get_setting("DELETE_PREVIEW")
+    - get_setting("ASYNC_OBJECT_DELETE")
+    - get_setting("DELETE_PREVIEW")
+    - get_setting("DELETE_PREVIEW")
+    - get_setting("ASYNC_OBJECT_DELETE")
+    - get_setting("DELETE_PREVIEW")
+    - get_setting("DELETE_PREVIEW")
+    - get_setting("DELETE_PREVIEW")
+  dojo.components.sql_group_concat.Sql_GroupConcat:
+    - Sql_GroupConcat(\n                "component_version", separator=separator, distinct=True,\n            )
+    - Sql_GroupConcat("component_version", separator=separator, distinct=True)
+  dojo.notifications.helper.WebhookNotificationManger:
+    - WebhookNotificationManger()
+  dojo.filters.ApiTestFilter:
+    - filterset_class = ApiTestFilter
+  dojo.endpoint.utils.endpoint_get_or_create:
+    - endpoint_get_or_create(\n                protocol=e[0],\n                userinfo=e[1],\n                host=e[2],\n                port=e[3],\n                path=e[4],\n                query=e[5],\n                fragment=e[6],\n                product=self.product,\n            )
+    - endpoint_get_or_create(\n                    protocol=endpoint.protocol,\n                    userinfo=endpoint.userinfo,\n                    host=endpoint.host,\n                    port=endpoint.po...
+  dojo.tools.api_sonarqube.api_client.SonarQubeAPI:
+    - SCAN_APIS = {\n                "Bugcrowd API": BugcrowdAPI,\n                "BlackDuck API": BlackduckAPI,\n                "Cobalt.io": CobaltAPI,\n                "Edgescan": EdgescanAPI,\n                "SonarQube": SonarQubeAPI,\n                "Vulners": VulnersAPI,\n             }
+  dojo.tools.appcheck_web_application_scanner.engines.nmap.NmapScanningEngineParser:
+    - SCANNING_ENGINE_PARSERS: dict[str, BaseEngineParser] = {\n    engine.SCANNING_ENGINE: engine() for engine in [\n        AppCheckScanningEngineParser, BaseEngineParser, NmapScanningEngineParser, OpenVASScannerEngineParser,\n    ]\n}
+  dojo.forms.ChangePasswordForm:
+    - ChangePasswordForm(user=user)
+    - ChangePasswordForm(request.POST, user=user)
+  dojo.models.ChoiceQuestion:
+    - child_models = (\n        TextQuestion,\n        ChoiceQuestion,\n    )
+    - admin.site.register(ChoiceQuestion, ChoiceQuestionAdmin)
+    - isinstance(instance, ChoiceQuestion)
+    - model = ChoiceQuestion
+    - ContentType.objects.get_for_model(ChoiceQuestion)
+    - model = ChoiceQuestion
+    - model = ChoiceQuestion
+    - ChoiceQuestion.objects.create(\n                        optional=form.cleaned_data["optional"],\n                        order=form.cleaned_data["order"],\n                        text=form.cleaned_data["text"],\n                        multichoice=choiceQuestionFrom.cleaned_data["multichoice"])
+  dojo.group.queries.get_authorized_group_members:
+    - get_authorized_group_members(Permissions.Group_View)
+  dojo.forms.FindingForm:
+    - FindingForm(*args, **kwargs)
+    - def get_jira_form(self, request: HttpRequest, finding: Finding, finding_form: FindingForm = None):\n        # Determine if jira should be used\n        if (jira_project := jira_helper.get_jira_project...
+  dojo.forms.DeleteToolProductSettingsForm:
+    - DeleteToolProductSettingsForm(request.POST, instance=tool_product)
+  dojo.metrics.utils.identify_view:
+    - identify_view(request)
+  dojo.models.Question:
+    - base_model = Question
+    - base_model = Question
+    - admin.site.register(Question, QuestionParentAdmin)
+    - Question.objects.select_subclasses()
+    - model = Question
+    - model = Question
+    - Question.objects.none()
+    - Question.objects.all()
+    - model = Question
+    - Question.polymorphic.all()
+    - model = Question
+    - Question.polymorphic.filter(engagement_survey=survey.survey)
+    - Question.polymorphic.filter(engagement_survey=survey.survey)
+    - Question.polymorphic.filter(engagement_survey=survey.survey)
+    - Question.polymorphic.all()
+    - Question.polymorphic.get(id=qid)
+    - try:\n        question = Question.polymorphic.get(id=qid)\n    except Question.DoesNotExist:\n        return Http404()\n    survey = Engagement_Survey.objects.filter(questions__in=[question])\n    rev...
+    - Question.polymorphic.filter(engagement_survey=survey.survey)
+    - Question.polymorphic.filter(engagement_survey=engagement_survey)
+    - Question.polymorphic.filter(engagement_survey=survey.survey)
+  dojo.models.Risk_Acceptance:
+    - model = Risk_Acceptance
+    - Risk_Acceptance.TREATMENT_TRANSLATIONS.get(obj.recommendation)
+    - Risk_Acceptance.TREATMENT_TRANSLATIONS.get(obj.decision)
+    - model = Risk_Acceptance
+    - Risk_Acceptance.objects.none()
+    - get_authorized_risk_acceptances(Permissions.Risk_Acceptance)
+    - user_is_authorized(Engagement, Permissions.Risk_Acceptance, "eid")
+    - user_is_authorized(Engagement, Permissions.Risk_Acceptance, "eid")
+    - get_object_or_404(Risk_Acceptance, pk=raid)
+    - user_is_authorized(Engagement, Permissions.Risk_Acceptance, "eid")
+    - Risk_Acceptance.objects.all()
+    - user_is_authorized(Engagement, Permissions.Risk_Acceptance, "eid")
+    - Risk_Acceptance.objects.all()
+    - user_is_authorized(Engagement, Permissions.Risk_Acceptance, "eid")
+    - get_object_or_404(Risk_Acceptance, pk=raid)
+    - get_object_or_404(Risk_Acceptance, pk=raid)
+    - Risk_Acceptance.objects.none()
+    - get_authorized_risk_acceptances(Permissions.Risk_Acceptance)
+    - model = Risk_Acceptance
+    - forms.ChoiceField(choices=Risk_Acceptance.TREATMENT_CHOICES, initial=Risk_Acceptance.TREATMENT_ACCEPT, widget=forms.RadioSelect, label="Security Recommendation")
+    - forms.ChoiceField(choices=Risk_Acceptance.TREATMENT_CHOICES, initial=Risk_Acceptance.TREATMENT_ACCEPT, widget=forms.RadioSelect, label="Security Recommendation")
+    - forms.ChoiceField(choices=Risk_Acceptance.TREATMENT_CHOICES, initial=Risk_Acceptance.TREATMENT_ACCEPT, widget=forms.RadioSelect)
+    - forms.ChoiceField(choices=Risk_Acceptance.TREATMENT_CHOICES, initial=Risk_Acceptance.TREATMENT_ACCEPT, widget=forms.RadioSelect)
+    - model = Risk_Acceptance
+    - model = Risk_Acceptance
+    - get_authorized_findings(Permissions.Risk_Acceptance)
+    - model = Risk_Acceptance
+    - model = Risk_Acceptance
+    - get_authorized_findings(Permissions.Risk_Acceptance)
+    - Risk_Acceptance.objects.create(\n                    accepted_by=assignee_name,\n                    owner=finding.reporter,\n                )
+    - Risk_Acceptance.objects.filter(\n        created__range=[datetime(now.year,\n                                 now.month, 1,\n                                 tzinfo=timezone.get_current_timezone()),\n...
+    - Risk_Acceptance.objects.filter(\n        owner=user, created__range=[day_list[0], day_list[-1]])
+    - Risk_Acceptance.objects.filter(\n                created__range=[month_start, month_end], owner=user)
+    - Risk_Acceptance.objects.filter(\n                created__range=[week_start, week_end], owner=user)
+    - Risk_Acceptance.objects.create(owner=owner, name=name[:100],\n                                                        decision=Risk_Acceptance.TREATMENT_ACCEPT,\n                                      ...
+    - Risk_Acceptance.objects.create(owner=owner, name=name[:100],\n                                                        decision=Risk_Acceptance.TREATMENT_ACCEPT,\n                                      ...
+    - def remove_finding_from_risk_acceptance(user: Dojo_User, risk_acceptance: Risk_Acceptance, finding: Finding) -> None:\n    logger.debug("removing finding %i from risk acceptance %i", finding.id, risk_...
+    - def add_findings_to_risk_acceptance(user: Dojo_User, risk_acceptance: Risk_Acceptance, findings: list[Finding]) -> None:\n    for finding in findings:\n        if not finding.duplicate or finding.risk...
+    - def get_view_risk_acceptance(risk_acceptance: Risk_Acceptance) -> str:\n    """Return the full qualified URL of the view risk acceptance page."""\n    # Suppressing this error because it does not happ...
+    - Risk_Acceptance.objects.filter(expiration_date__isnull=False, expiration_date_handled__isnull=True, expiration_date__date__lte=timezone.now().date())
+    - Risk_Acceptance.objects.filter(expiration_date__isnull=False, expiration_date_handled__isnull=True, expiration_date_warned__isnull=True,\n            expiration_date__date__lte=timezone.now().date() + relativedelta(days=heads_up_days), expiration_date__date__gte=timezone.now().date())
+    - Risk_Acceptance.objects.none()
+    - Risk_Acceptance.objects.all()
+    - Risk_Acceptance.objects.all()
+    - Risk_Acceptance.objects.annotate(\n        product__prod_type__member=Exists(authorized_product_type_roles),\n        product__member=Exists(authorized_product_roles),\n        product__prod_type__aut...
+    - receiver(pre_delete, sender=Risk_Acceptance)
+    - Risk_Acceptance.objects.create(\n                owner=finding.reporter,\n            )
+  dojo.filters.EndpointFilter:
+    - filter_class = EndpointFilterWithoutObjectLookups if filter_string_matching else EndpointFilter
+    - filter_class = EndpointFilterWithoutObjectLookups if filter_string_matching else EndpointFilter
+    - EndpointFilter(request.GET, queryset=endpoints, user=request.user)
+    - filter_class = EndpointFilterWithoutObjectLookups if filter_string_matching else EndpointFilter
+  dojo.utils.apply_cwe_to_template:
+    - apply_cwe_to_template(finding)
+    - apply_cwe_to_template(self)
+  dojo.forms.DeleteAppAnalysisForm:
+    - DeleteAppAnalysisForm(instance=technology)
+  dojo.reports.widgets.Widget:
+    - def get_available_widgets(self, request: HttpRequest) -> list[Widget]:\n        return [\n            CoverPage(request=request),\n            TableOfContents(request=request),\n            WYSIWYGCon...
+  dojo.utils.truncate_with_dots:
+    - truncate_with_dots(prod_name(obj), 25)
+  dojo.forms.SimpleSearchForm:
+    - SimpleSearchForm()
+    - SimpleSearchForm(request.GET)
+    - SimpleSearchForm()
+  dojo.forms.ApplyFindingTemplateForm:
+    - ApplyFindingTemplateForm(data=data, template=template)
+    - ApplyFindingTemplateForm(data=request.POST)
+  dojo.reports.widgets.TableOfContents:
+    - TableOfContents(request=request)
+  dojo.api_v2.views.FindingViewSet:
+    - v2_api.register(r"findings", FindingViewSet, basename="finding")
+  dojo.survey.urls.urlpatterns aliased as survey_urls:
+    - urlpatterns += survey_urls
+  dojo.models.Benchmark_Type:
+    - Benchmark_Type.objects.filter(\n            enabled=True)
+    - Benchmark_Type.objects.filter(\n        enabled=True)
+  dojo.importers.auto_create_context.AutoCreateContextManager:
+    - AutoCreateContextManager()
+    - def process_auto_create_create_context(\n        self,\n        auto_create_manager: AutoCreateContextManager,\n        context: dict,\n    ) -> None:\n        """\n        Extract all of the pertinen...
+    - def process_scan(\n        self,\n        auto_create_manager: AutoCreateContextManager,\n        data: dict,\n        context: dict,\n    ) -> None:\n        """\n        Process the scan with all of...
+    - AutoCreateContextManager()
+    - AutoCreateContextManager()
+    - AutoCreateContextManager()
+    - AutoCreateContextManager()
+  dojo.models.General_Survey:
+    - model = General_Survey
+    - General_Survey.objects.none()
+    - General_Survey.objects.all()
+    - model = General_Survey
+    - model = General_Survey
+    - General_Survey.objects.all()
+    - get_object_or_404(General_Survey, id=esid)
+    - get_object_or_404(General_Survey, id=esid)
+  dojo.utils.handle_uploaded_threat:
+    - handle_uploaded_threat(request.FILES["file"], eng)
+  dojo.models.IMPORT_UNTOUCHED_FINDING:
+    - Test_Import_Finding_Action.objects.exclude(\n                        action=IMPORT_UNTOUCHED_FINDING,\n                    )
+    - Test_Import_Finding_Action.objects.exclude(\n                    action=IMPORT_UNTOUCHED_FINDING,\n                )
+    - Test_Import_Finding_Action(\n                test_import=test_import,\n                finding=finding,\n                action=IMPORT_UNTOUCHED_FINDING,\n            )
+    - Test_Import_Finding_Action.objects.exclude(action=IMPORT_UNTOUCHED_FINDING)
+  dojo.group.queries.get_product_groups_for_group:
+    - get_product_groups_for_group(group)
+  dojo.forms.CreateTextQuestionForm:
+    - CreateTextQuestionForm()
+    - CreateTextQuestionForm(request.POST)
+  dojo.api_v2.views.EngagementPresetsViewset:
+    - v2_api.register(r"engagement_presets", EngagementPresetsViewset, basename="engagement_presets")
+  dojo.api_v2.views.NotesViewSet:
+    - v2_api.register(r"notes", NotesViewSet, basename="notes")
+  dojo.models.FileUpload:
+    - preferred_serializers = {\n    FileUpload: "FileSerializer",\n}
+    - model = FileUpload
+    - FileUpload(title=file.name, file=file)
+    - model = FileUpload
+    - model = FileUpload
+    - FileUpload(title=title, file=file)
+    - FileUpload(title=title, file=file)
+    - FileUpload(title=title, file=file)
+    - modelformset_factory(FileUpload, extra=3, max_num=10, fields=["title", "file"], can_delete=True, formset=BaseManageFileFormSet)
+    - FileUpload.objects.get_or_create(title=title)
+    - FileUpload(title=title, file=ContentFile(data))
+    - def generate_file_response(file_object: FileUpload) -> FileResponse:\n    """\n    Serve an uploaded file in a uniformed way.\n\n    This function assumes all permissions have previously validated/ver...
+    - isinstance(file_object, FileUpload)
+    - FileUpload.objects.filter(engagement__isnull=True,\n                                                     test__isnull=True,\n                                                     finding__isnull=True)
+    - FileUpload.objects.get(file=path)
+    - get_object_or_404(FileUpload, pk=fid)
+  dojo.models.Finding_Template:
+    - model = Finding_Template
+    - Finding_Template.objects.none()
+    - Finding_Template.objects.all()
+    - model = Finding_Template
+    - model = Finding_Template
+    - contextlib.suppress(Finding_Template.DoesNotExist)
+    - Finding_Template.objects.filter(cwe=finding.cwe)
+    - Finding_Template.objects.filter(title=finding.title)
+    - Finding_Template(\n            title=finding.title,\n            cwe=finding.cwe,\n            cvssv3=finding.cvssv3,\n            severity=finding.severity,\n            description=finding.descripti...
+    - Finding_Template.objects.annotate(\n            cve_len=Length("cve"), order=models.Value(1, models.IntegerField()),\n        )
+    - Finding_Template.objects.all()
+    - Finding_Template.objects.all()
+    - get_words_for_field(Finding_Template, "title")
+    - get_object_or_404(Finding_Template, id=tid)
+    - get_object_or_404(Finding_Template, id=tid)
+    - Finding_Template.objects.all()
+    - Finding_Template.objects.all()
+    - Finding_Template.objects.filter(\n                cwe=template.cwe, template_match=True, template_match_title=True,\n            )
+    - get_object_or_404(Finding_Template, id=tid)
+    - get_object_or_404(Finding_Template, id=tid)
+    - model = Finding_Template
+    - model = Finding_Template
+    - Finding_Template.objects.filter(cve__isnull=False)
+    - mass_model_updater(\n            Finding_Template,\n            finding_templates,\n            lambda f: create_vulnerability_id_template(f),\n            fields=None,\n            page_size=100,\n            log_prefix="creating vulnerability ids: ",\n        )
+    - Finding_Template.objects.all()
+    - get_object_or_404(Finding_Template, id=fid)
+    - Finding_Template.objects.all()
+    - Finding_Template.objects.all()
+    - get_words_for_field(Finding_Template, "title")
+    - Finding_Template.objects.all()
+    - Finding_Template.objects.filter(\n            cwe=finding.cwe, title__icontains=finding.title, template_match=True)
+    - Finding_Template.objects.filter(\n            cwe=finding.cwe, template_match=True)
+    - max_results = getattr(settings, "MAX_AUTOCOMPLETE_WORDS", 20000)\n    models = None\n    if model == Finding:\n        models = get_authorized_findings(Permissions.Finding_View, user=get_current_user(...
+    - Finding_Template.objects.all()
+  dojo.models.Stub_Finding:
+    - model = Stub_Finding
+    - model = Stub_Finding
+    - Stub_Finding.objects.none()
+    - Stub_Finding.objects.none()
+    - Stub_Finding.objects.all()
+    - Stub_Finding.objects.all()
+    - Stub_Finding.objects.annotate(\n        test__engagement__product__prod_type__member=Exists(authorized_product_type_roles),\n        test__engagement__product__member=Exists(authorized_product_roles),...
+    - user_is_authorized(Stub_Finding, Permissions.Finding_Delete, "fid")
+    - get_object_or_404(Stub_Finding, id=fid)
+    - user_is_authorized(Stub_Finding, Permissions.Finding_Edit, "fid")
+    - get_object_or_404(Stub_Finding, id=fid)
+    - model = Stub_Finding
+    - model = Stub_Finding
+    - isinstance(obj, Stub_Finding)
+    - isinstance(obj, Finding | Stub_Finding)
+    - Stub_Finding.objects.filter(test=test)
+  dojo.tools.factory.get_choices_sorted:
+    - get_choices_sorted()
+    - get_choices_sorted()
+    - forms.ChoiceField(required=True, choices=get_choices_sorted)
+    - get_choices_sorted()
+  dojo.forms.DeleteEndpointForm:
+    - DeleteEndpointForm(instance=endpoint)
+    - DeleteEndpointForm(request.POST, instance=endpoint)
+  dojo.filters.SimilarFindingFilter:
+    - finding_filter_class = SimilarFindingFilterWithoutObjectLookups if filter_string_matching else SimilarFindingFilter
+  dojo.filters.TemplateFindingFilter:
+    - TemplateFindingFilter(request.GET, queryset=templates)
+    - TemplateFindingFilter(request.GET, queryset=templates)
+    - TemplateFindingFilter(request.GET, queryset=templates)
+  dojo.forms.Delete_Group_MemberForm:
+    - Delete_Group_MemberForm(instance=member)
+    - Delete_Group_MemberForm(request.POST, instance=member)
+  dojo.forms.Add_Product_Type_Group_GroupForm:
+    - Add_Product_Type_Group_GroupForm(initial={"group": group.id})
+    - Add_Product_Type_Group_GroupForm(request.POST, initial={"group": group.id})
+  dojo.reports.widgets.PageBreak:
+    - PageBreak()
+  dojo.group.queries.get_group_member_roles:
+    - get_group_member_roles()
+    - get_group_member_roles()
+    - get_group_member_roles()
+    - get_group_member_roles()
+  dojo.forms.DeleteJIRAInstanceForm:
+    - return DeleteJIRAInstanceForm
+  dojo.forms.DeleteObjectsSettingsForm:
+    - DeleteObjectsSettingsForm(instance=object)
+  dojo.tools.nikto.json_parser.NiktoJSONParser:
+    - NiktoJSONParser()
+  dojo.tools.sonarqube.soprasteria_html.SonarQubeSoprasteriaHTML:
+    - SonarQubeSoprasteriaHTML()
+  dojo.forms.CopyFindingForm:
+    - CopyFindingForm(tests=tests)
+    - CopyFindingForm(request.POST, tests=tests)
+  dojo.forms.EngagementPresetsForm:
+    - EngagementPresetsForm(request.POST, instance=preset)
+    - EngagementPresetsForm(instance=preset)
+    - EngagementPresetsForm(request.POST)
+    - EngagementPresetsForm()
+  dojo.pipeline.assign_user_to_groups:

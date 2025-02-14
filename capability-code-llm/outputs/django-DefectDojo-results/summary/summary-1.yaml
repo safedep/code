@@ -1,0 +1,260 @@
+
+datetime:
+  datetime.datetime:
+    - datetime.combine(test.target_end, datetime.max.time())
+    - datetime.max.time()
+    - datetime.today()
+    - datetime.now()
+    - datetime.now()
+    - datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%fZ")
+    - datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%fZ")
+    - datetime.strptime(\n                tree.get("finish_datetime"), "%Y-%m-%d %H:%M:%S %z",\n            )
+    - datetime.now(UTC)
+    - datetime.datetime.strptime(finding.get("LastObservedAt"), "%Y-%m-%dT%H:%M:%S.%fZ")
+    - datetime.datetime.strptime(finding.get("LastObservedAt"), "%Y-%m-%dT%H:%M:%S.%fZ")
+    - datetime.datetime.strptime(finding.get("LastObservedAt"), "%Y-%m-%dT%H:%M:%fZ")
+    - datetime.datetime.strptime(finding.get("LastObservedAt"), "%Y-%m-%dT%H:%M:%fZ")
+    - datetime.datetime.now(datetime.UTC)
+    - datetime.datetime.now(datetime.UTC)
+    - datetime.datetime.now(datetime.UTC)
+    - datetime.datetime.strptime(finding.get("LastObservedAt"), "%Y-%m-%dT%H:%M:%S.%fZ")
+    - datetime.datetime.strptime(finding.get("LastObservedAt"), "%Y-%m-%dT%H:%M:%S.%fZ")
+    - datetime.datetime.strptime(finding.get("LastObservedAt"), "%Y-%m-%dT%H:%M:%fZ")
+    - datetime.datetime.strptime(finding.get("LastObservedAt"), "%Y-%m-%dT%H:%M:%fZ")
+    - datetime.datetime.now(datetime.UTC)
+    - datetime.datetime.now(datetime.UTC)
+    - datetime.datetime.now(datetime.UTC)
+    - datetime.datetime.strptime(finding.get("LastObservedAt"), "%Y-%m-%dT%H:%M:%S.%fZ")
+    - datetime.datetime.strptime(finding.get("LastObservedAt"), "%Y-%m-%dT%H:%M:%S.%fZ")
+    - datetime.datetime.strptime(finding.get("LastObservedAt"), "%Y-%m-%dT%H:%M:%fZ")
+    - datetime.datetime.strptime(finding.get("LastObservedAt"), "%Y-%m-%dT%H:%M:%fZ")
+    - datetime.datetime.now(datetime.UTC)
+    - datetime.datetime.now(datetime.UTC)
+    - datetime.datetime.now(datetime.UTC)
+    - datetime.strptime(\n                            status_change_date[0:10], "%Y-%m-%d",\n                        )
+    - datetime.now()
+    - datetime.datetime.fromtimestamp(value.get("seconds"), datetime.UTC)
+    - datetime.datetime.fromtimestamp(value.get("seconds"), datetime.UTC)
+    - datetime.datetime.fromtimestamp(value.get("seconds"), datetime.UTC)
+    - datetime.datetime.fromtimestamp(value.get("seconds"), datetime.UTC)
+    - datetime.datetime.fromtimestamp(value.get("seconds"), datetime.UTC)
+    - datetime.datetime.fromtimestamp(value.get("seconds"), datetime.UTC)
+    - datetime.strptime(\n                    item["publishDate"], "%Y-%m-%dT%H:%M:%S",\n                )
+    - datetime.now()
+    - datetime.datetime.fromtimestamp(int(row.get("First Seen")) / 1000, datetime.UTC)
+    - datetime.datetime.fromtimestamp(int(row.get("First Seen")) / 1000, datetime.UTC)
+    - datetime.datetime.fromtimestamp(int(row.get("First Seen")) / 1000, datetime.UTC)
+    - datetime.strptime(\n                    issue["firstDetected"], "%m/%d/%y",\n                )
+    - datetime.strptime(ds, "%Y-%M-%d")
+    - datetime.datetime.now(datetime.UTC)
+    - datetime.datetime.now(datetime.UTC)
+    - datetime.datetime.now(datetime.UTC)
+    - datetime.fromtimestamp(int(test_end))
+    - datetime.strptime(\n                vuln["discovered_at"], "%Y-%m-%dT%H:%M:%S.%f",\n            )
+    - datetime.strptime(data["scan"]["end_time"], "%Y-%m-%dT%H:%M:%S")
+    - datetime.strftime(\n                datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ"),\n                "%Y-%m-%d",\n            )
+    - datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ")
+    - datetime.strftime(\n            datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ"),\n            "%Y-%m-%d",\n        )
+    - datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ")
+    - datetime.strftime(\n                datetime.strptime(triaged_date, "%Y-%m-%dT%H:%M:%S.%fZ"),\n                "%Y-%m-%d",\n            )
+    - datetime.strptime(triaged_date, "%Y-%m-%dT%H:%M:%S.%fZ")
+    - datetime.strptime(\n            data.get("createdAt")[0:10], "%Y-%m-%d",\n        )
+    - datetime.strptime(\n        vulnerability["artifact_scan_time"], "%Y-%m-%dT%H:%M:%S%z",\n    )
+    - datetime.fromisoformat(report_json["timestamp"])
+    - datetime.now()
+    - datetime.now()
+    - datetime.now()
+    - datetime.datetime.strptime(\n                    data["Generated"].split(" ")[0], "%d/%m/%Y",\n                )
+    - datetime.datetime.strptime(\n                    data["Generated"].split(" ")[0], "%d/%m/%Y",\n                )
+    - datetime.datetime.strptime(\n                    data["Generated"], "%d/%m/%Y %H:%M %p",\n                )
+    - datetime.datetime.strptime(\n                    data["Generated"], "%d/%m/%Y %H:%M %p",\n                )
+    - datetime.fromisoformat(date)
+    - datetime.datetime.fromtimestamp(\n                int(root.attrib["start"]),\n            )
+    - datetime.datetime.fromtimestamp(\n                int(root.attrib["start"]),\n            )
+    - datetime.today()
+    - datetime.today()
+    - datetime.strptime(date, format)
+    - datetime.now()
+    - datetime.now()
+    - datetime.strptime(date, "%m/%d/%Y %H:%M:%S")
+    - datetime.strptime(date, "%m/%d/%Y %H:%M:%S")
+    - datetime.strptime(\n                        report_finding["Date Last Fixed"], "%m/%d/%Y %H:%M:%S",\n                    )
+    - datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
+    - datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
+    - datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
+    - datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
+    - datetime.datetime.strptime(\n                    last_fixed, "%Y-%m-%dT%H:%M:%SZ",\n                )
+    - datetime.datetime.strptime(\n                    last_fixed, "%Y-%m-%dT%H:%M:%SZ",\n                )
+    - datetime.now()
+    - datetime.strptime(\n                    raw_finding_date, "%d %b %Y %I:%M%p GMT",\n                )
+    - datetime.strptime(\n                    raw_finding_date, "%d %b %Y %I:%M%p GMT%z",\n                )
+    - datetime.strptime(\n                    raw_finding_date, "%d %b %Y %I:%M%p GMT",\n                )
+    - datetime.strptime(\n                    raw_finding_date, "%d %b %Y %I:%M%p GMT%z",\n                )
+    - datetime.strptime(data.get("StartedDate", ""), "%d/%m/%Y %H:%M:%S")
+    - datetime.strptime(\n                data["last_run"]["time"][0:10], "%Y-%m-%d",\n            )
+    - datetime.strptime(\n            column_value, "%Y-%m-%d %H:%M:%S",\n        )
+    - datetime.now()
+    - self.vuln_fix_date: datetime.date = None
+    - self.publish_date: datetime.date = None
+    - datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%f%z")
+    - datetime.strptime(\n            root.attrib["last_update_time"], "%Y-%m-%d %H:%M:%S %Z",\n        )
+    - datetime.strptime(date, "%Y-%m-%d %H:%M:%S %Z")
+    - datetime.strptime(date, "%Y-%m-%d %H:%M:%S %Z")
+    - datetime.strptime(\n                        mitigation.attrib["date"], "%Y-%m-%d %H:%M:%S %Z",\n                    )
+    - datetime.strptime(\n                    mitigation.attrib["date"], "%Y-%m-%d %H:%M:%S %Z",\n                )
+    - datetime.strptime(\n                        row.get("Issue opened: Scan date"), "%d %b %Y %H:%M%p %Z",\n                    )
+    - datetime.strptime(\n                        row.get("Issue opened: Scan date"), "%d %b %Y %H:%M%p %Z",\n                    )
+    - datetime.strptime(mitigated_ts, "%Y-%m-%dT%H:%M:%SZ")
+    - datetime.datetime.fromtimestamp(tree.get("start_time"), datetime.UTC)
+    - datetime.datetime.fromtimestamp(tree.get("start_time"), datetime.UTC)
+    - datetime.datetime.fromtimestamp(tree.get("start_time"), datetime.UTC)
+    - datetime.combine(first_sunday, datetime.min.time())
+    - datetime.min.time()
+    - datetime.combine(created, datetime.min.time())
+    - datetime.min.time()
+    - datetime(\n                        new_date.year,\n                        new_date.month,\n                        1,\n                        tzinfo=timezone.get_current_timezone())
+    - datetime(\n                        new_date.year,\n                        new_date.month,\n                        monthrange(new_date.year, new_date.month)[1],\n                        tzinfo=timezone.get_current_timezone())
+    - datetime.combine(finding.date, datetime.min.time(\n            ))
+    - datetime.min.time(\n            )
+    - datetime(start_date.year, start_date.month, start_date.day, tzinfo=tz)
+    - datetime(new_date.year, new_date.month, new_date.day, tzinfo=tz)
+    - datetime(end_date.year, end_date.month, end_date.day, tzinfo=tz)
+    - datetime.combine(finding.date, datetime.min.time())
+    - datetime.min.time()
+    - datetime(\n        start_date.year,\n        start_date.month,\n        start_date.day,\n        tzinfo=timezone.get_current_timezone())
+    - datetime(\n        end_date.year,\n        end_date.month,\n        end_date.day,\n        tzinfo=timezone.get_current_timezone())
+    - isinstance(mitigated_date, datetime)
+    - isinstance(start_date, datetime)
+    - isinstance(mitigated_date, datetime)
+    - datetime.combine(datetime.now(), datetime.min.time())
+    - datetime.now()
+    - datetime.min.time()
+    - datetime.combine(f.date, datetime.min.time())
+    - datetime.min.time()
+
+functools:
+  functools.wraps:
+    - wraps(func)
+    - wraps(func)
+    - wraps(func)
+    - wraps(fn)
+    - wraps(function)
+    - wraps(function)
+    - wraps(func)
+    - wraps(func)
+  functools.reduce:
+    - reduce(operator.or_, filters)
+    - reduce(operator.or_, q_objects)
+    - reduce(operator.or_, filters)
+  functools.partial:
+    - partial(get_charting_data, start_date=start_date, period=period, period_count=period_count)
+    - partial(aggregate_counts_by_period, period=period, metrics_type=metrics_type)
+
+typing:
+  typing.Any:
+    - def process_object_fields(\n        self,\n        key: str,\n        label: str,\n        object_type: Any,\n        data: dict,\n        **kwargs: dict,\n    ) -> None:\n        """\n        Process...
+    - def validate(\n        self,\n        field_name: str,\n        expected_types: list[Callable] = [],\n        *,\n        required: bool = False,\n        default: Any = None,\n        **kwargs: dict,...
+    - def validate(\n        self,\n        field_name: str,\n        expected_types: list[Callable] = [],\n        *,\n        required: bool = False,\n        default: Any = None,\n        **kwargs: dict,...
+    - def failure_to_add_message(message: str, exception: Exception, object: Any) -> bool:\n        if exception:\n            logger.exception(exception)\n        logger.error(message)\n        log_jira_alert(message, obj)\n        return False
+    - def failure_to_update_message(message: str, exception: Exception, obj: Any) -> bool:\n        if exception:\n            logger.exception(exception)\n        logger.error(message)\n        log_jira_alert(message, obj)\n        return False
+    - def finding_queries(\n    prod_type: QuerySet[Product_Type],\n    request: HttpRequest,\n) -> dict[str, Any]:\n    # Get the initial list of findings the user is authorized to see\n    all_authorized_...
+    - def endpoint_queries(\n    prod_type: QuerySet[Product_Type],\n    request: HttpRequest,\n) -> dict[str, Any]:\n    endpoints_query = Endpoint_Status.objects.filter(\n        mitigated=False,\n       ...
+    - def get_host(self, item: dict[str, Any]) -> str:\n        return item.get("url") or item.get("host") or item.get("ipv4_address") or None
+    - def parse_port(self, item: Any) -> int | None:\n        try:\n            int_val = int(item)\n            if 0 < int_val <= 65535:\n                return int_val\n        except (ValueError, TypeError):\n            pass\n        return None
+    - def get_port(self, item: dict[str, Any]) -> int | None:\n        return self.parse_port(item.get("port"))
+    - def parse_endpoints(self, item: dict[str, Any]) -> [Endpoint]:\n        # Endpoint requires a host\n        if host := self.get_host(item):\n            port = self.get_port(item)\n            return [self.construct_endpoint(host, port)]\n        return []
+    - def set_endpoints(self, finding: Finding, item: Any) -> None:\n        endpoints = self.parse_endpoints(item)\n        finding.unsaved_endpoints.extend(endpoints)
+    - def set_severity(self, finding: Finding, item: Any) -> None:\n        for base_score_entry, cvss_version in [\n            ("cvss_v4_base_score", 4),\n            ("cvss_v3_base_score", 3),\n         ...
+    - def process_whole_item(self, finding: Finding, item: Any) -> None:\n        self.set_severity(finding, item)\n        self.set_endpoints(finding, item)
+    - def parse_finding(self, item: dict[str, Any]) -> tuple[Finding, tuple]:\n        finding = Finding()\n        for field, field_handler in self.get_engine_fields().items():\n            # Check first w...
+    - def parse_endpoints(self, item: dict[str, Any]) -> [Endpoint]:\n        host = self.get_host(item)\n        ports = self.get_ports(item)\n        return [self.construct_endpoint(host, port) for port in ports]
+    - def get_scanning_engine_for_entry(self, item: dict[str, Any]) -> str:\n        # From the sample data we have, 'meta' appears to be one of: a dict, an empty list, or nonexistent\n        return (item.get("meta") or {}).get("scanning_engine", {}).get("name", BaseEngineParser.SCANNING_ENGINE)
+  typing.TypeVar:
+    - TypeVar("MetricsQuerySet", QuerySet[Finding], QuerySet[Endpoint_Status])
+  typing.NamedTuple:
+    - class _MetricsPeriodEntry(NamedTuple):\n\n    """\n    Class for holding information for a metrics period. Allows us to store a kwarg for date manipulation alongside a DB\n    method used to aggregate...
+    - class _MetricsTypeEntry(NamedTuple):\n\n    """\n    Class for holding information for a metrics type. Allows us to store relative queryset lookups for severities\n    alongside relative lookups for closed statuses.\n    """\n\n    severity_lookup: str\n    closed_lookup: str
+    - NamedTuple("AcceptedRisk", (("vulnerability_id", str), ("justification", str), ("accepted_by", str)))
+  typing.ClassVar:
+    - fields_to_label: ClassVar[dict[str, str]] = {\n        "id": "ID",\n        "weakness": "Weakness Category",\n        "substate": "Substate",\n        "reporter": "Reporter",\n        "assigned": "Ass...
+  typing.TYPE_CHECKING:
+    - from typing import TYPE_CHECKING\n\nif TYPE_CHECKING:\n    import datetime\n\n\nclass SysdigData:\n\n    def _map_severity(self, severity):\n        severity_mapping = {\n            "CRITICAL": "Crit...
+
+cvss:
+  cvss:
+    - cvss.CVSS3(cvss_vector)
+    - try:\n                c = cvss.CVSS3(cvss_vector)\n                return c.clean_vector()\n            except cvss.CVSS3Error:\n                return None
+  cvss.CVSS3:
+    - CVSS3(self.cvssv3)
+    - isinstance(\n                    cvss_objects[0], CVSS3,\n                )
+    - CVSS3(\n                    vuln.get("cvss3", {})\n                    .get("cvssV3", {})\n                    .get("vectorString", ""),\n                )
+    - isinstance(\n                            cvss_vectors[0], CVSS3,\n                        )
+    - CVSS3(cvss_vectors)
+    - CVSS3(cvss_vectors)
+    - CVSS3(raw_vector)
+    - CVSS3.from_rh_vector(cvss_v3)
+    - CVSS3(cvss_v3)
+    - CVSS3.from_rh_vector(cvss_v3)
+    - CVSS3(\n                            associated_vuln["CvssVector"])
+    - CVSS3(\n                "CVSS:3.0/" + split[1][:-1],\n            )
+    - CVSS3(vulnerability["CVSSv3"])
+    - CVSS3(vulnerability["CVSSv3"])
+    - isinstance(vectors[0], CVSS3)
+    - CVSS3(\n                        "CVSS:3.0/" + str(cvss_vector),\n                    )
+    - CVSS3(cvssv3_element_text)
+    - CVSS3(str(uncleaned_cvss))
+    - CVSS3(f"CVSS:3.1/{uncleaned_cvss}")
+    - CVSS3(f"CVSS:3.1/{cvss_vector}")
+  cvss.parser aliased as cvss_parser:
+    - cvss_parser.parse_cvss_from_text(\n                    item["Classification"]["Cvss"]["Vector"],\n                )
+    - cvss_parser.parse_cvss_from_text(\n                        item.findtext("CVSS3/Descriptor"),\n                    )
+    - cvss_parser.parse_cvss_from_text(vector)
+    - cvss_parser.parse_cvss_from_text(\n                    vulnerability["cvss_vector"],\n                )
+    - cvss_parser.parse_cvss_from_text(row["CVSSV3"])
+    - cvss_parser.parse_cvss_from_text(\n                                cvss_vector_string,\n                            )
+    - cvss_parser.parse_cvss_from_text(\n                        item["Classification"]["Cvss"]["Vector"],\n                    )
+    - cvss_parser.parse_cvss_from_text(\n                        item["Classification"]["Cvss31"]["Vector"],\n                    )
+    - cvss_parser.parse_cvss_from_text(\n                        classification["cvss-metrics"],\n                    )
+    - cvss_parser.parse_cvss_from_text(cvssv3_vector)
+  cvss.exceptions.CVSSError:
+    - try:\n            if (severity := cvss.CVSS4(value).severity) in Finding.SEVERITIES:\n                return severity\n        except CVSSError:\n            pass\n\n        if cvss_obj := cvss.parser...
+  cvss.CVSS2:
+    - isinstance(\n                            cvss_vectors[0], CVSS2,\n                        )
+    - CVSS2(cvss_vectors)
+  cvss.exceptions.CVSS3RHScoreDoesNotMatch:
+    - contextlib.suppress(CVSS3RHScoreDoesNotMatch, CVSS3RHMalformedError)
+  cvss.exceptions.CVSS3RHMalformedError:
+    - contextlib.suppress(CVSS3RHScoreDoesNotMatch, CVSS3RHMalformedError)
+
+gitlab:
+  gitlab:
+    - gitlab.Gitlab(settings.SOCIAL_AUTH_GITLAB_API_URL, oauth_token=token)
+
+auditlog:
+  auditlog.middleware.AuditlogMiddleware aliased as _AuditlogMiddleware:
+    - class AuditlogMiddleware(_AuditlogMiddleware):\n    def __call__(self, request):\n        remote_addr = self._get_remote_addr(request)\n\n        user = SimpleLazyObject(lambda: getattr(request, "user...
+  auditlog.context.set_actor:
+    - set_actor(actor=user, remote_addr=remote_addr)
+  auditlog.registry.auditlog:
+    - auditlog.register(Dojo_User, exclude_fields=["password"])
+    - auditlog.register(Endpoint)
+    - auditlog.register(Engagement)
+    - auditlog.register(Finding, m2m_fields={"reviewers"})
+    - auditlog.register(Finding_Group)
+    - auditlog.register(Product_Type)
+    - auditlog.register(Product)
+    - auditlog.register(Test)
+    - auditlog.register(Risk_Acceptance)
+    - auditlog.register(Finding_Template)
+    - auditlog.register(Cred_User, exclude_fields=["password"])
+    - auditlog.register(Notification_Webhooks, exclude_fields=["header_name", "header_value"])
+  auditlog.models.LogEntry:
+    - admin.site.unregister(LogEntry)
+    - LogEntry.objects.get(\n                action=LogEntry.Action.DELETE,\n                content_type=ContentType.objects.get(app_label="dojo", model="endpoint"),\n                object_id=instance.id,\n            )
+    - LogEntry.objects.get(\n                action=LogEntry.Action.DELETE,\n                content_type=ContentType.objects.get(app_label="dojo", model="endpoint"),\n                object_id=instance.id,\n            )
+    - LogEntry.objects.get(\n                action=LogEntry.Action.DELETE,\n                content_type=ContentType.objects.get(app_label="dojo", model="engagement"),\n                object_id=instance.id,\n            )
+    - LogEntry.objects.get(\n                action=LogEntry.Action.DELETE,\n                content_type=ContentType.objects.get(app_label="dojo", model="engagement"),\n                object_id=instance.id,\n            )
+    - MultipleChoiceFilter(choices=LogEntry.Action.choices)
+    - model = LogEntry
+    - LogEntry.objects.filter(content_type=ct,\n                                                          object_pk=obj.id)
+    - LogEntry.objects.get(\n            action=LogEntry.Action.DELETE,\n            content_type=ContentType.objects.get(app_label="dojo", model="product"),\n            object_id=instance.id,\n        )

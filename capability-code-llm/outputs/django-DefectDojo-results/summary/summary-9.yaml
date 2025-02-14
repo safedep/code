@@ -1,0 +1,194 @@
+
+rest_framework:
+  rest_framework.serializers:
+    - class TestImportFindingActionSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Test_Import_Finding_Action\n        fields = "__all__"
+    - class TestImportSerializer(serializers.ModelSerializer):\n    # findings = TestImportFindingActionSerializer(source='test_import_finding_action', many=True, read_only=True)\n    test_import_finding_ac...
+    - class RiskAcceptanceSerializer(serializers.ModelSerializer):\n    recommendation = serializers.SerializerMethodField()\n    decision = serializers.SerializerMethodField()\n    path = serializers.Seria...
+    - serializers.SerializerMethodField()
+    - serializers.SerializerMethodField()
+    - serializers.SerializerMethodField()
+    - serializers.CharField()
+    - serializers.CharField()
+    - serializers.CharField()
+    - serializers.IntegerField()
+    - class FindingMetaSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = DojoMeta\n        fields = ("name", "value")
+    - class FindingProdTypeSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Product_Type\n        fields = ["id", "name"]
+    - class FindingProductSerializer(serializers.ModelSerializer):\n    prod_type = FindingProdTypeSerializer(required=False)\n\n    class Meta:\n        model = Product\n        fields = ["id", "name", "prod_type"]
+    - class FindingEngagementSerializer(serializers.ModelSerializer):\n    product = FindingProductSerializer(required=False)\n\n    class Meta:\n        model = Engagement\n        fields = [\n            ...
+    - class FindingEnvironmentSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Development_Environment\n        fields = ["id", "name"]
+    - class FindingTestTypeSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Test_Type\n        fields = ["id", "name"]
+    - class FindingTestSerializer(serializers.ModelSerializer):\n    engagement = FindingEngagementSerializer(required=False)\n    environment = FindingEnvironmentSerializer(required=False)\n    test_type =...
+    - class FindingRelatedFieldsSerializer(serializers.Serializer):\n    test = serializers.SerializerMethodField()\n    jira = serializers.SerializerMethodField()\n\n    @extend_schema_field(FindingTestSer...
+    - serializers.SerializerMethodField()
+    - serializers.SerializerMethodField()
+    - class VulnerabilityIdSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Vulnerability_Id\n        fields = ["vulnerability_id"]
+    - class FindingSerializer(TaggitSerializer, serializers.ModelSerializer):\n    tags = TagListSerializerField(required=False)\n    request_response = serializers.SerializerMethodField()\n    accepted_ris...
+    - serializers.SerializerMethodField()
+    - serializers.BooleanField(default=False)
+    - serializers.IntegerField(read_only=True)
+    - serializers.IntegerField(read_only=True, allow_null=True)
+    - serializers.SerializerMethodField(allow_null=True)
+    - serializers.SerializerMethodField(read_only=True, allow_null=True)
+    - serializers.SerializerMethodField(read_only=True, allow_null=True)
+    - serializers.SerializerMethodField()
+    - serializers.PrimaryKeyRelatedField(\n        required=False, queryset=User.objects.all(),\n    )
+    - serializers.DateTimeField()
+    - serializers.DateTimeField()
+    - serializers.ValidationError(msg)
+    - serializers.ValidationError(msg)
+    - serializers.ValidationError(msg)
+    - serializers.ValidationError(msg)
+    - serializers.ValidationError(msg)
+    - class FindingCreateSerializer(TaggitSerializer, serializers.ModelSerializer):\n    notes = serializers.PrimaryKeyRelatedField(\n        read_only=True, allow_null=True, required=False, many=True,\n   ...
+    - serializers.PrimaryKeyRelatedField(\n        read_only=True, allow_null=True, required=False, many=True,\n    )
+    - serializers.PrimaryKeyRelatedField(queryset=Test.objects.all())
+    - serializers.IntegerField(default=0)
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Test_Type.objects.all(), many=True,\n    )
+    - serializers.CharField(allow_null=True, default=None)
+    - serializers.BooleanField(default=False)
+    - serializers.PrimaryKeyRelatedField(\n        required=False, queryset=User.objects.all(),\n    )
+    - serializers.ValidationError(msg)
+    - serializers.ValidationError(msg)
+    - serializers.ValidationError(msg)
+    - serializers.ValidationError(msg)
+    - serializers.ValidationError(msg)
+    - class VulnerabilityIdTemplateSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Vulnerability_Id_Template\n        fields = ["vulnerability_id"]
+    - class FindingTemplateSerializer(TaggitSerializer, serializers.ModelSerializer):\n    tags = TagListSerializerField(required=False)\n    vulnerability_ids = VulnerabilityIdTemplateSerializer(\n        ...
+    - class CredentialSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Cred_User\n        exclude = ("password",)
+    - class CredentialMappingSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Cred_Mapping\n        fields = "__all__"
+    - class StubFindingSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Stub_Finding\n        fields = "__all__"\n\n    def validate_severity(self, value: str) -> str:\n        if ...
+    - serializers.ValidationError(msg)
+    - class StubFindingCreateSerializer(serializers.ModelSerializer):\n    test = serializers.PrimaryKeyRelatedField(queryset=Test.objects.all())\n\n    class Meta:\n        model = Stub_Finding\n        fi...
+    - serializers.PrimaryKeyRelatedField(queryset=Test.objects.all())
+    - serializers.CurrentUserDefault()
+    - serializers.ValidationError(msg)
+    - class ProductSerializer(TaggitSerializer, serializers.ModelSerializer):\n    findings_count = serializers.SerializerMethodField()\n    findings_list = serializers.SerializerMethodField()\n\n    tags =...
+    - serializers.SerializerMethodField()
+    - serializers.SerializerMethodField()
+    - serializers.ValidationError(msg)
+    - class CommonImportScanSerializer(serializers.Serializer):\n    scan_date = serializers.DateField(\n        required=False,\n        help_text="Scan completion date will be used on all findings.",\n   ...
+    - serializers.DateField(\n        required=False,\n        help_text="Scan completion date will be used on all findings.",\n    )
+    - serializers.ChoiceField(\n        choices=SEVERITY_CHOICES,\n        default="Info",\n        help_text="Minimum severity level to be imported",\n    )
+    - serializers.BooleanField(\n        help_text="Force findings to be active/inactive or default to the original tool (None)", required=False,\n    )
+    - serializers.BooleanField(\n        help_text="Force findings to be verified/not verified or default to the original tool (None)", required=False,\n    )
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Endpoint.objects.all(),\n        required=False,\n        default=None,\n        help_text="Enter the ID of an Endpoint that is associated with the target Product. New Findings will be added to that Endpoint.",\n    )
+    - serializers.FileField(allow_empty_file=True, required=False)
+    - serializers.CharField(required=False)
+    - serializers.CharField(required=False)
+    - serializers.CharField(required=False)
+    - serializers.DateField(\n        required=False,\n        help_text="End Date for Engagement. Default is current time + 365 days. Required format year-month-day",\n    )
+    - serializers.URLField(\n        max_length=600,\n        required=False,\n        help_text="Resource link to source code",\n    )
+    - serializers.CharField(required=False)
+    - serializers.BooleanField(required=False)
+    - serializers.BooleanField(required=False)
+    - serializers.PrimaryKeyRelatedField(\n        allow_null=True, default=None, queryset=User.objects.all(),\n    )
+    - serializers.BooleanField(default=False)
+    - serializers.CharField(required=False)
+    - serializers.CharField(\n        required=False, help_text="ID of the build that was scanned.",\n    )
+    - serializers.CharField(\n        required=False, help_text="Branch or Tag that was scanned.",\n    )
+    - serializers.CharField(\n        required=False, help_text="Commit that was scanned.",\n    )
+    - serializers.PrimaryKeyRelatedField(\n        allow_null=True,\n        default=None,\n        queryset=Product_API_Scan_Configuration.objects.all(),\n    )
+    - serializers.CharField(\n        required=False,\n        help_text="A service is a self-contained piece of functionality within a Product. "\n        "This is an optional field which is used in dedupl...
+    - serializers.ChoiceField(\n        required=False,\n        choices=Finding_Group.GROUP_BY_OPTIONS,\n        help_text="Choose an option to automatically group new findings by the chosen option.",\n    )
+    - serializers.BooleanField(\n        help_text="If set to false, finding groups will only be created when there is more than one grouped finding",\n        required=False,\n        default=True,\n    )
+    - serializers.IntegerField(read_only=True)
+    - serializers.IntegerField(read_only=True)
+    - serializers.IntegerField(read_only=True)
+    - serializers.IntegerField(read_only=True)
+    - serializers.BooleanField(\n        help_text="If set to True, the tags will be applied to the findings",\n        required=False,\n    )
+    - serializers.BooleanField(\n        help_text="If set to True, the tags will be applied to the endpoints",\n        required=False,\n    )
+    - serializers.ValidationError(msg)
+    - serializers.ValidationError(msg)
+    - serializers.ValidationError(msg)
+    - serializers.ValidationError(msg)
+    - serializers.ChoiceField(choices=get_choices_sorted())
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Engagement.objects.all(), required=False,\n    )
+    - serializers.BooleanField(\n        required=False,\n        default=False,\n        help_text="Select if old findings no longer present in the report get closed as mitigated when importing. "\n        "If service has been set, only the findings for this service will be closed.",\n    )
+    - serializers.BooleanField(\n        required=False,\n        default=False,\n        help_text="Select if close_old_findings applies to all findings of the same type in the product. "\n        "By defa...
+    - serializers.CharField(\n        required=False, help_text="Version that was scanned.",\n    )
+    - serializers.IntegerField(\n        read_only=True,\n    )
+    - serializers.BooleanField(\n        default=False, required=False, help_text=help_do_not_reactivate,\n    )
+    - serializers.ChoiceField(\n        choices=get_choices_sorted(), required=True,\n    )
+    - serializers.PrimaryKeyRelatedField(\n        required=False, queryset=Test.objects.all(),\n    )
+    - serializers.BooleanField(\n        required=False,\n        default=True,\n        help_text="Select if old findings no longer present in the report get closed as mitigated when importing.",\n    )
+    - serializers.BooleanField(\n        required=False,\n        default=False,\n        help_text="Select if close_old_findings applies to all findings of the same type in the product. "\n        "By defa...
+    - serializers.CharField(\n        required=False,\n        help_text="Version that will be set on existing Test object. Leave empty to leave existing value in place.",\n    )
+    - class EndpointMetaImporterSerializer(serializers.Serializer):\n    file = serializers.FileField(required=True)\n    create_endpoints = serializers.BooleanField(default=True, required=False)\n    creat...
+    - serializers.FileField(required=True)
+    - serializers.BooleanField(default=True, required=False)
+    - serializers.BooleanField(default=True, required=False)
+    - serializers.BooleanField(default=False, required=False)
+    - serializers.CharField(required=False)
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Product.objects.all(), required=False,\n    )
+    - serializers.IntegerField(read_only=True)
+    - serializers.ValidationError(msg)
+    - class LanguageTypeSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Language_Type\n        fields = "__all__"
+    - class LanguageSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Languages\n        fields = "__all__"
+    - class ImportLanguagesSerializer(serializers.Serializer):\n    product = serializers.PrimaryKeyRelatedField(\n        queryset=Product.objects.all(), required=True,\n    )\n    file = serializers.FileF...
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Product.objects.all(), required=True,\n    )
+    - serializers.FileField(required=True)
+    - serializers.ValidationError(msg)
+    - class AddNewNoteOptionSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Notes\n        fields = ["entry", "private", "note_type"]
+    - class AddNewFileOptionSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = FileUpload\n        fields = "__all__"
+    - class FindingToNotesSerializer(serializers.Serializer):\n    finding_id = serializers.PrimaryKeyRelatedField(\n        queryset=Finding.objects.all(), many=False, allow_null=True,\n    )\n    notes = NoteSerializer(many=True)
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Finding.objects.all(), many=False, allow_null=True,\n    )
+    - class FindingToFilesSerializer(serializers.Serializer):\n    finding_id = serializers.PrimaryKeyRelatedField(\n        queryset=Finding.objects.all(), many=False, allow_null=True,\n    )\n    files = ...
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Finding.objects.all(), many=False, allow_null=True,\n    )
+    - class FindingCloseSerializer(serializers.ModelSerializer):\n    is_mitigated = serializers.BooleanField(required=False)\n    mitigated = serializers.DateTimeField(required=False)\n    false_p = serial...
+    - serializers.BooleanField(required=False)
+    - serializers.DateTimeField(required=False)
+    - serializers.BooleanField(required=False)
+    - serializers.BooleanField(required=False)
+    - serializers.BooleanField(required=False)
+    - class ReportGenerateOptionSerializer(serializers.Serializer):\n    include_finding_notes = serializers.BooleanField(default=False)\n    include_finding_images = serializers.BooleanField(default=False)...
+    - serializers.BooleanField(default=False)
+    - serializers.BooleanField(default=False)
+    - serializers.BooleanField(default=False)
+    - serializers.BooleanField(default=False)
+    - class ExecutiveSummarySerializer(serializers.Serializer):\n    engagement_name = serializers.CharField(max_length=200)\n    engagement_target_start = serializers.DateField()\n    engagement_target_end...
+    - serializers.CharField(max_length=200)
+    - serializers.DateField()
+    - serializers.DateField()
+    - serializers.CharField(max_length=200)
+    - serializers.DateTimeField()
+    - serializers.DateTimeField()
+    - serializers.CharField(max_length=200)
+    - serializers.URLField(\n        max_length=200, min_length=None, allow_blank=True,\n    )
+    - serializers.IntegerField()
+    - class ReportGenerateSerializer(serializers.Serializer):\n    executive_summary = ExecutiveSummarySerializer(many=False, allow_null=True)\n    product_type = ProductTypeSerializer(many=False, read_only...
+    - serializers.CharField(max_length=200)
+    - serializers.CharField(max_length=200)
+    - serializers.CharField(max_length=200)
+    - serializers.CharField(max_length=200)
+    - serializers.IntegerField()
+    - serializers.CharField(max_length=200)
+    - class EngagementUpdateJiraEpicSerializer(serializers.Serializer):\n    epic_name = serializers.CharField(required=False, max_length=200)\n    epic_priority = serializers.CharField(required=False, allow_null=True)
+    - serializers.CharField(required=False, max_length=200)
+    - serializers.CharField(required=False, allow_null=True)
+    - class TagSerializer(serializers.Serializer):\n    tags = TagListSerializerField(required=True)
+    - class SystemSettingsSerializer(TaggitSerializer, serializers.ModelSerializer):\n    class Meta:\n        model = System_Settings\n        fields = "__all__"\n\n    def validate(self, data):\n        i...
+    - class FindingNoteSerializer(serializers.Serializer):\n    note_id = serializers.IntegerField()
+    - serializers.IntegerField()
+    - class NotificationsSerializer(serializers.ModelSerializer):\n    product = serializers.PrimaryKeyRelatedField(\n        queryset=Product.objects.all(),\n        required=False,\n        default=None,\...
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Product.objects.all(),\n        required=False,\n        default=None,\n        allow_null=True,\n    )
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Dojo_User.objects.all(),\n        required=False,\n        default=None,\n        allow_null=True,\n    )
+    - serializers.BooleanField(default=False)
+    - class EngagementPresetsSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Engagement_Presets\n        fields = "__all__"
+    - class NetworkLocationsSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Network_Locations\n        fields = "__all__"
+    - class SLAConfigurationSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = SLA_Configuration\n        exclude = (\n            "async_updating",\n        )\n\n    def validate(se...
+    - serializers.ValidationError(msg)
+    - class UserProfileSerializer(serializers.Serializer):\n    user = UserSerializer(many=False)\n    user_contact_info = UserContactInfoSerializer(many=False, required=False)\n    global_role = GlobalRole...
+    - class DeletePreviewSerializer(serializers.Serializer):\n    model = serializers.CharField(read_only=True)\n    id = serializers.IntegerField(read_only=True, allow_null=True)\n    name = serializers.CharField(read_only=True)
+    - serializers.CharField(read_only=True)
+    - serializers.IntegerField(read_only=True, allow_null=True)
+    - serializers.CharField(read_only=True)
+    - class ConfigurationPermissionSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Permission\n        exclude = ("content_type",)
+    - class QuestionnaireQuestionSerializer(serializers.ModelSerializer):\n    def to_representation(self, instance):\n        if isinstance(instance, TextQuestion):\n            return TextQuestionSerializ...
+    - class QuestionSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Question\n        exclude = ("polymorphic_ctype",)
+    - class TextQuestionSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = TextQuestion\n        exclude = ("polymorphic_ctype",)
+    - class ChoiceQuestionSerializer(serializers.ModelSerializer):\n    choices = serializers.StringRelatedField(many=True)\n\n    class Meta:\n        model = ChoiceQuestion\n        exclude = ("polymorphic_ctype",)
+    - serializers.StringRelatedField(many=True)
+    - class QuestionnaireAnsweredSurveySerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Answered_Survey\n        fields = "__all__"
+    - class QuestionnaireAnswerSerializer(serializers.ModelSerializer):\n    def to_representation(self, instance):\n        if isinstance(instance, TextAnswer):\n            return TextAnswerSerializer(ins...
+    - class AnswerSerializer(serializers.ModelSerializer):\n    question = serializers.StringRelatedField()\n    answered_survey = QuestionnaireAnsweredSurveySerializer()\n\n    class Meta:\n        model = Answer\n        exclude = ("polymorphic_ctype",)
+    - serializers.StringRelatedField()

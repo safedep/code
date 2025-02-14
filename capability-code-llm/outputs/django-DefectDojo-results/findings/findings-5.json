@@ -1,0 +1,85 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "web:framework",
+      "evidence": [
+        {
+          "snippet": "django_filters.CharFilter(field_name=\"tags__name\", lookup_expr=\"icontains\", help_text=\"Not Tag name contains\", exclude=\"True\")"
+        },
+        {
+          "snippet": "django_filters.CharFilter(field_name=\"test_import__version\", lookup_expr=\"icontains\", label=\"Reimported Version\")"
+        },
+        {
+          "snippet": "django_filters.CharFilter(field_name=\"lead__username\", lookup_expr=\"iexact\", label=\"Lead Username\", help_text=\"Search for Lead username that are an exact match\")"
+        },
+        {
+          "snippet": "django_filters.DateFromToRangeFilter(field_name=\"date\", label=\"Date Discovered\")"
+        },
+        {
+          "snippet": "BooleanFilter(field_name=\"tags\", lookup_expr=\"isnull\", exclude=True, label=\"Has tags\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "time:management",
+      "evidence": [
+        {
+          "snippet": "_truncate(start_date - timedelta(days=1))"
+        },
+        {
+          "snippet": "_truncate(now() + timedelta(days=1))"
+        },
+        {
+          "snippet": "_truncate(now() - timedelta(days=7))"
+        },
+        {
+          "snippet": "_truncate(now() - timedelta(days=30))"
+        },
+        {
+          "snippet": "_truncate(now() - timedelta(days=365))"
+        }
+      ]
+    },
+    {
+      "capability_id": "db:sql",
+      "evidence": [
+        {
+          "snippet": "django_filters.OrderingFilter(fields=(\"component_name\", \"component_name\"), \"component_version\", \"component_version\")"
+        },
+        {
+          "snippet": "django_filters.OrderingFilter(fields=(\"username\", \"username\"), \"last_name\", \"last_name\")"
+        },
+        {
+          "snippet": "django_filters.OrderingFilter(fields=(\"product\", \"product\"), \"host\", \"host\")"
+        },
+        {
+          "snippet": "django_filters.OrderingFilter(fields=(\"title\", \"title\"), \"version\", \"version\")"
+        },
+        {
+          "snippet": "django_filters.OrderingFilter(fields=(\"numerical_severity\", \"numerical_severity\"), \"date\", \"date\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "db:filtering",
+      "evidence": [
+        {
+          "snippet": "django_filters.CharFilter(lookup_expr=\"icontains\", label=\"Version\")"
+        },
+        {
+          "snippet": "django_filters.OrderingFilter(fields=(\"name\", \"name\"), \"version\", \"version\")"
+        },
+        {
+          "snippet": "django_filters.BooleanFilter(field_name=\"tags\", lookup_expr=\"isnull\", exclude=True, label=\"Has tags\")"
+        },
+        {
+          "snippet": "django_filters.DateFromToRangeFilter(field_name=\"date\", label=\"Date Discovered\")"
+        },
+        {
+          "snippet": "django_filters.CharFilter(field_name=\"reporter__username\", lookup_expr=\"iexact\", label=\"Reporter Username\")"
+        }
+      ]
+    }
+  ]
+}

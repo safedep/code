@@ -1,0 +1,287 @@
+
+dojo:
+  dojo.models.Product_Group:
+    - Product_Group.objects.filter(\n        product=OuterRef("product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(\n        product=OuterRef("product_id"),\n        group__users=user,\n        role__in=roles)
+    - user_is_authorized(Product_Group, Permissions.Product_Group_Edit, "groupid")
+    - get_object_or_404(Product_Group, pk=groupid)
+    - user_is_authorized(Product_Group, Permissions.Product_Group_Delete, "groupid")
+    - get_object_or_404(Product_Group, pk=groupid)
+    - Product_Group.objects.filter(product=product, group=group)
+    - Product_Group()
+    - Product_Group.objects.filter(\n        product=OuterRef("engagement__product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(\n        product=OuterRef("engagement__product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(\n        product=OuterRef("test__engagement__product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(\n        product=OuterRef("product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects \\n        .filter(product=product, role__in=roles)
+    - Product_Group.objects \\n        .filter(product_id__in=authorized_products, role__in=roles)
+  dojo.utils.generate_file_response:
+    - generate_file_response(file_object)
+    - generate_file_response(file_object)
+    - generate_file_response(file_object)
+    - generate_file_response(file)
+    - generate_file_response(file)
+  dojo.filters.MetricsEndpointFilter:
+    - filter_class = MetricsEndpointFilterWithoutObjectLookups if filter_string_matching else MetricsEndpointFilter
+    - filter_class = MetricsEndpointFilterWithoutObjectLookups if filter_string_matching else MetricsEndpointFilter
+  dojo.tools.nikto.xml_parser.NiktoXMLParser:
+    - NiktoXMLParser()
+  dojo.risk_acceptance.helper.remove_finding_from_risk_acceptance:
+    - remove_finding_from_risk_acceptance(request.user, instance, finding)
+  dojo.filters.ProductEngagementFilterWithoutObjectLookups:
+    - filter_class = ProductEngagementFilterWithoutObjectLookups if filter_string_matching else ProductEngagementFilter
+  dojo.forms.AddFindingForm:
+    - AddFindingForm(*args, **kwargs)
+    - def get_jira_form(self, request: HttpRequest, test: Test, finding_form: AddFindingForm = None):\n        # Determine if jira should be used\n        if (jira_project := jira_helper.get_jira_project(te...
+    - AddFindingForm(request.POST, req_resp=None, product=test.engagement.product)
+    - AddFindingForm(req_resp=None, product=test.engagement.product, initial={"active": False,\n                                    "date": timezone.now().date(),\n                                    "verif...
+  dojo.cred.urls.urlpatterns aliased as cred_urls:
+    - ur += cred_urls
+  dojo.utils.findings_this_period:
+    - findings_this_period(findings, 1, stuff, o_stuff, a_stuff)
+    - findings_this_period(findings, 0, week_stuff, week_o_stuff, week_a_stuff)
+  dojo.notifications.helper.NotificationManagerHelpers:
+    - def get_webhook_manager_instance(self) -> NotificationManagerHelpers:\n        return WebhookNotificationManger()
+  dojo.utils.sum_by_severity_level:
+    - sum_by_severity_level(verified_objs_by_severity)
+    - sum_by_severity_level(inactive_objs_by_severity)
+    - sum_by_severity_level(false_positive_objs_by_severity)
+    - sum_by_severity_level(out_of_scope_objs_by_severity)
+    - sum_by_severity_level(new_objs_by_severity)
+    - sum_by_severity_level(all_objs_by_severity)
+  dojo.tools.awssecurityhub.compliance.Compliance:
+    - Compliance()
+  dojo.tools.sonarqube.soprasteria_helper.SonarQubeSoprasteriaHelper:
+    - SonarQubeSoprasteriaHelper()
+    - SonarQubeSoprasteriaHelper()
+    - SonarQubeSoprasteriaHelper()
+    - SonarQubeSoprasteriaHelper()
+    - SonarQubeSoprasteriaHelper()
+    - SonarQubeSoprasteriaHelper()
+    - SonarQubeSoprasteriaHelper()
+    - SonarQubeSoprasteriaHelper()
+    - SonarQubeSoprasteriaHelper()
+    - SonarQubeSoprasteriaHelper()
+    - SonarQubeSoprasteriaHelper()
+    - SonarQubeSoprasteriaHelper()
+  dojo.product.urls.urlpatterns aliased as prod_urls:
+    - ur += prod_urls
+  dojo.forms.DeleteUserForm:
+    - DeleteUserForm(instance=user)
+    - DeleteUserForm(request.POST, instance=user)
+  dojo.models.Engagement_Survey:
+    - admin.site.register(Engagement_Survey)
+    - model = Engagement_Survey
+    - Engagement_Survey.objects.none()
+    - Engagement_Survey.objects.all()
+    - model = Engagement_Survey
+    - Engagement_Survey.objects.all()
+    - Engagement_Survey.objects.all()
+    - model = Engagement_Survey
+    - model = Engagement_Survey
+    - model = Engagement_Survey
+    - Engagement_Survey.objects.exclude(id__in=ids)
+    - get_object_or_404(Engagement_Survey, id=sid)
+    - get_object_or_404(Engagement_Survey, id=sid)
+    - get_object_or_404(Engagement_Survey, id=sid)
+    - Engagement_Survey.objects.all()
+    - Engagement_Survey.objects.filter(questions__in=[question])
+    - Engagement_Survey.objects.all()
+    - get_object_or_404(Engagement_Survey, id=general_survey.survey_id)
+    - Engagement_Survey.objects.exclude(\n        id__in=ids)
+  dojo.tools.factory.get_parser:
+    - def get_parser(self) -> Parser:\n        """\n        Returns the correct parser based on the the test type supplied. If a test type\n        is supplied that does not have a parser created for it, an...
+    - get_parser(self.scan_type)
+  dojo.forms.SimpleMetricsForm:
+    - SimpleMetricsForm(request.POST)
+    - SimpleMetricsForm({"date": now})
+    - SimpleMetricsForm({"date": now})
+  dojo.api_v2.views.ProductTypeViewSet:
+    - v2_api.register(r"product_types", ProductTypeViewSet, basename="product_type")
+  dojo.models.ChoiceAnswer:
+    - child_models = (\n        TextAnswer,\n        ChoiceAnswer,\n    )
+    - admin.site.register(ChoiceAnswer, ChoiceAnswerAdmin)
+    - isinstance(instance, ChoiceAnswer)
+    - model = ChoiceAnswer
+    - ChoiceAnswer.objects.filter(\n            answered_survey=self.answered_survey,\n            question=self.question,\n        )
+    - ChoiceAnswer.objects.filter(\n            answered_survey=self.answered_survey,\n            question=self.question,\n        )
+    - ChoiceAnswer.objects.create(\n                answered_survey=self.answered_survey,\n                question=self.question,\n            )
+  dojo.forms.CredMappingFormProd:
+    - CredMappingFormProd(request.POST, instance=cred)
+    - CredMappingFormProd(instance=cred)
+    - CredMappingFormProd(instance=cred)
+    - CredMappingFormProd(request.POST)
+    - CredMappingFormProd()
+  dojo.utils.create_bleached_link:
+    - create_bleached_link(link, self.sast_source_file_path)
+    - create_bleached_link(link, self.file_path)
+    - create_bleached_link(match[0], match[0])
+  dojo.tools.generic.json_parser.GenericJSONParser:
+    - GenericJSONParser()
+    - GenericJSONParser()
+  dojo.api_v2.views.TestsViewSet:
+    - v2_api.register(r"tests", TestsViewSet, basename="test")
+  dojo.utils.get_words_for_field:
+    - get_words_for_field(Finding, "title")
+    - get_words_for_field(Finding, "component_name")
+    - get_words_for_field(Finding_Template, "title")
+    - get_words_for_field(templates.qs, "title")
+    - get_words_for_field(Finding, "title")
+    - get_words_for_field(Finding, "component_name")
+    - get_words_for_field(Finding, "title")
+    - get_words_for_field(Finding, "component_name")
+    - get_words_for_field(Finding, "title")
+    - get_words_for_field(Finding, "component_name")
+    - get_words_for_field(Finding, "title")
+    - get_words_for_field(Finding, "component_name")
+    - get_words_for_field(Finding_Template, "title")
+  dojo.utils.get_custom_method:
+    - get_custom_method("FINDING_HASH_METHOD")
+  dojo.github_issue_link.urls.urlpatterns aliased as github_urls:
+    - ur += github_urls
+  dojo.models.Product_Type_Member:
+    - model = Product_Type_Member
+    - Product_Type_Member.objects.filter(\n                product_type=data.get("product_type"), user=data.get("user"),\n            )
+    - Product_Type_Member.objects.filter(\n                    product_type=data.get("product_type"), role__is_owner=True,\n                )
+    - Product_Type_Member()
+    - Product_Type_Member.objects.none()
+    - Product_Type_Member.objects.filter(\n                product_type=instance.product_type, role__is_owner=True,\n            )
+    - Product_Type_Member.objects.filter(user=user)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("endpoint__product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("test__engagement__product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("finding__test__engagement__product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - model = Product_Type_Member
+    - Product_Type_Member.objects.filter(product_type=self.initial["product_type"])
+    - model = Product_Type_Member
+    - Product_Type_Member.objects.filter(user=self.initial["user"])
+    - model = Product_Type_Member
+    - Product_Type_Member.objects.create(\n                    user=get_current_user(),\n                    product_type=product_type,\n                    role=Role.objects.get(is_owner=True),\n                )
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("engagement__product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("engagement__product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("finding_group__test__engagement__product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("finding__test__engagement__product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("endpoint__product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("finding__test__engagement__product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(product_type=OuterRef("pk"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(product_type=product_type)
+    - Product_Type_Member.objects.none()
+    - Product_Type_Member.objects.none()
+    - Product_Type_Member.objects.all()
+    - Product_Type_Member.objects.all()
+    - Product_Type_Member.objects.filter(product_type__in=product_types)
+    - Product_Type_Member.objects.none()
+    - Product_Type_Member.objects.filter(user=user)
+    - Product_Type_Member.objects.filter(user=user)
+    - Product_Type_Member.objects.filter(user=user, product_type__in=product_types)
+    - Product_Type_Member()
+    - Product_Type_Member.objects.filter(product_type=pt, user=user)
+    - Product_Type_Member()
+    - user_is_authorized(Product_Type_Member, Permissions.Product_Type_Manage_Members, "memberid")
+    - get_object_or_404(Product_Type_Member, pk=memberid)
+    - Product_Type_Member.objects.filter(product_type=member.product_type, role__is_owner=True)
+    - user_is_authorized(Product_Type_Member, Permissions.Product_Type_Member_Delete, "memberid")
+    - get_object_or_404(Product_Type_Member, pk=memberid)
+    - Product_Type_Member.objects.filter(product_type=member.product_type, role__is_owner=True)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("engagement__product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("engagement__product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("test__engagement__product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects.filter(\n        product_type=OuterRef("product__prod_type_id"),\n        user=user,\n        role__in=roles)
+    - Product_Type_Member.objects \\n        .filter(product_type=product_type, role__in=roles)
+    - Product_Type_Member.objects \\n        .filter(product_type=product.prod_type, role__in=roles)
+    - Product_Type_Member.objects \\n        .filter(product_type_id__in=authorized_product_types, role__in=roles)
+    - Product_Type_Member.objects.filter(product_type=product_type, user=user)
+    - Product_Type_Member()
+  dojo.utils.mass_model_updater:
+    - mass_model_updater(Finding, qs, lambda f: reset_duplicate_before_delete(f), fields=["duplicate", "duplicate_finding"])
+    - mass_model_updater(Finding, cluster_outside, lambda f: set_new_original(f, new_original), fields=["duplicate_finding"])
+    - mass_model_updater(Finding, finds, lambda f: generate_hash_code(f), fields=["hash_code"], order="asc", log_prefix="hash_code computation ")
+    - mass_model_updater(Finding, findings, lambda f: do_dedupe_finding(f), fields=None, order="desc", page_size=100, log_prefix="deduplicating ")
+    - mass_model_updater(Finding, findings.only("id"), lambda f: do_dedupe_finding_task(f.id), fields=None, order="desc", log_prefix="deduplicating ")
+    - mass_model_updater(\n            Finding,\n            findings,\n            lambda f: create_vulnerability_id(f),\n            fields=None,\n            page_size=100,\n            log_prefix="creating vulnerability ids: ",\n        )
+    - mass_model_updater(\n            Finding_Template,\n            finding_templates,\n            lambda f: create_vulnerability_id_template(f),\n            fields=None,\n            page_size=100,\n            log_prefix="creating vulnerability ids: ",\n        )
+  dojo.utils.close_external_issue:
+    - close_external_issue(finding, "Closed by defectdojo", "github")
+  dojo.forms.AddDojoUserForm:
+    - AddDojoUserForm()
+    - AddDojoUserForm(request.POST)
+  dojo.product_type.queries.get_authorized_global_members_for_product_type:
+    - get_authorized_global_members_for_product_type(pt, Permissions.Product_Type_View)
+  dojo.note_type.urls.urlpatterns aliased as note_type_urls:
+    - ur += note_type_urls
+  dojo.models.Role:
+    - model = Role
+    - Role.objects.none()
+    - Role.objects.all()
+    - Role.objects.get(is_owner=True)
+    - Role.objects.exclude(name="API_Importer")
+    - Role.objects.get(is_owner=True)
+    - Role.objects.get(is_owner=True)
+    - Role.objects.get(is_owner=True)
+    - Role.objects.get(is_owner=True)
+    - Role.objects.get(name="Reader")
+    - Role.objects.get(id=Roles.Maintainer)
+    - Role.objects.get(id=Roles.Owner)
+    - Role.objects.get(is_owner=True)
+  dojo.finding.views.set_finding_as_original_internal:
+    - set_finding_as_original_internal(request.user, pk, new_fid)
+  dojo.checks.check_configuration_deduplication:
+    - register_check(check_configuration_deduplication, "dojo")
+    - check_configuration_deduplication(None)
+  dojo.finding.helper.OUT_OF_SCOPE_FINDINGS_QUERY:
+    - qs.filter(OUT_OF_SCOPE_FINDINGS_QUERY)
+  dojo.forms.JIRAFindingForm:
+    - JIRAFindingForm(*args, **kwargs)
+    - JIRAFindingForm(\n                request.POST,\n                instance=finding,\n                prefix="jiraform",\n                push_all=push_all_jira_issues,\n                jira_project=jira_helper.get_jira_project(finding),\n            )
+    - JIRAFindingForm(\n                prefix="jiraform",\n                push_all=jira_helper.is_push_all_issues(test),\n                jira_project=jira_helper.get_jira_project(test),\n            )
+    - JIRAFindingForm(*args, **kwargs)
+    - JIRAFindingForm(*args, **kwargs)
+    - JIRAFindingForm(push_all=jira_helper.is_push_all_issues(test), prefix="jiraform", jira_project=jira_helper.get_jira_project(test), finding_form=form)
+    - JIRAFindingForm(request.POST, prefix="jiraform", instance=new_finding, push_all=push_all_jira_issues, jira_project=jira_helper.get_jira_project(test), finding_form=form)
+    - JIRAFindingForm(push_all=jira_helper.is_push_all_issues(test), prefix="jiraform", jira_project=jira_helper.get_jira_project(test), finding_form=form)
+  dojo.filters.MetricsFindingFilterWithoutObjectLookups:
+    - def get_metrics_finding_filter_class() -> type[MetricsFindingFilter | MetricsFindingFilterWithoutObjectLookups]:\n    if get_system_setting("filter_string_matching", False):\n        return MetricsFindingFilterWithoutObjectLookups\n    return MetricsFindingFilter
+    - return MetricsFindingFilterWithoutObjectLookups
+    - finding_filter_class = MetricsFindingFilterWithoutObjectLookups if filter_string_matching else MetricsFindingFilter
+  dojo.forms.AppAnalysisForm:
+    - AppAnalysisForm(request.POST)
+    - AppAnalysisForm(initial={"user": request.user})
+    - AppAnalysisForm(instance=technology)
+    - AppAnalysisForm(request.POST, instance=technology)
+  dojo.api_v2.views.StubFindingsViewSet:
+    - v2_api.register(r"stub_findings", StubFindingsViewSet, basename="stub_finding")
+  dojo.models.Answered_Survey:
+    - admin.site.register(Answered_Survey)
+    - model = Answered_Survey
+    - Answered_Survey.objects.get_or_create(engagement=engagement, survey=engagement_survey)
+    - Answered_Survey.objects.none()
+    - Answered_Survey.objects.all()
+    - model = Answered_Survey
+    - model = Answered_Survey
+    - model = Answered_Survey
+    - Answered_Survey.objects.filter(assignee_id__isnull=True, completed__gt=0)
+    - get_object_or_404(Answered_Survey, id=sid)
+    - get_object_or_404(Answered_Survey, id=sid)
+    - get_object_or_404(Answered_Survey, id=sid)
+    - get_object_or_404(Answered_Survey, id=sid)
+    - Answered_Survey.objects.filter(engagement=engagement)
+    - Answered_Survey.objects.filter(survey=survey)
+    - Answered_Survey.objects.filter(survey=survey)
+    - Answered_Survey.objects.filter(survey__in=survey)
+    - get_object_or_404(Answered_Survey, id=esid)
+    - get_object_or_404(Answered_Survey, id=esid)
+    - Answered_Survey(survey=engagement_survey)
+    - get_object_or_404(Answered_Survey, id=esid)
+    - get_object_or_404(Answered_Survey, id=esid)
+    - get_object_or_404(Answered_Survey, id=esid)
+    - Answered_Survey.objects.filter(engagement=engagement)
+    - Answered_Survey.objects.filter(engagement=engagement)

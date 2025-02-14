@@ -1,0 +1,248 @@
+
+unittest:
+  unittest:
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+
+xml:
+  xml.etree.ElementTree.Element:
+    - def identify_root(self, zip_data: dict) -> Element:\n        """Iterate through the zip data to determine which file in the zip could be the XMl to be parsed."""\n        # Determine where the "audit....
+    - def identify_namespace(self, root: Element) -> None:\n        """Determine what the namespace could be, and then set the value in a class var labeled `namespace`"""\n        regex = r"{.*}"\n        m...
+    - def parse_vulnerabilities_and_convert_to_findings(self, root: Element, test: Test) -> list[Finding]:\n        """Parse the XML and generate a list of findings."""\n        items = []\n        for chil...
+    - def parse_severity_and_convert(self, vulnerability: Element, finding_context: dict) -> None:\n        """Convert the the float representation of severity and confidence to a string severity."""\n     ...
+    - def parse_class_information(self, vulnerability: Element, finding_context: dict) -> None:\n        """Appends the description with any class information that can be extracted."""\n        if (class_in...
+    - def parse_instance_information(self, vulnerability: Element, finding_context: dict) -> None:\n        """Appends the description with any instance information that can be extracted."""\n        if (in...
+    - def parse_analysis_information(self, vulnerability: Element, finding_context: dict) -> None:\n        """Appends the description with any analysis information that can be extracted."""\n        if (an...
+    - def get_source_location(self, analysis_info: Element) -> Element | None:\n        """Return the SourceLocation element if we are able to reach it."""\n        # The order of this list is very importan...
+    - def get_source_location(self, analysis_info: Element) -> Element | None:\n        """Return the SourceLocation element if we are able to reach it."""\n        # The order of this list is very importan...
+  xml.dom.NamespaceErr:
+    - NamespaceErr(msg)
+    - NamespaceErr(msg)
+    - NamespaceErr(msg)
+    - NamespaceErr(msg)
+    - NamespaceErr(msg)
+
+dojo:
+  dojo.models.IMPORT_ACTIONS:
+    - super().__init__(*args, **kwargs)\n        for action in IMPORT_ACTIONS:\n            self.fields[\n                action[1].lower()\n            ] = SeverityStatusStatisticsSerializer()
+    - MultipleChoiceFilter(choices=IMPORT_ACTIONS)
+  dojo.api_v2.mixins aliased as dojo_mixins:
+    - class DojoModelViewSet(\n    viewsets.ModelViewSet,\n    dojo_mixins.DeletePreviewModelMixin,\n):\n    pass
+    - class FindingViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    mixins.UpdateModelMixin,\n    mixins.DestroyModelMixin,\n    mixins.CreateModelMixin,\n    ra_api.Accep...
+    - class ProductViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    mixins.CreateModelMixin,\n    mixins.DestroyModelMixin,\n    mixins.UpdateModelMixin,\n    viewsets.Gen...
+    - class QuestionnaireQuestionViewSet(\n    viewsets.ReadOnlyModelViewSet,\n    dojo_mixins.QuestionSubClassFieldsMixin,\n):\n    serializer_class = serializers.QuestionnaireQuestionSerializer\n    query...
+    - class QuestionnaireAnswerViewSet(\n    viewsets.ReadOnlyModelViewSet,\n    dojo_mixins.AnswerSubClassFieldsMixin,\n):\n    serializer_class = serializers.QuestionnaireAnswerSerializer\n    queryset = ...
+  dojo.product.queries.get_authorized_app_analysis:
+    - get_authorized_app_analysis(Permissions.Product_View)
+    - get_authorized_app_analysis(Permissions.Product_View)
+  dojo.tools.tool_issue_updater:
+    - tool_issue_updater.async_tool_issue_update(finding)
+    - tool_issue_updater.async_tool_issue_update(finding)
+  dojo.widgets.TableCheckboxWidget:
+    - TableCheckboxWidget(attrs={"size": 25})
+  dojo.models.System_Settings:
+    - System_Settings.objects.get()
+    - model = System_Settings
+    - System_Settings.objects.none()
+    - System_Settings.objects.all()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - model = System_Settings
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get(id=1)
+    - models.signals.post_save.connect(self.cleanup, sender=System_Settings)
+    - System_Settings.objects.get(no_cache=True)
+    - System_Settings()
+    - def __init__(\n        self,\n        *_args: list,\n        system_notifications: Notifications | None = None,\n        system_settings: System_Settings | None = None,\n        **_kwargs: dict,\n    ...
+    - def _get_system_settings(self) -> System_Settings:\n        """Set the system settings object in the class."""\n        return System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - """\n    Creates a notification upon risk expiration and X days beforehand if configured.\n    This notification is 1 per risk acceptance.\n\n    If configured also sends a JIRA comment in both case t...
+    - System_Settings.objects.all()
+    - System_Settings.objects.all()
+    - System_Settings.objects.all()
+    - def get_settings_object(self) -> System_Settings:\n        return System_Settings.objects.get(no_cache=True)
+    - System_Settings.objects.get(no_cache=True)
+    - def get_form(\n        self,\n        request: HttpRequest,\n        system_settings: System_Settings,\n    ) -> SystemSettingsForm:\n        # Set up the args for the form\n        args = [request.PO...
+    - System_Settings.objects.get()
+    - try:\n        max_alerts_per_user = settings.MAX_ALERTS_PER_USER\n    except System_Settings.DoesNotExist:\n        max_alerts_per_user = -1\n\n    if max_alerts_per_user > -1:\n        total_deleted_...
+    - System_Settings.objects.get()
+    - try:\n        system_settings = System_Settings.objects.get()\n        enabled = system_settings.delete_duplicates\n        dupe_max = system_settings.max_dupes\n        total_duplicate_delete_count_m...
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get(no_cache=True)
+    - if dedupe_method := get_custom_method("FINDING_DEDUPE_METHOD"):\n        return dedupe_method(new_finding, *args, **kwargs)\n\n    try:\n        enabled = System_Settings.objects.get(no_cache=True).en...
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - System_Settings.objects.get()
+    - """\n    The SLA computation and notification will be disabled if the user opts out\n    of the Findings SLA on the System Settings page.\n\n    Notifications are managed the usual way, so you'd have ...
+  dojo.models.Finding:
+    - Finding.objects.all()
+    - Finding.objects.all()
+    - Finding.objects.filter(risk_acceptance=self.instance.id)
+    - Finding.objects.filter(id__in=new_findings_ids)
+    - Finding.objects.filter(id__in=[x.id for x in findings_to_add])
+    - Finding.objects.filter(id__in=[x.id for x in findings_to_remove])
+    - def validate_findings_have_same_engagement(finding_objects: list[Finding]):\n            engagements = finding_objects.values_list("test__engagement__id", flat=True).distinct().count()\n            if...
+    - Finding.objects.filter(id__in=findings_ids)
+    - Finding.objects.filter(risk_acceptance=self.instance.id)
+    - model = Finding
+    - model = Finding
+    - Finding.objects.all()
+    - Finding.objects.all()
+    - model = Finding
+    - Finding.objects.none()
+    - Finding.objects.filter(id=data.get("finding"))
+    - Finding.objects.filter(id=data.get("finding"))
+    - Finding.objects.filter(\n                    test__engagement__product__prod_type=product_type,\n                )
+    - Finding.objects.filter(test__engagement__product=product)
+    - Finding.objects.filter(test__engagement=engagement)
+    - Finding.objects.filter(test=test)
+    - Finding.objects.filter(endpoints__in=endpoints)
+    - user_is_authorized(Finding, Permissions.Finding_Edit, "fid")
+    - get_object_or_404(Finding, pk=fid)
+    - get_object_or_404(Finding, id=id)
+    - user_is_authorized(Finding, Permissions.Finding_Edit, "fid")
+    - def dojo_model_from_id(_func=None, *, model=Finding, parameter=0):\n    # logger.debug('dec_args:' + str(dec_args))\n    # logger.debug('dec_kwargs:' + str(dec_kwargs))\n    # logger.debug('_func:%s',...
+    - Finding.objects.none()
+    - user_is_authorized(Finding, Permissions.Finding_Edit, "fid")
+    - Finding.objects.filter(test__in=tests)
+    - Finding.objects.filter(test__in=tests)
+    - get_object_or_404(Finding, id=fid)
+    - Finding.objects.filter(duplicate=False, test__engagement=eng)
+    - get_object_or_404(\n                Finding, pk=request.POST["remove_finding_id"])
+    - Finding.objects.filter(test__in=eng.test_set.all(), risk_accepted=False)
+    - Finding.objects.all()
+    - if queryset is None:  # don't to 'if not queryset' which will trigger the query\n        queryset = Finding.objects.all()\n\n    try:\n        EARLIEST_FINDING = queryset.earliest("date")\n    except ...
+    - Finding.tags.tag_model.objects.all()
+    - Finding.tags.tag_model.objects.all()
+    - model = Finding
+    - model = Finding
+    - model = Finding
+    - model = Finding
+    - model = Finding
+    - Finding.tags.tag_model.objects.all()
+    - Finding.tags.tag_model.objects.all()
+    - model = Finding
+    - model = Finding
+    - Finding.tags.tag_model.objects.all()
+    - Finding.tags.tag_model.objects.all()
+    - Finding.tags.tag_model.objects.all()
+    - Finding.tags.tag_model.objects.all()
+    - model = Finding
+    - Finding.objects.filter(original_finding__isnull=False)
+    - pre_save_changed.connect(\n    pre_save_finding_status_change,\n    sender=Finding,\n    fields=[\n        "id",\n        "active",\n        "verified",\n        "false_p",\n        "is_mitigated",\n ...
+    - Finding.objects.filter(test=test)
+    - Finding.objects.filter(test=test)
+    - receiver(pre_delete, sender=Finding)
+    - logger.debug("finding delete, instance: %s", instance.id)\n\n    # the idea is that the engagement/test pre delete already prepared all the duplicates inside\n    # the test/engagement to no longer po...
+    - receiver(post_delete, sender=Finding)
+    - mass_model_updater(Finding, qs, lambda f: reset_duplicate_before_delete(f), fields=["duplicate", "duplicate_finding"])
+    - mass_model_updater(Finding, cluster_outside, lambda f: set_new_original(f, new_original), fields=["duplicate_finding"])
+    - Finding.objects.filter(original_finding__isnull=False)
+    - Finding.objects.filter(duplicate_finding__isnull=False, original_finding__isnull=False)
+    - Finding.objects.filter(duplicate_finding__isnull=True, duplicate=True)
+    - super(Finding, f)
+    - Finding.objects.filter(duplicate_finding__isnull=False, original_finding__isnull=False)
+    - Finding.objects.get(id=finding_id)
+    - super(Finding, finding)
+    - Finding.objects.get(id=tmp)
+    - Finding.objects.get(id=finding_id)
+    - super(Finding, finding)
+    - super(Finding, f)
+    - super(Finding, real_original)
+    - Finding.objects.none()
+    - Finding.objects.all()
+    - def filter_findings_by_object(self, findings: QuerySet[Finding]):\n        if product_id := self.get_product_id():\n            return findings.filter(test__engagement__product__id=product_id)\n      ...
+    - def filter_findings_by_filter_name(self, findings: QuerySet[Finding]):\n        filter_name = self.get_filter_name()\n        if filter_name == "Open":\n            return findings.filter(finding_help...
+    - def filter_findings_by_form(self, request: HttpRequest, findings: QuerySet[Finding]):\n        # Set up the args for the form\n        args = [request.GET, findings]\n        # Set the initial form ar...
+    - get_words_for_field(Finding, "title")
+    - get_words_for_field(Finding, "component_name")
+    - Finding.objects.all()
+    - def get_previous_and_next_findings(self, finding: Finding):\n        # Get the whole list of findings in the current test\n        findings = (\n            Finding.objects.filter(test=finding.test)\n...
+    - Finding.objects.filter(test=finding.test)
+    - def get_credential_objects(self, finding: Finding):\n        cred = (\n            Cred_Mapping.objects.filter(test=finding.test.id)\n            .select_related("cred_id")\n            .order_by("cre...
+    - def get_cwe_template(self, finding: Finding):\n        cwe_template = None\n        with contextlib.suppress(Finding_Template.DoesNotExist):\n            cwe_template = Finding_Template.objects.filter(cwe=finding.cwe).first()\n\n        return {\n            "cwe_template": cwe_template,\n        }
+    - def get_request_response(self, finding: Finding):\n        request_response = None\n        burp_request = None\n        burp_response = None\n        try:\n            request_response = BurpRawReque...
+    - def get_test_import_data(self, request: HttpRequest, finding: Finding):\n        test_imports = Test_Import.objects.filter(findings_affected=finding)\n        test_import_filter = TestImportFilter(req...
+    - def get_similar_findings(self, request: HttpRequest, finding: Finding):\n        similar_findings_enabled = get_system_setting("enable_similar_findings", True)\n        if similar_findings_enabled is ...
+    - def get_jira_data(self, finding: Finding):\n        (\n            can_be_pushed_to_jira,\n            can_be_pushed_to_jira_error,\n            error_code,\n        ) = jira_helper.can_be_pushed_to_j...
+    - def process_form(self, request: HttpRequest, finding: Finding, context: dict):\n        if context["form"].is_valid():\n            # Create the note object\n            new_note = context["form"].sav...
+    - def get_initial_context(self, request: HttpRequest, finding: Finding, user: Dojo_User):\n        notes = finding.notes.all()\n        note_type_activation = Note_Type.objects.filter(is_active=True).co...
+    - get_object_or_404(Finding, id=finding_id)
+    - def get_request_response(self, finding: Finding):\n        req_resp = None\n        if burp_rr := BurpRawRequestResponse.objects.filter(finding=finding).first():\n            req_resp = (burp_rr.get_request(), burp_rr.get_response())\n\n        return req_resp
+    - def get_finding_form(self, request: HttpRequest, finding: Finding):\n        # Get the burp request if available\n        req_resp = self.get_request_response(finding)\n        # Set up the args for t...
+    - def get_jira_form(self, request: HttpRequest, finding: Finding, finding_form: FindingForm = None):\n        # Determine if jira should be used\n        if (jira_project := jira_helper.get_jira_project...
+    - def get_github_form(self, request: HttpRequest, finding: Finding):\n        # Determine if github should be used\n        if get_system_setting("enable_github"):\n            # Ensure there is a githu...
+    - def get_initial_context(self, request: HttpRequest, finding: Finding):\n        # Get the finding form first since it is used in another place\n        finding_form = self.get_finding_form(request, fi...
+    - def validate_status_change(self, request: HttpRequest, finding: Finding, context: dict):\n        # If the finding is already not active, skip this extra validation\n        if not finding.active:\n  ...
+    - def process_mitigated_data(self, request: HttpRequest, finding: Finding, context: dict):\n        # If active is not checked and CAN_EDIT_MITIGATED_DATA,\n        # mitigate the finding and the associ...
+    - def process_false_positive_history(self, finding: Finding):\n        if get_system_setting("false_positive_history", False):\n            # If the finding is being marked as a false positive we dont n...
+    - def process_burp_request_response(self, finding: Finding, context: dict):\n        if "request" in context["form"].cleaned_data or "response" in context["form"].cleaned_data:\n            try:\n      ...
+    - def process_finding_form(self, request: HttpRequest, finding: Finding, context: dict):\n        if context["form"].is_valid():\n            # process some of the easy stuff first\n            new_find...
+    - Finding.get_numerical_severity(new_finding.severity)
+    - def process_jira_form(self, request: HttpRequest, finding: Finding, context: dict):\n        # Capture case if the jira not being enabled\n        if context["jform"] is None:\n            return requ...
+    - def process_github_form(self, request: HttpRequest, finding: Finding, context: dict, old_status: str):\n        if "githubform-push_to_github" not in request.POST:\n            return request, True\n\...
+    - def process_forms(self, request: HttpRequest, finding: Finding, context: dict):\n        form_success_list = []\n        # Set vars for the completed forms\n        old_status = finding.status()\n    ...
+    - get_object_or_404(Finding, id=finding_id)
+    - def process_form(self, request: HttpRequest, finding: Finding, context: dict):\n        if context["form"].is_valid():\n            product = finding.test.engagement.product\n            finding.delet...
+    - user_is_authorized(Finding, Permissions.Finding_Edit, "fid")
+    - get_object_or_404(Finding, id=fid)
+    - user_is_authorized(Finding, Permissions.Finding_Edit, "fid")
+    - get_object_or_404(Finding, id=fid)
+    - user_is_authorized(\n    Finding,\n    Permissions.Finding_Edit,\n    "fid",\n)
+    - get_object_or_404(Finding, id=fid)
+    - user_is_authorized(Finding, Permissions.Finding_Edit, "fid")
+    - get_object_or_404(Finding, id=fid)
+    - user_is_authorized(Finding, Permissions.Finding_Edit, "fid")
+    - get_object_or_404(Finding, id=fid)
+    - user_is_authorized(Finding, Permissions.Finding_Edit, "fid")
+    - get_object_or_404(Finding, id=fid)
+    - user_is_authorized(Finding, Permissions.Finding_Edit, "fid")
+    - get_object_or_404(Finding, id=fid)
+    - user_is_authorized(Finding, Permissions.Risk_Acceptance, "fid")
+    - get_object_or_404(Finding, id=fid)
+    - user_is_authorized(Finding, Permissions.Risk_Acceptance, "fid")
+    - get_object_or_404(Finding, id=fid)

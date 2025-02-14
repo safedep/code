@@ -1,0 +1,159 @@
+
+django:
+  django.conf.settings:
+    - self.session.get(\n            url=f"{self.cobalt_api_url}/findings?limit=1000&asset={asset_id}",\n            headers=self.get_headers(),\n            timeout=settings.REQUESTS_TIMEOUT,\n        )
+    - self.session.get(\n            url=f"{self.cobalt_api_url}/orgs",\n            headers=self.get_headers(),\n            timeout=settings.REQUESTS_TIMEOUT,\n        )
+    - self.session.get(\n            url=f"{self.cobalt_api_url}/assets",\n            headers=self.get_headers(),\n            timeout=settings.REQUESTS_TIMEOUT,\n        )
+    - requests.get(\n            url=url,\n            headers=self.get_headers(),\n            proxies=self.get_proxies(),\n            timeout=settings.REQUESTS_TIMEOUT,\n        )
+    - self.session.get(\n            url=f"{self.sonar_api_url}/components/search",\n            params=parameters,\n            headers=self.default_headers,\n            timeout=settings.REQUESTS_TIMEOUT,\n        )
+    - self.session.get(\n            url=f"{self.sonar_api_url}/components/show",\n            params=parameters,\n            headers=self.default_headers,\n            timeout=settings.REQUESTS_TIMEOUT,\n        )
+    - self.session.get(\n                url=f"{self.sonar_api_url}/issues/search",\n                params=request_filter,\n                headers=self.default_headers,\n                timeout=settings.REQUESTS_TIMEOUT,\n            )
+    - self.session.get(\n                url=f"{self.sonar_api_url}/hotspots/search",\n                params=request_filter,\n                headers=self.default_headers,\n                timeout=settings.REQUESTS_TIMEOUT,\n            )
+    - self.session.get(\n            url=f"{self.sonar_api_url}/issues/search",\n            params=request_filter,\n            headers=self.default_headers,\n            timeout=settings.REQUESTS_TIMEOUT,\n        )
+    - self.session.get(\n                url=f"{self.sonar_api_url}/rules/show",\n                params=request_filter,\n                headers=self.default_headers,\n                timeout=settings.REQUESTS_TIMEOUT,\n            )
+    - self.session.get(\n                url=f"{self.sonar_api_url}/hotspots/show",\n                params={"hotspot": rule_id},\n                headers=self.default_headers,\n                timeout=settings.REQUESTS_TIMEOUT,\n            )
+    - self.session.post(\n            url=f"{self.sonar_api_url}/issues/do_transition",\n            data={"issue": issue_key, "transition": transition},\n            headers=self.default_headers,\n            timeout=settings.REQUESTS_TIMEOUT,\n        )
+    - self.session.post(\n            url=f"{self.sonar_api_url}/issues/add_comment",\n            data={"issue": issue_key, "text": text},\n            headers=self.default_headers,\n            timeout=settings.REQUESTS_TIMEOUT,\n        )
+    - self.session.get(\n            url=f"{self.sonar_api_url}/components/search",\n            params=parameters,\n            headers=self.default_headers,\n            timeout=settings.REQUESTS_TIMEOUT,\n        )
+    - items = self.import_issues(test)\n        if settings.SONARQUBE_API_PARSER_HOTSPOTS:\n            if items:\n                items.extend(self.import_hotspots(test))\n            else:\n                items = self.import_hotspots(test)\n        return items
+    - if settings.USE_FIRST_SEEN:\n                        date = self._parse_date(instance.get("firstDetectionDate"))\n                    else:\n                        date = self._parse_date(instance.ge...
+    - if settings.USE_FIRST_SEEN:\n                    date = self._parse_date(instance.get("firstFoundDate"))\n                else:\n                    date = self._parse_date(instance.get("foundDate"))\...
+    - re.compile(settings.PARSER_EXCLUDE)
+    - settings.PARSER_EXCLUDE.strip()
+    - vuln = vulnsDefinitions[test.get("id").lower()]\n                    for desc in list(test):\n                        if "pluginOutput" in vuln:\n                            vuln[\n                   ...
+    - legacy_severity_lookup = {\n        "1": "Info",\n        "2": "Low",\n        "3": "Medium",\n        "4": "High",\n        "5": "Critical",\n    }\n    # Severity mapping taken from\n    # https://q...
+    - if settings.USE_FIRST_SEEN:\n                if date := report_finding.get("First Detected"):\n                    date = datetime.strptime(date, "%m/%d/%Y %H:%M:%S").date()\n            else:\n      ...
+    - if settings.USE_FIRST_SEEN:\n                        if date := report_finding.get("LAST SCAN"):\n                            date = parser.parse(date.replace("Z", ""))\n                    else:\n   ...
+    - severity_value: int = int(severity_value_str or -1)\n\n    sev: str = LEGACY_SEVERITY_LOOKUP.get(severity_value, "Unknown")\n\n    # Non legacy severity is a subset of legacy severity, retrieve it fro...
+    - if settings.USE_FIRST_SEEN:\n                if date := vuln_details.findtext("FIRST_FOUND"):\n                    temp["date"] = datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ").date()\n       ...
+    - self.session.get(\n            url=f"{self.url}/toes",\n            headers={"accept": "application/json", "Authorization": self.key},\n            timeout=settings.REQUESTS_TIMEOUT,\n        )
+    - self.session.get(\n                url=f"{self.url}/findings/{toe}",\n                headers={\n                    "accept": "application/json",\n                    "Authorization": self.key,\n                },\n                timeout=settings.REQUESTS_TIMEOUT,\n            )
+    - if settings.USE_FIRST_SEEN:\n                    if first_found_date := finding_status.get("first_found_date"):\n                        finding.date = parser.parse(first_found_date)\n                ...
+    - if settings.USE_FIRST_SEEN:\n                if date := xml_node.get("date_first_occurrence", None):\n                    finding.date = datetime.strptime(date, "%Y-%m-%d %H:%M:%S %Z")\n            el...
+    - if settings.USE_FIRST_SEEN:\n                    date = parser.parse(issue.get("created_date"))\n                else:\n                    date = parser.parse(issue.get("created_date"))
+    - if settings.USE_FIRST_SEEN:\n                    date = datetime.strptime(\n                        row.get("Issue opened: Scan date"), "%d %b %Y %H:%M%p %Z",\n                    )\n                e...
+    - hasattr(settings, "API_TOKENS_ENABLED")
+    - hasattr(settings, "API_TOKEN_AUTH_ENDPOINT_ENABLED")
+    - if settings.API_TOKENS_ENABLED and settings.API_TOKEN_AUTH_ENDPOINT_ENABLED:\n        api_v2_urls += [\n            re_path(\n                f"^{get_system_setting('url_prefix')}api/v2/api-token-auth...
+    - if settings.API_TOKENS_ENABLED and settings.API_TOKEN_AUTH_ENDPOINT_ENABLED:\n        api_v2_urls += [\n            re_path(\n                f"^{get_system_setting('url_prefix')}api/v2/api-token-auth...
+    - hasattr(settings, "PRELOAD_URL_PATTERNS")
+    - urlpatterns += settings.PRELOAD_URL_PATTERNS
+    - settings.MEDIA_URL.strip("/")
+    - re_path(r"^{}/(?P<path>.*)$".format(settings.MEDIA_URL.strip("/")), views.protected_serve, {"document_root": settings.MEDIA_ROOT})
+    - hasattr(settings, "DJANGO_METRICS_ENABLED")
+    - if settings.DJANGO_METRICS_ENABLED:\n        urlpatterns += [re_path(r"^{}django_metrics/".format(get_system_setting("url_prefix")), include("django_prometheus.urls"))]
+    - hasattr(settings, "SAML2_ENABLED")
+    - if settings.SAML2_ENABLED:\n        # django saml2\n        urlpatterns += [re_path(r"^saml2/", include("djangosaml2.urls"))]
+    - hasattr(settings, "DJANGO_ADMIN_ENABLED")
+    - if settings.DJANGO_ADMIN_ENABLED:\n        #  django admin\n        urlpatterns += [re_path(r"^{}admin/".format(get_system_setting("url_prefix")), admin.site.urls)]
+    - hasattr(settings, "EXTRA_URL_PATTERNS")
+    - urlpatterns += settings.EXTRA_URL_PATTERNS
+    - from django.conf import settings\nfrom django.conf.urls import include\nfrom django.contrib.auth import views as auth_views\nfrom django.urls import re_path, reverse_lazy\n\nfrom dojo.user import view...
+    - from django.conf import settings\nfrom django.conf.urls import include\nfrom django.contrib.auth import views as auth_views\nfrom django.urls import re_path, reverse_lazy\n\nfrom dojo.user import view...
+    - from django.conf import settings\nfrom django.conf.urls import include\nfrom django.contrib.auth import views as auth_views\nfrom django.urls import re_path, reverse_lazy\n\nfrom dojo.user import view...
+    - if not settings.API_TOKENS_ENABLED:\n        raise PermissionDenied\n    api_key = ""\n    form = APIKeyForm(instance=request.user)\n    if request.method == "POST":  # new key requested\n        form...
+    - if not settings.SHOW_LOGIN_FORM and settings.SOCIAL_LOGIN_AUTO_REDIRECT and sum([\n        settings.GOOGLE_OAUTH_ENABLED,\n        settings.OKTA_OAUTH_ENABLED,\n        settings.AZUREAD_TENANT_OAUTH2_...
+    - if not settings.SHOW_LOGIN_FORM and settings.SOCIAL_LOGIN_AUTO_REDIRECT and sum([\n        settings.GOOGLE_OAUTH_ENABLED,\n        settings.OKTA_OAUTH_ENABLED,\n        settings.AZUREAD_TENANT_OAUTH2_...
+    - sum([\n        settings.GOOGLE_OAUTH_ENABLED,\n        settings.OKTA_OAUTH_ENABLED,\n        settings.AZUREAD_TENANT_OAUTH2_ENABLED,\n        settings.GITLAB_OAUTH2_ENABLED,\n        settings.AUTH0_OA...
+    - sum([\n        settings.GOOGLE_OAUTH_ENABLED,\n        settings.OKTA_OAUTH_ENABLED,\n        settings.AZUREAD_TENANT_OAUTH2_ENABLED,\n        settings.GITLAB_OAUTH2_ENABLED,\n        settings.AUTH0_OA...
+    - sum([\n        settings.GOOGLE_OAUTH_ENABLED,\n        settings.OKTA_OAUTH_ENABLED,\n        settings.AZUREAD_TENANT_OAUTH2_ENABLED,\n        settings.GITLAB_OAUTH2_ENABLED,\n        settings.AUTH0_OA...
+    - sum([\n        settings.GOOGLE_OAUTH_ENABLED,\n        settings.OKTA_OAUTH_ENABLED,\n        settings.AZUREAD_TENANT_OAUTH2_ENABLED,\n        settings.GITLAB_OAUTH2_ENABLED,\n        settings.AUTH0_OA...
+    - sum([\n        settings.GOOGLE_OAUTH_ENABLED,\n        settings.OKTA_OAUTH_ENABLED,\n        settings.AZUREAD_TENANT_OAUTH2_ENABLED,\n        settings.GITLAB_OAUTH2_ENABLED,\n        settings.AUTH0_OA...
+    - sum([\n        settings.GOOGLE_OAUTH_ENABLED,\n        settings.OKTA_OAUTH_ENABLED,\n        settings.AZUREAD_TENANT_OAUTH2_ENABLED,\n        settings.GITLAB_OAUTH2_ENABLED,\n        settings.AUTH0_OA...
+    - sum([\n        settings.GOOGLE_OAUTH_ENABLED,\n        settings.OKTA_OAUTH_ENABLED,\n        settings.AZUREAD_TENANT_OAUTH2_ENABLED,\n        settings.GITLAB_OAUTH2_ENABLED,\n        settings.AUTH0_OA...
+    - sum([\n        settings.GOOGLE_OAUTH_ENABLED,\n        settings.OKTA_OAUTH_ENABLED,\n        settings.AZUREAD_TENANT_OAUTH2_ENABLED,\n        settings.GITLAB_OAUTH2_ENABLED,\n        settings.AUTH0_OA...
+    - if settings.GOOGLE_OAUTH_ENABLED:\n            social_auth = "google-oauth2"\n        elif settings.OKTA_OAUTH_ENABLED:\n            social_auth = "okta-oauth2"\n        elif settings.AZUREAD_TENANT_O...
+    - if settings.GOOGLE_OAUTH_ENABLED:\n            social_auth = "google-oauth2"\n        elif settings.OKTA_OAUTH_ENABLED:\n            social_auth = "okta-oauth2"\n        elif settings.AZUREAD_TENANT_O...
+    - if settings.GOOGLE_OAUTH_ENABLED:\n            social_auth = "google-oauth2"\n        elif settings.OKTA_OAUTH_ENABLED:\n            social_auth = "okta-oauth2"\n        elif settings.AZUREAD_TENANT_O...
+    - if settings.GOOGLE_OAUTH_ENABLED:\n            social_auth = "google-oauth2"\n        elif settings.OKTA_OAUTH_ENABLED:\n            social_auth = "okta-oauth2"\n        elif settings.AZUREAD_TENANT_O...
+    - if settings.GOOGLE_OAUTH_ENABLED:\n            social_auth = "google-oauth2"\n        elif settings.OKTA_OAUTH_ENABLED:\n            social_auth = "okta-oauth2"\n        elif settings.AZUREAD_TENANT_O...
+    - if settings.GOOGLE_OAUTH_ENABLED:\n            social_auth = "google-oauth2"\n        elif settings.OKTA_OAUTH_ENABLED:\n            social_auth = "okta-oauth2"\n        elif settings.AZUREAD_TENANT_O...
+    - if settings.GOOGLE_OAUTH_ENABLED:\n            social_auth = "google-oauth2"\n        elif settings.OKTA_OAUTH_ENABLED:\n            social_auth = "okta-oauth2"\n        elif settings.AZUREAD_TENANT_O...
+    - logout(request)\n\n    if not settings.SHOW_LOGIN_FORM:\n        return login_view(request)\n    messages.add_message(request,\n                     messages.SUCCESS,\n                     _("You have...
+    - if not settings.DISABLE_ALERT_COUNTER:\n        count = Alerts.objects.filter(user_id=request.user).count()\n        return JsonResponse({"count": count})\n    return JsonResponse({"count": 0})
+    - hyperlink.parse(settings.SITE_URL)
+    - context["domain"] = settings.SITE_URL[len(f"{url.scheme}://"):]
+    - hyperlink.parse(settings.SITE_URL)
+    - context["domain"] = settings.SITE_URL[len(f"{url.scheme}://"):]
+    - timedelta(seconds=settings.PASSWORD_RESET_TIMEOUT)
+    - fields = settings.DEDUPE_ALGO_ENDPOINT_FIELDS
+    - deduplicationLogger.debug("dedupe for: " + str(new_finding.id)\n                    + ":" + str(new_finding.title))\n        deduplicationAlgorithm = new_finding.test.deduplication_algorithm\n        ...
+    - deduplicationLogger.debug("dedupe for: " + str(new_finding.id)\n                    + ":" + str(new_finding.title))\n        deduplicationAlgorithm = new_finding.test.deduplication_algorithm\n        ...
+    - deduplicationLogger.debug("dedupe for: " + str(new_finding.id)\n                    + ":" + str(new_finding.title))\n        deduplicationAlgorithm = new_finding.test.deduplication_algorithm\n        ...
+    - Path(settings.MEDIA_ROOT + "/threat/")
+    - Path(settings.MEDIA_ROOT + "/threat/")
+    - open(settings.MEDIA_ROOT + f"/threat/{eng.id}{extension}",\n              "wb+")
+    - eng.tmodel_path = settings.MEDIA_ROOT + f"/threat/{eng.id}{extension}"
+    - open(settings.MEDIA_ROOT + f"/selenium/{cred.id}{extension}",\n              "wb+")
+    - cred.selenium_script = settings.MEDIA_ROOT + f"/selenium/{cred.id}{extension}"
+    - hasattr(settings, "DB_KEY")
+    - db_key = settings.DB_KEY
+    - getattr(settings, setting)
+    - if settings.SITE_URL:\n        return settings.SITE_URL\n    logger.warning("SITE URL undefined in settings, full_url cannot be created")\n    return "settings.SITE_URL"
+    - return settings.SITE_URL
+    - hasattr(settings, "SCAN_FILE_MAX_SIZE")
+    - size = file_size_mb(scan_file)\n        if size > settings.SCAN_FILE_MAX_SIZE:\n            return True
+    - logger.debug(f"Active {system_settings.enable_notify_sla_active}, Verified {system_settings.enable_notify_sla_active_verified}, Has JIRA {system_settings.enable_notify_sla_jira_only}, pre-breach {settings.SLA_NOTIFY_PRE_BREACH}, post-breach {settings.SLA_NOTIFY_POST_BREACH}")
+    - logger.debug(f"Active {system_settings.enable_notify_sla_active}, Verified {system_settings.enable_notify_sla_active_verified}, Has JIRA {system_settings.enable_notify_sla_jira_only}, pre-breach {settings.SLA_NOTIFY_PRE_BREACH}, post-breach {settings.SLA_NOTIFY_POST_BREACH}")
+    - total_count += 1\n                sla_age = finding.sla_days_remaining()\n\n                # get the sla enforcement for the severity and, if the severity setting is not enforced, do not notify\n    ...
+    - total_count += 1\n                sla_age = finding.sla_days_remaining()\n\n                # get the sla enforcement for the severity and, if the severity setting is not enforced, do not notify\n    ...
+    - getattr(settings, "MAX_AUTOCOMPLETE_WORDS", 20000)
+    - start_date = f.get("date", None)\n    if start_date and isinstance(start_date, str):\n        start_date = parse(start_date).date()\n\n    if settings.SLA_BUSINESS_DAYS:\n        if f.get("mitigated")...
+    - getattr(settings, setting_name, None)
+    - file_path = f"{settings.MEDIA_ROOT}/{file_object.file.url.lstrip(settings.MEDIA_URL)}"
+    - file_object.file.url.lstrip(settings.MEDIA_URL)
+    - try:\n        ct = ContentType.objects.get_for_id(cid)\n        obj = ct.get_object_for_this_type(pk=oid)\n    except (KeyError, ObjectDoesNotExist):\n        raise Http404\n\n    product_id = None\n ...
+    - Path(settings.MEDIA_ROOT)
+    - Path(settings.MEDIA_ROOT)
+  django.urls.Resolver404:
+    - raise Resolver404
+    - raise Resolver404
+  django.core.exceptions.FieldDoesNotExist:
+    - icon = kwargs.get("icon", "info-circle")\n            try:\n                source = Notifications._meta.get_field(event).verbose_name.title()[:100]\n            except FieldDoesNotExist:\n           ...
+  django.utils.html.format_html:
+    - format_html(\n            '<div class="btn-toolbar" data-role="editor-toolbar" data-target=""><div class="btn-group">'\n            '<a class="btn btn-default" data-edit="bold" title="Bold (Ctrl/Cmd+B...
+  django.core.management.execute_from_command_line:
+    - execute_from_command_line(sys.argv)
+  django.contrib.auth.models.Permission:
+    - Permission.objects.filter(\n            codename__in=get_configuration_permissions_codenames(),\n        )
+    - Permission.objects.filter(\n            codename__in=get_configuration_permissions_codenames(),\n        )
+    - model = Permission
+    - Permission.objects.none()
+    - Permission.objects.filter(\n            codename__in=get_configuration_permissions_codenames(),\n        )
+    - Permission.objects.all()
+    - Permission.objects.filter(content_type=content_type_system_settings,\n                codename="change_google_sheet")
+    - Permission.objects.create(\n                    name="Can change Google Sheet",\n                    content_type=content_type_system_settings,\n                    codename="change_google_sheet",\n                )
+    - Permission.objects.all()
+  django.core.serializers.deserialize:
+    - deserialize("json", finding)
+    - deserialize("json", finding)
+    - deserialize("json", finding)
+    - deserialize("json", finding)
+    - deserialize("json", finding)
+  django.db.models.F:
+    - F("test__engagement__product__name")
+    - F("test__engagement__product__id")
+    - F("date")
+    - F("finding__severity")
+    - F("finding__cwe")
+    - F("finding__cwe")
+  django.views.debug.SafeExceptionReporterFilter:
+    - class CustomExceptionReporterFilter(SafeExceptionReporterFilter):\n    def is_active(self, request):\n        # always activate for sensitive stuff we want to hide\n        # even when DEBUG = True\n        return True
+  django.template.defaultfilters.stringfilter:
+    - import base64\nimport contextlib\nimport datetime\nimport logging\nimport mimetypes\nfrom ast import literal_eval\nfrom itertools import chain\n\nimport bleach\nimport dateutil.relativedelta\nimport g...
+  django.contrib.admin:
+    - admin.site.unregister(LogEntry)
+    - admin.site.register(TextQuestion, TextQuestionAdmin)
+    - admin.site.register(ChoiceQuestion, ChoiceQuestionAdmin)
+    - admin.site.register(Question, QuestionParentAdmin)
+    - admin.site.register(Choice)
+    - admin.site.register(TextAnswer, TextAnswerAdmin)
+    - admin.site.register(ChoiceAnswer, ChoiceAnswerAdmin)
+    - admin.site.register(Answer, AnswerParentAdmin)
+    - admin.site.register(Engagement_Survey)
+    - admin.site.register(Answered_Survey)
+    - class System_SettingsAdmin(admin.ModelAdmin):\n    form = SystemSettingsFormAdmin\n    fields = ("product_grade",)
+    - class Tool_Configuration_Admin(admin.ModelAdmin):\n    form = ToolConfigForm_Admin
+    - class FindingAdmin(admin.ModelAdmin):\n    # For efficiency with large databases, display many-to-many fields with raw\n    # IDs rather than multi-select\n    raw_id_fields = (\n        "endpoints",\n    )
+    - class JIRA_Instance_Admin(admin.ModelAdmin):\n    form = JIRAForm_Admin
+    - class JIRA_Conf_Admin(admin.ModelAdmin):\n    form = JIRAForm_Admin

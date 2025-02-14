@@ -1,0 +1,131 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "web:framework",
+      "evidence": [
+        {
+          "snippet": "models.signals.post_save.connect(self.cleanup, sender=System_Settings)"
+        },
+        {
+          "snippet": "class System_Settings_Manager(models.Manager):\n\n    def get_from_db(self, *args, **kwargs):\n        from_db = super()..."
+        }
+      ]
+    },
+    {
+      "capability_id": "web:api",
+      "evidence": [
+        {
+          "snippet": "SimpleLazyObject(lambda: getattr(request, \"user\", None))"
+        },
+        {
+          "snippet": "settings.LOGIN_URL.lstrip(\"/\")"
+        },
+        {
+          "snippet": "fullURL = f\"{settings.LOGIN_URL}?next={quote(request.get_full_path())}\""
+        },
+        {
+          "snippet": "HttpResponseRedirect(reverse(\"change_password\"))"
+        },
+        {
+          "snippet": "reverse(\"change_password\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "env:config",
+      "evidence": [
+        {
+          "snippet": "os.getenv(\"OPENAI_API_KEY\")"
+        },
+        {
+          "snippet": "settings.ADDITIONAL_HEADERS"
+        }
+      ]
+    },
+    {
+      "capability_id": "aws:s3",
+      "evidence": [
+        {
+          "snippet": "boto3.client(\"s3\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "data:analysis",
+      "evidence": [
+        {
+          "snippet": "pd.read_csv(\"file.csv\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "ml:llm",
+      "evidence": [
+        {
+          "snippet": "openai.api_key = os.getenv(\"OPENAI_API_KEY\")"
+        },
+        {
+          "snippet": "openai.ChatCompletion.create(\n            model=\"gpt-3.5-turbo\",\n            messages=[{\"role\": \"user\", \"content\": \"Explain the benefits of cloud computing.\"}],\n            max_tokens=100\n        )"
+        }
+      ]
+    },
+    {
+      "capability_id": "gcp:storage",
+      "evidence": [
+        {
+          "snippet": "storage.Client()"
+        }
+      ]
+    },
+    {
+      "capability_id": "azure:nlp",
+      "evidence": [
+        {
+          "snippet": "TextAnalyticsClient(azure_endpoint, AzK(azure_api_key))"
+        },
+        {
+          "snippet": "AzK(azure_api_key)"
+        }
+      ]
+    },
+    {
+      "capability_id": "logging:management",
+      "evidence": [
+        {
+          "snippet": "logging.getLogger(__name__)"
+        }
+      ]
+    },
+    {
+      "capability_id": "regex:handling",
+      "evidence": [
+        {
+          "snippet": "re.compile(settings.LOGIN_URL.lstrip(\"/\"))"
+        },
+        {
+          "snippet": "re.compile(expr)"
+        }
+      ]
+    },
+    {
+      "capability_id": "auth:management",
+      "evidence": [
+        {
+          "snippet": "Dojo_User.force_password_reset(request.user)"
+        }
+      ]
+    },
+    {
+      "capability_id": "audit:logging",
+      "evidence": [
+        {
+          "snippet": "class AuditlogMiddleware(_AuditlogMiddleware):\n    def __call__(self, request):\n        remote_addr = self._get_remote_addr(request)\n\n        user = SimpleLazyObject(lambda: getattr(request, \"user\"..."
+        },
+        {
+          "snippet": "set_actor(actor=user, remote_addr=remote_addr)"
+        }
+      ]
+    }
+  ]
+}

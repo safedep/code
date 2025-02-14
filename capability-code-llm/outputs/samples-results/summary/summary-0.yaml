@@ -1,0 +1,82 @@
+
+django:
+  django.db.models:
+    - models.signals.post_save.connect(self.cleanup, sender=System_Settings)
+    - class System_Settings_Manager(models.Manager):\n\n    def get_from_db(self, *args, **kwargs):\n        # logger.debug('refreshing system_settings from db')\n        try:\n            from_db = super()...
+  django.utils.functional.SimpleLazyObject:
+    - SimpleLazyObject(lambda: getattr(request, "user", None))
+  django.conf.settings:
+    - settings.LOGIN_URL.lstrip("/")
+    - hasattr(settings, "LOGIN_EXEMPT_URLS")
+    - EXEMPT_URLS += [re.compile(expr) for expr in settings.LOGIN_EXEMPT_URLS]
+    - fullURL = f"{settings.LOGIN_URL}?next=/"
+    - fullURL = f"{settings.LOGIN_URL}?next={quote(request.get_full_path())}"
+    - request.META.update(settings.ADDITIONAL_HEADERS)
+  django.http.HttpResponseRedirect:
+    - HttpResponseRedirect(fullURL)
+    - HttpResponseRedirect(reverse("change_password"))
+  django.urls.reverse:
+    - reverse("change_password")
+
+urllib:
+  urllib.parse.quote:
+    - quote(request.get_full_path())
+
+threading:
+  threading.local:
+    - local()
+
+os:
+  os:
+    - os.getenv("OPENAI_API_KEY")
+
+boto3:
+  boto3:
+    - boto3.client("s3")
+
+pandas:
+  pandas aliased as pd:
+    - pd.read_csv("file.csv")
+
+contextlib:
+  contextlib.suppress:
+    - suppress(ModuleNotFoundError)
+
+openai:
+  openai:
+    - openai.api_key = os.getenv("OPENAI_API_KEY")
+    - apikey = openai.xyz.pqr.mno.api_key
+    - openai.ChatCompletion.create(\n            model="gpt-3.5-turbo",\n            messages=[{"role": "user", "content": "Explain the benefits of cloud computing."}],\n            max_tokens=100\n        )
+
+google:
+  google.cloud.storage:
+    - storage.Client()
+
+azure:
+  azure.ai.textanalytics.TextAnalyticsClient:
+    - TextAnalyticsClient(azure_endpoint, AzK(azure_api_key))
+  azure.core.credentials.AzureKeyCredential aliased as AzK:
+    - AzK(azure_api_key)
+
+logging:
+  logging:
+    - logging.getLogger(__name__)
+
+re:
+  re:
+    - re.compile(settings.LOGIN_URL.lstrip("/"))
+    - re.compile(expr)
+
+dojo:
+  dojo.models.Dojo_User:
+    - Dojo_User.force_password_reset(request.user)
+  dojo.models.System_Settings:
+    - models.signals.post_save.connect(self.cleanup, sender=System_Settings)
+    - System_Settings.objects.get(no_cache=True)
+    - System_Settings()
+
+auditlog:
+  auditlog.middleware.AuditlogMiddleware aliased as _AuditlogMiddleware:
+    - class AuditlogMiddleware(_AuditlogMiddleware):\n    def __call__(self, request):\n        remote_addr = self._get_remote_addr(request)\n\n        user = SimpleLazyObject(lambda: getattr(request, "user...
+  auditlog.context.set_actor:
+    - set_actor(actor=user, remote_addr=remote_addr)

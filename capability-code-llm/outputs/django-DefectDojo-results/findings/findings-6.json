@@ -1,0 +1,122 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "web:framework",
+      "evidence": [
+        {
+          "snippet": "class EngagementFilterHelper(FilterSet):\n    name = CharFilter(lookup_expr=\"icontains\", label=\"Product name contains\")\n    tag = CharFilter(field_name=\"tags__name\", lookup_expr=\"icontains\", label=\"Tag name\")"
+        },
+        {
+          "snippet": "class DojoFilter(FilterSet):\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, **kwargs)\n\n        for field in [\"tags\", \"test__tags\", \"test__engagement__tags\", \"test__engage...\"]"
+        },
+        {
+          "snippet": "class QuestionnaireFilter(FilterSet):\n    name = CharFilter(lookup_expr=\"icontains\")\n    description = CharFilter(lookup_expr=\"icontains\")\n    active = BooleanFilter()"
+        },
+        {
+          "snippet": "class ProductFilterHelper(FilterSet):\n    name = CharFilter(lookup_expr=\"icontains\", label=\"Product Name\")\n    name_exact = CharFilter(field_name=\"name\", lookup_expr=\"iexact\", label=\"Exact Product N...)"
+        },
+        {
+          "snippet": "class SimilarFindingHelper(FilterSet):\n    hash_code = MultipleChoiceFilter()\n    vulnerability_ids = CharFilter(method=custom_vulnerability_id_filter, label=\"Vulnerability Ids\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "io:streaming",
+      "evidence": [
+        {
+          "snippet": "io.StringIO(content)"
+        },
+        {
+          "snippet": "io.TextIOWrapper(zip.open(full_file_name), encoding=\"utf-8\")"
+        },
+        {
+          "snippet": "io.StringIO()"
+        }
+      ]
+    },
+    {
+      "capability_id": "network:http",
+      "evidence": [
+        {
+          "snippet": "requests.post(\n    url=req_url,\n    auth=HTTPBasicAuth(jira_instance.username, jira_instance.password),\n    json=json_data,\n    timeout=settings.REQUESTS_TIMEOUT\n)"
+        },
+        {
+          "snippet": "requests.get(\n    \"https://raw.githubusercontent.com/ozh/github-colors/master/colors.json\",\n    timeout=settings.REQUESTS_TIMEOUT\n)"
+        },
+        {
+          "snippet": "requests.request(\n    method=\"POST\",\n    url=\"https://slack.com/api/users.lookupByEmail\",\n    data={\"token\": self.system_settings.slack_token, \"email\": user_email},\n    timeout=settings.REQUESTS_TIMEOUT\n)"
+        },
+        {
+          "snippet": "try:\n    self.get_webhook_manager_instance()._test_webhooks_notification(form.instance)\nexcept requests.exceptions.RequestException as e:\n    messages.add_message(...)\n"
+        },
+        {
+          "snippet": "requests.request(\n    method=\"POST\",\n    url=endpoint.url,\n    headers=headers,\n    json=data,\n    timeout=self.system_settings.webhooks_notifications_timeout\n)"
+        }
+      ]
+    },
+    {
+      "capability_id": "data:serialization",
+      "evidence": [
+        {
+          "snippet": "requests.exceptions.JSONDecodeError aliased as RequestsJSONDecodeError:\n    \"\"\"Returns number of components (projects) or raise error.\"\"\"\n    parameters = {\"qualifiers\": \"TRK\"}"
+        }
+      ]
+    },
+    {
+      "capability_id": "authentication:http",
+      "evidence": [
+        {
+          "snippet": "HTTPBasicAuth(jira_instance.username, jira_instance.password)"
+        }
+      ]
+    },
+    {
+      "capability_id": "network:sockets",
+      "evidence": [
+        {
+          "snippet": "requests.Session()"
+        },
+        {
+          "snippet": "requests.request(\n    method=\"POST\",\n    url=\"https://slack.com/api/chat.postMessage\",\n    data={\n        \"token\": self.system_settings.slack_token,\n        \"channel\": \"#general\",\n        \"text\": \"Hello World\"\n    },\n    timeout=settings.REQUESTS_TIMEOUT\n)"
+        }
+      ]
+    },
+    {
+      "capability_id": "web:template",
+      "evidence": [
+        {
+          "snippet": "load_workbook(filename)"
+        },
+        {
+          "snippet": "Font(bold=True)"
+        },
+        {
+          "snippet": "Workbook()"
+        }
+      ]
+    },
+    {
+      "capability_id": "time:management",
+      "evidence": [
+        {
+          "snippet": "monthrange(today.year, today.month)"
+        },
+        {
+          "snippet": "tcalendar.timegm(date.timetuple())"
+        }
+      ]
+    },
+    {
+      "capability_id": "network:ip",
+      "evidence": [
+        {
+          "snippet": "IPAddress(request.META[\"REMOTE_ADDR\"])"
+        },
+        {
+          "snippet": "IPNetwork(ip_range)"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,194 @@
+
+dojo:
+  dojo.filters.AcceptedFindingFilter:
+    - accepted_finding_filter_class = AcceptedFindingFilterWithoutObjectLookups if filter_string_matching else AcceptedFindingFilter
+  dojo.utils.is_title_in_breadcrumbs:
+    - is_title_in_breadcrumbs("View User")
+    - is_title_in_breadcrumbs("View User")
+    - is_title_in_breadcrumbs("View User")
+    - is_title_in_breadcrumbs("View User")
+    - is_title_in_breadcrumbs("View User")
+    - is_title_in_breadcrumbs("View User")
+    - is_title_in_breadcrumbs("View Group")
+    - is_title_in_breadcrumbs("View Group")
+    - is_title_in_breadcrumbs("View User")
+    - is_title_in_breadcrumbs("View User")
+    - is_title_in_breadcrumbs("View User")
+    - is_title_in_breadcrumbs("View Group")
+    - is_title_in_breadcrumbs("View Group")
+  dojo.tools.factory.get_api_scan_configuration_hints:
+    - get_api_scan_configuration_hints()
+    - get_api_scan_configuration_hints()
+  dojo.forms.SLAConfigForm:
+    - SLAConfigForm(request.POST, instance=SLA_Configuration())
+    - SLAConfigForm()
+    - SLAConfigForm(request.POST, instance=sla_config)
+    - SLAConfigForm(instance=sla_config)
+  dojo.api_v2.views.RoleViewSet:
+    - v2_api.register(r"roles", RoleViewSet, basename="role")
+  dojo.product.queries.get_authorized_product_members:
+    - get_authorized_product_members(\n            Permissions.Product_View,\n        )
+  dojo.forms.JIRAImportScanForm:
+    - def get_jira_form(\n        self,\n        request: HttpRequest,\n        engagement_or_product: Engagement | Product,\n    ) -> tuple[JIRAImportScanForm | None, bool]:\n        """Returns a JiraImpor...
+    - JIRAImportScanForm(\n                    request.POST,\n                    push_all=push_all_jira_issues,\n                    prefix="jiraform",\n                )
+    - JIRAImportScanForm(\n                    push_all=push_all_jira_issues,\n                    prefix="jiraform",\n                )
+    - def process_jira_form(\n        self,\n        request: HttpRequest,\n        form: JIRAImportScanForm,\n        context: dict,\n    ) -> str | None:\n        """\n        Process the jira form by fir...
+    - def get_jira_form(\n        self,\n        request: HttpRequest,\n        test: Test,\n    ) -> tuple[JIRAImportScanForm | None, bool]:\n        """Returns a JiraImportScanForm if jira is enabled"""\n...
+    - JIRAImportScanForm(\n                        request.POST,\n                        push_all=push_all_jira_issues,\n                        prefix="jiraform",\n                    )
+    - JIRAImportScanForm(\n                        push_all=push_all_jira_issues,\n                        prefix="jiraform",\n                    )
+    - def process_jira_form(\n        self,\n        request: HttpRequest,\n        form: JIRAImportScanForm,\n        context: dict,\n    ) -> str | None:\n        """\n        Process the jira form by fir...
+  dojo.tools.appcheck_web_application_scanner.engines.appcheck.AppCheckScanningEngineParser:
+    - SCANNING_ENGINE_PARSERS: dict[str, BaseEngineParser] = {\n    engine.SCANNING_ENGINE: engine() for engine in [\n        AppCheckScanningEngineParser, BaseEngineParser, NmapScanningEngineParser, OpenVASScannerEngineParser,\n    ]\n}
+  dojo.api_v2.views.TestTypesViewSet:
+    - v2_api.register(r"test_types", TestTypesViewSet, basename="test_type")
+  dojo.decorators.dojo_ratelimit:
+    - dojo_ratelimit(key="post:username")
+    - dojo_ratelimit(key="post:password")
+  dojo.models.BurpRawRequestResponse:
+    - BurpRawRequestResponse(finding=finding, burpRequestBase64=b64request, burpResponseBase64=b64response)
+    - model = BurpRawRequestResponse
+    - BurpRawRequestResponse(\n                        finding=finding,\n                        burpRequestBase64=base64.b64encode(\n                            pair["request"].encode("utf-8"),\n          ...
+    - BurpRawRequestResponse.objects.filter(finding=finding)
+    - BurpRawRequestResponse.objects.none()
+    - BurpRawRequestResponse.objects.all()
+    - BurpRawRequestResponse.objects.filter(finding=finding)
+    - BurpRawRequestResponse.objects.filter(finding=finding)
+    - BurpRawRequestResponse.objects.get_or_create(finding=finding)
+    - try:\n                burp_rr, _ = BurpRawRequestResponse.objects.get_or_create(finding=finding)\n            except BurpRawRequestResponse.MultipleObjectsReturned:\n                burp_rr = BurpRawR...
+    - BurpRawRequestResponse.objects.filter(finding=finding)
+    - BurpRawRequestResponse.objects.filter(\n                                finding=finding,\n                            )
+    - BurpRawRequestResponse(\n                    finding=finding,\n                    burpRequestBase64=base64.b64encode(req_resp["req"].encode("utf-8")),\n                    burpResponseBase64=base64.b64encode(req_resp["resp"].encode("utf-8")))
+    - BurpRawRequestResponse(\n                finding=finding,\n                burpRequestBase64=base64.b64encode(unsaved_request.encode()),\n                burpResponseBase64=base64.b64encode(unsaved_response.encode()))
+    - BurpRawRequestResponse(\n                    finding=finding,\n                    burpRequestBase64=base64.b64encode(context["form"].cleaned_data["request"].encode()),\n                    burpResponseBase64=base64.b64encode(context["form"].cleaned_data["response"].encode()),\n                )
+    - BurpRawRequestResponse(\n                    finding=finding,\n                    burpRequestBase64=base64.b64encode(context["form"].cleaned_data["request"].encode()),\n                    burpResponseBase64=base64.b64encode(context["form"].cleaned_data["response"].encode()),\n                )
+    - BurpRawRequestResponse(\n                    finding=new_finding,\n                    burpRequestBase64=base64.b64encode(form.cleaned_data.get("request", "").encode("utf-8")),\n                    bu...
+  dojo.filters.ComponentFilterWithoutObjectLookups:
+    - filter_class = ComponentFilterWithoutObjectLookups if filter_string_matching else ComponentFilter
+  dojo.api_v2.views.ProductAPIScanConfigurationViewSet:
+    - v2_api.register(r"product_api_scan_configurations", ProductAPIScanConfigurationViewSet, basename="product_api_scan_configuration")
+  dojo.api_v2.serializers:
+    - serializers.DeletePreviewSerializer(many=True)
+    - serializers.DeletePreviewSerializer(page, many=True)
+    - serializer_class = serializers.RoleSerializer
+    - serializer_class = serializers.DojoGroupSerializer
+    - serializer_class = serializers.DojoGroupMemberSerializer
+    - serializer_class = serializers.GlobalRoleSerializer
+    - serializer_class = serializers.EndpointSerializer
+    - extend_schema(\n        request=serializers.ReportGenerateOptionSerializer,\n        responses={status.HTTP_200_OK: serializers.ReportGenerateSerializer},\n    )
+    - extend_schema(\n        request=serializers.ReportGenerateOptionSerializer,\n        responses={status.HTTP_200_OK: serializers.ReportGenerateSerializer},\n    )
+    - serializers.ReportGenerateOptionSerializer(\n            data=request.data,\n        )
+    - serializers.ReportGenerateSerializer(data)
+    - serializer_class = serializers.EndpointStatusSerializer
+    - serializer_class = serializers.EngagementSerializer
+    - extend_schema(\n        request=serializers.ReportGenerateOptionSerializer,\n        responses={status.HTTP_200_OK: serializers.ReportGenerateSerializer},\n    )
+    - extend_schema(\n        request=serializers.ReportGenerateOptionSerializer,\n        responses={status.HTTP_200_OK: serializers.ReportGenerateSerializer},\n    )
+    - serializers.ReportGenerateOptionSerializer(\n            data=request.data,\n        )
+    - serializers.ReportGenerateSerializer(data)
+    - extend_schema(\n        methods=["GET"],\n        responses={\n            status.HTTP_200_OK: serializers.EngagementToNotesSerializer,\n        },\n    )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.AddNewNoteOptionSerializer,\n        responses={status.HTTP_201_CREATED: serializers.NoteSerializer},\n    )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.AddNewNoteOptionSerializer,\n        responses={status.HTTP_201_CREATED: serializers.NoteSerializer},\n    )
+    - serializers.AddNewNoteOptionSerializer(\n                data=request.data,\n            )
+    - serializers.NoteSerializer(\n                {"author": author, "entry": entry, "private": private},\n            )
+    - serializers.EngagementToNotesSerializer(\n            {"engagement_id": engagement, "notes": notes},\n        )
+    - extend_schema(\n        methods=["GET"],\n        responses={\n            status.HTTP_200_OK: serializers.EngagementToFilesSerializer,\n        },\n    )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.AddNewFileOptionSerializer,\n        responses={status.HTTP_201_CREATED: serializers.FileSerializer},\n    )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.AddNewFileOptionSerializer,\n        responses={status.HTTP_201_CREATED: serializers.FileSerializer},\n    )
+    - serializers.FileSerializer(data=request.data)
+    - serializers.FileSerializer(file)
+    - serializers.EngagementToFilesSerializer(\n            {"engagement_id": engagement, "files": files},\n        )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.EngagementCheckListSerializer,\n        responses={\n            status.HTTP_201_CREATED: serializers.EngagementCheckListSerializer,\n        },\n    )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.EngagementCheckListSerializer,\n        responses={\n            status.HTTP_201_CREATED: serializers.EngagementCheckListSerializer,\n        },\n    )
+    - serializers.EngagementCheckListSerializer(\n                data=request.data,\n            )
+    - serializers.EngagementCheckListSerializer(\n                check_list,\n            )
+    - serializers.EngagementCheckListSerializer(entry)
+    - extend_schema(\n        methods=["GET"],\n        responses={\n            status.HTTP_200_OK: serializers.RawFileSerializer,\n        },\n    )
+    - extend_schema(\n        request=serializers.EngagementUpdateJiraEpicSerializer,\n        responses={status.HTTP_200_OK: serializers.EngagementUpdateJiraEpicSerializer},\n    )
+    - extend_schema(\n        request=serializers.EngagementUpdateJiraEpicSerializer,\n        responses={status.HTTP_200_OK: serializers.EngagementUpdateJiraEpicSerializer},\n    )
+    - serializer_class = serializers.RiskAcceptanceSerializer
+    - extend_schema(\n        methods=["GET"],\n        responses={\n            status.HTTP_200_OK: serializers.RiskAcceptanceProofSerializer,\n        },\n    )
+    - serializer_class = serializers.AppAnalysisSerializer
+    - serializer_class = serializers.CredentialSerializer
+    - serializer_class = serializers.CredentialMappingSerializer
+    - serializer_class = serializers.FindingTemplateSerializer
+    - serializer_class = serializers.FindingSerializer
+    - return serializers.FindingCreateSerializer
+    - return serializers.FindingSerializer
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.FindingCloseSerializer,\n        responses={status.HTTP_200_OK: serializers.FindingCloseSerializer},\n    )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.FindingCloseSerializer,\n        responses={status.HTTP_200_OK: serializers.FindingCloseSerializer},\n    )
+    - serializers.FindingCloseSerializer(\n                data=request.data,\n            )
+    - serializers.FindingCloseSerializer(finding)
+    - extend_schema(\n        methods=["GET"],\n        responses={status.HTTP_200_OK: serializers.TagSerializer},\n    )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.TagSerializer,\n        responses={status.HTTP_201_CREATED: serializers.TagSerializer},\n    )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.TagSerializer,\n        responses={status.HTTP_201_CREATED: serializers.TagSerializer},\n    )
+    - serializers.TagSerializer(data=request.data)
+    - serializers.TagSerializer({"tags": all_tags})
+    - serializers.TagSerializer({"tags": tags})
+    - extend_schema(\n        methods=["GET"],\n        responses={\n            status.HTTP_200_OK: serializers.BurpRawRequestResponseSerializer,\n        },\n    )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.BurpRawRequestResponseSerializer,\n        responses={\n            status.HTTP_201_CREATED: serializers.BurpRawRequestResponseSerializer,\n        },\n    )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.BurpRawRequestResponseSerializer,\n        responses={\n            status.HTTP_201_CREATED: serializers.BurpRawRequestResponseSerializer,\n        },\n    )
+    - serializers.BurpRawRequestResponseSerializer(\n                data=request.data, many=isinstance(request.data, list),\n            )
+    - serializers.BurpRawRequestResponseSerializer(\n            {"req_resp": burp_list},\n        )
+    - extend_schema(\n        methods=["GET"],\n        responses={status.HTTP_200_OK: serializers.FindingToNotesSerializer},\n    )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.AddNewNoteOptionSerializer,\n        responses={status.HTTP_201_CREATED: serializers.NoteSerializer},\n    )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.AddNewNoteOptionSerializer,\n        responses={status.HTTP_201_CREATED: serializers.NoteSerializer},\n    )
+    - serializers.AddNewNoteOptionSerializer(\n                data=request.data,\n            )
+    - serializers.NoteSerializer(\n                {"author": author, "entry": entry, "private": private},\n            )
+    - serializers.FindingToNotesSerializer(\n            {"finding_id": finding, "notes": notes},\n        )
+    - extend_schema(\n        methods=["GET"],\n        responses={status.HTTP_200_OK: serializers.FindingToFilesSerializer},\n    )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.AddNewFileOptionSerializer,\n        responses={status.HTTP_201_CREATED: serializers.FileSerializer},\n    )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.AddNewFileOptionSerializer,\n        responses={status.HTTP_201_CREATED: serializers.FileSerializer},\n    )
+    - serializers.FileSerializer(data=request.data)
+    - serializers.FileSerializer(file)
+    - serializers.FindingToFilesSerializer(\n            {"finding_id": finding, "files": files},\n        )
+    - extend_schema(\n        methods=["GET"],\n        responses={\n            status.HTTP_200_OK: serializers.RawFileSerializer,\n        },\n    )
+    - extend_schema(\n        request=serializers.FindingNoteSerializer,\n        responses={status.HTTP_204_NO_CONTENT: ""},\n    )
+    - extend_schema(\n        methods=["PUT", "PATCH"],\n        request=serializers.TagSerializer,\n        responses={status.HTTP_204_NO_CONTENT: ""},\n    )
+    - serializers.TagSerializer(data=request.data)
+    - serializers.TagSerializer({"tags": all_tags})
+    - serializers.FindingSerializer(many=True)
+    - serializers.FindingSerializer(\n            instance=result, many=True, context={"request": request},\n        )
+    - extend_schema(\n        request=serializers.ReportGenerateOptionSerializer,\n        responses={status.HTTP_200_OK: serializers.ReportGenerateSerializer},\n    )
+    - extend_schema(\n        request=serializers.ReportGenerateOptionSerializer,\n        responses={status.HTTP_200_OK: serializers.ReportGenerateSerializer},\n    )
+    - serializers.ReportGenerateOptionSerializer(\n            data=request.data,\n        )
+    - serializers.ReportGenerateSerializer(data)
+    - serializers.FindingMetaSerializer(\n            instance=metadata, many=True,\n        )
+    - serializers.FindingMetaSerializer(data=request.data)
+    - serializers.FindingMetaSerializer(many=True)
+    - extend_schema(\n        methods=["PUT"],\n        request=serializers.FindingMetaSerializer,\n        responses={\n            status.HTTP_200_OK: serializers.FindingMetaSerializer,\n            statu...
+    - extend_schema(\n        methods=["PUT"],\n        request=serializers.FindingMetaSerializer,\n        responses={\n            status.HTTP_200_OK: serializers.FindingMetaSerializer,\n            statu...
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.FindingMetaSerializer,\n        responses={\n            status.HTTP_200_OK: serializers.FindingMetaSerializer,\n            stat...
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.FindingMetaSerializer,\n        responses={\n            status.HTTP_200_OK: serializers.FindingMetaSerializer,\n            stat...
+    - serializer_class = serializers.JIRAInstanceSerializer
+    - serializer_class = serializers.JIRAIssueSerializer
+    - serializer_class = serializers.JIRAProjectSerializer
+    - serializer_class = serializers.SonarqubeIssueSerializer
+    - serializer_class = serializers.SonarqubeIssueTransitionSerializer
+    - serializer_class = serializers.ProductAPIScanConfigurationSerializer
+    - serializer_class = serializers.MetaSerializer
+    - extend_schema(\n        methods=["post", "patch"],\n        request=serializers.MetaMainSerializer,\n        responses={status.HTTP_200_OK: serializers.MetaMainSerializer},\n        filters=False,\n    )
+    - extend_schema(\n        methods=["post", "patch"],\n        request=serializers.MetaMainSerializer,\n        responses={status.HTTP_200_OK: serializers.MetaMainSerializer},\n        filters=False,\n    )
+    - serializers.MetaMainSerializer(data=request.data)
+    - serializer_class = serializers.ProductSerializer
+    - extend_schema(\n        request=serializers.ReportGenerateOptionSerializer,\n        responses={status.HTTP_200_OK: serializers.ReportGenerateSerializer},\n    )
+    - extend_schema(\n        request=serializers.ReportGenerateOptionSerializer,\n        responses={status.HTTP_200_OK: serializers.ReportGenerateSerializer},\n    )
+    - serializers.ReportGenerateOptionSerializer(\n            data=request.data,\n        )
+    - serializers.ReportGenerateSerializer(data)
+    - serializer_class = serializers.ProductMemberSerializer
+    - serializer_class = serializers.ProductGroupSerializer
+    - serializer_class = serializers.ProductTypeSerializer
+    - extend_schema(\n        request=serializers.ReportGenerateOptionSerializer,\n        responses={status.HTTP_200_OK: serializers.ReportGenerateSerializer},\n    )
+    - extend_schema(\n        request=serializers.ReportGenerateOptionSerializer,\n        responses={status.HTTP_200_OK: serializers.ReportGenerateSerializer},\n    )
+    - serializers.ReportGenerateOptionSerializer(\n            data=request.data,\n        )
+    - serializers.ReportGenerateSerializer(data)
+    - serializer_class = serializers.ProductTypeMemberSerializer
+    - serializer_class = serializers.ProductTypeGroupSerializer
+    - serializer_class = serializers.StubFindingSerializer
+    - return serializers.StubFindingCreateSerializer
+    - return serializers.StubFindingSerializer
+    - serializer_class = serializers.DevelopmentEnvironmentSerializer
+    - serializer_class = serializers.TestSerializer
+    - return serializers.TestCreateSerializer
+    - return serializers.TestSerializer
+    - extend_schema(\n        request=serializers.ReportGenerateOptionSerializer,\n        responses={status.HTTP_200_OK: serializers.ReportGenerateSerializer},\n    )
+    - extend_schema(\n        request=serializers.ReportGenerateOptionSerializer,\n        responses={status.HTTP_200_OK: serializers.ReportGenerateSerializer},\n    )
+    - serializers.ReportGenerateOptionSerializer(\n            data=request.data,\n        )

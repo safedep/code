@@ -1,0 +1,98 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "web:framework",
+      "evidence": [
+        {
+          "snippet": "class StatusStatisticsSerializer(serializers.Serializer):\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, **kwargs)\n        for stat in STATS_FIELDS:\n            self.fields[stat.lower()] = serializers.IntegerField()"
+        },
+        {
+          "snippet": "class UserSerializer(serializers.ModelSerializer):\n    date_joined = serializers.DateTimeField(read_only=True)\n    last_login = serializers.DateTimeField(read_only=True, allow_null=True)\n    email = serializers.EmailField(required=True)\n\n    class Meta:\n        model = User\n        fields = ('id', 'username', 'email', 'date_joined', 'last_login')"
+        },
+        {
+          "snippet": "class FileSerializer(serializers.ModelSerializer):\n    file = serializers.FileField(required=True)\n\n    class Meta:\n        model = FileUpload\n        fields = '__all__'\n\n    def validate(self, data):\n        if not data['file']:\n            raise serializers.ValidationError('File is required.')"
+        },
+        {
+          "snippet": "response.status_code = HTTP_500_INTERNAL_SERVER_ERROR"
+        },
+        {
+          "snippet": "response.status_code = HTTP_409_CONFLICT"
+        }
+      ]
+    },
+    {
+      "capability_id": "network:sockets",
+      "evidence": [
+        {
+          "snippet": "socket.socket()"
+        },
+        {
+          "snippet": "socket.socket()"
+        }
+      ]
+    },
+    {
+      "capability_id": "scraping:web",
+      "evidence": [
+        {
+          "snippet": "driver.find_element(By.CSS_SELECTOR, \".dropdown-toggle.pull-left\").click()"
+        },
+        {
+          "snippet": "self.goto_product_overview(driver)"
+        },
+        {
+          "snippet": "driver = self.driver"
+        }
+      ]
+    },
+    {
+      "capability_id": "auth:oauth",
+      "evidence": [
+        {
+          "snippet": "is_ratelimited(request=request, fn=fn,\n                                         key=key, rate=limiter_rate, method=method,\n                                         increment=True)"
+        },
+        {
+          "snippet": "if limiter_lockout:\n                    username = request.POST.get(\"username\", None)\n                    if username:\n                        dojo_user = Dojo_User.objects.filter(username=username)"
+        },
+        {
+          "snippet": "def dojo_ratelimit(key=\"ip\", rate=None, method=UNSAFE, block=False):\n    def decorator(fn):\n        @wraps(fn)\n        def _wrapped(request, *args, **kw):\n            limiter_block = getattr(settings, 'DOJO_LIM..."
+        }
+      ]
+    },
+    {
+      "capability_id": "data:serialization",
+      "evidence": [
+        {
+          "snippet": "urlencode(params)"
+        },
+        {
+          "snippet": "urlparse(uri)"
+        },
+        {
+          "snippet": "quote(request.get_full_path())"
+        },
+        {
+          "snippet": "decimal.Decimal(\"100.0\")"
+        },
+        {
+          "snippet": "textwrap.shorten(title, 150)"
+        }
+      ]
+    },
+    {
+      "capability_id": "testing:automation",
+      "evidence": [
+        {
+          "snippet": "base_test_class.on_exception_html_source_logger"
+        },
+        {
+          "snippet": "set_suite_settings(suite, jira=jira, github=github, block_execution=block_execution)"
+        },
+        {
+          "snippet": "driver = self.driver"
+        }
+      ]
+    }
+  ]
+}

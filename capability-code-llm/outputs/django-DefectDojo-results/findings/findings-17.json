@@ -1,0 +1,65 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "scraping:web",
+      "evidence": [
+        {
+          "snippet": "driver.find_element(By.ID, \"dropdownMenu1\")"
+        },
+        {
+          "snippet": "driver.find_element(By.LINK_TEXT, \"Close Engagement\")"
+        },
+        {
+          "snippet": "driver.find_element(By.CSS_SELECTOR, \".dropdown-toggle.pull-left\")"
+        },
+        {
+          "snippet": "driver.find_element(By.XPATH, \"//a[@class='dropdown-toggle active']//span[@class='hidden-xs']\")"
+        },
+        {
+          "snippet": "driver.find_element(By.NAME, \"delete_name\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "testing:automation",
+      "evidence": [
+        {
+          "snippet": "EC.presence_of_element_located((By.ID, \"id_reviewers\"))"
+        },
+        {
+          "snippet": "EC.visibility_of_element_located((By.LINK_TEXT, \"Notifications\"))"
+        },
+        {
+          "snippet": "element.find_elements(By.TAG_NAME, \"option\")"
+        },
+        {
+          "snippet": "bulk_edit_menu.find_element(By.ID, \"id_bulk_active\")"
+        },
+        {
+          "snippet": "driver.find_elements(By.NAME, \"collapsible\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "web:framework",
+      "evidence": [
+        {
+          "snippet": "driver.find_element(By.ID, \"id_title\")"
+        },
+        {
+          "snippet": "driver.find_element(By.NAME, \"submit\")"
+        },
+        {
+          "snippet": "driver.find_element(By.ID, \"apply\")"
+        },
+        {
+          "snippet": "driver.find_element(By.CSS_SELECTOR, \"input.btn.btn-success\")"
+        },
+        {
+          "snippet": "driver.find_element(By.ID, \"add_note\")"
+        }
+      ]
+    }
+  ]
+}

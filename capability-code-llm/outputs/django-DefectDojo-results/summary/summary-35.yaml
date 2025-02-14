@@ -1,0 +1,266 @@
+
+dojo:
+  dojo.authorization.authorization_decorators.user_is_authorized:
+    - user_is_authorized(Product, Permissions.Product_View, "pid")
+    - user_is_authorized(Product, Permissions.Engagement_View, "pid")
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - user_is_authorized(Product, Permissions.Product_Delete, "pid")
+    - user_is_authorized(Product, Permissions.Engagement_Add, "pid")
+    - user_is_authorized(Product, Permissions.Technology_Add, "pid")
+    - user_is_authorized(App_Analysis, Permissions.Technology_Edit, "tid")
+    - user_is_authorized(App_Analysis, Permissions.Technology_Delete, "tid")
+    - user_is_authorized(Product, Permissions.Engagement_Add, "pid")
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - user_is_authorized(Product, Permissions.Product_View, "pid")
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - user_is_authorized(Product, Permissions.Product_View, "pid")
+    - user_is_authorized(Product, Permissions.Product_Manage_Members, "pid")
+    - user_is_authorized(Product_Member, Permissions.Product_Manage_Members, "memberid")
+    - user_is_authorized(Product_Member, Permissions.Product_Member_Delete, "memberid")
+    - user_is_authorized(Product, Permissions.Product_API_Scan_Configuration_Add, "pid")
+    - user_is_authorized(Product, Permissions.Product_View, "pid")
+    - user_is_authorized(Product_API_Scan_Configuration, Permissions.Product_API_Scan_Configuration_Edit, "pascid")
+    - user_is_authorized(Product_API_Scan_Configuration, Permissions.Product_API_Scan_Configuration_Delete, "pascid")
+    - user_is_authorized(Product_Group, Permissions.Product_Group_Edit, "groupid")
+    - user_is_authorized(Product_Group, Permissions.Product_Group_Delete, "groupid")
+    - user_is_authorized(Product, Permissions.Product_Group_Add, "pid")
+    - user_is_authorized(Product_Type, Permissions.Product_Type_View, "ptid")
+    - user_is_authorized(Product_Type, Permissions.Product_Type_Delete, "ptid")
+    - user_is_authorized(Product_Type, Permissions.Product_Type_Edit, "ptid")
+    - user_is_authorized(Product_Type, Permissions.Product_Type_Manage_Members, "ptid")
+    - user_is_authorized(Product_Type_Member, Permissions.Product_Type_Manage_Members, "memberid")
+    - user_is_authorized(Product_Type_Member, Permissions.Product_Type_Member_Delete, "memberid")
+    - user_is_authorized(Product_Type, Permissions.Product_Type_Group_Add, "ptid")
+    - user_is_authorized(Product_Type_Group, Permissions.Product_Type_Group_Edit, "groupid")
+    - user_is_authorized(Product_Type_Group, Permissions.Product_Type_Group_Delete, "groupid")
+    - user_is_authorized(Product_Type, Permissions.Product_Type_View, "ptid")
+    - user_is_authorized(Product, Permissions.Product_View, "pid")
+    - user_is_authorized(Engagement, Permissions.Engagement_View, "eid")
+    - user_is_authorized(Test, Permissions.Test_View, "tid")
+    - user_is_authorized(Endpoint, Permissions.Endpoint_View, "eid")
+    - user_is_authorized(Endpoint, Permissions.Endpoint_View, "eid")
+    - user_is_authorized(Product, Permissions.Product_View, "pid")
+    - user_is_authorized(Engagement, Permissions.Engagement_Edit, "eid")
+    - user_is_authorized(Engagement, Permissions.Engagement_Edit, "eid")
+    - user_is_authorized(Engagement, Permissions.Engagement_View, "eid")
+    - user_is_authorized(Engagement, Permissions.Engagement_Edit, "eid")
+    - user_is_authorized(Test, Permissions.Test_Edit, "tid")
+    - user_is_authorized(Test, Permissions.Test_Delete, "tid")
+    - user_is_authorized(Test, Permissions.Test_Edit, "tid")
+    - user_is_authorized(Test, Permissions.Test_View, "tid")
+    - user_is_authorized(Test, Permissions.Finding_Add, "tid")
+    - user_is_authorized(Test, Permissions.Test_View, "tid")
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+  dojo.forms.Edit_Group_MemberForm:
+    - Edit_Group_MemberForm(instance=member)
+    - Edit_Group_MemberForm(request.POST, instance=member)
+  dojo.utils.process_tag_notifications:
+    - process_tag_notifications(request, new_note, url, title)
+    - process_tag_notifications(request, new_note, url, title)
+  dojo.tools.api_blackduck.api_client.BlackduckAPI:
+    - SCAN_APIS = {\n                "Bugcrowd API": BugcrowdAPI,\n                "BlackDuck API": BlackduckAPI,\n                "Cobalt.io": CobaltAPI,\n                "Edgescan": EdgescanAPI,\n                "SonarQube": SonarQubeAPI,\n                "Vulners": VulnersAPI,\n             }
+  dojo.api_v2.views.ProductTypeGroupViewSet:
+    - v2_api.register(r"product_type_groups", ProductTypeGroupViewSet, basename="product_type_group")
+  dojo.regulations.urls.urlpatterns aliased as regulations:
+    - ur += regulations
+  dojo.filters.ApiEngagementFilter:
+    - filterset_class = ApiEngagementFilter
+  dojo.forms.CredMappingForm:
+    - CredMappingForm(request.POST, instance=cred)
+    - CredMappingForm(request.POST)
+    - CredMappingForm()
+    - CredMappingForm(request.POST)
+    - CredMappingForm()
+    - CredMappingForm(request.POST)
+    - CredMappingForm()
+    - CredMappingForm(request.POST, instance=cred)
+    - CredMappingForm(instance=cred)
+    - CredMappingForm()
+    - CredMappingForm(request.POST)
+    - def get_credential_form(\n        self,\n        request: HttpRequest,\n        engagement: Engagement,\n    ) -> CredMappingForm:\n        """\n        Return a new instance of a form managing creden...
+    - CredMappingForm(request.POST)
+    - CredMappingForm()
+    - CredMappingForm(\n            initial={\n                "cred_user_queryset": Cred_Mapping.objects.filter(\n                    engagement=engagement,\n                ).order_by("cred_id"),\n            },\n        )
+    - def process_credentials_form(\n        self,\n        request: HttpRequest,\n        form: CredMappingForm,\n        context: dict,\n    ) -> str | None:\n        """Process the credentials form by cr...
+  dojo.finding.helper.OPEN_FINDINGS_QUERY:
+    - qs.filter(OPEN_FINDINGS_QUERY)
+    - all_findings_within_date_range.filter(OPEN_FINDINGS_QUERY)
+  dojo.filters.AcceptedFindingFilterWithoutObjectLookups:
+    - accepted_finding_filter_class = AcceptedFindingFilterWithoutObjectLookups if filter_string_matching else AcceptedFindingFilter
+  dojo.filters.MetricsEndpointFilterWithoutObjectLookups:
+    - filter_class = MetricsEndpointFilterWithoutObjectLookups if filter_string_matching else MetricsEndpointFilter
+    - filter_class = MetricsEndpointFilterWithoutObjectLookups if filter_string_matching else MetricsEndpointFilter
+  dojo.metrics.utils.endpoint_queries:
+    - endpoint_queries(prod_type, request)
+  dojo.forms.TypedNoteForm:
+    - TypedNoteForm(available_note_types=available_note_types)
+    - TypedNoteForm(request.POST, available_note_types=available_note_types)
+    - TypedNoteForm(available_note_types=available_note_types)
+    - TypedNoteForm(*args, **kwargs)
+    - TypedNoteForm(request.POST, available_note_types=available_note_types, instance=note)
+    - TypedNoteForm(available_note_types=available_note_types, instance=note)
+    - TypedNoteForm(*args, **kwargs)
+  dojo.forms.CheckForm:
+    - CheckForm(request.POST, instance=checklist, findings=findings)
+    - CheckForm(instance=checklist, findings=findings)
+  dojo.__version__ aliased as dd_version:
+    - headers = {\n            "User-Agent": f"DefectDojo-{dd_version}",\n            "X-DefectDojo-Event": event,\n            "X-DefectDojo-Instance": settings.SITE_URL,\n            "Accept": "application/json",\n        }
+  dojo.tools.appcheck_web_application_scanner.engines.base.BaseEngineParser:
+    - class AppCheckScanningEngineParser(BaseEngineParser):\n\n    """\n    Parser for data from the (proprietary?) AppCheck scanning engine.\n\n    Results from this engine may include request/response dat...
+    - class NmapScanningEngineParser(BaseEngineParser):\n\n    """\n    Parser for data from the Nmap scanning engine.\n\n    Nmap engine results include a list of ports in a 'port_table' data entry that we...
+    - class OpenVASScannerEngineParser(BaseEngineParser):\n\n    """\n    Parser for data from the OpenVAS scanning engine.\n\n    Shares all functionality with BaseEngineParser, but registered under an explicit name.\n    """\n\n    SCANNING_ENGINE = "OpenVASScanner"
+    - SCANNING_ENGINE_PARSERS: dict[str, BaseEngineParser] = {\n    engine.SCANNING_ENGINE: engine() for engine in [\n        AppCheckScanningEngineParser, BaseEngineParser, NmapScanningEngineParser, OpenVASScannerEngineParser,\n    ]\n}
+    - SCANNING_ENGINE_PARSERS: dict[str, BaseEngineParser] = {\n    engine.SCANNING_ENGINE: engine() for engine in [\n        AppCheckScanningEngineParser, BaseEngineParser, NmapScanningEngineParser, OpenVASScannerEngineParser,\n    ]\n}
+    - (item.get("meta") or {}).get("scanning_engine", {}).get("name", BaseEngineParser.SCANNING_ENGINE)
+    - def get_engine_parser(self, scanning_engine_name: str) -> BaseEngineParser:\n        return SCANNING_ENGINE_PARSERS.get(scanning_engine_name, SCANNING_ENGINE_PARSERS[BaseEngineParser.SCANNING_ENGINE])
+    - SCANNING_ENGINE_PARSERS.get(scanning_engine_name, SCANNING_ENGINE_PARSERS[BaseEngineParser.SCANNING_ENGINE])
+  dojo.tools.tenable.xml_format.TenableXMLParser:
+    - TenableXMLParser()
+  dojo.api_v2.views.DojoMetaViewSet:
+    - v2_api.register(r"metadata", DojoMetaViewSet, basename="metadata")
+  dojo.models.Engagement:
+    - model = Engagement
+    - Engagement.objects.all()
+    - Engagement.objects.all()
+    - Engagement.objects.all()
+    - Engagement.objects.filter(\n            risk_acceptance__id__in=[obj.id],\n        )
+    - Engagement.objects.filter(\n            risk_acceptance__id__in=[obj.id],\n        )
+    - model = Engagement
+    - Engagement.objects.all()
+    - Engagement.objects.none()
+    - return Engagement
+    - get_object_or_404(Engagement.objects, pk=engagement_id)
+    - user_is_authorized(Engagement, Permissions.Engagement_Edit, "eid")
+    - get_object_or_404(Engagement, pk=eid)
+    - user_is_authorized(Engagement, Permissions.Engagement_Edit, "eid")
+    - get_object_or_404(Engagement, pk=eid)
+    - get_object_or_404(Engagement, id=id)
+    - user_is_authorized(Engagement, Permissions.Engagement_Edit, "eid")
+    - Engagement.objects.none()
+    - Engagement.objects.all()
+    - Engagement.objects.all()
+    - Engagement.objects.annotate(\n        product__prod_type__member=Exists(authorized_product_type_roles),\n        product__member=Exists(authorized_product_roles),\n        product__prod_type__authoriz...
+    - receiver(pre_save, sender=Engagement)
+    - receiver(post_save, sender=Engagement)
+    - receiver(pre_save, sender=Engagement)
+    - receiver(post_delete, sender=Engagement)
+    - receiver(pre_delete, sender=Engagement)
+    - Engagement.objects.annotate(test_count=Count("test__id"))
+    - user_is_authorized(Engagement, Permissions.Engagement_Edit, "eid")
+    - Engagement.objects.get(pk=eid)
+    - user_is_authorized(Engagement, Permissions.Engagement_Delete, "eid")
+    - get_object_or_404(Engagement, pk=eid)
+    - user_is_authorized(Engagement, Permissions.Engagement_Edit, "eid")
+    - get_object_or_404(Engagement, id=eid)
+    - def get_filtered_tests(\n        self,\n        request: HttpRequest,\n        queryset: list[Test],\n        engagement: Engagement,\n    ):\n        filter_string_matching = get_system_setting("filt...
+    - get_object_or_404(Engagement, id=eid)
+    - get_object_or_404(Engagement, id=eid)
+    - user_is_authorized(Engagement, Permissions.Test_Add, "eid")
+    - Engagement.objects.get(id=eid)
+    - def get_engagement_or_product(\n        self,\n        user: Dojo_User,\n        engagement_id: int | None = None,\n        product_id: int | None = None,\n    ) -> tuple[Engagement, Product, Product ...
+    - def get_engagement_or_product(\n        self,\n        user: Dojo_User,\n        engagement_id: int | None = None,\n        product_id: int | None = None,\n    ) -> tuple[Engagement, Product, Product ...
+    - get_object_or_404(Engagement, id=engagement_id)
+    - def get_credential_form(\n        self,\n        request: HttpRequest,\n        engagement: Engagement,\n    ) -> CredMappingForm:\n        """\n        Return a new instance of a form managing creden...
+    - def get_jira_form(\n        self,\n        request: HttpRequest,\n        engagement_or_product: Engagement | Product,\n    ) -> tuple[JIRAImportScanForm | None, bool]:\n        """Returns a JiraImpor...
+    - def get_product_tab(\n        self,\n        product: Product,\n        engagement: Engagement,\n    ) -> tuple[Product_Tab, dict]:\n        """\n        Determine how the product tab will be rendered...
+    - def create_engagement(\n        self,\n        context: dict,\n    ) -> Engagement:\n        """\n        Create an engagement if the import was triggered from the product level,\n        otherwise, r...
+    - Engagement.objects.create(\n                name="AdHoc Import - " + strftime("%a, %d %b %Y %X", timezone.now().timetuple()),\n                threat_model=False,\n                api_test=False,\n   ...
+    - user_is_authorized(Engagement, Permissions.Engagement_Edit, "eid")
+    - Engagement.objects.get(id=eid)
+    - user_is_authorized(Engagement, Permissions.Engagement_Edit, "eid")
+    - Engagement.objects.get(id=eid)
+    - user_is_authorized(Engagement, Permissions.Engagement_Edit, "eid")
+    - get_object_or_404(Engagement, id=eid)
+    - user_is_authorized(Engagement, Permissions.Risk_Acceptance, "eid")
+    - get_object_or_404(Engagement, id=eid)
+    - user_is_authorized(Engagement, Permissions.Engagement_View, "eid")
+    - user_is_authorized(Engagement, Permissions.Risk_Acceptance, "eid")
+    - get_object_or_404(Engagement, pk=eid)
+    - user_is_authorized(Engagement, Permissions.Risk_Acceptance, "eid")
+    - get_object_or_404(Engagement, pk=eid)
+    - user_is_authorized(Engagement, Permissions.Risk_Acceptance, "eid")
+    - get_object_or_404(Engagement, pk=eid)
+    - user_is_authorized(Engagement, Permissions.Risk_Acceptance, "eid")
+    - get_object_or_404(Engagement, pk=eid)
+    - user_is_authorized(Engagement, Permissions.Engagement_View, "eid")
+    - Engagement.objects.filter(risk_acceptance=risk_acceptance, id=eid)
+    - user_is_authorized(Engagement, Permissions.Engagement_Edit, "eid")
+    - Engagement.objects.get(id=eid)
+    - user_is_authorized(Engagement, Permissions.Engagement_View, "eid")
+    - get_object_or_404(Engagement, pk=eid)
+    - user_is_authorized(Engagement, Permissions.Engagement_View, "eid")
+    - get_object_or_404(Engagement, id=eid)
+    - Engagement.tags.tag_model.objects.all()
+    - Engagement.tags.tag_model.objects.all()
+    - Engagement.tags.tag_model.objects.all()
+    - Engagement.tags.tag_model.objects.all()
+    - model = Engagement
+    - model = Engagement
+    - Engagement.tags.tag_model.objects.all()
+    - Engagement.tags.tag_model.objects.all()
+    - model = Engagement
+    - Engagement.tags.tag_model.objects.all()
+    - Engagement.tags.tag_model.objects.all()
+    - model = Engagement
+    - Engagement.objects.none()
+    - Engagement.objects.filter(\n                product_id=self.pid,\n            )
+    - Engagement.tags.tag_model.objects.all()
+    - Engagement.objects.none()
+    - Engagement.tags.tag_model.objects.all()
+    - Engagement.tags.tag_model.objects.all()
+    - Engagement.objects.filter(\n                product_id=self.pid,\n            )
+    - Engagement.tags.tag_model.objects.all()
+    - Engagement.tags.tag_model.objects.all()
+    - Engagement.objects.none()
+    - receiver(pre_delete, sender=Engagement)
+    - receiver(post_delete, sender=Engagement)
+    - get_object_or_404(Engagement, id=engagement_id)
+    - model = Engagement
+    - model = Engagement
+    - Engagement.objects.none()
+    - Engagement.objects.none()
+    - Engagement.objects.get(test=find.test)
+    - self.process_object_fields("engagement", "engagement_id", Engagement, data)
+    - def get_target_engagement_if_exists(\n        self,\n        engagement_id: int = 0,\n        engagement_name: str | None = None,\n        product: Product = None,\n        **kwargs: dict,\n    ) -> E...
+    - get_object_or_none(Engagement, pk=engagement_id)
+    - get_last_object_or_none(Engagement, product=product, name=engagement_name)
+    - def get_target_test_if_exists(\n        self,\n        test_id: int = 0,\n        test_title: str | None = None,\n        scan_type: str | None = None,\n        engagement: Engagement = None,\n       ...
+    - def get_or_create_engagement(\n        self,\n        engagement_id: int = 0,\n        engagement_name: str | None = None,\n        product_name: str | None = None,\n        product_type_name: str | N...
+    - Engagement.objects.select_for_update()
+    - self.validate(\n            "engagement",\n            expected_types=[Engagement],\n            required=True,\n            default=None,\n            **kwargs,\n        )
+    - self.engagement: Engagement | None = self.validate_engagement(*args, **kwargs)
+    - def validate_engagement(\n        self,\n        *args: list,\n        **kwargs: dict,\n    ) -> Engagement | None:\n        return self.validate(\n            "engagement",\n            expected_type...
+    - self.validate(\n            "engagement",\n            expected_types=[Engagement],\n            required=False,\n            default=None,\n            **kwargs,\n        )
+    - isinstance(obj, Engagement)
+    - isinstance(obj, Finding | Engagement | Finding_Group)
+    - isinstance(obj, Finding | Engagement | Finding_Group)
+    - isinstance(obj, Finding | Engagement | Finding_Group)
+    - isinstance(obj, Finding | Engagement)
+    - isinstance(obj, Engagement)
+    - dojo_model_from_id(model=Engagement)
+    - dojo_model_from_id(model=Engagement)
+    - dojo_model_from_id(model=Engagement)
+    - Engagement.objects.filter(name=engagement)
+    - Engagement.objects.filter(product=product)
+    - Engagement.objects.filter(\n            product=Product.objects.get(id=product))
+    - Engagement.objects.filter(\n            product=Product.objects.get(id=product))
+    - get_object_or_404(Engagement, id=objid)
+    - get_object_or_404(Engagement, id=objid)
+    - get_object_or_404(Engagement, id=objid)
+    - def create_notification(\n    event: str | None = None,\n    title: str | None = None,\n    finding: Finding | None = None,\n    test: Test | None = None,\n    engagement: Engagement | None = None,\n ...
+    - Engagement.objects.filter(product=product)
+    - Engagement.objects.filter(product=prod, active=True)
+    - Engagement.objects.filter(product=prod, active=False)
+    - Engagement.objects.filter(product=prod, active=True, status="In Progress")
+    - Engagement.objects.filter(~Q(status="In Progress"), product=prod, active=True)
+    - Engagement.objects.filter(product=prod, active=False)
+    - Engagement.objects.get(product=product, name=_("Ad Hoc Engagement"))
+    - try:\n            return Engagement.objects.get(product=product, name=_("Ad Hoc Engagement"))\n        except Engagement.DoesNotExist:\n            return Engagement.objects.create(\n                n...
+    - Engagement.objects.create(\n                name=_("Ad Hoc Engagement"),\n                target_start=timezone.now(),\n                target_end=timezone.now(),\n                active=False, product=product)
+    - def get_test(self, engagement: Engagement, test_type: Test_Type):\n        if test := Test.objects.filter(engagement=engagement).first():\n            return test\n        return Test.objects.create(\...

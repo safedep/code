@@ -1,0 +1,65 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "data:serialization",
+      "evidence": [
+        {
+          "snippet": "class TestImportFindingActionSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Test_Import_Finding_Action\n        fields = \"__all__\""
+        },
+        {
+          "snippet": "class FindingMetaSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = DojoMeta\n        fields = (\"name\", \"value\")"
+        },
+        {
+          "snippet": "class VulnerabilityIdSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Vulnerability_Id\n        fields = [\"vulnerability_id\"]"
+        },
+        {
+          "snippet": "class ProductSerializer(TaggitSerializer, serializers.ModelSerializer):\n    findings_count = serializers.SerializerMethodField()\n    findings_list = serializers.SerializerMethodField()\n\n    tags = ..."
+        },
+        {
+          "snippet": "class ExecutiveSummarySerializer(serializers.Serializer):\n    engagement_name = serializers.CharField(max_length=200)\n    engagement_target_start = serializers.DateField()\n    engagement_target_end..."
+        }
+      ]
+    },
+    {
+      "capability_id": "db:sql",
+      "evidence": [
+        {
+          "snippet": "class RiskAcceptanceSerializer(serializers.ModelSerializer):\n    recommendation = serializers.SerializerMethodField()\n    decision = serializers.SerializerMethodField()\n    path = serializers.Seria..."
+        },
+        {
+          "snippet": "class StubFindingCreateSerializer(serializers.ModelSerializer):\n    test = serializers.PrimaryKeyRelatedField(queryset=Test.objects.all())\n\n    class Meta:\n        model = Stub_Finding\n        fi..."
+        },
+        {
+          "snippet": "class CredentialSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Cred_User\n        exclude = (\"password\",)"
+        },
+        {
+          "snippet": "class SLAConfigurationSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = SLA_Configuration\n        exclude = (\"async_updating\",)\n\n    def validate(se..."
+        },
+        {
+          "snippet": "class FindingToNotesSerializer(serializers.Serializer):\n    finding_id = serializers.PrimaryKeyRelatedField(\n        queryset=Finding.objects.all(), many=False, allow_null=True,\n    )\n    notes = NoteSerializer(many=True)"
+        }
+      ]
+    },
+    {
+      "capability_id": "web:api",
+      "evidence": [
+        {
+          "snippet": "class FindingToNotesSerializer(serializers.Serializer):\n    finding_id = serializers.PrimaryKeyRelatedField(\n        queryset=Finding.objects.all(), many=False, allow_null=True,\n    )\n    notes = NoteSerializer(many=True)"
+        },
+        {
+          "snippet": "class EndpointMetaImporterSerializer(serializers.Serializer):\n    file = serializers.FileField(required=True)\n    create_endpoints = serializers.BooleanField(default=True, required=False)\n    creat..."
+        },
+        {
+          "snippet": "class ReportGenerateOptionSerializer(serializers.Serializer):\n    include_finding_notes = serializers.BooleanField(default=False)\n    include_finding_images = serializers.BooleanField(default=False)..."
+        },
+        {
+          "snippet": "class ConfigurationPermissionSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Permission\n        exclude = (\"content_type\",)"
+        },
+        {
+          "snippet": "class FindingCloseSerializer(serializers.ModelSerializer):\n    is_mitigated = serializers.BooleanField(required=False)\n    mitigated = serializers.DateTimeField(required=False)\n    false_p = serial..."
+        }
+      ]
+    }
+  ]
+}

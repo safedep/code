@@ -1,0 +1,285 @@
+
+dojo:
+  dojo.filters.SimilarFindingFilterWithoutObjectLookups:
+    - finding_filter_class = SimilarFindingFilterWithoutObjectLookups if filter_string_matching else SimilarFindingFilter
+  dojo.product.queries.get_authorized_groups_for_product:
+    - get_authorized_groups_for_product(prod, Permissions.Product_View)
+  dojo.api_v2.views.ReImportScanView:
+    - v2_api.register(r"reimport-scan", ReImportScanView, basename="reimportscan")
+  dojo.github.add_external_issue_github:
+    - add_external_issue_github(find, prod, eng)
+  dojo.product_type.queries.get_authorized_product_type_groups:
+    - get_authorized_product_type_groups(\n            Permissions.Product_Type_Group_View,\n        )
+  dojo.user.queries.get_authorized_users_for_product_type:
+    - get_authorized_users_for_product_type(\n                users,\n                self.product_type,\n                Permissions.Product_Type_View,\n            )
+  dojo.forms.DeleteNotificationsWebhookForm:
+    - DeleteNotificationsWebhookForm(request.POST, **kwargs)
+    - DeleteNotificationsWebhookForm(**kwargs)
+  dojo.api_v2.views.ConfigurationPermissionViewSet:
+    - v2_api.register(r"configuration_permissions", ConfigurationPermissionViewSet, basename="permission")
+  dojo.models.Product_Type:
+    - model = Product_Type
+    - model = Product_Type
+    - Product_Type.objects.none()
+    - Product_Type(**product_type_data)
+    - Product_Type.objects.none()
+    - Product_Type.objects.none()
+    - Product_Type.objects.none()
+    - Product_Type.objects.none()
+    - Product_Type.objects.none()
+    - Product_Type.objects.none()
+    - Product_Type.objects.none()
+    - model = Product_Type
+    - model = Product_Type
+    - model = Product_Type
+    - Product_Type.objects.none()
+    - Product_Type.objects.none()
+    - Product_Type.objects.filter(pk=prod_type_id)
+    - Product_Type.objects.all()
+    - Product_Type.objects.none()
+    - Product_Type.objects.none()
+    - def get_target_product_type_if_exists(\n        self,\n        product_type_name: str | None = None,\n        **kwargs: dict,\n    ) -> Product_Type | None:\n        """\n        Query for a product t...
+    - get_object_or_none(Product_Type, name=product_type_name)
+    - def get_or_create_product_type(\n        self,\n        product_type_name: str | None = None,\n        **kwargs: dict,\n    ) -> Product_Type:\n        """\n        Fetches a product type by name if o...
+    - Product_Type.objects.select_for_update()
+    - self.count_the_duplicates(Product_Type, "name")
+    - def finding_queries(\n    prod_type: QuerySet[Product_Type],\n    request: HttpRequest,\n) -> dict[str, Any]:\n    # Get the initial list of findings the user is authorized to see\n    all_authorized_...
+    - def endpoint_queries(\n    prod_type: QuerySet[Product_Type],\n    request: HttpRequest,\n) -> dict[str, Any]:\n    endpoints_query = Endpoint_Status.objects.filter(\n        mitigated=False,\n       ...
+    - Product_Type.objects.filter(id=mtype)
+    - Product_Type.objects.filter(id__in=request.GET.getlist("test__engagement__product__prod_type", []))
+    - self.product_type: Product_Type = None
+    - Product_Type.objects.get_or_create(name="Gitlab Import")
+    - get_object_or_404(Product_Type, pk=ptid)
+    - Product_Type.objects.none()
+    - Product_Type.objects.all()
+    - Product_Type.objects.all()
+    - Product_Type.objects.annotate(\n        member=Exists(authorized_roles),\n        authorized_group=Exists(authorized_groups))
+    - receiver(post_save, sender=Product_Type)
+    - receiver(post_delete, sender=Product_Type)
+    - user_is_authorized(Product_Type, Permissions.Product_Type_View, "ptid")
+    - get_object_or_404(Product_Type, pk=ptid)
+    - user_is_authorized(Product_Type, Permissions.Product_Type_Delete, "ptid")
+    - get_object_or_404(Product_Type, pk=ptid)
+    - user_is_authorized(Product_Type, Permissions.Product_Type_Edit, "ptid")
+    - get_object_or_404(Product_Type, pk=ptid)
+    - user_is_authorized(Product_Type, Permissions.Product_Type_Manage_Members, "ptid")
+    - get_object_or_404(Product_Type, pk=ptid)
+    - user_is_authorized(Product_Type, Permissions.Product_Type_Group_Add, "ptid")
+    - get_object_or_404(Product_Type, pk=ptid)
+    - user_is_authorized(Product_Type, Permissions.Product_Type_View, "ptid")
+    - get_object_or_404(Product_Type, id=ptid)
+  dojo.finding.helper.VERIFIED_FINDINGS_QUERY:
+    - qs.filter(VERIFIED_FINDINGS_QUERY)
+  dojo.forms.DeleteStubFindingForm:
+    - DeleteStubFindingForm(request.POST, instance=finding)
+  dojo.utils.do_dedupe_finding_task:
+    - do_dedupe_finding_task(f.id)
+  dojo.finding.helper.fix_loop_duplicates:
+    - fix_loop_duplicates()
+    - fix_loop_duplicates()
+  dojo.group.queries.get_authorized_group_members_for_user:
+    - get_authorized_group_members_for_user(user)
+    - get_authorized_group_members_for_user(user)
+  dojo.finding.queries.get_authorized_findings:
+    - get_authorized_findings(Permissions.Finding_Edit)
+    - get_authorized_findings(\n            Permissions.Finding_View,\n        )
+    - get_authorized_findings(Permissions.Finding_View)
+    - get_authorized_findings(Permissions.Finding_View, queryset, self.user)
+    - get_authorized_findings(Permissions.Finding_View, parent)
+    - get_authorized_findings(Permissions.Finding_View, duplicate_finding_query_set)
+    - get_authorized_findings(Permissions.Finding_View)
+    - get_authorized_findings(Permissions.Finding_View)
+    - get_authorized_findings(\n                    Permissions.Finding_Delete, finds,\n                )
+    - get_authorized_findings(\n                    Permissions.Finding_Edit, finds,\n                )
+    - get_authorized_findings(Permissions.Risk_Acceptance)
+    - get_authorized_findings(Permissions.Risk_Acceptance)
+    - get_authorized_findings(Permissions.Finding_View)
+    - get_authorized_findings(\n        Permissions.Finding_View,\n        user=request.user,\n    )
+    - get_authorized_findings(Permissions.Finding_View)
+    - get_authorized_findings(Permissions.Finding_View)
+    - get_authorized_findings(Permissions.Finding_View)
+    - get_authorized_findings(Permissions.Finding_View, user=get_current_user())
+  dojo.forms.Delete_Dev_EnvironmentForm:
+    - Delete_Dev_EnvironmentForm(instance=de)
+    - Delete_Dev_EnvironmentForm(request.POST, instance=de)
+  dojo.utils.add_language:
+    - add_language(\n                test.engagement.product, lang, files=language_list[lang],\n            )
+  dojo.authorization.authorization.user_has_permission:
+    - user_has_permission(\n                self.context["request"].user,\n                data.get("group"),\n                Permissions.Group_Manage_Members,\n            )
+    - user_has_permission(\n            self.context["request"].user,\n            data.get("group"),\n            Permissions.Group_Add_Owner,\n        )
+    - user_has_permission(\n                self.context["request"].user,\n                data.get("product"),\n                Permissions.Product_Manage_Members,\n            )
+    - user_has_permission(\n            self.context["request"].user,\n            data.get("product"),\n            Permissions.Product_Member_Add_Owner,\n        )
+    - user_has_permission(\n                self.context["request"].user,\n                data.get("product"),\n                Permissions.Product_Group_Add,\n            )
+    - user_has_permission(\n            self.context["request"].user,\n            data.get("product"),\n            Permissions.Product_Group_Add_Owner,\n        )
+    - user_has_permission(\n                self.context["request"].user,\n                data.get("product_type"),\n                Permissions.Product_Type_Manage_Members,\n            )
+    - user_has_permission(\n            self.context["request"].user,\n            data.get("product_type"),\n            Permissions.Product_Type_Member_Add_Owner,\n        )
+    - user_has_permission(\n                self.context["request"].user,\n                data.get("product_type"),\n                Permissions.Product_Type_Group_Add,\n            )
+    - user_has_permission(\n            self.context["request"].user,\n            data.get("product_type"),\n            Permissions.Product_Type_Group_Add_Owner,\n        )
+    - user_has_permission(request.user, group, Permissions.Group_Add_Owner)
+    - user_has_permission(request.user, member.group, Permissions.Group_Add_Owner)
+    - user_has_permission(user, product, permission)
+    - user_has_permission(user, product, permission)
+    - user_has_permission(user, product, permission)
+    - user_has_permission(user, product, permission)
+    - user_has_permission(request.user, product,\n                                                                                    Permissions.Product_Member_Add_Owner)
+    - user_has_permission(request.user, member.product,\n                                                                Permissions.Product_Member_Add_Owner)
+    - user_has_permission(request.user, group.product,\n                                                               Permissions.Product_Group_Add_Owner)
+    - user_has_permission(request.user, product,\n                                                                                    Permissions.Product_Group_Add_Owner)
+    - user_has_permission(user, product_type, permission)
+    - user_has_permission(user, product_type, permission)
+    - user_has_permission(user, product_type, permission)
+    - user_has_permission(user, product_type, permission)
+    - user_has_permission(request.user, pt, Permissions.Product_Type_Member_Add_Owner)
+    - user_has_permission(request.user, member.product_type, Permissions.Product_Type_Member_Add_Owner)
+    - user_has_permission(request.user, pt, Permissions.Product_Type_Group_Add_Owner)
+    - user_has_permission(request.user, group.product_type, Permissions.Product_Type_Group_Add_Owner)
+    - user_has_permission(\n            request.user,\n            engagement,\n            Permissions.Engagement_Edit)
+    - user_has_permission(crum.get_current_user(), obj, Permissions[permission])
+    - user_has_permission(request.user, engagement, Permissions.Engagement_View)
+  dojo.utils.match_finding_to_existing_findings:
+    - match_finding_to_existing_findings(\n                    finding, product=finding.test.engagement.product,\n                )
+    - match_finding_to_existing_findings(\n                                        find, product=find.test.engagement.product,\n                                    )
+  dojo.models.IMPORT_CLOSED_FINDING:
+    - Test_Import_Finding_Action(\n                test_import=test_import,\n                finding=finding,\n                action=IMPORT_CLOSED_FINDING,\n            )
+  dojo.forms.NoteTypeForm:
+    - NoteTypeForm()
+    - NoteTypeForm(request.POST)
+  dojo.api_v2.views.EngagementViewSet:
+    - v2_api.register(r"engagements", EngagementViewSet, basename="engagement")
+  dojo.api_v2.views.ToolTypesViewSet:
+    - v2_api.register(r"tool_types", ToolTypesViewSet, basename="tool_type")
+  dojo.finding.urls.urlpatterns aliased as finding_urls:
+    - ur += finding_urls
+  dojo.github.reopen_external_issue_github:
+    - reopen_external_issue_github(find, note, prod, eng)
+  dojo.utils.redirect:
+    - redirect(request, post["return_url"])
+    - redirect(request, return_url)
+  dojo.models.GITHUB_Conf:
+    - model = GITHUB_Conf
+    - model = GITHUB_Conf
+    - model = GITHUB_Conf
+    - GITHUB_Conf.objects.all()
+    - GITHUB_Conf()
+    - GITHUB_Conf.objects.all()
+    - get_object_or_404(GITHUB_Conf, pk=tid)
+  dojo.forms.Product_TypeForm:
+    - Product_TypeForm()
+    - Product_TypeForm(request.POST)
+    - Product_TypeForm(instance=pt)
+    - Product_TypeForm(request.POST, instance=pt)
+  dojo.product_type.queries.get_authorized_global_groups_for_product_type:
+    - get_authorized_global_groups_for_product_type(pt, Permissions.Product_Type_View)
+  dojo.tools.ptart.retest_parser.PTARTRetestParser:
+    - PTARTRetestParser()
+  dojo.authorization.authorization.user_has_global_permission:
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(Permissions.Finding_Add)
+    - user_has_global_permission(Permissions.Finding_Edit)
+    - user_has_global_permission(Permissions.Finding_Edit)
+    - user_has_global_permission(Permissions.Finding_Add)
+    - user_has_global_permission(Permissions.Finding_Edit)
+    - user_has_global_permission(Permissions.Finding_Delete)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(Permissions.Product_Type_Add)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(crum.get_current_user(), Permissions[permission])
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(user, permission)
+    - user_has_global_permission(user, permission)
+  dojo.forms.Add_Group_MemberForm:
+    - Add_Group_MemberForm(initial={"group": group.id})
+    - Add_Group_MemberForm(request.POST, initial={"group": group.id})
+  dojo.forms.DeleteNoteForm:
+    - DeleteNoteForm(request.POST, instance=note)
+  dojo.utils.get_zero_severity_level:
+    - get_zero_severity_level()
+    - get_zero_severity_level()
+    - get_zero_severity_level()
+    - get_zero_severity_level()
+  dojo.models.Notifications:
+    - model = Notifications
+    - Notifications.objects.filter(template=True)
+    - Notifications.objects.filter(\n                user=user, product=product, template=template,\n            )
+    - Notifications.objects.none()
+    - Notifications.objects.all()
+    - model = Notifications
+    - model = Notifications
+    - def __init__(\n        self,\n        *_args: list,\n        system_notifications: Notifications | None = None,\n        system_settings: System_Settings | None = None,\n        **_kwargs: dict,\n    ...
+    - def _get_notifications_object(self) -> Notifications:\n        """Set the system Notifications object on the class."""\n        try:\n            return Notifications.objects.get(user=None, template=False)\n        except Exception:\n            return Notifications()
+    - Notifications.objects.get(user=None, template=False)
+    - Notifications()
+    - Notifications._meta.get_field(event)
+    - Notifications.objects.filter(\n            user__username__in=kwargs["recipients"],\n            user__is_active=True,\n            product=None,\n        )
+    - Notifications.merge_notifications_list(\n                    [self.system_notifications, recipient_notifications],\n                )
+    - Notifications.objects.filter(\n                        Q(product_id=self.product) | Q(product__isnull=True),\n                    )
+    - Notifications.merge_notifications_list(\n            applicable_notifications,\n        )
+    - def _process_notifications(\n        self,\n        event: str | None,\n        notifications: Notifications | None = None,\n        **kwargs: dict,\n    ) -> None:\n        # Quick break out if we do...
+    - Notifications.objects.get(user=None, product__isnull=True, template=False)
+    - try:\n            notifications = Notifications.objects.get(user=None, product__isnull=True, template=False)\n        except Notifications.DoesNotExist:\n            notifications = Notifications(user=None, template=False)\n\n        return notifications
+    - Notifications(user=None, template=False)
+    - def get_form(self, request: HttpRequest, notifications: Notifications):\n        # Set up the args for the form\n        args = [request.POST] if request.method == "POST" else []\n        # Set the in...
+    - def get_initial_context(self, request: HttpRequest, notifications: Notifications, scope: str):\n        return {\n            "form": self.get_form(request, notifications),\n            "scope": scope...
+    - Notifications.objects.get(user=request.user, product__isnull=True)
+    - try:\n            notifications = Notifications.objects.get(user=request.user, product__isnull=True)\n        except Notifications.DoesNotExist:\n            notifications = Notifications(user=request.user)\n        return notifications
+    - Notifications(user=request.user)
+    - Notifications.objects.get(template=True)
+    - try:\n            notifications = Notifications.objects.get(template=True)\n        except Notifications.DoesNotExist:\n            notifications = Notifications(user=None, template=True)\n        return notifications
+    - Notifications(user=None, template=True)
+    - Notifications.objects.filter(user=request.user)
+    - Notifications.objects.filter(user=request.user)
+    - Notifications(user=request.user, product=prod)
+    - Notifications.objects.get(template=True)
+    - Notifications(user=instance)
+  dojo.authorization.authorization.role_has_permission:
+    - role_has_permission(request_user.global_role.role.id, permission)
+    - role_has_permission(request_user.global_role.role.id, permission)
+  dojo.product_type.queries.get_authorized_members_for_product_type:
+    - get_authorized_members_for_product_type(prod.prod_type, Permissions.Product_Type_View)
+    - get_authorized_members_for_product_type(pt, Permissions.Product_Type_View)
+    - get_authorized_members_for_product_type(pt, Permissions.Product_Type_Manage_Members)
+  dojo.forms.CopyTestForm:
+    - CopyTestForm(engagements=engagement_list)
+    - CopyTestForm(request.POST, engagements=engagement_list)
+  dojo.tools.acunetix.parse_acunetix360_json.AcunetixJSONParser:
+    - AcunetixJSONParser()
+  dojo.filters.EngagementTestFilter:
+    - filter_class = EngagementTestFilterWithoutObjectLookups if filter_string_matching else EngagementTestFilter
+  dojo.tools.parser_test.ParserTest:
+    - ParserTest(\n            name=self.ID, type=self.ID, version="",\n        )
+    - ParserTest(\n            name=data.get("name", self.ID),\n            type=data.get("type", self.ID),\n            version=data.get("version"),\n        )
+    - ParserTest(name=self.ID, type=self.ID, version=None)
+    - ParserTest(\n            name=scanner_name,\n            type=scanner_type,\n            version=scanner_version,\n        )
+    - ParserTest(\n            name=self.ID, type=self.ID, version=data.get("version").lstrip("v"),\n        )
+    - ParserTest(\n            name="Pen Test Report",\n            type="Pen Test",\n            version="",\n        )
+    - ParserTest(\n            name=parsername,\n            type=parsername,\n            version="",\n        )
+    - ParserTest(\n                name=run["tool"]["driver"]["name"],\n                type=run["tool"]["driver"]["name"],\n                version=run["tool"]["driver"].get("version"),\n            )
+    - ParserTest(\n            name=self.ID,\n            type=data["provider_name"],\n            version=last_run.get("version"),\n        )
+  dojo.models.Regulation:
+    - model = Regulation
+    - Regulation.objects.none()
+    - Regulation.objects.all()
+    - model = Regulation
+    - Regulation()
+    - Regulation.objects.get(pk=ttid)
+    - Regulation.objects.filter(pk=ttid)
+    - Regulation.objects.all()
+  dojo.models.Notification_Webhooks:
+    - model = Notification_Webhooks

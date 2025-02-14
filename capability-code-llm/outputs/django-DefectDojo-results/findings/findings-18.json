@@ -1,0 +1,45 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "scraping:web",
+      "evidence": [
+        {
+          "snippet": "driver.find_element(By.CSS_SELECTOR, \"input.btn.btn-primary\")"
+        },
+        {
+          "snippet": "driver.find_elements(By.NAME, \"group_name\")"
+        },
+        {
+          "snippet": "driver.find_element(By.LINK_TEXT, \"QA Test\")"
+        },
+        {
+          "snippet": "driver.find_element(By.XPATH, \"//select[@name='products']\")"
+        },
+        {
+          "snippet": "element.find_elements(By.TAG_NAME, \"option\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "testing:automation",
+      "evidence": [
+        {
+          "snippet": "driver.find_element(By.ID, \"id_role\")"
+        },
+        {
+          "snippet": "driver.find_element(By.CSS_SELECTOR, \"input.btn.btn-danger\")"
+        },
+        {
+          "snippet": "EC.presence_of_element_located((By.ID, \"id_products\"))"
+        },
+        {
+          "snippet": "driver.find_element(By.ID, \"show-filters\")"
+        },
+        {
+          "snippet": "driver.find_element(By.ID, \"apply\")"
+        }
+      ]
+    }
+  ]
+}

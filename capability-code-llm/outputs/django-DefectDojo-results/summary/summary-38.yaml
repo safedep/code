@@ -1,0 +1,304 @@
+
+dojo:
+  dojo.api_v2.serializers:
+    - serializers.ReportGenerateSerializer(data)
+    - extend_schema(\n        methods=["GET"],\n        responses={status.HTTP_200_OK: serializers.TestToNotesSerializer},\n    )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.AddNewNoteOptionSerializer,\n        responses={status.HTTP_201_CREATED: serializers.NoteSerializer},\n    )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.AddNewNoteOptionSerializer,\n        responses={status.HTTP_201_CREATED: serializers.NoteSerializer},\n    )
+    - serializers.AddNewNoteOptionSerializer(\n                data=request.data,\n            )
+    - serializers.NoteSerializer(\n                {"author": author, "entry": entry, "private": private},\n            )
+    - serializers.TestToNotesSerializer(\n            {"test_id": test, "notes": notes},\n        )
+    - extend_schema(\n        methods=["GET"],\n        responses={status.HTTP_200_OK: serializers.TestToFilesSerializer},\n    )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.AddNewFileOptionSerializer,\n        responses={status.HTTP_201_CREATED: serializers.FileSerializer},\n    )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.AddNewFileOptionSerializer,\n        responses={status.HTTP_201_CREATED: serializers.FileSerializer},\n    )
+    - serializers.FileSerializer(data=request.data)
+    - serializers.FileSerializer(file)
+    - serializers.TestToFilesSerializer(\n            {"test_id": test, "files": files},\n        )
+    - extend_schema(\n        methods=["GET"],\n        responses={\n            status.HTTP_200_OK: serializers.RawFileSerializer,\n        },\n    )
+    - serializer_class = serializers.TestTypeSerializer
+    - serializer_class = serializers.TestImportSerializer
+    - serializer_class = serializers.ToolConfigurationSerializer
+    - serializer_class = serializers.ToolProductSettingsSerializer
+    - serializer_class = serializers.ToolTypeSerializer
+    - serializer_class = serializers.RegulationSerializer
+    - serializer_class = serializers.UserSerializer
+    - serializer_class = serializers.UserContactInfoSerializer
+    - serializer_class = serializers.UserProfileSerializer
+    - serializers.UserProfileSerializer(\n            {\n                "user": user,\n                "user_contact_info": user_contact_info,\n                "global_role": global_role,\n                ...
+    - serializer_class = serializers.ImportScanSerializer
+    - serializer_class = serializers.EndpointMetaImporterSerializer
+    - serializer_class = serializers.LanguageTypeSerializer
+    - serializer_class = serializers.LanguageSerializer
+    - serializer_class = serializers.ImportLanguagesSerializer
+    - serializer_class = serializers.ReImportScanSerializer
+    - serializer_class = serializers.NoteTypeSerializer
+    - serializer_class = serializers.BurpRawRequestResponseMultiSerializer
+    - serializer_class = serializers.NoteSerializer
+    - serializer_class = serializers.SystemSettingsSerializer
+    - serializer_class = serializers.NotificationsSerializer
+    - serializer_class = serializers.EngagementPresetsSerializer
+    - serializer_class = serializers.NetworkLocationsSerializer
+    - serializer_class = serializers.ConfigurationPermissionSerializer
+    - serializer_class = serializers.SLAConfigurationSerializer
+    - serializer_class = serializers.QuestionnaireQuestionSerializer
+    - serializer_class = serializers.QuestionnaireAnswerSerializer
+    - serializer_class = serializers.QuestionnaireGeneralSurveySerializer
+    - serializer_class = serializers.QuestionnaireEngagementSurveySerializer
+    - extend_schema(\n    request=OpenApiTypes.NONE,\n    parameters=[\n        OpenApiParameter(\n            "engagement_id", OpenApiTypes.INT, OpenApiParameter.PATH,\n        ),\n    ],\n    responses={status.HTTP_200_OK: serializers.QuestionnaireAnsweredSurveySerializer},\n    )
+    - serializers.QuestionnaireAnsweredSurveySerializer(answered_survey)
+    - serializer_class = serializers.QuestionnaireAnsweredSurveySerializer
+    - serializer_class = serializers.AnnouncementSerializer
+    - serializer_class = serializers.NotificationWebhooksSerializer
+  dojo.models.NoteHistory:
+    - model = NoteHistory
+    - NoteHistory(\n            data=instance.entry,\n            time=instance.edit_time,\n            current_editor=instance.editor,\n        )
+    - NoteHistory(\n                data=new_note.entry, time=new_note.date, current_editor=new_note.author,\n            )
+    - NoteHistory(\n                        data=note.entry, time=note.date, current_editor=note.author,\n                    )
+    - NoteHistory(note_type=note.note_type,\n                                      data=note.entry,\n                                      time=note.edit_time,\n                                      current_editor=note.editor)
+    - NoteHistory(data=note.entry,\n                                      time=note.edit_time,\n                                      current_editor=note.editor)
+  dojo.filters.ApiEndpointFilter:
+    - filterset_class = ApiEndpointFilter
+  dojo.forms.UploadThreatForm:
+    - UploadThreatForm(request.POST, request.FILES)
+    - UploadThreatForm()
+  dojo.filters.ApiFindingFilter:
+    - filterset_class = ApiFindingFilter
+  dojo.utils.get_password_requirements_string:
+    - get_password_requirements_string()
+    - get_password_requirements_string()
+  dojo.utils.get_object_or_none:
+    - get_object_or_none(Product_Type, name=product_type_name)
+    - get_object_or_none(Product, name=product_name)
+    - get_object_or_none(Product, pk=product_id)
+    - get_object_or_none(Engagement, pk=engagement_id)
+    - get_object_or_none(Test, pk=test_id)
+  dojo.api_v2.views.DojoGroupMemberViewSet:
+    - v2_api.register(r"dojo_group_members", DojoGroupMemberViewSet, basename="dojo_group_member")
+  dojo.forms.EditDojoUserForm:
+    - EditDojoUserForm(instance=user)
+    - EditDojoUserForm(request.POST, instance=user)
+  dojo.utils.test_valentijn:
+    - test_valentijn(finding, Notes.objects.all().first())
+  dojo.tools.clair.clairklar_parser.ClairKlarScan:
+    - ClairKlarScan()
+  dojo.filters.EndpointFilterWithoutObjectLookups:
+    - filter_class = EndpointFilterWithoutObjectLookups if filter_string_matching else EndpointFilter
+    - filter_class = EndpointFilterWithoutObjectLookups if filter_string_matching else EndpointFilter
+    - filter_class = EndpointFilterWithoutObjectLookups if filter_string_matching else EndpointFilter
+  dojo.forms.DojoGroupForm:
+    - DojoGroupForm(*args, **kwargs)
+    - DojoGroupForm(*args, **kwargs)
+  dojo.forms.DeleteProduct_API_Scan_ConfigurationForm:
+    - DeleteProduct_API_Scan_ConfigurationForm(instance=product_api_scan_configuration)
+  dojo.forms.AddGeneralQuestionnaireForm:
+    - AddGeneralQuestionnaireForm()
+    - AddGeneralQuestionnaireForm(request.POST)
+  dojo.tools.deepfence_threatmapper.secret.DeepfenceThreatmapperSecret:
+    - DeepfenceThreatmapperSecret()
+  dojo.api_v2.views.JiraInstanceViewSet:
+    - v2_api.register(r"jira_instances", JiraInstanceViewSet, basename="jira_instance")
+    - v2_api.register(r"jira_configurations", JiraInstanceViewSet, basename="jira_configurations")
+  dojo.github.update_external_issue_github:
+    - update_external_issue_github(find, prod, eng)
+  dojo.tools.factory.requires_file:
+    - requires_file(scan_type)
+    - requires_file(scan_type)
+    - requires_file(self.scan_type)
+  dojo.engagement.queries.get_authorized_engagements:
+    - get_authorized_engagements(Permissions.Engagement_View)
+    - get_authorized_engagements(Permissions.Engagement_View)
+    - get_authorized_engagements(Permissions.Engagement_View)
+    - get_authorized_engagements(Permissions.Engagement_View)
+    - get_authorized_engagements(Permissions.Engagement_View)
+    - get_authorized_engagements(Permissions.Engagement_View)
+    - get_authorized_engagements(Permissions.Engagement_View)
+    - get_authorized_engagements(Permissions.Engagement_View)
+    - get_authorized_engagements(Permissions.Engagement_View)
+    - get_authorized_engagements(Permissions.Engagement_Edit)
+    - get_authorized_engagements(Permissions.Engagement_View)
+    - get_authorized_engagements(Permissions.Engagement_View)
+    - get_authorized_engagements(Permissions.Engagement_View)
+    - get_authorized_engagements(Permissions.Engagement_Edit)
+  dojo.utils.get_enabled_notifications_list:
+    - get_enabled_notifications_list()
+    - get_enabled_notifications_list()
+  dojo.pipeline.cleanup_old_groups_for_user:
+    - cleanup_old_groups_for_user(user, request.META[settings.AUTH_REMOTEUSER_GROUPS_HEADER].split(","))
+  dojo.tools.api_sonarqube.parser.SCAN_SONARQUBE_API:
+    - return test_type.name == SCAN_SONARQUBE_API
+    - test_type = finding.test.test_type\n\n    if test_type.name == SCAN_SONARQUBE_API:\n        from dojo.tools.api_sonarqube.updater import SonarQubeApiUpdater\n        SonarQubeApiUpdater().update_sonarqube_finding(finding)
+  dojo.api_v2.views.JiraIssuesViewSet:
+    - v2_api.register(r"jira_finding_mappings", JiraIssuesViewSet, basename="jira_issue")
+  dojo.notes.urls.urlpatterns aliased as notes_urls:
+    - ur += notes_urls
+  dojo.banner.urls.urlpatterns aliased as banner_urls:
+    - ur += banner_urls
+  dojo.authorization.authorization_decorators.user_is_configuration_authorized:
+    - user_is_configuration_authorized("dojo.change_announcement")
+    - user_is_configuration_authorized(Permissions.Credential_Add)
+    - user_is_configuration_authorized(Permissions.Credential_View)
+    - user_is_configuration_authorized("dojo.add_development_environment")
+    - user_is_configuration_authorized("dojo.change_development_environment")
+    - user_is_configuration_authorized("dojo.add_github_conf")
+    - user_is_configuration_authorized("dojo.view_github_conf")
+    - user_is_configuration_authorized("dojo.delete_github_conf")
+    - user_is_configuration_authorized("auth.change_permission")
+    - user_is_configuration_authorized("dojo.view_note_type")
+    - user_is_configuration_authorized("dojo.change_note_type")
+    - user_is_configuration_authorized("dojo.change_note_type")
+    - user_is_configuration_authorized("dojo.change_note_type")
+    - user_is_configuration_authorized("dojo.add_note_type")
+    - user_is_configuration_authorized("dojo.add_regulation")
+    - user_is_configuration_authorized("dojo.change_regulation")
+    - user_is_configuration_authorized("dojo.add_sla_configuration")
+    - user_is_configuration_authorized("dojo.change_sla_configuration")
+    - user_is_configuration_authorized("dojo.view_sla_configuration")
+    - user_is_configuration_authorized("dojo.change_engagement_survey")
+    - user_is_configuration_authorized("dojo.delete_engagement_survey")
+    - user_is_configuration_authorized("dojo.add_engagement_survey")
+    - user_is_configuration_authorized("dojo.view_engagement_survey")
+    - user_is_configuration_authorized("dojo.view_question")
+    - user_is_configuration_authorized("dojo.add_question")
+    - user_is_configuration_authorized("dojo.change_question")
+    - user_is_configuration_authorized("dojo.change_question")
+    - user_is_configuration_authorized("dojo.add_engagement_survey")
+    - user_is_configuration_authorized("dojo.view_engagement_survey")
+    - user_is_configuration_authorized("dojo.delete_engagement_survey")
+    - user_is_configuration_authorized("dojo.delete_engagement_survey")
+    - user_is_configuration_authorized("dojo.add_test_type")
+    - user_is_configuration_authorized("dojo.change_test_type")
+    - user_is_configuration_authorized("dojo.add_tool_configuration")
+    - user_is_configuration_authorized("dojo.change_tool_configuration")
+    - user_is_configuration_authorized("dojo.view_tool_configuration")
+    - user_is_configuration_authorized("dojo.add_tool_type")
+    - user_is_configuration_authorized("dojo.change_tool_type")
+    - user_is_configuration_authorized("dojo.view_tool_type")
+    - user_is_configuration_authorized("auth.view_user")
+    - user_is_configuration_authorized("auth.add_user")
+    - user_is_configuration_authorized("auth.view_user")
+    - user_is_configuration_authorized("auth.change_user")
+    - user_is_configuration_authorized("auth.delete_user")
+    - user_is_configuration_authorized("auth.change_permission")
+  dojo.endpoint.queries.get_authorized_endpoints:
+    - get_authorized_endpoints(Permissions.Endpoint_View)
+    - get_authorized_endpoints(Permissions.Endpoint_View, endpoints, request.user)
+    - get_authorized_endpoints(Permissions.Endpoint_Delete, endpoints, request.user)
+    - get_authorized_endpoints(Permissions.Endpoint_Edit, endpoints, request.user)
+    - get_authorized_endpoints(Permissions.Endpoint_View, parent)
+    - get_authorized_endpoints(Permissions.Endpoint_View, parent)
+    - get_authorized_endpoints(Permissions.Endpoint_View)
+  dojo.product_type.queries.get_authorized_product_types:
+    - get_authorized_product_types(\n            Permissions.Product_Type_View,\n        )
+    - get_authorized_product_types(Permissions.Product_Type_View)
+    - get_authorized_product_types(Permissions.Product_Type_View)
+    - get_authorized_product_types(Permissions.Product_Type_View)
+    - get_authorized_product_types(Permissions.Product_Type_View)
+    - get_authorized_product_types(Permissions.Product_Type_View)
+    - get_authorized_product_types(Permissions.Product_Type_View)
+    - get_authorized_product_types(Permissions.Product_Type_View)
+    - get_authorized_product_types(Permissions.Product_Type_Member_Add_Owner)
+    - get_authorized_product_types(Permissions.Product_Type_Add_Product)
+    - get_authorized_product_types(Permissions.Product_Type_Member_Add_Owner)
+    - get_authorized_product_types(Permissions.Product_Type_View)
+    - get_authorized_product_types(Permissions.Product_Type_View)
+    - get_authorized_product_types(Permissions.Product_Type_View)
+    - get_authorized_product_types(Permissions.Product_Type_View)
+    - get_authorized_product_types(Permissions.Product_Type_Add_Product)
+    - get_authorized_product_types(Permissions.Product_Type_View)
+    - get_authorized_product_types(Permissions.Product_Type_Add_Product)
+    - get_authorized_product_types(permission)
+  dojo.endpoint.views.get_endpoint_ids:
+    - get_endpoint_ids(\n            Endpoint.objects.filter(product=product).distinct(),\n        )
+    - get_endpoint_ids(\n            Endpoint.objects.filter(product=engagement.product).distinct(),\n        )
+  dojo.utils.to_str_typed:
+    - to_str_typed(sender)
+    - to_str_typed(instance)
+    - to_str_typed(sender)
+    - to_str_typed(instance)
+    - to_str_typed(sender)
+    - to_str_typed(instance)
+    - to_str_typed(sender)
+    - to_str_typed(instance)
+    - to_str_typed(sender)
+    - to_str_typed(instance)
+    - to_str_typed(obj)
+    - to_str_typed(obj)
+    - to_str_typed(obj)
+    - to_str_typed(obj)
+    - to_str_typed(obj)
+    - to_str_typed(obj)
+    - to_str_typed(obj)
+    - to_str_typed(obj)
+    - to_str_typed(obj)
+    - to_str_typed(obj)
+    - to_str_typed(obj)
+    - to_str_typed(obj)
+    - to_str_typed(obj)
+    - to_str_typed(obj)
+    - to_str_typed(obj)
+    - to_str_typed(obj)
+    - to_str_typed(obj)
+  dojo.api_v2.views.AnnouncementViewSet:
+    - v2_api.register(r"announcements", AnnouncementViewSet, basename="announcement")
+  dojo.api_v2.views.DojoGroupViewSet:
+    - v2_api.register(r"dojo_groups", DojoGroupViewSet, basename="dojo_group")
+  dojo.api_v2.views.ProductTypeMemberViewSet:
+    - v2_api.register(r"product_type_members", ProductTypeMemberViewSet, basename="product_type_member")
+  dojo.models.Announcement:
+    - Announcement.objects.all()
+    - receiver(post_save, sender=Announcement)
+    - Announcement.objects.get(id=1)
+    - try:\n            announcement = Announcement.objects.get(id=1)\n            form = AnnouncementRemoveForm(\n                initial={\n                    "message": announcement.message,\n          ...
+    - Announcement.objects.all()
+    - Announcement.objects.get_or_create(id=1)
+    - model = Announcement
+    - Announcement.objects.none()
+    - Announcement.objects.all()
+    - model = Announcement
+    - Announcement.objects.get_or_create(id=1)
+  dojo.finding.helper.CLOSED_FINDINGS_QUERY:
+    - qs.filter(CLOSED_FINDINGS_QUERY)
+    - all_findings_within_date_range.filter(CLOSED_FINDINGS_QUERY)
+  dojo.filters.FindingFilter:
+    - finding_filter_class = FindingFilterWithoutObjectLookups if filter_string_matching else FindingFilter
+    - finding_filter_class = FindingFilterWithoutObjectLookups if filter_string_matching else FindingFilter
+    - finding_filter_class = FindingFilterWithoutObjectLookups if filter_string_matching else FindingFilter
+  dojo.metrics.utils.get_in_period_details:
+    - get_in_period_details(all_findings)
+  dojo.models.Test_Type:
+    - model = Test_Type
+    - model = Test_Type
+    - Test_Type.objects.all()
+    - Test_Type.objects.none()
+    - Test_Type.objects.all()
+    - Test_Type.objects.all()
+    - Test_Type.objects.filter(test__engagement=self.engagement)
+    - Test_Type.objects.filter(test__engagement=self.engagement)
+    - model = Test_Type
+    - model = Test_Type
+    - Test_Type.objects.all()
+    - def get_or_create_test_type(\n        self,\n        test_type_name: str,\n    ) -> Test_Type:\n        """\n        Ensures that a test type exists for a given test. This function can be called\n    ...
+    - Test_Type.objects.get_or_create(name=test_type_name)
+    - Test_Type.objects.get_or_create(name=scan_type)
+    - Test_Type.objects.get(name="Mend Scan")
+    - Test_Type.objects.get_or_create(name=_("Pen Test"))
+    - def get_test(self, engagement: Engagement, test_type: Test_Type):\n        if test := Test.objects.filter(engagement=engagement).first():\n            return test\n        return Test.objects.create(\...
+    - Test_Type.objects.all()
+    - get_object_or_404(Test_Type, pk=ptid)
+    - Test_Type.objects.get_or_create(name=scan_type)
+    - Test_Type.objects.filter(active=False)
+  dojo.api_v2.prefetch:
+    - class PrefetchDojoModelViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    DojoModelViewSet,\n):\n    pass
+    - class PrefetchDojoModelViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    DojoModelViewSet,\n):\n    pass
+    - class FindingViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    mixins.UpdateModelMixin,\n    mixins.DestroyModelMixin,\n    mixins.CreateModelMixin,\n    ra_api.Accep...
+    - class FindingViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    mixins.UpdateModelMixin,\n    mixins.DestroyModelMixin,\n    mixins.CreateModelMixin,\n    ra_api.Accep...
+    - class ProductViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    mixins.CreateModelMixin,\n    mixins.DestroyModelMixin,\n    mixins.UpdateModelMixin,\n    viewsets.Gen...
+    - class ProductViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    mixins.CreateModelMixin,\n    mixins.DestroyModelMixin,\n    mixins.UpdateModelMixin,\n    viewsets.Gen...
+    - class QuestionnaireAnsweredSurveyViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    viewsets.ReadOnlyModelViewSet,\n):\n    serializer_class = serializers.Questionnair...
+    - class QuestionnaireAnsweredSurveyViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    viewsets.ReadOnlyModelViewSet,\n):\n    serializer_class = serializers.Questionnair...
+  dojo.filters.ProductEngagementsFilterWithoutObjectLookups:
+    - products_filter_class = ProductEngagementsFilterWithoutObjectLookups if filter_string_matching else ProductEngagementsFilter
+  dojo.tools.factory.get_scan_types_sorted:
+    - get_scan_types_sorted()
+    - get_scan_types_sorted()
+  dojo.forms.RiskAcceptanceForm:

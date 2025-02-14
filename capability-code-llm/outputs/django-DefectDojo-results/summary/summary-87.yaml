@@ -1,0 +1,258 @@
+
+django:
+  django.contrib.auth.password_validation.validate_password:
+    - forms.CharField(widget=forms.PasswordInput,\n        required=settings.REQUIRE_PASSWORD_ON_USER,\n        validators=[validate_password],\n        help_text="")
+  django.views.decorators.csrf.csrf_exempt:
+    - # Standard library imports\nimport logging\n\n# Third party imports\nfrom django.contrib import messages\nfrom django.contrib.admin.utils import NestedObjects\nfrom django.db import DEFAULT_DB_ALIAS\n...
+    - # Standard library imports\nimport datetime\nimport json\nimport logging\n\n# Third party imports\nfrom django.contrib import messages\nfrom django.contrib.admin.utils import NestedObjects\nfrom djang...
+  django.contrib.auth.get_user_model:
+    - get_user_model()
+  django.utils.deprecation.MiddlewareMixin:
+    - class RequestCacheMiddleware(MiddlewareMixin):\n\n    """\n    For every request, a fresh cache instance is stored in ``request.cache``.\n    The cache instance lives only as long as request does.\n    """\n\n    def process_request(self, request):\n        request.cache = RequestCache()
+  django.http.Http404:
+    - raise Http404
+    - raise Http404
+    - isinstance(e, Http404)
+    - raise Http404
+    - raise Http404
+    - raise Http404
+    - report_form = ReportOptionsForm(request.GET)\n        if report_format == "HTML":\n            return render(request,\n                          template,\n                          {"product_type": N...
+    - raise Http404
+    - report_form = ReportOptionsForm(request.GET)\n        if report_format == "HTML":\n            return render(request,\n                          template,\n                          {"product_type": p...
+    - Http404(msg)
+    - Http404()
+    - raise Http404
+    - raise Http404
+    - raise Http404
+    - raise Http404
+    - raise Http404
+    - raise Http404
+    - raise Http404
+  django.core.checks.Error:
+    - Error(\n                        f"Configuration error in HASHCODE_FIELDS_PER_SCANNER: Element {field} is not in the allowed list HASHCODE_ALLOWED_FIELDS for {scanner}.",\n                        hint=...
+  django.http.StreamingHttpResponse:
+    - StreamingHttpResponse(\n        FileIterWrapper(\n            open(settings.MEDIA_ROOT + "/" + risk_acceptance.path.name, mode="rb")))
+    - StreamingHttpResponse(FileIterWrapper(image))
+  django.db.models.Sum:
+    - Sum(Case(\n                When(Q(**{metrics_type.closed_lookup: True}), then=Value(1)),\n                output_field=IntegerField(), default=0),\n            )
+    - Sum(Case(When(age__lte=30, then=Value(1))), default=Value(0), output_field=IntegerField())
+    - Sum(Case(When(age__range=[31, 60], then=Value(1))), default=Value(0), output_field=IntegerField())
+    - Sum(Case(When(age__range=[61, 90], then=Value(1))), default=Value(0), output_field=IntegerField())
+    - Sum(Case(When(age__gt=90, then=Value(1))), default=Value(0), output_field=IntegerField())
+    - Sum(\n                    Case(When(severity__in=("Critical", "High", "Medium", "Low"),\n                              then=Value(1)),\n                         output_field=IntegerField()))
+    - Sum(\n                        Case(When(severity__in=("Critical", "High", "Medium", "Low"),\n                                then=Value(1)),\n                            output_field=IntegerField()))
+    - Sum(\n                        Case(When(severity__in=("Critical", "High", "Medium", "Low"),\n                                then=Value(1)),\n                            output_field=IntegerField()))
+    - Sum(\n                    Case(When(severity__in=("Critical", "High", "Medium", "Low"),\n                              then=Value(1)),\n                         output_field=IntegerField()))
+    - Sum(\n                        Case(When(severity__in=("Critical", "High", "Medium", "Low"),\n                                then=Value(1)),\n                            output_field=IntegerField()))
+    - Sum(\n                        Case(When(severity__in=("Critical", "High", "Medium", "Low"),\n                                then=Value(1)),\n                            output_field=IntegerField()))
+    - Sum("files")
+    - Sum("code")
+    - Sum(\n                Case(When(severity__in=("Critical", "High", "Medium", "Low"),\n                          then=Value(1)),\n                     output_field=IntegerField()))
+    - Sum(\n                Case(When(severity="Critical",\n                          then=Value(1)),\n                     output_field=IntegerField()))
+    - Sum(\n                Case(When(severity="High",\n                          then=Value(1)),\n                     output_field=IntegerField()))
+    - Sum(\n                Case(When(severity="Medium",\n                          then=Value(1)),\n                     output_field=IntegerField()))
+    - Sum(\n                Case(When(severity="Low",\n                          then=Value(1)),\n                     output_field=IntegerField()))
+    - Sum(\n                Case(When(severity="Info",\n                          then=Value(1)),\n                     output_field=IntegerField()))
+    - Sum(\n                Case(When(severity__in=("Critical", "High", "Medium", "Low"),\n                          then=Value(1)),\n                     output_field=IntegerField()))
+    - Sum(\n                Case(When(severity="Critical",\n                          then=Value(1)),\n                     output_field=IntegerField()))
+    - Sum(\n                Case(When(severity="High",\n                          then=Value(1)),\n                     output_field=IntegerField()))
+    - Sum(\n                Case(When(severity="Medium",\n                          then=Value(1)),\n                     output_field=IntegerField()))
+    - Sum(\n                Case(When(severity="Low",\n                          then=Value(1)),\n                     output_field=IntegerField()))
+    - Sum(\n                Case(When(severity="Info",\n                          then=Value(1)),\n                     output_field=IntegerField()))
+    - Sum(\n                Case(When(severity__in=("Critical", "High", "Medium", "Low"),\n                          then=Value(1)),\n                     output_field=IntegerField()))
+    - Sum(\n                Case(When(severity="Critical",\n                          then=Value(1)),\n                     output_field=IntegerField()))
+    - Sum(\n                Case(When(severity="High",\n                          then=Value(1)),\n                     output_field=IntegerField()))
+    - Sum(\n                Case(When(severity="Medium",\n                          then=Value(1)),\n                     output_field=IntegerField()))
+    - Sum(\n                Case(When(severity="Low",\n                          then=Value(1)),\n                     output_field=IntegerField()))
+    - Sum(\n                Case(When(severity="Info",\n                          then=Value(1)),\n                     output_field=IntegerField()))
+    - Sum(\n                    Case(\n                        When(\n                            severity__in=("Critical", "High", "Medium", "Low"),\n                            then=Value(1)),\n                        output_field=IntegerField()))
+    - Sum(\n                        Case(\n                            When(\n                                severity__in=("Critical", "High", "Medium", "Low"),\n                                then=Value(1)),\n                            output_field=IntegerField()))
+    - Sum(\n                    Case(\n                        When(\n                            severity__in=("Critical", "High", "Medium", "Low"),\n                            then=Value(1)),\n                        output_field=IntegerField()))
+    - Sum(\n                        Case(\n                            When(\n                                severity__in=("Critical", "High", "Medium", "Low"),\n                                then=Value(1)),\n                            output_field=IntegerField()))
+  django.utils.functional.cached_property:
+    - """\n    Product types represent the top level model, these can be business unit divisions, different offices or locations, development teams, or any other logical way of distinguishing “types” of...
+    - """\n    Product types represent the top level model, these can be business unit divisions, different offices or locations, development teams, or any other logical way of distinguishing “types” of...
+    - """\n    Product types represent the top level model, these can be business unit divisions, different offices or locations, development teams, or any other logical way of distinguishing “types” of...
+    - WEB_PLATFORM = "web"\n    IOT = "iot"\n    DESKTOP_PLATFORM = "desktop"\n    MOBILE_PLATFORM = "mobile"\n    WEB_SERVICE_PLATFORM = "web service"\n    PLATFORM_CHOICES = (\n        (WEB_SERVICE_PLATFO...
+    - WEB_PLATFORM = "web"\n    IOT = "iot"\n    DESKTOP_PLATFORM = "desktop"\n    MOBILE_PLATFORM = "mobile"\n    WEB_SERVICE_PLATFORM = "web service"\n    PLATFORM_CHOICES = (\n        (WEB_SERVICE_PLATFO...
+    - WEB_PLATFORM = "web"\n    IOT = "iot"\n    DESKTOP_PLATFORM = "desktop"\n    MOBILE_PLATFORM = "mobile"\n    WEB_SERVICE_PLATFORM = "web service"\n    PLATFORM_CHOICES = (\n        (WEB_SERVICE_PLATFO...
+    - WEB_PLATFORM = "web"\n    IOT = "iot"\n    DESKTOP_PLATFORM = "desktop"\n    MOBILE_PLATFORM = "mobile"\n    WEB_SERVICE_PLATFORM = "web service"\n    PLATFORM_CHOICES = (\n        (WEB_SERVICE_PLATFO...
+    - WEB_PLATFORM = "web"\n    IOT = "iot"\n    DESKTOP_PLATFORM = "desktop"\n    MOBILE_PLATFORM = "mobile"\n    WEB_SERVICE_PLATFORM = "web service"\n    PLATFORM_CHOICES = (\n        (WEB_SERVICE_PLATFO...
+    - title = models.CharField(max_length=511,\n                             verbose_name=_("Title"),\n                             help_text=_("A short description of the flaw."))\n    date = models.DateFi...
+    - title = models.CharField(max_length=511,\n                             verbose_name=_("Title"),\n                             help_text=_("A short description of the flaw."))\n    date = models.DateFi...
+    - title = models.CharField(max_length=511,\n                             verbose_name=_("Title"),\n                             help_text=_("A short description of the flaw."))\n    date = models.DateFi...
+    - title = models.CharField(max_length=511,\n                             verbose_name=_("Title"),\n                             help_text=_("A short description of the flaw."))\n    date = models.DateFi...
+    - GROUP_BY_OPTIONS = [("component_name", "Component Name"),\n                        ("component_name+component_version", "Component Name + Version"),\n                        ("file_path", "File path")...
+    - GROUP_BY_OPTIONS = [("component_name", "Component Name"),\n                        ("component_name+component_version", "Component Name + Version"),\n                        ("file_path", "File path")...
+    - GROUP_BY_OPTIONS = [("component_name", "Component Name"),\n                        ("component_name+component_version", "Component Name + Version"),\n                        ("file_path", "File path")...
+    - GROUP_BY_OPTIONS = [("component_name", "Component Name"),\n                        ("component_name+component_version", "Component Name + Version"),\n                        ("file_path", "File path")...
+    - title = models.TextField(max_length=1000)\n    cwe = models.IntegerField(default=None, null=True, blank=True)\n    cve = models.CharField(max_length=50,\n                           null=True,\n       ...
+  django.core.mail.backends.smtp.EmailBackend:
+    - isinstance(connection, EmailBackend)
+    - isinstance(connection, EmailBackend)
+  django.utils.encoding.force_str:
+    - force_str(value)
+    - force_str(respz["body"])
+  django.db.models.signals.post_save:
+    - receiver(post_save, sender=Dojo_User)
+    - receiver(post_save, sender=Announcement)
+    - receiver(post_save, sender=Engagement)
+    - receiver(post_save, sender=Dojo_Group)
+    - receiver(post_save, sender=Dojo_Group_Member)
+    - receiver(post_save, sender=Product)
+    - receiver(post_save, sender=Product_Type)
+    - receiver(post_save, sender=User)
+    - receiver(post_save, sender=Dojo_User)
+  django.db.models.Exists:
+    - Exists(authorized_product_type_roles)
+    - Exists(authorized_product_roles)
+    - Exists(authorized_product_type_groups)
+    - Exists(authorized_product_groups)
+    - Exists(authorized_product_type_roles)
+    - Exists(authorized_product_roles)
+    - Exists(authorized_product_type_groups)
+    - Exists(authorized_product_groups)
+    - Exists(authorized_product_type_roles)
+    - Exists(authorized_product_roles)
+    - Exists(authorized_product_type_groups)
+    - Exists(authorized_product_groups)
+    - Exists(authorized_product_type_roles)
+    - Exists(authorized_product_roles)
+    - Exists(authorized_product_type_groups)
+    - Exists(authorized_product_groups)
+    - Exists(authorized_product_type_roles)
+    - Exists(authorized_product_roles)
+    - Exists(authorized_product_type_groups)
+    - Exists(authorized_product_groups)
+    - Exists(authorized_product_type_roles)
+    - Exists(authorized_product_roles)
+    - Exists(authorized_product_type_groups)
+    - Exists(authorized_product_groups)
+    - Exists(authorized_product_type_roles)
+    - Exists(authorized_product_roles)
+    - Exists(authorized_product_type_groups)
+    - Exists(authorized_product_groups)
+    - Exists(authorized_roles)
+    - Exists(engagement_authorized_product_type_roles)
+    - Exists(engagement_authorized_product_roles)
+    - Exists(engagement_authorized_product_type_groups)
+    - Exists(engagement_authorized_product_groups)
+    - Exists(product_authorized_product_type_roles)
+    - Exists(product_authorized_product_roles)
+    - Exists(product_authorized_product_type_groups)
+    - Exists(product_authorized_product_groups)
+    - Exists(engagement_authorized_product_type_roles)
+    - Exists(engagement_authorized_product_roles)
+    - Exists(engagement_authorized_product_type_groups)
+    - Exists(engagement_authorized_product_groups)
+    - Exists(finding_group_authorized_product_type_roles)
+    - Exists(finding_group_authorized_product_roles)
+    - Exists(finding_group_authorized_product_type_groups)
+    - Exists(finding_group_authorized_product_groups)
+    - Exists(finding_authorized_product_type_roles)
+    - Exists(finding_authorized_product_roles)
+    - Exists(finding_authorized_product_type_groups)
+    - Exists(finding_authorized_product_groups)
+    - Exists(authorized_product_type_roles)
+    - Exists(authorized_product_roles)
+    - Exists(authorized_product_type_groups)
+    - Exists(authorized_product_groups)
+    - Exists(authorized_product_type_roles)
+    - Exists(authorized_product_roles)
+    - Exists(authorized_product_type_groups)
+    - Exists(authorized_product_groups)
+    - Exists(product_authorized_product_type_roles)
+    - Exists(product_authorized_product_roles)
+    - Exists(product_authorized_product_type_groups)
+    - Exists(product_authorized_product_groups)
+    - Exists(endpoint_authorized_product_type_roles)
+    - Exists(endpoint_authorized_product_roles)
+    - Exists(endpoint_authorized_product_type_groups)
+    - Exists(endpoint_authorized_product_groups)
+    - Exists(finding_authorized_product_type_roles)
+    - Exists(finding_authorized_product_roles)
+    - Exists(finding_authorized_product_type_groups)
+    - Exists(finding_authorized_product_groups)
+    - Exists(authorized_product_type_roles)
+    - Exists(authorized_product_roles)
+    - Exists(authorized_product_type_groups)
+    - Exists(authorized_product_groups)
+    - Exists(authorized_product_type_roles)
+    - Exists(authorized_product_roles)
+    - Exists(authorized_product_type_groups)
+    - Exists(authorized_product_groups)
+    - Exists(authorized_product_type_roles)
+    - Exists(authorized_product_roles)
+    - Exists(authorized_product_type_groups)
+    - Exists(authorized_product_groups)
+    - Exists(authorized_roles)
+    - Exists(authorized_groups)
+    - Exists(authorized_product_type_roles)
+    - Exists(authorized_product_roles)
+    - Exists(authorized_product_type_groups)
+    - Exists(authorized_product_groups)
+    - Exists(authorized_product_type_roles)
+    - Exists(authorized_product_roles)
+    - Exists(authorized_product_type_groups)
+    - Exists(authorized_product_groups)
+    - Exists(authorized_product_type_roles)
+    - Exists(authorized_product_roles)
+    - Exists(authorized_product_type_groups)
+    - Exists(authorized_product_groups)
+    - Exists(authorized_product_type_roles)
+    - Exists(authorized_product_roles)
+    - Exists(authorized_product_type_groups)
+    - Exists(authorized_product_groups)
+  django.db.models.signals.post_delete:
+    - receiver(post_delete, sender=Endpoint)
+    - receiver(post_delete, sender=Engagement)
+    - receiver(post_delete, sender=Finding)
+    - receiver(post_delete, sender=Test)
+    - receiver(post_delete, sender=Engagement)
+    - receiver(post_delete, sender=Dojo_Group)
+    - receiver(post_delete, sender=Dojo_Group_Member)
+    - receiver(post_delete, sender=Product)
+    - receiver(post_delete, sender=Product_Type)
+    - receiver(post_delete, sender=Test)
+  django.db.models.signals.pre_save:
+    - receiver(pre_save, sender=Engagement)
+    - receiver(pre_save, sender=Engagement)
+    - receiver(pre_save, sender=Test)
+  django.core.exceptions.MultipleObjectsReturned:
+    - ep = None\n            try:\n                ep, _ = endpoint_get_or_create(\n                    protocol=endpoint.protocol,\n                    userinfo=endpoint.userinfo,\n                    host...
+  django.template.TemplateDoesNotExist:
+    - def failure_to_add_message(message: str, exception: Exception, object: Any) -> bool:\n        if exception:\n            logger.exception(exception)\n        logger.error(message)\n        log_jira_al...
+    - template = f"notifications/{notification_type}/{event.replace('/', '')}.tpl"\n        kwargs.update({"user": user})\n        notification_message = None\n\n        # TODO: This may be deleted\n       ...
+  django.db.DEFAULT_DB_ALIAS:
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - connection = connections[DEFAULT_DB_ALIAS]
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+  django.utils.dateparse.parse_datetime:
+    - parse_datetime(parsed["issue"]["fields"]["updated"])
+    - parse_datetime(issue_from_jira.fields.updated)
+    - parse_datetime(metadata.date)
+    - parse_datetime(metadata.date)
+  django.utils.safestring.mark_safe aliased as safe:
+    - safe(inputs)
+    - safe(link)
+    - safe("Previous")
+    - safe("Next")
+  django.conf.settings.QUALYS_WAS_UNIQUE_ID:
+    - QUALYS_WAS_UNIQUE_ID = False
+    - qualys_webapp_parser(\n            file, test, QUALYS_WAS_UNIQUE_ID, enable_weakness,\n        )
+  django.core.exceptions.ObjectDoesNotExist:
+    - try:\n        ct = ContentType.objects.get_for_id(cid)\n        obj = ct.get_object_for_this_type(pk=oid)\n    except (KeyError, ObjectDoesNotExist):\n        raise Http404\n\n    product_id = None\n ...
+  django.contrib.auth.password_validation.CommonPasswordValidator:
+    - class DojoCommonPasswordValidator(CommonPasswordValidator):\n    def validate(self, password, user=None):\n        if get_system_setting("non_common_password_required"):\n            return super().validate(password, user)\n        return None
+  django.utils.translation.gettext_lazy aliased as _:

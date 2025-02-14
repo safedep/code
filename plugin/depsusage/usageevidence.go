@@ -51,9 +51,12 @@ type UsageEvidence struct {
 
 	// Line number where the usage was found
 	Line uint
+
+	// Evidence snippet
+	EvidenceSnippet string
 }
 
-func newUsageEvidence(packageHint string, module string, itemName string, alias string, isWildCardUsage bool, identifier string, filePath string, line uint) *UsageEvidence {
+func newUsageEvidence(packageHint string, module string, itemName string, alias string, isWildCardUsage bool, identifier string, filePath string, line uint, evidenceSnippet string) *UsageEvidence {
 	return &UsageEvidence{
 		PackageHint:     packageHint,
 		ModuleName:      module,
@@ -63,12 +66,13 @@ func newUsageEvidence(packageHint string, module string, itemName string, alias 
 		Identifier:      identifier,
 		FilePath:        filePath,
 		Line:            line,
+		EvidenceSnippet: evidenceSnippet,
 	}
 }
 
 func (e *UsageEvidence) String() string {
 	if e.IsWildCardUsage {
-		return fmt.Sprintf("UsageEvidence (WildCardUsage) - PackageHint: %s, Module: %s, ModuleItem: %s, Alias: %s, Identifier: %s, FilePath: %s, Line: %d", e.PackageHint, e.ModuleName, e.ModuleItem, e.ModuleAlias, e.Identifier, e.FilePath, e.Line)
+		return fmt.Sprintf("UsageEvidence (WildCardUsage) - PackageHint: %s, Module: %s, ModuleItem: %s, Alias: %s, Identifier: %s, FilePath: %s, Line: %d, EvidenceSnippet: %s", e.PackageHint, e.ModuleName, e.ModuleItem, e.ModuleAlias, e.Identifier, e.FilePath, e.Line, e.EvidenceSnippet)
 	}
-	return fmt.Sprintf("UsageEvidence - PackageHint: %s, Module: %s, ModuleItem: %s, Alias: %s, Identifier: %s, FilePath: %s, Line: %d", e.PackageHint, e.ModuleName, e.ModuleItem, e.ModuleAlias, e.Identifier, e.FilePath, e.Line)
+	return fmt.Sprintf("UsageEvidence - PackageHint: %s, Module: %s, ModuleItem: %s, Alias: %s, Identifier: %s, FilePath: %s, Line: %d, EvidenceSnippet: %s", e.PackageHint, e.ModuleName, e.ModuleItem, e.ModuleAlias, e.Identifier, e.FilePath, e.Line, e.EvidenceSnippet)
 }

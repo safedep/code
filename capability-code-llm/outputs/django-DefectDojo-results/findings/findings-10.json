@@ -1,0 +1,87 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "data:serialization",
+      "evidence": [
+        {
+          "snippet": "serializers.StringRelatedField()"
+        },
+        {
+          "snippet": "serializers.ListField(child=serializers.CharField())"
+        },
+        {
+          "snippet": "serializers.CharField(max_length=200, help_text=\"Name or email of person who accepts the risk\")"
+        },
+        {
+          "snippet": "class TextAnswerSerializer(serializers.ModelSerializer):\n    question = serializers.StringRelatedField()\n    answered_survey = QuestionnaireAnsweredSurveySerializer()\n    class Meta:\n        model = TextAnswer\n        exclude = (\"polymorphic_ctype\",)"
+        },
+        {
+          "snippet": "class AnnouncementSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Announcement\n        fields = \"__all__\"\n    def create(self, validated_data):\n        validated_data..."
+        }
+      ]
+    },
+    {
+      "capability_id": "web:api",
+      "evidence": [
+        {
+          "snippet": "class FindingViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    mixins.UpdateModelMixin,\n    mixins.DestroyModelMixin,\n    mixins.CreateModelMixin,\n    ra_api.Accep..."
+        },
+        {
+          "snippet": "class ProductViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    mixins.CreateModelMixin,\n    mixins.DestroyModelMixin,\n    mixins.UpdateModelMixin,\n    viewsets.Gen..."
+        },
+        {
+          "snippet": "class ImportScanView(mixins.CreateModelMixin, viewsets.GenericViewSet):\n\n    \"\"\"\n    Imports a scan report into an engagement or product.\n\n    By ID:\n    - Create a Product (or use an existing p..."
+        },
+        {
+          "snippet": "class QuestionnaireAnsweredSurveyViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    viewsets.ReadOnlyModelViewSet,\n):\n    serializer_class = serializers.Questionnair..."
+        },
+        {
+          "snippet": "class UserProfileView(GenericAPIView):\n    permission_classes = (IsAuthenticated,)\n    pagination_class = None\n    serializer_class = serializers.UserProfileSerializer\n\n    @action(\n        deta..."
+        }
+      ]
+    },
+    {
+      "capability_id": "auth:jwt",
+      "evidence": [
+        {
+          "snippet": "class RemoteUserAuthentication(OriginalRemoteUserAuthentication):\n    def authenticate(self, request):\n        # process only if request is comming from the trusted proxy node\n        if IPAddress(...)"
+        }
+      ]
+    },
+    {
+      "capability_id": "rest_framework:response_handling",
+      "evidence": [
+        {
+          "snippet": "Response(status=status.HTTP_204_NO_CONTENT)"
+        },
+        {
+          "snippet": "Response(data=metadata_data.data, status=status.HTTP_200_OK)"
+        },
+        {
+          "snippet": "Response(serialized_note.data, status=status.HTTP_201_CREATED)"
+        },
+        {
+          "snippet": "Response(\n                {\n                    \"message\": \"A completed checklist for this engagement already exists.\",\n                },\n                status=status.HTTP_400_BAD_REQUEST,\n            )"
+        },
+        {
+          "snippet": "Response(\n            {\"error\", \"unsupported method\"}, status=status.HTTP_400_BAD_REQUEST,\n        )"
+        }
+      ]
+    },
+    {
+      "capability_id": "auth:permission_validation",
+      "evidence": [
+        {
+          "snippet": "permission_classes = (permissions.IsSuperUser, DjangoModelPermissions)"
+        },
+        {
+          "snippet": "permission_classes = (IsAuthenticated, DjangoModelPermissions)"
+        },
+        {
+          "snippet": "permission_classes = (\n        permissions.UserHasEngagementPermission,\n        DjangoModelPermissions,\n    )"
+        }
+      ]
+    }
+  ]
+}

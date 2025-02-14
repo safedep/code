@@ -1,0 +1,302 @@
+
+dojo:
+  dojo.models.Dojo_User:
+    - Dojo_User.objects.filter(is_staff=True)
+    - Dojo_User.objects.get(username="admin")
+    - Dojo_User.objects.all()
+    - get_object_or_404(Dojo_User, pk=eid)
+    - Dojo_User.force_password_reset(request.user)
+    - def create_notification(\n    event: str | None = None,\n    title: str | None = None,\n    finding: Finding | None = None,\n    test: Test | None = None,\n    engagement: Engagement | None = None,\n ...
+    - def create_notification(\n    event: str | None = None,\n    title: str | None = None,\n    finding: Finding | None = None,\n    test: Test | None = None,\n    engagement: Engagement | None = None,\n ...
+    - def create_notification(\n    event: str | None = None,\n    title: str | None = None,\n    finding: Finding | None = None,\n    test: Test | None = None,\n    engagement: Engagement | None = None,\n ...
+    - def _create_notification_message(\n        self,\n        event: str,\n        user: Dojo_User,\n        notification_type: str,\n        kwargs: dict,\n    ) -> str:\n        template = f"notificatio...
+    - Dojo_User.objects.filter(is_superuser=True)
+    - def send_slack_notification(\n        self,\n        event: str,\n        user: Dojo_User | None = None,\n        **kwargs: dict,\n    ):\n        try:\n            # If the user has slack information...
+    - def _post_slack_message(\n        self,\n        event: str,\n        user: Dojo_User,\n        channel: str,\n        **kwargs: dict,\n    ) -> None:\n        res = requests.request(\n            met...
+    - def send_msteams_notification(\n        self,\n        event: str,\n        user: Dojo_User | None = None,\n        **kwargs: dict,\n    ):\n        try:\n            # Microsoft Teams doesn't offer d...
+    - def send_mail_notification(\n        self,\n        event: str,\n        user: Dojo_User | None = None,\n        **kwargs: dict,\n    ):\n        # Attempt to get the "to" address\n        if (recipie...
+    - def send_webhooks_notification(\n        self,\n        event: str,\n        user: Dojo_User | None = None,\n        **kwargs: dict,\n    ):\n        for endpoint in self._get_webhook_endpoints(user=u...
+    - def _get_webhook_endpoints(\n        self,\n        user: Dojo_User | None = None,\n    ) -> QuerySet[Notification_Webhooks]:\n        endpoints = Notification_Webhooks.objects.filter(owner=user)\n   ...
+    - def send_alert_notification(\n        self,\n        event: str,\n        user: Dojo_User | None = None,\n        **kwargs: dict,\n    ):\n        logger.debug("sending alert notification to %s", user...
+    - def _get_user_to_send_notifications_to(\n        self,\n    ) -> QuerySet[Dojo_User]:\n        """Determine the users we should send notifications to based on product and product type permissions."""\...
+    - Dojo_User.objects.filter(is_active=True)
+    - def _send_single_notification_to_user(\n        self,\n        user: Dojo_User,\n        event: str | None = None,\n        **kwargs: dict,\n    ) -> None:\n        """Send a notification to a single ...
+    - Dojo_User.objects.get(id=request.user.id)
+    - def remove_finding_from_risk_acceptance(user: Dojo_User, risk_acceptance: Risk_Acceptance, finding: Finding) -> None:\n    logger.debug("removing finding %i from risk acceptance %i", finding.id, risk_...
+    - Dojo_User.generate_full_name(user)
+    - def add_findings_to_risk_acceptance(user: Dojo_User, risk_acceptance: Risk_Acceptance, findings: list[Finding]) -> None:\n    for finding in findings:\n        if not finding.duplicate or finding.risk...
+    - Dojo_User.generate_full_name(user)
+    - def simple_risk_accept(user: Dojo_User, finding: Finding, perform_save=True) -> None:\n    if not finding.test.engagement.product.enable_simple_risk_acceptance:\n        raise PermissionDenied\n\n    ...
+    - Dojo_User.generate_full_name(user)
+    - def risk_unaccept(user: Dojo_User, finding: Finding, perform_save=True, post_comments=True) -> None:\n    logger.debug("unaccepting finding %i:%s if it is currently risk accepted", finding.id, finding...
+    - Dojo_User.generate_full_name(user)
+    - Dojo_User.generate_full_name(user)
+    - Dojo_User.objects.filter(is_active=True)
+    - Dojo_User.objects.none()
+    - Dojo_User.objects.none()
+    - Dojo_User.objects.all()
+    - Dojo_User.objects.get(username=username)
+    - get_object_or_404(Dojo_User, pk=request.user.id)
+    - get_object_or_404(Dojo_User, pk=request.user.id)
+    - Dojo_User.disable_force_password_reset(user)
+    - Dojo_User.objects.all()
+    - get_object_or_404(Dojo_User, id=uid)
+    - get_object_or_404(Dojo_User, id=uid)
+    - get_object_or_404(Dojo_User, id=uid)
+    - get_object_or_404(Dojo_User, id=uid)
+    - get_object_or_404(Dojo_User, id=uid)
+    - get_object_or_404(Dojo_User, id=uid)
+    - get_object_or_404(Dojo_User, id=uid)
+    - receiver(post_save, sender=Dojo_User)
+  dojo.forms.AnnouncementRemoveForm:
+    - AnnouncementRemoveForm(\n                initial={\n                    "message": announcement.message,\n                    "style": announcement.style,\n                    "dismissable": announcement.dismissable,\n                },\n            )
+  dojo.models.get_current_date:
+    - get_current_date()
+  dojo.cred.queries.get_authorized_cred_mappings:
+    - get_authorized_cred_mappings(Permissions.Credential_View)
+    - get_authorized_cred_mappings(Permissions.Product_View, cred_products)
+  dojo.utils.get_system_setting:
+    - get_system_setting("enable_jira")
+    - get_system_setting("enable_jira")
+    - get_system_setting("enable_jira")
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("enable_ui_table_based_searching")
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("enable_calendar")
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("enable_ui_table_based_searching")
+    - get_system_setting("enable_jira")
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("enable_ui_table_based_searching")
+    - get_system_setting("time_zone")
+    - get_system_setting("enable_jira")
+    - get_system_setting("enable_jira")
+    - get_system_setting("enable_jira")
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("enable_ui_table_based_searching")
+    - get_system_setting("enable_similar_findings", True)
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("enable_ui_table_based_searching")
+    - get_system_setting("enable_github")
+    - get_system_setting("false_positive_history", False)
+    - get_system_setting("retroactive_false_positive_history")
+    - get_system_setting("enable_ui_table_based_searching")
+    - get_system_setting("risk_acceptance_form_default_days")
+    - get_system_setting("disclaimer_notes")
+    - get_system_setting("disclaimer_notes")
+    - get_system_setting("disclaimer_notes")
+    - get_system_setting("disclaimer_notes")
+    - get_system_setting("disclaimer_notes")
+    - get_system_setting("disclaimer_notes")
+    - get_system_setting("disclaimer_notes")
+    - get_system_setting("enable_user_profile_editable")
+    - get_system_setting("enable_user_profile_editable")
+    - get_system_setting("disclaimer_reports_forced")
+    - get_system_setting("disclaimer_notes")
+    - get_system_setting("enforce_verified_status", True)
+    - get_system_setting("enforce_verified_status_jira", True)
+    - get_system_setting("enable_github")
+    - get_system_setting("enable_github")
+    - get_system_setting("enable_github")
+    - get_system_setting("enable_github")
+    - get_system_setting("enforce_verified_status", True)
+    - get_system_setting("enable_jira")
+    - get_system_setting("enforce_verified_status", True)
+    - get_system_setting("enforce_verified_status_jira", True)
+    - get_system_setting("enable_jira")
+    - get_system_setting("enable_jira")
+    - get_system_setting("time_zone")
+    - get_system_setting("time_zone")
+    - get_system_setting("enable_deduplication")
+    - get_system_setting("time_zone")
+    - get_system_setting("enforce_verified_status", True)
+    - get_system_setting("enforce_verified_status_jira", True)
+    - get_system_setting("time_zone")
+    - get_system_setting("enforce_verified_status", True)
+    - get_system_setting("enforce_verified_status_jira", True)
+    - get_system_setting("time_zone")
+    - get_system_setting("time_zone")
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("enforce_verified_status", True)
+    - get_system_setting("enforce_verified_status_metrics", True)
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("url_prefix")
+    - get_system_setting("team_name")
+    - get_system_setting("enforce_verified_status", True)
+    - get_system_setting("enforce_verified_status_metrics", True)
+    - get_system_setting("enforce_verified_status", True)
+    - get_system_setting("enforce_verified_status_metrics", True)
+    - get_system_setting("enforce_verified_status", True)
+    - get_system_setting("enforce_verified_status_metrics", True)
+    - get_system_setting("enforce_verified_status", True)
+    - get_system_setting("enforce_verified_status_metrics", True)
+    - get_system_setting("enforce_verified_status", True)
+    - get_system_setting("enforce_verified_status_metrics", True)
+    - get_system_setting("enforce_verified_status", True)
+    - get_system_setting("enforce_verified_status_metrics", True)
+    - get_system_setting("enforce_verified_status", True)
+    - get_system_setting("enforce_verified_status_metrics", True)
+    - get_system_setting("enforce_verified_status", True)
+    - get_system_setting("enforce_verified_status_metrics", True)
+    - get_system_setting("enable_webhooks_notifications")
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("enable_ui_table_based_searching")
+    - get_system_setting("enable_github")
+    - get_system_setting("enable_ui_table_based_searching")
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("enable_ui_table_based_searching")
+    - get_system_setting("enable_github")
+    - get_system_setting("enable_github")
+    - get_system_setting("enable_jira")
+    - get_system_setting("enable_github")
+    - get_system_setting("enable_github")
+    - get_system_setting("enable_github")
+    - get_system_setting("enable_jira")
+    - get_system_setting("enable_github")
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("enforce_verified_status", True)
+    - get_system_setting("enforce_verified_status_metrics", True)
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("disclaimer_reports_forced", 0)
+    - get_system_setting("disclaimer_reports")
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("enforce_verified_status", True)
+    - get_system_setting("enforce_verified_status_metrics", True)
+    - get_system_setting("enforce_verified_status", True)
+    - get_system_setting("enforce_verified_status_metrics", True)
+    - get_system_setting("disclaimer_reports_forced", 0)
+    - get_system_setting("disclaimer_reports")
+    - get_system_setting("disclaimer_reports_forced", 0)
+    - get_system_setting("disclaimer_reports")
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("team_name")
+    - get_system_setting("enforce_verified_status", True)
+    - get_system_setting("enforce_verified_status_metrics", True)
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("risk_acceptance_form_default_days", 90)
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("enable_product_tag_inheritance")
+    - get_system_setting("enable_finding_sla")
+    - get_system_setting("enable_finding_sla")
+    - get_system_setting("filter_string_matching", False)
+    - get_system_setting("enable_ui_table_based_searching")
+    - get_system_setting("enable_calendar")
+    - get_system_setting("enable_jira")
+    - get_system_setting("url_prefix")
+    - get_system_setting("url_prefix")
+    - get_system_setting('url_prefix')
+    - get_system_setting("url_prefix")
+    - get_system_setting("url_prefix")
+    - get_system_setting("url_prefix")
+    - get_system_setting("url_prefix")
+    - get_system_setting("url_prefix")
+    - get_system_setting("url_prefix")
+    - get_system_setting("url_prefix")
+    - get_system_setting("enable_github")
+    - get_system_setting("enable_google_sheets")
+    - get_system_setting("enable_jira")
+    - get_system_setting("enable_questionnaires")
+    - get_system_setting("minimum_password_length")
+    - get_system_setting("minimum_password_length")
+    - get_system_setting("maximum_password_length")
+    - get_system_setting("maximum_password_length")
+    - get_system_setting("number_character_required")
+    - get_system_setting("uppercase_character_required")
+    - get_system_setting("lowercase_character_required")
+    - get_system_setting("special_character_required")
+    - get_system_setting("non_common_password_required")
+    - get_system_setting("email_from")
+    - get_system_setting("email_from")
+  dojo.filters.ReportFindingFilter:
+    - report_finding_filter_class = ReportFindingFilterWithoutObjectLookups if filter_string_matching else ReportFindingFilter
+    - filter_class = ReportFindingFilterWithoutObjectLookups if filter_string_matching else ReportFindingFilter
+    - filter_class = ReportFindingFilterWithoutObjectLookups if filter_string_matching else ReportFindingFilter
+    - report_finding_filter_class = ReportFindingFilterWithoutObjectLookups if filter_string_matching else ReportFindingFilter
+    - filter_class = ReportFindingFilterWithoutObjectLookups if filter_string_matching else ReportFindingFilter
+  dojo.forms.DisableOrEnableNoteTypeForm:
+    - DisableOrEnableNoteTypeForm(instance=nt)
+    - DisableOrEnableNoteTypeForm(request.POST, instance=nt)
+    - DisableOrEnableNoteTypeForm(instance=nt)
+    - DisableOrEnableNoteTypeForm(request.POST, instance=nt)
+  dojo.api_v2.views.RegulationsViewSet:
+    - v2_api.register(r"regulations", RegulationsViewSet, basename="regulations")
+  dojo.metrics.urls.urlpatterns aliased as metrics_urls:
+    - ur += metrics_urls
+  dojo.components.urls.urlpatterns aliased as component_urls:
+    - ur += component_urls
+  dojo.api_v2.views.UserProfileView:
+    - UserProfileView.as_view()
+  dojo.models.TextAnswer:
+    - child_models = (\n        TextAnswer,\n        ChoiceAnswer,\n    )
+    - admin.site.register(TextAnswer, TextAnswerAdmin)
+    - isinstance(instance, TextAnswer)
+    - model = TextAnswer
+    - TextAnswer.objects.filter(\n            answered_survey=self.answered_survey,\n            question=self.question,\n        )
+    - TextAnswer.objects.get_or_create(\n            answered_survey=self.answered_survey,\n            question=self.question,\n        )
+  dojo.finding.views.find_available_notetypes:
+    - find_available_notetypes(notes)
+    - find_available_notetypes(notes)
+    - find_available_notetypes(notes)
+  dojo.tools.api_bugcrowd.api_client.BugcrowdAPI:
+    - SCAN_APIS = {\n                "Bugcrowd API": BugcrowdAPI,\n                "BlackDuck API": BlackduckAPI,\n                "Cobalt.io": CobaltAPI,\n                "Edgescan": EdgescanAPI,\n                "SonarQube": SonarQubeAPI,\n                "Vulners": VulnersAPI,\n             }
+  dojo.tools.fortify.fpr_parser.FortifyFPRParser:
+    - FortifyFPRParser()
+  dojo.object.urls.urlpatterns aliased as object_urls:
+    - ur += object_urls
+  dojo.models.Endpoint_Params:
+    - model = Endpoint_Params
+  dojo.forms.Add_Product_GroupForm:
+    - Add_Product_GroupForm(initial={"product": product.id})
+    - Add_Product_GroupForm(request.POST, initial={"product": product.id})
+  dojo.tools.deepfence_threatmapper.vulnerability.DeepfenceThreatmapperVulnerability:
+    - DeepfenceThreatmapperVulnerability()
+  dojo.api_v2.views.UsersViewSet:
+    - v2_api.register(r"users", UsersViewSet, basename="user")
+  dojo.endpoint.utils.endpoint_meta_import:
+    - endpoint_meta_import(\n                file,\n                product,\n                create_endpoints,\n                create_tags,\n                create_dojo_meta,\n                origin="API",\n            )
+    - endpoint_meta_import(file, product, create_endpoints, create_tags, create_dojo_meta, origin="UI", request=request)
+  dojo.filters.TestImportAPIFilter:
+    - filterset_class = TestImportAPIFilter
+  dojo.importers.base_importer.Parser:
+    - def parse_findings(\n        self,\n        scan: TemporaryUploadedFile,\n        parser: Parser,\n    ) -> list[Finding]:\n        """\n        Determine how to parse the findings based on the presen...
+    - def parse_findings_static_test_type(\n        self,\n        scan: TemporaryUploadedFile,\n        parser: Parser,\n    ) -> list[Finding]:\n        """\n        Creates a test object as part of the i...
+    - def parse_findings_dynamic_test_type(\n        self,\n        scan: TemporaryUploadedFile,\n        parser: Parser,\n    ) -> list[Finding]:\n        """\n        Uses the parser to fetch any tests th...
+    - def parse_findings(\n        self,\n        scan: TemporaryUploadedFile,\n        parser: Parser,\n    ) -> list[Finding]:\n        """\n        Determine how to parse the findings based on the presen...
+    - def parse_findings_static_test_type(\n        self,\n        scan: TemporaryUploadedFile,\n        parser: Parser,\n    ) -> list[Finding]:\n        """\n        Parses the findings from file and assi...
+    - def parse_findings_dynamic_test_type(\n        self,\n        scan: TemporaryUploadedFile,\n        parser: Parser,\n    ) -> list[Finding]:\n        """\n        Uses the parser to fetch any tests th...
+  dojo.forms.Delete_Product_TypeForm:
+    - Delete_Product_TypeForm(instance=product_type)
+    - Delete_Product_TypeForm(request.POST, instance=product_type)
+  dojo.forms.Delete_Product_Type_MemberForm:
+    - Delete_Product_Type_MemberForm(instance=member)
+    - Delete_Product_Type_MemberForm(request.POST, instance=member)
+  dojo.api_v2.views.QuestionnaireEngagementSurveyViewSet:
+    - v2_api.register(r"questionnaire_engagement_questionnaires", QuestionnaireEngagementSurveyViewSet, basename="engagement_survey")
+  dojo.utils.generate_file_response_from_file_path:
+    - generate_file_response_from_file_path(eng.tmodel_path)
+  dojo.metrics.utils.severity_count:
+    - severity_count(top_ten, "annotate", "engagement__test__finding__severity")
+    - severity_count(top_ten, "annotate", "engagement__test__finding__severity")
+  dojo.product.views aliased as product_views:
+    - re_path(r"^product/type/(?P<ptid>\d+)/add_product",\n        product_views.new_product,\n        name="add_product_to_product_type")
+  dojo.management.commands.jira_status_reconciliation.jira_status_reconciliation:
+    - jira_status_reconciliation(*args, **kwargs)
+  dojo.api_v2.views.QuestionnaireAnswerViewSet:
+    - v2_api.register(r"questionnaire_answers", QuestionnaireAnswerViewSet, basename="answer")
+  dojo.announcement.urls.urlpatterns aliased as announcement_urls:
+    - ur += announcement_urls
+  dojo.models.Languages:
+    - model = Languages
+    - Languages.objects.filter(product=product)
+    - Languages()
+    - Languages.objects.none()
+    - Languages.objects.none()
+    - Languages.objects.all()
+    - Languages.objects.all()

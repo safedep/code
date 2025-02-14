@@ -1,0 +1,195 @@
+
+dojo:
+  dojo.models.Finding:
+    - def add_dynamic_details(self, finding, finding_details, backup_title=None) -> Finding:\n        finding.dynamic_finding = True\n        finding.static_finding = False\n        # Get the finding catego...
+    - def add_sca_details(self, finding, finding_details, backup_title=None) -> Finding:\n        finding.dynamic_finding = False\n        finding.static_finding = False\n        # Set the initial standard ...
+    - def parse_description(self, finding, description_body, scan_type) -> Finding:\n        if scan_type == "STATIC":\n            # The description of the veracode finding is defined in three parts separa...
+    - Finding()
+    - Finding()
+    - Finding(\n                test=test,\n                title=f"{component_name}:{component_version} | {vuln_id}",\n                description=description,\n                severity=severity,\n        ...
+    - Finding(\n                test=test,\n                title=f"{library}:{version} | {vuln_id}",\n                description=description,\n                severity=severity,\n                component...
+    - Finding(\n                    title=title,\n                    description=description,\n                    severity=severity,\n                    mitigation=mitigation,\n                    refere...
+    - Finding(\n                        title=title,\n                        test=test,\n                        description=description,\n                        severity=severity,\n                      ...
+    - Finding(\n                    title=f"Found {url.to_text()}",\n                    test=test,\n                    severity=severity,\n                    description=description,\n                   ...
+    - Finding(\n                    title=summary,\n                    description=description,\n                    mitigation=(\n                        "Replace hardcoded secret with a placeholder (ie: ...
+    - Finding(\n                    title=whitehat_vuln["class"],\n                    test=test,\n                    cwe=cwe,\n                    active=active,\n                    verified=True,\n     ...
+    - def parse_findings(self, test: Test, reader: csv.DictReader) -> list[Finding]:\n        """\n        Parse the CSV with the assumed format of the link below.\n\n        test file: https://github.com/D...
+    - Finding(\n                    title=title,\n                    description=description,\n                    severity=severity.lower().capitalize(),\n                    static_finding=False,\n      ...
+    - def parse_findings(self, test: Test, reader: csv.DictReader) -> list[Finding]:\n        """\n        Parse the CSV with the assumed format of the link below.\n\n        test file: Coming soon!\n      ...
+    - Finding(\n                title=f"{package_name}: {vulnerability_id}",\n                description=description,\n                mitigation=mitigation,\n                severity=self._validate_severi...
+    - Finding(\n                        title=f"{lib_name} - {vuln_name}",\n                        description=finding_description,\n                        file_path=lib_path,\n                        sev...
+    - Finding(\n                    title=f"Secret: {desc}",\n                    description=description,\n                    severity=severity,\n                    file_path=file_name,\n                ...
+    - Finding(\n                            title=f"{rule_name} - {resource_name}",\n                            description=description,\n                            severity=severity,\n                   ...
+    - Finding(\n                        title=f"{pkg_name} - {vuln_name}",\n                        description=finding_description,\n                        severity=severity,\n                        stat...
+    - Finding(\n                title=vul["title"],\n                description=description,\n                severity="Medium",\n                cwe=1035,\n                references=self.generate_referen...
+    - Finding(\n                title=f"Interesting finding: {interesting_finding.get('to_s')}",\n                description=description,\n                references=references,\n                severity="...
+    - Finding(\n                test=test,\n                title=self.generate_title(finding, line),\n                description=description,\n                cwe=self.resolve_cwe(finding),\n             ...
+    - Finding(\n                title=str(childid),\n                test=test,\n                severity=self.severitytranslator(severity=childseverity),\n                description=description,\n        ...
+    - Finding(\n                title=tree.get("advisories").get(element).get("cves")[0] + "_" + tree.get("advisories").get(element).get("module_name"),\n                test=test,\n                severity...
+    - Finding(\n            title=item_node["title"]\n            + " - "\n            + "("\n            + item_node["module_name"]\n            + ", "\n            + item_node["vulnerable_versions"]\n    ...
+    - Finding(\n                    test=test,\n                    title=item.findtext("alert"),\n                    description=html2text(item.findtext("desc")),\n                    severity=self.MAPPIN...
+    - super(Finding, find)
+    - Finding.objects.filter(\n                **custom_filter,\n                hash_code=finding.hash_code,\n            )
+    - Finding.objects.filter(\n                **custom_filter,\n                unique_id_from_tool=finding.unique_id_from_tool,\n            )
+    - Finding.objects.filter(\n            Q(**custom_filter),\n            (\n                (Q(hash_code__isnull=False) & Q(hash_code=finding.hash_code))\n                | (Q(unique_id_from_tool__isnull=False) & Q(unique_id_from_tool=finding.unique_id_from_tool))\n            ),\n        )
+    - Finding.objects.filter(\n                **custom_filter,\n                title=finding.title,\n                severity=finding.severity,\n                numerical_severity=Finding.get_numerical_severity(finding.severity),\n            )
+    - Finding.get_numerical_severity(finding.severity)
+    - Finding.objects.filter(\n            test__engagement=new_finding.test.engagement,\n            cwe=new_finding.cwe)
+    - Finding.objects.filter(\n            test__engagement=new_finding.test.engagement,\n            title=new_finding.title)
+    - Finding.objects.filter(\n            test__engagement__product=new_finding.test.engagement.product,\n            cwe=new_finding.cwe)
+    - Finding.objects.filter(\n            test__engagement__product=new_finding.test.engagement.product,\n            title=new_finding.title)
+    - Finding.objects.filter(Q(id__in=eng_findings_cwe) | Q(id__in=eng_findings_title))
+    - Finding.objects.filter(\n            test__engagement=new_finding.test.engagement,\n            unique_id_from_tool=new_finding.unique_id_from_tool)
+    - Finding.objects.filter(\n            test__engagement__product=new_finding.test.engagement.product,\n            # the unique_id_from_tool is unique for a given tool: do not compare with other tools\n...
+    - Finding.objects.filter(\n            test__engagement=new_finding.test.engagement,\n            hash_code=new_finding.hash_code)
+    - Finding.objects.filter(\n            test__engagement__product=new_finding.test.engagement.product,\n            hash_code=new_finding.hash_code)
+    - Finding.objects.filter(\n            (Q(hash_code__isnull=False) & Q(hash_code=new_finding.hash_code))\n            # unique_id_from_tool can only apply to the same test_type because it is parser depe...
+    - Finding.objects.filter(\n            (Q(hash_code__isnull=False) & Q(hash_code=new_finding.hash_code))\n            | (Q(unique_id_from_tool__isnull=False) & Q(unique_id_from_tool=new_finding.unique_i...
+    - super(Finding, new_finding)
+    - super(Finding, existing_finding)
+    - def finding_mitigated(finding: Finding) -> bool:\n    return finding.active is False and (finding.is_mitigated is True or finding.mitigated is not None)
+    - def finding_not_human_set_status(finding: Finding) -> bool:\n    return finding.out_of_scope is False and finding.false_p is False
+    - Finding.objects.filter(\n            date__range=[start_date, end_date],\n            **kwargs,\n            verified=True,\n            false_p=False,\n            duplicate=False,\n            out_o...
+    - Finding.objects.filter(\n            date__range=[start_date, end_date],\n            **kwargs,\n            verified=True,\n            false_p=False,\n            duplicate=False,\n            out_o...
+    - Finding.objects.filter(\n                mitigated__date__range=[start_date, end_date],\n                **kwargs,\n                severity__in=("Critical", "High", "Medium", "Low"))
+    - Finding.objects.filter(\n                date__lte=end_date.date(),\n                verified=True,\n                false_p=False,\n                duplicate=False,\n                out_of_scope=Fals...
+    - Finding.objects.filter(\n            date__range=[start_date, end_date],\n            **kwargs,\n            false_p=False,\n            duplicate=False,\n            out_of_scope=False,\n            ...
+    - Finding.objects.filter(\n            date__range=[start_date, end_date],\n            **kwargs,\n            false_p=False,\n            duplicate=False,\n            out_of_scope=False,\n            mitigated__isnull=True,\n            severity__in=("Critical", "High", "Medium", "Low"))
+    - Finding.objects.filter(\n                mitigated__date__range=[start_date, end_date],\n                **kwargs,\n                severity__in=("Critical", "High", "Medium", "Low"))
+    - Finding.objects.filter(\n                date__lte=end_date.date(),\n                false_p=False,\n                duplicate=False,\n                out_of_scope=False,\n                mitigated__i...
+    - Finding.objects.filter(\n                ~Q(severity="Info"),\n                active=True,\n                duplicate=False,\n                false_p=False,\n                test__engagement__product=product)
+    - Finding.objects.filter(test__engagement__product=self.product,\n                                                          false_p=False,\n                                                          dupl...
+    - Finding.objects.filter(test__engagement__product=product,\n                                           false_p=False,\n                                           duplicate=False,\n                     ...
+    - Finding.objects.exclude(jira_issue__isnull=False)
+    - Finding.objects \\n                .filter(query)
+    - max_results = getattr(settings, "MAX_AUTOCOMPLETE_WORDS", 20000)\n    models = None\n    if model == Finding:\n        models = get_authorized_findings(Permissions.Finding_View, user=get_current_user(...
+    - isinstance(obj, Finding | Finding_Group)
+    - self.mapping = {\n            "Product_Type": [\n                (Endpoint, "product__prod_type"),\n                (Finding, "test__engagement__product__prod_type"),\n                (Test, "engageme...
+    - self.mapping = {\n            "Product_Type": [\n                (Endpoint, "product__prod_type"),\n                (Finding, "test__engagement__product__prod_type"),\n                (Test, "engageme...
+    - self.mapping = {\n            "Product_Type": [\n                (Endpoint, "product__prod_type"),\n                (Finding, "test__engagement__product__prod_type"),\n                (Test, "engageme...
+    - self.mapping = {\n            "Product_Type": [\n                (Endpoint, "product__prod_type"),\n                (Finding, "test__engagement__product__prod_type"),\n                (Test, "engageme...
+    - Finding.objects.filter(test__engagement__product=product, duplicate=False)
+    - Finding.objects.get(id=obj.id)
+    - get_object_or_404(Finding, pk=oid)
+    - isinstance(obj, Finding)
+    - get_object_or_404(Finding, pk=oid)
+  dojo.metrics.utils.get_closed_in_period_details:
+    - get_closed_in_period_details(\n        findings_queryset(filters["closed"]),\n    )
+  dojo.product.helpers aliased as async_product_funcs:
+    - async_product_funcs.propagate_tags_on_product(instance.id, countdown=5)
+  dojo.models.Sonarqube_Issue:
+    - model = Sonarqube_Issue
+    - Sonarqube_Issue.objects.none()
+    - Sonarqube_Issue.objects.all()
+    - Sonarqube_Issue.objects.update_or_create(\n                    key=issue["key"],\n                    defaults={\n                        "status": status,\n                        "type": issue_type,\n                    },\n                )
+    - Sonarqube_Issue.objects.update_or_create(\n                    key=hotspot["key"],\n                    defaults={"status": status, "type": issue_type},\n                )
+  dojo.filters.TestImportFilter:
+    - TestImportFilter(request.GET, test_imports)
+    - TestImportFilter(request.GET, test_imports)
+  dojo.product.queries.get_authorized_global_groups_for_product:
+    - get_authorized_global_groups_for_product(prod, Permissions.Product_View)
+  dojo.tools.netsparker.parser.NetsparkerParser:
+    - class InvictiParser(NetsparkerParser):\n    def get_scan_types(self):\n        return ["Invicti Scan"]\n\n    def get_label_for_scan_types(self, scan_type):\n        return "Invicti Scan"\n\n    def g...
+  dojo.tools.sonarqube.sonarqube_restapi_zip.SonarQubeRESTAPIZIP:
+    - SonarQubeRESTAPIZIP()
+  dojo.finding.helper.save_vulnerability_ids:
+    - save_vulnerability_ids(instance, vulnerability_ids)
+    - save_vulnerability_ids(new_finding, vulnerability_ids)
+  dojo.models.Cred_User:
+    - model = Cred_User
+    - Cred_User.objects.all()
+    - Cred_User.objects.all()
+    - receiver(pre_delete, sender=Cred_User)
+    - user_is_authorized(Cred_User, Permissions.Credential_Edit, "ttid")
+    - Cred_User.objects.get(pk=ttid)
+    - user_is_authorized(Cred_User, Permissions.Credential_View, "ttid")
+    - Cred_User.objects.get(pk=ttid)
+    - Cred_User.objects.all()
+    - user_is_authorized(Cred_User, Permissions.Credential_View, "ttid")
+    - user_is_authorized(Cred_User, Permissions.Credential_View, "ttid")
+    - user_is_authorized(Cred_User, Permissions.Credential_View, "ttid")
+    - user_is_authorized(Cred_User, Permissions.Credential_View, "ttid")
+    - user_is_authorized(Cred_User, Permissions.Credential_Edit, "ttid")
+    - user_is_authorized(Cred_User, Permissions.Credential_Edit, "ttid")
+    - user_is_authorized(Cred_User, Permissions.Credential_Delete, "ttid")
+    - Cred_User.objects.get(pk=ttid)
+    - user_is_authorized(Cred_User, Permissions.Credential_Delete, "ttid")
+    - user_is_authorized(Cred_User, Permissions.Credential_Delete, "ttid")
+    - user_is_authorized(Cred_User, Permissions.Credential_Delete, "ttid")
+    - user_is_authorized(Cred_User, Permissions.Credential_Delete, "ttid")
+    - user_is_authorized(Cred_User, Permissions.Credential_Delete, "ttid")
+    - model = Cred_User
+    - get_object_or_404(Cred_User, id=objid)
+  dojo.filters.ApiTemplateFindingFilter:
+    - filterset_class = ApiTemplateFindingFilter
+  dojo.group.queries.get_product_type_groups_for_group:
+    - get_product_type_groups_for_group(group)
+  dojo.finding.views.prefetch_for_findings:
+    - prefetch_for_findings(findings.object_list)
+  dojo.tools.clair.clair_parser.ClairScan:
+    - ClairScan()
+  dojo.models.SEVERITIES:
+    - super().__init__(*args, **kwargs)\n        for sev in SEVERITIES:\n            self.fields[sev.lower()] = StatusStatisticsSerializer()\n\n        self.fields["total"] = StatusStatisticsSerializer()
+    - if value not in SEVERITIES:\n            msg = f"Severity must be one of the following: {SEVERITIES}"\n            raise serializers.ValidationError(msg)\n        return value
+    - msg = f"Severity must be one of the following: {SEVERITIES}"
+    - if value not in SEVERITIES:\n            msg = f"Severity must be one of the following: {SEVERITIES}"\n            raise serializers.ValidationError(msg)\n        return value
+    - msg = f"Severity must be one of the following: {SEVERITIES}"
+    - if value not in SEVERITIES:\n            msg = f"Severity must be one of the following: {SEVERITIES}"\n            raise serializers.ValidationError(msg)\n        return value
+    - msg = f"Severity must be one of the following: {SEVERITIES}"
+    - if value not in SEVERITIES:\n            msg = f"Severity must be one of the following: {SEVERITIES}"\n            raise serializers.ValidationError(msg)\n        return value
+    - msg = f"Severity must be one of the following: {SEVERITIES}"
+    - """\n        Sanitization on the finding severity such that only the following\n        severities may be set on the finding:\n        - Critical, High, Medium, Low, Info\n        There is a simple co...
+    - msg = (\n                f'Finding severity "{finding.severity}" is not supported. '\n                f"Any of the following are supported: {SEVERITIES}."\n            )
+    - """Ensure the supplied severity fits what DefectDojo is expecting."""\n        if severity not in SEVERITIES:\n            logger.error(f"Severity is not supported: {severity}")\n            # Default to Info severity\n            return "Info"\n        return severity
+  dojo.models.Tool_Product_Settings:
+    - model = Tool_Product_Settings
+    - Tool_Product_Settings.objects.none()
+    - model = Tool_Product_Settings
+    - model = Tool_Product_Settings
+    - Tool_Product_Settings.objects.none()
+    - Tool_Product_Settings.objects.all()
+    - Tool_Product_Settings.objects.all()
+    - Tool_Product_Settings.objects.annotate(\n        product__prod_type__member=Exists(authorized_product_type_roles),\n        product__member=Exists(authorized_product_roles),\n        product__prod_typ...
+    - receiver(pre_delete, sender=Tool_Product_Settings)
+    - Tool_Product_Settings.objects.filter(product=prod)
+    - Tool_Product_Settings.objects.get(pk=ttid)
+    - Tool_Product_Settings.objects.get(pk=ttid)
+  dojo.utils.reopen_external_issue:
+    - reopen_external_issue(finding, "re-opened by defectdojo", "github")
+  dojo.forms.AdHocFindingForm:
+    - AdHocFindingForm(*args, **kwargs)
+    - def get_jira_form(self, request: HttpRequest, test: Test, finding_form: AdHocFindingForm = None):\n        # Determine if jira should be used\n        if (jira_project := jira_helper.get_jira_project(...
+  dojo.forms.Add_Questionnaire_Form:
+    - Add_Questionnaire_Form()
+    - Add_Questionnaire_Form(request.POST)
+  dojo.tools.cyclonedx.xml_parser.CycloneDXXMLParser:
+    - CycloneDXXMLParser()
+  dojo.user.utils.get_configuration_permissions_codenames:
+    - get_configuration_permissions_codenames()
+    - get_configuration_permissions_codenames()
+    - get_configuration_permissions_codenames()
+  dojo.models.Check_List:
+    - model = Check_List
+    - Check_List.objects.filter(engagement=engagement)
+    - Check_List(**check_list.data)
+    - Check_List.objects.get(engagement=eng)
+    - Check_List.objects.get(engagement=eng)
+    - Check_List.objects.get(engagement=eng)
+    - Check_List.objects.get(engagement=eng)
+    - model = Check_List
+    - Check_List.get_status(value)
+  dojo.product.queries.get_authorized_members_for_product:
+    - get_authorized_members_for_product(prod, Permissions.Product_View)
+  dojo.tool_config.factory.create_API:
+    - create_API(product_api_scan_configuration.tool_configuration)
+    - create_API(form_copy.tool_configuration)
+    - create_API(form_copy)
+    - create_API(form_copy)
+  dojo.reports.widgets.EndpointList:
+    - EndpointList(request=request, endpoints=self.get_endpoints(request))
+  dojo.reports.urls.urlpatterns aliased as reports_urls:
+    - ur += reports_urls
+  dojo.search.urls.urlpatterns aliased as search_urls:
+    - ur += search_urls
+  dojo.risk_acceptance.queries.get_authorized_risk_acceptances:
+    - get_authorized_risk_acceptances(Permissions.Risk_Acceptance)

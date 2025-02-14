@@ -1,0 +1,158 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "db:sql",
+      "evidence": [
+        {
+          "snippet": "LogEntry.objects.get(\n            action=LogEntry.Action.DELETE,\n            content_type=ContentType.objects.get(app_label=\"dojo\", model=\"product\"),\n            object_id=instance.id,\n        )"
+        },
+        {
+          "snippet": "LogEntry.objects.get(\n            action=LogEntry.Action.DELETE,\n            content_type=ContentType.objects.get(app_label=\"dojo\", model=\"product_type\"),\n            object_id=instance.id,\n        )"
+        },
+        {
+          "snippet": "LogEntry.objects.filter(timestamp__date__lt=retention_date)"
+        },
+        {
+          "snippet": "LogEntry.objects.get(\n                action=LogEntry.Action.DELETE,\n                content_type=ContentType.objects.get(app_label=\"dojo\", model=\"test\"),\n                object_id=instance.id,\n            )"
+        },
+        {
+          "snippet": "LogEntry.objects.filter(content_type=ct,\n                          object_pk=obj.id)"
+        }
+      ]
+    },
+    {
+      "capability_id": "web:template",
+      "evidence": [
+        {
+          "snippet": "TagField(required=False, help_text=\"Add tags that help describe this scan.  \"\n                    \"Choose from the list or add new tags. Press Enter key to add.\")"
+        },
+        {
+          "snippet": "TagField(blank=True, force_lowercase=True, help_text=_(\"Add tags that help describe this product. Choose from the list or add new tags. Press Enter key to add.\"))"
+        },
+        {
+          "snippet": "TagField(blank=True, force_lowercase=True, help_text=_(\"Add tags that help describe this engagement. Choose from the list or add new tags. Press Enter key to add.\"))"
+        },
+        {
+          "snippet": "TagField(blank=True, force_lowercase=True, help_text=_(\"Add tags that help describe this test. Choose from the list or add new tags. Press Enter key to add.\"))"
+        },
+        {
+          "snippet": "TagField(blank=True, force_lowercase=True, help_text=_(\"Add tags that help describe this finding template. Choose from the list or add new tags. Press Enter key to add.\"))"
+        }
+      ]
+    },
+    {
+      "capability_id": "env:config",
+      "evidence": [
+        {
+          "snippet": "os.environ.setdefault(\"DJANGO_SETTINGS_MODULE\", \"dojo.settings.settings\")"
+        },
+        {
+          "snippet": "os.getenv(\"DD_DATABASE_URL\")"
+        },
+        {
+          "snippet": "os.environ[\"DJANGO_SETTINGS_MODULE\"] = \"my_django_project.settings\""
+        },
+        {
+          "snippet": "os.environ[\"DD_BASE_URL\"]"
+        },
+        {
+          "snippet": "driver.find_element(By.ID, \"id_username\").send_keys(os.environ[\"DD_ADMIN_USER\"])"
+        }
+      ]
+    },
+    {
+      "capability_id": "file:read",
+      "evidence": [
+        {
+          "snippet": "os.listdir(package_dir)"
+        },
+        {
+          "snippet": "os.path.realpath(__file__)"
+        },
+        {
+          "snippet": "os.path.realpath(self.relative_path + \"/dedupe_scans/dedupe_path_1.json\")"
+        },
+        {
+          "snippet": "os.walk(template_root)"
+        },
+        {
+          "snippet": "os.path.realpath(self.relative_path + \"/dedupe_scans/dedupe_cross_1.csv\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "data:serialization",
+      "evidence": [
+        {
+          "snippet": "csv.DictReader(io.StringIO(content))"
+        },
+        {
+          "snippet": "csv.writer(response)"
+        },
+        {
+          "snippet": "csv.field_size_limit(int(sys.maxsize / 10))"
+        },
+        {
+          "snippet": "csv.DictReader(csv_file, delimiter=\",\", quotechar='\"')"
+        },
+        {
+          "snippet": "csv.reader(\n            io.StringIO(content), delimiter=\",\", quotechar='\"', escapechar=\"\\\\\",\n        )"
+        }
+      ]
+    },
+    {
+      "capability_id": "threading:management",
+      "evidence": [
+        {
+          "snippet": "local()"
+        },
+        {
+          "snippet": "Lock()"
+        }
+      ]
+    },
+    {
+      "capability_id": "crypto:hashing",
+      "evidence": [
+        {
+          "snippet": "uuid4()"
+        },
+        {
+          "snippet": "uuid.uuid4()"
+        }
+      ]
+    },
+    {
+      "capability_id": "auth:oauth",
+      "evidence": [
+        {
+          "snippet": "isinstance(backend, AzureADTenantOAuth2)"
+        },
+        {
+          "snippet": "isinstance(backend, GoogleOAuth2)"
+        }
+      ]
+    },
+    {
+      "capability_id": "web:framework",
+      "evidence": [
+        {
+          "snippet": "class FindingStatusFilter(ChoiceFilter):\n    def any(self, qs, name):\n        return qs\n\n    def open(self, qs, name):\n        return qs.filter(OPEN_FINDINGS_QUERY)"
+        },
+        {
+          "snippet": "class ProductSLAFilter(ChoiceFilter):\n    def any(self, qs, name):\n        return qs\n\n    def sla_satisifed(self, qs, name):\n        for product in qs:\n            if product.violates_sla():"
+        },
+        {
+          "snippet": "class ReportRiskAcceptanceFilter(ChoiceFilter):\n\n    def any(self, qs, name):\n        return qs.all()\n\n    def accepted(self, qs, name):\n        # return qs.filter(risk_acceptance__isnull=False)"
+        },
+        {
+          "snippet": "class MetricsDateRangeFilter(ChoiceFilter):\n    def any(self, qs, name):\n        earliest_finding = get_earliest_finding(qs)\n        if earliest_finding is not None:\n            start_date = localtime()"
+        },
+        {
+          "snippet": "ModelMultipleChoiceFilter(\n        field_name=\"tags__name\",\n        to_field_name=\"name\",\n        queryset=Finding.tags.tag_model.objects.all().order_by(\"name\"),\n        help_text=\"Filter Findings by the selected tags\")"
+        }
+      ]
+    }
+  ]
+}
