@@ -1,0 +1,274 @@
+
+dojo:
+  dojo.models.Product:
+    - user_is_authorized(Product, Permissions.Product_View, "pid")
+    - user_is_authorized(Product, Permissions.Engagement_View, "eid")
+    - user_is_authorized(Product, Permissions.Test_View, "tid")
+    - user_is_authorized(Product, Permissions.Finding_View, "fid")
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - get_object_or_404(Product, pk=pid)
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - get_object_or_404(Product, pk=pid)
+    - Product.objects.get(id=pid)
+    - get_object_or_404(Product, id=id)
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - get_object_or_404(Product, id=p[0])
+    - user_is_authorized(Product, Permissions.Endpoint_Add, "pid")
+    - get_object_or_404(Product, id=pid)
+    - get_object_or_404(Product, id=pid)
+    - Product.objects.filter(endpoint__id__in=endpoints_to_update)
+    - get_object_or_404(Product, id=pid)
+    - user_is_authorized(Product, Permissions.Endpoint_Edit, "pid")
+    - get_object_or_404(Product, id=pid)
+    - def get_engagement_or_product(\n        self,\n        user: Dojo_User,\n        engagement_id: int | None = None,\n        product_id: int | None = None,\n    ) -> tuple[Engagement, Product, Product ...
+    - def get_engagement_or_product(\n        self,\n        user: Dojo_User,\n        engagement_id: int | None = None,\n        product_id: int | None = None,\n    ) -> tuple[Engagement, Product, Product ...
+    - get_object_or_404(Product, id=product_id)
+    - def get_jira_form(\n        self,\n        request: HttpRequest,\n        engagement_or_product: Engagement | Product,\n    ) -> tuple[JIRAImportScanForm | None, bool]:\n        """Returns a JiraImpor...
+    - def get_product_tab(\n        self,\n        product: Product,\n        engagement: Engagement,\n    ) -> tuple[Product_Tab, dict]:\n        """\n        Determine how the product tab will be rendered...
+    - Product.tags.tag_model.objects.all()
+    - Product.tags.tag_model.objects.all()
+    - Product.objects.none()
+    - MultipleChoiceFilter(\n        choices=Product.LIFECYCLE_CHOICES,\n        label="Product lifecycle",\n        null_label="Empty")
+    - MultipleChoiceFilter(\n        choices=Product.LIFECYCLE_CHOICES,\n        label="Product lifecycle",\n        null_label="Empty")
+    - model = Product
+    - model = Product
+    - model = Product
+    - MultipleChoiceFilter(choices=Product.BUSINESS_CRITICALITY_CHOICES, null_label="Empty")
+    - MultipleChoiceFilter(choices=Product.PLATFORM_CHOICES, null_label="Empty")
+    - MultipleChoiceFilter(choices=Product.LIFECYCLE_CHOICES, null_label="Empty")
+    - MultipleChoiceFilter(choices=Product.ORIGIN_CHOICES, null_label="Empty")
+    - Product.tags.tag_model.objects.all()
+    - Product.tags.tag_model.objects.all()
+    - model = Product
+    - model = Product
+    - MultipleChoiceFilter(\n        choices=Product.LIFECYCLE_CHOICES,\n        label="Product lifecycle")
+    - Product.objects.none()
+    - Product.tags.tag_model.objects.all()
+    - Product.tags.tag_model.objects.all()
+    - Product.tags.tag_model.objects.all()
+    - Product.objects.none()
+    - Product.tags.tag_model.objects.all()
+    - Product.tags.tag_model.objects.all()
+    - Product.objects.none()
+    - MultipleChoiceFilter(choices=Product.LIFECYCLE_CHOICES, label="Product Lifecycle")
+    - get_object_or_404(Product, id=product_id)
+    - user_is_authorized(Product, Permissions.Finding_Edit, "pid")
+    - get_object_or_404(Product, pk=pid)
+    - get_object_or_404(Product, id=pid)
+    - get_object_or_404(Product, id=pid)
+    - Product()
+    - model = Product
+    - model = Product
+    - Product.objects.none()
+    - Product.objects.none()
+    - isinstance(product, Product)
+    - Product.objects.get(id=int(product))
+    - Product.objects.none()
+    - Product.tags.tag_model.objects.none()
+    - Product.tags.tag_model.objects.filter(product__in=prods)
+    - Product.objects.none()
+    - Product.objects.get(engagement=eng)
+    - self.process_object_fields("product", "product_id", Product, data)
+    - def get_target_product_if_exists(\n        self,\n        product_name: str | None = None,\n        product_type_name: str | None = None,\n        **kwargs: dict,\n    ) -> Product | None:\n        ""...
+    - get_object_or_none(Product, name=product_name)
+    - def get_target_product_by_id_if_exists(\n        self,\n        product_id: int = 0,\n        **kwargs: dict,\n    ) -> Product | None:\n        """\n        Query for a product matching by ID\n\n    ...
+    - get_object_or_none(Product, pk=product_id)
+    - def get_target_engagement_if_exists(\n        self,\n        engagement_id: int = 0,\n        engagement_name: str | None = None,\n        product: Product = None,\n        **kwargs: dict,\n    ) -> E...
+    - def get_or_create_product(\n        self,\n        product_name: str | None = None,\n        product_type_name: str | None = None,\n        *,\n        auto_create_context: bool = False,\n        **kw...
+    - Product.objects.select_for_update()
+    - isinstance(obj, Product)
+    - Product.objects.all()
+    - self.count_the_duplicates(Product, "name")
+    - Product.objects.filter(name=product)
+    - Product.objects.filter(engagement__test__finding__date__lte=end_date,\n                                                engagement__test__finding__verified=True,\n                                      ...
+    - Product.objects.filter(engagement__test__finding__date__lte=end_date,\n                                                engagement__test__finding__false_p=False,\n                                      ...
+    - Product.objects.filter(engagement__test__finding__date__lte=end_date,\n                                                engagement__test__finding__verified=True,\n                                      ...
+    - Product.objects.filter(engagement__test__finding__date__lte=end_date,\n                                                engagement__test__finding__false_p=False,\n                                      ...
+    - Product.objects.get(id=product)
+    - Product.objects.get(id=product)
+    - Product.objects.get(id=product)
+    - Product.objects.get(id=product)
+    - def create_notification(\n    event: str | None = None,\n    title: str | None = None,\n    finding: Finding | None = None,\n    test: Test | None = None,\n    engagement: Engagement | None = None,\n ...
+    - self.product: Product = None
+    - user_is_authorized(Product, Permissions.Product_Tracking_Files_Add, "pid")
+    - get_object_or_404(Product, id=pid)
+    - user_is_authorized(Product, Permissions.Product_Tracking_Files_View, "pid")
+    - get_object_or_404(Product, id=pid)
+    - user_is_authorized(Product, Permissions.Product_Tracking_Files_Edit, "pid")
+    - get_object_or_404(Product, id=pid)
+    - user_is_authorized(Product, Permissions.Product_Tracking_Files_Delete, "pid")
+    - get_object_or_404(Product, id=pid)
+    - Product.objects.get(name=project.path_with_namespace)
+    - try:\n                    # Check if there is a product with the name of the GitLab project\n                    product = Product.objects.get(name=project.path_with_namespace)\n                except...
+    - Product(name=project.path_with_namespace, prod_type=product_type)
+    - Product.objects.get(name=product_name)
+    - super(Product, product)
+    - contextlib.suppress(Product.DoesNotExist)
+    - Product.objects.get(id=product_id)
+    - Product.objects.none()
+    - Product.objects.all()
+    - Product.objects.all()
+    - Product.objects.annotate(\n        prod_type__member=Exists(authorized_product_type_roles),\n        member=Exists(authorized_product_roles),\n        prod_type__authorized_group=Exists(authorized_product_type_groups),\n        authorized_group=Exists(authorized_product_groups))
+    - receiver(post_save, sender=Product)
+    - receiver(post_delete, sender=Product)
+    - user_is_authorized(Product, Permissions.Product_View, "pid")
+    - Product.objects.all()
+    - user_is_authorized(Product, Permissions.Component_View, "pid")
+    - get_object_or_404(Product, id=pid)
+    - user_is_authorized(Product, Permissions.Product_View, "pid")
+    - get_object_or_404(Product, id=pid)
+    - user_is_authorized(Product, Permissions.Product_View, "pid")
+    - get_object_or_404(Product, id=pid)
+    - user_is_authorized(Product, Permissions.Engagement_View, "pid")
+    - get_object_or_404(Product, id=pid)
+    - Product()
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - Product.objects.get(pk=pid)
+    - Product.objects.get(pk=form.instance.id)
+    - user_is_authorized(Product, Permissions.Product_Delete, "pid")
+    - get_object_or_404(Product, pk=pid)
+    - user_is_authorized(Product, Permissions.Engagement_Add, "pid")
+    - Product.objects.get(id=pid)
+    - user_is_authorized(Product, Permissions.Technology_Add, "pid")
+    - get_object_or_404(Product, id=pid)
+    - user_is_authorized(Product, Permissions.Engagement_Add, "pid")
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - Product.objects.get(id=pid)
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - Product.objects.get(id=pid)
+    - get_object_or_404(Product, id=product_id)
+    - def get_engagement(self, product: Product):\n        try:\n            return Engagement.objects.get(product=product, name=_("Ad Hoc Engagement"))\n        except Engagement.DoesNotExist:\n           ...
+    - def create_nested_objects(self, product: Product):\n        engagement = self.get_engagement(product)\n        test_type = self.get_test_type()\n        return self.get_test(engagement, test_type)
+    - def get_finding_form(self, request: HttpRequest, product: Product):\n        # Set up the args for the form\n        args = [request.POST] if request.method == "POST" else []\n        # Set the initia...
+    - user_is_authorized(Product, Permissions.Product_View, "pid")
+    - get_object_or_404(Product, id=pid)
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - get_object_or_404(Product, id=pid)
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - get_object_or_404(Product, id=pid)
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - get_object_or_404(Product, id=pid)
+    - user_is_authorized(Product, Permissions.Product_View, "pid")
+    - get_object_or_404(Product, id=pid)
+    - user_is_authorized(Product, Permissions.Product_Manage_Members, "pid")
+    - get_object_or_404(Product, pk=pid)
+    - user_is_authorized(Product, Permissions.Product_API_Scan_Configuration_Add, "pid")
+    - get_object_or_404(Product, id=pid)
+    - user_is_authorized(Product, Permissions.Product_View, "pid")
+    - get_object_or_404(Product, id=pid)
+    - get_object_or_404(Product, id=pid)
+    - get_object_or_404(Product, id=pid)
+    - user_is_authorized(Product, Permissions.Product_Group_Add, "pid")
+    - get_object_or_404(Product, pk=pid)
+    - user_is_authorized(Product, Permissions.Product_View, "pid")
+    - get_object_or_404(Product, id=pid)
+    - user_is_authorized(Product, Permissions.Product_View, "pid")
+    - Product.objects.all()
+    - Product.objects.filter(prod_type=product_type,\n                                          engagement__test__finding__in=findings.qs)
+    - get_object_or_404(Product, id=pid)
+    - tag_filters = {"tag": ""}\n\n    if qs.model == Finding:\n        tag_filters = {\n            "tag": "",\n            "test-tag": "test__",\n            "engagement-tag": "test__engagement__",\n     ...
+    - super(Product, product)
+    - Product.objects.filter(sla_configuration=sla_config)
+    - receiver(signals.m2m_changed, sender=Product.tags.through)
+    - isinstance(instance, Product)
+    - Product.objects.all()
+    - if value == Product.VERY_HIGH_CRITICALITY:\n        return mark_safe(stars(5, 5, "Very High"))\n    if value == Product.HIGH_CRITICALITY:\n        return mark_safe(stars(4, 5, "High"))\n    if value =...
+    - if value == Product.VERY_HIGH_CRITICALITY:\n        return mark_safe(stars(5, 5, "Very High"))\n    if value == Product.HIGH_CRITICALITY:\n        return mark_safe(stars(4, 5, "High"))\n    if value =...
+    - if value == Product.VERY_HIGH_CRITICALITY:\n        return mark_safe(stars(5, 5, "Very High"))\n    if value == Product.HIGH_CRITICALITY:\n        return mark_safe(stars(4, 5, "High"))\n    if value =...
+    - if value == Product.VERY_HIGH_CRITICALITY:\n        return mark_safe(stars(5, 5, "Very High"))\n    if value == Product.HIGH_CRITICALITY:\n        return mark_safe(stars(4, 5, "High"))\n    if value =...
+    - if value == Product.VERY_HIGH_CRITICALITY:\n        return mark_safe(stars(5, 5, "Very High"))\n    if value == Product.HIGH_CRITICALITY:\n        return mark_safe(stars(4, 5, "High"))\n    if value =...
+    - if value == Product.VERY_HIGH_CRITICALITY:\n        return mark_safe(stars(5, 5, "Very High"))\n    if value == Product.HIGH_CRITICALITY:\n        return mark_safe(stars(4, 5, "High"))\n    if value =...
+    - if value == Product.WEB_PLATFORM:\n        return mark_safe(icon("list-alt", "Web"))\n    if value == Product.DESKTOP_PLATFORM:\n        return mark_safe(icon("desktop", "Desktop"))\n    if value == P...
+    - if value == Product.WEB_PLATFORM:\n        return mark_safe(icon("list-alt", "Web"))\n    if value == Product.DESKTOP_PLATFORM:\n        return mark_safe(icon("desktop", "Desktop"))\n    if value == P...
+    - if value == Product.WEB_PLATFORM:\n        return mark_safe(icon("list-alt", "Web"))\n    if value == Product.DESKTOP_PLATFORM:\n        return mark_safe(icon("desktop", "Desktop"))\n    if value == P...
+    - if value == Product.WEB_PLATFORM:\n        return mark_safe(icon("list-alt", "Web"))\n    if value == Product.DESKTOP_PLATFORM:\n        return mark_safe(icon("desktop", "Desktop"))\n    if value == P...
+    - if value == Product.WEB_PLATFORM:\n        return mark_safe(icon("list-alt", "Web"))\n    if value == Product.DESKTOP_PLATFORM:\n        return mark_safe(icon("desktop", "Desktop"))\n    if value == P...
+    - if value == Product.CONSTRUCTION:\n        return mark_safe(icon("compass", "Explore"))\n    if value == Product.PRODUCTION:\n        return mark_safe(icon("ship", "Sustain"))\n    if value == Product...
+    - if value == Product.CONSTRUCTION:\n        return mark_safe(icon("compass", "Explore"))\n    if value == Product.PRODUCTION:\n        return mark_safe(icon("ship", "Sustain"))\n    if value == Product...
+    - if value == Product.CONSTRUCTION:\n        return mark_safe(icon("compass", "Explore"))\n    if value == Product.PRODUCTION:\n        return mark_safe(icon("ship", "Sustain"))\n    if value == Product...
+    - if value == Product.THIRD_PARTY_LIBRARY_ORIGIN:\n        return mark_safe(icon("book", "Third-Party Library"))\n    if value == Product.PURCHASED_ORIGIN:\n        return mark_safe(icon("money", "Purch...
+    - if value == Product.THIRD_PARTY_LIBRARY_ORIGIN:\n        return mark_safe(icon("book", "Third-Party Library"))\n    if value == Product.PURCHASED_ORIGIN:\n        return mark_safe(icon("money", "Purch...
+    - if value == Product.THIRD_PARTY_LIBRARY_ORIGIN:\n        return mark_safe(icon("book", "Third-Party Library"))\n    if value == Product.PURCHASED_ORIGIN:\n        return mark_safe(icon("money", "Purch...
+    - if value == Product.THIRD_PARTY_LIBRARY_ORIGIN:\n        return mark_safe(icon("book", "Third-Party Library"))\n    if value == Product.PURCHASED_ORIGIN:\n        return mark_safe(icon("money", "Purch...
+    - if value == Product.THIRD_PARTY_LIBRARY_ORIGIN:\n        return mark_safe(icon("book", "Third-Party Library"))\n    if value == Product.PURCHASED_ORIGIN:\n        return mark_safe(icon("money", "Purch...
+    - if value == Product.THIRD_PARTY_LIBRARY_ORIGIN:\n        return mark_safe(icon("book", "Third-Party Library"))\n    if value == Product.PURCHASED_ORIGIN:\n        return mark_safe(icon("money", "Purch...
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - get_object_or_404(Product, id=pid)
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - get_object_or_404(Product, id=pid)
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - get_object_or_404(Product, id=pid)
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - get_object_or_404(Product, id=pid)
+    - Product.objects.get(engagement=eng)
+    - Product.objects.get(engagement=Engagement.objects.get(test=find.test))
+    - Product.objects.get(engagement=Engagement.objects.get(test=find.test))
+    - Product.objects.get(engagement=Engagement.objects.get(test=find.test))
+    - dojo_model_from_id(model=Product)
+    - super(Product, product)
+    - Product.objects.get(id=product_id)
+    - isinstance(obj, Product)
+    - self.mapping = {\n            "Product_Type": [\n                (Endpoint, "product__prod_type"),\n                (Finding, "test__engagement__product__prod_type"),\n                (Test, "engageme...
+    - Product.objects.get(id=obj.id)
+    - get_object_or_404(Product, id=product_id)
+  dojo.finding.helper.WAS_ACCEPTED_FINDINGS_QUERY:
+    - qs.filter(WAS_ACCEPTED_FINDINGS_QUERY)
+  dojo.forms.ConfigurationPermissionsForm:
+    - ConfigurationPermissionsForm(group=group)
+    - ConfigurationPermissionsForm(request.POST, group=group)
+    - ConfigurationPermissionsForm(user=user)
+    - ConfigurationPermissionsForm(request.POST, user=user)
+  dojo.metrics.utils.findings_queryset:
+    - findings_queryset(queryset_check(filters["all"]))
+    - findings_queryset(filters["accepted"])
+    - findings_queryset(filters["closed"])
+  dojo.forms.ExistingEngagementForm:
+    - return ExistingEngagementForm
+  dojo.request_cache.cache_for_request:
+    - import crum\nfrom django import template\n\nfrom dojo.authorization.authorization import user_has_configuration_permission as configuration_permission\nfrom dojo.authorization.authorization import use...
+    - import crum\nfrom django import template\n\nfrom dojo.authorization.authorization import user_has_configuration_permission as configuration_permission\nfrom dojo.authorization.authorization import use...
+    - from crum import get_current_user\nfrom django.db.models import Q\n\nfrom dojo.authorization.authorization import get_roles_for_permission, user_has_global_permission\nfrom dojo.models import (\n    D...
+  dojo.product_type.queries.get_authorized_product_type_members_for_user:
+    - get_authorized_product_type_members_for_user(user, Permissions.Product_Type_View)
+  dojo.models.JIRA_Project:
+    - model = JIRA_Project
+    - JIRA_Project.objects.none()
+    - model = JIRA_Project
+    - isinstance(obj, JIRA_Project)
+    - engagement = obj\n        jira_project = None\n        try:\n            jira_project = engagement.jira_project  # first() doesn't work with prefetching\n            if jira_project:\n                ...
+    - isinstance(obj, JIRA_Project)
+    - isinstance(obj, JIRA_Project)
+    - isinstance(obj, JIRA_Project)
+    - JIRA_Project.objects.none()
+    - JIRA_Project.objects.all()
+  dojo.forms.NoteForm:
+    - NoteForm(request.POST)
+    - NoteForm()
+    - NoteForm()
+    - NoteForm(request.POST)
+    - NoteForm()
+    - NoteForm()
+    - NoteForm(request.POST)
+    - NoteForm()
+    - NoteForm()
+    - NoteForm(request.POST)
+    - NoteForm()
+    - NoteForm()
+    - NoteForm(request.POST)
+    - NoteForm()
+    - NoteForm()
+    - NoteForm()
+    - NoteForm(request.POST)
+    - NoteForm()
+    - NoteForm(request.POST)
+    - NoteForm()
+    - NoteForm(*args, **kwargs)
+    - NoteForm(request.POST, instance=note)
+    - NoteForm()
+    - NoteForm(instance=note)
+    - NoteForm(*args, **kwargs)
+  dojo.finding.helper aliased as helper:
+    - helper.prepare_duplicates_for_delete(engagement=self)
+    - helper.finding_delete(self)
+  dojo.tools.ptart.ptart_parser_tools aliased as ptart_tools:
+    - ptart_tools.parse_ptart_fix_effort(hit.get("fix_complexity"))

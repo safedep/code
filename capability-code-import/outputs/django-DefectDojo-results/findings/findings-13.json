@@ -1,0 +1,110 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "regex:pattern_matching",
+      "evidence": [
+        {
+          "snippet": "re.search(r\" (/[^/ ]*)+/?\", text)"
+        },
+        {
+          "snippet": "re.compile(r\"^[a-zA-Z0-9_\\s+-.]*$\")"
+        },
+        {
+          "snippet": "re.search(r\"CWE-(\\d+)\", raw_html)"
+        },
+        {
+          "snippet": "re.findall(r\"^CWE-[0-9]{1,4}\", title)"
+        },
+        {
+          "snippet": "re.sub(r\"\\[.*\\]\\s\", \"\", title_text)"
+        }
+      ]
+    },
+    {
+      "capability_id": "file:tempfile_creation",
+      "evidence": [
+        {
+          "snippet": "NamedTemporaryFile()"
+        },
+        {
+          "snippet": "tempfile.NamedTemporaryFile()"
+        }
+      ]
+    },
+    {
+      "capability_id": "serialization:json_processing",
+      "evidence": [
+        {
+          "snippet": "data = json.loads(content)"
+        },
+        {
+          "snippet": "json.dumps(self)"
+        },
+        {
+          "snippet": "content = filename.read()\n        try:\n            data = json.loads(str(content, \"utf-8\"))\n        except (JSONDecodeError, TypeError):\n            data = json.loads(content)"
+        },
+        {
+          "snippet": "try:\n                return json.loads(tool_config.extras)\n            except (JSONDecodeError, TypeError):\n                msg = \"JSON not provided in Extras field.\"\n                raise ValueError(msg)"
+        },
+        {
+          "snippet": "if json_file is None:\n            return None\n        try:\n            tree = json.load(json_file)\n        except JSONDecodeError:\n            msg = \"Invalid format\"\n            raise ValueError(msg)"
+        }
+      ]
+    },
+    {
+      "capability_id": "crypto:encryption",
+      "evidence": [
+        {
+          "snippet": "Cipher(algorithms.AES(key), modes.OFB(iv), backend=backend)"
+        },
+        {
+          "snippet": "modes.OFB(iv)"
+        },
+        {
+          "snippet": "algorithms.AES(key)"
+        }
+      ]
+    },
+    {
+      "capability_id": "xml:parsing",
+      "evidence": [
+        {
+          "snippet": "etree.HTMLParser()"
+        },
+        {
+          "snippet": "etree.fromstring(vuln_details, parser)"
+        },
+        {
+          "snippet": "etree.parse(file, parser)"
+        },
+        {
+          "snippet": "etree.tostring(vuln_details, pretty_print=True)"
+        },
+        {
+          "snippet": "html.parse(filename)"
+        }
+      ]
+    },
+    {
+      "capability_id": "iteration:itertools_operations",
+      "evidence": [
+        {
+          "snippet": "itertools.chain.from_iterable(map(flatten, elem))"
+        },
+        {
+          "snippet": "chain(result_list, finding_ids)"
+        },
+        {
+          "snippet": "starmap(self.format_additional_description, addendum.items())"
+        },
+        {
+          "snippet": "groupby(list_vulns, key=lambda vuln: vuln[\"OSV\"][\"aliases\"][0])"
+        },
+        {
+          "snippet": "islice(elems, 1)"
+        }
+      ]
+    }
+  ]
+}

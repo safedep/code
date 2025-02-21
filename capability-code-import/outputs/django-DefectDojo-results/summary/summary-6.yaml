@@ -1,0 +1,273 @@
+
+django_filters:
+  django_filters.BooleanFilter:
+    - BooleanFilter(\n            field_name="finding_group",\n            lookup_expr="isnull",\n            exclude=True,\n            label="Is Grouped")
+    - BooleanFilter(\n            field_name="jira_issue",\n            lookup_expr="isnull",\n            exclude=True,\n            label="Has JIRA")
+    - BooleanFilter(\n                field_name="finding_group__jira_issue",\n                lookup_expr="isnull",\n                exclude=True,\n                label="Has Group JIRA")
+    - BooleanFilter(field_name="tags", lookup_expr="isnull", exclude=True, label="Has tags")
+    - BooleanFilter(field_name="tags", lookup_expr="isnull", exclude=True, label="Has tags")
+    - BooleanFilter(field_name="tags", lookup_expr="isnull", exclude=True, label="Has tags")
+    - BooleanFilter(field_name="tags", lookup_expr="isnull", exclude=True, label="Has tags")
+    - BooleanFilter(field_name="tags", lookup_expr="isnull", exclude=True, label="Has tags")
+    - BooleanFilter(field_name="findings_affected", lookup_expr="isnull", exclude=True, label="Findings affected")
+    - BooleanFilter()
+  django_filters.FilterSet:
+    - class DojoFilter(FilterSet):\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, **kwargs)\n\n        for field in ["tags", "test__tags", "test__engagement__tags", "test__engage...
+    - class FindingTagStringFilter(FilterSet):\n    tags_contains = CharFilter(\n        label="Finding Tag Contains",\n        field_name="tags__name",\n        lookup_expr="icontains",\n        help_text=...
+    - class EngagementDirectFilterHelper(FilterSet):\n    name = CharFilter(lookup_expr="icontains", label="Engagement name contains")\n    version = CharFilter(field_name="version", lookup_expr="icontains"...
+    - class EngagementFilterHelper(FilterSet):\n    name = CharFilter(lookup_expr="icontains", label="Product name contains")\n    tag = CharFilter(field_name="tags__name", lookup_expr="icontains", label="T...
+    - class ProductEngagementFilterHelper(FilterSet):\n    version = CharFilter(lookup_expr="icontains", label="Engagement version")\n    test__version = CharFilter(field_name="test__version", lookup_expr="...
+    - class ProductFilterHelper(FilterSet):\n    name = CharFilter(lookup_expr="icontains", label="Product Name")\n    name_exact = CharFilter(field_name="name", lookup_expr="iexact", label="Exact Product N...
+    - class FindingFilterHelper(FilterSet):\n    title = CharFilter(lookup_expr="icontains")\n    date = DateRangeFilter(field_name="date", label="Date Discovered")\n    on = DateFilter(field_name="date", l...
+    - class SimilarFindingHelper(FilterSet):\n    hash_code = MultipleChoiceFilter()\n    vulnerability_ids = CharFilter(method=custom_vulnerability_id_filter, label="Vulnerability Ids")\n\n    def update_d...
+    - class MetricsEndpointFilterHelper(FilterSet):\n    start_date = DateFilter(field_name="date", label="Start Date", lookup_expr=("gt"))\n    end_date = DateFilter(field_name="date", label="End Date", lo...
+    - class EndpointFilterHelper(FilterSet):\n    protocol = CharFilter(lookup_expr="icontains")\n    userinfo = CharFilter(lookup_expr="icontains")\n    host = CharFilter(lookup_expr="icontains")\n    port...
+    - class EngagementTestFilterHelper(FilterSet):\n    version = CharFilter(lookup_expr="icontains", label="Version")\n    if settings.TRACK_IMPORT_HISTORY:\n        test_import__version = CharFilter(field...
+    - class ReportFindingFilterHelper(FilterSet):\n    title = CharFilter(lookup_expr="icontains", label="Name")\n    date = DateFromToRangeFilter(field_name="date", label="Date Discovered")\n    date_recen...
+    - class QuestionnaireFilter(FilterSet):\n    name = CharFilter(lookup_expr="icontains")\n    description = CharFilter(lookup_expr="icontains")\n    active = BooleanFilter()\n\n    class Meta:\n        model = Engagement_Survey\n        exclude = ["questions"]\n\n    survey_set = FilterSet
+    - survey_set = FilterSet
+    - class QuestionFilter(FilterSet):\n        text = CharFilter(lookup_expr="icontains")\n        type = QuestionTypeFilter()\n\n        class Meta:\n            model = Question\n            exclude = ["polymorphic_ctype", "created", "modified", "order"]\n\n        question_set = FilterSet
+    - question_set = FilterSet
+  django_filters.MultipleChoiceFilter:
+    - MultipleChoiceFilter(choices=ENGAGEMENT_STATUS_CHOICES, label="Status")
+    - MultipleChoiceFilter(\n        choices=Product.LIFECYCLE_CHOICES,\n        label="Product lifecycle",\n        null_label="Empty")
+    - MultipleChoiceFilter(\n        choices=Product.LIFECYCLE_CHOICES,\n        label="Product lifecycle",\n        null_label="Empty")
+    - MultipleChoiceFilter(\n        choices=ENGAGEMENT_STATUS_CHOICES,\n        label="Status")
+    - MultipleChoiceFilter(field_name="status", choices=ENGAGEMENT_STATUS_CHOICES,\n                                              label="Status")
+    - MultipleChoiceFilter(choices=ENGAGEMENT_STATUS_CHOICES, label="Status")
+    - MultipleChoiceFilter(choices=Product.BUSINESS_CRITICALITY_CHOICES, null_label="Empty")
+    - MultipleChoiceFilter(choices=Product.PLATFORM_CHOICES, null_label="Empty")
+    - MultipleChoiceFilter(choices=Product.LIFECYCLE_CHOICES, null_label="Empty")
+    - MultipleChoiceFilter(choices=Product.ORIGIN_CHOICES, null_label="Empty")
+    - MultipleChoiceFilter(choices=[])
+    - MultipleChoiceFilter(choices=SEVERITY_CHOICES)
+    - MultipleChoiceFilter(choices=EFFORT_FOR_FIXING_CHOICES)
+    - MultipleChoiceFilter(\n        choices=Product.LIFECYCLE_CHOICES,\n        label="Product lifecycle")
+    - MultipleChoiceFilter()
+    - MultipleChoiceFilter(choices=[])
+    - MultipleChoiceFilter(choices=SEVERITY_CHOICES)
+    - MultipleChoiceFilter(choices=SEVERITY_CHOICES, label="Severity")
+    - MultipleChoiceFilter(choices=SEVERITY_CHOICES, label="Severity")
+    - MultipleChoiceFilter(choices=SEVERITY_CHOICES)
+    - MultipleChoiceFilter(choices=Product.LIFECYCLE_CHOICES, label="Product Lifecycle")
+    - MultipleChoiceFilter(choices=IMPORT_ACTIONS)
+    - MultipleChoiceFilter(choices=LogEntry.Action.choices)
+  django_filters.ModelChoiceFilter:
+    - ModelChoiceFilter(queryset=Dojo_User.objects.none(), label="Lead")
+    - ModelChoiceFilter(\n        queryset=Dojo_User.objects.none(),\n        label="Lead")
+    - ModelChoiceFilter(field_name="lead", queryset=Dojo_User.objects.none(), label="Lead")
+    - ModelChoiceFilter(queryset=Dojo_User.objects.none(), label="Lead")
+    - ModelChoiceFilter(queryset=Dojo_User.objects.none(), label="Lead")
+    - ModelChoiceFilter(\n        queryset=Product_API_Scan_Configuration.objects.none(),\n        label="API Scan Configuration")
+    - ModelChoiceFilter(queryset=Finding.objects.filter(original_finding__isnull=False).distinct())
+
+io:
+  io:
+    - io.StringIO(content)
+    - io.StringIO()
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.TextIOWrapper(zip.open(full_file_name), encoding="utf-8")
+    - io.TextIOWrapper(zip.open(full_file_name), encoding="utf-8")
+    - io.TextIOWrapper(zip.open(full_file_name), encoding="utf-8")
+    - io.TextIOWrapper(zip.open(full_file_name), encoding="utf-8")
+    - io.TextIOWrapper(zip.open(full_file_name), encoding="utf-8")
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+    - io.StringIO(content)
+
+requests:
+  requests.auth.HTTPBasicAuth:
+    - HTTPBasicAuth(jira_instance.username, jira_instance.password)
+  requests.exceptions.JSONDecodeError aliased as RequestsJSONDecodeError:
+    - """Returns number of components (projects) or raise error."""\n        parameters = {"qualifiers": "TRK"}\n\n        if self.org_id is not None:\n            parameters["organization"] = self.org_id\n...
+  requests:
+    - try:\n        connect_method = get_jira_connect_method()\n        jira = connect_method(jira_server, jira_username, jira_password)\n\n        logger.debug("logged in to JIRA %s successfully", jira_ser...
+    - requests.post(\n                    url=req_url,\n                    auth=HTTPBasicAuth(jira_instance.username, jira_instance.password),\n                    json=json_data,\n                    timeout=settings.REQUESTS_TIMEOUT,\n                )
+    - requests.get(\n                    "https://raw.githubusercontent.com/ozh/github-colors/master/colors.json",\n                    timeout=settings.REQUESTS_TIMEOUT,\n                )
+    - requests.request(\n            method="POST",\n            url="https://slack.com/api/users.lookupByEmail",\n            data={"token": self.system_settings.slack_token, "email": user_email},\n            timeout=settings.REQUESTS_TIMEOUT,\n        )
+    - requests.request(\n            method="POST",\n            url="https://slack.com/api/chat.postMessage",\n            data={\n                "token": self.system_settings.slack_token,\n              ...
+    - requests.request(\n                        method="POST",\n                        url=self.system_settings.msteams_url,\n                        data=self._create_notification_message(\n             ...
+    - error = None\n            if endpoint.status not in [\n                Notification_Webhooks.Status.STATUS_ACTIVE,\n                Notification_Webhooks.Status.STATUS_ACTIVE_TMP,\n            ]:\n   ...
+    - def _webhooks_notification_request(\n        self,\n        endpoint: Notification_Webhooks,\n        event: str | None = None,\n        **kwargs: dict,\n    ) -> requests.Response:\n        headers, ...
+    - requests.request(\n            method="POST",\n            url=endpoint.url,\n            headers=headers,\n            json=data,\n            timeout=self.system_settings.webhooks_notifications_timeout,\n        )
+    - try:\n                self.get_webhook_manager_instance()._test_webhooks_notification(form.instance)\n            except requests.exceptions.RequestException as e:\n                messages.add_messag...
+    - try:\n                self.get_webhook_manager_instance()._test_webhooks_notification(form.instance)\n            except requests.exceptions.RequestException as e:\n                messages.add_messag...
+    - requests.get(\n                        (str(soc.extra_data["resource"]) + "/v1.0/groups/" + str(group_from_response) + "?$select=displayName"),\n                        headers=request_headers,\n                        timeout=settings.REQUESTS_TIMEOUT,\n                    )
+    - requests.Session()
+    - requests.Session()
+    - requests.get(\n            url=url,\n            headers=self.get_headers(),\n            proxies=self.get_proxies(),\n            timeout=settings.REQUESTS_TIMEOUT,\n        )
+    - requests.Session()
+    - requests.Session()
+
+netaddr:
+  netaddr.IPSet:
+    - IPSet()
+  netaddr.IPNetwork:
+    - IPNetwork(ip_range)
+  netaddr.IPAddress:
+    - IPAddress(request.META["REMOTE_ADDR"])
+    - IPAddress(request.META["REMOTE_ADDR"])
+    - IPAddress(request.META["REMOTE_ADDR"])
+    - IPAddress(request.META["REMOTE_ADDR"])
+    - IPAddress(ip)
+
+abc:
+  abc:
+    - def __init__(self, *args, **kwargs):\n        self.title = "Base Widget"\n        self.form = None\n        self.multiple = "false"\n        self.widget_class = "widget"\n\n    @abc.abstractmethod\n  ...
+    - def __init__(self, *args, **kwargs):\n        self.title = "Base Widget"\n        self.form = None\n        self.multiple = "false"\n        self.widget_class = "widget"\n\n    @abc.abstractmethod\n  ...
+  abc.ABC:
+    - class AcceptedRisksMixin(ABC):\n\n    @property\n    @abstractmethod\n    def risk_application_model_class(self):\n        pass\n\n    @extend_schema(\n        request=AcceptedRiskSerializer(many=True...
+    - class AcceptedFindingsMixin(ABC):\n\n    @extend_schema(\n        request=AcceptedRiskSerializer(many=True),\n        responses={status.HTTP_201_CREATED: RiskAcceptanceSerializer(many=True)},\n    )\n...
+    - class Importer(ABC):\n    @abstractmethod\n    def parse_findings(self, report: Path) -> Iterable[BlackduckFinding]:\n        while False:\n            yield None
+    - class Importer(ABC):\n    @abstractmethod\n    def parse_findings(self, report: Path) -> Iterable[BlackduckBinaryAnalysisFinding]:\n        while False:\n            yield None
+  abc.abstractmethod:
+    - @property\n    @abstractmethod\n    def risk_application_model_class(self):\n        pass\n\n    @extend_schema(\n        request=AcceptedRiskSerializer(many=True),\n        responses={status.HTTP_201...
+    - @abstractmethod\n    def parse_findings(self, report: Path) -> Iterable[BlackduckFinding]:\n        while False:\n            yield None
+    - @abstractmethod\n    def parse_findings(self, report: Path) -> Iterable[BlackduckBinaryAnalysisFinding]:\n        while False:\n            yield None
+
+openpyxl:
+  openpyxl.Workbook:
+    - Workbook()
+    - Workbook()
+  openpyxl.styles.Font:
+    - Font(bold=True)
+    - Font(bold=True)
+  openpyxl.load_workbook:
+    - load_workbook(filename)
+    - load_workbook(file)
+
+pathlib:
+  pathlib.Path:
+    - Path(file.name)
+    - Path(file.name)
+    - Path(clean_base_dir)
+    - Path(template_dir)
+    - Path(template_dir)
+    - Path(file)
+    - Path(__file__)
+    - Path(filename)
+    - Path(now().strftime(self.directory))
+    - Path(file_name)
+    - Path(self.path.name)
+    - environ.Path(__file__)
+    - Path(root("dojo/settings/.env.prod"))
+    - Path(DOJO_ROOT)
+    - Path(__file__)
+    - Path(BASEDIR)
+    - Path(file.file.url)
+    - def parse_findings(self, report: Path) -> Iterable[BlackduckFinding]:\n        while False:\n            yield None
+    - def parse_findings(self, report: Path) -> Iterable[BlackduckFinding]:\n        if not issubclass(type(report), Path):\n            report = Path(report.temporary_file_path())\n\n        if zipfile.is_...
+    - issubclass(type(report), Path)
+    - Path(report.temporary_file_path())
+    - def parse_findings(self, report: Path) -> Iterable[BlackduckBinaryAnalysisFinding]:\n        while False:\n            yield None
+    - def parse_findings(self, report: Path) -> Iterable[BlackduckBinaryAnalysisFinding]:\n        orig_report_name = Path(report.name)\n        if not issubclass(type(report), Path):\n            report = Path(report.temporary_file_path())\n\n        return self._process_csvfile(report, orig_report_name)
+    - Path(report.name)
+    - issubclass(type(report), Path)
+    - Path(report.temporary_file_path())
+    - def parse_findings(self, report: Path) -> (dict, dict, dict):\n        """\n        Given a path to a zip file, this function will find the relevant CSV files and\n        return three dictionaries wi...
+    - issubclass(type(report), Path)
+    - Path(report.temporary_file_path())
+    - def _process_zipfile(self, report: Path) -> (dict, dict, dict):\n        """\n        Open the zip file and extract information on vulnerable packages from security.csv,\n        as well as license ri...
+    - Path(__file__)
+    - Path(package_dir)
+    - Path(f.name)
+    - Path(settings.MEDIA_ROOT + "/threat/")
+    - Path(settings.MEDIA_ROOT + "/threat/")
+    - Path(f.name)
+    - Path(file_path)
+    - pathlib.Path(file_path)
+    - Path(settings.MEDIA_ROOT)
+    - Path(settings.MEDIA_ROOT)
+    - Path(os.path.realpath(__file__))
+    - Path(self.repo_path)
+    - Path(self.repo_path)
+    - Path(dir_path[:-5] + "dojo/tools")
+    - Path(self.repo_path)
+    - Path(self.repo_path + "/" + test)
+    - Path(self.repo_path + "/" + test)
+    - Path(os.path.realpath(__file__))
+    - Path(os.path.realpath(__file__))
+    - Path(os.path.realpath(__file__))
+    - Path(os.path.realpath(__file__))
+    - Path(os.path.realpath(__file__))
+    - Path(os.path.realpath(__file__))
+    - Path(os.path.realpath(__file__))
+    - Path(os.path.realpath(__file__))
+    - Path(file_name)
+    - Path(file_name)
+    - Path(os.path.realpath(__file__))
+    - Path(os.path.realpath(__file__))
+  pathlib:
+    - pathlib.Path(screenshot["screenshot"]["filename"])
+    - pathlib.Path(file_path)
+
+calendar:
+  calendar.monthrange:
+    - monthrange(today.year, today.month)
+    - monthrange(month_requested.year, month_requested.month)
+    - monthrange(today.year, today.month)
+    - monthrange(month_requested.year, month_requested.month)
+    - monthrange(now.year,\n                                            now.month)
+    - monthrange(\n                                 month_start.year,\n                                 month_start.month)
+    - monthrange(new_date.year, new_date.month)
+  calendar aliased as tcalendar:
+    - tcalendar.timegm(date.timetuple())
+    - tcalendar.timegm(new_date.timetuple())
+    - tcalendar.timegm(new_date.timetuple())
+    - tcalendar.timegm(new_date.timetuple())
+    - tcalendar.timegm(new_date.timetuple())
+    - tcalendar.timegm(new_date.timetuple())
+
+saml2:
+  saml2:
+    - SAML_LOGOUT_REQUEST_PREFERRED_BINDING = saml2.BINDING_HTTP_POST
+    - SAML_CONFIG = {\n        # full path to the xmlsec1 binary programm\n        "xmlsec_binary": "/usr/bin/xmlsec1",\n\n        # your entity id, usually your subdomain plus the url to the metadata view\...
+    - SAML_CONFIG = {\n        # full path to the xmlsec1 binary programm\n        "xmlsec_binary": "/usr/bin/xmlsec1",\n\n        # your entity id, usually your subdomain plus the url to the metadata view\...
+    - SAML_CONFIG = {\n        # full path to the xmlsec1 binary programm\n        "xmlsec_binary": "/usr/bin/xmlsec1",\n\n        # your entity id, usually your subdomain plus the url to the metadata view\...
+    - SAML_CONFIG = {\n        # full path to the xmlsec1 binary programm\n        "xmlsec_binary": "/usr/bin/xmlsec1",\n\n        # your entity id, usually your subdomain plus the url to the metadata view\...
+
+base_test_class:
+  base_test_class.BaseTestCase:
+    - class ScannerTest(BaseTestCase):\n    def setUp(self):\n        super().setUp(self)\n        self.repo_path = dir_path + "/scans"\n        if Path(self.repo_path).is_dir():\n            shutil.rmtree(...
+    - BaseTestCase("test_login")
+    - BaseTestCase("disable_block_execution")
+    - BaseTestCase.tearDownDriver()
+    - class AnnouncementBannerTest(BaseTestCase):\n\n    def __init__(self, method_name, type):\n        super().__init__(method_name)\n        self.type = type\n\n    def test_setup(self):\n        driver ...
+    - BaseTestCase("test_login")
+    - BaseTestCase.tearDownDriver()
+    - class VariousPagesTest(BaseTestCase):\n    def test_user_status(self):\n        driver = self.driver\n        driver.get(self.base_url + "user")\n\n    def test_calendar_status(self):\n        driver ...
+    - BaseTestCase("test_login")
+    - BaseTestCase.tearDownDriver()
+    - class CloseOldDedupeTest(BaseTestCase):\n    # --------------------------------------------------------------------------------------------------------\n    # Taken from dedupe_test.py\n    # This set...
+    - BaseTestCase("test_login")
+    - BaseTestCase("enable_jira")
+    - BaseTestCase("disable_jira")
+    - BaseTestCase("enable_github")
+    - BaseTestCase("disable_github")
+    - BaseTestCase("enable_block_execution")
+    - BaseTestCase("disable_block_execution")
+    - BaseTestCase.tearDownDriver()
+    - class CloseOldTest(BaseTestCase):\n    # --------------------------------------------------------------------------------------------------------\n    # This set of tests is similar to close_old_findi...
+    - BaseTestCase("test_login")
+    - BaseTestCase("enable_jira")
+    - BaseTestCase("disable_jira")

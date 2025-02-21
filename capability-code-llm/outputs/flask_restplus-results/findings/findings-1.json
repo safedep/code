@@ -1,0 +1,105 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "web:framework",
+      "evidence": [
+        {
+          "snippet": ">>> app = Flask(__name__)\n>>> api = Api(app)"
+        },
+        {
+          "snippet": "class Model(RawModel, dict, MutableMapping):\n    '''\n    A thin wrapper on fields dict to store API doc metadata."
+        },
+        {
+          "snippet": "urlparse(url_for(endpoint, _external=self.absolute, **data))"
+        },
+        {
+          "snippet": "A thin wrapper on ordered fields dict to store API doc metadata.\n:param str name: The model public name"
+        },
+        {
+          "snippet": "RefResolver.from_schema(self.__schema__)"
+        }
+      ]
+    },
+    {
+      "capability_id": "web:api",
+      "evidence": [
+        {
+          "snippet": ">>> app = Flask(__name__)\n>>> api = Api(app)"
+        },
+        {
+          "snippet": "validator = Draft4Validator(self.__schema__, resolver=resolver, format_checker=format_checker)"
+        },
+        {
+          "snippet": ">>> api.add_resource(Resource, '/resource')"
+        },
+        {
+          "snippet": "isinstance(e, HTTPException)"
+        },
+        {
+          "snippet": ">>> api.version = '1.0'"
+        }
+      ]
+    },
+    {
+      "capability_id": "data:serialization",
+      "evidence": [
+        {
+          "snippet": "dumps(data, **settings)"
+        },
+        {
+          "snippet": "OrderedDict(DEFAULT_REPRESENTATIONS)"
+        },
+        {
+          "snippet": "OrderedDict((k, v) for k, v in sorted(iteritems(data)) if v is not None)"
+        },
+        {
+          "snippet": "parse_rule(path)"
+        },
+        {
+          "snippet": "text_type(underlying_exception)"
+        }
+      ]
+    },
+    {
+      "capability_id": "time:management",
+      "evidence": [
+        {
+          "snippet": "isinstance(max_age, timedelta)"
+        },
+        {
+          "snippet": "datetime.combine(start, START_OF_DAY)"
+        },
+        {
+          "snippet": "datetime.strptime(value, \"%Y-%m-%d\")"
+        },
+        {
+          "snippet": "time(0, 0, 0, tzinfo=pytz.UTC)"
+        },
+        {
+          "snippet": "datetime.fromtimestamp(timestamp, pytz.utc)"
+        }
+      ]
+    },
+    {
+      "capability_id": "auth:jwt",
+      "evidence": [
+        {
+          "snippet": ">>> jwt = create_access_token(identity=username)"
+        },
+        {
+          "snippet": ">>> decoded_jwt = decode_token(encoded_token)"
+        },
+        {
+          "snippet": "is_valid = verify_token(encoded_token)"
+        },
+        {
+          "snippet": ">>> set_access_cookies(response, access_token)"
+        },
+        {
+          "snippet": ">>> unset_jwt_cookies(response)"
+        }
+      ]
+    }
+  ]
+}

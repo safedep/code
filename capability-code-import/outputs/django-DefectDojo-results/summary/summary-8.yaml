@@ -1,0 +1,189 @@
+
+base_test_class:
+  base_test_class.on_exception_html_source_logger:
+    - def test_view_test(self):\n        # View existing test from ProductTest()\n        # Login to the site.\n        driver = self.driver\n\n        # goto engagemnent list (and wait for javascript to lo...
+    - def goto_add_api_scan_configuration(self, driver):\n        self.goto_product_overview(driver)\n        driver.find_element(By.CSS_SELECTOR, ".dropdown-toggle.pull-left").click()\n        driver.find_...
+    - def goto_add_api_scan_configuration(self, driver):\n        self.goto_product_overview(driver)\n        driver.find_element(By.CSS_SELECTOR, ".dropdown-toggle.pull-left").click()\n        driver.find_...
+    - def goto_add_api_scan_configuration(self, driver):\n        self.goto_product_overview(driver)\n        driver.find_element(By.CSS_SELECTOR, ".dropdown-toggle.pull-left").click()\n        driver.find_...
+    - def goto_add_api_scan_configuration(self, driver):\n        self.goto_product_overview(driver)\n        driver.find_element(By.CSS_SELECTOR, ".dropdown-toggle.pull-left").click()\n        driver.find_...
+    - def goto_add_api_scan_configuration(self, driver):\n        self.goto_product_overview(driver)\n        driver.find_element(By.CSS_SELECTOR, ".dropdown-toggle.pull-left").click()\n        driver.find_...
+    - def goto_add_api_scan_configuration(self, driver):\n        self.goto_product_overview(driver)\n        driver.find_element(By.CSS_SELECTOR, ".dropdown-toggle.pull-left").click()\n        driver.find_...
+  base_test_class.set_suite_settings:
+    - set_suite_settings(suite, jira=jira, github=github, block_execution=block_execution)
+    - set_suite_settings(suite, jira=jira, github=github, block_execution=block_execution)
+    - set_suite_settings(suite, jira=jira, github=github, block_execution=block_execution)
+    - set_suite_settings(suite, jira=jira, github=github, block_execution=block_execution)
+    - set_suite_settings(suite, jira=jira, github=github, block_execution=block_execution)
+
+socket:
+  socket:
+    - socket.socket()
+    - socket.socket()
+
+django_ratelimit:
+  django_ratelimit.core.is_ratelimited:
+    - is_ratelimited(request=request, fn=fn,\n                                         key=key, rate=limiter_rate, method=method,\n                                         increment=True)
+  django_ratelimit.exceptions.Ratelimited:
+    - if limiter_lockout:\n                    username = request.POST.get("username", None)\n                    if username:\n                        dojo_user = Dojo_User.objects.filter(username=username...
+  django_ratelimit.UNSAFE:
+    - def dojo_ratelimit(key="ip", rate=None, method=UNSAFE, block=False):\n    def decorator(fn):\n        @wraps(fn)\n        def _wrapped(request, *args, **kw):\n            limiter_block = getattr(setti...
+
+decimal:
+  decimal:
+    - decimal.Decimal("100.0")
+    - decimal.Decimal("100.0")
+    - decimal.Decimal("100.0")
+    - decimal.Decimal(f"1E{exponent}")
+
+crispy_forms:
+  crispy_forms.bootstrap.InlineRadios:
+    - inline_type = InlineRadios
+  crispy_forms.bootstrap.InlineCheckboxes:
+    - inline_type = InlineCheckboxes
+  crispy_forms.layout.Layout:
+    - Layout(\n            inline_type("answer"),\n        )
+  crispy_forms.helper.FormHelper:
+    - FormHelper()
+
+urllib:
+  urllib.parse.quote:
+    - quote(request.get_full_path())
+  urllib.parse.urlparse:
+    - urlparse(uri)
+    - urlparse(endpoint)
+    - urlparse(targetURL)
+  urllib.parse.urlencode:
+    - urlencode(params)
+    - urlencode(params_default)
+
+email:
+  email.utils.getaddresses:
+    - getaddresses([env("DD_ADMINS")])
+
+textwrap:
+  textwrap:
+    - textwrap.shorten(title, width=511, placeholder="...")
+    - textwrap.shorten(title, width=511, placeholder="...")
+    - textwrap.shorten(\n                    text=hotspot.get("message", ""), width=500,\n                )
+    - textwrap.shorten(result_extended, 150)
+    - textwrap.shorten(result_extended, 150)
+    - textwrap.shorten(result_extended, 150)
+    - textwrap.shorten(result_extended, 150)
+    - textwrap.shorten(\n                    dependency_name, width=190, placeholder="...",\n                )
+    - textwrap.shorten(\n                    dependency_version, width=90, placeholder="...",\n                )
+    - textwrap.shorten(title, 150)
+    - textwrap.shorten(title, 150)
+    - textwrap.shorten(finding["description"], 150)
+    - textwrap.shorten(title, width=255, placeholder="...")
+    - textwrap.shorten(\n                data_package_name, width=200, placeholder="...",\n            )
+
+rest_framework:
+  rest_framework.status.HTTP_409_CONFLICT:
+    - response.status_code = HTTP_409_CONFLICT
+  rest_framework.status.HTTP_500_INTERNAL_SERVER_ERROR:
+    - response.status_code = HTTP_500_INTERNAL_SERVER_ERROR
+  rest_framework.serializers:
+    - serializers.ValidationError(msg)
+    - class StatusStatisticsSerializer(serializers.Serializer):\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, **kwargs)\n        for stat in STATS_FIELDS:\n            self.fields[stat.lower()] = serializers.IntegerField()
+    - serializers.IntegerField()
+    - class SeverityStatusStatisticsSerializer(serializers.Serializer):\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, **kwargs)\n        for sev in SEVERITIES:\n            self...
+    - class DeltaStatisticsSerializer(serializers.Serializer):\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, **kwargs)\n        for action in IMPORT_ACTIONS:\n            self.fields[\n                action[1].lower()\n            ] = SeverityStatusStatisticsSerializer()
+    - class ImportStatisticsSerializer(serializers.Serializer):\n    before = SeverityStatusStatisticsSerializer(\n        required=False,\n        help_text="Finding statistics as stored in Defect Dojo bef...
+    - serializers.ListField(child=serializers.CharField())
+    - serializers.CharField()
+    - class TagListSerializerField(serializers.ListField):\n    child = serializers.CharField()\n    default_error_messages = {\n        "not_a_list": _(\n            'Expected a list of items but got type ...
+    - serializers.CharField()
+    - class TaggitSerializer(serializers.Serializer):\n    def create(self, validated_data):\n        to_be_tagged, validated_data = self._pop_tags(validated_data)\n\n        tag_object = super().create(val...
+    - class RequestResponseSerializerField(serializers.ListSerializer):\n    child = DictField(child=serializers.CharField())\n    default_error_messages = {\n        "not_a_list": _(\n            'Expected...
+    - serializers.CharField()
+    - class BurpRawRequestResponseSerializer(serializers.Serializer):\n    req_resp = RequestResponseSerializerField(required=True)
+    - class BurpRawRequestResponseMultiSerializer(serializers.ModelSerializer):\n    burpRequestBase64 = serializers.CharField()\n    burpResponseBase64 = serializers.CharField()\n\n    def to_representatio...
+    - serializers.CharField()
+    - serializers.CharField()
+    - class MetaSerializer(serializers.ModelSerializer):\n    product = serializers.PrimaryKeyRelatedField(\n        queryset=Product.objects.all(),\n        required=False,\n        default=None,\n        ...
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Product.objects.all(),\n        required=False,\n        default=None,\n        allow_null=True,\n    )
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Endpoint.objects.all(),\n        required=False,\n        default=None,\n        allow_null=True,\n    )
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Finding.objects.all(),\n        required=False,\n        default=None,\n        allow_null=True,\n    )
+    - class MetadataSerializer(serializers.Serializer):\n    name = serializers.CharField(max_length=120)\n    value = serializers.CharField(max_length=300)
+    - serializers.CharField(max_length=120)
+    - serializers.CharField(max_length=300)
+    - class MetaMainSerializer(serializers.Serializer):\n    id = serializers.IntegerField(read_only=True)\n\n    product = serializers.PrimaryKeyRelatedField(\n        queryset=Product.objects.all(),\n    ...
+    - serializers.IntegerField(read_only=True)
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Product.objects.all(),\n        required=False,\n        default=None,\n        allow_null=True,\n    )
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Endpoint.objects.all(),\n        required=False,\n        default=None,\n        allow_null=True,\n    )
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Finding.objects.all(),\n        required=False,\n        default=None,\n        allow_null=True,\n    )
+    - class ProductMetaSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = DojoMeta\n        fields = ("name", "value")
+    - class UserSerializer(serializers.ModelSerializer):\n    date_joined = serializers.DateTimeField(read_only=True)\n    last_login = serializers.DateTimeField(read_only=True, allow_null=True)\n    email ...
+    - serializers.DateTimeField(read_only=True)
+    - serializers.DateTimeField(read_only=True, allow_null=True)
+    - serializers.EmailField(required=True)
+    - serializers.CharField(\n        write_only=True,\n        style={"input_type": "password"},\n        required=False,\n        validators=[validate_password],\n    )
+    - serializers.PrimaryKeyRelatedField(\n        allow_null=True,\n        queryset=Permission.objects.filter(\n            codename__in=get_configuration_permissions_codenames(),\n        ),\n        many=True,\n        required=False,\n        source="user_permissions",\n    )
+    - class UserContactInfoSerializer(serializers.ModelSerializer):\n    user_profile = UserSerializer(many=False, source="user", read_only=True)\n\n    class Meta:\n        model = UserContactInfo\n        fields = "__all__"
+    - class UserStubSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Dojo_User\n        fields = ("id", "username", "first_name", "last_name")
+    - class RoleSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Role\n        fields = "__all__"
+    - class DojoGroupSerializer(serializers.ModelSerializer):\n    configuration_permissions = serializers.PrimaryKeyRelatedField(\n        allow_null=True,\n        queryset=Permission.objects.filter(\n   ...
+    - serializers.PrimaryKeyRelatedField(\n        allow_null=True,\n        queryset=Permission.objects.filter(\n            codename__in=get_configuration_permissions_codenames(),\n        ),\n        many=True,\n        required=False,\n        source="auth_group.permissions",\n    )
+    - class DojoGroupMemberSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Dojo_Group_Member\n        fields = "__all__"\n\n    def validate(self, data):\n        if (\n          ...
+    - class GlobalRoleSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Global_Role\n        fields = "__all__"\n\n    def validate(self, data):\n        user = None\n        group ...
+    - class AddUserSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = User\n        fields = ("id", "username")
+    - class NoteTypeSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Note_Type\n        fields = "__all__"
+    - class NoteHistorySerializer(serializers.ModelSerializer):\n    current_editor = UserStubSerializer(read_only=True)\n    note_type = NoteTypeSerializer(read_only=True, many=False)\n\n    class Meta:\n        model = NoteHistory\n        fields = "__all__"
+    - class NoteSerializer(serializers.ModelSerializer):\n    author = UserStubSerializer(many=False, read_only=True)\n    editor = UserStubSerializer(read_only=True, many=False, allow_null=True)\n    histo...
+    - class FileSerializer(serializers.ModelSerializer):\n    file = serializers.FileField(required=True)\n\n    class Meta:\n        model = FileUpload\n        fields = "__all__"\n\n    def validate(self,...
+    - serializers.FileField(required=True)
+    - class RawFileSerializer(serializers.ModelSerializer):\n    file = serializers.FileField(required=True)\n\n    class Meta:\n        model = FileUpload\n        fields = ["file"]
+    - serializers.FileField(required=True)
+    - class RiskAcceptanceProofSerializer(serializers.ModelSerializer):\n    path = serializers.FileField(required=True)\n\n    class Meta:\n        model = Risk_Acceptance\n        fields = ["path"]
+    - serializers.FileField(required=True)
+    - class ProductMemberSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Product_Member\n        fields = "__all__"\n\n    def validate(self, data):\n        if (\n            sel...
+    - class ProductGroupSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Product_Group\n        fields = "__all__"\n\n    def validate(self, data):\n        if (\n            self....
+    - class ProductTypeMemberSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Product_Type_Member\n        fields = "__all__"\n\n    def validate(self, data):\n        if (\n      ...
+    - class ProductTypeGroupSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Product_Type_Group\n        fields = "__all__"\n\n    def validate(self, data):\n        if (\n        ...
+    - class ProductTypeSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Product_Type\n        fields = "__all__"
+    - class EngagementSerializer(TaggitSerializer, serializers.ModelSerializer):\n    tags = TagListSerializerField(required=False)\n\n    class Meta:\n        model = Engagement\n        exclude = ("inheri...
+    - serializers.ValidationError(msg)
+    - class EngagementToNotesSerializer(serializers.Serializer):\n    engagement_id = serializers.PrimaryKeyRelatedField(\n        queryset=Engagement.objects.all(), many=False, allow_null=True,\n    )\n    notes = NoteSerializer(many=True)
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Engagement.objects.all(), many=False, allow_null=True,\n    )
+    - class EngagementToFilesSerializer(serializers.Serializer):\n    engagement_id = serializers.PrimaryKeyRelatedField(\n        queryset=Engagement.objects.all(), many=False, allow_null=True,\n    )\n   ...
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Engagement.objects.all(), many=False, allow_null=True,\n    )
+    - class EngagementCheckListSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Check_List\n        fields = "__all__"
+    - class AppAnalysisSerializer(TaggitSerializer, serializers.ModelSerializer):\n    tags = TagListSerializerField(required=False)\n\n    class Meta:\n        model = App_Analysis\n        fields = "__all__"
+    - class ToolTypeSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Tool_Type\n        fields = "__all__"\n\n    def validate(self, data):\n        if self.context["request"].meth...
+    - serializers.ValidationError(msg)
+    - class RegulationSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Regulation\n        fields = "__all__"
+    - class ToolConfigurationSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Tool_Configuration\n        fields = "__all__"\n        extra_kwargs = {\n            "password": {"wr...
+    - class ToolProductSettingsSerializer(serializers.ModelSerializer):\n    setting_url = serializers.CharField(source="url")\n    product = serializers.PrimaryKeyRelatedField(\n        queryset=Product.ob...
+    - serializers.CharField(source="url")
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Product.objects.all(), required=True,\n    )
+    - class EndpointStatusSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Endpoint_Status\n        fields = "__all__"\n\n    def run_validators(self, initial_data):\n        try:\...
+    - serializers.ValidationError(msg)
+    - serializers.ValidationError(msg)
+    - serializers.ValidationError(msg)
+    - class EndpointSerializer(TaggitSerializer, serializers.ModelSerializer):\n    tags = TagListSerializerField(required=False)\n\n    class Meta:\n        model = Endpoint\n        exclude = ("inherited_...
+    - serializers.ValidationError(msg)
+    - serializers.ValidationError(msg)
+    - serializers.ValidationError(msg, code="invalid")
+    - class EndpointParamsSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Endpoint_Params\n        fields = "__all__"
+    - class JIRAIssueSerializer(serializers.ModelSerializer):\n    url = serializers.SerializerMethodField(read_only=True)\n\n    class Meta:\n        model = JIRA_Issue\n        fields = "__all__"\n\n    d...
+    - serializers.SerializerMethodField(read_only=True)
+    - serializers.ValidationError(msg)
+    - serializers.ValidationError(msg)
+    - class JIRAInstanceSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = JIRA_Instance\n        fields = "__all__"\n        extra_kwargs = {\n            "password": {"write_only": True},\n        }
+    - class JIRAProjectSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = JIRA_Project\n        fields = "__all__"\n\n    def validate(self, data):\n        if self.context["request"...
+    - serializers.ValidationError(msg)
+    - class SonarqubeIssueSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Sonarqube_Issue\n        fields = "__all__"
+    - class SonarqubeIssueTransitionSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Sonarqube_Issue_Transition\n        fields = "__all__"
+    - class ProductAPIScanConfigurationSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Product_API_Scan_Configuration\n        fields = "__all__"
+    - class DevelopmentEnvironmentSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Development_Environment\n        fields = "__all__"
+    - class FindingGroupSerializer(serializers.ModelSerializer):\n    jira_issue = JIRAIssueSerializer(read_only=True, allow_null=True)\n\n    class Meta:\n        model = Finding_Group\n        fields = ("id", "name", "test", "jira_issue")
+    - class TestSerializer(TaggitSerializer, serializers.ModelSerializer):\n    tags = TagListSerializerField(required=False)\n    test_type_name = serializers.ReadOnlyField()\n    finding_groups = FindingG...
+    - serializers.ReadOnlyField()
+    - class TestCreateSerializer(TaggitSerializer, serializers.ModelSerializer):\n    engagement = serializers.PrimaryKeyRelatedField(\n        queryset=Engagement.objects.all(),\n    )\n    notes = seriali...
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Engagement.objects.all(),\n    )
+    - serializers.PrimaryKeyRelatedField(\n        allow_null=True,\n        queryset=Notes.objects.all(),\n        many=True,\n        required=False,\n    )
+    - class TestTypeSerializer(TaggitSerializer, serializers.ModelSerializer):\n    tags = TagListSerializerField(required=False)\n\n    class Meta:\n        model = Test_Type\n        exclude = ("dynamically_generated",)
+    - class TestToNotesSerializer(serializers.Serializer):\n    test_id = serializers.PrimaryKeyRelatedField(\n        queryset=Test.objects.all(), many=False, allow_null=True,\n    )\n    notes = NoteSerializer(many=True)
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Test.objects.all(), many=False, allow_null=True,\n    )
+    - class TestToFilesSerializer(serializers.Serializer):\n    test_id = serializers.PrimaryKeyRelatedField(\n        queryset=Test.objects.all(), many=False, allow_null=True,\n    )\n    files = FileSeria...
+    - serializers.PrimaryKeyRelatedField(\n        queryset=Test.objects.all(), many=False, allow_null=True,\n    )

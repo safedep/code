@@ -1,0 +1,223 @@
+
+django:
+  django.db.models:
+    - models.ForeignKey(Engagement, related_name="engagement+",\n                                   null=True, blank=False, editable=True,\n                                   on_delete=models.CASCADE)
+    - models.ForeignKey(Engagement, related_name="engagement+",\n                                   null=True, blank=False, editable=True,\n                                   on_delete=models.CASCADE)
+    - models.ForeignKey(Engagement_Survey, on_delete=models.CASCADE)
+    - models.ForeignKey(Engagement_Survey, on_delete=models.CASCADE)
+    - models.ForeignKey(Dojo_User, related_name="assignee",\n                                  null=True, blank=True, editable=True,\n                                  default=None, on_delete=models.RESTRICT)
+    - models.ForeignKey(Dojo_User, related_name="assignee",\n                                  null=True, blank=True, editable=True,\n                                  default=None, on_delete=models.RESTRICT)
+    - models.ForeignKey(Dojo_User, related_name="responder",\n                                  null=True, blank=True, editable=True,\n                                  default=None, on_delete=models.RESTRICT)
+    - models.ForeignKey(Dojo_User, related_name="responder",\n                                  null=True, blank=True, editable=True,\n                                  default=None, on_delete=models.RESTRICT)
+    - models.BooleanField(default=False)
+    - models.DateField(null=True)
+    - class General_Survey(models.Model):\n    survey = models.ForeignKey(Engagement_Survey, on_delete=models.CASCADE)\n    num_responses = models.IntegerField(default=0)\n    generated = models.DateTimeFie...
+    - models.ForeignKey(Engagement_Survey, on_delete=models.CASCADE)
+    - models.ForeignKey(Engagement_Survey, on_delete=models.CASCADE)
+    - models.IntegerField(default=0)
+    - models.DateTimeField(auto_now_add=True, null=True)
+    - models.DateTimeField(null=False, blank=False)
+    - models.ForeignKey(Question, on_delete=models.CASCADE)
+    - models.ForeignKey(Question, on_delete=models.CASCADE)
+    - models.ForeignKey(Answered_Survey,\n                                            null=False,\n                                            blank=False,\n                                            on_delete=models.CASCADE)
+    - models.ForeignKey(Answered_Survey,\n                                            null=False,\n                                            blank=False,\n                                            on_delete=models.CASCADE)
+    - models.Manager()
+    - models.TextField(\n        blank=False,\n        help_text=_("The answer text"),\n        default="")
+    - models.ManyToManyField(\n        Choice,\n        help_text=_("The selected choices as the answer"))
+  django.contrib.auth.decorators.user_passes_test:
+    - user_passes_test(lambda u: u.is_superuser)
+    - user_passes_test(lambda u: u.is_superuser)
+    - user_passes_test(lambda u: u.is_active)
+    - user_passes_test(lambda u: u.is_superuser)
+    - user_passes_test(lambda u: u.is_superuser)
+    - user_passes_test(lambda u: u.is_superuser)
+  django.contrib.contenttypes.models.ContentType:
+    - ContentType.objects.get(app_label="dojo", model="endpoint")
+    - ContentType.objects.get(app_label="dojo", model="engagement")
+    - ContentType.objects.get_for_model(TextQuestion)
+    - ContentType.objects.get_for_model(ChoiceQuestion)
+    - ContentType.objects.get(app_label="dojo", model="system_settings")
+    - try:\n            content_type_system_settings = ContentType.objects.get(app_label="dojo", model="system_settings")\n            google_permission = Permission.objects.filter(content_type=content_type...
+    - try:\n            content_type_system_settings = ContentType.objects.get(app_label="dojo", model="system_settings")\n            google_permission = Permission.objects.filter(content_type=content_type...
+    - ContentType.objects.get_for_id(\n                        ContentType.objects.get_for_model(finding).id)
+    - ContentType.objects.get_for_model(finding)
+    - ContentType.objects.get(app_label="dojo", model="product")
+    - ContentType.objects.get(app_label="dojo", model="product_type")
+    - ContentType.objects.get_for_model(question)
+    - ContentType.objects.get_for_model(obj)
+    - ContentType.objects.get_for_model(obj)
+    - ContentType.objects.get(app_label="dojo", model="test")
+    - ContentType.objects.get_for_id(cid)
+  django.utils.dates.MONTHS:
+    - MONTHS.items()
+    - MONTHS.items()
+  django.utils.http.urlencode:
+    - urlencode({"next": request.GET.get("next")})
+  django.contrib.humanize.templatetags.humanize.naturaltime:
+    - naturaltime(last_login)
+    - naturaltime(now() + timedelta(seconds=settings.PASSWORD_RESET_TIMEOUT))
+  django.urls.get_resolver:
+    - get_resolver(None)
+    - get_resolver(ROOT_URLCONF)
+  django.contrib.admin.utils.NestedObjects:
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+    - NestedObjects(using=DEFAULT_DB_ALIAS)
+  django.db.models.Count:
+    - Count("id")
+    - Count("id", filter=Q(active=True))
+    - Count("id", filter=Q(duplicate=True))
+    - Count("id")
+    - Count("finding__id", filter=Q(finding__active=True))
+    - Count("engagement")
+    - Count("test__id")
+    - Count("accepted_findings__id")
+    - Count("finding__id", distinct=True)
+    - Count("finding__id", filter=Q(finding__active=True), distinct=True)
+    - Count("finding__id", filter=Q(finding__active=True) & Q(finding__verified=True), distinct=True)
+    - Count("finding__id", filter=Q(finding__is_mitigated=True), distinct=True)
+    - Count("finding__id", filter=Q(finding__duplicate=True), distinct=True)
+    - Count("test_import__id", filter=Q(test_import__type=Test_Import.REIMPORT_TYPE), distinct=True)
+    - Count(\n                "status_finding__id", filter=Q(status_finding__mitigated=False),\n            )
+    - Count(\n                "status_finding__id", filter=Q(status_finding__mitigated=True),\n            )
+    - Count("answer")
+    - Count("severity")
+    - Count("severity")
+    - Count("id")
+    - Count("id", filter=Q(**{total_expression: ("Critical", "High", "Medium", "Low", "Info")}))
+    - Count("id", filter=Q(**{expression: "Critical"}))
+    - Count("id", filter=Q(**{expression: "High"}))
+    - Count("id", filter=Q(**{expression: "Medium"}))
+    - Count("id", filter=Q(**{expression: "Low"}))
+    - Count("id", filter=Q(**{expression: "Info"}))
+    - Count("numerical_severity")
+    - Count("numerical_severity")
+    - Count("numerical_severity")
+    - Count("numerical_severity")
+    - Count("numerical_severity")
+    - Count("numerical_severity")
+    - Count(Case(When(**{stats_field: True}, then=1)))
+    - Count("id")
+    - Count("findings", filter=Q(test_import_finding_action__action=IMPORT_CREATED_FINDING))
+    - Count("findings", filter=Q(test_import_finding_action__action=IMPORT_CLOSED_FINDING))
+    - Count("findings", filter=Q(test_import_finding_action__action=IMPORT_REACTIVATED_FINDING))
+    - Count("findings", filter=Q(test_import_finding_action__action=IMPORT_UNTOUCHED_FINDING))
+    - Count(\n                    "notifications__id",\n                    filter=Q(notifications__product_id=self.product) | Q(notifications__product__isnull=True),\n                )
+    - Count("engagement__test__finding", filter=Q(engagement__test__finding__active=True))
+    - Count("engagement__id", filter=Q(engagement__active=True))
+    - Count("engagement__id", filter=Q(engagement__active=False))
+    - Count("engagement__test__finding__id",\n                                                                                filter=Q(\n                                                                                    engagement__test__finding__active=True))
+    - Count("engagement__test__finding__id",\n                                                filter=Q(\n                                                    engagement__test__finding__active=True,\n                                                    engagement__test__finding__verified=True))
+    - Count("files")
+    - Count("severity")
+    - Count("id")
+    - Count("id", filter=Q(active=True))
+    - Count("id", filter=Q(duplicate=True))
+    - Count("cwe")
+    - Count("cwe")
+    - Count("finding__cwe")
+    - Count("finding__cwe")
+    - Count("finding__id", filter=Q(finding__verified=True))
+    - Count("test", distinct=True)
+    - Count("test__finding__id")
+    - Count("test__finding__id", filter=Q(test__finding__active=True))
+    - Count("test__finding__id",\n                                           filter=Q(test__finding__active=True) & Q(test__finding__verified=True))
+    - Count("test__finding__id", filter=Q(test__finding__is_mitigated=True))
+    - Count("test__finding__id", filter=Q(test__finding__duplicate=True))
+    - Count("test__finding__id", filter=Q(test__finding__risk_accepted=True))
+    - Count("prod_type__engagement__test__finding__id", filter=active_findings_query)
+    - Count("prod_type__engagement__test__finding__id", filter=active_verified_findings_query)
+    - Count("prod_type", distinct=True)
+    - Count("id")
+    - Count("status_finding__id", filter=Q(status_finding__mitigated=False))
+    - Count("status_finding__id", filter=Q(status_finding__mitigated=True))
+    - Count("test_import__id", distinct=True)
+    - Count("id")
+    - Count("id")
+    - Count("numerical_severity")
+    - Count("numerical_severity")
+    - Count("numerical_severity")
+  django.core.validators.validate_ipv46_address:
+    - validate_ipv46_address(endpoint.host)
+    - validate_ipv46_address(self.host)
+    - validate_ipv46_address(ip)
+  django.db.models.JSONField:
+    - filter_overrides = {\n            JSONField: {\n                "filter_class": CharFilter,\n                "extra": lambda _: {\n                    "lookup_expr": "icontains",\n                },\n            },\n        }
+    - JSONField(null=True)
+    - models.JSONField(max_length=200, blank=True, null=True,\n                                   help_text=_('JIRA custom field JSON mapping of Id to value, e.g. {"customfield_10122": [{"name": "8.0.1"}]}'))
+  django.contrib.auth.middleware.RemoteUserMiddleware aliased as OriginalRemoteUserMiddleware:
+    - class RemoteUserMiddleware(OriginalRemoteUserMiddleware):\n    def process_request(self, request):\n        if not settings.AUTH_REMOTEUSER_ENABLED:\n            return None\n\n        # process only ...
+  django.template.defaultfilters.register:
+    - register.filter(name="dict_key")
+  django.urls.get_script_prefix:
+    - get_script_prefix()
+  django.core.wsgi.get_wsgi_application:
+    - get_wsgi_application()
+    - get_wsgi_application()
+  django.contrib.auth.signals.user_login_failed:
+    - receiver(user_login_failed)
+  django.template.defaultfilters.pluralize:
+    - pluralize(count, "finding,findings")
+    - pluralize(count, "finding,findings")
+  django.core.files.uploadedfile.TemporaryUploadedFile:
+    - def process_scan(\n        self,\n        scan: TemporaryUploadedFile,\n        *args: list,\n        **kwargs: dict,\n    ) -> tuple[Test, int, int, int, int, int, Test_Import]:\n        """\n       ...
+    - def process_scan_file(\n        self,\n        scan: TemporaryUploadedFile,\n    ) -> TemporaryUploadedFile:\n        """\n        Make any preprocessing actions or changes on the report before submitting\n        to the parser to generate findings from the file\n        """\n        return scan
+    - def process_scan_file(\n        self,\n        scan: TemporaryUploadedFile,\n    ) -> TemporaryUploadedFile:\n        """\n        Make any preprocessing actions or changes on the report before submitting\n        to the parser to generate findings from the file\n        """\n        return scan
+    - def parse_findings_static_test_type(\n        self,\n        scan: TemporaryUploadedFile,\n        parser: Parser,\n    ) -> list[Finding]:\n        """\n        Parse the scan report submitted with t...
+    - def parse_dynamic_test_type_tests(\n        self,\n        scan: TemporaryUploadedFile,\n        parser: Parser,\n    ) -> list[Test]:\n        """Use the API configuration object to get the tests to ...
+    - def parse_findings_dynamic_test_type(\n        self,\n        scan: TemporaryUploadedFile,\n        parser: Parser,\n    ) -> list[Finding]:\n        """\n        Use the API configuration object to g...
+    - def parse_findings(\n        self,\n        scan: TemporaryUploadedFile,\n        parser: Parser,\n    ) -> list[Finding]:\n        """\n        Determine how to parse the findings based on the presen...
+    - def process_scan(\n        self,\n        scan: TemporaryUploadedFile,\n        *args: list,\n        **kwargs: dict,\n    ) -> tuple[Test, int, int, int, int, int, Test_Import]:\n        """\n       ...
+    - def parse_findings(\n        self,\n        scan: TemporaryUploadedFile,\n        parser: Parser,\n    ) -> list[Finding]:\n        """\n        Determine how to parse the findings based on the presen...
+    - def parse_findings_static_test_type(\n        self,\n        scan: TemporaryUploadedFile,\n        parser: Parser,\n    ) -> list[Finding]:\n        """\n        Creates a test object as part of the i...
+    - def parse_findings_dynamic_test_type(\n        self,\n        scan: TemporaryUploadedFile,\n        parser: Parser,\n    ) -> list[Finding]:\n        """\n        Uses the parser to fetch any tests th...
+    - def process_scan(\n        self,\n        scan: TemporaryUploadedFile,\n        *args: list,\n        **kwargs: dict,\n    ) -> tuple[Test, int, int, int, int, int, Test_Import]:\n        """\n       ...
+    - def parse_findings(\n        self,\n        scan: TemporaryUploadedFile,\n        parser: Parser,\n    ) -> list[Finding]:\n        """\n        Determine how to parse the findings based on the presen...
+    - def parse_findings_static_test_type(\n        self,\n        scan: TemporaryUploadedFile,\n        parser: Parser,\n    ) -> list[Finding]:\n        """\n        Parses the findings from file and assi...
+    - def parse_findings_dynamic_test_type(\n        self,\n        scan: TemporaryUploadedFile,\n        parser: Parser,\n    ) -> list[Finding]:\n        """\n        Uses the parser to fetch any tests th...
+    - def get_findings(self, file: TemporaryUploadedFile, test: Test) -> list[Finding]:\n        """Return the list of findings generated from the uploaded report."""\n        # first determine which format...
+    - def get_json_tree(self, file: TemporaryUploadedFile) -> dict:\n        """Extract the CSV file into a iterable that represents a dict."""\n        data = file.read()\n        try:\n            tree = ...
+    - def determine_json_format(self, file: TemporaryUploadedFile, test: Test) -> list[Finding]:\n        """Evaluate the format of the JSON report that was uploaded to determine which parser to use."""\n  ...
+    - def get_csv_reader(self, file: TemporaryUploadedFile) -> csv.DictReader:\n        """Extract the CSV file into a iterable that represents a dict."""\n        if file is None:\n            return ()\n ...
+    - def determine_csv_format(self, file: TemporaryUploadedFile, test: Test) -> list[Finding]:\n        """Evaluate the format of the CSV report that was uploaded to determine which parser to use."""\n    ...
+  django.core.validators.RegexValidator:
+    - RegexValidator(regex=r"^\+?1?\d{9,15}$",\n                                 message=_("Phone number must be entered in the format: '+999999999'. "\n                                         "Up to 15 digits allowed."))
+    - RegexValidator(regex=r"^AV:[NALP]|AC:[LH]|PR:[UNLH]|UI:[NR]|S:[UC]|[CIA]:[NLH]", message="CVSS must be entered in format: 'AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H'")
+    - RegexValidator(regex=r"^AV:[NALP]|AC:[LH]|PR:[UNLH]|UI:[NR]|S:[UC]|[CIA]:[NLH]", message="CVSS must be entered in format: 'AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H'")
+  django.core.mail.EmailMessage:
+    - EmailMessage(\n                subject,\n                self._create_notification_message(event, user, "mail", kwargs),\n                self.system_settings.email_from,\n                [address],\n                headers={"From": f"{self.system_settings.email_from}"},\n            )
+  django.contrib.auth.forms.PasswordResetForm:
+    - class DojoForgotUsernameForm(PasswordResetForm):\n    def send_mail(self, subject_template_name, email_template_name,\n                  context, from_email, to_email, html_email_template_name=None):\...
+    - class DojoPasswordResetForm(PasswordResetForm):\n    def send_mail(self, subject_template_name, email_template_name,\n                  context, from_email, to_email, html_email_template_name=None):\n...
+  django.contrib.auth.views.PasswordResetView:
+    - class DojoPasswordResetView(PasswordResetView):\n    form_class = DojoPasswordResetForm
+    - class DojoForgotUsernameView(PasswordResetView):\n    form_class = DojoForgotUsernameForm
+  django.db.utils.IntegrityError:
+    - endpoint = validated_data.get("endpoint")\n        finding = validated_data.get("finding")\n        try:\n            status = Endpoint_Status.objects.create(\n                finding=finding, endpoin...
+    - try:\n            return super().update(instance, validated_data)\n        except IntegrityError as ie:\n            if "finding, endpoint must make a unique set" in str(ie):\n                msg = "T...
+    - validated_data["id"] = 1\n        try:\n            return super().create(validated_data)\n        except IntegrityError as e:\n            if 'duplicate key value violates unique constraint "dojo_ann...
+    - metadata_name = request.query_params.get("name", None)\n        if metadata_name is None:\n            return Response(\n                "Metadata name is required", status=status.HTTP_400_BAD_REQUEST...
+    - try:\n                DojoMeta.objects.create(\n                    product=product,\n                    finding=finding,\n                    endpoint=endpoint,\n                    name=metadata.ge...
+    - try:\n                    dojometa.update(\n                        name=metadata.get("name"),\n                        value=metadata.get("value"),\n                        )\n                except (IntegrityError) as ex:\n                    raise ValidationError(str(ex))
+    - logger.debug("creating finding_group_create")\n    if not finds or len(finds) == 0:\n        msg = "cannot create empty Finding Group"\n        raise ValueError(msg)\n\n    finding_group_name_dummy = ...
+  django.contrib.postgres.aggregates.StringAgg:
+    - StringAgg(\n                    "component_version", delimiter=separator, distinct=True, default=Value(""),\n                )
+    - StringAgg("component_version", delimiter=separator, distinct=True, default=Value(""))
+  django.views.decorators.cache.cache_page:
+    - cache_page(60 * 5)
+    - cache_page(60 * 5)
+    - cache_page(60 * 5)
+    - cache_page(60 * 5)
+  django.http.HttpRequest:
+    - def get_filtered_tests(\n        self,\n        request: HttpRequest,\n        queryset: list[Test],\n        engagement: Engagement,\n    ):\n        filter_string_matching = get_system_setting("filt...
+    - def get_form(\n        self,\n        request: HttpRequest,\n        **kwargs: dict,\n    ) -> ImportScanForm:\n        """Returns the default import form for importing findings"""\n        if request...

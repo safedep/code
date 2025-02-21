@@ -1,0 +1,250 @@
+
+dojo:
+  dojo.models.Product_Type_Group:
+    - Product_Type_Group.objects.filter(\n        product_type=OuterRef("product__prod_type_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Type_Group.objects.filter(\n        product_type=OuterRef("product__prod_type_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Type_Group.objects.filter(\n        product_type=OuterRef("endpoint__product__prod_type_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Type_Group.objects.filter(\n        product_type=OuterRef("finding__test__engagement__product__prod_type_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Type_Group.objects.filter(\n        product_type=OuterRef("product__prod_type_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Type_Group.objects.filter(\n        product_type=OuterRef("product__prod_type_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Type_Group.objects.filter(\n        product_type=OuterRef("product__prod_type_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Type_Group.objects.filter(\n        product_type=OuterRef("pk"),\n        group__users=user,\n        role__in=roles)
+    - Product_Type_Group.objects.filter(product_type=product_type, group__in=authorized_groups)
+    - Product_Type_Group.objects.none()
+    - Product_Type_Group.objects.none()
+    - Product_Type_Group.objects.all()
+    - Product_Type_Group.objects.filter(product_type__in=product_types)
+    - Product_Type_Group.objects.filter(product_type=pt, group=group)
+    - Product_Type_Group()
+    - user_is_authorized(Product_Type_Group, Permissions.Product_Type_Group_Edit, "groupid")
+    - get_object_or_404(Product_Type_Group, pk=groupid)
+    - user_is_authorized(Product_Type_Group, Permissions.Product_Type_Group_Delete, "groupid")
+    - get_object_or_404(Product_Type_Group, pk=groupid)
+    - Product_Type_Group.objects.filter(\n        product_type=OuterRef("engagement__product__prod_type_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Type_Group.objects.filter(\n        product_type=OuterRef("engagement__product__prod_type_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Type_Group.objects.filter(\n        product_type=OuterRef("test__engagement__product__prod_type_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Type_Group.objects.filter(\n        product_type=OuterRef("product__prod_type_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Type_Group.objects \\n        .filter(product_type=product_type, role__in=roles)
+    - Product_Type_Group.objects \\n        .filter(product_type=product.prod_type, role__in=roles)
+    - Product_Type_Group.objects \\n        .filter(product_type_id__in=authorized_product_types, role__in=roles)
+  dojo.jira_link.queries.get_authorized_jira_projects:
+    - get_authorized_jira_projects(Permissions.Product_View)
+  dojo.utils.get_page_items:
+    - get_page_items(request, comp_filter.qs, 25)
+    - get_page_items(request, devs.qs, 25)
+    - get_page_items(request, endpoints.qs, 25)
+    - get_page_items(request, active_findings, 25)
+    - get_page_items(request, filtered_engagements.qs, 25)
+    - get_page_items(request, filtered.qs, 25)
+    - get_page_items(request, tests_filter.qs, default_page_num)
+    - get_page_items(request, tests_filter.qs, default_page_num)
+    - get_page_items(request, accepted_findings, 15)
+    - get_page_items(request, unaccepted_findings, 25, "apage")
+    - get_page_items(request, filtered_findings.qs, 25)
+    - get_page_items(\n            request,\n            similar_findings_filter.qs,\n            settings.SIMILAR_FINDINGS_MAX_RESULTS,\n            prefix="similar",\n        )
+    - get_page_items(request, templates.qs, 25)
+    - get_page_items(request, templates.qs, 25)
+    - get_page_items(request, filtered_groups.qs, 25)
+    - get_page_items(request, users.qs, 25)
+    - get_page_items(request, ntl.qs, 25)
+    - get_page_items(request, prod_filter.qs, 25)
+    - get_page_items(request, comp_filter.qs, 25)
+    - get_page_items(request, result.qs, 10)
+    - get_page_items(request, active_engs_filter.qs, default_page_num, prefix="engs")
+    - get_page_items(request, queued_engs_filter.qs, default_page_num, prefix="queued_engs")
+    - get_page_items(request, inactive_engs_filter.qs, default_page_num, prefix="inactive_engs")
+    - get_page_items(request, ptl.qs, 25)
+    - get_page_items(request, prod_filter.qs, 25)
+    - get_page_items(request, findings.qs.distinct(), 25)
+    - get_page_items(request, endpoints.qs, 25)
+    - get_page_items(request, endpoints.qs, 25)
+    - get_page_items(request, findings.qs.distinct().order_by("numerical_severity"), 25)
+    - get_page_items(self.request, self.findings.qs, 25)
+    - get_page_items(self.request, self.endpoints.qs, 25)
+    - get_page_items(request, findings, 25)
+    - get_page_items(request, surveys.qs, 25)
+    - get_page_items(request, questions.qs, 25)
+    - get_page_items(request, stub_findings, 25)
+    - get_page_items(request, templates.qs, 25)
+    - get_page_items(request, test_types.qs, 25)
+    - get_page_items(request, alerts, 25)
+    - get_page_items(request, users.qs, 25)
+    - get_page_items(request, log_entry_filter.qs, 25)
+  dojo.forms.CredUserForm:
+    - CredUserForm(request.POST)
+    - CredUserForm()
+    - CredUserForm(request.POST, request.FILES, instance=tool_config)
+    - CredUserForm(instance=tool_config)
+  dojo.user.queries.get_authorized_users:
+    - get_authorized_users(Permissions.Engagement_View)
+    - get_authorized_users(Permissions.Product_Type_View)
+    - get_authorized_users(Permissions.Product_Type_View)
+    - get_authorized_users(Permissions.Product_Type_View)
+    - get_authorized_users(\n            Permissions.Product_Type_View)
+    - get_authorized_users(Permissions.Finding_View)
+    - get_authorized_users(Permissions.Finding_View)
+    - get_authorized_users(Permissions.Product_Type_View)
+    - get_authorized_users(Permissions.Product_View)
+    - get_authorized_users(Permissions.Engagement_View)
+    - get_authorized_users(Permissions.Test_View)
+    - get_authorized_users(Permissions.Test_Edit)
+    - get_authorized_users(Permissions.Test_Edit)
+    - get_authorized_users(Permissions.Finding_Edit)
+    - get_authorized_users(Permissions.Engagement_View)
+    - get_authorized_users(Permissions.Test_View)
+  dojo.forms.ReplaceRiskAcceptanceProofForm:
+    - ReplaceRiskAcceptanceProofForm(\n                request.POST, request.FILES, instance=risk_acceptance)
+    - ReplaceRiskAcceptanceProofForm(instance=risk_acceptance)
+  dojo.utils.FileIterWrapper:
+    - FileIterWrapper(\n            open(settings.MEDIA_ROOT + "/" + risk_acceptance.path.name, mode="rb"))
+    - FileIterWrapper(image)
+  dojo.tools.factory.PARSERS:
+    - for scan_type in PARSERS:\n            Test_Type.objects.get_or_create(name=scan_type)\n            parser = PARSERS[scan_type]\n            if hasattr(parser, "requires_tool_type"):\n                ...
+    - parser = PARSERS[scan_type]
+  dojo.tools.fortify.xml_parser.FortifyXMLParser:
+    - FortifyXMLParser()
+
+inspect:
+  inspect:
+    - inspect.isclass(obj)
+    - inspect.getmembers(\n            sys.modules[SERIALIZER_DEFS_MODULE], _is_model_serializer,\n        )
+  inspect.isclass:
+    - isclass(attribute)
+
+time:
+  time.strftime:
+    - strftime("%a, %d %b %Y %X", timezone.now().timetuple())
+    - strftime("%a, %d %b  %Y %X", timezone.now().timetuple())
+  time:
+    - time.sleep(5)
+    - time.sleep(5)
+    - time.sleep(0.5)
+    - time.sleep(1)
+    - time.sleep(5)
+    - time.sleep(5)
+    - time.sleep(0.5)
+    - time.sleep(1)
+    - time.sleep(1)
+    - time.sleep(1)
+    - time.sleep(1)
+    - time.time()
+    - time.time()
+    - time.time()
+    - time.time()
+    - time.sleep(0.2)
+    - time.sleep(15)
+    - time.sleep(15)
+
+contextlib:
+  contextlib:
+    - contextlib.suppress(IndexError, ValueError)
+    - contextlib.suppress(IndexError, ValueError)
+    - contextlib.suppress(Finding_Template.DoesNotExist)
+    - contextlib.suppress(Product.DoesNotExist)
+    - contextlib.suppress(AttributeError)
+    - contextlib.suppress(ValueError)
+    - contextlib.suppress(sender.DoesNotExist)
+    - contextlib.suppress(KeyError)
+    - contextlib.suppress(KeyError, StopIteration, TypeError)
+    - contextlib.suppress(CVSS3RHScoreDoesNotMatch, CVSS3RHMalformedError)
+    - contextlib.suppress(ValueError)
+    - contextlib.suppress(ValueError)
+    - contextlib.suppress(Exception)
+  contextlib.suppress:
+    - suppress(ModuleNotFoundError)
+    - suppress(Product.DoesNotExist)
+    - suppress(Engagement.DoesNotExist, Product.DoesNotExist)
+    - suppress(Test.DoesNotExist, Engagement.DoesNotExist, Product.DoesNotExist)
+    - suppress(ModuleNotFoundError)
+    - suppress(AttributeError)
+    - suppress(ValueError)
+
+yaml:
+  yaml:
+    - yaml.safe_load(yaml_data)
+
+ast:
+  ast.literal_eval:
+    - literal_eval(value)
+
+blackduck:
+  blackduck.Client:
+    - Client(\n                base_url=tool_config.url,\n                token=tool_config.api_key,\n                timeout=120,\n            )
+
+django:
+  django.db.models.Aggregate:
+    - class Sql_GroupConcat(Aggregate):\n    function = "GROUP_CONCAT"\n    allow_distinct = True\n\n    def __init__(\n        self, expression, separator, distinct=False, ordering=None, **extra,\n    ):\n...
+  django.db.models.query.Prefetch:
+    - Prefetch("engagement_set", queryset=products_filter_class(request.GET, engagement_query).qs)
+    - Prefetch(\n                    "test_import_finding_action_set",\n                    queryset=Test_Import_Finding_Action.objects.exclude(\n                        action=IMPORT_UNTOUCHED_FINDING,\n                    ),\n                )
+    - Prefetch(\n                "test_import_finding_action_set",\n                queryset=Test_Import_Finding_Action.objects.exclude(\n                    action=IMPORT_UNTOUCHED_FINDING,\n                ),\n            )
+    - Prefetch(\n                    "notifications_set",\n                    queryset=Notifications.objects.filter(\n                        Q(product_id=self.product) | Q(product__isnull=True),\n                    ),\n                    to_attr="applicable_notifications",\n                )
+    - Prefetch("endpoint_set", queryset=active_endpoint_query, to_attr="active_endpoints")
+    - Prefetch("github_pkey_set", queryset=GITHUB_PKey.objects.all().select_related("git_conf"),\n                         to_attr="github_confs")
+    - Prefetch("test_set", queryset=Test.objects.filter(\n            id__in=Subquery(\n                Test.objects.filter(\n                    engagement_id=OuterRef("engagement_id"),\n                  ...
+    - Prefetch("original_finding",\n            queryset=Finding.objects.filter(duplicate=True).order_by("date"))
+    - Prefetch("test_import_finding_action_set",\n                                                                            queryset=Test_Import_Finding_Action.objects.exclude(action=IMPORT_UNTOUCHED_FINDING))
+  django.db.models.Subquery:
+    - Subquery(\n                Test.objects.filter(\n                    engagement_id=OuterRef("engagement_id"),\n                    updated__gte=timezone.now() - timedelta(days=recent_test_day_count),\n                ).values_list("id", flat=True),\n            )
+  django.core.management.base.BaseCommand:
+    - class Command(BaseCommand):\n    help = "Remove alerts from the database"\n\n    def add_arguments(self, parser):\n        parser.add_argument("-a", "--all", action="store_true", help="Remove all aler...
+    - class Command(BaseCommand):\n    help = "Input: Filepath and name"\n\n    def add_arguments(self, parser):\n        parser.add_argument("file_path")\n\n    def handle(self, *args, **options):\n       ...
+    - class Command(BaseCommand):\n\n    """\n    Updates hash codes and/or runs deduplication for findings. Hashcode calculation always runs in the foreground, dedupe by default runs in the background.\n  ...
+    - class Command(BaseCommand):\n    help = "No input commands for dedupe findings."\n\n    def count_the_duplicates(self, model, column):\n        logger.info("===================================")\n    ...
+    - class Command(BaseCommand):\n\n    help = "Usage: manage.py endpoint_migration.py [--dry-run]"\n\n    def add_arguments(self, parser):\n        parser.add_argument(\n            "--dry-run",\n        ...
+    - class Command(BaseCommand):\n\n    help = "Usage: manage.py fix_0120"\n\n    def handle(self, *args, **options):\n        connection = connections[DEFAULT_DB_ALIAS]\n        connection.prepare_databas...
+    - class Command(BaseCommand):\n\n    help = "Usage: manage.py remove_broken_endpoint_statuses.py"\n\n    def handle(self, *args, **options):\n        remove_broken_endpoint_statuses(apps=apps)
+    - class Command(BaseCommand):\n    help = "No input commands for fixing Loop findings."\n\n    def handle(self, *args, **options):\n        fix_loop_duplicates()
+    - class Command(BaseCommand):\n\n    """\n    GitHub maintains a wide range of languages with colors. The project https://github.com/ozh/github-colors\n    converts them regularly in a json file, which ...
+    - class Command(BaseCommand):\n    help = "Import surverys from dojo/fixtures/initial_surveys.py"\n\n    def handle(self, *args, **options):\n        # First create a temp question to pull the polymorph...
+    - class Command(BaseCommand):\n\n    """This management command creates non-standard Django permissions"""\n\n    help = "Usage: manage.py initialize_permissions"\n\n    def handle(self, *args, **option...
+    - class Command(BaseCommand):\n    help = "Initializes Test_Types"\n\n    def handle(self, *args, **options):\n        # called by the initializer to fill the table with test_types\n        for scan_typ...
+    - class Command(BaseCommand):\n    help = "No input commands for JIRA bulk update."\n\n    def handle(self, *args, **options):\n\n        findings = Finding.objects.exclude(jira_issue__isnull=True)\n   ...
+    - class Command(BaseCommand):\n\n    help = "Command to move data from some tables to other tables as part of https://github.com/DefectDojo/django-DefectDojo/pull/3200" + \\n        "Should normally be ...
+    - class Command(BaseCommand):\n\n    """\n    Reconcile finding status with JIRA issue status, stdout will contain semicolon seperated CSV results.\n    Risk Accepted findings are skipped.'\n\n    modes...
+    - class Command(BaseCommand):\n\n    """\n    This management command migrated authorized users of product types and\n    products to product type members and product members. Since the legacy\n    auth...
+    - class Command(BaseCommand):\n\n    """This management command creates vulnerability ids for all findings / findings_templates with cve's."""\n\n    help = "Usage: manage.py migrate_cve"\n\n    def han...
+    - class Command(BaseCommand):\n\n    """\n    This management command creates a group for staff users with all configuration\n    permissions staff users had in previous releases.\n    """\n\n    help =...
+    - class Command(BaseCommand):\n    help = "import survey data from defectDojo_engagement_survey tables to dojo tables"\n\n    def handle(self, *args, **options):\n        # Get a connection to the db\n ...
+    - class Command(BaseCommand):\n\n    """\n    Textquestions for surveys need to be modified after loading the fixture\n    as they contain an instance dependant polymorphic content id\n    """\n\n    he...
+    - class Command(BaseCommand):\n    help = "Display all the currently loaded settings in the project"\n\n    def handle(self, *args, **options):\n\n        os.environ["DJANGO_SETTINGS_MODULE"] = "my_djan...
+    - class Command(BaseCommand):\n    help = "No input commands for Jira bulk update."\n\n    def handle(self, *args, **options):\n\n        findings = Finding.objects.exclude(jira_issue__isnull=True)\n   ...
+    - class Command(BaseCommand):\n    help = "No input commands for dedupe findings."\n\n    def handle(self, *args, **options):\n        rename_mend_finding()
+    - class Command(BaseCommand):\n    help = "Handle any risk acceptances that are expired (and not handled yet). Also posts expiration heads alerts / jira comments if configured"\n\n    def handle(self, *...
+    - class Command(BaseCommand):\n    help = "Launch with no argument."\n\n    def handle(self, *args, **options):\n        sla_compute_and_notify()
+    - class Command(BaseCommand):\n    help = "A new field last_reviewed has been added to the Finding model \n" \\n           "This script will update all findings with a last_reviewed date of the most cur...
+    - class Command(BaseCommand):\n    help = "Updates product grade calculation"\n\n    def handle(self, *args, **options):\n        code = """def grade_product(crit, high, med, low):\n            health=1...
+    - class Command(BaseCommand):\n    help = "Command to do some tests with celery and decorators. Just committing it so 'we never forget'"\n\n    def handle(self, *args, **options):\n        finding = Fin...
+    - class Command(BaseCommand):\n    help = "Validate deduplication logic in settings"\n\n    def handle(self, *args, **options):\n        errors = check_configuration_deduplication(None)\n        for error in errors:\n            deduplicationLogger.error(f"{error} - Using default fields")
+  django.db.models.When:
+    - When(Q(**{metrics_type.closed_lookup: True}), then=Value(1))
+    - When(age__lte=30, then=Value(1))
+    - When(age__range=[31, 60], then=Value(1))
+    - When(age__range=[61, 90], then=Value(1))
+    - When(age__gt=90, then=Value(1))
+    - When(severity__in=("Critical", "High", "Medium", "Low"),\n                              then=Value(1))
+    - When(severity__in=("Critical", "High", "Medium", "Low"),\n                                then=Value(1))
+    - When(severity__in=("Critical", "High", "Medium", "Low"),\n                                then=Value(1))
+    - When(severity__in=("Critical", "High", "Medium", "Low"),\n                              then=Value(1))
+    - When(severity__in=("Critical", "High", "Medium", "Low"),\n                                then=Value(1))
+    - When(severity__in=("Critical", "High", "Medium", "Low"),\n                                then=Value(1))
+    - When(**{stats_field: True}, then=1)
+    - When(severity__in=("Critical", "High", "Medium", "Low"),\n                          then=Value(1))
+    - When(severity="Critical",\n                          then=Value(1))
+    - When(severity="High",\n                          then=Value(1))
+    - When(severity="Medium",\n                          then=Value(1))
+    - When(severity="Low",\n                          then=Value(1))
+    - When(severity="Info",\n                          then=Value(1))
+    - When(severity__in=("Critical", "High", "Medium", "Low"),\n                          then=Value(1))
+    - When(severity="Critical",\n                          then=Value(1))
+    - When(severity="High",\n                          then=Value(1))
+    - When(severity="Medium",\n                          then=Value(1))
+    - When(severity="Low",\n                          then=Value(1))
+    - When(severity="Info",\n                          then=Value(1))
+    - When(severity__in=("Critical", "High", "Medium", "Low"),\n                          then=Value(1))
+    - When(severity="Critical",\n                          then=Value(1))
+    - When(severity="High",\n                          then=Value(1))
+    - When(severity="Medium",\n                          then=Value(1))
+    - When(severity="Low",\n                          then=Value(1))
+    - When(severity="Info",\n                          then=Value(1))
+    - When(\n                            severity__in=("Critical", "High", "Medium", "Low"),\n                            then=Value(1))

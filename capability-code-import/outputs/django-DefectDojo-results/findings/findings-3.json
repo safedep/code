@@ -1,0 +1,85 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "web:framework",
+      "evidence": [
+        {
+          "snippet": "django_filters.ModelMultipleChoiceFilter(field_name=\"test__engagement__tags__name\", to_field_name=\"name\", exclude=True, label=\"Engagement without tags\", queryset=Engagement.tags.tag_model.objects.all().order_by(\"name\"))"
+        },
+        {
+          "snippet": "django_filters.DateFilter(field_name=\"date\", lookup_expr=\"exact\", label=\"Discovered On\")"
+        },
+        {
+          "snippet": "django_filters.DateTimeFilter(field_name=\"mitigated\", lookup_expr=\"exact\", label=\"Mitigated On\", method=\"filter_mitigated_on\")"
+        },
+        {
+          "snippet": "class NumberInFilter(filters.BaseInFilter, filters.NumberFilter): pass"
+        },
+        {
+          "snippet": "django_filters.CharFilter(field_name=\"tags__name\", lookup_expr=\"icontains\", label=\"Tag name contains\", help_text=\"Search for tags on a Finding that contain a given pattern\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "data:filtering",
+      "evidence": [
+        {
+          "snippet": "django_filters.ModelMultipleChoiceFilter(field_name=\"test__engagement__product__tags__name\", to_field_name=\"name\", exclude=True, label=\"Product without tags\", queryset=Product.tags.tag_model.objects.all().order_by(\"name\"))"
+        },
+        {
+          "snippet": "django_filters.DateFilter(field_name=\"date\", lookup_expr=\"lt\", label=\"Discovered Before\")"
+        },
+        {
+          "snippet": "django_filters.DateTimeFilter(field_name=\"mitigated\", lookup_expr=\"gt\", label=\"Mitigated After\", method=\"filter_mitigated_after\")"
+        },
+        {
+          "snippet": "django_filters.CharFilter(field_name=\"tags__name\", lookup_expr=\"iexact\", label=\"Finding Tag\", help_text=\"Search for tags on a Finding that are an exact match\")"
+        },
+        {
+          "snippet": "django_filters.NumberFilter(widget=HiddenInput())"
+        }
+      ]
+    },
+    {
+      "capability_id": "data:serialization",
+      "evidence": [
+        {
+          "snippet": "django_filters.ModelMultipleChoiceFilter(queryset=Product_Type.objects.none(), label=\"Product Type\")"
+        },
+        {
+          "snippet": "django_filters.DateFilter(field_name=\"date\", label=\"Start Date\", lookup_expr=(\"gt\"))"
+        },
+        {
+          "snippet": "django_filters.DateTimeFilter(field_name=\"mitigated\", lookup_expr=\"lt\", label=\"Mitigated Before\")"
+        },
+        {
+          "snippet": "django_filters.CharFilter(field_name=\"tags__name\", lookup_expr=\"icontains\", label=\"Tag name contains\", help_text=\"Search for tags on a Finding that contain a given pattern\")"
+        },
+        {
+          "snippet": "class PercentageFilter(NumberFilter): def __init__(self, *args, **kwargs): kwargs[\"method\"] = self.filter_percentage super().__init__(*args, **kwargs)"
+        }
+      ]
+    },
+    {
+      "capability_id": "web:api",
+      "evidence": [
+        {
+          "snippet": "tags_filter = self.filters[\"tags\"]"
+        },
+        {
+          "snippet": "django_filters.CharFilter(field_name=\"test__tags__name\", lookup_expr=\"icontains\", label=\"Test Tag Contains\", help_text=\"Search for tags on a Finding that contain a given pattern\")"
+        },
+        {
+          "snippet": "django_filters.ModelMultipleChoiceFilter(field_name=\"finding__test__engagement__tags__name\", to_field_name=\"name\", exclude=True, label=\"Engagement without tags\", queryset=Engagement.tags.tag_model.objects.all().order_by(\"name\"))"
+        },
+        {
+          "snippet": "django_filters.DateFilter(field_name=\"date\", lookup_expr=\"gt\", label=\"Discovered After\")"
+        },
+        {
+          "snippet": "django_filters.CharFilter(field_name=\"tags__name\", lookup_expr=\"icontains\", label=\"Finding Tag Contains\", help_text=\"Search for tags on a Finding that contain a given pattern\")"
+        }
+      ]
+    }
+  ]
+}

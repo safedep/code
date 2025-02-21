@@ -1,0 +1,130 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "data:serialization",
+      "evidence": [
+        {
+          "snippet": "json.load(file)"
+        },
+        {
+          "snippet": "json.loads(str(data, \"utf-8\"))"
+        },
+        {
+          "snippet": "json.dumps(item[\"render_path\"], indent=4)"
+        },
+        {
+          "snippet": "json.load(filename)"
+        },
+        {
+          "snippet": "json.loads(tree)"
+        }
+      ]
+    },
+    {
+      "capability_id": "web:framework",
+      "evidence": [
+        {
+          "snippet": "watson.register(self.get_model(\"Product\"), fields=get_model_fields_with_extra(self.get_model(\"Product\"), (\"id\", \"prod_type__name\")), store=(\"prod_type__name\", ))"
+        },
+        {
+          "snippet": "watson.filter(finding_templates, keywords_query)"
+        },
+        {
+          "snippet": "watson.search(keywords_query, models=(\n                    authorized_findings, authorized_tests, authorized_engagements,\n                    authorized_products, authorized_endpoints,\n                    authorized_finding_templates, authorized_vulnerability_ids, authorized_app_analysis))"
+        },
+        {
+          "snippet": "watson.filter(vulnerability_ids, keywords_query)"
+        },
+        {
+          "snippet": "engagements.filter(id__in=[watson.id for watson in watson_results])"
+        }
+      ]
+    },
+    {
+      "capability_id": "network:http",
+      "evidence": [
+        {
+          "snippet": "Github(github_conf.api_key)"
+        },
+        {
+          "snippet": "Github(api_key)"
+        },
+        {
+          "snippet": "Github(github_pkey.git_conf.api_key)"
+        }
+      ]
+    },
+    {
+      "capability_id": "io:streaming",
+      "evidence": [
+        {
+          "snippet": "zipfile.ZipFile(file, \"r\")"
+        },
+        {
+          "snippet": "zipfile.is_zipfile(str(report))"
+        },
+        {
+          "snippet": "zipfile.ZipFile(filename.name, \"r\")"
+        },
+        {
+          "snippet": "zipfile.ZipFile(file.name, \"r\")"
+        },
+        {
+          "snippet": "zipfile.ZipFile(filename, \"r\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "logging:operations",
+      "evidence": [
+        {
+          "snippet": "logging.getLogger(__name__)"
+        },
+        {
+          "snippet": "logging.getLogger(\"dojo.specific-loggers.deduplication\")"
+        },
+        {
+          "snippet": "logging.config.dictConfig(settings.LOGGING)"
+        }
+      ]
+    },
+    {
+      "capability_id": "crypto:encoding",
+      "evidence": [
+        {
+          "snippet": "base64.b64encode(pair[\"request\"].encode(\"utf-8\"))"
+        },
+        {
+          "snippet": "base64.b64encode(form.cleaned_data.get(\"request\", \"\").encode(\"utf-8\"))"
+        },
+        {
+          "snippet": "base64.b64decode(value)"
+        },
+        {
+          "snippet": "base64.b64decode(reqres.burpRequestBase64)"
+        },
+        {
+          "snippet": "base64.b64encode(context[\"form\"].cleaned_data[\"response\"].encode())"
+        }
+      ]
+    },
+    {
+      "capability_id": "system:dynamic_module_load",
+      "evidence": [
+        {
+          "snippet": "importlib.import_module(module_name)"
+        },
+        {
+          "snippet": "importlib.util.find_spec(f\"dojo.tools.{module_name}.parser\")"
+        },
+        {
+          "snippet": "importlib.import_module(mn)"
+        },
+        {
+          "snippet": "import_module(f\"dojo.tools.{module_name}.parser\")"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "web:api",
+      "evidence": [
+        {
+          "snippet": "Response(serialized_file.data, status=status.HTTP_201_CREATED)"
+        },
+        {
+          "snippet": "Response(serialized_files.data, status=status.HTTP_200_OK)"
+        },
+        {
+          "snippet": "extend_schema(methods=[\"GET\"], responses={status.HTTP_200_OK: serializers.RawFileSerializer})"
+        },
+        {
+          "snippet": "Response({\"error\": \"File ID not associated with Test\"}, status=status.HTTP_404_NOT_FOUND)"
+        },
+        {
+          "snippet": "Response(status=status.HTTP_204_NO_CONTENT)"
+        }
+      ]
+    },
+    {
+      "capability_id": "data:serialization",
+      "evidence": [
+        {
+          "snippet": "response = Response(serializer.data, status=status.HTTP_200_OK)"
+        },
+        {
+          "snippet": "Response(data=request.data, status=status.HTTP_200_OK)"
+        },
+        {
+          "snippet": "Response(data=metadata_data.data, status=status.HTTP_200_OK)"
+        },
+        {
+          "snippet": "Response(delete_tags.errors, status=status.HTTP_400_BAD_REQUEST)"
+        },
+        {
+          "snippet": "Response(new_file.errors, status=status.HTTP_400_BAD_REQUEST)"
+        }
+      ]
+    },
+    {
+      "capability_id": "testing:automation",
+      "evidence": [
+        {
+          "snippet": "try: return super().run_validators(initial_data) except RestFrameworkValidationError as exc: if \"finding, endpoint must make a unique set\" in str(exc):"
+        }
+      ]
+    },
+    {
+      "capability_id": "web:framework",
+      "evidence": [
+        {
+          "snippet": "parser_classes = [MultiPartParser]"
+        },
+        {
+          "snippet": "action(detail=True, methods=[\"get\", \"post\"], parser_classes=(MultiPartParser,))"
+        },
+        {
+          "snippet": "extend_schema(request=serializers.ReportGenerateOptionSerializer, responses={status.HTTP_200_OK: serializers.ReportGenerateSerializer})"
+        },
+        {
+          "snippet": "Response({\"error\": \"unsupported method\"}, status=status.HTTP_400_BAD_REQUEST)"
+        },
+        {
+          "snippet": "Response(response, status=status.HTTP_405_METHOD_NOT_ALLOWED)"
+        }
+      ]
+    },
+    {
+      "capability_id": "auth:jwt",
+      "evidence": [
+        {
+          "snippet": "re.compile(settings.LOGIN_URL.lstrip(\"/\"))"
+        },
+        {
+          "snippet": "re.search(settings.AZUREAD_TENANT_OAUTH2_GROUPS_FILTER, group_name)"
+        },
+        {
+          "snippet": "re.match(r\"^[A-Za-z0-9_\\-\\+][A-Za-z0-9_\\.\\-\\+]+$\", self.host)"
+        }
+      ]
+    },
+    {
+      "capability_id": "system:info",
+      "evidence": [
+        {
+          "snippet": "re.match(r\"^[A-Za-z][A-Za-z0-9\\.\\-\\+]+$\", endpoint.host)"
+        },
+        {
+          "snippet": "re.search(r\"\\*\\*Library Description\\*\\*\", finding.description)"
+        },
+        {
+          "snippet": "re.compile(r\"Finding [0-9][0-9][0-9]:*\")"
+        },
+        {
+          "snippet": "re.findall(r\"([\(|\\[]?(https?):((//)|(\\\\))+([\\w\\d:#@%/;$~_?\\+-=\\\\\\.&](#!)?)*[\\)|\\]]?)\", self.references)"
+        },
+        {
+          "snippet": "re.search(r\" (/[^/ ]*)+/?\", text)"
+        }
+      ]
+    }
+  ]
+}

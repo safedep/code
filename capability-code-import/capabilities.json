@@ -1,0 +1,455 @@
+{
+  "capabilities": [
+    {
+      "id": "file:manipulation",
+      "name": "File Manipulation",
+      "description": "Creating, writing, deleting, or modifying files",
+      "type": "system",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["os", "shutil", "pathlib"]
+        }
+      ]
+    },
+    {
+      "id": "file:read",
+      "name": "File Read",
+      "description": "Reading files or directories",
+      "type": "system",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["os", "pathlib"]
+        }
+      ]
+    },
+    {
+      "id": "network:http",
+      "name": "HTTP Requests",
+      "description": "Making HTTP requests and handling responses",
+      "type": "system",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["requests", "http.client"]
+        }
+      ]
+    },
+    {
+      "id": "network:sockets",
+      "name": "Socket Communication",
+      "description": "Handling socket-level communication",
+      "type": "system",
+      "rules": [
+        { "language": "python", "type": "system", "packages": ["socket"] }
+      ]
+    },
+    {
+      "id": "network:dns",
+      "name": "DNS Resolution",
+      "description": "Performing DNS lookups and resolutions",
+      "type": "system",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["socket", "dns.resolver"]
+        }
+      ]
+    },
+    {
+      "id": "process:management",
+      "name": "Process Management",
+      "description": "Spawning, killing, or managing processes",
+      "type": "system",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["subprocess", "psutil"]
+        }
+      ]
+    },
+    {
+      "id": "threading:management",
+      "name": "Threading Management",
+      "description": "Thread creation and synchronization",
+      "type": "system",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["threading", "multiprocessing"]
+        }
+      ]
+    },
+    {
+      "id": "crypto:hashing",
+      "name": "Hashing Operations",
+      "description": "Performing hashing operations like MD5, SHA",
+      "type": "system",
+      "rules": [
+        { "language": "python", "type": "system", "packages": ["hashlib"] }
+      ]
+    },
+    {
+      "id": "crypto:encryption",
+      "name": "Encryption and Decryption",
+      "description": "Encrypting and decrypting data",
+      "type": "system",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["cryptography", "pycryptodome"]
+        }
+      ]
+    },
+    {
+      "id": "env:config",
+      "name": "Environment Configuration",
+      "description": "Reading or modifying environment variables",
+      "type": "system",
+      "rules": [{ "language": "python", "type": "system", "packages": ["os"] }]
+    },
+    {
+      "id": "io:streaming",
+      "name": "I/O Streaming",
+      "description": "Handling input and output stream operations",
+      "type": "system",
+      "rules": [{ "language": "python", "type": "system", "packages": ["io"] }]
+    },
+    {
+      "id": "time:management",
+      "name": "Time Management",
+      "description": "Handling time and date manipulation",
+      "type": "system",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["time", "datetime"]
+        }
+      ]
+    },
+    {
+      "id": "system:info",
+      "name": "System Information",
+      "description": "Retrieving system information like OS version",
+      "type": "system",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["platform", "os"]
+        }
+      ]
+    },
+    {
+      "id": "data:serialization",
+      "name": "Data Serialization",
+      "description": "Handling data formatting and serialization",
+      "type": "system",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["json", "yaml", "pickle"]
+        }
+      ]
+    },
+    {
+      "id": "db:sql",
+      "name": "SQL Database Operations",
+      "description": "Performing SQL database queries",
+      "type": "third-party",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["sqlite3", "sqlalchemy", "psycopg2"]
+        }
+      ]
+    },
+    {
+      "id": "db:nosql",
+      "name": "NoSQL Database Operations",
+      "description": "Performing NoSQL database queries",
+      "type": "third-party",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["pymongo", "boto3", "redis"]
+        }
+      ]
+    },
+    {
+      "id": "db:redis",
+      "name": "Redis Database Operations",
+      "description": "Redis DB operations",
+      "type": "third-party",
+      "rules": [
+        { "language": "python", "type": "system", "packages": ["redis"] }
+      ]
+    },
+    {
+      "id": "aws",
+      "name": "AWS SDK",
+      "description": "General AWS SDK usage",
+      "type": "third-party",
+      "rules": [
+        { "language": "python", "type": "system", "packages": ["boto3"] }
+      ]
+    },
+    {
+      "id": "gcp",
+      "name": "Google Cloud SDK",
+      "description": "General Google Cloud usage",
+      "type": "third-party",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": [
+            "google-cloud-storage",
+            "google",
+            "google-cloud-bigquery"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "azure",
+      "name": "Microsoft Azure SDK",
+      "description": "General Microsoft Azure usage",
+      "type": "third-party",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["azure-storage-blob", "azure"]
+        }
+      ]
+    },
+    {
+      "id": "ml:framework",
+      "name": "Machine Learning Frameworks",
+      "description": "Using general machine learning frameworks",
+      "type": "third-party",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["tensorflow", "torch", "scikit-learn"]
+        }
+      ]
+    },
+    {
+      "id": "ml:llm",
+      "name": "Large Language Model Operations",
+      "description": "Working with LLMs like OpenAI, LangChain",
+      "type": "third-party",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["openai", "langchain"]
+        }
+      ]
+    },
+    {
+      "id": "web:framework",
+      "name": "Web Development Frameworks",
+      "description": "Using web development frameworks",
+      "type": "third-party",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["flask", "django", "fastapi"]
+        }
+      ]
+    },
+    {
+      "id": "auth:oauth",
+      "name": "OAuth Authentication",
+      "description": "Handling OAuth authentication processes",
+      "type": "third-party",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["oauthlib", "requests-oauthlib"]
+        }
+      ]
+    },
+    {
+      "id": "msg:queue",
+      "name": "Message Queue",
+      "description": "Using message queues like Kafka, RabbitMQ, SQS",
+      "type": "third-party",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["kafka-python", "pika", "boto3"]
+        }
+      ]
+    },
+    {
+      "id": "scraping:web",
+      "name": "Web Scraping",
+      "description": "Automating web scraping with BeautifulSoup, Selenium",
+      "type": "third-party",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["beautifulsoup4", "selenium", "scrapy"]
+        }
+      ]
+    },
+    {
+      "id": "monitoring:metrics",
+      "name": "Monitoring & Metrics",
+      "description": "Using observability tools like Prometheus, Datadog",
+      "type": "third-party",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["prometheus_client", "datadog"]
+        }
+      ]
+    },
+    {
+      "id": "devops:ci_cd",
+      "name": "CI/CD Tools",
+      "description": "Handling Continuous Integration/Deployment",
+      "type": "third-party",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["jenkinsapi", "gitpython"]
+        }
+      ]
+    },
+    {
+      "id": "cache:management",
+      "name": "Cache Management",
+      "description": "Handling caching mechanisms like Redis, Memcached",
+      "type": "third-party",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["redis", "pymemcache"]
+        }
+      ]
+    },
+    {
+      "id": "auth:jwt",
+      "name": "JWT Authentication",
+      "description": "Handling JSON Web Tokens (JWT)",
+      "type": "third-party",
+      "rules": [
+        { "language": "python", "type": "system", "packages": ["pyjwt"] }
+      ]
+    },
+    {
+      "id": "container:management",
+      "name": "Container Management",
+      "description": "Containerization tools (e.g., Docker, Kubernetes)",
+      "type": "third-party",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["docker", "kubernetes"]
+        }
+      ]
+    },
+    {
+      "id": "testing:automation",
+      "name": "Automated Testing",
+      "description": "Automated testing frameworks (e.g., PyTest, JUnit)",
+      "type": "third-party",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["pytest", "unittest"]
+        }
+      ]
+    },
+    {
+      "id": "monitoring:metrics",
+      "name": "Monitoring and Metrics",
+      "description": "Monitoring and observability (e.g., Prometheus, Datadog)",
+      "type": "third-party",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["prometheus_client", "datadog"]
+        }
+      ]
+    },
+    {
+      "id": "scraping:web",
+      "name": "Web Scraping",
+      "description": "Web scraping and automation (e.g., BeautifulSoup, Selenium)",
+      "type": "third-party",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": ["beautifulsoup4", "selenium"]
+        }
+      ]
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Capabilities",
+      "description": "Capabilities that are not categorized yet",
+      "type": "system",
+      "rules": [
+        {
+          "language": "python",
+          "type": "system",
+          "packages": [
+            "enum",
+            "re",
+            "logging",
+            "collections",
+            "functools",
+            "itertools",
+            "werkzeug",
+            "six",
+            "inspect",
+            "difflib",
+            "jsonschema",
+            "types",
+            "operator",
+            "decimal",
+            "email",
+            "fnmatch",
+            "pytz",
+            "aniso8601",
+            "warnings",
+            "uuid",
+            "sys",
+            "copy",
+            "time"
+          ]
+        }
+      ]
+    }
+  ]
+}

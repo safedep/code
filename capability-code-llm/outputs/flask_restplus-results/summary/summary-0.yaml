@@ -1,0 +1,328 @@
+
+flask:
+  flask:
+    - flask.abort(code)
+  flask.has_app_context:
+    - has_app_context()
+  flask.make_response aliased as original_flask_make_response:
+    - original_flask_make_response(str(data), *args, **kwargs)
+  flask.url_for:
+    - url_for(self.endpoint('specs'), _external=True)
+    - url_for(self.endpoint('root'), _external=True)
+    - url_for(self.endpoint('root'), _external=False)
+    - def url_for(self, resource, **values):\n        '''\n        Generates a URL to the given resource.\n\n        Works like :func:`flask.url_for`.\n        '''\n        endpoint = resource.endpoint\n   ...
+    - url_for(endpoint, **values)
+    - url_for('restplus_doc.static', filename=filename)
+    - url_for(endpoint, _external=self.absolute, **data)
+  flask.current_app:
+    - current_app.create_url_adapter(request)
+    - current_app._get_current_object()
+    - '''\n        Error handler for the API transforms a raised exception into a Flask response,\n        with the appropriate HTTP status code and body.\n\n        :param Exception e: the raised Exception...
+    - current_app.config.get("ERROR_INCLUDE_MESSAGE", True)
+    - current_app.log_exception(exc_info)
+    - current_app.config.get("ERROR_404_HELP", True)
+    - current_app.url_map.iter_rules()
+    - current_app.config.get("HTTP_BASIC_AUTH_REALM", "flask-restplus")
+    - current_app.make_default_options_response()
+    - current_app.make_default_options_response()
+    - mask_header = current_app.config['RESTPLUS_MASK_HEADER']
+    - current_app.config.get('RESTPLUS_JSON', {})
+    - '''Makes a Flask response with a JSON encoded body'''\n\n    settings = current_app.config.get('RESTPLUS_JSON', {})\n\n    # If we're in debug mode, and the indent is not set, we set it to a\n    # re...
+    - current_app.config.get('BUNDLE_ERRORS', False)
+    - if not converter:\n            continue\n        param = {\n            'name': variable,\n            'in': 'path',\n            'required': True\n        }\n\n        if converter in PATH_TYPES:\n  ...
+    - current_app.config.get('SERVER_NAME', None)
+    - params = []\n        for name, param in iteritems(doc['params']):\n            param['name'] = name\n            if 'type' not in param and 'schema' not in param:\n                param['type'] = 'str...
+    - param = {\n                'name': current_app.config['RESTPLUS_MASK_HEADER'],\n                'in': 'header',\n                'type': 'string',\n                'format': 'mask',\n                'description': 'An optional fields mask',\n            }
+  flask.signals.got_request_exception:
+    - got_request_exception.send(current_app._get_current_object(), exception=e)
+  flask.Blueprint:
+    - class Apidoc(Blueprint):\n    '''\n    Allow to know if the blueprint has already been registered\n    until https://github.com/mitsuhiko/flask/pull/1301 is merged\n    '''\n    def __init__(self, *ar...
+  flask.make_response:
+    - make_response(f(*args, **kwargs))
+    - make_response(dumped, code)
+  flask.views.MethodView:
+    - class Resource(MethodView):\n    '''\n    Represents an abstract RESTPlus resource.\n\n    Concrete resources should extend from this class\n    and expose methods for each supported HTTP method.\n   ...
+  flask.request:
+    - request.accept_mimetypes.best_match(\n            self.representations,\n            default=default_mediatype,\n        )
+    - current_app.create_url_adapter(request)
+    - '''Encapsulating the rules for whether the request was to a Flask endpoint'''\n        # 404's, 405's, which might not have a url_rule\n        if self._should_use_fr_error_handler():\n            ret...
+    - self.owns_endpoint(request.url_rule.endpoint)
+    - difflib.get_close_matches(request.path, rules.keys())
+    - ''.join((\n                (message.rstrip('.') + '. ') if message else '',\n                'You have requested this URI [',\n                request.path,\n                '] but did you mean ',\n  ...
+    - request.get_json()
+    - sorted(request.accept_mimetypes,\n                                     key=operator.itemgetter(1), reverse=True)
+    - if automatic_options and request.method == 'OPTIONS':\n                resp = current_app.make_default_options_response()\n            else:\n                resp = make_response(f(*args, **kwargs))\n...
+    - if automatic_options and request.method == 'OPTIONS':\n                resp = current_app.make_default_options_response()\n            else:\n                resp = make_response(f(*args, **kwargs))\n...
+    - endpoint = self.endpoint if self.endpoint is not None else request.endpoint
+    - request.headers.get(mask_header)
+    - request.get_json()
+    - def source(self, request):\n        '''\n        Pulls values off the request in the provided location\n        :param request: The flask request object to parse arguments from\n        '''\n        i...
+    - getattr(request, self.location, MultiDict())
+    - getattr(request, l, None)
+    - def parse(self, request, bundle_errors=False):\n        '''\n        Parses argument value(s) from the request, converting according to\n        the argument's type.\n\n        :param request: The fla...
+    - self.source(request)
+    - if hasattr(value, 'strip') and self.trim:\n                        value = value.strip()\n                    if hasattr(value, 'lower') and not self.case_sensitive:\n                        value = v...
+    - request.unparsed_arguments.pop(name)
+    - req = request
+    - request.method.lower()
+    - meth = getattr(self, request.method.lower(), None)\n        if meth is None and request.method == 'HEAD':\n            meth = getattr(self, 'get', None)\n        assert meth is not None, 'Unimplemente...
+    - meth = getattr(self, request.method.lower(), None)\n        if meth is None and request.method == 'HEAD':\n            meth = getattr(self, 'get', None)\n        assert meth is not None, 'Unimplemente...
+    - request.accept_mimetypes.best_match(representations, default=None)
+    - request.get_json()
+  flask.helpers._endpoint_from_view_func:
+    - _endpoint_from_view_func(view_func)
+  flask.render_template:
+    - render_template('swagger-ui.html', title=api.title,\n                           specs_url=api.specs_url)
+  flask.views.http_method_funcs:
+    - if doc is False:\n            return False\n        unshortcut_params_description(doc)\n        handle_deprecations(doc)\n        for http_method in http_method_funcs:\n            if http_method in d...
+
+socket:
+  socket:
+    - socket.inet_aton(value)
+    - '''Validate an IPv4 address'''\n    try:\n        socket.inet_aton(value)\n        if value.count('.') == 3:\n            return value\n    except socket.error:\n        pass\n    raise ValueError('{0} is not a valid ipv4 address'.format(value))
+    - socket.inet_pton(socket.AF_INET6, value)
+    - socket.inet_pton(socket.AF_INET6, value)
+    - '''Validate an IPv6 address'''\n    try:\n        socket.inet_pton(socket.AF_INET6, value)\n        return value\n    except socket.error:\n        raise ValueError('{0} is not a valid ipv4 address'.format(value))
+    - socket.getaddrinfo(data['domain'], None)
+    - try:\n                    socket.getaddrinfo(data['domain'], None)\n                except socket.error:\n                    self.error(value, 'Domain does not exists')
+    - socket.getaddrinfo(server, None)
+    - try:\n                socket.getaddrinfo(server, None)\n            except socket.error:\n                self.error(value)
+
+uuid:
+  uuid.uuid5:
+    - uuid5(self.collection.uuid, seed)
+    - uuid5(self.collection.uuid, str(self.tag))
+    - uuid5(NAMESPACE_URL, self.api.base_url)
+  uuid.NAMESPACE_URL:
+    - uuid5(NAMESPACE_URL, self.api.base_url)
+
+calendar:
+  calendar.timegm:
+    - timegm(dt.utctimetuple())
+
+aniso8601:
+  aniso8601:
+    - aniso8601.parse_interval(value)
+    - aniso8601.parse_datetime(value)
+    - aniso8601.parse_date(value)
+    - aniso8601.parse_datetime(value)
+    - aniso8601.parse_date(value)
+
+:
+  .model.ModelBase:
+    - isinstance(expect[0], ModelBase)
+    - isinstance(expect, ModelBase)
+    - isinstance(model, ModelBase)
+    - isinstance(expect, ModelBase)
+    - isinstance(model, ModelBase)
+    - isinstance(model, ModelBase)
+    - isinstance(specs, ModelBase)
+  ._http.HTTPStatus:
+    - self.abort(HTTPStatus.NOT_FOUND)
+    - self.abort(HTTPStatus.NOT_FOUND)
+    - unpack(result, HTTPStatus.INTERNAL_SERVER_ERROR)
+    - HTTPStatus(e.code)
+    - unpack(result, HTTPStatus.INTERNAL_SERVER_ERROR)
+    - code = HTTPStatus.INTERNAL_SERVER_ERROR
+    - '''\n        Error handler for the API transforms a raised exception into a Flask response,\n        with the appropriate HTTP status code and body.\n\n        :param Exception e: the raised Exception...
+    - '''\n        Error handler for the API transforms a raised exception into a Flask response,\n        with the appropriate HTTP status code and body.\n\n        :param Exception e: the raised Exception...
+    - '''\n        Error handler for the API transforms a raised exception into a Flask response,\n        with the appropriate HTTP status code and body.\n\n        :param Exception e: the raised Exception...
+    - '''\n        Error handler for the API transforms a raised exception into a Flask response,\n        with the appropriate HTTP status code and body.\n\n        :param Exception e: the raised Exception...
+    - return schema, HTTPStatus.INTERNAL_SERVER_ERROR if 'error' in schema else HTTPStatus.OK
+    - return schema, HTTPStatus.INTERNAL_SERVER_ERROR if 'error' in schema else HTTPStatus.OK
+    - return {'message': 'Mask parse error: {0}'.format(error)}, HTTPStatus.BAD_REQUEST
+    - return {'message': 'Mask error: {0}'.format(error)}, HTTPStatus.BAD_REQUEST
+    - def abort(code=HTTPStatus.INTERNAL_SERVER_ERROR, message=None, **kwargs):\n    '''\n    Properly abort the current request.\n\n    Raise a `HTTPException` for the given status `code`.\n    Attach any ...
+    - abort(HTTPStatus.BAD_REQUEST, message='Input payload validation failed',\n                  errors=dict(self.format_error(e) for e in validator.iter_errors(data)))
+    - def marshal_with(self, fields, as_list=False, code=HTTPStatus.OK, description=None, **kwargs):\n        '''\n        A decorator specifying the fields to use for serialization.\n\n        :param bool ...
+    - abort(HTTPStatus.BAD_REQUEST, 'Input payload validation failed', errors=errors)
+    - abort(HTTPStatus.BAD_REQUEST, 'Input payload validation failed', errors=errors)
+    - d.get('default_code', HTTPStatus.OK)
+    - str(HTTPStatus.OK.value)
+    - def unpack(response, default_code=HTTPStatus.OK):\n    '''\n    Unpack a Flask standard response.\n\n    Flask response can be:\n    - a single value\n    - a 2-tuple ``(value, code)``\n    - a 3-tupl...
+  .postman.PostmanCollectionV1:
+    - PostmanCollectionV1(self, swagger=swagger)
+  .errors.RestError:
+    - class MarshallingError(RestError):\n    '''\n    This is an encapsulating Exception in case of marshalling error.\n    '''\n    def __init__(self, underlying_exception):\n        # just put the contex...
+    - class MaskError(RestError):\n    '''Raised when an error occurs on mask'''\n    pass
+  ..fields:
+    - fields = self
+    - if previous not in fields:\n                    raise ParseError('Unexpected opening bracket')\n                fields[previous] = Mask(skip=self.skip)\n                stack.append(fields)\n                fields = fields[previous]
+    - fields[previous] = Mask(skip=self.skip)
+    - stack.append(fields)
+    - fields = fields[previous]
+    - fields = fields[previous]
+    - fields = stack.pop()
+    - fields[token] = True
+    - isinstance(data, (fields.Nested, fields.List, fields.Polymorph))
+    - isinstance(data, (fields.Nested, fields.List, fields.Polymorph))
+    - isinstance(data, (fields.Nested, fields.List, fields.Polymorph))
+    - '''\n        Apply a fields mask to the data.\n\n        :param data: The data or model to apply mask on\n        :raises MaskError: when unable to apply the mask\n\n        '''\n        from . import...
+    - fields.Raw(default=data.default, attribute=data.attribute, mask=self)
+    - '''\n        Apply a fields mask to the data.\n\n        :param data: The data or model to apply mask on\n        :raises MaskError: when unable to apply the mask\n\n        '''\n        from . import...
+    - fields.Raw(mask=self)
+    - isinstance(data, fields.Raw)
+    - issubclass(data, fields.Raw)
+    - issubclass(model, fields.Raw)
+    - isinstance(model, fields.Raw)
+    - isinstance(field, fields.Polymorph)
+    - isinstance(field, fields.Nested)
+    - isinstance(field, fields.List)
+  .model.Model:
+    - cls = OrderedModel if self.ordered else Model
+    - Model.extend(name, *parents)
+    - Model.extend(name, parent, fields)
+    - Model.clone(name, *specs)
+    - Model.inherit(name, *specs)
+    - isinstance(self.type, Model)
+    - isinstance(specs, Model)
+  .reqparse.RequestParser:
+    - RequestParser()
+    - isinstance(expect, RequestParser)
+  .utils.not_none_sorted:
+    - not_none_sorted(paths)
+  .utils.camel_to_dash:
+    - camel_to_dash(resource.__name__)
+    - camel_to_dash(resource.__name__)
+    - camel_to_dash(classname)
+  .fields.Wildcard:
+    - isinstance(field, Wildcard)
+    - isinstance(field, Wildcard)
+  .mask.apply aliased as apply_mask:
+    - apply_mask(fields, mask, skip=True)
+  .inputs.date_from_iso8601:
+    - date_from_iso8601(value)
+  .model.OrderedModel:
+    - cls = OrderedModel if self.ordered else Model
+  .swagger.Swagger:
+    - Swagger(self)
+  .utils.not_none:
+    - not_none(self.schema())
+    - not_none({\n            'required': sorted(list(required)) or None,\n            'properties': properties,\n            'discriminator': discriminator,\n            'x-mask': str(self.__mask__) if self.__mask__ else None,\n            'type': 'object',\n        })
+    - not_none(header)
+    - not_none(specs)
+    - not_none({\n                    'name': 'payload',\n                    'required': True,\n                    'in': 'body',\n                    'schema': self.serialize_schema(expect),\n                })
+    - not_none({\n                        'name': 'payload',\n                        'required': True,\n                        'in': 'body',\n                        'schema': self.serialize_schema(model),\n                        'description': description\n                    })
+    - not_none({\n                        'name': 'payload',\n                        'required': True,\n                        'in': 'body',\n                        'schema': self.serialize_schema(expect),\n                    })
+    - not_none(response)
+    - not_none(path)
+    - not_none(operation)
+  .inputs.boolean:
+    - boolean(value)
+  .resource.Resource:
+    - class SwaggerView(Resource):\n    '''Render the Swagger specifications as JSON'''\n    def get(self):\n        schema = self.api.__schema__\n        return schema, HTTPStatus.INTERNAL_SERVER_ERROR if ...
+  .representations.output_json:
+    - DEFAULT_REPRESENTATIONS = [('application/json', output_json)]
+  .utils.default_id:
+    - def __init__(self, app=None, version='1.0', title=None, description=None,\n            terms_url=None, license=None, license_url=None,\n            contact=None, contact_url=None, contact_email=None,\...
+    - def __init__(self, app=None, version='1.0', title=None, description=None,\n            terms_url=None, license=None, license_url=None,\n            contact=None, contact_url=None, contact_email=None,\...
+    - self.default_id = default_id
+    - self.default_id = default_id
+  .utils.unpack:
+    - unpack(resp)
+    - unpack(result, HTTPStatus.INTERNAL_SERVER_ERROR)
+    - unpack(result, HTTPStatus.INTERNAL_SERVER_ERROR)
+    - unpack(resp)
+    - unpack(resp)
+    - unpack(resp)
+  .inputs.datetime_from_iso8601:
+    - parser = datetime_from_iso8601 if self.dt_format == 'iso8601' else datetime_from_rfc822
+  .inputs.datetime_from_rfc822:
+    - parser = datetime_from_iso8601 if self.dt_format == 'iso8601' else datetime_from_rfc822
+  .errors.abort:
+    - abort(HTTPStatus.BAD_REQUEST, message='Input payload validation failed',\n                  errors=dict(self.format_error(e) for e in validator.iter_errors(data)))
+    - def abort(self, *args, **kwargs):\n        '''\n        Properly abort the current request\n\n        See: :func:`~flask_restplus.errors.abort`\n        '''\n        abort(*args, **kwargs)
+    - abort(*args, **kwargs)
+    - abort(HTTPStatus.BAD_REQUEST, 'Input payload validation failed', errors=errors)
+    - abort(HTTPStatus.BAD_REQUEST, 'Input payload validation failed', errors=errors)
+  .utils.merge:
+    - merge(getattr(cls, '__apidoc__', {}), doc)
+    - merge(getattr(field, '__apidoc__', {}), {'as_list': True})
+    - merge(getattr(func, '__apidoc__', {}), doc)
+    - merge(self.api.authorizations, ns.authorizations)
+    - merge(getattr(resource, '__apidoc__', {}), route_doc)
+    - merge(self.expected_params(doc), doc.get('params', OrderedDict()))
+    - merge(params, extract_path_params(url))
+    - merge(method_doc, getattr(method_impl, '__apidoc__', OrderedDict()))
+    - merge(method_params, method_doc.get('params', {}))
+    - merge(inherited_params, method_params)
+  .model.SchemaModel:
+    - SchemaModel(name, schema)
+  .mask.MaskError:
+    - self.error_handlers = {\n            ParseError: mask_parse_error_handler,\n            MaskError: mask_error_handler,\n        }
+  ..apidoc:
+    - app.register_blueprint(apidoc.apidoc)
+    - app.register_blueprint(apidoc.apidoc)
+    - apidoc.ui_for(self)
+  .marshalling.marshal:
+    - marshal(value, self.nested, skip_none=self.skip_none, ordered=ordered)
+    - marshal(value, self.container.nested)
+    - marshal(value, candidates[0].resolved, mask=self.mask, ordered=ordered)
+    - def marshal(self, *args, **kwargs):\n        '''A shortcut to the :func:`marshal` helper'''\n        return marshal(*args, **kwargs)
+    - marshal(*args, **kwargs)
+    - marshal(value, self.type)
+  .marshalling.marshal_with:
+    - def marshal_with(self, fields, as_list=False, code=HTTPStatus.OK, description=None, **kwargs):\n        '''\n        A decorator specifying the fields to use for serialization.\n\n        :param bool ...
+    - marshal_with(fields, ordered=self.ordered, **kwargs)
+    - self.marshal_with(fields, True, **kwargs)
+  .mask.Mask:
+    - Mask(mask, skip=True)
+    - isinstance(self.__mask__, Mask)
+    - Mask(self.__mask__)
+  .mask.ParseError:
+    - self.error_handlers = {\n            ParseError: mask_parse_error_handler,\n            MaskError: mask_error_handler,\n        }
+  .namespace.Namespace:
+    - Namespace(*args, **kwargs)
+  .errors.SpecsError:
+    - SpecsError("Can't use formData and body at the same time")
+
+functools:
+  functools.partial:
+    - partial(self.error_router, app.handle_exception)
+    - partial(self.error_router, app.handle_user_exception)
+    - partial(self._complete_url, url)
+  functools.wraps:
+    - wraps(resource)
+    - wraps(f)
+    - wraps(f)
+  functools.update_wrapper:
+    - update_wrapper(wrapped_function, f)
+
+itertools:
+  itertools.chain:
+    - chain(namespace.decorators, self.decorators)
+  itertools:
+    - itertools.chain(\n                    iteritems(doc.get('headers', {})),\n                    iteritems(method_doc.get('headers', {})),\n                    iteritems(headers or {})\n                )
+
+inspect:
+  inspect:
+    - inspect.isclass(exception)
+    - inspect.isroutine(attr_obj)
+    - inspect.getmembers(obj)
+    - inspect.isclass(exception)
+  inspect.isclass:
+    - isclass(data)
+    - isclass(model)
+  inspect.getdoc:
+    - getdoc(obj)
+
+operator:
+  operator:
+    - operator.itemgetter(1)
+
+time:
+  time.time:
+    - time()
+    - time()
+
+sys:
+  sys:
+    - sys.exc_info()
+    - sys.exc_info()
+
+fnmatch:
+  fnmatch:
+    - fnmatch.translate(key)
+
+werkzeug:
+  werkzeug.cached_property:

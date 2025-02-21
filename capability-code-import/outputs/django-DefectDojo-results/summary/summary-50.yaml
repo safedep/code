@@ -1,0 +1,200 @@
+
+dojo:
+  dojo.models.Test:
+    - self.validate(\n            "test",\n            expected_types=[Test],\n            required=False,\n            default=None,\n            **kwargs,\n        )
+    - isinstance(obj, Test)
+    - schema_editor.remove_field(\n                        model=Test,\n                        field=Test._meta.get_field("sonarqube_config"),\n                    )
+    - Test._meta.get_field("sonarqube_config")
+    - Test.objects.filter(engagement=eng)
+    - Test.objects.filter(engagement=eng)
+    - Test.objects.filter(engagement=eng)
+    - get_object_or_404(Test, id=objid)
+    - get_object_or_404(Test, id=objid)
+    - get_object_or_404(Test, id=objid)
+    - def create_notification(\n    event: str | None = None,\n    title: str | None = None,\n    finding: Finding | None = None,\n    test: Test | None = None,\n    engagement: Engagement | None = None,\n ...
+    - Test.objects.filter(engagement__product=product)
+    - Test.objects.filter(engagement__product=prod)
+    - Test.objects.filter(\n            id__in=Subquery(\n                Test.objects.filter(\n                    engagement_id=OuterRef("engagement_id"),\n                    updated__gte=timezone.now() ...
+    - Test.objects.filter(\n                    engagement_id=OuterRef("engagement_id"),\n                    updated__gte=timezone.now() - timedelta(days=recent_test_day_count),\n                )
+    - Test.objects.filter(engagement=engagement)
+    - Test.objects.create(\n            engagement=engagement,\n            test_type=test_type,\n            target_start=timezone.now(),\n            target_end=timezone.now())
+    - def get_initial_context(self, request: HttpRequest, test: Test):\n        # Get the finding form first since it is used in another place\n        finding_form = self.get_finding_form(request, test.eng...
+    - def get_jira_form(self, request: HttpRequest, test: Test, finding_form: AdHocFindingForm = None):\n        # Determine if jira should be used\n        if (jira_project := jira_helper.get_jira_project(...
+    - def get_github_form(self, request: HttpRequest, test: Test):\n        # Determine if github should be used\n        if get_system_setting("enable_github"):\n            # Ensure there is a github conf...
+    - def process_finding_form(self, request: HttpRequest, test: Test, context: dict):\n        finding = None\n        if context["form"].is_valid():\n            finding = context["form"].save(commit=Fals...
+    - def process_forms(self, request: HttpRequest, test: Test, context: dict):\n        form_success_list = []\n        # Set vars for the completed forms\n        # Validate finding mitigation\n        re...
+    - user_is_authorized(Test, Permissions.Test_View, "tid")
+    - get_object_or_404(Test, id=tid)
+    - Test.objects.filter(engagement__product__prod_type=product_type,\n                                    finding__in=findings.qs)
+    - Test.objects.filter(finding__id__in=ids)
+    - Test.objects.filter(finding__id__in=ids)
+    - get_object_or_404(Test, id=tid)
+    - tag_filters = {"tag": ""}\n\n    if qs.model == Finding:\n        tag_filters = {\n            "tag": "",\n            "test-tag": "test__",\n            "engagement-tag": "test__engagement__",\n     ...
+    - receiver(signals.m2m_changed, sender=Test.tags.through)
+    - receiver(signals.post_save, sender=Test)
+    - isinstance(instance, Test)
+    - Test.objects.none()
+    - Test.objects.all()
+    - Test.objects.all()
+    - receiver(post_delete, sender=Test)
+    - receiver(pre_save, sender=Test)
+    - receiver(pre_delete, sender=Test)
+    - def get_test_import_data(self, request: HttpRequest, test: Test):\n        test_imports = Test_Import.objects.filter(test=test)\n        test_import_filter = TestImportFilter(request.GET, test_imports...
+    - def get_stub_findings(self, request: HttpRequest, test: Test):\n        stub_findings = Stub_Finding.objects.filter(test=test)\n        paged_stub_findings = get_page_items(request, stub_findings, 25)\n\n        return {\n            "stub_findings": paged_stub_findings,\n        }
+    - def get_findings(self, request: HttpRequest, test: Test):\n        findings = Finding.objects.filter(test=test).order_by("numerical_severity")\n        filter_string_matching = get_system_setting("fil...
+    - def get_initial_context(self, request: HttpRequest, test: Test):\n        # Set up the product tab\n        product_tab = Product_Tab(test.engagement.product, title=_("Test"), tab="engagements")\n    ...
+    - def process_form(self, request: HttpRequest, test: Test, context: dict):\n        if context["form"].is_valid():\n            # Save the note\n            new_note = context["form"].save(commit=False)...
+    - user_is_authorized(Test, Permissions.Test_Edit, "tid")
+    - get_object_or_404(Test, pk=tid)
+    - user_is_authorized(Test, Permissions.Test_Delete, "tid")
+    - get_object_or_404(Test, pk=tid)
+    - user_is_authorized(Test, Permissions.Test_Edit, "tid")
+    - get_object_or_404(Test, id=tid)
+    - user_is_authorized(Test, Permissions.Test_View, "tid")
+    - get_object_or_404(Test, id=tid)
+    - get_object_or_404(Test, id=test_id)
+    - def get_initial_context(self, request: HttpRequest, test: Test):\n        # Get the finding form first since it is used in another place\n        finding_form = self.get_finding_form(request, test)\n ...
+    - def get_finding_form(self, request: HttpRequest, test: Test):\n        # Set up the args for the form\n        args = [request.POST] if request.method == "POST" else []\n        # Set the initial form...
+    - def get_jira_form(self, request: HttpRequest, test: Test, finding_form: AddFindingForm = None):\n        # Determine if jira should be used\n        if (jira_project := jira_helper.get_jira_project(te...
+    - def process_finding_form(self, request: HttpRequest, test: Test, context: dict):\n        finding = None\n        if context["form"].is_valid():\n            finding = context["form"].save(commit=Fals...
+    - def process_forms(self, request: HttpRequest, test: Test, context: dict):\n        form_success_list = []\n        finding = None\n        # Set vars for the completed forms\n        # Validate findin...
+    - user_is_authorized(Test, Permissions.Finding_Add, "tid")
+    - get_object_or_404(Test, id=tid)
+    - user_is_authorized(Test, Permissions.Test_View, "tid")
+    - get_object_or_404(Test, id=tid)
+    - def get_form(\n        self,\n        request: HttpRequest,\n        test: Test,\n        **kwargs: dict,\n    ) -> ReImportScanForm:\n        """Returns the default import form for importing findings...
+    - def get_jira_form(\n        self,\n        request: HttpRequest,\n        test: Test,\n    ) -> tuple[JIRAImportScanForm | None, bool]:\n        """Returns a JiraImportScanForm if jira is enabled"""\n...
+    - get_object_or_404(Test, id=test_id)
+    - def parse_vulnerabilities_from_scan_list(\n        self,\n        test: Test,\n        data: dict,\n    ) -> list[Finding]:\n        findings = []\n        cwe_store = data.get("vulnerabilityDetails",...
+    - def parse_iac_vulnerabilities(\n        self,\n        test: Test,\n        results: list,\n        cwe_store: list,\n    ) -> list[Finding]:\n        findings = []\n        for technology in results:...
+    - def parse_sca_vulnerabilities(\n        self,\n        test: Test,\n        results: list,\n        cwe_store: list,\n    ) -> list[Finding]:\n        # Not implemented yet\n        return []
+    - def parse_sast_vulnerabilities(\n        self,\n        test: Test,\n        results: list,\n        cwe_store: list,\n    ) -> list[Finding]:\n        def get_cwe_store_entry(cwe_store: list, cwe: in...
+    - def parse_vulnerabilities(\n        self,\n        test: Test,\n        results: list,\n    ) -> list[Finding]:\n        findings = []\n        for result in results:\n            id = result.get("ide...
+    - def parse_results(\n        self,\n        test: Test,\n        results: list,\n    ) -> list[Finding]:\n        findings = []\n        for vulnerability in results:\n            result_type = vulnera...
+    - def get_results_sast(\n        self,\n        test: Test,\n        vulnerability: dict,\n    ) -> Finding:\n        description = vulnerability.get("description")\n        file_path = vulnerability.ge...
+    - def get_results_kics(\n        self,\n        test: Test,\n        vulnerability: dict,\n    ) -> Finding:\n        description = vulnerability.get("description")\n        file_path = vulnerability.ge...
+    - def get_results_sca(\n        self,\n        test: Test,\n        vulnerability: dict,\n    ) -> Finding:\n        description = vulnerability.get("description")\n        unique_id_from_tool = vulnera...
+    - def parse_vulnerabilities_and_convert_to_findings(self, root: Element, test: Test) -> list[Finding]:\n        """Parse the XML and generate a list of findings."""\n        items = []\n        for chil...
+    - def get_bug_bounty_program_json_findings(self, dict_list: dict, test: Test) -> list[Finding]:\n        return self.parse_findings(dict_list, test)
+    - def get_bug_bounty_program_csv_findings(self, dict_list: dict, test: Test) -> list[Finding]:\n        return self.parse_findings(dict_list, test)
+    - def parse_findings(self, dict_list: list[dict], test: Test) -> list[Finding]:\n        """Return a list of findings generated by the submitted report."""\n        findings = []\n        for entry in d...
+    - def get_findings(self, file: TemporaryUploadedFile, test: Test) -> list[Finding]:\n        """Return the list of findings generated from the uploaded report."""\n        # first determine which format...
+    - def determine_json_format(self, file: TemporaryUploadedFile, test: Test) -> list[Finding]:\n        """Evaluate the format of the JSON report that was uploaded to determine which parser to use."""\n  ...
+    - def determine_csv_format(self, file: TemporaryUploadedFile, test: Test) -> list[Finding]:\n        """Evaluate the format of the CSV report that was uploaded to determine which parser to use."""\n    ...
+    - def get_findings(self, filename: str, test: Test):\n        # Read the CSV\n        content = filename.read()\n        delimiter = self.detect_delimiter(content)\n        if isinstance(content, bytes)...
+    - def get_findings(self, filename: str, test: Test) -> list:\n        # Read the XML\n        nscan = ElementTree.parse(filename)\n        root = nscan.getroot()\n\n        if "NessusClientData_v2" not ...
+    - def parse_findings(self, test: Test, reader: csv.DictReader) -> list[Finding]:\n        """\n        Parse the CSV with the assumed format of the link below.\n\n        test file: https://github.com/D...
+    - def parse_findings(self, test: Test, reader: csv.DictReader) -> list[Finding]:\n        """\n        Parse the CSV with the assumed format of the link below.\n\n        test file: Coming soon!\n      ...
+    - isinstance(obj, Test)
+    - self.mapping = {\n            "Product_Type": [\n                (Endpoint, "product__prod_type"),\n                (Finding, "test__engagement__product__prod_type"),\n                (Test, "engageme...
+    - self.mapping = {\n            "Product_Type": [\n                (Endpoint, "product__prod_type"),\n                (Finding, "test__engagement__product__prod_type"),\n                (Test, "engageme...
+    - self.mapping = {\n            "Product_Type": [\n                (Endpoint, "product__prod_type"),\n                (Finding, "test__engagement__product__prod_type"),\n                (Test, "engageme...
+    - Test.objects.get(id=obj.id)
+    - get_object_or_404(Test, pk=oid)
+    - isinstance(obj, Test)
+    - get_object_or_404(Test, pk=oid)
+  dojo.importers.options.ImporterOptions:
+    - class BaseImporter(ImporterOptions):\n\n    """\n    A collection of utilities used by various importers within DefectDojo.\n    Some of these commonalities may be fully used by children importers,\n ...
+    - ImporterOptions.__init__(self, *args, **kwargs)
+    - class DefaultImporterOptions(ImporterOptions):\n    def validate_engagement(\n        self,\n        *args: list,\n        **kwargs: dict,\n    ):\n        return self.validate(\n            "engageme...
+    - class DefaultReImporterOptions(ImporterOptions):\n    def validate_test(\n        self,\n        *args: list,\n        **kwargs: dict,\n    ):\n        return self.validate(\n            "test",\n    ...
+  dojo.forms.DeleteTestForm:
+    - DeleteTestForm(instance=test)
+    - DeleteTestForm(request.POST, instance=test)
+  dojo.tools.trivy_operator.compliance_handler.TrivyComplianceHandler:
+    - TrivyComplianceHandler()
+  dojo.forms.APIKeyForm:
+    - APIKeyForm(instance=request.user)
+    - APIKeyForm(request.POST, instance=request.user)
+  dojo.group.queries.get_group_members_for_group:
+    - get_group_members_for_group(group)
+  dojo.models.IMPORT_REACTIVATED_FINDING:
+    - Test_Import_Finding_Action(\n                test_import=test_import,\n                finding=finding,\n                action=IMPORT_REACTIVATED_FINDING,\n            )
+  dojo.filters.ProductTypeFilter:
+    - ProductTypeFilter(request.GET, queryset=prod_types)
+  dojo.forms.RegulationForm:
+    - RegulationForm(request.POST, instance=Regulation())
+    - RegulationForm()
+    - RegulationForm(request.POST, instance=regulation)
+    - RegulationForm(instance=regulation)
+  dojo.api_v2.views.NetworkLocationsViewset:
+    - v2_api.register(r"network_locations", NetworkLocationsViewset, basename="network_locations")
+  dojo.models.Product_Member:
+    - model = Product_Member
+    - Product_Member.objects.filter(\n                product=data.get("product"), user=data.get("user"),\n            )
+    - Product_Member.objects.none()
+    - Product_Member.objects.filter(user=user)
+    - Product_Member.objects.filter(\n        product=OuterRef("product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(\n        product=OuterRef("product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(\n        product=OuterRef("endpoint__product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(\n        product=OuterRef("product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(\n        product=OuterRef("test__engagement__product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(\n        product=OuterRef("finding__test__engagement__product_id"),\n        user=user,\n        role__in=roles)
+    - model = Product_Member
+    - Product_Member.objects.filter(product=self.initial["product"])
+    - model = Product_Member
+    - Product_Member.objects.filter(user=self.initial["user"])
+    - model = Product_Member
+    - Product_Member.objects.create(\n                    user=get_current_user(),\n                    product=product,\n                    role=Role.objects.get(is_owner=True),\n                )
+    - Product_Member.objects.filter(\n        product=OuterRef("engagement__product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(\n        product=OuterRef("product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(\n        product=OuterRef("engagement__product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(\n        product=OuterRef("finding_group__test__engagement__product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(\n        product=OuterRef("finding__test__engagement__product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.get_or_create(product=product, user=user, defaults={"role": Role.objects.get(id=Roles.Owner)})
+    - Product_Member.objects.filter(product=product, user=user)
+    - Product_Member.objects.filter(\n        product=OuterRef("pk"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(product=product)
+    - Product_Member.objects.none()
+    - Product_Member.objects.none()
+    - Product_Member.objects.all()
+    - Product_Member.objects.all()
+    - Product_Member.objects.filter(product__in=products)
+    - Product_Member.objects.none()
+    - Product_Member.objects.filter(user=user)
+    - Product_Member.objects.filter(user=user)
+    - Product_Member.objects.filter(user=user, product__in=products)
+    - Product_Member.objects.filter(\n        product=OuterRef("product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(\n        product=OuterRef("product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(\n        product=OuterRef("endpoint__product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(\n        product=OuterRef("finding__test__engagement__product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(\n        product=OuterRef("product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(\n        product=OuterRef("product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(\n        product=OuterRef("product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(product=product, user=user)
+    - Product_Member()
+    - user_is_authorized(Product_Member, Permissions.Product_Manage_Members, "memberid")
+    - get_object_or_404(Product_Member, pk=memberid)
+    - user_is_authorized(Product_Member, Permissions.Product_Member_Delete, "memberid")
+    - get_object_or_404(Product_Member, pk=memberid)
+    - Product_Member.objects.filter(\n        product=OuterRef("engagement__product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(\n        product=OuterRef("engagement__product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(\n        product=OuterRef("test__engagement__product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects.filter(\n        product=OuterRef("product_id"),\n        user=user,\n        role__in=roles)
+    - Product_Member.objects \\n        .filter(product=product, role__in=roles)
+    - Product_Member.objects \\n        .filter(product_id__in=authorized_products, role__in=roles)
+    - Product_Member.objects.filter(product=product, user=user)
+    - Product_Member()
+  dojo.risk_acceptance.helper.prefetch_for_expiration:
+    - prefetch_for_expiration(Risk_Acceptance.objects.all())
+    - prefetch_for_expiration(Risk_Acceptance.objects.all())
+  dojo.endpoint.views.prefetch_for_endpoints:
+    - prefetch_for_endpoints(endpoints)
+  dojo.forms.EditTextQuestionForm:
+    - EditTextQuestionForm(instance=question)
+    - EditTextQuestionForm(request.POST, instance=question)
+  dojo.api_v2.views.FindingTemplatesViewSet:
+    - v2_api.register(r"finding_templates", FindingTemplatesViewSet, basename="finding_template")
+  dojo.reports.views.report_url_resolver:
+    - report_url_resolver(request)
+  dojo.filters.EngagementDirectFilterWithoutObjectLookups:
+    - filter_class = EngagementDirectFilterWithoutObjectLookups if filter_string_matching else EngagementDirectFilter
+  dojo.forms.CloseFindingForm:
+    - CloseFindingForm(missing_note_types=missing_note_types)
+    - CloseFindingForm(request.POST, missing_note_types=missing_note_types)
+  dojo.utils.get_punchcard_data:
+    - get_punchcard_data(findings, today - relativedelta(weeks=26), 26)
+    - get_punchcard_data(all_findings, filters["start_date"], filters["weeks_between"], view)
+    - get_punchcard_data(filters.get("open", None), start_date, weeks_between, view)
+  dojo.filters.ProductFilter:
+    - filter_class = ProductFilterWithoutObjectLookups if filter_string_matching else ProductFilter

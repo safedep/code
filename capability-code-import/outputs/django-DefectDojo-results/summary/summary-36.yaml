@@ -1,0 +1,270 @@
+
+dojo:
+  dojo.models.Engagement:
+    - user_is_authorized(Engagement, Permissions.Engagement_View, "eid")
+    - get_object_or_404(Engagement, id=eid)
+    - Engagement.objects.filter(product__prod_type=product_type,\n                                                test__finding__in=findings.qs)
+    - Engagement.objects.filter(test__finding__id__in=ids)
+    - get_object_or_404(Engagement, id=eid)
+    - tag_filters = {"tag": ""}\n\n    if qs.model == Finding:\n        tag_filters = {\n            "tag": "",\n            "test-tag": "test__",\n            "engagement-tag": "test__engagement__",\n     ...
+    - user_is_authorized(Engagement, Permissions.Engagement_Edit, "eid")
+    - get_object_or_404(Engagement, id=eid)
+    - get_object_or_404(Engagement, id=eid)
+    - user_is_authorized(Engagement, Permissions.Engagement_Edit, "eid")
+    - get_object_or_404(Engagement, id=eid)
+    - user_is_authorized(Engagement, Permissions.Engagement_View, "eid")
+    - get_object_or_404(Engagement, id=eid)
+    - user_is_authorized(Engagement, Permissions.Engagement_Edit, "eid")
+    - get_object_or_404(Engagement, id=eid)
+    - Engagement(\n                product_id=product.id,\n                target_start=tz.now().date(),\n                target_end=tz.now().date() + timedelta(days=7))
+    - receiver(signals.m2m_changed, sender=Engagement.tags.through)
+    - receiver(signals.post_save, sender=Engagement)
+    - isinstance(instance, Engagement)
+    - Engagement.objects.filter(target_start__gt=now + timedelta(days=3), target_start__lt=now + timedelta(days=3) + runinterval)
+    - Engagement.objects.filter(\n        target_start__gt=now - runinterval,\n        target_end__lt=now,\n        status="In Progress")
+    - Engagement.objects.filter(target_end__lte=now - timedelta(days=close_days),\n                                                        status="In Progress")
+    - Engagement.objects.get(test=find.test)
+    - Engagement.objects.get(test=find.test)
+    - Engagement.objects.get(test=find.test)
+    - Engagement.objects.get(test=find.test)
+    - Engagement.objects.get(test=find.test)
+    - Engagement.objects.get(test=find.test)
+    - Engagement.objects.get(test=find.test)
+    - Engagement.objects.filter(\n            product=self.product, active=True)
+    - Engagement.objects.filter(\n        product=product, active=True)
+    - isinstance(obj, Engagement)
+    - self.mapping = {\n            "Product_Type": [\n                (Endpoint, "product__prod_type"),\n                (Finding, "test__engagement__product__prod_type"),\n                (Test, "engageme...
+    - self.mapping = {\n            "Product_Type": [\n                (Endpoint, "product__prod_type"),\n                (Finding, "test__engagement__product__prod_type"),\n                (Test, "engageme...
+    - Engagement.objects.get(id=obj.id)
+    - Engagement.objects.filter(risk_acceptance=obj)
+    - get_object_or_404(Engagement, pk=oid)
+    - isinstance(obj, Engagement)
+    - get_object_or_404(Engagement, pk=oid)
+  dojo.filters.ApiRiskAcceptanceFilter:
+    - filterset_class = ApiRiskAcceptanceFilter
+  dojo.forms.ToolTypeForm:
+    - ToolTypeForm(request.POST, instance=Tool_Type())
+    - ToolTypeForm()
+    - ToolTypeForm(request.POST, instance=tool_type)
+    - ToolTypeForm(instance=tool_type)
+  dojo.models.Notes:
+    - model = Notes
+    - Notes.objects.all()
+    - model = Notes
+    - Notes(\n                entry=entry,\n                author=author,\n                private=private,\n                note_type=note_type,\n            )
+    - Notes(\n                entry=entry,\n                author=author,\n                private=private,\n                note_type=note_type,\n            )
+    - get_object_or_404(Notes.objects, id=request.data["note_id"])
+    - Notes(\n                entry=entry,\n                author=author,\n                private=private,\n                note_type=note_type,\n            )
+    - Notes.objects.none()
+    - Notes.objects.all()
+    - Notes(\n                    entry=form.cleaned_data["notes"],\n                    author=request.user,\n                    date=timezone.now())
+    - get_object_or_404(Notes, pk=request.POST["delete_note_id"])
+    - Notes()
+    - Notes()
+    - Notes()
+    - Notes(\n                                entry=single_finding_notes_entry, author=request.user,\n                            )
+    - Notes(entry=notes_entry, author=request.user)
+    - Notes(\n                        entry=form.cleaned_data["notes"],\n                        author=request.user,\n                        date=timezone.now(),\n                    )
+    - isinstance(note, Notes)
+    - model = Notes
+    - model = Notes
+    - model = Notes
+    - model = Notes
+    - model = Notes
+    - Notes(\n                    entry=reactivated_note_text,\n                    author=self.user,\n                )
+    - Notes(entry=f"Re-activated by {self.scan_type} re-upload.", author=self.user)
+    - dojo_model_from_id(model=Notes, parameter=1)
+    - Notes()
+    - Notes()
+    - Notes.objects.all()
+    - dojo_model_from_id(model=Notes, parameter=1)
+    - receiver(pre_delete, sender=Notes)
+    - get_object_or_404(Notes, id=id)
+    - get_object_or_404(Notes, id=id)
+    - get_object_or_404(Notes, id=id)
+    - Notes.objects.create(\n            entry=(\n                f"{Dojo_User.generate_full_name(user)} ({user.id}) removed this finding from the risk acceptance: "\n                f'"{risk_acceptance.nam...
+    - Notes.objects.create(\n                entry=(\n                    f"{Dojo_User.generate_full_name(user)} ({user.id}) added this finding to the risk acceptance: "\n                    f'"{risk_accept...
+    - Notes.objects.create(\n            entry=(f"{Dojo_User.generate_full_name(user)} ({user.id}) has risk accepted this finding"),\n            author=user,\n        )
+    - Notes.objects.create(\n                entry=(f"{Dojo_User.generate_full_name(user)} ({user.id}) removed a risk exception from this finding"),\n                author=user,\n            )
+  dojo.models.Network_Locations:
+    - model = Network_Locations
+    - Network_Locations.objects.none()
+    - Network_Locations.objects.all()
+  dojo.utils.calculate_grade:
+    - calculate_grade(prod)
+    - calculate_grade(product)
+    - calculate_grade(finding.test.engagement.product)
+    - calculate_grade(product)
+    - calculate_grade(product)
+    - calculate_grade(prod)
+    - calculate_grade(prod)
+    - calculate_grade(product)
+    - calculate_grade(self.product)
+    - calculate_grade(self.engagement.product)
+    - calculate_grade(self.test.engagement.product)
+    - calculate_grade(product)
+    - calculate_grade(product)
+    - calculate_grade(product)
+  dojo.utils.get_file_images:
+    - get_file_images(find)
+    - get_file_images(find)
+    - get_file_images(obj, return_objects=True)
+  dojo.filters.ProductComponentFilter:
+    - ProductComponentFilter(request.GET, queryset=component_query)
+  dojo.forms.CreateQuestionForm:
+    - CreateQuestionForm()
+    - CreateQuestionForm(request.POST)
+  dojo.tools.intsights.json_handler.IntSightsJSONParser:
+    - IntSightsJSONParser()
+  dojo.api_v2.views.EndPointViewSet:
+    - v2_api.register(r"endpoints", EndPointViewSet, basename="endpoint")
+  dojo.product.queries.get_authorized_dojo_meta:
+    - get_authorized_dojo_meta(Permissions.Product_View)
+  dojo.utils.add_error_message_to_response:
+    - add_error_message_to_response(f"Skipped deletion of {skipped_endpoint_count} endpoints because you are not authorized.")
+    - add_error_message_to_response(f"Skipped mitigation of {skipped_endpoint_count} endpoints because you are not authorized.")
+    - add_error_message_to_response(f"An exception error occurred during the report import:{e}")
+    - add_error_message_to_response(form_error)
+    - add_error_message_to_response(form_error)
+    - add_error_message_to_response(import_error)
+    - add_error_message_to_response(form_error)
+    - add_error_message_to_response("The form has errors, please correct them below.")
+    - add_error_message_to_response(\n            "The form has errors, please correct them below.",\n        )
+    - add_error_message_to_response(\n                        f"Skipped deletion of {skipped_find_count} findings because you are not authorized.",\n                    )
+    - add_error_message_to_response(\n                        f"Skipped update of {skipped_find_count} findings because you are not authorized.",\n                    )
+    - add_error_message_to_response(f"{error_count} finding groups could not be pushed to JIRA: {error_message}")
+    - add_error_message_to_response(f"{error_count} findings could not be pushed to JIRA: {error_message}")
+    - add_error_message_to_response("Unable to authenticate to JIRA. Please check the URL, username, password, captcha challenge, Network connection. Details in alert on top right. " + str(error_message))
+    - add_error_message_to_response("Unable to authenticate to JIRA. Please check the URL, username, password, captcha challenge, Network connection. Details in alert on top right. " + str(error_message))
+    - add_error_message_to_response(e.text)
+    - add_error_message_to_response("Push to JIRA for Epic skipped because enable_engagement_epic_mapping is not checked for this engagement")
+    - add_error_message_to_response("Push to JIRA for Epic skipped because enable_engagement_epic_mapping is not checked for this engagement")
+    - add_error_message_to_response("Push to JIRA for Epic skipped because enable_engagement_epic_mapping is not checked for this engagement")
+    - add_error_message_to_response("Push to JIRA for finding skipped because JIRA Project is disabled")
+    - add_error_message_to_response("Push to JIRA for group skipped because JIRA Project is disabled")
+    - add_error_message_to_response(f"Unable to delete JIRA Instance, probably because it is used by JIRA Issues: {e}")
+    - add_error_message_to_response("The form has errors, please correct them below.")
+    - add_error_message_to_response("The form has errors, please correct them below.")
+    - add_error_message_to_response(f"jira form validation failed: {jform.errors}")
+    - add_error_message_to_response(form_error)
+    - add_error_message_to_response(form_error)
+    - add_error_message_to_response(import_error)
+  dojo.filters.EngagementFilter:
+    - filter_class = EngagementFilterWithoutObjectLookups if filter_string_matching else EngagementFilter
+    - filter_class = EngagementFilterWithoutObjectLookups if filter_string_matching else EngagementFilter
+  dojo.forms.TestForm:
+    - TestForm(request.POST, engagement=eng)
+    - TestForm(engagement=eng)
+    - TestForm(instance=test)
+    - TestForm(request.POST, instance=test)
+  dojo.forms.ImportScanForm:
+    - def get_form(\n        self,\n        request: HttpRequest,\n        **kwargs: dict,\n    ) -> ImportScanForm:\n        """Returns the default import form for importing findings"""\n        if request...
+    - ImportScanForm(request.POST, request.FILES, **kwargs)
+    - ImportScanForm(**kwargs)
+    - def process_form(\n        self,\n        request: HttpRequest,\n        form: ImportScanForm,\n        context: dict,\n    ) -> str | None:\n        """Process the form and manipulate the input in an...
+  dojo.finding.helper.INACTIVE_FINDINGS_QUERY:
+    - qs.filter(INACTIVE_FINDINGS_QUERY)
+  dojo.product_type.queries.get_authorized_groups_for_product_type:
+    - get_authorized_groups_for_product_type(prod.prod_type, Permissions.Product_Type_View)
+    - get_authorized_groups_for_product_type(pt, Permissions.Product_Type_View)
+  dojo.__version__:
+    - SPECTACULAR_SETTINGS = {\n    "TITLE": "Defect Dojo API v2",\n    "DESCRIPTION": "Defect Dojo - Open Source vulnerability Management made easy. Prefetch related parameters/responses not yet in the sch...
+    - version = __version__
+  dojo.forms.Delete_Questionnaire_Form:
+    - Delete_Questionnaire_Form(instance=survey)
+    - Delete_Questionnaire_Form(request.POST, instance=survey)
+    - Delete_Questionnaire_Form(instance=survey)
+    - Delete_Questionnaire_Form(request.POST, instance=survey)
+  dojo.filters.QuestionFilter:
+    - QuestionFilter(request.GET, queryset=questions)
+  dojo.filters.ApiCredentialsFilter:
+    - filterset_class = ApiCredentialsFilter
+  dojo.finding.helper.ACCEPTED_FINDINGS_QUERY:
+    - qs.filter(ACCEPTED_FINDINGS_QUERY)
+    - qs.filter(ACCEPTED_FINDINGS_QUERY)
+    - all_findings_within_date_range.filter(ACCEPTED_FINDINGS_QUERY)
+  dojo.utils.add_external_issue:
+    - add_external_issue(finding, "github")
+    - add_external_issue(new_finding, "github")
+    - add_external_issue(finding, "github")
+    - add_external_issue(finding, "github")
+  dojo.forms.ClearFindingReviewForm:
+    - ClearFindingReviewForm(request.POST, instance=finding)
+    - ClearFindingReviewForm(instance=finding)
+  dojo.models.Objects_Product:
+    - model = Objects_Product
+    - model = Objects_Product
+    - Objects_Product.objects.filter(product=pid)
+    - Objects_Product.objects.get(pk=ttid)
+    - Objects_Product.objects.get(pk=ttid)
+  dojo.models.get_current_datetime:
+    - get_current_datetime()
+    - get_current_datetime()
+    - get_current_datetime()
+  dojo.forms.ReportOptionsForm:
+    - ReportOptionsForm()
+    - ReportOptionsForm(request.GET)
+    - ReportOptionsForm()
+    - ReportOptionsForm(request.GET)
+  dojo.models.Test_Import_Finding_Action:
+    - model = Test_Import_Finding_Action
+    - model = Test_Import_Finding_Action
+    - Test_Import_Finding_Action.objects.exclude(\n                        action=IMPORT_UNTOUCHED_FINDING,\n                    )
+    - Test_Import_Finding_Action.objects.exclude(\n                    action=IMPORT_UNTOUCHED_FINDING,\n                )
+    - Test_Import_Finding_Action(\n                test_import=test_import,\n                finding=finding,\n                action=IMPORT_CLOSED_FINDING,\n            )
+    - Test_Import_Finding_Action(\n                test_import=test_import,\n                finding=finding,\n                action=IMPORT_CREATED_FINDING,\n            )
+    - Test_Import_Finding_Action(\n                test_import=test_import,\n                finding=finding,\n                action=IMPORT_REACTIVATED_FINDING,\n            )
+    - Test_Import_Finding_Action(\n                test_import=test_import,\n                finding=finding,\n                action=IMPORT_UNTOUCHED_FINDING,\n            )
+    - Test_Import_Finding_Action.objects.bulk_create(test_import_finding_action_list)
+    - Test_Import_Finding_Action.objects.exclude(action=IMPORT_UNTOUCHED_FINDING)
+  dojo.models.DEFAULT_NOTIFICATION:
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+    - MultipleChoiceField(\n        choices=NOTIFICATION_CHOICES, default=DEFAULT_NOTIFICATION,\n    )
+  dojo.tools.sysdig_reports.sysdig_csv_parser.CSVParser:
+    - CSVParser()
+  dojo.api_v2.views.LanguageTypeViewSet:
+    - v2_api.register(r"language_types", LanguageTypeViewSet, basename="language_type")
+  dojo.product_type.queries.get_authorized_product_type_members:
+    - get_authorized_product_type_members(\n            Permissions.Product_Type_View,\n        )
+  dojo.models.Alerts:
+    - Alerts.objects.filter(user_id=request.user)
+    - Alerts.objects.filter(user_id_id=user.id)
+    - Alerts.objects.all()
+    - Alerts.objects.filter(user_id_id=None)
+    - Alerts(\n                user_id=user,\n                url=kwargs.get("url", reverse("alerts")),\n                title=kwargs.get("title", "Notification issue")[:250],\n                description=k...
+    - Alerts(\n                user_id=user,\n                title=kwargs.get("title")[:250],\n                description=self._create_notification_message(\n                    event,\n                  ...
+    - Alerts.objects.filter(user_id=user.id)
+    - Alerts.objects.filter(pk__in=list(alerts_to_delete))
+    - Alerts.objects.filter(user_id=request.user)
+    - Alerts.objects.filter(user_id=request.user)
+    - Alerts.objects.filter(user_id=request.user)
+    - Alerts.objects.filter(user_id=request.user)
+    - Alerts.objects.filter(user_id=request.user)
+  dojo.utils.add_success_message_to_response:
+    - add_success_message_to_response(importer_client.construct_imported_message(\n                finding_count=finding_count,\n                closed_finding_count=closed_finding_count,\n            ))
+    - add_success_message_to_response(\n                            f"Created finding group with {added} findings",\n                        )
+    - add_success_message_to_response(\n                            f"Skipped {skipped} findings in group creation, findings already part of another group",\n                        )
+    - add_success_message_to_response(\n                            f"Added {added} findings to finding group {finding_group.name}",\n                        )
+    - add_success_message_to_response(\n                            f"Skipped {skipped} findings when adding to finding group {finding_group.name}, "\n                            "findings already part of another group",\n                        )
+    - add_success_message_to_response(\n                            "Removed {} findings from finding groups {}".format(\n                                removed,\n                                ",".join(\...
+    - add_success_message_to_response(\n                            f"Skipped {skipped} findings when removing from any finding group, findings not part of any group",\n                        )
+    - add_success_message_to_response(\n                            f"Grouped {grouped} findings into {len(finding_groups)} ({groups_created} newly created) finding groups",\n                        )
+    - add_success_message_to_response(\n                            f"Skipped {skipped} findings when grouping by {finding_group_by_option} as these findings "\n                            "were already in an existing group",\n                        )
+    - add_success_message_to_response(f"{success_count} finding groups pushed to JIRA successfully")
+    - add_success_message_to_response(f"{success_count} findings pushed to JIRA successfully")
+    - add_success_message_to_response(importer_client.construct_imported_message(\n                finding_count=finding_count,\n                new_finding_count=new_finding_count,\n                closed_...

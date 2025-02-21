@@ -1,0 +1,310 @@
+
+dojo:
+  dojo.utils.prepare_for_view:
+    - prepare_for_view(tool_config.password)
+    - prepare_for_view(value)
+    - prepare_for_view(tool_config.password)
+    - prepare_for_view(tool_config.ssh)
+    - prepare_for_view(tool_config.password)
+  dojo.utils.get_product:
+    - get_product(obj)
+    - get_product(obj)
+  dojo.forms.DeleteGITHUBConfForm:
+    - DeleteGITHUBConfForm(instance=github_instance)
+    - DeleteGITHUBConfForm(request.POST, instance=github_instance)
+  dojo.utils.timezone:
+    - timezone.now()
+  dojo.filters.ProductEngagementsFilter:
+    - products_filter_class = ProductEngagementsFilterWithoutObjectLookups if filter_string_matching else ProductEngagementsFilter
+  dojo.models.Benchmark_Requirement:
+    - model = Benchmark_Requirement
+  dojo.forms.Edit_Product_Type_Group_Form:
+    - Edit_Product_Type_Group_Form(instance=group)
+    - Edit_Product_Type_Group_Form(request.POST, instance=group)
+  dojo.forms.SystemSettingsForm:
+    - def get_form(\n        self,\n        request: HttpRequest,\n        system_settings: System_Settings,\n    ) -> SystemSettingsForm:\n        # Set up the args for the form\n        args = [request.PO...
+    - SystemSettingsForm(*args, **kwargs)
+  dojo.forms.ToolConfigForm:
+    - ToolConfigForm(request.POST)
+    - ToolConfigForm()
+    - ToolConfigForm(request.POST, instance=tool_config)
+    - ToolConfigForm(instance=tool_config)
+  dojo.tools.trivy_operator.uniform_vulnid.UniformTrivyVulnID:
+    - UniformTrivyVulnID()
+    - UniformTrivyVulnID()
+    - UniformTrivyVulnID()
+  dojo.tools.veracode.xml_parser.VeracodeXMLParser:
+    - VeracodeXMLParser()
+  dojo.forms.AnnouncementCreateForm:
+    - AnnouncementCreateForm()
+    - AnnouncementCreateForm(request.POST)
+  dojo.models.Development_Environment:
+    - model = Development_Environment
+    - model = Development_Environment
+    - Development_Environment.objects.get_or_create(name=data.get("environment", "Development"))
+    - Development_Environment.objects.get(name=data.get("environment", "Development"))
+    - Development_Environment.objects.none()
+    - Development_Environment.objects.all()
+    - Development_Environment.objects.all()
+    - get_object_or_404(Development_Environment, pk=deid)
+    - def get_development_environment(\n        self,\n        environment_name: str = "Development",\n    ) -> Development_Environment | None:\n        """\n        Get the development environment in two c...
+    - Development_Environment.objects.filter(name=environment_name)
+    - model = Development_Environment
+    - model = Development_Environment
+    - model = Development_Environment
+    - Development_Environment.objects.all()
+    - Development_Environment.objects.all()
+    - self.validate(\n            "environment",\n            expected_types=[Development_Environment],\n            required=False,\n            default=None,\n            **kwargs,\n        )
+    - self.environment: Development_Environment | None = self.validate_environment(*args, **kwargs)
+    - def validate_environment(\n        self,\n        *args: list,\n        **kwargs: dict,\n    ) -> Development_Environment | None:\n        return self.validate(\n            "environment",\n          ...
+    - self.validate(\n            "environment",\n            expected_types=[Development_Environment],\n            required=True,\n            default=None,\n            **kwargs,\n        )
+  dojo.tools.factory.requires_tool_type:
+    - requires_tool_type(scan_type)
+    - requires_tool_type(scan_type)
+    - requires_tool_type(self.scan_type)
+  dojo.forms.FindingTemplateForm:
+    - FindingTemplateForm()
+    - FindingTemplateForm(request.POST)
+    - FindingTemplateForm(\n        instance=template,\n        initial={"vulnerability_ids": "\n".join(template.vulnerability_ids)},\n    )
+    - FindingTemplateForm(request.POST, instance=template)
+  dojo.forms.ProductTypeCountsForm:
+    - ProductTypeCountsForm()
+    - ProductTypeCountsForm(request.GET)
+  dojo.utils.do_false_positive_history:
+    - do_false_positive_history(finding, *args, **kwargs)
+    - do_false_positive_history(find)
+  dojo.product.helpers.update_sla_expiration_dates_product_async:
+    - update_sla_expiration_dates_product_async(self, sla_config)
+  dojo.api_v2.views.ProductMemberViewSet:
+    - v2_api.register(r"product_members", ProductMemberViewSet, basename="product_member")
+  dojo.api_v2.views.TestImportViewSet:
+    - v2_api.register(r"test_imports", TestImportViewSet, basename="test_imports")
+  dojo.api_v2.views.UserContactInfoViewSet:
+    - v2_api.register(r"user_contact_infos", UserContactInfoViewSet, basename="usercontactinfo")
+  dojo.endpoint.utils.remove_broken_endpoint_statuses:
+    - remove_broken_endpoint_statuses(apps=apps)
+  dojo.api_v2.views.SystemSettingsViewSet:
+    - v2_api.register(r"system_settings", SystemSettingsViewSet, basename="system_settings")
+  dojo.models.Choice:
+    - admin.site.register(Choice)
+    - Choice.objects.filter(id__in=real_answer)
+    - Choice.objects.all()
+    - model = Choice
+    - Choice.objects.get_or_create(label=c)
+    - Choice.objects.get_or_create(**form.cleaned_data)
+  dojo.models.DojoMeta:
+    - DojoMeta(**data)
+    - model = DojoMeta
+    - DojoMeta(product=product_id,\n                     endpoint=endpoint_id,\n                     finding=finding_id,\n                     name=item.get("name"),\n                     value=item.get("value"))
+    - model = DojoMeta
+    - model = DojoMeta
+    - DojoMeta.objects.filter(finding=finding)
+    - DojoMeta.objects.update_or_create(\n                name=metadata_name,\n                finding=finding,\n                defaults={\n                    "name": request.data.get("name"),\n                    "value": request.data.get("value"),\n                },\n            )
+    - DojoMeta(finding=finding, name=name, value=value)
+    - get_object_or_404(\n            DojoMeta.objects, finding=finding, name=name,\n        )
+    - DojoMeta.objects.none()
+    - DojoMeta.objects.create(\n                    product=product,\n                    finding=finding,\n                    endpoint=endpoint,\n                    name=metadata.get("name"),\n                    value=metadata.get("value"),\n                    )
+    - DojoMeta.objects.filter(product=product, finding=finding, endpoint=endpoint, name=metadata.get("name"))
+    - DojoMeta.objects.get_or_create(\n                            endpoint=endpoint,\n                            name=item[0])
+    - DojoMeta(endpoint=endpoint)
+    - get_object_or_404(DojoMeta, id=cfv_id)
+    - get_object_or_404(DojoMeta, id=cfv_id)
+    - model = DojoMeta
+    - DojoMeta.objects.none()
+    - DojoMeta.objects.all()
+    - DojoMeta.objects.all()
+    - DojoMeta.objects.annotate(\n        product__prod_type__member=Exists(product_authorized_product_type_roles),\n        product__member=Exists(product_authorized_product_roles),\n        product__prod_...
+    - DojoMeta(product=prod)
+    - get_object_or_404(DojoMeta, id=cfv_id)
+    - get_object_or_404(DojoMeta, id=cfv_id)
+  dojo.models.Tool_Type:
+    - model = Tool_Type
+    - Tool_Type.objects.filter(name=name)
+    - Tool_Type.objects.none()
+    - Tool_Type.objects.all()
+    - model = Tool_Type
+    - Tool_Type.objects.filter(name=name)
+    - Tool_Type.objects.all()
+    - self.count_the_duplicates(Tool_Type, "name")
+    - Tool_Type.objects.get_or_create(name=tool_type)
+    - Tool_Type()
+    - Tool_Type.objects.get(pk=ttid)
+    - Tool_Type.objects.all()
+    - Tool_Type.objects.filter(name=tool_type)
+  dojo.metrics.utils.get_accepted_in_period_details:
+    - get_accepted_in_period_details(\n        findings_queryset(filters["accepted"]),\n    )
+  dojo.tools.openvas.csv_parser.OpenVASCSVParser:
+    - OpenVASCSVParser()
+  dojo.forms.Development_EnvironmentForm:
+    - Development_EnvironmentForm()
+    - Development_EnvironmentForm(request.POST)
+    - Development_EnvironmentForm(instance=de)
+    - Development_EnvironmentForm(request.POST, instance=de)
+  dojo.finding.helper.FALSE_POSITIVE_FINDINGS_QUERY:
+    - qs.filter(FALSE_POSITIVE_FINDINGS_QUERY)
+  dojo.tools.trivy_operator.clustercompliance_handler.TrivyClusterComplianceHandler:
+    - TrivyClusterComplianceHandler()
+  dojo.api_v2.views.CredentialsMappingViewSet:
+    - v2_api.register(r"credential_mappings", CredentialsMappingViewSet, basename="cred_mapping")
+  dojo.forms.DojoUserForm:
+    - DojoUserForm(instance=user)
+    - DojoUserForm(request.POST, instance=user)
+  dojo.forms.Add_Group_Member_UserForm:
+    - Add_Group_Member_UserForm(initial={"user": user.id})
+    - Add_Group_Member_UserForm(request.POST, initial={"user": user.id})
+  dojo.models.Tool_Configuration:
+    - model = Tool_Configuration
+    - Tool_Configuration.objects.none()
+    - Tool_Configuration.objects.all()
+    - Tool_Configuration.objects.all()
+    - model = Tool_Configuration
+    - Tool_Configuration.objects.all()
+    - Tool_Configuration.objects.get(pk=ttid)
+    - Tool_Configuration.objects.all()
+    - Tool_Configuration.objects.filter(tool_type__name=tool_type)
+  dojo.endpoint.utils.endpoint_filter:
+    - endpoint_filter(\n            protocol=endpoint_ins.protocol,\n            userinfo=endpoint_ins.userinfo,\n            host=endpoint_ins.host,\n            port=endpoint_ins.port,\n            path=e...
+    - endpoint_filter(\n            protocol=protocol,\n            userinfo=userinfo,\n            host=host,\n            port=port,\n            path=path,\n            query=query,\n            fragment=fragment,\n            product=self.product,\n        )
+  dojo.tools.sysdig_reports.sysdig_data.SysdigData:
+    - def parse(self, filename) -> SysdigData:\n\n        if filename is None:\n            return ()\n\n        content = filename.read()\n        if isinstance(content, bytes):\n            content = cont...
+    - SysdigData()
+  dojo.tools.veracode.json_parser.VeracodeJSONParser:
+    - VeracodeJSONParser()
+  dojo.models.UserAnnouncement:
+    - UserAnnouncement.objects.filter(\n                user=dojo_user, announcement=announcement,\n            )
+    - UserAnnouncement.objects.get_or_create(\n                    user=dojo_user, announcement=announcement,\n                )
+    - UserAnnouncement.objects.bulk_create(\n            [\n                UserAnnouncement(\n                    user=user_id, announcement=instance,\n                )\n                for user_id in Dojo_User.objects.all()\n            ],\n        )
+    - UserAnnouncement(\n                    user=user_id, announcement=instance,\n                )
+    - UserAnnouncement.objects.filter(\n            user=request.user, announcement=1,\n        )
+    - UserAnnouncement.objects.select_related(\n                "announcement",\n            )
+  dojo.models.Finding_Group:
+    - model = Finding_Group
+    - serializers.ChoiceField(\n        required=False,\n        choices=Finding_Group.GROUP_BY_OPTIONS,\n        help_text="Choose an option to automatically group new findings by the chosen option.",\n    )
+    - Finding_Group.objects.none()
+    - Finding_Group(test=finds[0].test)
+    - Finding_Group.objects.filter(test=find.test, name=group_name)
+    - Finding_Group.objects.get_or_create(test=test, creator=creator, name=name)
+    - Finding_Group.objects.get(test=test, name=name)
+    - Finding_Group.objects.get_or_create(test=test, creator=creator, name=name)
+    - Finding_Group.objects.get(id=fgid)
+    - model = Finding_Group
+    - model = Finding_Group
+    - forms.ChoiceField(required=False, choices=Finding_Group.GROUP_BY_OPTIONS, help_text="Choose an option to automatically group new findings by the chosen option.")
+    - forms.ChoiceField(required=False, choices=Finding_Group.GROUP_BY_OPTIONS, help_text="Choose an option to automatically group new findings by the chosen option")
+    - Finding_Group.objects.none()
+    - isinstance(obj, Finding_Group)
+    - isinstance(obj, Finding_Group)
+    - isinstance(obj, Finding_Group)
+    - isinstance(obj, Finding | Engagement | Finding_Group)
+    - isinstance(obj, Finding | Engagement | Finding_Group)
+    - isinstance(obj, Finding | Engagement | Finding_Group)
+    - isinstance(obj, Finding_Group)
+    - isinstance(obj, Finding_Group)
+    - isinstance(obj, Finding_Group)
+    - isinstance(obj, Finding_Group)
+    - isinstance(obj, Finding_Group)
+    - isinstance(obj, Finding_Group)
+    - dojo_model_from_id(model=Finding_Group)
+    - isinstance(obj, Finding_Group)
+    - dojo_model_from_id(model=Finding_Group)
+    - isinstance(obj, Finding_Group)
+    - context = {\n            "test": test,\n            "prod": test.engagement.product,\n            "product_tab": product_tab,\n            "title_words": get_words_for_field(Finding, "title"),\n      ...
+    - isinstance(obj, Finding | Finding_Group)
+  dojo.utils.get_return_url:
+    - get_return_url(request)
+    - get_return_url(request)
+  dojo.models.EFFORT_FOR_FIXING_CHOICES:
+    - MultipleChoiceFilter(choices=EFFORT_FOR_FIXING_CHOICES)
+    - forms.ChoiceField(\n        required=False,\n        choices=EFFORT_FOR_FIXING_CHOICES,\n        error_messages={\n            "invalid_choice": EFFORT_FOR_FIXING_INVALID_CHOICE})
+    - forms.ChoiceField(\n        required=False,\n        choices=EFFORT_FOR_FIXING_CHOICES,\n        error_messages={\n            "invalid_choice": EFFORT_FOR_FIXING_INVALID_CHOICE})
+    - forms.ChoiceField(\n        required=False,\n        choices=EFFORT_FOR_FIXING_CHOICES,\n        error_messages={\n            "invalid_choice": EFFORT_FOR_FIXING_INVALID_CHOICE})
+  dojo.forms.ReviewFindingForm:
+    - ReviewFindingForm(finding=finding, user=user)
+    - ReviewFindingForm(request.POST, finding=finding, user=user)
+  dojo.utils.sla_compute_and_notify:
+    - sla_compute_and_notify()
+    - sla_compute_and_notify(*args, **kwargs)
+  dojo.tools.trivy_operator.vulnerability_handler.TrivyVulnerabilityHandler:
+    - TrivyVulnerabilityHandler()
+  dojo.api_v2.views.QuestionnaireGeneralSurveyViewSet:
+    - v2_api.register(r"questionnaire_general_questionnaires", QuestionnaireGeneralSurveyViewSet, basename="general_survey")
+  dojo.models.Endpoint_Status:
+    - model = Endpoint_Status
+    - Endpoint_Status.objects.create(\n                finding=finding, endpoint=endpoint,\n            )
+    - Endpoint_Status.objects.none()
+    - Endpoint_Status.objects.none()
+    - Endpoint_Status.objects.all()
+    - Endpoint_Status.objects.filter(endpoint__in=endpoints)
+    - Endpoint_Status.objects.get(\n                    endpoint=endpoint,\n                    finding__id=fid)
+    - if queryset is None:  # don't to 'if not queryset' which will trigger the query\n        queryset = Finding.objects.all()\n\n    try:\n        EARLIEST_FINDING = queryset.earliest("date")\n    except ...
+    - model = Endpoint_Status
+    - model = Endpoint_Status
+    - Endpoint_Status.objects.get_or_create(\n            finding=new_finding,\n            endpoint=endpoint, defaults={"date": form.cleaned_data["date"] or timezone.now()})
+    - Endpoint_Status.objects.filter(finding=new_finding)
+    - Endpoint_Status.objects.get_or_create(\n                finding=finding,\n                endpoint=ep,\n                defaults={"date": finding.date})
+    - def mitigate_endpoint_status(\n        self,\n        endpoint_status_list: list[Endpoint_Status],\n        user: Dojo_User,\n        **kwargs: dict,\n    ) -> None:\n        """Mitigates all endpoint...
+    - def reactivate_endpoint_status(\n        self,\n        endpoint_status_list: list[Endpoint_Status],\n        **kwargs: dict,\n    ) -> None:\n        """Reactivate all endpoint status objects that ar...
+    - def chunk_endpoints_and_reactivate(\n        self,\n        endpoint_status_list: list[Endpoint_Status],\n        **kwargs: dict,\n    ) -> None:\n        """\n        Reactivates all endpoint status ...
+    - def chunk_endpoints_and_mitigate(\n        self,\n        endpoint_status_list: list[Endpoint_Status],\n        user: Dojo_User,\n        **kwargs: dict,\n    ) -> None:\n        """\n        Mitigate...
+    - Endpoint_Status.objects.filter(\n        mitigated=False,\n        finding__severity__in=("Critical", "High", "Medium", "Low", "Info"),\n    )
+    - Endpoint_Status.objects.filter(\n            mitigated_time__range=[start_date, end_date],\n            finding__test__engagement__product__prod_type__in=prod_type,\n        )
+    - Endpoint_Status.objects.filter(\n            date__range=[start_date, end_date],\n            risk_accepted=True,\n            finding__test__engagement__product__prod_type__in=prod_type,\n        )
+    - Endpoint_Status.objects.filter(\n            mitigated_time__range=[start_date, end_date],\n        )
+    - Endpoint_Status.objects.filter(\n            date__range=[start_date, end_date],\n            risk_accepted=True,\n        )
+    - TypeVar("MetricsQuerySet", QuerySet[Finding], QuerySet[Endpoint_Status])
+    - """\n    Given a MetricsQuerySet, returns a QuerySet representing all its findings.\n\n    :param qs: MetricsQuerySet (A queryset of either Findings or Endpoint_Statuses)\n    :return: A queryset of F...
+    - Endpoint_Status.objects.filter(finding__test__engagement__product=prod,\n                                                     finding__severity__in=(\n                                                         "Critical", "High", "Medium", "Low", "Info"))
+    - Endpoint_Status.objects.get(endpoint=endpoint, finding=finding)
+    - Endpoint_Status.objects.get(endpoint=endpoint, finding=finding)
+    - Endpoint_Status.objects.get(endpoint=endpoint, finding=finding)
+    - Endpoint_Status.objects.get(endpoint=endpoint, finding=finding)
+    - Endpoint_Status.objects.get(endpoint=endpoint, finding=finding)
+  dojo.product.queries.get_authorized_engagement_presets:
+    - get_authorized_engagement_presets(Permissions.Product_View)
+  dojo.forms.DeleteEngagementForm:
+    - DeleteEngagementForm(instance=engagement)
+    - DeleteEngagementForm(request.POST, instance=engagement)
+  dojo.endpoint.utils.validate_endpoints_to_add:
+    - validate_endpoints_to_add(cleaned_data["endpoints_to_add"])
+    - validate_endpoints_to_add(cleaned_data["endpoints_to_add"])
+    - validate_endpoints_to_add(cleaned_data["endpoints_to_add"])
+    - validate_endpoints_to_add(cleaned_data["endpoints_to_add"])
+    - validate_endpoints_to_add(cleaned_data["endpoints_to_add"])
+    - validate_endpoints_to_add(endpoint)
+  dojo.models.IMPORT_CREATED_FINDING:
+    - Test_Import_Finding_Action(\n                test_import=test_import,\n                finding=finding,\n                action=IMPORT_CREATED_FINDING,\n            )
+  dojo.utils.queryset_check:
+    - queryset_check(findings_filter)
+    - queryset_check(endpoints)
+    - queryset_check(filters["all"])
+    - queryset_check(findings)
+    - queryset_check(endpoints)
+    - queryset_check(endpoints)
+  dojo.forms.Add_Product_Type_MemberForm:
+    - Add_Product_Type_MemberForm(initial={"product_type": pt.id})
+    - Add_Product_Type_MemberForm(request.POST, initial={"product_type": pt.id})
+  dojo.reports.widgets.CoverPage:
+    - CoverPage(request=request)
+  dojo.tools.trivy_operator.secrets_handler.TrivySecretsHandler:
+    - TrivySecretsHandler()
+  dojo.api_v2.views.ToolProductSettingsViewSet:
+    - v2_api.register(r"tool_product_settings", ToolProductSettingsViewSet, basename="tool_product_settings")
+  dojo.engagement.urls.urlpatterns aliased as eng_urls:
+    - ur += eng_urls
+  dojo.models.Product:
+    - isinstance(product_id, Product)
+    - Product.objects.all()
+    - Product.objects.all()
+    - Product.objects.all()
+    - model = Product
+    - model = Product
+    - Product.objects.all()
+    - Product.objects.all()
+    - Product.objects.all()
+    - Product.objects.filter(id=data.get("product"))
+    - Product.objects.filter(id=data.get("product"))
+    - Product.objects.none()
+    - Product.objects.none()
+    - Product.objects.none()
+    - user_is_authorized(Product, Permissions.Product_Edit, "pid")
+    - get_object_or_404(Product, id=pid)

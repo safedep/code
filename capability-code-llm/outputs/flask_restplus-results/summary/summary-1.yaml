@@ -1,0 +1,273 @@
+
+werkzeug:
+  werkzeug.cached_property:
+    - '''\n    The main entry point for the application.\n    You need to initialize it with a Flask Application: ::\n\n    >>> app = Flask(__name__)\n    >>> api = Api(app)\n\n    Alternatively, you can us...
+    - '''\n    Raw provides a base field class from which others should extend. It\n    applies no formatting by default, and should only be used in cases where\n    data does not need to be formatted befor...
+    - '''\n    A thin wrapper on ordered fields dict to store API doc metadata.\n    Can also be used for response marshalling.\n\n    :param str name: The model public name\n    :param str mask: an optiona...
+  werkzeug.exceptions.MethodNotAllowed:
+    - '''\n        Determine if error should be handled with FR or default Flask\n\n        The goal is to return Flask error handlers for non-FR-related routes,\n        and FR errors (with the correct med...
+  werkzeug.exceptions.NotFound:
+    - '''\n        Determine if error should be handled with FR or default Flask\n\n        The goal is to return Flask error handlers for non-FR-related routes,\n        and FR errors (with the correct med...
+  werkzeug.datastructures.Headers:
+    - Headers()
+  werkzeug.routing.parse_rule:
+    - parse_rule(path)
+  werkzeug.exceptions.NotAcceptable:
+    - NotAcceptable()
+  werkzeug.exceptions.InternalServerError:
+    - InternalServerError()
+  werkzeug.datastructures.MultiDict:
+    - MultiDict()
+    - MultiDict()
+    - MultiDict()
+  werkzeug.datastructures.FileStorage:
+    - isinstance(value, FileStorage)
+    - if value is None:\n            if not self.nullable:\n                raise ValueError('Must not be null!')\n            return None\n\n        elif isinstance(self.type, Model) and isinstance(value, ...
+  werkzeug.exceptions:
+    - exceptions.BadRequest(msg)
+  werkzeug.wrappers.BaseResponse:
+    - isinstance(resp, BaseResponse)
+    - isinstance(resp, BaseResponse)
+  werkzeug.exceptions.HTTPException:
+    - isinstance(e, HTTPException)
+    - isinstance(e, HTTPException)
+    - '''\n    Properly abort the current request.\n\n    Raise a `HTTPException` for the given status `code`.\n    Attach any keyword arguments to the exception for later processing.\n\n    :param int code...
+
+jsonschema:
+  jsonschema.RefResolver:
+    - RefResolver.from_schema(self.__schema__)
+  jsonschema.Draft4Validator:
+    - Draft4Validator(self.__schema__, resolver=resolver, format_checker=format_checker)
+  jsonschema.exceptions.ValidationError:
+    - validator = Draft4Validator(self.__schema__, resolver=resolver, format_checker=format_checker)\n        try:\n            validator.validate(data)\n        except ValidationError:\n            abort(H...
+
+datetime:
+  datetime.timedelta:
+    - isinstance(max_age, timedelta)
+    - timedelta(days=1)
+    - timedelta(hours=1)
+    - timedelta(minutes=1)
+    - timedelta(seconds=1)
+  datetime.datetime:
+    - isinstance(value, datetime)
+    - datetime(value.year, value.month, value.day)
+    - isinstance(value, datetime)
+    - isinstance(start, datetime)
+    - datetime.combine(start, START_OF_DAY)
+    - datetime.combine(end, START_OF_DAY)
+    - isinstance(start, datetime)
+    - datetime.strptime(value, "%Y-%m-%d")
+    - datetime.fromtimestamp(timestamp)
+    - datetime.fromtimestamp(timestamp, pytz.utc)
+    - datetime(date.year, date.month, date.day)
+  datetime.date:
+    - isinstance(value, date)
+    - value.date()
+    - isinstance(value, date)
+  datetime.time:
+    - time(0, 0, 0, tzinfo=pytz.UTC)
+    - time(23, 59, 59, 999999, tzinfo=pytz.UTC)
+    - time = value.split('T')[1]
+    - re.sub('[+-].+', '', time)
+
+email:
+  email.utils.parsedate_tz:
+    - parsedate_tz(value)
+  email.utils.mktime_tz:
+    - mktime_tz(timetuple)
+  email.utils.formatdate:
+    - formatdate(timegm(dt.utctimetuple()))
+
+types:
+  types.MethodType:
+    - MethodType(Api._blueprint_setup_add_url_rule_patch,\n                                                  setup_state)
+
+pytz:
+  pytz:
+    - time(0, 0, 0, tzinfo=pytz.UTC)
+    - time(23, 59, 59, 999999, tzinfo=pytz.UTC)
+    - pytz.UTC.localize(start)
+    - pytz.UTC.localize(end)
+    - start.astimezone(pytz.UTC)
+    - end.astimezone(pytz.UTC)
+    - datetime.fromtimestamp(timestamp).replace(tzinfo=pytz.utc)
+    - datetime.fromtimestamp(timestamp, pytz.utc)
+
+warnings:
+  warnings:
+    - warnings.warn('extend is is deprecated, use clone instead', DeprecationWarning, stacklevel=2)
+    - warnings.warn('The parser attribute is deprecated, use expect instead', DeprecationWarning, stacklevel=2)
+    - warnings.warn('The body attribute is deprecated, use expect instead', DeprecationWarning, stacklevel=2)
+
+json:
+  json.dumps:
+    - dumps(data, **settings)
+
+re:
+  re:
+    - re.compile('(<.*>)')
+    - re.match(reg, objkey, re.IGNORECASE)
+    - re.match(reg, objkey, re.IGNORECASE)
+    - re.compile(\n    r'(?:(?P<auth>[^:@]+?(?::[^:@]*?)?)@)?'  # basic auth\n    r'(?:'\n    r'(?P<localhost>localhost)|'  # localhost...\n    r'(?P<ipv4>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})|'  # ...or ipv4...
+    - re.compile(\n    r'(?:(?P<auth>[^:@]+?(?::[^:@]*?)?)@)?'  # basic auth\n    r'(?:'\n    r'(?P<localhost>localhost)|'  # localhost...\n    r'(?P<ipv4>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})|'  # ...or ipv4...
+    - re.compile(\n    r'^'\n    '(?P<local>[^@]*[^@.])'\n    r'@'\n    r'(?P<server>[^@]+(?:\.[^@]+)*)'\n    r'$', re.IGNORECASE)
+    - re.compile(\n    r'^'\n    '(?P<local>[^@]*[^@.])'\n    r'@'\n    r'(?P<server>[^@]+(?:\.[^@]+)*)'\n    r'$', re.IGNORECASE)
+    - re.compile(r'\d{2}:\d{2}')
+    - self.re = re.compile(pattern)
+    - re.compile(pattern)
+    - self.re.search(value)
+    - re.sub('[+-].+', '', time)
+    - re.compile(r'\{|\}|\,|[\w_:\-\*]+')
+    - re.compile(r'u?\'(?P<name>.*)\' is a required property', re.I | re.U)
+    - re.compile(r'u?\'(?P<name>.*)\' is a required property', re.I | re.U)
+    - re.compile(r'u?\'(?P<name>.*)\' is a required property', re.I | re.U)
+    - re.compile(r'<(?:[^:<>]+:)?([^<>]+)>')
+    - re.compile(r'^:raises\s+(?P<name>[\w\d_]+)\s*:\s*(?P<description>.*)$', re.MULTILINE)
+    - re.compile(r'^:raises\s+(?P<name>[\w\d_]+)\s*:\s*(?P<description>.*)$', re.MULTILINE)
+    - re.compile('(.)([A-Z][a-z]+)')
+    - re.compile('([a-z0-9])([A-Z])')
+
+collections:
+  collections.OrderedDict:
+    - OrderedDict(DEFAULT_REPRESENTATIONS)
+    - OrderedDict()
+    - OrderedDict()
+    - OrderedDict(items)
+    - OrderedDict([(envelope, out)])
+    - OrderedDict([(envelope, out)])
+    - OrderedDict()
+    - OrderedDict(items)
+    - OrderedDict([(envelope, out)])
+    - class Mask(OrderedDict):\n    '''\n    Hold a parsed mask.\n\n    :param str|dict|Mask mask: A mask, parsed or not\n    :param bool skip: If ``True``, missing fields won't appear in result\n    '''\n ...
+    - isinstance(mask, (dict, OrderedDict))
+    - isinstance(data, (dict, OrderedDict))
+    - class OrderedModel(RawModel, OrderedDict, MutableMapping):\n    '''\n    A thin wrapper on ordered fields dict to store API doc metadata.\n    Can also be used for response marshalling.\n\n    :param ...
+    - wrapper = OrderedDict
+    - OrderedDict()
+    - OrderedDict()
+    - OrderedDict()
+    - OrderedDict()
+    - OrderedDict((k, v) for k, v in iteritems(params) if k in method_params)
+    - OrderedDict(\n            (k[0], p) for k, p in up_params.items() if k not in need_to_go_down\n        )
+    - OrderedDict()
+    - OrderedDict((p['name'], p) for p in expect.__schema__)
+    - OrderedDict((k, v) for k, v in sorted(iteritems(data)) if v is not None)
+  collections.MutableMapping:
+    - class Model(RawModel, dict, MutableMapping):\n    '''\n    A thin wrapper on fields dict to store API doc metadata.\n    Can also be used for response marshalling.\n\n    :param str name: The model public name\n    :param str mask: an optional default model mask\n    '''\n    pass
+    - class OrderedModel(RawModel, OrderedDict, MutableMapping):\n    '''\n    A thin wrapper on ordered fields dict to store API doc metadata.\n    Can also be used for response marshalling.\n\n    :param ...
+  collections.namedtuple:
+    - namedtuple("ResourceRoute", "resource urls route_doc kwargs")
+  collections.Hashable:
+    - isinstance(arg.type, Hashable)
+    - isinstance(typedef, Hashable)
+
+six:
+  six.moves.urllib.parse.urlencode:
+    - urlencode(url_vars)
+  six.iterkeys:
+    - iterkeys(self.api.representations)
+  six.text_type:
+    - text_type(underlying_exception)
+    - text_type(value)
+    - text_type(Decimal(value))
+    - text_type(dvalue.quantize(self.precision, rounding=ROUND_HALF_EVEN))
+    - text_type(src_str)
+  six.string_types:
+    - isinstance(value, string_types)
+    - isinstance(value, string_types)
+    - isinstance(header, string_types)
+    - isinstance(tag, string_types)
+    - isinstance(mask, string_types)
+    - isinstance(response, string_types)
+    - isinstance(model, string_types)
+    - isinstance(value, (string_types))
+  six.moves.urllib.parse.urlparse:
+    - urlparse(url_for(endpoint, _external=self.absolute, **data))
+    - urlparse(value)
+  six.moves.urllib.parse.urlunparse:
+    - urlunparse((scheme, o.netloc, o.path, "", "", ""))
+    - urlunparse(("", "", o.path, "", "", ""))
+  six.itervalues:
+    - itervalues(mapping)
+    - itervalues(resolved)
+    - itervalues(specs)
+    - itervalues(field.mapping)
+  six:
+    - six.iteritems(ns.models)
+    - six.iteritems(ns.error_handlers)
+    - six.iteritems(self._own_and_child_error_handlers)
+    - isinstance(mask, six.string_types)
+    - six.iteritems(self)
+    - six.iteritems(data)
+    - six.iteritems(self)
+    - isinstance(shortcut, six.text_type)
+    - six.iteritems(data['params'])
+    - isinstance(description, six.string_types)
+    - six.text_type(x)
+    - isinstance(self.location, six.string_types)
+    - six.text_type(error)
+    - six.text_type(self.help)
+    - isinstance(self.location, six.string_types)
+  six.iteritems:
+    - iteritems(self.mapping)
+    - iteritems(obj)
+    - iteritems(fields)
+    - iteritems(self)
+    - iteritems(self)
+    - iteritems(data)
+    - iteritems(self.collection.apikeys)
+    - iteritems(self.collection.apikeys)
+    - iteritems(headers)
+    - iteritems(params)
+    - iteritems(self.api.__schema__['paths'])
+    - iteritems(operations)
+    - iteritems(self.api.__schema__.get('securityDefinitions'))
+    - iteritems(params)
+    - iteritems(self.api.error_handlers)
+    - iteritems(doc[method].get('vendor', {}))
+    - iteritems(doc['params'])
+    - iteritems(d['responses'])
+    - iteritems(d['docstring']['raises'])
+    - iteritems(self.api.error_handlers)
+    - iteritems(doc.get('headers', {}))
+    - iteritems(method_doc.get('headers', {}))
+    - iteritems(headers or {})
+    - iteritems(self._registered_models)
+    - iteritems(value)
+    - iteritems(second)
+    - iteritems(data)
+    - iteritems(data)
+
+difflib:
+  difflib:
+    - difflib.get_close_matches(request.path, rules.keys())
+
+enum:
+  enum.IntEnum:
+    - class HTTPStatus(IntEnum):\n    """HTTP status codes and reason phrases\n\n    Status codes from the following RFCs are all observed:\n\n        * RFC 7231: Hypertext Transfer Protocol (HTTP/1.1), obs...
+
+logging:
+  logging:
+    - logging.getLogger(__name__)
+    - logging.getLogger(__name__)
+
+decimal:
+  decimal.Decimal:
+    - Decimal(value)
+    - Decimal()
+    - Decimal('0.' + '0' * (decimals - 1) + '1')
+    - Decimal(value)
+  decimal.ROUND_HALF_EVEN:
+    - dvalue.quantize(self.precision, rounding=ROUND_HALF_EVEN)
+  decimal:
+    - if self.type is decimal.Decimal:\n                    return self.type(str(value), self.name)\n                else:\n                    return self.type(value, self.name)
+
+copy:
+  copy:
+    - copy.deepcopy(self)
+    - copy.deepcopy(parent)
+    - copy.deepcopy(value, memo)
+  copy.deepcopy:
+    - deepcopy(self.args)
+    - deepcopy(first)
+    - deepcopy(value)

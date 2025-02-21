@@ -1,0 +1,161 @@
+
+django:
+  django.forms:
+    - class ToolConfigForm(forms.ModelForm):\n    tool_type = forms.ModelChoiceField(queryset=Tool_Type.objects.all(), label="Tool Type")\n    ssh = forms.CharField(widget=forms.Textarea(attrs={}), required...
+    - forms.ModelChoiceField(queryset=Tool_Type.objects.all(), label="Tool Type")
+    - forms.CharField(widget=forms.Textarea(attrs={}), required=False, label="SSH Key")
+    - forms.Textarea(attrs={})
+    - from django.core.validators import URLValidator\n        form_data = self.cleaned_data\n\n        try:\n            if form_data["url"] is not None:\n                url_validator = URLValidator(schem...
+    - forms.ValidationError(msg, code="invalid")
+    - class SLAConfigForm(forms.ModelForm):\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, **kwargs)\n\n        # if this sla config has findings being asynchronously updated, di...
+    - class DeleteSLAConfigForm(forms.ModelForm):\n    id = forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())\n\n    class Meta:\n        model = SLA_Configuration\n        fields = ["id"]
+    - forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())
+    - forms.widgets.HiddenInput()
+    - class DeleteObjectsSettingsForm(forms.ModelForm):\n    id = forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())\n\n    class Meta:\n        model = Objects_Product\n        fields = ["id"]
+    - forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())
+    - forms.widgets.HiddenInput()
+    - class DeleteToolProductSettingsForm(forms.ModelForm):\n    id = forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())\n\n    class Meta:\n        model = Tool_Product_Settings\n        fields = ["id"]
+    - forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())
+    - forms.widgets.HiddenInput()
+    - class ToolProductSettingsForm(forms.ModelForm):\n    tool_configuration = forms.ModelChoiceField(queryset=Tool_Configuration.objects.all(), label="Tool Configuration")\n\n    class Meta:\n        mode...
+    - forms.ModelChoiceField(queryset=Tool_Configuration.objects.all(), label="Tool Configuration")
+    - from django.core.validators import URLValidator\n        form_data = self.cleaned_data\n\n        try:\n            if form_data["url"] is not None:\n                url_validator = URLValidator(schem...
+    - forms.ValidationError(msg, code="invalid")
+    - class ObjectSettingsForm(forms.ModelForm):\n\n    # tags = forms.CharField(widget=forms.SelectMultiple(choices=[]),\n    #                        required=False,\n    #                        help_tex...
+    - class CredMappingForm(forms.ModelForm):\n    cred_user = forms.ModelChoiceField(\n        queryset=Cred_Mapping.objects.all().select_related("cred_id"),\n        required=False,\n        label="Select...
+    - forms.ModelChoiceField(\n        queryset=Cred_Mapping.objects.all().select_related("cred_id"),\n        required=False,\n        label="Select a Credential",\n    )
+    - class CredMappingFormProd(forms.ModelForm):\n    class Meta:\n        model = Cred_Mapping\n        fields = ["cred_id", "url", "is_authn_provider"]\n        exclude = ["product", "finding", "engagement", "test"]
+    - class EngagementPresetsForm(forms.ModelForm):\n\n    notes = forms.CharField(widget=forms.Textarea(attrs={}),\n                                  required=False, help_text="Description of what needs to...
+    - forms.CharField(widget=forms.Textarea(attrs={}),\n                                  required=False, help_text="Description of what needs to be tested or setting up environment for testing")
+    - forms.Textarea(attrs={})
+    - forms.CharField(widget=forms.Textarea(attrs={}),\n                                  required=False, help_text="Scope of Engagement testing, IP's/Resources/URL's)")
+    - forms.Textarea(attrs={})
+    - class DeleteEngagementPresetsForm(forms.ModelForm):\n    id = forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())\n\n    class Meta:\n        model = Engagement_Presets\n        fields = ["id"]
+    - forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())
+    - forms.widgets.HiddenInput()
+    - class SystemSettingsForm(forms.ModelForm):\n    jira_webhook_secret = forms.CharField(required=False)\n\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, **kwargs)\n        se...
+    - forms.CharField(required=False)
+    - class BenchmarkForm(forms.ModelForm):\n\n    class Meta:\n        model = Benchmark_Product\n        exclude = ["product", "control"]
+    - class Benchmark_RequirementForm(forms.ModelForm):\n\n    class Meta:\n        model = Benchmark_Requirement\n        exclude = [""]
+    - class NotificationsForm(forms.ModelForm):\n\n    class Meta:\n        model = Notifications\n        exclude = ["template"]
+    - class NotificationsWebhookForm(forms.ModelForm):\n    class Meta:\n        model = Notification_Webhooks\n        exclude = []\n\n    def __init__(self, *args, **kwargs):\n        is_superuser = kwarg...
+    - class DeleteNotificationsWebhookForm(forms.ModelForm):\n    id = forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())\n\n    def __init__(self, *args, **k...
+    - forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())
+    - forms.widgets.HiddenInput()
+    - class ProductNotificationsForm(forms.ModelForm):\n\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, **kwargs)\n        if not self.instance.id:\n            self.initial["eng...
+    - class AjaxChoiceField(forms.ChoiceField):\n    def valid_value(self, value):\n        return True
+    - class CredUserForm(forms.ModelForm):\n    # selenium_script = forms.FileField(widget=forms.widgets.FileInput(\n    #    attrs={"accept": ".py"}),\n    #    label="Select a Selenium Script", required=F...
+    - class GITHUB_Product_Form(forms.ModelForm):\n    git_conf = forms.ModelChoiceField(queryset=GITHUB_Conf.objects.all(), label="GITHUB Configuration", required=False)\n\n    class Meta:\n        model = GITHUB_PKey\n        exclude = ["product"]
+    - forms.ModelChoiceField(queryset=GITHUB_Conf.objects.all(), label="GITHUB Configuration", required=False)
+    - class JIRAProjectForm(forms.ModelForm):\n    inherit_from_product = forms.BooleanField(label="inherit JIRA settings from product", required=False)\n    jira_instance = forms.ModelChoiceField(queryset=...
+    - forms.BooleanField(label="inherit JIRA settings from product", required=False)
+    - forms.ModelChoiceField(queryset=JIRA_Instance.objects.all(), label="JIRA Instance", required=False)
+    - forms.ChoiceField(required=False,\n                                       choices=JIRA_TEMPLATE_CHOICES,\n                                       help_text="Choose the folder containing the Django temp...
+    - forms.TextInput(attrs={"placeholder": f"JIRA settings inherited from product '{product_name}'"})
+    - class GITHUBFindingForm(forms.Form):\n    def __init__(self, *args, **kwargs):\n        self.enabled = kwargs.pop("enabled")\n        super().__init__(*args, **kwargs)\n        self.fields["push_to_gi...
+    - forms.BooleanField()
+    - forms.BooleanField(required=False)
+    - class JIRAFindingForm(forms.Form):\n    def __init__(self, *args, **kwargs):\n        self.push_all = kwargs.pop("push_all", False)\n        self.instance = kwargs.pop("instance", None)\n        self....
+    - forms.BooleanField()
+    - forms.TextInput(attrs={"placeholder": "Leave empty and check push to jira to create a new JIRA issue for this finding, or the group this finding is in."})
+    - forms.TextInput(attrs={"placeholder": "Leave empty and check push to jira to create a new JIRA issue for this finding."})
+    - forms.CharField(required=False, label="Linked JIRA Issue",\n                validators=[validators.RegexValidator(\n                    regex=r"^[A-Z][A-Z_0-9]+-\d+$",\n                    message="JIRA issue key must be in XXXX-nnnn format ([A-Z][A-Z_0-9]+-\\d+)")])
+    - forms.BooleanField(required=False, label="Push to JIRA")
+    - class JIRAImportScanForm(forms.Form):\n    def __init__(self, *args, **kwargs):\n        self.push_all = kwargs.pop("push_all", False)\n\n        super().__init__(*args, **kwargs)\n        if self.pus...
+    - forms.BooleanField(required=False, label="Push to JIRA", help_text="Checking this will create a new jira issue for each new finding.")
+    - class JIRAEngagementForm(forms.Form):\n    prefix = "jira-epic-form"\n\n    def __init__(self, *args, **kwargs):\n        self.instance = kwargs.pop("instance", None)\n\n        super().__init__(*args...
+    - forms.BooleanField(required=False, label="Create EPIC", help_text="Checking this will create an EPIC in JIRA for this engagement.")
+    - forms.CharField(max_length=200, required=False, help_text="EPIC name in JIRA. If not specified, it defaults to the engagement name")
+    - forms.CharField(max_length=200, required=False, help_text="EPIC priority. If not specified, the JIRA default priority will be used")
+    - class LoginBanner(forms.Form):\n    banner_enable = forms.BooleanField(\n        label="Enable login banner",\n        initial=False,\n        required=False,\n        help_text="Tick this box to enab...
+    - forms.BooleanField(\n        label="Enable login banner",\n        initial=False,\n        required=False,\n        help_text="Tick this box to enable a text banner on the login page",\n    )
+    - forms.CharField(\n        required=False,\n        label="Message to display on the login page",\n    )
+    - class AnnouncementCreateForm(forms.ModelForm):\n    class Meta:\n        model = Announcement\n        fields = "__all__"
+    - class QuestionForm(forms.Form):\n\n    """Base class for a Question"""\n\n    def __init__(self, *args, **kwargs):\n        self.helper = FormHelper()\n        self.helper.form_method = "post"\n\n    ...
+    - forms.CharField(\n            label=self.question.text,\n            widget=forms.Textarea(attrs={"rows": 3, "cols": 10}),\n            required=not self.question.optional,\n            initial=initial_answer,\n        )
+    - forms.Textarea(attrs={"rows": 3, "cols": 10})
+    - forms.ValidationError(msg)
+    - forms.ValidationError(msg)
+    - widget = forms.RadioSelect
+    - field_type = forms.ChoiceField
+    - field_type = forms.MultipleChoiceField
+    - widget = forms.CheckboxSelectMultiple
+    - forms.ValidationError(msg)
+    - forms.ValidationError(msg)
+    - class Add_Questionnaire_Form(forms.ModelForm):\n    survey = forms.ModelChoiceField(\n        queryset=Engagement_Survey.objects.all(),\n        required=True,\n        widget=forms.widgets.Select(),\...
+    - forms.ModelChoiceField(\n        queryset=Engagement_Survey.objects.all(),\n        required=True,\n        widget=forms.widgets.Select(),\n        help_text="Select the Questionnaire to add.")
+    - forms.widgets.Select()
+    - class AddGeneralQuestionnaireForm(forms.ModelForm):\n    survey = forms.ModelChoiceField(\n        queryset=Engagement_Survey.objects.all(),\n        required=True,\n        widget=forms.widgets.Selec...
+    - forms.ModelChoiceField(\n        queryset=Engagement_Survey.objects.all(),\n        required=True,\n        widget=forms.widgets.Select(),\n        help_text="Select the Questionnaire to add.")
+    - forms.widgets.Select()
+    - forms.DateField(widget=forms.TextInput(\n        attrs={"class": "datepicker", "autocomplete": "off"}))
+    - forms.TextInput(\n        attrs={"class": "datepicker", "autocomplete": "off"})
+    - forms.ValidationError(msg)
+    - forms.ValidationError(msg)
+    - forms.ValidationError(msg)
+    - class Delete_Questionnaire_Form(forms.ModelForm):\n    id = forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())\n\n    class Meta:\n        model = Answered_Survey\n        fields = ["id"]
+    - forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())
+    - forms.widgets.HiddenInput()
+    - class DeleteGeneralQuestionnaireForm(forms.ModelForm):\n    id = forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())\n\n    class Meta:\n        model = General_Survey\n        fields = ["id"]
+    - forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())
+    - forms.widgets.HiddenInput()
+    - class Delete_Eng_Survey_Form(forms.ModelForm):\n    id = forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())\n\n    class Meta:\n        model = Engagement_Survey\n        fields = ["id"]
+    - forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())
+    - forms.widgets.HiddenInput()
+    - class CreateQuestionnaireForm(forms.ModelForm):\n    class Meta:\n        model = Engagement_Survey\n        exclude = ["questions"]
+    - class EditQuestionnaireQuestionsForm(forms.ModelForm):\n        questions = forms.ModelMultipleChoiceField(\n            Question.polymorphic.all(),\n            required=True,\n            help_text=...
+    - forms.ModelMultipleChoiceField(\n            Question.polymorphic.all(),\n            required=True,\n            help_text="Select questions to include on this questionnaire.  Field can be used to search available questions.",\n            widget=MultipleSelectWithPop(attrs={"size": "11"}))
+    - class CreateQuestionForm(forms.Form):\n    type = forms.ChoiceField(\n        choices=(("---", "-----"), ("text", "Text"), ("choice", "Choice")))\n    order = forms.IntegerField(\n        min_value=1,...
+    - forms.ChoiceField(\n        choices=(("---", "-----"), ("text", "Text"), ("choice", "Choice")))
+    - forms.IntegerField(\n        min_value=1,\n        widget=forms.TextInput(attrs={"data-type": "both"}),\n        help_text="The order the question will appear on the questionnaire")
+    - forms.TextInput(attrs={"data-type": "both"})
+    - forms.BooleanField(help_text="If selected, user doesn't have to answer this question",\n                                  initial=False,\n                                  required=False,\n                                  widget=forms.CheckboxInput(attrs={"data-type": "both"}))
+    - forms.CheckboxInput(attrs={"data-type": "both"})
+    - forms.CharField(widget=forms.Textarea(attrs={"data-type": "text"}),\n                           label="Question Text",\n                           help_text="The actual question.")
+    - forms.Textarea(attrs={"data-type": "text"})
+    - class CreateTextQuestionForm(forms.Form):\n    class Meta:\n        model = TextQuestion\n        exclude = ["order", "optional"]
+    - class MultiWidgetBasic(forms.widgets.MultiWidget):\n    def __init__(self, attrs=None):\n        widgets = [forms.TextInput(attrs={"data-type": "choice"}),\n                   forms.TextInput(attrs={"...
+    - forms.TextInput(attrs={"data-type": "choice"})
+    - forms.TextInput(attrs={"data-type": "choice"})
+    - forms.TextInput(attrs={"data-type": "choice"})
+    - forms.TextInput(attrs={"data-type": "choice"})
+    - forms.TextInput(attrs={"data-type": "choice"})
+    - forms.TextInput(attrs={"data-type": "choice"})
+    - class MultiExampleField(forms.fields.MultiValueField):\n    widget = MultiWidgetBasic\n\n    def __init__(self, *args, **kwargs):\n        list_fields = [forms.fields.CharField(required=True),\n      ...
+    - forms.fields.CharField(required=True)
+    - forms.fields.CharField(required=True)
+    - forms.fields.CharField(required=False)
+    - forms.fields.CharField(required=False)
+    - forms.fields.CharField(required=False)
+    - forms.fields.CharField(required=False)
+    - class CreateChoiceQuestionForm(forms.Form):\n    multichoice = forms.BooleanField(required=False,\n                                     initial=False,\n                                     widget=form...
+    - forms.BooleanField(required=False,\n                                     initial=False,\n                                     widget=forms.CheckboxInput(attrs={"data-type": "choice"}),\n                                     help_text="Can more than one choice can be selected?")
+    - forms.CheckboxInput(attrs={"data-type": "choice"})
+    - class EditQuestionForm(forms.ModelForm):\n    class Meta:\n        model = Question\n        exclude = []
+    - forms.ModelMultipleChoiceField(\n        Choice.objects.all(),\n        required=True,\n        help_text="Select choices to include on this question.  Field can be used to search available choices.",\n        widget=MultipleSelectWithPop(attrs={"size": "11"}))
+    - class AddChoicesForm(forms.ModelForm):\n    class Meta:\n        model = Choice\n        exclude = []
+    - class AssignUserForm(forms.ModelForm):\n    assignee = forms.CharField(required=False,\n                                widget=forms.widgets.HiddenInput())\n\n    def __init__(self, *args, **kwargs):\...
+    - forms.CharField(required=False,\n                                widget=forms.widgets.HiddenInput())
+    - forms.widgets.HiddenInput()
+    - forms.ModelChoiceField(queryset=get_authorized_users(Permissions.Engagement_View), empty_label="Not Assigned", required=False)
+    - class AddEngagementForm(forms.Form):\n    product = forms.ModelChoiceField(\n        queryset=Product.objects.none(),\n        required=True,\n        widget=forms.widgets.Select(),\n        help_text...
+    - forms.ModelChoiceField(\n        queryset=Product.objects.none(),\n        required=True,\n        widget=forms.widgets.Select(),\n        help_text="Select which product to attach Engagement")
+    - forms.widgets.Select()
+    - class ExistingEngagementForm(forms.Form):\n    engagement = forms.ModelChoiceField(\n        queryset=Engagement.objects.none(),\n        required=True,\n        widget=forms.widgets.Select(),\n      ...
+    - forms.ModelChoiceField(\n        queryset=Engagement.objects.none(),\n        required=True,\n        widget=forms.widgets.Select(),\n        help_text="Select which Engagement to link the Questionnaire to")
+    - forms.widgets.Select()
+    - class ConfigurationPermissionsForm(forms.Form):\n\n    def __init__(self, *args, **kwargs):\n        self.user = kwargs.pop("user", None)\n        self.group = kwargs.pop("group", None)\n        super...
+    - forms.BooleanField(required=False)
+    - class SystemSettingsFormAdmin(forms.ModelForm):\n    product_grade = forms.CharField(widget=forms.Textarea)\n\n    class Meta:\n        model = System_Settings\n        fields = ["product_grade"]
+    - forms.CharField(widget=forms.Textarea)
+    - forms.CharField(widget=forms.Textarea)
+    - class ToolConfigForm_Admin(forms.ModelForm):\n    password = forms.CharField(widget=forms.PasswordInput, required=False)\n    api_key = forms.CharField(widget=forms.PasswordInput, required=False)\n   ...
+    - forms.CharField(widget=forms.PasswordInput, required=False)
+    - forms.CharField(widget=forms.PasswordInput, required=False)
+    - forms.CharField(widget=forms.PasswordInput, required=False)
+    - forms.CharField(widget=forms.PasswordInput, required=False)
+    - forms.CharField(widget=forms.PasswordInput, required=False)
+    - forms.CharField(widget=forms.PasswordInput, required=False)
+    - class JIRAForm_Admin(forms.ModelForm):\n    password = forms.CharField(widget=forms.PasswordInput, required=True)\n\n    # django doesn't seem to have an easy way to handle password fields as Password...
+    - forms.CharField(widget=forms.PasswordInput, required=True)
+    - forms.CharField(widget=forms.PasswordInput, required=True)

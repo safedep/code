@@ -1,0 +1,210 @@
+
+auditlog:
+  auditlog.models.LogEntry:
+    - LogEntry.objects.get(\n            action=LogEntry.Action.DELETE,\n            content_type=ContentType.objects.get(app_label="dojo", model="product"),\n            object_id=instance.id,\n        )
+    - LogEntry.objects.get(\n            action=LogEntry.Action.DELETE,\n            content_type=ContentType.objects.get(app_label="dojo", model="product_type"),\n            object_id=instance.id,\n        )
+    - LogEntry.objects.get(\n            action=LogEntry.Action.DELETE,\n            content_type=ContentType.objects.get(app_label="dojo", model="product_type"),\n            object_id=instance.id,\n        )
+    - LogEntry.objects.filter(timestamp__date__lt=retention_date)
+    - LogEntry.objects.get(\n                action=LogEntry.Action.DELETE,\n                content_type=ContentType.objects.get(app_label="dojo", model="test"),\n                object_id=instance.id,\n            )
+    - LogEntry.objects.get(\n                action=LogEntry.Action.DELETE,\n                content_type=ContentType.objects.get(app_label="dojo", model="test"),\n                object_id=instance.id,\n            )
+    - LogEntry.objects.filter(content_type=ct,\n                                      object_pk=obj.id)
+
+tagulous:
+  tagulous.forms.TagField:
+    - TagField(required=False, help_text="Add tags that help describe this scan.  "\n                    "Choose from the list or add new tags. Press Enter key to add.")
+    - TagField(required=False, help_text="Modify existing tags that help describe this scan.  "\n                    "Choose from the list or add new tags. Press Enter key to add.")
+    - TagField(required=False, help_text="Add tags that help describe this finding template. Choose from the list or add new tags. Press Enter key to add.", initial=Finding.tags.tag_model.objects.all().order_by("name"))
+    - TagField(required=False, autocomplete_tags=Finding.tags.tag_model.objects.all().order_by("name"))
+    - TagField(required=False,\n                    help_text="Add tags that help describe this endpoint.  "\n                              "Choose from the list or add new tags. Press Enter key to add.")
+    - TagField(blank=True, force_lowercase=True, help_text=_("Add tags that help describe this product. Choose from the list or add new tags. Press Enter key to add."))
+    - TagField(blank=True, force_lowercase=True, help_text=_("Add tags that help describe this engagement. Choose from the list or add new tags. Press Enter key to add."))
+    - TagField(blank=True, force_lowercase=True, help_text=_("Internal use tags sepcifically for maintaining parity with product. This field will be present as a subset in the tags field"))
+    - TagField(blank=True, force_lowercase=True, help_text=_("Add tags that help describe this endpoint. Choose from the list or add new tags. Press Enter key to add."))
+    - TagField(blank=True, force_lowercase=True, help_text=_("Internal use tags sepcifically for maintaining parity with product. This field will be present as a subset in the tags field"))
+    - TagField(blank=True, force_lowercase=True, help_text=_("Add tags that help describe this test. Choose from the list or add new tags. Press Enter key to add."))
+    - TagField(blank=True, force_lowercase=True, help_text=_("Internal use tags sepcifically for maintaining parity with product. This field will be present as a subset in the tags field"))
+    - TagField(blank=True, force_lowercase=True, help_text=_("Add tags that help describe this finding. Choose from the list or add new tags. Press Enter key to add."))
+    - TagField(blank=True, force_lowercase=True, help_text=_("Internal use tags sepcifically for maintaining parity with product. This field will be present as a subset in the tags field"))
+    - TagField(blank=True, force_lowercase=True, help_text=_("Add tags that help describe this finding template. Choose from the list or add new tags. Press Enter key to add."))
+    - TagField(blank=True, force_lowercase=True)
+    - TagField(blank=True, force_lowercase=True, help_text=_("Add tags that help describe this object. Choose from the list or add new tags. Press Enter key to add."))
+  tagulous.models.managers.FakeTagRelatedManager:
+    - isinstance(obj.inherited_tags, FakeTagRelatedManager)
+    - isinstance(obj.tags, FakeTagRelatedManager)
+    - isinstance(obj.inherited_tags, FakeTagRelatedManager)
+  tagulous:
+    - tagulous.utils.render_tags(data_safe)
+    - tagulous.utils.parse_tags(value)
+    - tagulous.utils.parse_tags(\n                    new_tags.validated_data["tags"],\n                )
+    - tagulous.utils.render_tags(all_tags)
+    - tagulous.utils.parse_tags(\n                delete_tags.validated_data["tags"],\n            )
+    - tagulous.utils.render_tags(all_tags)
+    - tagulous.models.options.TagOptions(autocomplete_settings={"width": "200px", "defer": True})
+    - tagulous.models.options.TagOptions(autocomplete_settings={"width": "200px", "defer": True})
+
+os:
+  os:
+    - os.environ.setdefault("DJANGO_SETTINGS_MODULE", "dojo.settings.settings")
+    - os.walk(template_root)
+    - os.environ["DJANGO_SETTINGS_MODULE"] = "my_django_project.settings"
+    - #########################################################################################################\n# It is not recommended to edit file 'settings.dist.py', for production deployments.         ...
+    - os.getenv("DD_DATABASE_URL")
+    - os.listdir(package_dir)
+    - os.urandom(16)
+    - os.environ.setdefault("DJANGO_SETTINGS_MODULE", "dojo.settings.settings")
+    - os.environ.setdefault("DJANGO_SETTINGS_MODULE", "dojo.settings.settings")
+    - os.path.realpath(__file__)
+    - webdriver.Chrome(\n                os.environ["CHROMEDRIVER"],\n                chrome_options=dd_driver_options,\n                desired_capabilities=desired,\n            )
+    - cls.base_url = os.environ["DD_BASE_URL"]
+    - driver.find_element(By.ID, "id_username").send_keys(os.environ["DD_ADMIN_USER"])
+    - driver.find_element(By.ID, "id_password").send_keys(\n            os.environ["DD_ADMIN_PASSWORD"],\n        )
+    - os.path.realpath(__file__)
+    - os.path.realpath(__file__)
+    - os.path.realpath(__file__)
+    - os.path.realpath(__file__)
+    - os.path.realpath(__file__)
+    - os.path.realpath(__file__)
+    - os.path.realpath(self.relative_path + "/dedupe_scans/dedupe_path_1.json")
+    - os.path.realpath(self.relative_path + "/dedupe_scans/dedupe_path_2.json")
+    - os.path.realpath(self.relative_path + "/dedupe_scans/dedupe_endpoint_1.xml")
+    - os.path.realpath(self.relative_path + "/dedupe_scans/dedupe_endpoint_2.xml")
+    - os.path.realpath(self.relative_path + "/dedupe_scans/dedupe_endpoint_1.xml")
+    - os.path.realpath(self.relative_path + "/dedupe_scans/dedupe_cross_1.csv")
+    - os.path.realpath(self.relative_path + "/dedupe_scans/multiple_findings.xml")
+    - os.path.realpath(self.relative_path + "/dedupe_scans/multiple_findings_line_changed.xml")
+    - os.path.realpath(self.relative_path + "/dedupe_scans/dedupe_endpoint_1.xml")
+    - os.path.realpath(self.relative_path + "/dedupe_scans/dedupe_cross_1.csv")
+    - os.path.realpath(self.relative_path + "/dedupe_scans/multiple_findings.xml")
+    - os.path.realpath(self.relative_path + "/dedupe_scans/multiple_findings.xml")
+    - os.path.realpath(self.relative_path + "/dedupe_scans/multiple_findings.xml")
+    - os.path.realpath(self.relative_path + "/dedupe_scans/multiple_findings.xml")
+    - driver.find_element(By.ID, "id_username").send_keys(os.environ["DD_ADMIN_USER"])
+    - driver.find_element(By.ID, "id_password").send_keys(os.environ["DD_ADMIN_PASSWORD"])
+    - os.path.realpath(__file__)
+    - os.path.realpath(__file__)
+    - os.path.realpath(__file__)
+    - driver.find_element(By.ID, "id_username").send_keys(os.environ["DD_ADMIN_USER"])
+    - driver.find_element(By.ID, "id_password").send_keys(os.environ["DD_ADMIN_PASSWORD"])
+    - os.path.realpath(__file__)
+    - driver.find_element(By.ID, "id_username").send_keys(os.environ["DD_ADMIN_USER"])
+    - driver.find_element(By.ID, "id_password").send_keys(os.environ["DD_ADMIN_PASSWORD"])
+    - os.environ.setdefault("DJANGO_SETTINGS_MODULE", "dojo.settings.settings")
+  os.linesep:
+    - item['value'].replace(linesep, ' ')
+    - assumption['content'].replace(linesep, ' ')
+    - item['value'].replace(linesep, ' ')
+
+csv:
+  csv:
+    - csv.DictReader(io.StringIO(content))
+    - csv.writer(response)
+    - csv.writer(open(file_path, "w", encoding="utf-8"))
+    - csv.writer(response)
+    - csv.field_size_limit(int(sys.maxsize / 10))
+    - csv.DictReader(io.StringIO(content))
+    - csv.field_size_limit(int(sys.maxsize / 10))
+    - csv.DictReader(io.StringIO(content))
+    - csv.DictReader(csv_file)
+    - csv.DictReader(csv_file, delimiter=",", quotechar='"')
+    - csv.DictReader(src_file)
+    - csv.DictReader(csv_file)
+    - csv.DictReader(csv_file)
+    - csv.DictReader(\n            io.StringIO(content), delimiter=",", quotechar='"',\n        )
+    - csv.DictReader(\n            io.StringIO(content), delimiter=",", quotechar='"',\n        )
+    - csv.field_size_limit(int(sys.maxsize / 10))
+    - csv.DictReader(io.StringIO(content))
+    - csv.DictReader(\n            io.StringIO(content), delimiter=",", quotechar='"',\n        )
+    - csv.DictReader(\n            io.StringIO(content), delimiter=",", quotechar='"',\n        )
+    - def get_csv_reader(self, file: TemporaryUploadedFile) -> csv.DictReader:\n        """Extract the CSV file into a iterable that represents a dict."""\n        if file is None:\n            return ()\n ...
+    - csv.DictReader(io.StringIO(content), delimiter=",", quotechar='"')
+    - csv.DictReader(\n            io.StringIO(content), delimiter=",", quotechar='"',\n        )
+    - csv.DictReader(\n            io.StringIO(content), delimiter=",", quotechar='"',\n        )
+    - csv.reader(io.StringIO(content), delimiter=",", quotechar='"')
+    - csv.DictReader(io.StringIO(content), delimiter=",", quotechar='"')
+    - csv.DictReader(\n        io.StringIO(content), delimiter=",", quotechar='"',\n    )
+    - csv.DictReader(io.StringIO(content), delimiter=",", quotechar='"')
+    - csv.reader(\n            io.StringIO(content), delimiter=",", quotechar='"', escapechar="\\",\n        )
+    - csv.DictReader(\n            io.StringIO(content), delimiter=",", quotechar='"',\n        )
+    - csv.DictReader(io.StringIO(content), delimiter=",", quotechar='"')
+    - csv.field_size_limit(int(sys.maxsize / 10))
+    - csv.DictReader(io.StringIO(content), delimiter=delimiter)
+    - csv.DictReader(\n            io.StringIO(content), delimiter=",", quotechar='"',\n        )
+    - csv.DictReader(\n            io.StringIO(content), delimiter=",", quotechar='"',\n        )
+    - csv.DictReader(\n            io.StringIO(content), delimiter=",", quotechar='"',\n        )
+    - csv.reader(io.StringIO(content), delimiter=",", quotechar='"')
+    - csv.DictReader(\n            io.StringIO(content), delimiter=",", quotechar='"',\n        )
+    - def parse_findings(self, test: Test, reader: csv.DictReader) -> list[Finding]:\n        """\n        Parse the CSV with the assumed format of the link below.\n\n        test file: https://github.com/D...
+    - def parse_findings(self, test: Test, reader: csv.DictReader) -> list[Finding]:\n        """\n        Parse the CSV with the assumed format of the link below.\n\n        test file: Coming soon!\n      ...
+    - csv.field_size_limit(int(sys.maxsize / 10))
+    - csv.DictReader(io.StringIO(content))
+
+threading:
+  threading.local:
+    - local()
+  threading.Lock:
+    - Lock()
+
+uuid:
+  uuid.uuid4:
+    - uuid4()
+    - uuid4()
+    - uuid4()
+    - uuid4()
+    - uuid4()
+  uuid:
+    - uuid.uuid4()
+
+social_core:
+  social_core.backends.azuread_tenant.AzureADTenantOAuth2:
+    - isinstance(backend, AzureADTenantOAuth2)
+    - isinstance(backend, AzureADTenantOAuth2)
+  social_core.backends.google.GoogleOAuth2:
+    - isinstance(backend, GoogleOAuth2)
+
+django_filters:
+  django_filters.filters.ChoiceFilter:
+    - class FindingStatusFilter(ChoiceFilter):\n    def any(self, qs, name):\n        return qs\n\n    def open(self, qs, name):\n        return qs.filter(OPEN_FINDINGS_QUERY)\n\n    def verified(self, qs, ...
+    - class FindingSLAFilter(ChoiceFilter):\n    def any(self, qs, name):\n        return qs\n\n    def sla_satisfied(self, qs, name):\n        # return findings that have an sla expiration date after today...
+    - class FindingHasJIRAFilter(ChoiceFilter):\n    def no_jira(self, qs, name):\n        return qs.filter(Q(jira_issue=None) & Q(finding_group__jira_issue=None))\n\n    def any_jira(self, qs, name):\n    ...
+    - class ProductSLAFilter(ChoiceFilter):\n    def any(self, qs, name):\n        return qs\n\n    def sla_satisifed(self, qs, name):\n        for product in qs:\n            if product.violates_sla():\n  ...
+    - class DateRangeFilter(ChoiceFilter):\n    options = {\n        None: (_("Any date"), lambda qs, _: qs.all()),\n        1: (_("Today"), lambda qs, name: qs.filter(**{\n            f"{name}__year": now(...
+    - class DateRangeOmniFilter(ChoiceFilter):\n    options = {\n        None: (_("Any date"), lambda qs, _: qs.all()),\n        1: (_("Today"), lambda qs, name: qs.filter(**{\n            f"{name}__year": ...
+    - class ReportBooleanFilter(ChoiceFilter):\n    options = {\n        None: (_("Either"), lambda qs, _: qs.all()),\n        1: (_("Yes"), lambda qs, name: qs.filter(**{\n            f"{name}": True,\n   ...
+    - class ReportRiskAcceptanceFilter(ChoiceFilter):\n\n    def any(self, qs, name):\n        return qs.all()\n\n    def accepted(self, qs, name):\n        # return qs.filter(risk_acceptance__isnull=False)...
+    - class MetricsDateRangeFilter(ChoiceFilter):\n    def any(self, qs, name):\n        earliest_finding = get_earliest_finding(qs)\n        if earliest_finding is not None:\n            start_date = local...
+    - class QuestionTypeFilter(ChoiceFilter):\n    def any(self, qs, name):\n        return qs.all()\n\n    def text_question(self, qs, name):\n        return qs.filter(polymorphic_ctype=ContentType.objects...
+  django_filters.ModelMultipleChoiceFilter:
+    - ModelMultipleChoiceFilter(\n        field_name="tags__name",\n        to_field_name="name",\n        queryset=Finding.tags.tag_model.objects.all().order_by("name"),\n        help_text="Filter Findings by the selected tags")
+    - ModelMultipleChoiceFilter(\n        field_name="test__tags__name",\n        to_field_name="name",\n        queryset=Test.tags.tag_model.objects.all().order_by("name"),\n        help_text="Filter Tests by the selected tags")
+    - ModelMultipleChoiceFilter(\n        field_name="test__engagement__tags__name",\n        to_field_name="name",\n        queryset=Engagement.tags.tag_model.objects.all().order_by("name"),\n        help_text="Filter Engagements by the selected tags")
+    - ModelMultipleChoiceFilter(\n        field_name="test__engagement__product__tags__name",\n        to_field_name="name",\n        queryset=Product.tags.tag_model.objects.all().order_by("name"),\n        help_text="Filter Products by the selected tags")
+    - ModelMultipleChoiceFilter(\n        field_name="tags__name",\n        to_field_name="name",\n        queryset=Finding.tags.tag_model.objects.all().order_by("name"),\n        help_text="Search for tags on a Finding that contain a given pattern, and exclude them",\n        exclude=True)
+    - ModelMultipleChoiceFilter(\n        field_name="test__tags__name",\n        to_field_name="name",\n        label="Test without tags",\n        queryset=Test.tags.tag_model.objects.all().order_by("name...
+    - ModelMultipleChoiceFilter(\n        field_name="test__engagement__tags__name",\n        to_field_name="name",\n        label="Engagement without tags",\n        queryset=Engagement.tags.tag_model.obje...
+    - ModelMultipleChoiceFilter(\n        field_name="test__engagement__product__tags__name",\n        to_field_name="name",\n        label="Product without tags",\n        queryset=Product.tags.tag_model.o...
+    - ModelMultipleChoiceFilter(\n        queryset=Product_Type.objects.none(),\n        label="Product Type")
+    - ModelMultipleChoiceFilter(\n        queryset=Product.objects.none(),\n        label="Product")
+    - ModelMultipleChoiceFilter(\n        queryset=Product_Type.objects.none(),\n        label="Product Type")
+    - ModelMultipleChoiceFilter(\n        field_name="tags__name",\n        to_field_name="name",\n        queryset=Engagement.tags.tag_model.objects.all().order_by("name"))
+    - ModelMultipleChoiceFilter(\n        field_name="tags__name",\n        to_field_name="name",\n        exclude=True,\n        queryset=Engagement.tags.tag_model.objects.all().order_by("name"))
+    - ModelMultipleChoiceFilter(\n        queryset=Product_Type.objects.none(),\n        label="Product Type")
+    - ModelMultipleChoiceFilter(\n        field_name="tags__name",\n        to_field_name="name",\n        queryset=Engagement.tags.tag_model.objects.all().order_by("name"))
+    - ModelMultipleChoiceFilter(\n        field_name="tags__name",\n        to_field_name="name",\n        exclude=True,\n        queryset=Engagement.tags.tag_model.objects.all().order_by("name"))
+    - ModelMultipleChoiceFilter(\n        field_name="tags__name",\n        to_field_name="name",\n        queryset=Engagement.tags.tag_model.objects.all().order_by("name"))
+    - ModelMultipleChoiceFilter(\n        field_name="tags__name",\n        to_field_name="name",\n        exclude=True,\n        queryset=Engagement.tags.tag_model.objects.all().order_by("name"))
+    - ModelMultipleChoiceFilter(\n        queryset=Product_Type.objects.none(),\n        label="Product Type")
+    - ModelMultipleChoiceFilter(\n        field_name="tags__name",\n        to_field_name="name",\n        queryset=Product.tags.tag_model.objects.all().order_by("name"))
+    - ModelMultipleChoiceFilter(\n        field_name="tags__name",\n        to_field_name="name",\n        exclude=True,\n        queryset=Product.tags.tag_model.objects.all().order_by("name"))
+    - ModelMultipleChoiceFilter(queryset=Test_Type.objects.all(), label="Test Type")
+    - ModelMultipleChoiceFilter(queryset=Dojo_User.objects.none())
+    - ModelMultipleChoiceFilter(queryset=Dojo_User.objects.none())
+    - ModelMultipleChoiceFilter(\n        queryset=Product_Type.objects.none(),\n        label="Product Type")
+    - ModelMultipleChoiceFilter(\n        queryset=Product.objects.none(),\n        label="Product")
+    - ModelMultipleChoiceFilter(\n        queryset=Engagement.objects.none(),\n        label="Engagement")
+    - ModelMultipleChoiceFilter(\n        queryset=Test.objects.none(),\n        label="Test")
+    - ModelMultipleChoiceFilter(\n            queryset=Finding_Group.objects.none(),\n            label="Finding Group")
+    - ModelMultipleChoiceFilter(\n            queryset=Dojo_User.objects.none(),\n            label="Risk Acceptance Owner")
+    - ModelMultipleChoiceFilter(\n        queryset=Risk_Acceptance.objects.none(),\n        label="Accepted By")
+    - ModelMultipleChoiceFilter(\n        field_name="tags__name",\n        to_field_name="name",\n        queryset=Finding.tags.tag_model.objects.all().order_by("name"),\n        # label='tags', # doesn't work with tagulous, need to set in __init__ below\n    )
+    - ModelMultipleChoiceFilter(\n        field_name="tags__name",\n        to_field_name="name",\n        exclude=True,\n        queryset=Finding.tags.tag_model.objects.all().order_by("name"),\n        # label='tags', # doesn't work with tagulous, need to set in __init__ below\n    )
+    - ModelMultipleChoiceFilter(\n        field_name="test__tags__name",\n        to_field_name="name",\n        exclude=True,\n        label="Test without tags",\n        queryset=Test.tags.tag_model.objec...

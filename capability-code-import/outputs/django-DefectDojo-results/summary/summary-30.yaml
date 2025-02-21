@@ -1,0 +1,200 @@
+
+dojo:
+  dojo.authorization.authorization.user_has_configuration_permission:
+    - user_has_configuration_permission(request.user, "auth.view_group")
+    - user_has_configuration_permission(request.user, "auth.view_group")
+    - user_has_configuration_permission(request.user, "auth.add_group")
+    - user_has_configuration_permission(request.user, "auth.add_group")
+    - user_has_configuration_permission(request.user, "dojo.view_engagement_survey")
+    - user_has_configuration_permission(request.user, "dojo.add_jira_instance")
+    - user_has_configuration_permission(request.user, "dojo.add_jira_instance")
+    - user_has_configuration_permission(request.user, "dojo.add_jira_instance")
+    - user_has_configuration_permission(request.user, "dojo.add_jira_instance")
+    - user_has_configuration_permission(request.user, "dojo.change_jira_instance")
+    - user_has_configuration_permission(request.user, "dojo.change_jira_instance")
+    - user_has_configuration_permission(request.user, "dojo.view_jira_instance")
+    - user_has_configuration_permission(request.user, "dojo.delete_jira_instance")
+    - user_has_configuration_permission(request.user, "dojo.delete_jira_instance")
+    - user_has_configuration_permission(request.user, "dojo.add_engagement_survey")
+    - user_has_configuration_permission(request.user, "dojo.change_engagement_survey")
+  dojo.forms.DeleteGroupForm:
+    - DeleteGroupForm(*args, **kwargs)
+  dojo.forms.Edit_Product_MemberForm:
+    - Edit_Product_MemberForm(instance=member)
+    - Edit_Product_MemberForm(request.POST, instance=member)
+  dojo.home.urls.urlpatterns aliased as home_urls:
+    - ur += home_urls
+  dojo.notifications.helper.create_notification:
+    - create_notification(event="endpoint_deleted",  # template does not exists, it will default to "other" but this event name needs to stay because of unit testing\n                            title=_("De...
+    - create_notification(event="engagement_added", title=title, engagement=instance, product=instance.product,\n                            url=reverse("view_engagement", args=(instance.id,)), url_api=reverse("engagement-detail", args=(instance.id,)))
+    - create_notification(event="engagement_closed",\n                                title=_("Closure of %s") % instance.name,\n                                description=_('The engagement "%s" was closed...
+    - create_notification(event="engagement_reopened",\n                                title=_("Reopening of %s") % instance.name,\n                                engagement=instance,\n                   ...
+    - create_notification(event="engagement_deleted",  # template does not exists, it will default to "other" but this event name needs to stay because of unit testing\n                            title=_("...
+    - create_notification(event="engagement_copied",  # TODO: - if 'copy' functionality will be supported by API as well, 'create_notification' needs to be migrated to place where it will be able to cover a...
+    - create_notification(\n                event="test_added",\n                title=f"Test created for {new_test.engagement.product}: {new_test.engagement.name}: {new_test}",\n                test=new_te...
+    - create_notification(\n                event="finding_deleted",\n                title=f"Deletion of {finding.title}",\n                description=f'The finding "{finding.title}" was deleted by {reque...
+    - create_notification(\n                    event="finding_closed",\n                    title=_("Closing of %s") % finding.title,\n                    finding=finding,\n                    description=...
+    - create_notification(\n        event="finding_reopened",\n        title=_("Reopening of %s") % finding.title,\n        finding=finding,\n        description=f'The finding "{finding.title}" was reopened by {request.user}',\n        url=reverse("view_finding", args=(finding.id,)),\n    )
+    - create_notification(\n                event="finding_copied",  # TODO: - if 'copy' functionality will be supported by API as well, 'create_notification' needs to be migrated to place where it will be ...
+    - create_notification(\n                event="review_requested",  # TODO: - if 'review_requested' functionality will be supported by API as well, 'create_notification' needs to be migrated to place whe...
+    - create_notification(\n            event="scan_added_empty" if updated_count == 0 else "scan_added",\n            title=title,\n            findings_new=new_findings,\n            findings_mitigated=fi...
+    - create_notification(\n            event="test_added",\n            title=f"Test created for {self.test.engagement.product}: {self.test.engagement.name}: {self.test}",\n            test=self.test,\n   ...
+    - create_notification(\n        event="jira_update",\n        title=title,\n        description=description,\n        icon="bullseye",\n        source="JIRA")
+    - create_notification(\n        event="jira_update",\n        title="Error pushing to JIRA " + "(" + truncate_with_dots(prod_name(obj), 25) + ")",\n        description=to_str_typed(obj) + ", " + error,\...
+    - create_notification(\n        event="jira_update",\n        title="Pushing to JIRA: ",\n        description=text + " Finding: " + str(finding.id),\n        url=reverse("view_finding", args=(finding.id, )),\n        icon="bullseye",\n        source="JIRA", finding=finding)
+    - create_notification(event="jira_comment", title=f"JIRA incoming comment - {jissue.finding}", finding=jissue.finding, url=reverse("view_finding", args=(jissue.finding.id,)), icon="check")
+    - create_notification(event="jira_comment", title=f"JIRA incoming comment - {jissue.finding_group}", finding=first_finding_group, url=reverse("view_finding_group", args=(jissue.finding_group.id,)), icon="check")
+    - create_notification(\n                event="jira_config_added",\n                title=f"New addition of JIRA: {jform.cleaned_data.get('configuration_name')}",\n                description=f"JIRA \"{...
+    - create_notification(\n                event="jira_config_added",\n                title=f"New addition of JIRA: {jform.cleaned_data.get('configuration_name')}",\n                description=f"JIRA \"{...
+    - create_notification(\n                event="jira_config_edited",\n                title=f"Edit of JIRA: {jform.cleaned_data.get('configuration_name')}",\n                description=f"JIRA \"{jform.c...
+    - create_notification(\n                        event="jira_config_deleted",\n                        title=_("Deletion of JIRA: %s") % jira_instance.configuration_name,\n                        descrip...
+    - create_notification(event="product_added",\n                            title=instance.name,\n                            product=instance,\n                            url=reverse("view_product", arg...
+    - create_notification(event="product_deleted",  # template does not exists, it will default to "other" but this event name needs to stay because of unit testing\n                        title=_("Deletio...
+    - create_notification(event="product_type_added",\n                            title=instance.name,\n                            product_type=instance,\n                            url=reverse("view_pro...
+    - create_notification(event="product_type_deleted",  # template does not exists, it will default to "other" but this event name needs to stay because of unit testing\n                        title=_("De...
+    - create_notification(event="risk_acceptance_expiration", title=title, risk_acceptance=risk_acceptance, accepted_findings=accepted_findings,\n                         reactivated_findings=reactivated_fi...
+    - create_notification(event="risk_acceptance_expiration", title=notification_title, risk_acceptance=risk_acceptance,\n                                accepted_findings=risk_acceptance.accepted_findings....
+    - create_notification(event="other", title=title, description=description,\n                        icon="bullseye", source=source)
+    - create_notification(event="upcoming_engagement",\n                            title=f"Upcoming engagement: {engagement.name}",\n                            engagement=engagement,\n                    ...
+    - create_notification(event="stale_engagement",\n                            title=f"Stale Engagement: {eng.name}",\n                            description='The engagement "{}" is stale. Target end was...
+    - create_notification(event="auto_close_engagement",\n                                title=eng.name,\n                                description='The engagement "{}" has auto-closed. Target end was {}...
+    - create_notification(event="test_deleted",  # template does not exists, it will default to "other" but this event name needs to stay because of unit testing\n                            title=_("Deleti...
+    - create_notification(event="test_copied",  # TODO: - if 'copy' functionality will be supported by API as well, 'create_notification' needs to be migrated to place where it will be able to cover actions...
+    - create_notification(\n                event="finding_added",\n                title=_("Addition of %s") % finding.title,\n                finding=finding,\n                description=_('Finding "%s" ...
+    - create_notification(\n                event="sonarqube_failed",\n                title="SonarQube API import issue",\n                description=e,\n                icon="exclamation-triangle",\n                source="SonarQube API",\n                obj=test.engagement.product,\n            )
+    - create_notification(\n                event="sonarqube_failed",\n                title="SonarQube API import issue",\n                description=e,\n                icon="exclamation-triangle",\n                source="SonarQube API",\n                obj=test.engagement.product,\n            )
+    - create_notification(\n        event="user_mentioned",\n        section=parent_title,\n        note=note,\n        title=f"{request.user} jotted a note",\n        url=parent_url,\n        icon="commenting",\n        recipients=users_to_notify)
+    - create_notification(\n                            event="sla_breach",\n                            title=title,\n                            finding=n.finding,\n                            url=reverse("view_finding", args=(n.finding.id,)),\n                        )
+    - create_notification(\n                        event="sla_breach_combined",\n                        title=title_combined,\n                        product=product,\n                        findings=fi...
+  dojo.forms.DoneForm:
+    - DoneForm()
+    - DoneForm(request.POST)
+    - DoneForm()
+    - DoneForm()
+  dojo.endpoint.utils.save_endpoints_to_add:
+    - save_endpoints_to_add(form.endpoints_to_add_list, context.get("engagement").product)
+    - save_endpoints_to_add(form.endpoints_to_add_list, new_finding.test.engagement.product)
+  dojo.tools.aws_prowler_v3plus.prowler_v3.AWSProwlerV3Parser:
+    - AWSProwlerV3Parser()
+  dojo.models.Product_API_Scan_Configuration:
+    - model = Product_API_Scan_Configuration
+    - Product_API_Scan_Configuration.objects.all()
+    - Product_API_Scan_Configuration.objects.none()
+    - Product_API_Scan_Configuration.objects.filter(product__id=product_tab.product.id)
+    - Product_API_Scan_Configuration.objects.none()
+    - Product_API_Scan_Configuration.objects.filter(product=self.engagement.product)
+    - forms.ModelChoiceField(Product_API_Scan_Configuration.objects, required=False, label="API Scan Configuration")
+    - forms.ModelChoiceField(Product_API_Scan_Configuration.objects, required=False, label="API Scan Configuration")
+    - Product_API_Scan_Configuration.objects.filter(product=product)
+    - model = Product_API_Scan_Configuration
+    - model = Product_API_Scan_Configuration
+    - self.api_scan_configuration: Product_API_Scan_Configuration | None = self.validate_api_scan_configuration(*args, **kwargs)
+    - def validate_api_scan_configuration(\n        self,\n        *args: list,\n        **kwargs: dict,\n    ) -> Product_API_Scan_Configuration | None:\n        return self.validate(\n            "api_sca...
+    - self.validate(\n            "api_scan_configuration",\n            expected_types=[Product_API_Scan_Configuration],\n            required=False,\n            default=None,\n            **kwargs,\n        )
+    - Product_API_Scan_Configuration.objects.none()
+    - Product_API_Scan_Configuration.objects.all()
+    - Product_API_Scan_Configuration.objects.all()
+    - Product_API_Scan_Configuration.objects.annotate(\n        product__prod_type__member=Exists(authorized_product_type_roles),\n        product__member=Exists(authorized_product_roles),\n        product_...
+    - Product_API_Scan_Configuration.objects.filter(product=pid)
+    - user_is_authorized(Product_API_Scan_Configuration, Permissions.Product_API_Scan_Configuration_Edit, "pascid")
+    - get_object_or_404(Product_API_Scan_Configuration, id=pascid)
+    - user_is_authorized(Product_API_Scan_Configuration, Permissions.Product_API_Scan_Configuration_Delete, "pascid")
+    - get_object_or_404(Product_API_Scan_Configuration, id=pascid)
+    - Product_API_Scan_Configuration.objects.filter(product__id=product_tab.product.id)
+    - Product_API_Scan_Configuration.objects.filter(\n                product=product,\n                tool_configuration__tool_type__name=self.config_id,\n            )
+    - Product_API_Scan_Configuration.objects.filter(\n                product=product,\n                tool_configuration__tool_type__name="Bugcrowd API",\n            )
+    - Product_API_Scan_Configuration.objects.filter(\n                product=product,\n                tool_configuration__tool_type__name="Cobalt.io",\n            )
+    - Product_API_Scan_Configuration.objects.filter(\n                product=product,\n            )
+    - Product_API_Scan_Configuration.objects.filter(\n                product=product, tool_configuration__tool_type__name="Vulners",\n            )
+  dojo.product.queries.get_authorized_products:
+    - get_authorized_products(Permissions.Product_View)
+    - get_authorized_products(Permissions.Endpoint_Edit)
+    - get_authorized_products(Permissions.Language_Add)
+    - get_authorized_products(Permissions.Product_View)
+    - get_authorized_products(Permissions.Engagement_View)
+    - get_authorized_products(Permissions.Product_View)
+    - get_authorized_products(Permissions.Product_View)
+    - get_authorized_products(Permissions.Product_View)
+    - get_authorized_products(Permissions.Product_View)
+    - get_authorized_products(Permissions.Product_Member_Add_Owner)
+    - get_authorized_products(Permissions.Engagement_Add)
+    - get_authorized_products(Permissions.Endpoint_Add)
+    - get_authorized_products(Permissions.Product_Member_Add_Owner)
+    - get_authorized_products(Permissions.Product_View)
+    - get_authorized_products(Permissions.Engagement_Add)
+    - get_authorized_products(Permissions.Product_View)
+    - get_authorized_products(Permissions.Product_View)
+    - get_authorized_products(Permissions.Product_View)
+    - get_authorized_products(Permissions.Product_Type_View)
+    - get_authorized_products(Permissions.Product_View, user)
+    - get_authorized_products(Permissions.Product_View)
+    - get_authorized_products(Permissions.Product_View)
+    - get_authorized_products(Permissions.Product_View)
+    - get_authorized_products(permission)
+  dojo.forms.DojoMetaDataForm:
+    - DojoMetaDataForm(request.POST, instance=DojoMeta(endpoint=endpoint))
+    - DojoMetaDataForm()
+    - DojoMetaDataForm(request.POST, instance=DojoMeta(product=prod))
+    - DojoMetaDataForm()
+  dojo.forms.JIRAForm:
+    - return JIRAForm
+  dojo.finding_group.urls.urlpatterns aliased as finding_group_urls:
+    - ur += finding_group_urls
+  dojo.models.Dojo_User:
+    - receiver(post_save, sender=Dojo_User)
+    - Dojo_User.objects.get(id=instance.id)
+    - Dojo_User.objects.all()
+    - model = Dojo_User
+    - Dojo_User.objects.create(**validated_data)
+    - model = Dojo_User
+    - Dojo_User.objects.all()
+    - Dojo_User.objects.get(id=request.user.id)
+    - Dojo_User.wants_block_execution(user)
+    - Dojo_User.objects.filter(username=username)
+    - Dojo_User.enable_force_password_reset(dojo_user)
+    - def get_engagement_or_product(\n        self,\n        user: Dojo_User,\n        engagement_id: int | None = None,\n        product_id: int | None = None,\n    ) -> tuple[Engagement, Product, Product ...
+    - Dojo_User.objects.none()
+    - Dojo_User.objects.none()
+    - Dojo_User.objects.none()
+    - Dojo_User.objects.none()
+    - Dojo_User.objects.none()
+    - Dojo_User.objects.none()
+    - Dojo_User.objects.none()
+    - Dojo_User.objects.none()
+    - model = Dojo_User
+    - Dojo_User.objects.none()
+    - get_object_or_404(Dojo_User, id=user.id)
+    - def get_initial_context(self, request: HttpRequest, finding: Finding, user: Dojo_User):\n        notes = finding.notes.all()\n        note_type_activation = Note_Type.objects.filter(is_active=True).co...
+    - get_object_or_404(Dojo_User, id=request.user.id)
+    - get_object_or_404(Dojo_User, id=request.user.id)
+    - Dojo_User.objects.filter(id__in=form.cleaned_data["reviewers"])
+    - get_object_or_404(Dojo_User, id=request.user.id)
+    - Dojo_User.objects.order_by("first_name", "last_name")
+    - Dojo_User.objects.none()
+    - Dojo_User.objects.exclude(\n            Q(is_superuser=True)\n            | Q(id__in=current_members))
+    - Dojo_User.objects.exclude(is_active=False)
+    - Dojo_User.objects.exclude(is_active=False)
+    - Dojo_User.objects.exclude(is_active=False)
+    - Dojo_User.objects.order_by("first_name", "last_name")
+    - Dojo_User.objects.none()
+    - Dojo_User.objects.exclude(\n            Q(is_superuser=True)\n            | Q(id__in=current_members))
+    - Dojo_User.objects.none()
+    - Dojo_User.objects.none()
+    - Dojo_User.objects.exclude(\n            Q(is_superuser=True)\n            | Q(id__in=current_members))
+    - model = Dojo_User
+    - model = Dojo_User
+    - model = Dojo_User
+    - Dojo_User.objects.exclude(is_active=False)
+    - def mitigate_endpoint_status(\n        self,\n        endpoint_status_list: list[Endpoint_Status],\n        user: Dojo_User,\n        **kwargs: dict,\n    ) -> None:\n        """Mitigates all endpoint...
+    - def chunk_endpoints_and_mitigate(\n        self,\n        endpoint_status_list: list[Endpoint_Status],\n        user: Dojo_User,\n        **kwargs: dict,\n    ) -> None:\n        """\n        Mitigate...
+    - def update_endpoint_status(\n        self,\n        existing_finding: Finding,\n        new_finding: Finding,\n        user: Dojo_User,\n        **kwargs: dict,\n    ) -> None:\n        """Update the ...
+    - self.lead: Dojo_User | None = self.validate_lead(*args, **kwargs)
+    - self.user: Dojo_User | None = self.validate_user(*args, **kwargs)
+    - Dojo_User.objects.get(id=model_value)
+    - def validate_lead(\n        self,\n        *args: list,\n        **kwargs: dict,\n    ) -> Dojo_User | None:\n        return self.validate(\n            "lead",\n            expected_types=[User, Dojo...
+    - self.validate(\n            "lead",\n            expected_types=[User, Dojo_User, SimpleLazyObject],\n            required=False,\n            default=None,\n            **kwargs,\n        )
+    - def validate_user(\n        self,\n        *args: list,\n        **kwargs: dict,\n    ) -> Dojo_User | None:\n        return self.validate(\n            "user",\n            expected_types=[User, Dojo...
+    - self.validate(\n            "user",\n            expected_types=[User, Dojo_User, SimpleLazyObject],\n            required=False,\n            default=get_current_user(),\n            **kwargs,\n        )
+    - Dojo_User.objects.get(username=user_name)
+    - Dojo_User.objects.get(username="JIRA")
+    - Dojo_User.objects.filter(is_superuser=True)

@@ -1,0 +1,279 @@
+
+dojo:
+  dojo.pipeline.assign_user_to_groups:
+    - assign_user_to_groups(user, request.META[settings.AUTH_REMOTEUSER_GROUPS_HEADER].split(","), Dojo_Group.REMOTE)
+  dojo.jira_link.helper.escape_for_jira:
+    - escape_for_jira(risk_acceptance.name)
+    - escape_for_jira(risk_acceptance.name)
+    - escape_for_jira(risk_acceptance.name)
+    - escape_for_jira(risk_acceptance.name)
+    - escape_for_jira(risk_acceptance.name)
+  dojo.finding.queries.get_authorized_vulnerability_ids:
+    - get_authorized_vulnerability_ids(Permissions.Finding_View)
+  dojo.tools.deepfence_threatmapper.compliance.DeepfenceThreatmapperCompliance:
+    - DeepfenceThreatmapperCompliance()
+  dojo.settings.settings.ROOT_URLCONF:
+    - get_resolver(ROOT_URLCONF)
+  dojo.forms.JIRAProjectForm:
+    - JIRAProjectForm(instance=jira_project, target="engagement", product=engagement.product)
+    - JIRAProjectForm(request.POST, instance=instance, target=target, product=product, engagement=engagement)
+    - JIRAProjectForm()
+    - JIRAProjectForm(instance=jira_project)
+    - JIRAProjectForm(target="engagement", product=product)
+  dojo.utils.get_cal_event:
+    - get_cal_event(\n        start_date,\n        end_date,\n        f"Engagement: {eng.name} ({eng.product.name})",\n        (\n            f"Set aside for engagement {eng.name}, on product {eng.product.n...
+    - get_cal_event(\n        start_date,\n        end_date,\n        _("Test: %s (%s)") % (\n            test.test_type.name,\n            test.engagement.product.name,\n        ),\n        _(\n           ...
+  dojo.filters.UserFilter:
+    - UserFilter(request.GET, queryset=users)
+    - UserFilter(request.GET, queryset=users)
+  dojo.utils.get_work_days:
+    - get_work_days(self.date, mitigated_date)
+    - get_work_days(self.date, get_current_date())
+  dojo.forms.AddFindingsRiskAcceptanceForm:
+    - AddFindingsRiskAcceptanceForm(\n                request.POST, request.FILES, instance=risk_acceptance)
+    - AddFindingsRiskAcceptanceForm(instance=risk_acceptance)
+  dojo.tool_config.urls.urlpatterns aliased as tool_config_urls:
+    - ur += tool_config_urls
+  dojo.product.queries.get_authorized_product_members_for_user:
+    - get_authorized_product_members_for_user(user, Permissions.Product_View)
+  dojo.models.Endpoint:
+    - Endpoint.objects.all()
+    - Endpoint.objects.all()
+    - model = Endpoint
+    - Endpoint(\n            protocol=protocol,\n            userinfo=userinfo,\n            host=host,\n            port=port,\n            path=path,\n            query=query,\n            fragment=fragment,\n            product=product,\n        )
+    - Endpoint.objects.all()
+    - Endpoint.objects.none()
+    - Endpoint.objects.filter(id=data.get("endpoint"))
+    - Endpoint.objects.filter(id=data.get("endpoint"))
+    - Endpoint.objects.filter(product=product)
+    - Endpoint.objects.filter(id__in=ids)
+    - Endpoint.objects.filter(product=engagement.product)
+    - Endpoint.objects.filter(id__in=ids)
+    - Endpoint.objects.filter(\n            host=host, product=endpoint.product,\n        )
+    - Endpoint.objects.none()
+    - Endpoint.objects.all()
+    - receiver(post_delete, sender=Endpoint)
+    - Endpoint.objects.all()
+    - Endpoint.objects.get_or_create(**kwargs)
+    - Endpoint.from_uri(endpoint.host)
+    - Endpoint.from_uri("//" + endpoint.host)
+    - Endpoint.clean(endpoint)
+    - Endpoint.from_uri(endpoint)
+    - Endpoint.from_uri("//" + endpoint)
+    - Endpoint.objects.filter(host=host, product=product)
+    - Endpoint.objects.create(host=host, product=product)
+    - Endpoint.objects.filter(\n            status_endpoint__mitigated=False,\n            status_endpoint__false_positive=False,\n            status_endpoint__out_of_scope=False,\n            status_endpoint__risk_accepted=False)
+    - Endpoint.objects.all()
+    - get_object_or_404(Endpoint, id=eid)
+    - user_is_authorized(Endpoint, Permissions.Endpoint_View, "eid")
+    - user_is_authorized(Endpoint, Permissions.Endpoint_View, "eid")
+    - user_is_authorized(Endpoint, Permissions.Endpoint_Edit, "eid")
+    - get_object_or_404(Endpoint, id=eid)
+    - user_is_authorized(Endpoint, Permissions.Endpoint_Delete, "eid")
+    - get_object_or_404(Endpoint, pk=eid)
+    - user_is_authorized(Endpoint, Permissions.Endpoint_Edit, "eid")
+    - Endpoint.objects.get(id=eid)
+    - user_is_authorized(Endpoint, Permissions.Endpoint_Edit, "eid")
+    - Endpoint.objects.get(id=eid)
+    - Endpoint.objects.filter(id__in=endpoints_to_update)
+    - Endpoint.objects.filter(id__in=endpoints_to_update)
+    - Endpoint.objects.filter(product__id=product_tab.product.id)
+    - Endpoint.tags.tag_model.objects.all()
+    - Endpoint.tags.tag_model.objects.all()
+    - Endpoint.tags.tag_model.objects.all()
+    - Endpoint.tags.tag_model.objects.all()
+    - Endpoint.tags.tag_model.objects.all()
+    - Endpoint.tags.tag_model.objects.all()
+    - model = Endpoint
+    - model = Endpoint
+    - model = Endpoint
+    - Endpoint.tags.tag_model.objects.all()
+    - Endpoint.tags.tag_model.objects.all()
+    - model = Endpoint
+    - Endpoint.objects.filter(id__in=endpoint_ids)
+    - get_object_or_404(Endpoint, id=endpoint_id)
+    - forms.ModelMultipleChoiceField(Endpoint.objects, required=False, label="Systems / Endpoints")
+    - forms.ModelMultipleChoiceField(Endpoint.objects, required=False, label="Systems / Endpoints")
+    - Endpoint.objects.none()
+    - Endpoint.objects.filter(product=product)
+    - Endpoint.objects.none()
+    - Endpoint.objects.filter(product=product)
+    - Endpoint.objects.none()
+    - Endpoint.objects.filter(product=product)
+    - Endpoint.objects.none()
+    - Endpoint.objects.filter(product=self.instance.test.engagement.product)
+    - model = Endpoint
+    - model = Endpoint
+    - def process_endpoints(\n        self,\n        finding: Finding,\n        endpoints_to_add: list[Endpoint],\n    ) -> None:\n        """\n        Process any endpoints to add to the finding. Endpoints...
+    - def add_endpoints_to_unsaved_finding(\n        self,\n        finding: Finding,\n        endpoints: list[Endpoint],\n        **kwargs: dict,\n    ) -> None:\n        """Creates Endpoint objects for a ...
+    - def chunk_endpoints(\n        self,\n        endpoint_list: list[Endpoint],\n        chunk_size: int = settings.ASYNC_FINDING_IMPORT_CHUNK_SIZE,\n    ) -> list[list[Endpoint]]:\n        """\n        S...
+    - def chunk_endpoints(\n        self,\n        endpoint_list: list[Endpoint],\n        chunk_size: int = settings.ASYNC_FINDING_IMPORT_CHUNK_SIZE,\n    ) -> list[list[Endpoint]]:\n        """\n        S...
+    - def chunk_endpoints_and_disperse(\n        self,\n        finding: Finding,\n        endpoints: list[Endpoint],\n        **kwargs: dict,\n    ) -> None:\n        """\n        Determines whether to asy...
+    - def clean_unsaved_endpoints(\n        self,\n        endpoints: list[Endpoint],\n    ) -> None:\n        """\n        Clean endpoints that are supplied. For any endpoints that fail this validation\n  ...
+    - self.endpoints_to_add: list[Endpoint] | None = self.validate_endpoints_to_add(*args, **kwargs)
+    - Endpoint.objects.filter(product=product)
+    - Endpoint.objects.filter(\n            status_endpoint__mitigated=False,\n            status_endpoint__false_positive=False,\n            status_endpoint__out_of_scope=False,\n            status_endpoint__risk_accepted=False,\n        )
+    - Endpoint.objects.filter(finding__active=True,\n                                            finding__false_p=False,\n                                            finding__duplicate=False,\n             ...
+    - Endpoint.objects.filter(finding__active=True,\n                                        finding__false_p=False,\n                                        finding__duplicate=False,\n                                        finding__out_of_scope=False,\n                                        )
+    - user_is_authorized(Endpoint, Permissions.Endpoint_View, "eid")
+    - get_object_or_404(Endpoint, id=eid)
+    - user_is_authorized(Endpoint, Permissions.Endpoint_View, "eid")
+    - get_object_or_404(Endpoint, id=eid)
+    - Endpoint.objects.filter(finding__active=True,\n                                         finding__false_p=False,\n                                         finding__duplicate=False,\n                                         finding__out_of_scope=False)
+    - Endpoint.objects.filter(id__in=endpoint_ids)
+    - Endpoint.objects.filter(product=product)
+    - Endpoint.objects.filter(product=engagement.product)
+    - Endpoint.objects.filter(host=endpoint.host,\n                                                product=endpoint.product)
+    - Endpoint.objects.filter(pk=endpoint.id)
+    - Endpoint.objects.filter(finding__active=True,\n                                                finding__false_p=False,\n                                                finding__duplicate=False,\n     ...
+    - Endpoint.objects.filter(id__in=endpoints)
+    - receiver(signals.m2m_changed, sender=Endpoint.tags.through)
+    - receiver(signals.post_save, sender=Endpoint)
+    - isinstance(instance, Endpoint)
+    - Endpoint.objects.count()
+    - Endpoint.objects.filter(product__id=product_tab.product.id)
+    - Endpoint.from_uri(url)
+    - Endpoint(\n                    host=url.host,\n                    port=url.port,\n                    path=item.findtext("Affects"),\n                )
+    - Endpoint.from_uri(\n                            entry["attributes"]["bug_url"].strip(),\n                        )
+    - Endpoint.from_uri(\n                            "//" + entry["attributes"]["bug_url"].strip(),\n                        )
+    - Endpoint.from_uri(affected_target)
+    - Endpoint.from_uri(vulnerability["location"])
+    - Endpoint.from_uri("//" + vulnerability["location"])
+    - Endpoint(host=agentip)
+    - def construct_endpoint(self, host: str, port: int | None) -> Endpoint:\n        endpoint = Endpoint.from_uri(host)\n        if endpoint.host:\n            if port:\n                endpoint.port = port\n        else:\n            endpoint = Endpoint(host=host, port=port)\n        return endpoint
+    - Endpoint.from_uri(host)
+    - Endpoint(host=host, port=port)
+    - def parse_endpoints(self, item: dict[str, Any]) -> [Endpoint]:\n        # Endpoint requires a host\n        if host := self.get_host(item):\n            port = self.get_port(item)\n            return [self.construct_endpoint(host, port)]\n        return []
+    - def parse_endpoints(self, item: dict[str, Any]) -> [Endpoint]:\n        host = self.get_host(item)\n        ports = self.get_ports(item)\n        return [self.construct_endpoint(host, port) for port in ports]
+    - Endpoint.from_uri(vuln_url)
+    - Endpoint.from_uri(url)
+    - Endpoint(host=ip)
+    - Endpoint(host=endpoint_host)
+    - Endpoint(host=f"{component_name} {resource.get('Id')}")
+    - Endpoint(host=f"{component_name} {resource.get('Id')}")
+    - Endpoint.from_uri(stripped_url)
+    - Endpoint.from_uri("//" + stripped_url)
+    - Endpoint.from_uri(url_host)
+    - Endpoint.from_uri(\n                            issue.get("origin") + issue.get("path"),\n                        )
+    - Endpoint.from_uri(endpoint)
+    - Endpoint.from_uri(issue["origin"] + issue["path"])
+    - Endpoint.from_uri(issue["origin"] + issue["path"])
+    - Endpoint(\n                    host="0.0.0.0",  # noqa: S104\n                    path=row.get("Request URI"),\n                    protocol=row.get("Request Protocol"),\n                )
+    - Endpoint.from_uri(url)
+    - Endpoint.from_uri(row["Url"])
+    - Endpoint.from_uri("//" + row["Url"])
+    - Endpoint.from_uri(endpoint_item)
+    - Endpoint.from_uri("//" + endpoint_item)
+    - Endpoint(**endpoint_item)
+    - Endpoint.from_uri(url_str)
+    - Endpoint(host=host, port=port)
+    - Endpoint.from_uri(url)
+    - Endpoint.from_uri(url)
+    - Endpoint.from_uri(url)
+    - Endpoint.from_uri(url)
+    - Endpoint(host=host, port=port)
+    - Endpoint.from_uri(url)
+    - Endpoint.from_uri(url)
+    - Endpoint.from_uri(url)
+    - Endpoint.from_uri(url)
+    - Endpoint(host=str(machine["computerDnsName"]).replace(" ", "").replace("(", "_").replace(")", "_"))
+    - Endpoint(host=str(machine["lastIpAddress"]))
+    - Endpoint(host=str(machine["lastExternalIpAddress"]))
+    - Endpoint.from_uri(url)
+    - Endpoint(host=host["name"])
+    - Endpoint(\n                        host=host["name"],\n                        port=service["port"],\n                        protocol=service["name"]\n                        if service["name"] in SC...
+    - Endpoint(\n                host=host,\n                port=port,\n                path=vulnerability.get("url"),\n            )
+    - Endpoint.from_uri(ip)
+    - Endpoint(\n                    host=fqdn or ip, protocol=protocol,\n                )
+    - Endpoint.from_uri(matched)
+    - Endpoint.from_uri("//" + matched)
+    - Endpoint(host=ip)
+    - Endpoint.from_uri(ip)
+    - Endpoint.from_uri("//" + ip)
+    - Endpoint()
+    - Endpoint(protocol=protocol, host=host, port=port)
+    - Endpoint.from_uri(hit["asset"])
+    - Endpoint.from_uri(report_finding.get("FQDN"))
+    - Endpoint(host=report_finding.get("DNS"))
+    - Endpoint(host=report_finding["IP"])
+    - Endpoint(host=issue_row["fqdn"])
+    - Endpoint(host=issue_row["ip_address"])
+    - Endpoint.from_uri(self.get_endpoint(row))
+    - Endpoint(host=issue_row["fqdn"])
+    - Endpoint(host=issue_row["ip_address"])
+    - Endpoint(\n                host=truncate_str(host, 500),\n                port=port,\n                path=truncate_str(path, 500),\n                protocol=protocol,\n                query=truncate_str(query, 1000),\n                fragment=truncate_str(fragment, 500),\n            )
+    - Endpoint.from_uri(endpoint)
+    - Endpoint.from_uri(url)
+    - Endpoint(host=data["target"].split(":")[0], port=data["target"].split(":")[1])
+    - Endpoint(host=data["target"].split(":")[0], port=data["target"].split(":")[1])
+    - Endpoint(host=data["target"].split(":")[0], port=data["target"].split(":")[1])
+    - Endpoint(host=data["target"].split(":")[0], port=data["target"].split(":")[1])
+    - Endpoint(host=data["target"].split(":")[0], port=data["target"].split(":")[1])
+    - Endpoint(host=data["target"].split(":")[0], port=data["target"].split(":")[1])
+    - Endpoint(host=data["target"].split(":")[0], port=data["target"].split(":")[1])
+    - Endpoint(host=data["target"].split(":")[0], port=data["target"].split(":")[1])
+    - Endpoint(host=data["target"].split(":")[0], port=data["target"].split(":")[1])
+    - Endpoint(host=data["target"].split(":")[0], port=data["target"].split(":")[1])
+    - Endpoint(host=hostName, port=port, protocol=protocol)
+    - Endpoint(host=ipAddress, port=port, protocol=protocol)
+    - Endpoint.from_uri(url["requestUrl"])
+    - Endpoint.from_uri(host)
+    - Endpoint(host=host, port=port)
+    - Endpoint(host=hostname, port=port)
+    - Endpoint(\n                                    host=host, port=port, protocol=protocol,\n                                )
+    - Endpoint.from_uri(host + path["path"])
+    - Endpoint.from_uri(host)
+    - Endpoint(protocol=protocol, host=host, port=port)
+    - Endpoint.from_uri(fqdn)
+    - Endpoint(host=fqdn or ip)
+    - Endpoint(\n                            protocol=protocol,\n                            host=fqdn or ip,\n                            port=port,\n                        )
+    - Endpoint(host=row["fqdn/ip"].split("/")[0])
+    - Endpoint(host=host)
+    - Endpoint.from_uri(location["url"])
+    - Endpoint(host=str(location["domain"]))
+    - Endpoint(host=str(location["ip"]))
+    - Endpoint.from_uri(url)
+    - Endpoint(\n                    host=host,\n                    port=port,\n                    path=path,\n                )
+    - Endpoint.from_uri(url_host)
+    - Endpoint.from_uri(url)
+    - Endpoint(host=agent_name)
+    - Endpoint(host=agent_ip)
+    - Endpoint(\n                        path="/".join(url.path),\n                        host=url.host,\n                        protocol=url.scheme,\n                        port=url.port,\n                    )
+    - Endpoint.from_uri(attack_vector["request"]["url"])
+    - Endpoint.from_uri(interesting_finding["url"])
+    - Endpoint.from_uri(instance.findtext("uri"))
+    - Endpoint.objects.filter(\n            product=self.product,\n            status_endpoint__mitigated=False,\n            status_endpoint__false_positive=False,\n            status_endpoint__out_of_scope=False,\n            status_endpoint__risk_accepted=False,\n        )
+    - Endpoint.objects.filter(product=product)
+    - self.mapping = {\n            "Product_Type": [\n                (Endpoint, "product__prod_type"),\n                (Finding, "test__engagement__product__prod_type"),\n                (Test, "engageme...
+    - self.mapping = {\n            "Product_Type": [\n                (Endpoint, "product__prod_type"),\n                (Finding, "test__engagement__product__prod_type"),\n                (Test, "engageme...
+    - Endpoint.objects.get(id=obj.id)
+  dojo.importers.base_importer.BaseImporter:
+    - def get_importer(\n        self,\n        **kwargs: dict,\n    ) -> BaseImporter:\n        """\n        Returns a new instance of an importer that extends\n        the BaseImporter class\n        """\n        return DefaultImporter(**kwargs)
+    - def get_reimporter(\n        self,\n        **kwargs: dict,\n    ) -> BaseImporter:\n        """\n        Returns a new instance of a reimporter that extends\n        the BaseImporter class\n        """\n        return DefaultReImporter(**kwargs)
+    - def get_importer(\n        self,\n        context: dict,\n    ) -> BaseImporter:\n        """Gets the importer to use"""\n        return DefaultImporter(**context)
+    - class DefaultImporter(BaseImporter, DefaultImporterOptions):\n\n    """\n    The classic importer process used by DefectDojo\n\n    This Importer is intended to be used when auditing the history\n    ...
+    - class DefaultReImporter(BaseImporter, DefaultReImporterOptions):\n\n    """\n    The classic reimporter process used by DefectDojo\n\n    This importer is intended to be used when mitigation of\n    v...
+    - def get_reimporter(\n        self,\n        context: dict,\n    ) -> BaseImporter:\n        """Gets the reimporter to use"""\n        return DefaultReImporter(**context)
+  dojo.product.queries.get_authorized_product_api_scan_configurations:
+    - get_authorized_product_api_scan_configurations(\n            Permissions.Product_API_Scan_Configuration_View,\n        )
+  dojo.filters.ReportFindingFilterWithoutObjectLookups:
+    - report_finding_filter_class = ReportFindingFilterWithoutObjectLookups if filter_string_matching else ReportFindingFilter
+    - filter_class = ReportFindingFilterWithoutObjectLookups if filter_string_matching else ReportFindingFilter
+    - filter_class = ReportFindingFilterWithoutObjectLookups if filter_string_matching else ReportFindingFilter
+    - report_finding_filter_class = ReportFindingFilterWithoutObjectLookups if filter_string_matching else ReportFindingFilter
+    - filter_class = ReportFindingFilterWithoutObjectLookups if filter_string_matching else ReportFindingFilter
+  dojo.filters.EngagementFilterWithoutObjectLookups:
+    - filter_class = EngagementFilterWithoutObjectLookups if filter_string_matching else EngagementFilter
+    - filter_class = EngagementFilterWithoutObjectLookups if filter_string_matching else EngagementFilter
+  dojo.middleware.System_Settings_Manager:
+    - System_Settings_Manager()
+  dojo.utils.get_open_findings_burndown:
+    - get_open_findings_burndown(prod)
+  dojo.reports.widgets.CustomReportJsonForm:
+    - CustomReportJsonForm(request.POST)
+  dojo.forms.DeleteGeneralQuestionnaireForm:
+    - DeleteGeneralQuestionnaireForm(instance=survey)
+    - DeleteGeneralQuestionnaireForm(request.POST, instance=survey)
+  dojo.tools.openvas.xml_parser.OpenVASXMLParser:
+    - OpenVASXMLParser()
+  dojo.forms.DeleteFindingTemplateForm:

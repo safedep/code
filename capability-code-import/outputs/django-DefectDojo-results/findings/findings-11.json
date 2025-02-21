@@ -1,0 +1,105 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "web:api",
+      "evidence": [
+        {
+          "snippet": "Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)"
+        },
+        {
+          "snippet": "Response(status=status.HTTP_204_NO_CONTENT)"
+        },
+        {
+          "snippet": "Response(serialized_answered_survey.data)"
+        },
+        {
+          "snippet": "Response(status=status.HTTP_201_CREATED, data=result.data)"
+        },
+        {
+          "snippet": "extend_schema(request=serializers.FindingCloseSerializer, responses={status.HTTP_200_OK: serializers.FindingCloseSerializer})"
+        }
+      ]
+    },
+    {
+      "capability_id": "auth:token",
+      "evidence": [
+        {
+          "snippet": "Token.objects.get(user=request.user)"
+        },
+        {
+          "snippet": "Token.objects.create(user=request.user)"
+        },
+        {
+          "snippet": "try: api_key = Token.objects.get(user=request.user)"
+        },
+        {
+          "snippet": "Token.objects.get(user=request.user)"
+        },
+        {
+          "snippet": "Token.objects.create(user=request.user)"
+        }
+      ]
+    },
+    {
+      "capability_id": "auth:permissions",
+      "evidence": [
+        {
+          "snippet": "permission_classes = (IsAuthenticated,)"
+        },
+        {
+          "snippet": "permission_classes = (IsAuthenticated, permissions.UserHasTestPermission)"
+        },
+        {
+          "snippet": "permission_classes = (IsAuthenticated, DjangoModelPermissions)"
+        },
+        {
+          "snippet": "permission_classes = (IsAuthenticated, permissions.UserHasFindingPermission)"
+        },
+        {
+          "snippet": "action(detail=True, methods=[\"post\"], permission_classes=[IsAuthenticated])"
+        }
+      ]
+    },
+    {
+      "capability_id": "web:framework",
+      "evidence": [
+        {
+          "snippet": "DefaultRouter()"
+        },
+        {
+          "snippet": "action(detail=True, methods=[\"get\", \"post\"], parser_classes=(MultiPartParser,))"
+        },
+        {
+          "snippet": "action(detail=True, methods=[\"post\"], url_path=r\"link_engagement/(?P<engagement_id>\\d+)\")"
+        },
+        {
+          "snippet": "action(detail=True, methods=[\"post\", \"put\", \"delete\", \"get\"], filter_backends=[], pagination_class=None)"
+        },
+        {
+          "snippet": "action(methods=[\"post\"], detail=True, permission_classes=[IsAdminUser], serializer_class=AcceptedRiskSerializer)"
+        }
+      ]
+    },
+    {
+      "capability_id": "data:serialization",
+      "evidence": [
+        {
+          "snippet": "Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)"
+        },
+        {
+          "snippet": "Response(serialized_notes.data, status=status.HTTP_200_OK)"
+        },
+        {
+          "snippet": "Response(serialized_file.data, status=status.HTTP_201_CREATED)"
+        },
+        {
+          "snippet": "Response(serialized_check_list.data, status=status.HTTP_201_CREATED)"
+        },
+        {
+          "snippet": "Response(result, status=status.HTTP_200_OK)"
+        }
+      ]
+    }
+  ]
+}

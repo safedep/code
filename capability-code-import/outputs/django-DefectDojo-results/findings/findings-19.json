@@ -1,0 +1,65 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "scraping:web",
+      "evidence": [
+        {
+          "snippet": "driver.find_element(By.ID, \"id_include_table_of_contents\")"
+        },
+        {
+          "snippet": "driver.find_element(By.NAME, \"_generate\")"
+        },
+        {
+          "snippet": "driver.find_element(By.LINK_TEXT, \"QA Test\")"
+        },
+        {
+          "snippet": "driver.find_element(By.PARTIAL_LINK_TEXT, \"Engagements\")"
+        },
+        {
+          "snippet": "driver.find_element(By.XPATH, \"//label[@for='id_include_finding_notes']\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "testing:automation",
+      "evidence": [
+        {
+          "snippet": "from selenium.webdriver.common.by import By"
+        },
+        {
+          "snippet": "from selenium.webdriver.support.ui import Select"
+        },
+        {
+          "snippet": "EC.visibility_of_element_located((By.ID, \"show-filters\"))"
+        },
+        {
+          "snippet": "Select(driver.find_element(By.ID, \"id_scan_type\"))"
+        },
+        {
+          "snippet": "driver.find_element(By.CSS_SELECTOR, \"button.btn.btn-success\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "web:interaction",
+      "evidence": [
+        {
+          "snippet": "driver.find_element(By.ID, \"id_username\")"
+        },
+        {
+          "snippet": "driver.find_element(By.ID, \"simple_search_submit\")"
+        },
+        {
+          "snippet": "driver.find_element(By.PARTIAL_LINK_TEXT, \"Beta Test\")"
+        },
+        {
+          "snippet": "driver.find_element(By.CSS_SELECTOR, \"input.btn.btn-primary\")"
+        },
+        {
+          "snippet": "driver.find_element(By.XPATH, \"//input[@value='Add Note']\")"
+        }
+      ]
+    }
+  ]
+}

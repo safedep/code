@@ -1,0 +1,144 @@
+
+django:
+  django.forms:
+    - forms.CharField(\n        required=True, max_length=2400,\n        widget=forms.Textarea, label="Notes:",\n        error_messages={"required": ("The reason for closing a finding is "\n                ...
+    - forms.CharField(\n        required=True, max_length=2400,\n        widget=forms.Textarea, label="Notes:",\n        error_messages={"required": ("The reason for closing a finding is "\n                ...
+    - class ClearFindingReviewForm(forms.ModelForm):\n    entry = forms.CharField(\n        required=True, max_length=2400,\n        help_text="Please provide a message.",\n        widget=forms.Textarea, la...
+    - forms.CharField(\n        required=True, max_length=2400,\n        help_text="Please provide a message.",\n        widget=forms.Textarea, label="Notes:",\n        error_messages={"required": ("The rea...
+    - forms.CharField(\n        required=True, max_length=2400,\n        help_text="Please provide a message.",\n        widget=forms.Textarea, label="Notes:",\n        error_messages={"required": ("The rea...
+    - class ReviewFindingForm(forms.Form):\n    reviewers = forms.MultipleChoiceField(\n        help_text=(\n            "Select all users who can review Finding. Only users with "\n            "at least wr...
+    - forms.MultipleChoiceField(\n        help_text=(\n            "Select all users who can review Finding. Only users with "\n            "at least write permission to this finding can be selected"),\n        required=False,\n    )
+    - forms.CharField(\n        required=True, max_length=2400,\n        help_text="Please provide a message for reviewers.",\n        widget=forms.Textarea, label="Notes:",\n        error_messages={"requir...
+    - forms.CharField(\n        required=True, max_length=2400,\n        help_text="Please provide a message for reviewers.",\n        widget=forms.Textarea, label="Notes:",\n        error_messages={"requir...
+    - forms.BooleanField(\n        required=False,\n        label="Allow All Eligible Reviewers",\n        help_text=("Checking this box will allow any user in the drop down "\n                   "above to provide a review for this finding"))
+    - class WeeklyMetricsForm(forms.Form):\n    dates = forms.ChoiceField()\n\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, **kwargs)\n        wmf_options = []\n\n        for i ...
+    - forms.ChoiceField()
+    - class SimpleMetricsForm(forms.Form):\n    date = forms.DateField(\n        label="",\n        widget=MonthYearWidget())
+    - forms.DateField(\n        label="",\n        widget=MonthYearWidget())
+    - class SimpleSearchForm(forms.Form):\n    query = forms.CharField(required=False)
+    - forms.CharField(required=False)
+    - class DateRangeMetrics(forms.Form):\n    start_date = forms.DateField(required=True, label="To",\n                                 widget=forms.TextInput(attrs={"class": "datepicker", "autocomplete": ...
+    - forms.DateField(required=True, label="To",\n                                 widget=forms.TextInput(attrs={"class": "datepicker", "autocomplete": "off"}))
+    - forms.TextInput(attrs={"class": "datepicker", "autocomplete": "off"})
+    - forms.DateField(required=True,\n                               label="From",\n                               widget=forms.TextInput(attrs={"class": "datepicker", "autocomplete": "off"}))
+    - forms.TextInput(attrs={"class": "datepicker", "autocomplete": "off"})
+    - class MetricsFilterForm(forms.Form):\n    start_date = forms.DateField(required=False,\n                                 label="To",\n                                 widget=forms.TextInput(attrs={"cl...
+    - forms.DateField(required=False,\n                                 label="To",\n                                 widget=forms.TextInput(attrs={"class": "datepicker", "autocomplete": "off"}))
+    - forms.TextInput(attrs={"class": "datepicker", "autocomplete": "off"})
+    - forms.DateField(required=False,\n                               label="From",\n                               widget=forms.TextInput(attrs={"class": "datepicker", "autocomplete": "off"}))
+    - forms.TextInput(attrs={"class": "datepicker", "autocomplete": "off"})
+    - forms.MultipleChoiceField(\n        required=False,\n        widget=forms.CheckboxSelectMultiple,\n        choices=FINDING_STATUS,\n        label="Status")
+    - forms.MultipleChoiceField(\n        required=False,\n        widget=forms.CheckboxSelectMultiple,\n        choices=FINDING_STATUS,\n        label="Status")
+    - forms.MultipleChoiceField(required=False,\n                                         choices=(("Low", "Low"),\n                                                  ("Medium", "Medium"),\n                 ...
+    - forms.ModelMultipleChoiceField(\n        required=False, queryset=Product_Type.objects.all().order_by("name"))
+    - class DojoGroupForm(forms.ModelForm):\n\n    name = forms.CharField(max_length=255, required=True)\n    description = forms.CharField(widget=forms.Textarea(attrs={}), required=False)\n\n    class Meta:\n        model = Dojo_Group\n        fields = ["name", "description"]\n        exclude = ["users"]
+    - forms.CharField(max_length=255, required=True)
+    - forms.CharField(widget=forms.Textarea(attrs={}), required=False)
+    - forms.Textarea(attrs={})
+    - class DeleteGroupForm(forms.ModelForm):\n    id = forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())\n\n    class Meta:\n        model = Dojo_Group\n        fields = ["id"]
+    - forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())
+    - forms.widgets.HiddenInput()
+    - class Add_Group_MemberForm(forms.ModelForm):\n    users = forms.ModelMultipleChoiceField(queryset=Dojo_Group_Member.objects.none(), required=True, label="Users")\n\n    def __init__(self, *args, **kwa...
+    - forms.ModelMultipleChoiceField(queryset=Dojo_Group_Member.objects.none(), required=True, label="Users")
+    - class Add_Group_Member_UserForm(forms.ModelForm):\n    groups = forms.ModelMultipleChoiceField(queryset=Dojo_Group.objects.none(), required=True, label="Groups")\n\n    def __init__(self, *args, **kwa...
+    - forms.ModelMultipleChoiceField(queryset=Dojo_Group.objects.none(), required=True, label="Groups")
+    - class Edit_Group_MemberForm(forms.ModelForm):\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, **kwargs)\n        self.fields["group"].disabled = True\n        self.fields["u...
+    - class Add_Product_GroupForm(forms.ModelForm):\n    groups = forms.ModelMultipleChoiceField(queryset=Dojo_Group.objects.none(), required=True, label="Groups")\n\n    def __init__(self, *args, **kwargs)...
+    - forms.ModelMultipleChoiceField(queryset=Dojo_Group.objects.none(), required=True, label="Groups")
+    - class Add_Product_Group_GroupForm(forms.ModelForm):\n    products = forms.ModelMultipleChoiceField(queryset=Product.objects.none(), required=True, label="Products")\n\n    def __init__(self, *args, **...
+    - forms.ModelMultipleChoiceField(queryset=Product.objects.none(), required=True, label="Products")
+    - class Edit_Product_Group_Form(forms.ModelForm):\n\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, **kwargs)\n        self.fields["product"].disabled = True\n        self.fie...
+    - class Add_Product_Type_GroupForm(forms.ModelForm):\n    groups = forms.ModelMultipleChoiceField(queryset=Dojo_Group.objects.none(), required=True, label="Groups")\n\n    def __init__(self, *args, **kw...
+    - forms.ModelMultipleChoiceField(queryset=Dojo_Group.objects.none(), required=True, label="Groups")
+    - class Add_Product_Type_Group_GroupForm(forms.ModelForm):\n    product_types = forms.ModelMultipleChoiceField(queryset=Product_Type.objects.none(), required=True, label="Product Types")\n\n    def __in...
+    - forms.ModelMultipleChoiceField(queryset=Product_Type.objects.none(), required=True, label="Product Types")
+    - class Edit_Product_Type_Group_Form(forms.ModelForm):\n\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, **kwargs)\n        self.fields["product_type"].disabled = True\n      ...
+    - class DojoUserForm(forms.ModelForm):\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, **kwargs)\n        if not get_current_user().is_superuser and not get_system_setting("en...
+    - class ChangePasswordForm(forms.Form):\n    current_password = forms.CharField(widget=forms.PasswordInput,\n        required=True)\n    new_password = forms.CharField(widget=forms.PasswordInput,\n     ...
+    - forms.CharField(widget=forms.PasswordInput,\n        required=True)
+    - forms.CharField(widget=forms.PasswordInput,\n        required=True)
+    - forms.CharField(widget=forms.PasswordInput,\n        required=True,\n        validators=[validate_password],\n        help_text="")
+    - forms.CharField(widget=forms.PasswordInput,\n        required=True,\n        validators=[validate_password],\n        help_text="")
+    - forms.CharField(widget=forms.PasswordInput,\n        required=True,\n        validators=[validate_password],\n        help_text="Password must match the new password entered above.")
+    - forms.CharField(widget=forms.PasswordInput,\n        required=True,\n        validators=[validate_password],\n        help_text="Password must match the new password entered above.")
+    - forms.ValidationError(msg)
+    - forms.ValidationError(msg)
+    - forms.ValidationError(msg)
+    - class AddDojoUserForm(forms.ModelForm):\n    email = forms.EmailField(required=True)\n    password = forms.CharField(widget=forms.PasswordInput,\n        required=settings.REQUIRE_PASSWORD_ON_USER,\n ...
+    - forms.EmailField(required=True)
+    - forms.CharField(widget=forms.PasswordInput,\n        required=settings.REQUIRE_PASSWORD_ON_USER,\n        validators=[validate_password],\n        help_text="")
+    - forms.CharField(widget=forms.PasswordInput,\n        required=settings.REQUIRE_PASSWORD_ON_USER,\n        validators=[validate_password],\n        help_text="")
+    - class EditDojoUserForm(forms.ModelForm):\n    email = forms.EmailField(required=True)\n\n    class Meta:\n        model = Dojo_User\n        fields = ["username", "first_name", "last_name", "email", "...
+    - forms.EmailField(required=True)
+    - class DeleteUserForm(forms.ModelForm):\n    id = forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())\n\n    class Meta:\n        model = User\n        fields = ["id"]
+    - forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())
+    - forms.widgets.HiddenInput()
+    - class UserContactInfoForm(forms.ModelForm):\n    class Meta:\n        model = UserContactInfo\n        exclude = ["user", "slack_user_id"]\n\n    def __init__(self, *args, **kwargs):\n        super()....
+    - class GlobalRoleForm(forms.ModelForm):\n    class Meta:\n        model = Global_Role\n        exclude = ["user", "group"]\n\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, *...
+    - class ProductCountsFormBase(forms.Form):\n    month = forms.ChoiceField(choices=list(MONTHS.items()), required=True, error_messages={\n        "required": "*"})\n    year = forms.ChoiceField(choices=get_years, required=True, error_messages={\n        "required": "*"})
+    - forms.ChoiceField(choices=list(MONTHS.items()), required=True, error_messages={\n        "required": "*"})
+    - forms.ChoiceField(choices=get_years, required=True, error_messages={\n        "required": "*"})
+    - forms.ModelChoiceField(required=True,\n                                          queryset=Product_Type.objects.none(),\n                                          error_messages={\n                                              "required": "*"})
+    - forms.ModelChoiceField(required=True,\n                                         queryset=Product.tags.tag_model.objects.none().order_by("name"),\n                                         error_messages={\n                                             "required": "*"})
+    - class APIKeyForm(forms.ModelForm):\n    id = forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())\n\n    class Meta:\n        model = User\n        exclud...
+    - forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())
+    - forms.widgets.HiddenInput()
+    - class ReportOptionsForm(forms.Form):\n    yes_no = (("0", "No"), ("1", "Yes"))\n    include_finding_notes = forms.ChoiceField(choices=yes_no, label="Finding Notes")\n    include_finding_images = forms...
+    - forms.ChoiceField(choices=yes_no, label="Finding Notes")
+    - forms.ChoiceField(choices=yes_no, label="Finding Images")
+    - forms.ChoiceField(choices=yes_no, label="Executive Summary")
+    - forms.ChoiceField(choices=yes_no, label="Table of Contents")
+    - forms.ChoiceField(choices=yes_no, label="Disclaimer")
+    - forms.ChoiceField(choices=(("HTML", "HTML"),))
+    - class CustomReportOptionsForm(forms.Form):\n    yes_no = (("0", "No"), ("1", "Yes"))\n    report_name = forms.CharField(required=False, max_length=100)\n    include_finding_notes = forms.ChoiceField(r...
+    - forms.CharField(required=False, max_length=100)
+    - forms.ChoiceField(required=False, choices=yes_no)
+    - forms.ChoiceField(choices=yes_no, label="Finding Images")
+    - forms.ChoiceField(choices=(("HTML", "HTML"),))
+    - class DeleteFindingForm(forms.ModelForm):\n    id = forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())\n\n    class Meta:\n        model = Finding\n        fields = ["id"]
+    - forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())
+    - forms.widgets.HiddenInput()
+    - class CopyFindingForm(forms.Form):\n    test = forms.ModelChoiceField(\n        required=True,\n        queryset=Test.objects.none(),\n        error_messages={"required": "*"})\n\n    def __init__(sel...
+    - forms.ModelChoiceField(\n        required=True,\n        queryset=Test.objects.none(),\n        error_messages={"required": "*"})
+    - class FindingFormID(forms.ModelForm):\n    id = forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())\n\n    class Meta:\n        model = Finding\n        fields = ("id",)
+    - forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())
+    - forms.widgets.HiddenInput()
+    - class DeleteStubFindingForm(forms.ModelForm):\n    id = forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())\n\n    class Meta:\n        model = Stub_Finding\n        fields = ["id"]
+    - forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())
+    - forms.widgets.HiddenInput()
+    - class GITHUB_IssueForm(forms.ModelForm):\n\n    class Meta:\n        model = GITHUB_Issue\n        exclude = ["product"]
+    - class GITHUBForm(forms.ModelForm):\n    api_key = forms.CharField(widget=forms.PasswordInput, required=True)\n\n    class Meta:\n        model = GITHUB_Conf\n        exclude = ["product"]
+    - forms.CharField(widget=forms.PasswordInput, required=True)
+    - forms.CharField(widget=forms.PasswordInput, required=True)
+    - class DeleteGITHUBConfForm(forms.ModelForm):\n    id = forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())\n\n    class Meta:\n        model = GITHUB_Conf\n        fields = ["id"]
+    - forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())
+    - forms.widgets.HiddenInput()
+    - class ExpressGITHUBForm(forms.ModelForm):\n    password = forms.CharField(widget=forms.PasswordInput, required=True)\n    issue_key = forms.CharField(required=True, help_text="A valid issue ID is requ...
+    - forms.CharField(widget=forms.PasswordInput, required=True)
+    - forms.CharField(widget=forms.PasswordInput, required=True)
+    - forms.CharField(required=True, help_text="A valid issue ID is required to gather the necessary information.")
+    - class JIRA_IssueForm(forms.ModelForm):\n\n    class Meta:\n        model = JIRA_Issue\n        exclude = ["product"]
+    - class BaseJiraForm(forms.ModelForm):\n    password = forms.CharField(widget=forms.PasswordInput, required=True)\n\n    def test_jira_connection(self):\n        import dojo.jira_link.helper as jira_hel...
+    - forms.CharField(widget=forms.PasswordInput, required=True)
+    - forms.CharField(widget=forms.PasswordInput, required=True)
+    - forms.ChoiceField(required=False,\n                                       choices=JIRA_TEMPLATE_CHOICES,\n                                       help_text="Choose the folder containing the Django temp...
+    - forms.CharField(required=True, help_text="A valid issue ID is required to gather the necessary information.")
+    - forms.ChoiceField(required=False,\n                                       choices=JIRA_TEMPLATE_CHOICES,\n                                       help_text="Choose the folder containing the Django temp...
+    - class Benchmark_Product_SummaryForm(forms.ModelForm):\n\n    class Meta:\n        model = Benchmark_Product_Summary\n        exclude = ["product", "current_level", "benchmark_type", "asvs_level_1_benc...
+    - class DeleteBenchmarkForm(forms.ModelForm):\n    id = forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())\n\n    class Meta:\n        model = Benchmark_Product_Summary\n        fields = ["id"]
+    - forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())
+    - forms.widgets.HiddenInput()
+    - class Product_API_Scan_ConfigurationForm(forms.ModelForm):\n\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, **kwargs)\n\n    tool_configuration = forms.ModelChoiceField(\n ...
+    - forms.ModelChoiceField(\n        label="Tool Configuration",\n        queryset=Tool_Configuration.objects.all().order_by("name"),\n        required=True,\n    )
+    - class DeleteProduct_API_Scan_ConfigurationForm(forms.ModelForm):\n    id = forms.IntegerField(required=True, widget=forms.widgets.HiddenInput())\n\n    class Meta:\n        model = Product_API_Scan_Configuration\n        fields = ["id"]
+    - forms.IntegerField(required=True, widget=forms.widgets.HiddenInput())
+    - forms.widgets.HiddenInput()
+    - class DeleteJIRAInstanceForm(forms.ModelForm):\n    id = forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())\n\n    class Meta:\n        model = JIRA_Instance\n        fields = ["id"]
+    - forms.IntegerField(required=True,\n                            widget=forms.widgets.HiddenInput())
+    - forms.widgets.HiddenInput()
+    - class ToolTypeForm(forms.ModelForm):\n    class Meta:\n        model = Tool_Type\n        exclude = ["product"]\n\n    def __init__(self, *args, **kwargs):\n        instance = kwargs.get("instance")\n...
+    - forms.ValidationError(msg)
+    - class RegulationForm(forms.ModelForm):\n    class Meta:\n        model = Regulation\n        exclude = ["product"]
+    - class AppAnalysisForm(forms.ModelForm):\n    user = forms.ModelChoiceField(queryset=Dojo_User.objects.exclude(is_active=False).order_by("first_name", "last_name"), required=True)\n\n    class Meta:\n        model = App_Analysis\n        exclude = ["product"]
+    - forms.ModelChoiceField(queryset=Dojo_User.objects.exclude(is_active=False).order_by("first_name", "last_name"), required=True)
+    - class DeleteAppAnalysisForm(forms.ModelForm):\n    class Meta:\n        model = App_Analysis\n        exclude = ["product", "tags"]\n\n    def __init__(self, *args, **kwargs):\n        super().__init_...

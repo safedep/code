@@ -1,0 +1,265 @@
+
+hashlib:
+  hashlib:
+    - hashlib.sha256(\n                str(description + title).encode("utf-8"),\n            )
+    - hashlib.md5(\n                    (finding.title + "|" + finding.description).encode("utf-8"),\n                )
+    - hashlib.sha256()
+    - hashlib.sha256(\n                f"{finding.vuln_id_from_tool}".encode(),\n            )
+    - hashlib.sha256(key_str.encode("utf-8"))
+    - hashlib.sha256(\n                    (type + file + str(line) + hashed_secret).encode("utf-8"),\n                )
+    - hashlib.sha256(\n                (code + title).encode("utf-8"),\n            )
+    - hashlib.sha256(\n                f"{finding.severity}|{finding.title}|{finding.description}".encode(),\n            )
+    - hashlib.md5(\n            (\n                title\n                + findings["match"]\n                + str(findings["line_start"])\n                + str(findings["line_end"])\n            ).encode("utf-8"),\n        )
+    - hashlib.sha256(\n                f"{item.severity}|{item.title}|{item.description}".encode(),\n            )
+    - hashlib.sha256(\n            (issue["offender"] + file_path + str(line)).encode("utf-8"),\n        )
+    - hashlib.md5(\n            (title + secret + str(line)).encode("utf-8"),\n        )
+    - hashlib.md5(\n                str(references + title).encode("utf-8"),\n            )
+    - hashlib.md5(\n                            str(vuln).encode("utf-8"),\n                        )
+    - hashlib.md5(\n                        str(issue_description + name + severity).encode(\n                            "utf-8",\n                        ),\n                    )
+    - hashlib.md5(\n                str(description + title + severity).encode("utf-8"),\n            )
+    - hashlib.sha256()
+    - hashlib.sha256(\n                    (\n                        platform\n                        + category\n                        + issue_type\n                        + file_name\n               ...
+    - hashlib.md5(\n                    (\n                        finding.severity\n                        + "|"\n                        + finding.title\n                        + "|"\n                  ...
+    - hashlib.sha256(\n                (\n                    finding.description\n                    + "|"\n                    + finding.severity\n                    + "|"\n                    + finding...
+    - hashlib.sha256(str(finding.description + finding.title + finding.steps_to_reproduce + finding.vuln_id_from_tool).encode("utf-8"))
+    - hashlib.md5(\n                f.description.encode("utf-8")\n                + f.title.encode("utf-8"),\n            )
+    - hashlib.sha256(\n                    f"{finding.description}|{finding.title}|{finding.severity}".encode(),\n                )
+    - hashlib.sha256(\n                    (key + str(cwe) + masvs + owasp_mobile + file_path).encode("utf-8"),\n                )
+    - hashlib.md5(unique_key.encode("utf-8"))
+    - hashlib.sha256(description.encode("utf-8"))
+    - hashlib.md5((filepath + "|" + secret + "|" + str(line_num)).encode("utf-8"))
+    - hashlib.md5((filepath + "|" + rule_text_id + "|" + str(line_num)).encode("utf-8"))
+    - hashlib.sha256(\n                (template_id + item_type + matcher + endpoint.host).encode(\n                    "utf-8",\n                ),\n            )
+    - hashlib.sha256(\n                    references.encode("utf-8"),\n                )
+    - hashlib.sha256(\n                    (\n                        str(finding.unsaved_endpoints[0])\n                        + "|"\n                        + finding.severity\n                        + ...
+    - hashlib.md5(\n                (item.title + item.references).encode(),\n            )
+    - hashlib.sha256(\n                f"{finding.title}|{finding.description}|{finding.file_path}|{finding.line}".encode(),\n            )
+    - hashlib.sha256(\n                                str(description + title).encode("utf-8"),\n                            )
+    - hashlib.sha256(\n                        (offending_uri + contents).encode("utf-8"),\n                    )
+    - hashlib.md5(\n                            (\n                                item.title + item.references + encrypted_file\n                            ).encode(),\n                        )
+    - hashlib.md5(\n                    node.get("Public ID").encode("utf-8")\n                    + node.get("Library").encode("utf-8"),\n                )
+    - hashlib.sha256(\n                    str(\n                        finding.severity\n                        + "|"\n                        + finding.title\n                        + "|"\n                        + finding.description,\n                    ).encode("utf-8"),\n                )
+    - hashlib.sha256(\n                        str(description + title).encode("utf-8"),\n                    )
+    - hashlib.md5(\n                        str(description + title).encode("utf-8"),\n                    )
+    - hashlib.md5(\n                        (\n                            title\n                            + message\n                            + file_path\n                            + description\n ...
+    - hashlib.sha256(\n                (\n                    rule_id\n                    + rule_name\n                    + resource_name\n                    + resource_type\n                    + file\n                    + str(line)\n                ).encode("utf-8"),\n            )
+    - hashlib.sha256(\n                    "|".join(\n                        [\n                            finding.description,\n                            finding.title,\n                            str...
+    - hashlib.sha256(\n                (\n                    rule_provider\n                    + rule_id\n                    + file\n                    + str(start_line)\n                    + str(end_line)\n                ).encode("utf-8"),\n            )
+    - hashlib.md5((file + reason).encode("utf-8"))
+    - hashlib.md5(\n                (file + detector_name + str(line_number) + commit + (raw + rawV2)).encode("utf-8"),\n            )
+    - hashlib.md5((file + reason).encode("utf-8"))
+    - hashlib.md5(\n            (title + secret + severity + str(line)).encode("utf-8"),\n        )
+    - hashlib.sha256(\n                f"{finding.severity}|{finding.title}|{finding.description}".encode(),\n            )
+    - hashlib.sha256(\n                f"{item.severity}|{item.title}|{item.description}".encode(),\n            )
+    - hashlib.md5(\n                    (\n                        finding.severity\n                        + "|"\n                        + finding.title\n                        + "|"\n                        + finding.description\n                    ).encode("utf-8"),\n                )
+    - hashlib.md5(\n                    (\n                        finding.severity\n                        + "|"\n                        + finding.title\n                        + "|"\n                        + finding.description\n                    ).encode("utf-8"),\n                )
+    - hashlib.md5(\n                    (\n                        finding.severity\n                        + "|"\n                        + finding.title\n                        + "|"\n                        + finding.description\n                    ).encode("utf-8"),\n                )
+    - hashlib.sha256(\n                    str(description + title + severity).encode("utf-8"),\n                )
+    - hashlib.sha256(dupe_key.encode("utf-8"))
+    - hashlib.sha256(\n                (url.to_text() + str(return_code)).encode("utf-8"),\n            )
+    - hashlib.md5(\n                whitehat_vuln["id"].encode("utf-8"),\n            )
+    - hashlib.sha256(\n                str(finding.unique_id_from_tool).encode("utf-8"),\n            )
+    - hashlib.sha256(\n                str(\n                    "interesting_findings"\n                    + finding.title\n                    + interesting_finding["url"],\n                ).encode("utf-8"),\n            )
+    - hashlib.sha256(db_key.encode("utf-8"))
+
+environ:
+  environ:
+    - environ.Path(__file__)
+    - environ.FileAwareEnv(\n    # Set casting and default values\n    DD_SITE_URL=(str, "http://localhost:8080"),\n    DD_DEBUG=(bool, False),\n    DD_TEMPLATE_DEBUG=(bool, False),\n    DD_LOG_LEVEL=(str, ...
+    - #########################################################################################################\n# It is not recommended to edit file 'settings.dist.py', for production deployments.         ...
+
+shutil:
+  shutil:
+    - shutil.rmtree(self.repo_path)
+    - shutil.rmtree(self.repo_path)
+
+user_test:
+  user_test.UserTest:
+    - UserTest("test_create_user")
+    - UserTest("test_create_user_with_writer_global_role")
+    - UserTest("test_user_with_writer_role_delete")
+    - UserTest("test_create_user")
+    - UserTest("test_user_delete")
+    - UserTest("test_create_user")
+    - UserTest("test_user_delete")
+    - UserTest("test_create_user")
+    - UserTest("test_user_delete")
+
+notifications_test:
+  notifications_test.NotificationTest:
+    - NotificationTest("enable_notification", "mail")
+
+zapv2:
+  zapv2.ZAPv2:
+    - ZAPv2(proxies={"http": "http://127.0.0.1:8080", "https": "http://127.0.0.1:8080"})
+
+mimetypes:
+  mimetypes:
+    - mimetypes.guess_type(file_path)
+    - mimetypes.init()
+    - mimetypes.guess_type(risk_acceptance.path.name)
+    - mimetypes.init()
+    - mimetypes.guess_type(file_name)
+    - mimetypes.guess_type(image_file.file.name)
+    - mimetypes.guess_type(file_name)
+    - mimetypes.guess_type(file_path)
+
+copy:
+  copy:
+    - copy.copy(finding)
+    - copy.copy(finding)
+    - finding.copy(test=test)
+    - copy.deepcopy(find)
+    - copy.copy(DEFAULT_STATS)
+    - copy.copy(DEFAULT_STATS)
+    - def copy(self):\n        copy = _copy_model_util(self)\n        copy.save()\n        return copy
+    - copy = _copy_model_util(self)
+    - copy.save()
+    - return copy
+    - def copy(self):\n        copy = _copy_model_util(self)\n        # Save the necessary ManyToMany relationships\n        old_history = list(self.history.all())\n        # Save the object before setting ...
+    - copy = _copy_model_util(self)
+    - copy.save()
+    - copy.history.add(history.copy())
+    - history.copy()
+    - return copy
+    - def copy(self):\n        copy = _copy_model_util(self)\n        # Add unique modifier to file name\n        copy.title = f"{self.title} - clone-{str(uuid4())[:8]}"\n        # Create new unique file na...
+    - copy = _copy_model_util(self)
+    - copy.title = f"{self.title} - clone-{str(uuid4())[:8]}"
+    - copy.file = new_file
+    - copy.save()
+    - return copy
+    - def copy(self):\n        copy = _copy_model_util(self)\n        # Save the necessary ManyToMany relationships\n        old_notes = list(self.notes.all())\n        old_files = list(self.files.all())\n ...
+    - copy = _copy_model_util(self)
+    - copy.save()
+    - copy.notes.add(notes.copy())
+    - notes.copy()
+    - copy.files.add(files.copy())
+    - files.copy()
+    - test.copy(engagement=copy)
+    - test.copy(engagement=copy)
+    - copy.risk_acceptance.add(risk_acceptance.copy(engagement=copy))
+    - risk_acceptance.copy(engagement=copy)
+    - risk_acceptance.copy(engagement=copy)
+    - copy.tags.set(old_tags)
+    - return copy
+    - def copy(self, finding=None):\n        copy = _copy_model_util(self)\n        current_endpoint = self.endpoint\n        if finding:\n            copy.finding = finding\n        copy.endpoint = current_endpoint\n        copy.save()\n\n        return copy
+    - copy = _copy_model_util(self)
+    - copy.finding = finding
+    - copy.endpoint = current_endpoint
+    - copy.save()
+    - return copy
+    - def copy(self, engagement=None):\n        copy = _copy_model_util(self)\n        # Save the necessary ManyToMany relationships\n        old_notes = list(self.notes.all())\n        old_files = list(sel...
+    - copy = _copy_model_util(self)
+    - copy.engagement = engagement
+    - copy.save()
+    - copy.notes.add(notes.copy())
+    - notes.copy()
+    - copy.files.add(files.copy())
+    - files.copy()
+    - finding.copy(test=copy)
+    - finding.copy(test=copy)
+    - copy.tags.set(old_tags)
+    - return copy
+    - def copy(self, test=None):\n        copy = _copy_model_util(self)\n        # Save the necessary ManyToMany relationships\n        old_notes = list(self.notes.all())\n        old_files = list(self.file...
+    - copy = _copy_model_util(self)
+    - copy.test = test
+    - copy.save()
+    - copy.notes.add(notes.copy())
+    - notes.copy()
+    - copy.files.add(files.copy())
+    - files.copy()
+    - endpoint_status.copy(finding=copy)
+    - endpoint_status.copy(finding=copy)
+    - copy.reviewers.set(old_reviewers)
+    - copy.found_by.set(old_found_by)
+    - copy.tags.set(old_tags)
+    - return copy
+    - def copy(self, engagement=None):\n        copy = _copy_model_util(self)\n        # Save the necessary ManyToMany relationships\n        old_notes = list(self.notes.all())\n        old_accepted_finding...
+    - copy = _copy_model_util(self)
+    - copy.save()
+    - copy.notes.add(notes.copy())
+    - notes.copy()
+    - copy.accepted_findings.set(new_accepted_findings)
+    - return copy
+
+pickle:
+  pickle:
+    - pickle.loads(value)
+    - pickle.dumps(values)
+    - pickle.loads(choiceQuestionFrom.cleaned_data["answer_choices"])
+
+jira:
+  jira.JIRA:
+    - JIRA(\n        server=jira_server,\n        basic_auth=(jira_username, jira_password),\n        max_retries=0,\n        options={\n            "verify": settings.JIRA_SSL_VERIFY,\n            "headers": settings.ADDITIONAL_HEADERS,\n        })
+  jira.exceptions.JIRAError:
+    - try:\n        connect_method = get_jira_connect_method()\n        jira = connect_method(jira_server, jira_username, jira_password)\n\n        logger.debug("logged in to JIRA %s successfully", jira_ser...
+    - try:\n        if issue and transition_id:\n            jira.transition_issue(issue, transition_id)\n            return True\n    except JIRAError as jira_error:\n        logger.debug("error transition...
+    - try:\n        return jira.add_issues_to_epic(epic_id=epic_id, issue_keys=issue_keys, ignore_epics=ignore_epics)\n    except JIRAError as e:\n        """\n        We must try to accommodate the followi...
+    - """\n        We must try to accommodate the following:\n\n        The request contains a next-gen issue. This operation can't add next-gen issues to epics.\n        To add a next-gen issue to an epic,...
+    - JIRAError.log_to_tempfile = False
+    - JIRAError.log_to_tempfile = False
+    - JIRAError.log_to_tempfile = False
+    - logger.debug("getting jira issue from JIRA for %d:%s", find.id, find)\n\n    if not is_jira_enabled():\n        return False\n\n    jira_project = get_jira_project(find)\n    jira_instance = get_jira_...
+    - try:\n                meta = jira.createmeta(\n                        projectKeys=project_key,\n                        issuetypeNames=issuetype_name,\n                        expand="projects.issuet...
+    - JIRAError(msg)
+    - JIRAError(msg)
+    - try:\n                issuetypes = jira.project_issue_types(project_key)\n            except JIRAError as e:\n                e.text = f"Jira API call 'createmeta/issuetypes' failed with status: {e.st...
+    - JIRAError(msg)
+    - try:\n                issuetypes = jira.project_issue_types(project_key)\n            except JIRAError as e:\n                e.text = f"Jira API call 'createmeta/issuetypes' failed with status: {e.st...
+    - JIRAError(msg)
+    - issuetype_fields = None\n    use_cloud_api = jira.deploymentType.lower() == "cloud" or jira._version < (9, 0, 0)\n\n    try:\n        if use_cloud_api:\n            try:\n                meta = jira.c...
+    - try:\n        jira = get_jira_connection(jira_project)\n        get_issuetype_fields(jira, jira_project.project_key, jira_project.jira_instance.default_issue_type)\n        return True\n    except JIR...
+    - try:\n            if jira_filename is not None:\n                attachment = io.StringIO()\n                attachment.write(jira_filename)\n                jira.add_attachment(\n                    ...
+    - try:\n                jissue = get_jira_issue(eng)\n                if jissue is None:\n                    logger.warning("JIRA close epic failed: no issue found")\n                    return False\n...
+    - try:\n            jira = get_jira_connection(jira_instance)\n            j_issue = get_jira_issue(engagement)\n            issue = jira.issue(j_issue.jira_id)\n\n            epic_name = kwargs.get("ep...
+    - epic_name = kwargs.get("epic_name")\n        epic_issue_type_name = getattr(jira_project, "epic_issue_type_name", "Epic")\n        if not epic_name:\n            epic_name = engagement.name\n        i...
+    - try:\n        jira_instance = jira_project.jira_instance\n        jira = get_jira_connection(jira_instance)\n        return jira.issue(issue_key)\n\n    except JIRAError as jira_error:\n        logger...
+    - try:\n                jira = get_jira_connection(jira_instance)\n                j_issue = obj.jira_issue\n                jira.add_comment(\n                    j_issue.jira_id,\n                    ...
+    - JIRAError.log_to_tempfile = False
+
+enum:
+  enum.Enum:
+    - class MetricsPeriod(_MetricsPeriodEntry, Enum):\n\n    """Enum for the two metrics periods supported: by week and month"""\n\n    WEEK = ("weeks", TruncWeek)\n    MONTH = ("months", TruncMonth)
+    - class MetricsType(_MetricsTypeEntry, Enum):\n\n    """Enum for the two metrics types supported: by Findings and by Endpoints (Endpoint_Status)"""\n\n    FINDING = ("severity", "is_mitigated")\n    ENDPOINT = ("finding__severity", "mitigated")
+
+vulners:
+  vulners:
+    - vulners.VulnersApi(\n            api_key=self.api_key,\n            server_url=self.vulners_api_url,\n            persistent=False,\n        )
+
+unittest:
+  unittest:
+    - unittest.skip("Deprecated since Dynamic Parser infrastructure")
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - class BaseTestCase(unittest.TestCase):\n    @classmethod\n    def setUpClass(cls):\n\n        # Path for automatic downloads, mapped to the media path\n        cls.export_path = "/app"\n\n        glob...
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()
+    - unittest.TextTestRunner(descriptions=True, failfast=True, verbosity=2)
+    - unittest.TestSuite()

@@ -1,0 +1,45 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "scraping:web",
+      "evidence": [
+        {
+          "snippet": "driver.find_element(By.XPATH, '//*[@id=\"id_enable_deduplication\"]')"
+        },
+        {
+          "snippet": "driver.find_element(By.CSS_SELECTOR, \"input.btn.btn-primary\")"
+        },
+        {
+          "snippet": "driver.find_element(By.ID, \"id_enable_deduplication\")"
+        },
+        {
+          "snippet": "driver.find_element(By.PARTIAL_LINK_TEXT, \"Close Same Engagement Test\")"
+        },
+        {
+          "snippet": "driver.find_elements(By.CSS_SELECTOR, \"button.btn.btn-primary\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "testing:automation",
+      "evidence": [
+        {
+          "snippet": "driver.find_element(By.LINK_TEXT, \"Add New Engagement\")"
+        },
+        {
+          "snippet": "driver.find_element(By.ID, \"id_scan_type\")"
+        },
+        {
+          "snippet": "driver.find_element(By.XPATH, '//*[@id=\"id_deduplication_on_engagement\"]')"
+        },
+        {
+          "snippet": "driver.find_element(By.LINK_TEXT, \"Re-Upload Scan\")"
+        },
+        {
+          "snippet": "driver.find_element(By.CSS_SELECTOR, \".dropdown-toggle.pull-left\")"
+        }
+      ]
+    }
+  ]
+}

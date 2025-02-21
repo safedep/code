@@ -1,0 +1,95 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "process:management",
+      "evidence": [
+        {
+          "snippet": "subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True, check=False)"
+        }
+      ]
+    },
+    {
+      "capability_id": "task:queue",
+      "evidence": [
+        {
+          "snippet": "Celery(\"dojo\")"
+        },
+        {
+          "snippet": "from celery.signals import setup_logging"
+        },
+        {
+          "snippet": "crontab(hour=7, minute=30)"
+        },
+        {
+          "snippet": "crontab(minute=0, hour=\"*/3\")"
+        },
+        {
+          "snippet": "get_task_logger(__name__)"
+        }
+      ]
+    },
+    {
+      "capability_id": "markdown:rendering",
+      "evidence": [
+        {
+          "snippet": "markdown.markdown(value,\n                                          extensions=[\"markdown.extensions.nl2br\",\n                                                      \"markdown.extensions.sane_lists\","
+        }
+      ]
+    },
+    {
+      "capability_id": "html:parsing",
+      "evidence": [
+        {
+          "snippet": "html2text.HTML2Text()"
+        },
+        {
+          "snippet": "html2text.html2text(\n                        item.findtext(\"Description\"),\n                    )"
+        },
+        {
+          "snippet": "html2text.html2text(item.findtext(\"Details\"))"
+        },
+        {
+          "snippet": "html2text.html2text(description)"
+        },
+        {
+          "snippet": "html2text.html2text(issue.get(\"description_html\"))"
+        }
+      ]
+    },
+    {
+      "capability_id": "testing:automation",
+      "evidence": [
+        {
+          "snippet": "GroupTest(\"test_create_group\")"
+        },
+        {
+          "snippet": "GroupTest(\"test_group_edit_name_and_global_role\")"
+        },
+        {
+          "snippet": "GroupTest(\"test_group_delete\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "time:management",
+      "evidence": [
+        {
+          "snippet": "timedelta(days=1)"
+        },
+        {
+          "snippet": "date.today()"
+        },
+        {
+          "snippet": "datetime.now(UTC)"
+        },
+        {
+          "snippet": "datetime.combine(context.get(\"scan_date\"), datetime.min.time())"
+        },
+        {
+          "snippet": "datetime.today()"
+        }
+      ]
+    }
+  ]
+}

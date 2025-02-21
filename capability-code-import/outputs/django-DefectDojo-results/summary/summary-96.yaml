@@ -1,0 +1,144 @@
+
+drf_spectacular:
+  drf_spectacular.utils.extend_schema:
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.AddNewNoteOptionSerializer,\n        responses={status.HTTP_201_CREATED: serializers.NoteSerializer},\n    )
+    - extend_schema(\n        methods=["GET"],\n        responses={status.HTTP_200_OK: serializers.TestToFilesSerializer},\n    )
+    - extend_schema(\n        methods=["POST"],\n        request=serializers.AddNewFileOptionSerializer,\n        responses={status.HTTP_201_CREATED: serializers.FileSerializer},\n    )
+    - extend_schema(\n        methods=["GET"],\n        responses={\n            status.HTTP_200_OK: serializers.RawFileSerializer,\n        },\n    )
+    - extend_schema(\n    request=OpenApiTypes.NONE,\n    parameters=[\n        OpenApiParameter(\n            "engagement_id", OpenApiTypes.INT, OpenApiParameter.PATH,\n        ),\n    ],\n    responses={status.HTTP_200_OK: serializers.QuestionnaireAnsweredSurveySerializer},\n    )
+    - extend_schema(\n        request=AcceptedRiskSerializer(many=True),\n        responses={status.HTTP_201_CREATED: RiskAcceptanceSerializer(many=True)},\n    )
+    - extend_schema(\n        request=AcceptedRiskSerializer(many=True),\n        responses={status.HTTP_201_CREATED: RiskAcceptanceSerializer(many=True)},\n    )
+  drf_spectacular.utils.extend_schema_field:
+    - extend_schema_field(\n    serializers.ListField(child=serializers.CharField()),\n)
+    - extend_schema_field(serializers.CharField())
+    - extend_schema_field(serializers.CharField())
+    - extend_schema_field(serializers.CharField())
+    - extend_schema_field(serializers.IntegerField())
+    - extend_schema_field(FindingTestSerializer)
+    - extend_schema_field(JIRAIssueSerializer)
+    - extend_schema_field(serializers.DateTimeField())
+    - extend_schema_field(serializers.DateTimeField())
+    - extend_schema_field(FindingRelatedFieldsSerializer)
+    - extend_schema_field(BurpRawRequestResponseSerializer)
+    - extend_schema_field(serializers.ListField(child=serializers.CharField()))
+    - extend_schema_field(OpenApiTypes.NUMBER)
+    - extend_schema_field(OpenApiTypes.NUMBER)
+    - extend_schema_field(OpenApiTypes.NUMBER)
+  drf_spectacular.types.OpenApiTypes:
+    - OpenApiParameter(\n                    "prefetch",\n                    OpenApiTypes.STR,\n                    OpenApiParameter.QUERY,\n                    required=False,\n                    descrip...
+    - OpenApiParameter(\n                    "prefetch",\n                    OpenApiTypes.STR,\n                    OpenApiParameter.QUERY,\n                    required=False,\n                    descrip...
+    - extend_schema(\n        request=OpenApiTypes.NONE, responses={status.HTTP_200_OK: ""},\n    )
+    - extend_schema(\n        request=OpenApiTypes.NONE, responses={status.HTTP_200_OK: ""},\n    )
+    - OpenApiParameter(\n                "related_fields",\n                OpenApiTypes.BOOL,\n                OpenApiParameter.QUERY,\n                required=False,\n                description="Expand ...
+    - OpenApiParameter(\n                "prefetch",\n                OpenApiTypes.STR,\n                OpenApiParameter.QUERY,\n                required=False,\n                description="List of fields for which to prefetch model instances and add those to the response",\n            )
+    - OpenApiParameter(\n                "related_fields",\n                OpenApiTypes.BOOL,\n                OpenApiParameter.QUERY,\n                required=False,\n                description="Expand ...
+    - OpenApiParameter(\n                "prefetch",\n                OpenApiTypes.STR,\n                OpenApiParameter.QUERY,\n                required=False,\n                description="List of fields for which to prefetch model instances and add those to the response",\n            )
+    - extend_schema(\n        request=OpenApiTypes.NONE,\n        responses={status.HTTP_204_NO_CONTENT: ""},\n    )
+    - extend_schema(\n        request=OpenApiTypes.NONE,\n        parameters=[\n            OpenApiParameter(\n                "new_fid", OpenApiTypes.INT, OpenApiParameter.PATH,\n            ),\n        ],\n        responses={status.HTTP_204_NO_CONTENT: ""},\n    )
+    - OpenApiParameter(\n                "new_fid", OpenApiTypes.INT, OpenApiParameter.PATH,\n            )
+    - OpenApiParameter(\n                "name",\n                OpenApiTypes.INT,\n                OpenApiParameter.QUERY,\n                required=True,\n                description="name of the metadat...
+    - extend_schema(\n    request=OpenApiTypes.NONE,\n    parameters=[\n        OpenApiParameter(\n            "engagement_id", OpenApiTypes.INT, OpenApiParameter.PATH,\n        ),\n    ],\n    responses={status.HTTP_200_OK: serializers.QuestionnaireAnsweredSurveySerializer},\n    )
+    - OpenApiParameter(\n            "engagement_id", OpenApiTypes.INT, OpenApiParameter.PATH,\n        )
+    - extend_schema_field(OpenApiTypes.NUMBER)
+    - extend_schema_field(OpenApiTypes.NUMBER)
+    - extend_schema_field(OpenApiTypes.NUMBER)
+  drf_spectacular.utils.extend_schema_view:
+    - extend_schema_view(**schema_with_prefetch())
+    - extend_schema_view(**schema_with_prefetch())
+    - extend_schema_view(**schema_with_prefetch())
+    - extend_schema_view(**schema_with_prefetch())
+    - extend_schema_view(**schema_with_prefetch())
+    - extend_schema_view(\n    list=extend_schema(\n        parameters=[\n            OpenApiParameter(\n                "related_fields",\n                OpenApiTypes.BOOL,\n                OpenApiParamet...
+    - extend_schema_view(**schema_with_prefetch())
+    - extend_schema_view(**schema_with_prefetch())
+    - extend_schema_view(**schema_with_prefetch())
+    - extend_schema_view(**schema_with_prefetch())
+    - extend_schema_view(**schema_with_prefetch())
+    - extend_schema_view(**schema_with_prefetch())
+    - extend_schema_view(**schema_with_prefetch())
+    - extend_schema_view(**schema_with_prefetch())
+    - extend_schema_view(**schema_with_prefetch())
+    - extend_schema_view(**schema_with_prefetch())
+    - extend_schema_view(**schema_with_prefetch())
+    - extend_schema_view(**schema_with_prefetch())
+    - extend_schema_view(**schema_with_prefetch())
+    - extend_schema_view(**schema_with_prefetch())
+    - extend_schema_view(**schema_with_prefetch())
+  drf_spectacular.utils.OpenApiParameter:
+    - OpenApiParameter(\n                    "prefetch",\n                    OpenApiTypes.STR,\n                    OpenApiParameter.QUERY,\n                    required=False,\n                    descrip...
+    - OpenApiParameter(\n                    "prefetch",\n                    OpenApiTypes.STR,\n                    OpenApiParameter.QUERY,\n                    required=False,\n                    descrip...
+    - OpenApiParameter(\n                    "prefetch",\n                    OpenApiTypes.STR,\n                    OpenApiParameter.QUERY,\n                    required=False,\n                    descrip...
+    - OpenApiParameter(\n                    "prefetch",\n                    OpenApiTypes.STR,\n                    OpenApiParameter.QUERY,\n                    required=False,\n                    descrip...
+    - OpenApiParameter(\n                "related_fields",\n                OpenApiTypes.BOOL,\n                OpenApiParameter.QUERY,\n                required=False,\n                description="Expand ...
+    - OpenApiParameter(\n                "related_fields",\n                OpenApiTypes.BOOL,\n                OpenApiParameter.QUERY,\n                required=False,\n                description="Expand ...
+    - OpenApiParameter(\n                "prefetch",\n                OpenApiTypes.STR,\n                OpenApiParameter.QUERY,\n                required=False,\n                description="List of fields for which to prefetch model instances and add those to the response",\n            )
+    - OpenApiParameter(\n                "prefetch",\n                OpenApiTypes.STR,\n                OpenApiParameter.QUERY,\n                required=False,\n                description="List of fields for which to prefetch model instances and add those to the response",\n            )
+    - OpenApiParameter(\n                "related_fields",\n                OpenApiTypes.BOOL,\n                OpenApiParameter.QUERY,\n                required=False,\n                description="Expand ...
+    - OpenApiParameter(\n                "related_fields",\n                OpenApiTypes.BOOL,\n                OpenApiParameter.QUERY,\n                required=False,\n                description="Expand ...
+    - OpenApiParameter(\n                "prefetch",\n                OpenApiTypes.STR,\n                OpenApiParameter.QUERY,\n                required=False,\n                description="List of fields for which to prefetch model instances and add those to the response",\n            )
+    - OpenApiParameter(\n                "prefetch",\n                OpenApiTypes.STR,\n                OpenApiParameter.QUERY,\n                required=False,\n                description="List of fields for which to prefetch model instances and add those to the response",\n            )
+    - OpenApiParameter(\n                "new_fid", OpenApiTypes.INT, OpenApiParameter.PATH,\n            )
+    - OpenApiParameter(\n                "new_fid", OpenApiTypes.INT, OpenApiParameter.PATH,\n            )
+    - OpenApiParameter(\n                "name",\n                OpenApiTypes.INT,\n                OpenApiParameter.QUERY,\n                required=True,\n                description="name of the metadat...
+    - OpenApiParameter(\n                "name",\n                OpenApiTypes.INT,\n                OpenApiParameter.QUERY,\n                required=True,\n                description="name of the metadat...
+    - OpenApiParameter(\n            "engagement_id", OpenApiTypes.INT, OpenApiParameter.PATH,\n        )
+    - OpenApiParameter(\n            "engagement_id", OpenApiTypes.INT, OpenApiParameter.PATH,\n        )
+  drf_spectacular.renderers.OpenApiJsonRenderer2:
+    - class DojoOpenApiJsonRenderer(OpenApiJsonRenderer2):\n    def get_indent(self, accepted_media_type, renderer_context):\n        if accepted_media_type and "indent" in accepted_media_type:\n           ...
+  drf_spectacular.views.SpectacularAPIView:
+    - class DojoSpectacularAPIView(SpectacularAPIView):\n    renderer_classes = [DojoOpenApiJsonRenderer, *SpectacularAPIView.renderer_classes]
+    - renderer_classes = [DojoOpenApiJsonRenderer, *SpectacularAPIView.renderer_classes]
+
+collections:
+  collections.abc.Iterable:
+    - def parse_findings(self, report: Path) -> Iterable[BlackduckFinding]:\n        while False:\n            yield None
+    - def parse_findings(self, report: Path) -> Iterable[BlackduckFinding]:\n        if not issubclass(type(report), Path):\n            report = Path(report.temporary_file_path())\n\n        if zipfile.is_...
+    - def parse_findings(self, report: Path) -> Iterable[BlackduckBinaryAnalysisFinding]:\n        while False:\n            yield None
+    - def parse_findings(self, report: Path) -> Iterable[BlackduckBinaryAnalysisFinding]:\n        orig_report_name = Path(report.name)\n        if not issubclass(type(report), Path):\n            report = Path(report.temporary_file_path())\n\n        return self._process_csvfile(report, orig_report_name)
+  collections.namedtuple:
+    - namedtuple(\n    "BlackduckFinding",\n    [\n        "vuln_id",\n        "description",\n        "security_risk",\n        "impact",\n        "component_name",\n        "component_version",\n        "...
+    - namedtuple(\n    "BlackduckBinaryAnalysisFinding",\n    [\n        "report_name",\n        "component",\n        "version",\n        "latest_version",\n        "cve",\n        "matching_type",\n      ...
+    - namedtuple(\n    "RuleViolationModel", ["pkg", "license_id", "projects", "rule_violation"],\n)
+  collections:
+    - class RequestResponseDict(collections.UserList):\n    def __init__(self, *args, **kwargs):\n        pretty_print = kwargs.pop("pretty_print", True)\n        collections.UserList.__init__(self, *args, ...
+    - collections.UserList.__init__(self, *args, **kwargs)
+    - collections.OrderedDict(sorted(cwe.items()))
+    - collections.OrderedDict()
+    - collections.Counter(default_keys)
+    - collections.Counter(\n            csv_reader.fieldnames,\n        )
+    - collections.defaultdict(list)
+  collections.OrderedDict:
+    - OrderedDict(\n                    [\n                        ("Endpoints", reverse("vulnerable_endpoints")),\n                        (endpoint, reverse("view_endpoint", args=(endpoint.id,))),\n                    ],\n                )
+    - collections.OrderedDict()
+    - OrderedDict(sorted(vulns.items(), key=itemgetter(1)))
+    - OrderedDict()
+    - OrderedDict()
+    - OrderedDict()
+    - OrderedDict()
+    - OrderedDict()
+    - OrderedDict()
+    - OrderedDict()
+  collections.defaultdict:
+    - defaultdict(lambda: 0)
+    - defaultdict(lambda: 0)
+    - defaultdict(lambda: 0, {s["severity"]: s["count"] for s in severities_all})
+    - defaultdict(set)
+    - defaultdict(set)
+    - defaultdict(list)
+    - defaultdict(list)
+    - defaultdict(list)
+  collections.abc.Callable:
+    - def validate(\n        self,\n        field_name: str,\n        expected_types: list[Callable] = [],\n        *,\n        required: bool = False,\n        default: Any = None,\n        **kwargs: dict,...
+    - def query_counts(\n    open_qs: MetricsQuerySet,\n    active_qs: MetricsQuerySet,\n    accepted_qs: MetricsQuerySet,\n    start_date: date,\n    metrics_type: MetricsType,\n) -> Callable[[MetricsPerio...
+    - def get_custom_method(setting_name: str) -> Callable | None:\n    """\n    Attempts to load and return the method specified by fully-qualified name at the given setting.\n\n    :param setting_name: Th...
+  collections.deque:
+    - deque()
+
+git:
+  git:
+    - git.Repo(search_parent_directories=True)
+    - git.Repo.clone_from("https://github.com/DefectDojo/sample-scan-files", self.repo_path)
+
+vobject:
+  vobject:
+    - vobject.iCalendar()

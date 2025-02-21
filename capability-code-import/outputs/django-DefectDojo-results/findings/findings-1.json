@@ -1,0 +1,99 @@
+
+{
+  "capabilities": [
+    {
+      "capability_id": "time:management",
+      "evidence": [
+        {
+          "snippet": "datetime.combine(test.target_end, datetime.max.time())"
+        },
+        {
+          "snippet": "datetime.strptime(timestamp, \"%Y-%m-%dT%H:%M:%S.%fZ\")"
+        },
+        {
+          "snippet": "datetime.datetime.now(datetime.UTC)"
+        },
+        {
+          "snippet": "datetime.datetime.fromtimestamp(value.get(\"seconds\"), datetime.UTC)"
+        },
+        {
+          "snippet": "datetime.combine(finding.date, datetime.min.time())"
+        }
+      ]
+    },
+    {
+      "capability_id": "func:wrapping",
+      "evidence": [
+        {
+          "snippet": "wraps(func)"
+        },
+        {
+          "snippet": "wraps(fn)"
+        },
+        {
+          "snippet": "wraps(function)"
+        }
+      ]
+    },
+    {
+      "capability_id": "data:serialization",
+      "evidence": [
+        {
+          "snippet": "datetime.strftime(datetime.strptime(date, \"%Y-%m-%dT%H:%M:%S.%fZ\"), \"%Y-%m-%d\")"
+        },
+        {
+          "snippet": "datetime.strptime(\ndata.get(\"createdAt\")[0:10], \"%Y-%m-%d\",\n)"
+        },
+        {
+          "snippet": "datetime.strptime(date, \"%Y-%m-%d %H:%M:%S %Z\")"
+        },
+        {
+          "snippet": "datetime.strptime(row.get(\"Issue opened: Scan date\"), \"%d %b %Y %H:%M%p %Z\")"
+        },
+        {
+          "snippet": "datetime.strptime(mitigated_ts, \"%Y-%m-%dT%H:%M:%SZ\")"
+        }
+      ]
+    },
+    {
+      "capability_id": "ml:cvss",
+      "evidence": [
+        {
+          "snippet": "cvss.CVSS3(cvss_vector)"
+        },
+        {
+          "snippet": "CVSS3(vulnerability[\"CVSSv3\"])"
+        },
+        {
+          "snippet": "CVSS3.from_rh_vector(cvss_v3)"
+        },
+        {
+          "snippet": "cvss_parser.parse_cvss_from_text(vector)"
+        },
+        {
+          "snippet": "try:\n                c = cvss.CVSS3(cvss_vector)\n                return c.clean_vector()\n            except cvss.CVSS3Error:\n                return None"
+        }
+      ]
+    },
+    {
+      "capability_id": "audit:logging",
+      "evidence": [
+        {
+          "snippet": "auditlog.register(Dojo_User, exclude_fields=[\"password\"])"
+        },
+        {
+          "snippet": "auditlog.register(Finding, m2m_fields={\"reviewers\"})"
+        },
+        {
+          "snippet": "LogEntry.objects.get(\n                action=LogEntry.Action.DELETE,\n                content_type=ContentType.objects.get(app_label=\"dojo\", model=\"endpoint\"),\n                object_id=instance.id,\n            )"
+        },
+        {
+          "snippet": "LogEntry.objects.filter(content_type=ct,\n                                                          object_pk=obj.id)"
+        },
+        {
+          "snippet": "set_actor(actor=user, remote_addr=remote_addr)"
+        }
+      ]
+    }
+  ]
+}

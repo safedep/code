@@ -1,0 +1,178 @@
+
+rest_framework:
+  rest_framework.serializers:
+    - class TextAnswerSerializer(serializers.ModelSerializer):\n    question = serializers.StringRelatedField()\n    answered_survey = QuestionnaireAnsweredSurveySerializer()\n\n    class Meta:\n        model = TextAnswer\n        exclude = ("polymorphic_ctype",)
+    - serializers.StringRelatedField()
+    - class ChoiceAnswerSerializer(serializers.ModelSerializer):\n    answer = serializers.StringRelatedField(many=True)\n    question = serializers.StringRelatedField()\n    answered_survey = Questionnaire...
+    - serializers.StringRelatedField(many=True)
+    - serializers.StringRelatedField()
+    - class QuestionnaireEngagementSurveySerializer(serializers.ModelSerializer):\n    questions = serializers.SerializerMethodField()\n\n    @extend_schema_field(serializers.ListField(child=serializers.Cha...
+    - serializers.SerializerMethodField()
+    - serializers.ListField(child=serializers.CharField())
+    - serializers.CharField()
+    - class QuestionnaireGeneralSurveySerializer(serializers.ModelSerializer):\n    survey = QuestionnaireEngagementSurveySerializer()\n\n    class Meta:\n        model = General_Survey\n        fields = "__all__"
+    - class AnnouncementSerializer(serializers.ModelSerializer):\n\n    class Meta:\n        model = Announcement\n        fields = "__all__"\n\n    def create(self, validated_data):\n        validated_data...
+    - serializers.ValidationError(msg)
+    - class NotificationWebhooksSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Notification_Webhooks\n        fields = "__all__"
+    - class AcceptedRiskSerializer(serializers.Serializer):\n    vulnerability_id = serializers.CharField(\n        max_length=50,\n        label="Vulnerability Id",\n        help_text="An id of a vulnerabi...
+    - serializers.CharField(\n        max_length=50,\n        label="Vulnerability Id",\n        help_text="An id of a vulnerability in a security advisory associated with this finding. Can be a Common Vulnerabilities and Exposure (CVE) or from other sources.")
+    - serializers.CharField(help_text="Justification for accepting findings with this vulnerability id")
+    - serializers.CharField(max_length=200, help_text="Name or email of person who accepts the risk")
+  rest_framework.mixins:
+    - class FindingViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    mixins.UpdateModelMixin,\n    mixins.DestroyModelMixin,\n    mixins.CreateModelMixin,\n    ra_api.Accep...
+    - class FindingViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    mixins.UpdateModelMixin,\n    mixins.DestroyModelMixin,\n    mixins.CreateModelMixin,\n    ra_api.Accep...
+    - class FindingViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    mixins.UpdateModelMixin,\n    mixins.DestroyModelMixin,\n    mixins.CreateModelMixin,\n    ra_api.Accep...
+    - class ProductViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    mixins.CreateModelMixin,\n    mixins.DestroyModelMixin,\n    mixins.UpdateModelMixin,\n    viewsets.Gen...
+    - class ProductViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    mixins.CreateModelMixin,\n    mixins.DestroyModelMixin,\n    mixins.UpdateModelMixin,\n    viewsets.Gen...
+    - class ProductViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    mixins.CreateModelMixin,\n    mixins.DestroyModelMixin,\n    mixins.UpdateModelMixin,\n    viewsets.Gen...
+    - class TestTypesViewSet(\n    mixins.UpdateModelMixin,\n    mixins.CreateModelMixin,\n    viewsets.ReadOnlyModelViewSet,\n):\n    serializer_class = serializers.TestTypeSerializer\n    queryset = Test_...
+    - class TestTypesViewSet(\n    mixins.UpdateModelMixin,\n    mixins.CreateModelMixin,\n    viewsets.ReadOnlyModelViewSet,\n):\n    serializer_class = serializers.TestTypeSerializer\n    queryset = Test_...
+    - class ImportScanView(mixins.CreateModelMixin, viewsets.GenericViewSet):\n\n    """\n    Imports a scan report into an engagement or product.\n\n    By ID:\n    - Create a Product (or use an existing p...
+    - class EndpointMetaImporterView(\n    mixins.CreateModelMixin, viewsets.GenericViewSet,\n):\n\n    """\n    Imports a CSV file into a product to propagate arbitrary meta and tags on endpoints.\n\n    B...
+    - class ImportLanguagesView(mixins.CreateModelMixin, viewsets.GenericViewSet):\n    serializer_class = serializers.ImportLanguagesSerializer\n    parser_classes = [MultiPartParser]\n    queryset = Produ...
+    - class ReImportScanView(mixins.CreateModelMixin, viewsets.GenericViewSet):\n\n    """\n    Reimports a scan report into an existing test.\n\n    By ID:\n    - Create a Product (or use an existing produ...
+    - class NotesViewSet(\n    mixins.UpdateModelMixin,\n    viewsets.ReadOnlyModelViewSet,\n):\n    serializer_class = serializers.NoteSerializer\n    queryset = Notes.objects.none()\n    filter_backends =...
+    - class SystemSettingsViewSet(\n    mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet,\n):\n\n    """Basic control over System Settings. Use 'id' 1 for PUT, PATCH operations"""\n\n...
+    - class SystemSettingsViewSet(\n    mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet,\n):\n\n    """Basic control over System Settings. Use 'id' 1 for PUT, PATCH operations"""\n\n...
+  rest_framework.generics.GenericAPIView:
+    - class UserProfileView(GenericAPIView):\n    permission_classes = (IsAuthenticated,)\n    pagination_class = None\n    serializer_class = serializers.UserProfileSerializer\n\n    @action(\n        deta...
+  rest_framework.authentication.RemoteUserAuthentication aliased as OriginalRemoteUserAuthentication:
+    - class RemoteUserAuthentication(OriginalRemoteUserAuthentication):\n    def authenticate(self, request):\n        # process only if request is comming from the trusted proxy node\n        if IPAddress(...
+  rest_framework.exceptions.ParseError:
+    - isinstance(exc, ParseError)
+  rest_framework.status.HTTP_400_BAD_REQUEST:
+    - response.status_code = HTTP_400_BAD_REQUEST
+    - response.status_code = HTTP_400_BAD_REQUEST
+  rest_framework.serializers.ModelSerializer:
+    - issubclass(obj, ModelSerializer)
+  rest_framework.exceptions.NotFound:
+    - NotFound(msg)
+  rest_framework.viewsets:
+    - class DojoModelViewSet(\n    viewsets.ModelViewSet,\n    dojo_mixins.DeletePreviewModelMixin,\n):\n    pass
+    - class RoleViewSet(viewsets.ReadOnlyModelViewSet):\n    serializer_class = serializers.RoleSerializer\n    queryset = Role.objects.none()\n    filter_backends = (DjangoFilterBackend,)\n    filterset_fi...
+    - class FindingViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    mixins.UpdateModelMixin,\n    mixins.DestroyModelMixin,\n    mixins.CreateModelMixin,\n    ra_api.Accep...
+    - class ProductViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    mixins.CreateModelMixin,\n    mixins.DestroyModelMixin,\n    mixins.UpdateModelMixin,\n    viewsets.Gen...
+    - class TestTypesViewSet(\n    mixins.UpdateModelMixin,\n    mixins.CreateModelMixin,\n    viewsets.ReadOnlyModelViewSet,\n):\n    serializer_class = serializers.TestTypeSerializer\n    queryset = Test_...
+    - class ImportScanView(mixins.CreateModelMixin, viewsets.GenericViewSet):\n\n    """\n    Imports a scan report into an engagement or product.\n\n    By ID:\n    - Create a Product (or use an existing p...
+    - class EndpointMetaImporterView(\n    mixins.CreateModelMixin, viewsets.GenericViewSet,\n):\n\n    """\n    Imports a CSV file into a product to propagate arbitrary meta and tags on endpoints.\n\n    B...
+    - class ImportLanguagesView(mixins.CreateModelMixin, viewsets.GenericViewSet):\n    serializer_class = serializers.ImportLanguagesSerializer\n    parser_classes = [MultiPartParser]\n    queryset = Produ...
+    - class ReImportScanView(mixins.CreateModelMixin, viewsets.GenericViewSet):\n\n    """\n    Reimports a scan report into an existing test.\n\n    By ID:\n    - Create a Product (or use an existing produ...
+    - class NotesViewSet(\n    mixins.UpdateModelMixin,\n    viewsets.ReadOnlyModelViewSet,\n):\n    serializer_class = serializers.NoteSerializer\n    queryset = Notes.objects.none()\n    filter_backends =...
+    - class SystemSettingsViewSet(\n    mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet,\n):\n\n    """Basic control over System Settings. Use 'id' 1 for PUT, PATCH operations"""\n\n...
+    - class ConfigurationPermissionViewSet(\n    viewsets.ReadOnlyModelViewSet,\n):\n    serializer_class = serializers.ConfigurationPermissionSerializer\n    queryset = Permission.objects.none()\n    filte...
+    - class QuestionnaireQuestionViewSet(\n    viewsets.ReadOnlyModelViewSet,\n    dojo_mixins.QuestionSubClassFieldsMixin,\n):\n    serializer_class = serializers.QuestionnaireQuestionSerializer\n    query...
+    - class QuestionnaireAnswerViewSet(\n    viewsets.ReadOnlyModelViewSet,\n    dojo_mixins.AnswerSubClassFieldsMixin,\n):\n    serializer_class = serializers.QuestionnaireAnswerSerializer\n    queryset = ...
+    - class QuestionnaireGeneralSurveyViewSet(\n    viewsets.ReadOnlyModelViewSet,\n):\n    serializer_class = serializers.QuestionnaireGeneralSurveySerializer\n    queryset = General_Survey.objects.none()\...
+    - class QuestionnaireEngagementSurveyViewSet(\n    viewsets.ReadOnlyModelViewSet,\n):\n    serializer_class = serializers.QuestionnaireEngagementSurveySerializer\n    queryset = Engagement_Survey.object...
+    - class QuestionnaireAnsweredSurveyViewSet(\n    prefetch.PrefetchListMixin,\n    prefetch.PrefetchRetrieveMixin,\n    viewsets.ReadOnlyModelViewSet,\n):\n    serializer_class = serializers.Questionnair...
+  rest_framework.permissions.DjangoModelPermissions:
+    - permission_classes = (permissions.IsSuperUser, DjangoModelPermissions)
+    - permission_classes = (permissions.IsSuperUser, DjangoModelPermissions)
+    - permission_classes = (permissions.IsSuperUser, DjangoModelPermissions)
+    - permission_classes = (permissions.IsSuperUser, DjangoModelPermissions)
+    - permission_classes = (IsAuthenticated, DjangoModelPermissions)
+    - permission_classes = (IsAuthenticated, DjangoModelPermissions)
+    - permission_classes = (IsAuthenticated, DjangoModelPermissions)
+    - permission_classes = (permissions.IsSuperUser, DjangoModelPermissions)
+    - permission_classes = (permissions.IsSuperUser, DjangoModelPermissions)
+    - permission_classes = (permissions.IsSuperUser, DjangoModelPermissions)
+    - permission_classes = (permissions.IsSuperUser, DjangoModelPermissions)
+    - permission_classes = (IsAuthenticated, DjangoModelPermissions)
+    - permission_classes = (permissions.IsSuperUser, DjangoModelPermissions)
+    - permission_classes = (IsAuthenticated, DjangoModelPermissions)
+    - permission_classes = (\n        permissions.UserHasEngagementPermission,\n        DjangoModelPermissions,\n    )
+    - permission_classes = (\n        permissions.UserHasEngagementPermission,\n        DjangoModelPermissions,\n    )
+    - permission_classes = (\n        permissions.UserHasEngagementPermission,\n        DjangoModelPermissions,\n    )
+    - permission_classes = (\n        permissions.UserHasEngagementPermission,\n        DjangoModelPermissions,\n    )
+    - permission_classes = (\n        permissions.UserHasEngagementPermission,\n        DjangoModelPermissions,\n    )
+    - permission_classes = (permissions.IsSuperUser, DjangoModelPermissions)
+  rest_framework.response.Response:
+    - Response()
+    - Response()
+    - Response()
+    - Response()
+    - Response(response, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    - Response(\n                report_options.errors, status=status.HTTP_400_BAD_REQUEST,\n            )
+    - Response(report.data)
+    - Response(status=status.HTTP_204_NO_CONTENT)
+    - Response(\n                report_options.errors, status=status.HTTP_400_BAD_REQUEST,\n            )
+    - Response(report.data)
+    - Response(\n                    new_note.errors, status=status.HTTP_400_BAD_REQUEST,\n                )
+    - Response("Only one instance of this note_type allowed on an engagement.", status=status.HTTP_400_BAD_REQUEST)
+    - Response(\n                serialized_note.data, status=status.HTTP_201_CREATED,\n            )
+    - Response(serialized_notes.data, status=status.HTTP_200_OK)
+    - Response(\n                    new_file.errors, status=status.HTTP_400_BAD_REQUEST,\n                )
+    - Response(\n                serialized_file.data, status=status.HTTP_201_CREATED,\n            )
+    - Response(serialized_files.data, status=status.HTTP_200_OK)
+    - Response(\n                    {\n                        "message": "A completed checklist for this engagement already exists.",\n                    },\n                    status=status.HTTP_400_BAD_REQUEST,\n                )
+    - Response(\n                    check_list.errors, status=status.HTTP_400_BAD_REQUEST,\n                )
+    - Response(\n                serialized_check_list.data, status=status.HTTP_201_CREATED,\n            )
+    - Response(result, status=status.HTTP_200_OK)
+    - Response(\n                {"error": "File ID not associated with Engagement"},\n                status=status.HTTP_404_NOT_FOUND,\n            )
+    - Response(\n                    {"info": "Jira Epic update query sent"},\n                    status=status.HTTP_200_OK,\n                )
+    - Response(\n                    {"info": "Jira Epic create query sent"},\n                    status=status.HTTP_200_OK,\n                )
+    - Response(\n                {"error": "Bad Request!"},\n                status=status.HTTP_400_BAD_REQUEST,\n            )
+    - Response(\n                {"error": "Proof has not provided to this risk acceptance..."},\n                status=status.HTTP_404_NOT_FOUND,\n            )
+    - Response(\n                    finding_close.errors, status=status.HTTP_400_BAD_REQUEST,\n                )
+    - Response(serialized_finding.data)
+    - Response(\n                    new_tags.errors, status=status.HTTP_400_BAD_REQUEST,\n                )
+    - Response(serialized_tags.data)
+    - Response(\n                    burps.errors, status=status.HTTP_400_BAD_REQUEST,\n                )
+    - Response(serialized_burps.data)
+    - Response(\n                    new_note.errors, status=status.HTTP_400_BAD_REQUEST,\n                )
+    - Response("Only one instance of this note_type allowed on a finding.", status=status.HTTP_400_BAD_REQUEST)
+    - Response(\n                serialized_note.data, status=status.HTTP_201_CREATED,\n            )
+    - Response(serialized_notes.data, status=status.HTTP_200_OK)
+    - Response(\n                    new_file.errors, status=status.HTTP_400_BAD_REQUEST,\n                )
+    - Response(\n                serialized_file.data, status=status.HTTP_201_CREATED,\n            )
+    - Response(serialized_files.data, status=status.HTTP_200_OK)
+    - Response(\n                {"error": "File ID not associated with Finding"},\n                status=status.HTTP_404_NOT_FOUND,\n            )
+    - Response(\n                    {"error": "Selected Note is not assigned to this Finding"},\n                    status=status.HTTP_400_BAD_REQUEST,\n                )
+    - Response(\n                {"error": "('note_id') parameter missing"},\n                status=status.HTTP_400_BAD_REQUEST,\n            )
+    - Response(\n                {"error": "Delete Failed, You are not the Note's author"},\n                status=status.HTTP_400_BAD_REQUEST,\n            )
+    - Response(\n            {"Success": "Selected Note has been Removed successfully"},\n            status=status.HTTP_204_NO_CONTENT,\n        )
+    - Response(\n                    {"error": "Empty Tag List Not Allowed"},\n                    status=status.HTTP_400_BAD_REQUEST,\n                )
+    - Response(\n                        {\n                            "error": f"'{tag}' is not a valid tag in list",\n                        },\n                        status=status.HTTP_400_BAD_REQUEST,\n                    )
+    - Response(\n                {"success": "Tag(s) Removed"},\n                status=status.HTTP_204_NO_CONTENT,\n            )
+    - Response(\n            delete_tags.errors, status=status.HTTP_400_BAD_REQUEST,\n        )
+    - Response(serializer.data, status=status.HTTP_200_OK)
+    - Response(status=status.HTTP_400_BAD_REQUEST)
+    - Response(status=status.HTTP_204_NO_CONTENT)
+    - Response(status=status.HTTP_400_BAD_REQUEST)
+    - Response(status=status.HTTP_204_NO_CONTENT)
+    - Response(\n                report_options.errors, status=status.HTTP_400_BAD_REQUEST,\n            )
+    - Response(report.data)
+    - Response(serializer.data, status=status.HTTP_200_OK)
+    - Response(\n                "Metadata name is required", status=status.HTTP_400_BAD_REQUEST,\n            )
+    - Response(data=request.data, status=status.HTTP_200_OK)
+    - Response(\n                "Update failed because the new name already exists",\n                status=status.HTTP_400_BAD_REQUEST,\n            )
+    - Response(\n                    "Create failed probably because the name of the metadata already exists",\n                    status=status.HTTP_400_BAD_REQUEST,\n                )
+    - Response(data=metadata_data.data, status=status.HTTP_200_OK)
+    - Response(\n            metadata_data.errors, status=status.HTTP_400_BAD_REQUEST,\n        )
+    - Response(\n                "A metadata name must be provided",\n                status=status.HTTP_400_BAD_REQUEST,\n            )
+    - Response("Metadata deleted", status=status.HTTP_200_OK)
+    - Response(\n            {"error", "unsupported method"}, status=status.HTTP_400_BAD_REQUEST,\n        )
+    - Response(status=status.HTTP_201_CREATED, data=serialized_data.data)
+    - Response(status=status.HTTP_204_NO_CONTENT)
+    - Response(\n                report_options.errors, status=status.HTTP_400_BAD_REQUEST,\n            )
+    - Response(report.data)
+    - Response(response, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    - Response(response, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    - Response(status=status.HTTP_204_NO_CONTENT)
+    - Response(\n                report_options.errors, status=status.HTTP_400_BAD_REQUEST,\n            )
+    - Response(report.data)
+    - Response(\n                    "There must be at least one owner",\n                    status=status.HTTP_400_BAD_REQUEST,\n                )
+    - Response(status=status.HTTP_204_NO_CONTENT)
+    - Response(response, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    - Response(response, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    - Response(status=status.HTTP_204_NO_CONTENT)
+    - Response(\n                report_options.errors, status=status.HTTP_400_BAD_REQUEST,\n            )
+    - Response(report.data)
+    - Response(\n                    new_note.errors, status=status.HTTP_400_BAD_REQUEST,\n                )
+    - Response("Only one instance of this note_type allowed on a test.", status=status.HTTP_400_BAD_REQUEST)
+    - Response(\n                serialized_note.data, status=status.HTTP_201_CREATED,\n            )
+    - Response(serialized_notes.data, status=status.HTTP_200_OK)
+    - Response(\n                    new_file.errors, status=status.HTTP_400_BAD_REQUEST,\n                )
+    - Response(\n                serialized_file.data, status=status.HTTP_201_CREATED,\n            )
+    - Response(serialized_files.data, status=status.HTTP_200_OK)
+    - Response(\n                {"error": "File ID not associated with Test"},\n                status=status.HTTP_404_NOT_FOUND,\n            )

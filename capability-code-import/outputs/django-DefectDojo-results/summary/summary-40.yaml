@@ -1,0 +1,267 @@
+
+dojo:
+  dojo.benchmark.urls.urlpatterns aliased as benchmark_urls:
+    - ur += benchmark_urls
+  dojo.forms.AdvancedJIRAForm:
+    - return AdvancedJIRAForm
+    - return AdvancedJIRAForm
+    - return AdvancedJIRAForm
+  dojo.forms.CreateQuestionnaireForm:
+    - CreateQuestionnaireForm(instance=survey)
+    - CreateQuestionnaireForm(request.POST, instance=survey)
+    - CreateQuestionnaireForm()
+    - CreateQuestionnaireForm(request.POST)
+  dojo.forms.CreateChoiceQuestionForm:
+    - CreateChoiceQuestionForm()
+    - CreateChoiceQuestionForm(request.POST)
+  dojo.__docs__:
+    - mark_safe(__docs__)
+  dojo.models.BannerConf:
+    - BannerConf.objects.get()
+  dojo.api_v2.views.NoteTypeViewSet:
+    - v2_api.register(r"note_type", NoteTypeViewSet, basename="note_type")
+  dojo.product_type.urls.urlpatterns aliased as pt_urls:
+    - ur += pt_urls
+  dojo.forms.Add_Product_Member_UserForm:
+    - Add_Product_Member_UserForm(initial={"user": user.id})
+    - Add_Product_Member_UserForm(request.POST, initial={"user": user.id})
+  dojo.models.SEVERITY_CHOICES:
+    - serializers.ChoiceField(\n        choices=SEVERITY_CHOICES,\n        default="Info",\n        help_text="Minimum severity level to be imported",\n    )
+    - MultipleChoiceFilter(choices=SEVERITY_CHOICES)
+    - MultipleChoiceFilter(choices=SEVERITY_CHOICES)
+    - MultipleChoiceFilter(choices=SEVERITY_CHOICES, label="Severity")
+    - MultipleChoiceFilter(choices=SEVERITY_CHOICES, label="Severity")
+    - MultipleChoiceFilter(choices=SEVERITY_CHOICES)
+    - forms.ChoiceField(help_text="Minimum severity level to be imported",\n                                         required=True,\n                                         choices=SEVERITY_CHOICES)
+    - forms.ChoiceField(help_text="Minimum severity level to be imported",\n                                         required=True,\n                                         choices=SEVERITY_CHOICES[0:4])
+    - forms.ChoiceField(\n        choices=SEVERITY_CHOICES,\n        error_messages={\n            "required": "Select valid choice: In Progress, On Hold, Completed",\n            "invalid_choice": EFFORT_FOR_FIXING_INVALID_CHOICE})
+    - forms.ChoiceField(\n        choices=SEVERITY_CHOICES,\n        error_messages={\n            "required": "Select valid choice: In Progress, On Hold, Completed",\n            "invalid_choice": EFFORT_FOR_FIXING_INVALID_CHOICE})
+    - forms.ChoiceField(\n        choices=SEVERITY_CHOICES,\n        error_messages={\n            "required": "Select valid choice: In Progress, On Hold, Completed",\n            "invalid_choice": "Select valid choice: Critical,High,Medium,Low"})
+    - forms.ChoiceField(\n        choices=SEVERITY_CHOICES,\n        error_messages={\n            "required": "Select valid choice: In Progress, On Hold, Completed",\n            "invalid_choice": "Select valid choice: Critical,High,Medium,Low"})
+    - forms.ChoiceField(required=False, choices=SEVERITY_CHOICES, error_messages={"required": "Select valid choice: In Progress, On Hold, Completed", "invalid_choice": "Select valid choice: Critical,High,Medium,Low"})
+    - forms.ChoiceField(\n        required=False,\n        choices=SEVERITY_CHOICES,\n        error_messages={\n            "required": "Select valid choice: In Progress, On Hold, Completed",\n            "invalid_choice": "Select valid choice: Critical,High,Medium,Low"})
+  dojo.utils.update_external_issue:
+    - update_external_issue(finding, old_status, "github")
+    - update_external_issue(finding, old_status, "github")
+  dojo.models.Benchmark_Product:
+    - model = Benchmark_Product
+    - Benchmark_Product.objects.filter(product_id=benchmark_score.product_id, enabled=True,\n                                                      control__category__type=benchmark_score.benchmark_type)
+  dojo.forms.GITHUBForm:
+    - GITHUBForm(request.POST, instance=GITHUB_Conf())
+    - GITHUBForm()
+  dojo.models.JIRA_Instance:
+    - model = JIRA_Instance
+    - JIRA_Instance.objects.none()
+    - JIRA_Instance.objects.all()
+    - model = JIRA_Instance
+    - model = JIRA_Instance
+    - model = JIRA_Instance
+    - JIRA_Instance.objects.all()
+    - isinstance(jira_instance, JIRA_Instance)
+    - jid = parsed["issue"]["id"]\n            # This may raise a 404, but it will be handled in the exception response\n            try:\n                jissue = JIRA_Issue.objects.get(jira_id=jid)\n     ...
+    - """\n    Example incoming requests from JIRA Server 8.14.0\n    {\n    "timestamp":1610269967824,\n    "webhookEvent":"comment_created",\n    "comment":{\n        "self":"https://jira.host.com/rest/ap...
+    - JIRA_Instance.objects.values_list("username", flat=True)
+    - JIRA_Instance()
+    - JIRA_Instance()
+    - JIRA_Instance()
+    - JIRA_Instance(\n                username=jira_username,\n                password=jira_password,\n                url=jira_server,\n                configuration_name=jform.cleaned_data.get("configura...
+    - JIRA_Instance()
+    - JIRA_Instance.objects.get(pk=jid)
+    - JIRA_Instance.objects.get(pk=jid)
+    - JIRA_Instance.objects.all()
+    - get_object_or_404(JIRA_Instance, pk=tid)
+    - get_object_or_404(JIRA_Instance, pk=tid)
+    - JIRA_Instance.objects.all()
+  dojo.tool_product.queries.get_authorized_tool_product_settings:
+    - get_authorized_tool_product_settings(Permissions.Product_View)
+  dojo.utils.Product_Tab:
+    - Product_Tab(prod, title="Credentials", tab="settings")
+    - Product_Tab(prod, title="Edit Product Credential", tab="settings")
+    - Product_Tab(prod, title="Add Credential Configuration", tab="settings")
+    - Product_Tab(product, title="Delete Credential Mapping", tab="settings")
+    - Product_Tab(product, view_name, tab="endpoints")
+    - Product_Tab(endpoint.product, "Host" if host_view else "Endpoint", tab="endpoints")
+    - Product_Tab(endpoint.product, "Endpoint", tab="endpoints")
+    - Product_Tab(endpoint.product, "Delete Endpoint", tab="endpoints")
+    - Product_Tab(product, "Add Endpoint", tab="endpoints")
+    - Product_Tab(endpoint.product, "Add Metadata", tab="endpoints")
+    - Product_Tab(endpoint.product, "Edit Metadata", tab="endpoints")
+    - Product_Tab(product, title="Endpoint Meta Importer", tab="endpoints")
+    - Product_Tab(engagement.product, title=title, tab="engagements")
+    - Product_Tab(product, title="Delete Engagement", tab="engagements")
+    - Product_Tab(product, title="Copy Engagement", tab="engagements")
+    - Product_Tab(prod, title="View" + title + " Engagement", tab="engagements")
+    - Product_Tab(prod, title="View" + title + " Engagement", tab="engagements")
+    - Product_Tab(eng.product, title="Add Tests", tab="engagements")
+    - def get_product_tab(\n        self,\n        product: Product,\n        engagement: Engagement,\n    ) -> tuple[Product_Tab, dict]:\n        """\n        Determine how the product tab will be rendered...
+    - Product_Tab(engagement.product, title="Import Scan Results", tab="engagements")
+    - Product_Tab(product, title="Import Scan Results", tab="findings")
+    - Product_Tab(eng.product, title="Checklist", tab="engagements")
+    - Product_Tab(eng.product, title="Risk Acceptance", tab="engagements")
+    - Product_Tab(eng.product, title="Risk Acceptance", tab="engagements")
+    - Product_Tab(eng.product, title="Upload Threat Model", tab="engagements")
+    - Product_Tab(product, title="Findings", tab="findings")
+    - Product_Tab(engagement.product, title=engagement.name, tab="engagements")
+    - Product_Tab(\n                finding.test.engagement.product, title="View Finding", tab="findings",\n            )
+    - Product_Tab(\n                finding.test.engagement.product, title="Edit Finding", tab="findings",\n            )
+    - Product_Tab(\n        finding.test.engagement.product, title="Close", tab="findings",\n    )
+    - Product_Tab(\n        finding.test.engagement.product, title="Jira Status Review", tab="findings",\n    )
+    - Product_Tab(product, title="Copy Finding", tab="findings")
+    - Product_Tab(\n        finding.test.engagement.product,\n        title="Planned Remediation Date",\n        tab="findings",\n    )
+    - Product_Tab(\n        finding.test.engagement.product, title="Review Finding", tab="findings",\n    )
+    - Product_Tab(\n        finding.test.engagement.product, title="Clear Finding Review", tab="findings",\n    )
+    - Product_Tab(\n        test.engagement.product, title="Apply Template to Finding", tab="findings",\n    )
+    - Product_Tab(\n        finding.test.engagement.product,\n        title="Finding Template Options",\n        tab="findings",\n    )
+    - Product_Tab(\n                finding.test.engagement.product,\n                title="Apply Finding Template",\n                tab="findings",\n            )
+    - Product_Tab(\n        finding.test.engagement.product, title="Promote Finding", tab="findings",\n    )
+    - Product_Tab(\n        finding.test.engagement.product, title="Merge Findings", tab="findings",\n    )
+    - Product_Tab(prod, title="Add Tracked Files to a Product", tab="settings")
+    - Product_Tab(product, title="Tracked Product Files, Paths and Artifacts", tab="settings")
+    - Product_Tab(product, title="Edit Tracked Files", tab="settings")
+    - Product_Tab(product, title="Delete Product Tool Configuration", tab="settings")
+    - Product_Tab(prod, title=_("Product"), tab="overview")
+    - Product_Tab(prod, title=_("Product"), tab="components")
+    - Product_Tab(prod, title=_("Product"), tab="metrics")
+    - Product_Tab(prod, title=_("All Engagements"), tab="engagements")
+    - Product_Tab(product, title=_("Edit Product"), tab="settings")
+    - Product_Tab(product, title=_("Product"), tab="settings")
+    - Product_Tab(product, title=title, tab="engagements")
+    - Product_Tab(get_object_or_404(Product, id=pid), title=_("Add Technology"), tab="settings")
+    - Product_Tab(technology.product, title=_("Edit Technology"), tab="settings")
+    - Product_Tab(technology.product, title=_("Delete Technology"), tab="settings")
+    - Product_Tab(prod, title=_("Add Metadata"), tab="settings")
+    - Product_Tab(prod, title=_("Edit Metadata"), tab="settings")
+    - Product_Tab(test.engagement.product, title=_("Add Finding"), tab="engagements")
+    - Product_Tab(prod, title=_("Engagement Presets"), tab="settings")
+    - Product_Tab(prod, title=_("Edit Engagement Preset"), tab="settings")
+    - Product_Tab(prod, title=_("New Engagement Preset"), tab="settings")
+    - Product_Tab(prod, title=_("Delete Engagement Preset"), tab="settings")
+    - Product_Tab(product, title=_("Add Product Member"), tab="settings")
+    - Product_Tab(member.product, title=_("Edit Product Member"), tab="settings")
+    - Product_Tab(member.product, title=_("Delete Product Member"), tab="settings")
+    - Product_Tab(product, title=_("Add API Scan Configuration"), tab="settings")
+    - Product_Tab(get_object_or_404(Product, id=pid), title=_("API Scan Configurations"), tab="settings")
+    - Product_Tab(get_object_or_404(Product, id=pid), title=_("Edit API Scan Configuration"), tab="settings")
+    - Product_Tab(get_object_or_404(Product, id=pid), title=_("Delete Tool Configuration"), tab="settings")
+    - Product_Tab(group.product, title=_("Edit Product Group"), tab="settings")
+    - Product_Tab(group.product, title=_("Delete Product Group"), tab="settings")
+    - Product_Tab(product, title=_("Edit Product Group"), tab="settings")
+    - Product_Tab(product, "Product Endpoint Report", tab="endpoints")
+    - Product_Tab(engagement.product, title="Engagement Report", tab="engagements")
+    - Product_Tab(test.engagement.product, title="Test Report", tab="engagements")
+    - Product_Tab(product, title="Product Report", tab="findings")
+    - Product_Tab(endpoint.product, title="Endpoint Host Report", tab="endpoints")
+    - Product_Tab(endpoint.product, title="Endpoint Report", tab="endpoints")
+    - Product_Tab(test.engagement.product, title=_("Test"), tab="engagements")
+    - Product_Tab(test.engagement.product, title=_("Edit Test"), tab="engagements")
+    - Product_Tab(test.engagement.product, title=_("Delete Test"), tab="engagements")
+    - Product_Tab(product, title="Copy Test", tab="engagements")
+    - Product_Tab(test.engagement.product, title=_("Add Finding"), tab="engagements")
+    - Product_Tab(test.engagement.product, title=_("Add Finding"), tab="engagements")
+    - Product_Tab(test.engagement.product, title=_("Re-upload a %s") % scan_type, tab="engagements")
+    - Product_Tab(prod, title=_("Tool Configurations"), tab="settings")
+    - Product_Tab(prod, title=_("Tool Configurations"), tab="settings")
+    - Product_Tab(product, title=_("Edit Product Tool Configuration"), tab="settings")
+    - Product_Tab(product, title=_("Delete Product Tool Configuration"), tab="settings")
+    - Product_Tab(get_object_or_404(Product, id=product_id), title="History", tab=active_tab)
+  dojo.forms.Add_Product_Group_GroupForm:
+    - Add_Product_Group_GroupForm(initial={"group": group.id})
+    - Add_Product_Group_GroupForm(request.POST, initial={"group": group.id})
+  dojo.engagement.views.import_scan_results:
+    - import_scan_results(request, pid=pid)
+  dojo.forms.Edit_Product_Type_MemberForm:
+    - Edit_Product_Type_MemberForm(instance=member)
+    - Edit_Product_Type_MemberForm(request.POST, instance=member)
+  dojo.tools.api_vulners.api_client.VulnersAPI:
+    - SCAN_APIS = {\n                "Bugcrowd API": BugcrowdAPI,\n                "BlackDuck API": BlackduckAPI,\n                "Cobalt.io": CobaltAPI,\n                "Edgescan": EdgescanAPI,\n                "SonarQube": SonarQubeAPI,\n                "Vulners": VulnersAPI,\n             }
+  dojo.tools.sonarqube.sonarqube_restapi_json.SonarQubeRESTAPIJSON:
+    - SonarQubeRESTAPIJSON()
+    - SonarQubeRESTAPIJSON()
+  dojo.tools.sonatype.identifier.ComponentIdentifier:
+    - ComponentIdentifier(component)
+  dojo.models.Note_Type:
+    - model = Note_Type
+    - Note_Type.objects.none()
+    - Note_Type.objects.all()
+    - Note_Type.objects.filter(is_active=True)
+    - Note_Type.objects.filter(is_active=True)
+    - model = Note_Type
+    - Note_Type.objects.filter(is_active=True)
+    - Note_Type.objects.filter(is_active=True)
+    - Note_Type.objects.filter(is_active=True)
+    - Note_Type.objects.filter(\n        is_single=True, is_active=True,\n    )
+    - Note_Type.objects.filter(\n        is_single=False, is_active=True,\n    )
+    - Note_Type.objects.filter(id__in=available_note_types)
+    - Note_Type.objects.filter(\n        is_mandatory=True, is_active=True,\n    )
+    - Note_Type.objects.filter(id__in=notes_to_be_added)
+    - model = Note_Type
+    - model = Note_Type
+    - Note_Type.objects.all()
+    - get_object_or_404(Note_Type, pk=ntid)
+    - get_object_or_404(Note_Type, pk=ntid)
+    - get_object_or_404(Note_Type, pk=ntid)
+    - Note_Type.objects.filter(is_active=True)
+    - Note_Type.objects.filter(is_single=True, is_active=True)
+    - Note_Type.objects.filter(is_single=False, is_active=True)
+    - Note_Type.objects.filter(id__in=available_note_types)
+    - Note_Type.objects.filter(is_mandatory=True, is_active=True)
+    - Note_Type.objects.filter(is_active=True)
+    - Note_Type.objects.filter(is_mandatory=True, is_active=True)
+    - Note_Type.objects.filter(is_mandatory=True, is_active=True)
+  dojo.models.FileAccessToken:
+    - FileAccessToken.objects.get(token=token)
+    - FileAccessToken(user=user, file=image, size=size)
+  dojo.utils.prod_name:
+    - prod_name(obj)
+    - prod_name(obj)
+  dojo.filters.NoteTypesFilter:
+    - NoteTypesFilter(request.GET, queryset=initial_queryset)
+  dojo.utils.get_period_counts_legacy:
+    - get_period_counts_legacy(findings.qs.order_by("numerical_severity"), findings.qs.order_by("numerical_severity"), None,\n                                                            months_between, start_date,\n                                                            relative_delta="months")
+  dojo.api_v2.views.DojoSpectacularAPIView aliased as SpectacularAPIView:
+    - SpectacularAPIView.as_view()
+  dojo.models.TextQuestion:
+    - child_models = (\n        TextQuestion,\n        ChoiceQuestion,\n    )
+    - admin.site.register(TextQuestion, TextQuestionAdmin)
+    - isinstance(instance, TextQuestion)
+    - model = TextQuestion
+    - ContentType.objects.get_for_model(TextQuestion)
+    - model = TextQuestion
+    - model = TextQuestion
+    - TextQuestion.objects.create(optional=False, order=1, text="What is love?")
+    - TextQuestion.objects.create(optional=False, order=1, text="What is love?")
+    - TextQuestion.objects.create(\n                        optional=form.cleaned_data["optional"],\n                        order=form.cleaned_data["order"],\n                        text=form.cleaned_data["text"])
+  dojo.models.Product_Group:
+    - model = Product_Group
+    - Product_Group.objects.filter(\n                product=data.get("product"), group=data.get("group"),\n            )
+    - Product_Group.objects.none()
+    - Product_Group.objects.filter(\n        product=OuterRef("product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(\n        product=OuterRef("product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(\n        product=OuterRef("endpoint__product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(\n        product=OuterRef("product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(\n        product=OuterRef("test__engagement__product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(\n        product=OuterRef("finding__test__engagement__product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(product=self.initial["product"])
+    - model = Product_Group
+    - Product_Group.objects.filter(group=self.initial["group"])
+    - model = Product_Group
+    - model = Product_Group
+    - Product_Group.objects.filter(group=group)
+    - Product_Group.objects.filter(product=product, group=group)
+    - Product_Group()
+    - Product_Group.objects.filter(\n        product=OuterRef("engagement__product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(\n        product=OuterRef("product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(\n        product=OuterRef("engagement__product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(\n        product=OuterRef("finding_group__test__engagement__product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(\n        product=OuterRef("finding__test__engagement__product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(\n        product=OuterRef("pk"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(product=product, group__in=authorized_groups)
+    - Product_Group.objects.none()
+    - Product_Group.objects.none()
+    - Product_Group.objects.all()
+    - Product_Group.objects.filter(product__in=products)
+    - Product_Group.objects.filter(\n        product=OuterRef("product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(\n        product=OuterRef("product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(\n        product=OuterRef("endpoint__product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(\n        product=OuterRef("finding__test__engagement__product_id"),\n        group__users=user,\n        role__in=roles)
+    - Product_Group.objects.filter(\n        product=OuterRef("product_id"),\n        group__users=user,\n        role__in=roles)
