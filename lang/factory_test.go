@@ -16,21 +16,10 @@ var resolveLanguageTestcases = []struct {
 	{filePath: "test.js", exists: true, expectedLanguageCode: core.LanguageCodeJavascript},
 	{filePath: "test.cjs", exists: true, expectedLanguageCode: core.LanguageCodeJavascript},
 	{filePath: "test.mjs", exists: true, expectedLanguageCode: core.LanguageCodeJavascript},
-	{
-		filePath:             "test.go",
-		exists:               false,
-		expectedLanguageCode: "",
-	},
-	{
-		filePath:             "README.md",
-		exists:               false,
-		expectedLanguageCode: "",
-	},
-	{
-		filePath:             "withoutextension",
-		exists:               false,
-		expectedLanguageCode: "",
-	},
+	{filePath: "test.go", exists: true, expectedLanguageCode: core.LanguageCodeGo},
+	{filePath: "test.java", exists: false, expectedLanguageCode: ""},
+	{filePath: "README.md", exists: false, expectedLanguageCode: ""},
+	{filePath: "withoutextension", exists: false, expectedLanguageCode: ""},
 }
 
 func TestResolveLanguage(t *testing.T) {
@@ -44,5 +33,19 @@ func TestResolveLanguage(t *testing.T) {
 				assert.Nil(t, l)
 			}
 		}
+	})
+}
+
+func TestGetLanguage(t *testing.T) {
+	t.Run("GetLanguage", func(t *testing.T) {
+		allLangs, err := AllLanguages()
+		assert.NoError(t, err)
+		for _, lang := range allLangs {
+			l, err := GetLanguage(string(lang.Meta().Code))
+			assert.NoError(t, err)
+			assert.Equal(t, lang.Meta().Code, l.Meta().Code)
+		}
+		_, err = GetLanguage("unknown")
+		assert.Error(t, err)
 	})
 }

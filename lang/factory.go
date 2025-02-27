@@ -9,12 +9,15 @@ import (
 	"github.com/safedep/dry/log"
 )
 
-var languages = map[string]func() (core.Language, error){
-	"python": func() (core.Language, error) {
+var languages = map[core.LanguageCode]func() (core.Language, error){
+	core.LanguageCodePython: func() (core.Language, error) {
 		return NewPythonLanguage()
 	},
-	"javascript": func() (core.Language, error) {
+	core.LanguageCodeJavascript: func() (core.Language, error) {
 		return NewJavascriptLanguage()
+	},
+	core.LanguageCodeGo: func() (core.Language, error) {
+		return NewGoLanguage()
 	},
 }
 
@@ -31,12 +34,13 @@ func AllLanguages() ([]core.Language, error) {
 	return langs, nil
 }
 
-func GetLanguage(name string) (core.Language, error) {
-	if f, ok := languages[name]; ok {
+// GetLanguage returns the core.Language implementation for the given language code
+func GetLanguage(languageCode string) (core.Language, error) {
+	if f, ok := languages[core.LanguageCode(languageCode)]; ok {
 		return f()
 	}
 
-	return nil, fmt.Errorf("language not found: %s", name)
+	return nil, fmt.Errorf("language not found: %s", languageCode)
 }
 
 // ResolveLanguageFromPath resolves the programming language from the
