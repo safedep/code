@@ -104,3 +104,11 @@ func (r *pythonResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode
 
 	return imports, err
 }
+
+func (r *pythonResolvers) ResolveImportContents(importNode *ast.ImportNode) (core.ImportContents, error) {
+	return core.ImportContents{
+		ModuleName:  importNode.ModuleName(),
+		ModuleItem:  importNode.ModuleItem(),
+		ModuleAlias: importNode.ModuleAlias(),
+	}, nil
+}

@@ -153,3 +153,11 @@ func (r *javascriptResolvers) ResolveImports(tree core.ParseTree) ([]*ast.Import
 
 	return imports, err
 }
+
+func (r *javascriptResolvers) ResolveImportContents(importNode *ast.ImportNode) (core.ImportContents, error) {
+	return core.ImportContents{
+		ModuleName:  importNode.ModuleName(),
+		ModuleItem:  importNode.ModuleItem(),
+		ModuleAlias: importNode.ModuleAlias(),
+	}, nil
+}
