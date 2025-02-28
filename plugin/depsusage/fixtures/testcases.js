@@ -4,7 +4,7 @@
 import express from 'express';
 import DotEnv from 'dotenv';
 const buffer = require('buffer');
-const Cluster = require('cluster');
+let Cluster = require('cluster');
 const EslintConfig = require('@gilbarbara/eslint-config');
 
 const app = express();
@@ -61,19 +61,26 @@ ReactDOM.render(<App />, document.getElementById('root'));
 import { EADDRINUSE, EACCES, EAGAIN } from 'constants';
 import { hex } from 'chalk/ansi-styles';
 const { patch } = require('virtual-dom');
+const a = require("@xyz/abc"), b = require("@xyz/xyz");
 
 console.log(`Error: ${EADDRINUSE}`);
-console.log(hex.open);
+console.log(hex.open, b.something);
 patch(oldTree, newTree);
 
 // Aliased named import
 import { useEffect, useState as useMyState } from 'react';
 const { bar, foo: fooAlias } = require('@xyz/pqr');
+let { baz, baz2: baz2Alias } = require('@xyz/mno');
 
 const [count, setCount] = useMyState(0);
-useEffect(() => {
-    console.log('Component Mounted');
-}, []);
+useEffect(() => {}, []);
 
-console.log(fooAlias());
-console.log(bar());
+console.log(fooAlias(), bar());
+
+
+// Commonly found in bundled js code
+// imports mixed with other stuff including usage
+let
+    c = require("polyfill"),
+    {d, baz: bazAlias} = require("vue"),
+    xyz=DotEnv.config();

@@ -85,10 +85,15 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 		return fmt.Errorf("failed to get tree data: %w", err)
 	}
 
+	treeLanguage, err := tree.Language()
+	if err != nil {
+		return fmt.Errorf("failed to get tree language: %w", err)
+	}
+
 	cursor := sitter.NewTreeCursor(tree.Tree().RootNode())
 	defer cursor.Close()
 
-	err = traverse(cursor, func(n *sitter.Node) error {
+	err = traverse(cursor, &treeLanguage, treeData, func(n *sitter.Node) error {
 		nodeType := n.Type()
 		content := n.Content(*treeData)
 		identifierKey := string(content)
@@ -108,7 +113,7 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 	return nil
 }
 
-func traverse(cursor *sitter.TreeCursor, visit func(node *sitter.Node) error) error {
+func traverse(cursor *sitter.TreeCursor, treeLanguage *core.Language, treeData *[]byte, visit func(node *sitter.Node) error) error {
 	for {
 		// Call the visit function for the current node
 		err := visit(cursor.CurrentNode())
@@ -116,8 +121,7 @@ func traverse(cursor *sitter.TreeCursor, visit func(node *sitter.Node) error) er
 			return err
 		}
 
-		// No need to traverse inside if the node is of an ignored type
-		if _, ignored := ignoredTypes[cursor.CurrentNode().Type()]; !ignored {
+		if !isIgnoredNode(cursor.CurrentNode(), treeLanguage, treeData) {
 			// Try going to the first child
 			if cursor.GoToFirstChild() {
 				continue
