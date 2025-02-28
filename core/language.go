@@ -34,6 +34,7 @@ type LanguageCode string
 const (
 	LanguageCodePython     LanguageCode = "python"
 	LanguageCodeJavascript LanguageCode = "javascript"
+	LanguageCodeGo         LanguageCode = "go"
 )
 
 // LanguageMeta is exposes metadata about a language
