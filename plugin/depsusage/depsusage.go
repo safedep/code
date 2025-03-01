@@ -33,7 +33,7 @@ func (p *dependencyUsagePlugin) Name() string {
 	return "DependencyUsagePlugin"
 }
 
-var supportedLanguages = []core.LanguageCode{core.LanguageCodePython}
+var supportedLanguages = []core.LanguageCode{core.LanguageCodePython, core.LanguageCodeGo, core.LanguageCodeJavascript}
 
 func (p *dependencyUsagePlugin) SupportedLanguages() []core.LanguageCode {
 	return supportedLanguages
@@ -60,18 +60,23 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 
 	moduleIdentifiers := make(map[string]*identifierItem)
 	for _, imp := range imports {
-		packageHint := resolvePackageHint(imp.ModuleName(), lang)
+		importContents, err := helpers.ResolveImportContents(imp, lang)
+		if err != nil {
+			return fmt.Errorf("failed to resolve import contents: %w", err)
+		}
+
+		packageHint := resolvePackageHint(importContents.ModuleName, lang)
 
 		if imp.IsWildcardImport() {
 			// @TODO - This is false positive case for wildcard imports
 			// If it is a wildcard import, mark the module as used by default
-			evidence := newUsageEvidence(packageHint, imp.ModuleName(), imp.ModuleItem(), imp.ModuleAlias(), true, "", file.Name(), uint(imp.GetModuleNameNode().StartPoint().Row)+1)
+			evidence := newUsageEvidence(packageHint, importContents.ModuleName, importContents.ModuleItem, importContents.ModuleAlias, true, "", file.Name(), uint(imp.GetModuleNameNode().StartPoint().Row)+1)
 			if err := p.usageCallback(ctx, evidence); err != nil {
 				return fmt.Errorf("failed to call usage callback for wildcard import: %w", err)
 			}
 		} else {
-			identifierKey := helpers.GetFirstNonEmptyString(imp.ModuleAlias(), imp.ModuleItem(), imp.ModuleName())
-			moduleIdentifiers[identifierKey] = newIdentifierItem(imp.ModuleName(), imp.ModuleItem(), imp.ModuleAlias(), identifierKey, packageHint)
+			identifierKey := helpers.GetFirstNonEmptyString(importContents.ModuleAlias, importContents.ModuleItem, importContents.ModuleName)
+			moduleIdentifiers[identifierKey] = newIdentifierItem(importContents.ModuleName, importContents.ModuleItem, importContents.ModuleAlias, identifierKey, packageHint)
 		}
 	}
 
@@ -80,10 +85,15 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 		return fmt.Errorf("failed to get tree data: %w", err)
 	}
 
+	treeLanguage, err := tree.Language()
+	if err != nil {
+		return fmt.Errorf("failed to get tree language: %w", err)
+	}
+
 	cursor := sitter.NewTreeCursor(tree.Tree().RootNode())
 	defer cursor.Close()
 
-	err = traverse(cursor, func(n *sitter.Node) error {
+	err = traverse(cursor, &treeLanguage, treeData, func(n *sitter.Node) error {
 		nodeType := n.Type()
 		content := n.Content(*treeData)
 		identifierKey := string(content)
@@ -103,7 +113,7 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 	return nil
 }
 
-func traverse(cursor *sitter.TreeCursor, visit func(node *sitter.Node) error) error {
+func traverse(cursor *sitter.TreeCursor, treeLanguage *core.Language, treeData *[]byte, visit func(node *sitter.Node) error) error {
 	for {
 		// Call the visit function for the current node
 		err := visit(cursor.CurrentNode())
@@ -111,8 +121,7 @@ func traverse(cursor *sitter.TreeCursor, visit func(node *sitter.Node) error) er
 			return err
 		}
 
-		// No need to traverse inside if the node is of an ignored type
-		if _, ignored := ignoredTypes[cursor.CurrentNode().Type()]; !ignored {
+		if !isIgnoredNode(cursor.CurrentNode(), treeLanguage, treeData) {
 			// Try going to the first child
 			if cursor.GoToFirstChild() {
 				continue

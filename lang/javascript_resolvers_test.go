@@ -41,6 +41,13 @@ var javascriptImportExpectations = []ImportExpectations{
 			"ImportNode{ModuleName: virtual-dom, ModuleItem: patch, ModuleAlias: patch, WildcardImport: false}",
 			"ImportNode{ModuleName: @xyz/pqr, ModuleItem: foo, ModuleAlias: fooAlias, WildcardImport: false}",
 			"ImportNode{ModuleName: @xyz/pqr, ModuleItem: bar, ModuleAlias: bar, WildcardImport: false}",
+			"ImportNode{ModuleName: @xyz/mno, ModuleItem: baz2, ModuleAlias: baz2Alias, WildcardImport: false}",
+			"ImportNode{ModuleName: @xyz/mno, ModuleItem: baz, ModuleAlias: baz, WildcardImport: false}",
+			"ImportNode{ModuleName: @xyz/abc, ModuleItem: , ModuleAlias: a, WildcardImport: false}",
+			"ImportNode{ModuleName: @xyz/xyz, ModuleItem: , ModuleAlias: b, WildcardImport: false}",
+			"ImportNode{ModuleName: @xyz/pqr, ModuleItem: , ModuleAlias: c, WildcardImport: false}",
+			"ImportNode{ModuleName: @xyz/mno, ModuleItem: baz, ModuleAlias: bazAlias, WildcardImport: false}",
+			"ImportNode{ModuleName: @xyz/mno, ModuleItem: d, ModuleAlias: d, WildcardImport: false}",
 		},
 	},
 }

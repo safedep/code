@@ -5,6 +5,15 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
+// ImportContents represents the contents of an import node
+// It represents the ready to use content of import nodes which may
+// exhibit different forms in different languages
+type ImportContents struct {
+	ModuleName  string
+	ModuleItem  string
+	ModuleAlias string
+}
+
 // LanguageResolvers define the minimum contract for a language
 // implementation to resolve language specific concerns
 // such as imports, functions, etc.
