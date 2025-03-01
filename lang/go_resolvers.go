@@ -2,7 +2,6 @@ package lang
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
@@ -77,19 +76,4 @@ func (r *goResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, er
 	}
 
 	return imports, err
-}
-
-func (r *goResolvers) ResolveImportContents(importNode *ast.ImportNode) (core.ImportContents, error) {
-	moduleName := strings.Trim(importNode.ModuleName(), `"`)
-	moduleItem := strings.Trim(importNode.ModuleItem(), `"`)
-	moduleAlias := strings.Trim(importNode.ModuleAlias(), `"`)
-
-	moduleAliasParts := strings.Split(moduleAlias, "/")
-	moduleAlias = moduleAliasParts[len(moduleAliasParts)-1]
-
-	return core.ImportContents{
-		ModuleName:  moduleName,
-		ModuleItem:  moduleItem,
-		ModuleAlias: moduleAlias,
-	}, nil
 }

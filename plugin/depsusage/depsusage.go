@@ -60,7 +60,7 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 
 	moduleIdentifiers := make(map[string]*identifierItem)
 	for _, imp := range imports {
-		importContents, err := lang.Resolvers().ResolveImportContents(imp)
+		importContents, err := helpers.ResolveImportContents(imp, lang)
 		if err != nil {
 			return fmt.Errorf("failed to resolve import contents: %w", err)
 		}
