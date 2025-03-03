@@ -7,7 +7,7 @@ import (
 
 // TS nodes Ignored in all languages when parsing AST
 // eg. comment is useless, imports are already resolved
-var commonIgnoredTypesList = []string{"comment", "import_statement", "import_from_statement"}
+var commonIgnoredTypesList = []string{"comment", "import_statement", "import_from_statement", "import_declaration"}
 var commonIgnoredTypes = make(map[string]bool)
 
 type LanguageIgnoreRules struct {
@@ -24,19 +24,19 @@ var ignoreRules = map[core.LanguageCode]LanguageIgnoreRules{
 	core.LanguageCodeJavascript: {
 		rule: []func(node *sitter.Node, data *[]byte) bool{
 			func(node *sitter.Node, data *[]byte) bool {
-				// requires aren't identified as import by tree sitter, instead they follow the pattern
-				// variable_declarator -> call_expression -> identifier = "require"
+				// requires aren't identified as import by tree sitter, instead they follow
+				// the pattern - variable_declarator -> call_expression -> (identifier = "require")
 				if node.Type() != "variable_declarator" {
 					return false
 				}
 
-				for i := 0; i < int(node.ChildCount()); i++ {
+				for i := range int(node.ChildCount()) {
 					if node.Child(i).Type() != "call_expression" {
 						continue
 					}
 
 					callExpression := node.Child(i)
-					for j := 0; j < int(callExpression.ChildCount()); j++ {
+					for j := range int(callExpression.ChildCount()) {
 						identifier := callExpression.Child(j)
 						if identifier.Type() == "identifier" && identifier.Content(*data) == "require" {
 							return true
