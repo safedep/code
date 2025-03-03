@@ -4,7 +4,7 @@
 import express from 'express';
 import DotEnv from 'dotenv'
 const buffer = require('buffer');
-const Cluster = require('cluster');
+let Cluster = require('cluster');
 const EslintConfig = require('@gilbarbara/eslint-config');
 
 // From file
@@ -43,3 +43,7 @@ const { patch } = require('virtual-dom');
 // Aliased named import
 import { useEffect, useState as useMyState } from 'react';
 const { bar, foo: fooAlias } = require('@xyz/pqr');
+let { baz, baz2: baz2Alias } = require('@xyz/mno');
+
+const a = require("@xyz/abc"), b = require("@xyz/xyz");
+let c = require("@xyz/pqr"), {d, baz: bazAlias} = require("@xyz/mno");
