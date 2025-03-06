@@ -49,7 +49,7 @@ var testcases = []DepsTestcase{
 			newUsageEvidence("embed", "embed", "", "", true, "", "fixtures/testcases.go", 12),
 			newUsageEvidence("math", "math", "", "", true, "", "fixtures/testcases.go", 13),
 			newUsageEvidence("github.com/labstack/echo-contrib", "github.com/labstack/echo-contrib/pprof", "", "", true, "", "fixtures/testcases.go", 18),
-			newUsageEvidence("net/http", "net/http", "", "", true, "", "fixtures/testcases.go", 20),
+			newUsageEvidence("net", "net/http", "", "", true, "", "fixtures/testcases.go", 20),
 			newUsageEvidence("fmt", "fmt", "", "fmt", false, "fmt", "fixtures/testcases.go", 25),
 			newUsageEvidence("github.com/safedep/code", "github.com/safedep/code/lang", "", "lang", false, "lang", "fixtures/testcases.go", 25),
 			newUsageEvidence("os", "os", "", "osalias", false, "osalias", "fixtures/testcases.go", 27),

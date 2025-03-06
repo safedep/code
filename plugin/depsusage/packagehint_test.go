@@ -12,16 +12,15 @@ func TestResolvePackageHint(t *testing.T) {
 	t.Run("resolvePackageHint", func(t *testing.T) {
 		languageWiseTests := map[core.LanguageCode]map[string]string{
 			core.LanguageCodePython: {
-				"":                "",
 				"foo":             "foo",
 				"foo.bar":         "foo",
 				"foo.bar.baz":     "foo",
 				"foo.bar.baz.qux": "foo",
 			},
 			core.LanguageCodeGo: {
-				"":                                           "",
 				"os":                                         "os",
 				"filepath":                                   "filepath",
+				"os/signal":                                  "os",
 				"github.com/sjwhitworth/golearn/x/y/z":       "github.com/sjwhitworth/golearn",
 				"github.com/safedep/code/utils/helpers":      "github.com/safedep/code",
 				"github.com/robfig/cron/v3":                  "github.com/robfig/cron/v3",
@@ -47,7 +46,6 @@ func TestResolvePackageHint(t *testing.T) {
 				"bitbucket.org/bertimus9/systemstat/abc/xyz": "bitbucket.org/bertimus9/systemstat",
 			},
 			core.LanguageCodeJavascript: {
-				"":                                       "",
 				"lodash":                                 "lodash",
 				"lodash/fp":                              "lodash",
 				"express/lib/router":                     "express",
@@ -64,8 +62,13 @@ func TestResolvePackageHint(t *testing.T) {
 		for langCode, tests := range languageWiseTests {
 			language, err := lang.GetLanguage(string(langCode))
 			assert.NoError(t, err)
+			// Empty modulename must give error
+			_, err = resolvePackageHint("", language)
+			assert.Error(t, err)
 			for moduleName, expected := range tests {
-				assert.Equal(t, expected, resolvePackageHint(moduleName, language))
+				packageHint, err := resolvePackageHint(moduleName, language)
+				assert.NoError(t, err)
+				assert.Equal(t, expected, packageHint)
 			}
 		}
 	})
