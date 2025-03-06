@@ -65,7 +65,10 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 			return fmt.Errorf("failed to resolve import contents: %w", err)
 		}
 
-		packageHint := resolvePackageHint(importContents.ModuleName, lang)
+		packageHint, err := resolvePackageHint(importContents.ModuleName, lang)
+		if err != nil {
+			return fmt.Errorf("failed to resolve package hint: %w", err)
+		}
 
 		if imp.IsWildcardImport() {
 			// @TODO - This is false positive case for wildcard imports
