@@ -1,6 +1,6 @@
-# Usag evidence
+# Usage evidence
 
-`UsageEvidence` represents the evidence of usage of a module item in a file. Fields -
+`depsusage.UsageEvidence` represents the evidence of usage of a module in a file. It is generated in [depsusage](depsusage.md) plugin. Fields -
 
 - PackageHint - string
   
