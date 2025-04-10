@@ -54,12 +54,12 @@ func run() error {
 		return fmt.Errorf("failed to get language: %w", err)
 	}
 
-	walker, err := fs.NewSourceWalker(fs.SourceWalkerConfig{}, language)
+	walker, err := fs.NewSourceWalker(fs.SourceWalkerConfig{}, []core.Language{language})
 	if err != nil {
 		return fmt.Errorf("failed to create source walker: %w", err)
 	}
 
-	treeWalker, err := parser.NewWalkingParser(walker, language)
+	treeWalker, err := parser.NewWalkingParser(walker, []core.Language{language})
 	if err != nil {
 		return fmt.Errorf("failed to create tree walker: %w", err)
 	}
