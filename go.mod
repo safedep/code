@@ -1,6 +1,6 @@
 module github.com/safedep/code
 
-go 1.23.2
+go 1.24.1
 
 require (
 	github.com/safedep/dry v0.0.0-20241225162018-db93ecfc503f
