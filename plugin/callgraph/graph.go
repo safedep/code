@@ -2,7 +2,10 @@ package callgraph
 
 import (
 	"fmt"
+	"slices"
 	"strings"
+
+	"github.com/safedep/code/core"
 )
 
 const namespaceSeparator = "//"
@@ -25,14 +28,33 @@ type CallGraph struct {
 	Nodes                        map[string]*graphNode
 	assignments                  AssignmentGraph
 	importedIdentifierNamespaces map[string]string
+	Tree                         core.ParseTree
 }
 
-func NewCallGraph(fileName string, importedIdentifierNamespaces map[string]string) *CallGraph {
-	cg := &CallGraph{FileName: fileName, Nodes: make(map[string]*graphNode), assignments: *NewAssignmentGraph(), importedIdentifierNamespaces: importedIdentifierNamespaces}
+func NewCallGraph(fileName string, importedIdentifierNamespaces map[string]string, tree core.ParseTree) (*CallGraph, error) {
+	language, err := tree.Language()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get language from parse tree: %w", err)
+	}
+
+	builtIns := GetBuiltins(language)
+
+	cg := &CallGraph{
+		FileName:                     fileName,
+		Nodes:                        make(map[string]*graphNode),
+		assignments:                  *NewAssignmentGraph(),
+		importedIdentifierNamespaces: importedIdentifierNamespaces,
+		Tree:                         tree,
+	}
+
 	for identifier, namespace := range importedIdentifierNamespaces {
 		cg.assignments.AddAssignment(identifier, namespace)
 	}
-	return cg
+	for identifier, namespace := range builtIns {
+		cg.assignments.AddAssignment(identifier, namespace)
+	}
+
+	return cg, nil
 }
 
 // AddEdge adds an edge from one function to another
@@ -43,7 +65,9 @@ func (cg *CallGraph) AddEdge(caller, callee string) {
 	if _, exists := cg.Nodes[callee]; !exists {
 		cg.Nodes[callee] = newGraphNode(callee)
 	}
-	cg.Nodes[caller].CallsTo = append(cg.Nodes[caller].CallsTo, callee)
+	if !slices.Contains(cg.Nodes[caller].CallsTo, callee) {
+		cg.Nodes[caller].CallsTo = append(cg.Nodes[caller].CallsTo, callee)
+	}
 }
 
 func (cg *CallGraph) PrintCallGraph() {
