@@ -65,7 +65,7 @@
     "Exception": "Exception"
   },
   "javascript": {
-    "console.log": "console.log",
+    "console": "console",
     "parseInt": "parseInt",
     "parseFloat": "parseFloat",
     "isNaN": "isNaN",

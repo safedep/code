@@ -90,7 +90,7 @@ func buildCallGraph(tree core.ParseTree, lang core.Language, filePath string) (*
 	}
 
 	// Add root node to the call graph
-	callGraph.Nodes[filePath] = newGraphNode(filePath)
+	callGraph.AddNode(filePath)
 
 	// traverseTree(astRootNode, treeData, callGraph, filePath, filePath, "", false)
 	processChildren(astRootNode, *treeData, filePath, callGraph, processorMetadata{})
@@ -155,7 +155,7 @@ func processChildren(node *sitter.Node, treeData []byte, currentNamespace string
 // 			}
 
 // 			if _, exists := callGraph.Nodes[currentNamespace]; !exists {
-// 				callGraph.Nodes[currentNamespace] = newGraphNode(currentNamespace)
+// 				callGraph.AddNode(currentNamespace)
 // 				// @TODO - Class Constructor edge must be language agnostic, (__init__ ) must be obtained from lang. For java, it would be classname itself, etc
 // 				if insideClass && funcName == "__init__" {
 // 					fmt.Printf(("Resolved constructor %s for class %s => %s\n"), funcName, classNamespace, currentNamespace)
@@ -316,7 +316,7 @@ func processChildren(node *sitter.Node, treeData []byte, currentNamespace string
 // 		functionNode := node.ChildByFieldName("function")
 // 		if functionNode != nil {
 // 			functionName := functionNode.Content(treeData)
-// 			// Check if the function is a class in the current or parrent scopes in callgraph graph
+// 			// Check if the function is a class in the current or parent scopes in callgraph graph
 // 			for i := strings.Count(currentNamespace, namespaceSeparator); i >= 0; i-- {
 // 				searchNamespace := strings.Join(strings.Split(currentNamespace, namespaceSeparator)[:i], namespaceSeparator) + namespaceSeparator + functionName
 // 				if i == 0 {

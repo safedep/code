@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/safedep/code/core"
+	"github.com/safedep/dry/log"
 )
 
 const namespaceSeparator = "//"
@@ -16,7 +17,7 @@ type graphNode struct {
 	CallsTo   []string
 }
 
-func newGraphNode(namespace string) *graphNode {
+func newCallGraphNode(namespace string) *graphNode {
 	return &graphNode{
 		Namespace: namespace,
 		CallsTo:   []string{},
@@ -27,6 +28,7 @@ type CallGraph struct {
 	FileName                     string
 	Nodes                        map[string]*graphNode
 	assignments                  AssignmentGraph
+	classConstructors            map[string]bool
 	importedIdentifierNamespaces map[string]string
 	Tree                         core.ParseTree
 }
@@ -43,12 +45,20 @@ func NewCallGraph(fileName string, importedIdentifierNamespaces map[string]strin
 		FileName:                     fileName,
 		Nodes:                        make(map[string]*graphNode),
 		assignments:                  *NewAssignmentGraph(),
+		classConstructors:            make(map[string]bool),
 		importedIdentifierNamespaces: importedIdentifierNamespaces,
 		Tree:                         tree,
 	}
 
 	for identifier, namespace := range importedIdentifierNamespaces {
-		cg.assignments.AddAssignment(identifier, namespace)
+		fmt.Println("Imported Identifier:", identifier, "Namespace:", namespace)
+		if identifier == namespace {
+			cg.assignments.AddIdentifier(identifier)
+			cg.AddNode(identifier)
+		} else {
+			cg.assignments.AddAssignment(identifier, namespace)
+			cg.AddEdge(identifier, namespace)
+		}
 	}
 	for identifier, namespace := range builtIns {
 		cg.assignments.AddAssignment(identifier, namespace)
@@ -57,14 +67,16 @@ func NewCallGraph(fileName string, importedIdentifierNamespaces map[string]strin
 	return cg, nil
 }
 
+func (cg *CallGraph) AddNode(identifier string) {
+	if _, exists := cg.Nodes[identifier]; !exists {
+		cg.Nodes[identifier] = newCallGraphNode(identifier)
+	}
+}
+
 // AddEdge adds an edge from one function to another
 func (cg *CallGraph) AddEdge(caller, callee string) {
-	if _, exists := cg.Nodes[caller]; !exists {
-		cg.Nodes[caller] = newGraphNode(caller)
-	}
-	if _, exists := cg.Nodes[callee]; !exists {
-		cg.Nodes[callee] = newGraphNode(callee)
-	}
+	cg.AddNode(caller)
+	cg.AddNode(callee)
 	if !slices.Contains(cg.Nodes[caller].CallsTo, callee) {
 		cg.Nodes[caller].CallsTo = append(cg.Nodes[caller].CallsTo, callee)
 	}
@@ -77,6 +89,13 @@ func (cg *CallGraph) PrintCallGraph() {
 	}
 	fmt.Println()
 }
+func (cg *CallGraph) PrintAssignmentGraph() {
+	fmt.Println("Assignment Graph:")
+	for identifier, namespaces := range cg.assignments.Assignments {
+		fmt.Printf("  %s => %s\n", identifier, namespaces)
+	}
+	fmt.Println()
+}
 
 func (cg *CallGraph) DFS() []string {
 	visited := make(map[string]bool)
@@ -86,7 +105,7 @@ func (cg *CallGraph) DFS() []string {
 }
 
 func (cg *CallGraph) dfsUtil(startNode string, visited map[string]bool, result *[]string, depth int) {
-	fmt.Println("DFS Util:", startNode)
+	fmt.Println(startNode)
 	if visited[startNode] {
 		// append that not going inside this on prev level
 		*result = append(*result, fmt.Sprintf("%s Stopped at %s", strings.Repeat("|", depth), startNode))
@@ -101,4 +120,13 @@ func (cg *CallGraph) dfsUtil(startNode string, visited map[string]bool, result *
 	for _, callee := range cg.Nodes[startNode].CallsTo {
 		cg.dfsUtil(callee, visited, result, depth+1)
 	}
+}
+
+func (cg *CallGraph) GetInstanceKeyword() (string, bool) {
+	language, err := cg.Tree.Language()
+	if err != nil {
+		log.Errorf("failed to get language from parse tree: %v", err)
+		return "", false
+	}
+	return resolveInstanceKeyword(language)
 }

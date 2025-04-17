@@ -1,11 +1,62 @@
 import requests
-from os import path
+import parser
+import pstats
+import zipfile
+import tarfile
+import gettext
+import flask
+from openai import Openai
+from os import path, listdir, getenv, chdir
 
-somenum = 5
-someothernum = 7.0
-dsf = "dsfa"
-sf = 'f'
-#
+
+# Correct callgraph & assignment resolution ------------------------------------------
+
+# Correctly assigned to appropriate imports
+requests.get("https://example.com/" + chdir("something"))
+Openai("gpt-3.5-turbo")
+
+# Correctly assigned to builtin keyword - print
+print("Hello")
+
+# Archiver assignment to zipfile.ZipFile and tarfile.open.makearchive detected correctly
+archiver = zipfile.ZipFile
+if getenv("USE_TAR"):
+    archiver = tarfile.open.makearchive
+
+# Function Calls (path.join) added to call from current namespace (here filename) 
+# Note - return values & arg assignments aren't processed
+archiver(path.join("something", gettext.get("xyz")))
+
+# Parsed correctly
+path.altsep.capitalize(
+    "something",
+    getenv("xyz"),
+    parser.parse("https://example.com")
+)
+
+# Literal assignment
+somenumber = 7.0
+
+# Correctly assigned multiple attribute values
+abc = path.altsep.__dict__
+abc = path.altsep
+abc = listdir
+abc = requests.__url__
+abc = 7
+abc = True
+abc = "gg"
+abc = somenumber
+
+# This forms a chain of assignments
+# spd => abc => [listdir, 7, True, somenumber, ....]
+spd = abc
+
+# Attribute assignee
+path.altsep.__dict__ = "something"
+path.altsep.__dict__ = "something else"
+
+
+# Nested function definitions & scoped calls correctly parsed
 def add(a, b):
     return a + b
 def sub(a, b):
@@ -15,30 +66,35 @@ def complexop(a, b):
         return a*2 + b*2
     x = a
     return add(x, b) + add(a*2, b) + sub(a*2, b)
-#
-#
+
 r1 = 95 + 7.3 + 2
+res = complexop(1, 2) + add(3, 4) + add(5, 6) + r1 - somenumber + 95 + 7.3 + pstats.getsomestat()
 
-# @TODO - handle assignment of return value of add/complex to res
-res = complexop(1, 2) + add(3, 4) + add(5, 6) + somenum - someothernum + 95 + 7.3
-
-print(r1)
-
-xyz = "something"
-pqr = "misc"
-pqr = xyz
-abc = pqr
-
+# Correctly processes constructor, member function and member variables by instance keyword ie. self.name, self.value
 class DeepestClass:
     def __init__(self):
-        self.name = "DeepestClass"
+        self.name = "DeepestClass name"
+        self.value = 42
+        if getenv("USE_TAR"):
+            self.value = 100
+    
+    def helper_method(self):
+        print("Called helper_method")
+        return self.value
     
     def deepest_method(self):
+        self.helper_method()
         print("Called deepest_method")
         return "Success"
 
-# modelname = "gpt-3.5-turbo"
-# Openai(modelname)
+    def aboutme(self):
+        print(f"Name: {self.name}")
+    
+# Correctly identifies that adfff is instance of DeepestClass
+# so any qualifier on adfff is resolved as member of DeepestClass
+alice = DeepestClass()
+alice.aboutme()
+bannername = alice.name
 
 class InnerClass:
     def __init__(self):
@@ -51,77 +107,30 @@ class InnerClass:
 class OuterClass:
     def __init__(self):
         self.name = "OuterClass"
+        listdir(self.name)
     
     def outer_method(self):
         print("Called outer_method")
         return InnerClass()
 
+
+
+
+
+
+# Not working ------------------------------------------
+
+# @TODO - Refer attributeResolver for more details
+deepresultvalue = OuterClass().outer_method().inner_method()
+
+# @TODO - This would require return value processing, which is a complex task
+deepresultvalue.deepest_method()
+
+# @TODO - We're not able to identify instance as return values from factory functions yet
 def create_outer():
     return OuterClass()
 
-def print_info(message):
-    print(f"Info: {message}")
-
-import requests
-import requests
-import requests
-import requests
-import requests
-
-
-result = OuterClass().outer_method().inner_method()
-    
-# Use the assigned result
-result.deepest_method()
-
-# Multiple variables referencing the same chain
+# @TODO - Can't work with return values yet
 a = OuterClass()
-b = a.outer_method()
-
-# 
-c = b.inner_method()
-c.deepest_method()
-
-# Testing different levels of attribute chains
-def test_nested_attributes():
-    # Level 1 attribute access
-    outer = OuterClass()
-    outer.outer_method()
-    
-    # Level 2 attribute access
-    outer_inner = outer.outer_method()
-    outer_inner.inner_method()
-    
-    # Level 3 attribute access
-    outer_inner_deepest = outer.outer_method().inner_method()
-    outer_inner_deepest.deepest_method()
-    
-    # Complex chaining in one line
-    outer.outer_method().inner_method().deepest_method()
-    
-    # Create via helper function and chain
-    create_outer().outer_method().inner_method()
-    
-    # External module attribute chaining
-    requests.get("https://example.com").json()
-    
-    # Python standard library chaining
-    path.dirname(path.abspath(__file__))
-
-# Test variable assignment with attribute chains
-def test_variable_assignments():
-    # Assign object with multiple attribute levels
-    result = OuterClass().outer_method().inner_method()
-    
-    # Use the assigned result
-    result.deepest_method()
-    
-    # Multiple variables referencing the same chain
-    a = OuterClass()
-    b = a.outer_method()
-    c = b.inner_method()
-    c.deepest_method()
-
-if __name__ == "__main__":
-    test_nested_attributes()
-    test_variable_assignments()
+b = a.outer_method() # @TODO - class information needed for this
+ 

@@ -66,6 +66,7 @@ func run() error {
 
 	// consume callgraph
 	var callgraphCallback callgraph.CallgraphCallback = func(cg *callgraph.CallGraph) error {
+		cg.PrintAssignmentGraph()
 		cg.PrintCallGraph()
 
 		fmt.Println("DFS Traversal:")
