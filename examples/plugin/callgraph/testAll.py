@@ -71,9 +71,9 @@ r1 = 95 + 7.3 + 2
 res = complexop(1, 2) + add(3, 4) + add(5, 6) + r1 - somenumber + 95 + 7.3 + pstats.getsomestat()
 
 # Correctly processes constructor, member function and member variables by instance keyword ie. self.name, self.value
-class DeepestClass:
+class TesterClass:
     def __init__(self):
-        self.name = "DeepestClass name"
+        self.name = "TesterClass name"
         self.value = 42
         if getenv("USE_TAR"):
             self.value = 100
@@ -90,47 +90,8 @@ class DeepestClass:
     def aboutme(self):
         print(f"Name: {self.name}")
     
-# Correctly identifies that adfff is instance of DeepestClass
-# so any qualifier on adfff is resolved as member of DeepestClass
-alice = DeepestClass()
+# Correctly identifies that adfff is instance of TesterClass
+# so any qualifier on adfff is resolved as member of TesterClass
+alice = TesterClass()
 alice.aboutme()
 bannername = alice.name
-
-class InnerClass:
-    def __init__(self):
-        self.name = "InnerClass"
-    
-    def inner_method(self):
-        print("Called inner_method")
-        return DeepestClass()
-
-class OuterClass:
-    def __init__(self):
-        self.name = "OuterClass"
-        listdir(self.name)
-    
-    def outer_method(self):
-        print("Called outer_method")
-        return InnerClass()
-
-
-
-
-
-
-# Not working ------------------------------------------
-
-# @TODO - Refer attributeResolver for more details
-deepresultvalue = OuterClass().outer_method().inner_method()
-
-# @TODO - This would require return value processing, which is a complex task
-deepresultvalue.deepest_method()
-
-# @TODO - We're not able to identify instance as return values from factory functions yet
-def create_outer():
-    return OuterClass()
-
-# @TODO - Can't work with return values yet
-a = OuterClass()
-b = a.outer_method() # @TODO - class information needed for this
- 

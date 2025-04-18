@@ -51,7 +51,6 @@ func NewCallGraph(fileName string, importedIdentifierNamespaces map[string]strin
 	}
 
 	for identifier, namespace := range importedIdentifierNamespaces {
-		fmt.Println("Imported Identifier:", identifier, "Namespace:", namespace)
 		if identifier == namespace {
 			cg.assignments.AddIdentifier(identifier)
 			cg.AddNode(identifier)
@@ -105,10 +104,10 @@ func (cg *CallGraph) DFS() []string {
 }
 
 func (cg *CallGraph) dfsUtil(startNode string, visited map[string]bool, result *[]string, depth int) {
-	fmt.Println(startNode)
+	// fmt.Println(startNode, depth)
 	if visited[startNode] {
 		// append that not going inside this on prev level
-		*result = append(*result, fmt.Sprintf("%s Stopped at %s", strings.Repeat("|", depth), startNode))
+		*result = append(*result, fmt.Sprintf("%s Stopped at %s (Already visited)", strings.Repeat("|", depth), startNode))
 		return
 	}
 

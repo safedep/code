@@ -1,30 +1,58 @@
-import base64
-from utils import printinit, printenc, printdec as pdec
-    
-class Encoding:
+import pprint
+from xyz import printxyz1, printxyz2, printxyz3
+from os import getenv
+
+# Correctly processes constructor, member function and member variables by instance keyword ie. self.name, self.value
+class TesterClass:
     def __init__(self):
-        printinit("Initialized")
-        pass
-
-    def apply(self, msg, func):
-        return func(msg)
+        self.name = "TesterClass name"
+        self.value = 42
+        if getenv("USE_TAR"):
+            self.value = 100
     
-    # Unused
-    def apply2(self, msg, func):
-        return func(msg)
+    def helper_method(self):
+        print("Called helper_method")
+        return self.value
+    
+    def deepest_method(self):
+        self.helper_method()
+        print("Called deepest_method")
+        return "Success"
 
-def getenc():
-    return "encoded"
+    def aboutme(self):
+        print(f"Name: {self.name}")
+    
+# Correctly identifies that adfff is instance of TesterClass
+# so any qualifier on adfff is resolved as member of TesterClass
+alice = TesterClass()
+alice.aboutme()
+bannername = alice.name
 
-encoder = Encoding()
-encoded = encoder.apply("Hello, World!".encode('utf-8'), base64.b64encode)
-printenc(encoded)
-decoded = encoder.apply(getenc(), base64.b64decode)
-pdec(decoded)
 
-class NoConstructorClass:
-    def show():
-        print("NoConstructorClass")
-        pass
-ncc = NoConstructorClass()
-ncc.show()
+
+
+class ClassA:
+  def method1(self):
+    printxyz2("GG")
+  def method2(self):
+    printxyz2("GG")
+
+class ClassB:
+  def method1(self):
+    printxyz2("GG")
+  def method2(self):
+    printxyz2("GG")
+  def methodUnique(self):
+    printxyz3("GG")
+    pprint.pp("GG")
+
+
+x = ClassA()
+x = ClassB()
+x.method1() 
+y = x
+y.method1()
+y.method2()
+y.methodUnique() # @TODO - This creates a call to namespace that doesn't exist
+
+
