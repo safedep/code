@@ -18,12 +18,13 @@ def foo():
   pprint.pprint("foo")
 def bar():
   print("bar")
+baz = bar
 
 xyz = "abc"
 xyz = 25
 xyz = foo
-xyz = bar
-xyz() # @TODO - xyz (assigned to)=> [foo, bar], During DFS, we must consider this; Pending example as consumer 
+xyz = baz
+xyz()
 
 
 # Nested & scoped functions

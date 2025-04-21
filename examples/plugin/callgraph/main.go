@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"strings"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/fs"
@@ -69,11 +70,21 @@ func run() error {
 		cg.PrintAssignmentGraph()
 		cg.PrintCallGraph()
 
-		fmt.Println("DFS Traversal:")
-		for _, node := range cg.DFS() {
-			fmt.Println(node)
+		fmt.Println("DFS Traversal results:")
+		for _, resultItem := range cg.DFS() {
+			// fmt.Println(resultItem.Depth, "-", resultItem.Namespace)
+			fmt.Printf("%s %s\n", strings.Repeat(">", resultItem.Depth), resultItem.Namespace)
 		}
-		fmt.Println()
+
+		signatureMatches, err := cg.MatchSignatures(callgraph.ParsedSignatures.Signatures)
+		if err != nil {
+			return fmt.Errorf("failed to match signatures: %w", err)
+		}
+
+		fmt.Println("\nSignature matches:")
+		for _, match := range signatureMatches {
+			fmt.Printf("Match found: %s (%s)\n", match.MatchedSignature.ID, match.MatchedLanguageCode)
+		}
 		return nil
 	}
 
