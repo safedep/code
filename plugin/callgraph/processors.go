@@ -14,14 +14,14 @@ type processorMetadata struct {
 }
 
 type processorResult struct {
-	ImmediateCalls       []string // Will be needed to manage assignment-for-call-returned values
-	ImmediateAssignments []string
+	ImmediateCalls       []*graphNode // Will be needed to manage assignment-for-call-returned values
+	ImmediateAssignments []*assignmentNode
 }
 
 func newProcessorResult() processorResult {
 	return processorResult{
-		ImmediateCalls:       []string{},
-		ImmediateAssignments: []string{},
+		ImmediateCalls:       []*graphNode{},
+		ImmediateAssignments: []*assignmentNode{},
 	}
 }
 
@@ -53,6 +53,7 @@ func init() {
 		"argument_list":        emptyProcessor,
 		"attribute":            attributeProcessor,
 		"assignment":           assignmentProcessor,
+		"subscript":            skippedProcessor,
 	}
 
 	// Literals
@@ -76,14 +77,14 @@ func init() {
 	}
 }
 
-func emptyProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	if node == nil {
+func emptyProcessor(emptyNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if emptyNode == nil {
 		return newProcessorResult()
 	}
 
 	// fmt.Printf("Process children for %s\n", node.Type())
 
-	return processChildren(node, treeData, currentNamespace, callGraph, metadata)
+	return processChildren(emptyNode, treeData, currentNamespace, callGraph, metadata)
 }
 
 func skippedProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
@@ -96,48 +97,50 @@ func skippedProcessor(node *sitter.Node, treeData []byte, currentNamespace strin
 	return newProcessorResult()
 }
 
-func literalValueProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	if node == nil {
+func literalValueProcessor(literalNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if literalNode == nil {
 		return newProcessorResult()
 	}
 
 	// fmt.Printf("Assignment of Literal value '%s' - %s under namespace %s\n", node.Type(), node.Content(treeData), currentNamespace)
 
 	result := newProcessorResult()
-	result.ImmediateAssignments = append(result.ImmediateAssignments, node.Content(treeData))
+	literalNamespace := currentNamespace + namespaceSeparator + literalNode.Content(treeData)
+	literalAssignmentNode := callGraph.assignmentGraph.AddIdentifier(literalNamespace, literalNode)
+	result.ImmediateAssignments = append(result.ImmediateAssignments, literalAssignmentNode)
 	return result
 }
 
-func classDefinitionProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	if node == nil {
+func classDefinitionProcessor(classDefNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if classDefNode == nil {
 		return newProcessorResult()
 	}
 
-	classNameNode := node.ChildByFieldName("name")
+	classNameNode := classDefNode.ChildByFieldName("name")
 	if classNameNode == nil {
-		log.Errorf("Class definition without name - %s", node.Content(treeData))
+		log.Errorf("Class definition without name - %s", classDefNode.Content(treeData))
 		return newProcessorResult()
 	}
 
 	// Class definition has its own scope, hence its own namespace
 	classNamespace := currentNamespace + namespaceSeparator + classNameNode.Content(treeData)
-	callGraph.AddNode(classNamespace)
+	callGraph.AddNode(classNamespace, classDefNode)
 
 	// Assignment is added so that we can resolve class constructor when a function with same name as classname is called
-	callGraph.assignments.AddIdentifier(classNamespace)
+	callGraph.assignmentGraph.AddIdentifier(classNamespace, classDefNode)
 	callGraph.classConstructors[classNamespace] = true
 
 	instanceKeyword, exists := callGraph.GetInstanceKeyword()
 	if exists {
 		instanceNamespace := classNamespace + namespaceSeparator + instanceKeyword
-		callGraph.AddNode(instanceNamespace)
-		callGraph.assignments.AddIdentifier(instanceNamespace)
+		callGraph.AddNode(instanceNamespace, nil) // @TODO
+		callGraph.assignmentGraph.AddIdentifier(instanceNamespace, nil)
 		// fmt.Println("Added instance keyword to call & assignment graph -", instanceNamespace)
 	}
 
-	classBody := node.ChildByFieldName("body")
+	classBody := classDefNode.ChildByFieldName("body")
 	if classBody == nil {
-		log.Errorf("Class definition without body - %s", node.Content(treeData))
+		log.Errorf("Class definition without body - %s", classDefNode.Content(treeData))
 		return newProcessorResult()
 	}
 
@@ -150,14 +153,14 @@ func classDefinitionProcessor(node *sitter.Node, treeData []byte, currentNamespa
 	return newProcessorResult()
 }
 
-func functionDefinitionProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	if node == nil {
+func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if functionDefNode == nil {
 		return newProcessorResult()
 	}
 
-	functionNameNode := node.ChildByFieldName("name")
+	functionNameNode := functionDefNode.ChildByFieldName("name")
 	if functionNameNode == nil {
-		log.Errorf("Function definition without name - %s", node.Content(treeData))
+		log.Errorf("Function definition without name - %s", functionDefNode.Content(treeData))
 		return newProcessorResult()
 	}
 
@@ -168,8 +171,8 @@ func functionDefinitionProcessor(node *sitter.Node, treeData []byte, currentName
 
 	// Add function to the call graph
 	if _, exists := callGraph.Nodes[functionNamespace]; !exists {
-		callGraph.AddNode(functionNamespace)
-		callGraph.assignments.AddIdentifier(functionNamespace)
+		callGraph.AddNode(functionNamespace, functionDefNode)
+		callGraph.assignmentGraph.AddIdentifier(functionNamespace, functionDefNode)
 		// fmt.Println("Added function to call & assignment graph -", functionNamespace)
 
 		// Add virtual fn call from class => classConstructor
@@ -177,11 +180,11 @@ func functionDefinitionProcessor(node *sitter.Node, treeData []byte, currentName
 			instanceKeyword, exists := callGraph.GetInstanceKeyword()
 			if exists {
 				instanceNamespace := currentNamespace + namespaceSeparator + instanceKeyword + namespaceSeparator + funcName
-				callGraph.AddEdge(instanceNamespace, functionNamespace)
+				callGraph.AddEdge(instanceNamespace, nil, functionNamespace, functionDefNode) // @TODO - Can't create sitter node for instance keyword
 				fmt.Printf("Resolved member function %s => %s\n", instanceNamespace, functionNamespace)
 			}
 			if funcName == "__init__" {
-				callGraph.AddEdge(currentNamespace, functionNamespace)
+				callGraph.AddEdge(currentNamespace, nil, functionNamespace, functionDefNode) // @TODO - Can't create sitter node for instance keyword
 				fmt.Printf(("Resolved constructor %s => %s\n"), funcName, functionNamespace)
 			}
 		}
@@ -189,7 +192,7 @@ func functionDefinitionProcessor(node *sitter.Node, treeData []byte, currentName
 
 	results := newProcessorResult()
 
-	functionBody := node.ChildByFieldName("body")
+	functionBody := functionDefNode.ChildByFieldName("body")
 	if functionBody != nil {
 		metadata.insideFunction = true
 		result := processChildren(functionBody, treeData, functionNamespace, callGraph, metadata)
@@ -202,8 +205,8 @@ func functionDefinitionProcessor(node *sitter.Node, treeData []byte, currentName
 	return results
 }
 
-func functionReturnProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	if node == nil {
+func functionReturnProcessor(fnReturnNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if fnReturnNode == nil {
 		return newProcessorResult()
 	}
 
@@ -213,7 +216,7 @@ func functionReturnProcessor(node *sitter.Node, treeData []byte, currentNamespac
 	// here, we know, main calls=> y,
 	// handle, x assigned=> return values of y
 
-	return processChildren(node, treeData, currentNamespace, callGraph, metadata)
+	return processChildren(fnReturnNode, treeData, currentNamespace, callGraph, metadata)
 }
 
 func assignmentProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
@@ -235,67 +238,74 @@ func assignmentProcessor(node *sitter.Node, treeData []byte, currentNamespace st
 
 	// @TODO - Handle multi variate assignments, eg. a, b = 1, 2
 
-	assigneeNamespaces := []string{currentNamespace + namespaceSeparator + leftNode.Content(treeData)}
+	assigneeNodes := []*assignmentNode{}
+
 	if leftNode.Type() == "attribute" {
 		// eg. xyz.attr = 1
 		// must be resolved to xyz//attr (assigned)=> 1
 		attributeResult := attributeProcessor(leftNode, treeData, currentNamespace, callGraph, metadata)
-		assigneeNamespaces = attributeResult.ImmediateAssignments
-		// fmt.Println("Resolved for attr assignment of left -", assigneeNamespaces)
+		assigneeNodes = attributeResult.ImmediateAssignments
+		// log.Debugf("Resolved left for attr assignment of %s - %v", leftNode.Content(treeData), assigneeNodes)
 	}
 
-	// fmt.Println("Process right node children", rightNode.Type(), rightNode.Content(treeData))
+	// Create new fallback assignment node for leftNode if not found
+	if len(assigneeNodes) == 0 {
+		assigneeNodes = []*assignmentNode{
+			callGraph.assignmentGraph.AddIdentifier(currentNamespace+namespaceSeparator+leftNode.Content(treeData), leftNode),
+		}
+		// log.Debugf("Resolved left for attr assignment (fallback) of %s - %v", leftNode.Content(treeData), assigneeNodes)
+	}
+
+	fmt.Println("Process right node children", rightNode.Type(), rightNode.Content(treeData))
 	result := processNode(rightNode, treeData, currentNamespace, callGraph, metadata)
 
 	// Process & note direct calls of processChildren(right,...), and assign returned values in assignment graph
 
-	for _, assigneeNamespace := range assigneeNamespaces {
+	for _, assigneeNode := range assigneeNodes {
 		for _, immediateCall := range result.ImmediateCalls {
-			callGraph.AddEdge(assigneeNamespace, immediateCall)
+			callGraph.AddEdge(assigneeNode.Namespace, assigneeNode.TreeNode, immediateCall.Namespace, immediateCall.TreeNode)
 		}
 		for _, immediateAssignment := range result.ImmediateAssignments {
-			callGraph.assignments.AddAssignment(assigneeNamespace, immediateAssignment)
+			callGraph.assignmentGraph.AddAssignment(assigneeNode.Namespace, assigneeNode.TreeNode, immediateAssignment.Namespace, immediateAssignment.TreeNode)
 		}
 
-		fmt.Printf("Resolved assignment for '%s' = ...\n", assigneeNamespace)
-		if callGraph.assignments.Assignments[assigneeNamespace] != nil {
-			fmt.Printf("\tAssignment edges -> %v\n", callGraph.assignments.Assignments[assigneeNamespace])
-		}
-		if callGraph.Nodes[assigneeNamespace] != nil {
-			fmt.Printf("\tGraph edges -> %v\n", callGraph.Nodes[assigneeNamespace].CallsTo)
+		log.Debugf("Resolved assignment for '%s' => %v\n", assigneeNode.Namespace, assigneeNode.AssignedTo)
+		if callGraph.Nodes[assigneeNode.Namespace] != nil {
+			fmt.Printf("\tGraph edges -> %v\n", callGraph.Nodes[assigneeNode.Namespace].CallsTo)
 		}
 	}
 	return newProcessorResult()
 }
 
-func attributeProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	if node == nil {
+func attributeProcessor(attributeNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if attributeNode == nil {
 		return newProcessorResult()
 	}
 	// fmt.Println("Attribute processor -", node.Type(), node.Content(treeData))
 
-	objectSymbol, attributeQualifierNamespace, err := attributeResolver(node, treeData, currentNamespace, callGraph, metadata)
+	objectSymbol, attributeQualifierNamespace, err := attributeResolver(attributeNode, treeData, currentNamespace, callGraph, metadata)
 	if err != nil {
 		log.Errorf("Error resolving attribute - %v", err)
 		return newProcessorResult()
 	}
 
-	targetObjectNamespace, objectResolved := resolveSymbolNamespace(objectSymbol, currentNamespace, callGraph)
+	targetObject, objectResolved := resolveSymbol(objectSymbol, currentNamespace, callGraph)
 	if !objectResolved {
-		log.Errorf("Object not found in namespace for attribute - %s (Obj - %s, Attr - %s)", node.Content(treeData), objectSymbol, attributeQualifierNamespace)
+		log.Errorf("Object not found in namespace for attribute - %s (Obj - %s, Attr - %s)", attributeNode.Content(treeData), objectSymbol, attributeQualifierNamespace)
 		return newProcessorResult()
 	}
 
-	resolvedObjectNamespaces := callGraph.assignments.Resolve(targetObjectNamespace)
+	resolvedObjects := callGraph.assignmentGraph.Resolve(targetObject.Namespace)
 
 	// fmt.Printf("Resolved attribute for `%s` => %v // %s\n", node.Content(treeData), resolvedObjectNamespaces, attributeQualifierNamespace)
 
 	// We only handle assignments for attributes here eg. xyz.attr
 	// 'called' attributes eg. xyz.attr(), are handled in callProcessor directly
 	result := newProcessorResult()
-	for _, resolvedObjectNamespace := range resolvedObjectNamespaces {
-		finalAttributeNamespace := resolvedObjectNamespace + namespaceSeparator + attributeQualifierNamespace
-		result.ImmediateAssignments = append(result.ImmediateAssignments, finalAttributeNamespace)
+	for _, resolvedObject := range resolvedObjects {
+		finalAttributeNamespace := resolvedObject.Namespace + namespaceSeparator + attributeQualifierNamespace
+		finalAttributeNode := callGraph.assignmentGraph.AddIdentifier(finalAttributeNamespace, attributeNode)
+		result.ImmediateAssignments = append(result.ImmediateAssignments, finalAttributeNode)
 	}
 
 	return result
@@ -328,8 +338,8 @@ func binaryOperatorProcessor(node *sitter.Node, treeData []byte, currentNamespac
 	return processChildren(node, treeData, currentNamespace, callGraph, metadata)
 }
 
-func identifierProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	if node == nil {
+func identifierProcessor(identifierNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if identifierNode == nil {
 		return newProcessorResult()
 	}
 
@@ -343,29 +353,33 @@ func identifierProcessor(node *sitter.Node, treeData []byte, currentNamespace st
 	// @TODO - Handle identifier during function calls
 	// eg. xyz(), instance.method(), etc
 
-	identifierNamespace, namespaceResolved := resolveSymbolNamespace(node.Content(treeData), currentNamespace, callGraph)
+	identifierAssignmentNode, identifierResolved := resolveSymbol(identifierNode.Content(treeData), currentNamespace, callGraph)
 
-	if namespaceResolved {
-		result.ImmediateAssignments = append(result.ImmediateAssignments, identifierNamespace)
+	if identifierResolved {
+		result.ImmediateAssignments = append(result.ImmediateAssignments, identifierAssignmentNode)
 		return result
 	}
 
-	// If not found in search namespace, we can assume it is a new identifier
-	identifierNamespace = currentNamespace + namespaceSeparator + node.Content(treeData)
-	result.ImmediateAssignments = append(result.ImmediateAssignments, identifierNamespace)
+	// If not found iby search, we can assume it is a new identifier
+	identifierAssignmentNode = callGraph.assignmentGraph.AddIdentifier(
+		currentNamespace+namespaceSeparator+identifierNode.Content(treeData),
+		identifierNode,
+	)
+
+	result.ImmediateAssignments = append(result.ImmediateAssignments, identifierAssignmentNode)
 
 	return result
 }
 
-func callProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	if node == nil {
+func callProcessor(callNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if callNode == nil {
 		return newProcessorResult()
 	}
 
 	// log.Debugf("Call - '%s' under namespace %s\n", node.Content(treeData), currentNamespace)
 
-	functionNode := node.ChildByFieldName("function")
-	argumentsNode := node.ChildByFieldName("arguments")
+	functionNode := callNode.ChildByFieldName("function")
+	argumentsNode := callNode.ChildByFieldName("arguments")
 	if functionNode != nil {
 		return functionCallProcessor(functionNode, argumentsNode, treeData, currentNamespace, callGraph, metadata)
 	}
@@ -373,16 +387,16 @@ func callProcessor(node *sitter.Node, treeData []byte, currentNamespace string, 
 	return newProcessorResult()
 }
 
-func functionCallProcessor(functionNode *sitter.Node, argumentsNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
 	result := newProcessorResult()
 
-	functionName := functionNode.Content(treeData)
+	functionName := functionCallNode.Content(treeData)
 
-	markClassAssignment := func(namespace string) {
-		if callGraph.classConstructors[namespace] {
-			fmt.Printf("Class constructed - %s in fncall for %s\n", namespace, functionName)
+	markClassAssignment := func(classAssignmentNode *assignmentNode) {
+		if classAssignmentNode != nil && callGraph.classConstructors[classAssignmentNode.Namespace] {
+			fmt.Printf("Class constructed - %s in fncall for %s\n", classAssignmentNode, functionName)
 			// Include class namespace in assignments for constructors
-			result.ImmediateAssignments = append(result.ImmediateAssignments, namespace)
+			result.ImmediateAssignments = append(result.ImmediateAssignments, classAssignmentNode)
 		}
 	}
 
@@ -391,16 +405,17 @@ func functionCallProcessor(functionNode *sitter.Node, argumentsNode *sitter.Node
 		// @TODO - Ideally, the result.ImmediateAssignments should be associated with called function
 		// but, we don't have parameter and their positional information, which is a complex task
 		// Hence, we're not processing argument results here
+		fmt.Println("Process function arguments -", argumentsNode.Type(), argumentsNode.Content(treeData))
 		processNode(argumentsNode, treeData, currentNamespace, callGraph, metadata)
 	}
 
-	functionNamespace, functionResolvedBySearch := resolveSymbolNamespace(functionName, currentNamespace, callGraph)
+	functionAssignmentNode, functionResolvedBySearch := resolveSymbol(functionName, currentNamespace, callGraph)
 	if functionResolvedBySearch {
-		// log.Debugf("Call %s searched (direct) & resolved to %s\n", functionName, functionNamespace)
+		log.Debugf("Call %s searched (direct) & resolved to %s\n", functionName, functionAssignmentNode.Namespace)
 		// fmt.Printf("\t%s (calls)=> %s\n", currentNamespace, functionNamespace)
-		callGraph.AddEdge(currentNamespace, functionNamespace)
+		callGraph.AddEdge(currentNamespace, nil, functionAssignmentNode.Namespace, functionAssignmentNode.TreeNode) // @TODO - Assumed current namespace to be pre-existing
 		// result.ImmediateCalls = append(result.ImmediateCalls, functionNamespace)
-		markClassAssignment(functionNamespace)
+		markClassAssignment(functionAssignmentNode)
 		return result
 	}
 
@@ -409,11 +424,10 @@ func functionCallProcessor(functionNode *sitter.Node, argumentsNode *sitter.Node
 	// Resolve qualified function calls, eg. xyz.attr()
 
 	// Process attributes
-	functionObjectNode := functionNode.ChildByFieldName("object")
-	functionAttributeNode := functionNode.ChildByFieldName("attribute")
+	functionObjectNode := functionCallNode.ChildByFieldName("object")
+	functionAttributeNode := functionCallNode.ChildByFieldName("attribute")
 	if functionAttributeNode != nil && functionObjectNode != nil {
-		// fmt.Println("\tFunction object -", functionObjectNode.Type(), functionObjectNode.Content(treeData))
-		// fmt.Println("\tFunction attribute -", functionAttributeNode.Type(), functionAttributeNode.Content(treeData))
+		log.Debugf("Call %s searched (attr qualified) & resolved to object - %s (%s), attribute - %s (%s) \n", functionName, functionObjectNode.Content(treeData), functionObjectNode.Type(), functionAttributeNode.Content(treeData), functionAttributeNode.Type())
 
 		objectSymbol, attributeQualifierNamespace, err := attributeResolver(functionObjectNode, treeData, currentNamespace, callGraph, metadata)
 		if err != nil {
@@ -424,19 +438,20 @@ func functionCallProcessor(functionNode *sitter.Node, argumentsNode *sitter.Node
 		if attributeQualifierNamespace != "" {
 			finalAttributeNamespace = attributeQualifierNamespace + namespaceSeparator + finalAttributeNamespace
 		}
-		// fmt.Printf("\tResolved fn call attribute for `%s` => %s // %s\n", functionNode.Content(treeData), objectSymbol, finalAttributeNamespace)
+		fmt.Printf("Object symbol - %s, attribute qualifier - %s, final attribute - %s\n", objectSymbol, attributeQualifierNamespace, finalAttributeNamespace)
+		fmt.Printf("Final attribute namespace - %s\n", finalAttributeNamespace)
 
-		objectNamespace, functionResolvedByObjectQualifiedSearch := resolveSymbolNamespace(objectSymbol, currentNamespace, callGraph)
+		objectAssignmentNode, functionResolvedByObjectQualifiedSearch := resolveSymbol(objectSymbol, currentNamespace, callGraph)
 
 		if functionResolvedByObjectQualifiedSearch {
-			resolvedObjectNamespaces := callGraph.assignments.Resolve(objectNamespace)
-			// fmt.Printf("\tObj %s traversed (object qualified) & resolved to %v\n", objectNamespace, resolvedObjectNamespaces)
-			for _, resolvedObjectNamespace := range resolvedObjectNamespaces {
-				functionNamespace := resolvedObjectNamespace + namespaceSeparator + finalAttributeNamespace
+			resolvedObjectNodes := callGraph.assignmentGraph.Resolve(objectAssignmentNode.Namespace)
+			for _, resolvedObjectNode := range resolvedObjectNodes {
+				functionNamespace := resolvedObjectNode.Namespace + namespaceSeparator + finalAttributeNamespace
+
 				// log.Debugf("Call %s searched (attr qualified) & resolved to %s\n", functionName, functionNamespace)
-				callGraph.AddEdge(currentNamespace, functionNamespace)
-				// result.ImmediateCalls = append(result.ImmediateCalls, functionNamespace)
-				markClassAssignment(functionNamespace)
+				callGraph.AddEdge(currentNamespace, nil, functionNamespace, nil) // @TODO - Assumed current namespace & functionNamespace to be pre-existing
+
+				markClassAssignment(callGraph.assignmentGraph.Assignments[functionNamespace])
 			}
 			return result
 		}
@@ -464,9 +479,9 @@ func functionCallProcessor(functionNode *sitter.Node, argumentsNode *sitter.Node
 // try searching for outerfn1 in graph with all scope levels
 // eg. search nestNestedFn.py//nestParent//nestChild//outerfn1
 // then nestNestedFn.py//nestParent//outerfn1 then nestNestedFn.py//outerfn1 and so on
-func resolveSymbolNamespace(symbol string, currentNamespace string, callGraph *CallGraph) (string, bool) {
+func resolveSymbol(symbol string, currentNamespace string, callGraph *CallGraph) (*assignmentNode, bool) {
 	if symbol == "" {
-		return "", false
+		return nil, false
 	}
 
 	for i := strings.Count(currentNamespace, namespaceSeparator) + 1; i >= 0; i-- {
@@ -476,12 +491,13 @@ func resolveSymbolNamespace(symbol string, currentNamespace string, callGraph *C
 		}
 
 		// Note - We're searching in assignment graph currently, since callgraph includes only nodes from defined functions, however assignment graph also has imported function items
-		if _, exists := callGraph.assignments.Assignments[searchNamespace]; exists {
-			return searchNamespace, true
+		searchedAssignmentNode, exists := callGraph.assignmentGraph.Assignments[searchNamespace]
+		if exists {
+			return searchedAssignmentNode, true
 		}
 	}
 
-	return "", false
+	return nil, false
 }
 
 // Resolves a attribute eg. xyz.attr.subattr -> xyz, attr//subattr
@@ -504,7 +520,7 @@ func attributeResolver(node *sitter.Node, treeData []byte, currentNamespace stri
 		return "", "", fmt.Errorf("invalid node type for attribute resolver - %s", node.Type())
 	}
 
-	// fmt.Printf("Try resolving attribute - '%s' \n", node.Content(treeData))
+	fmt.Printf("Try resolving attribute - '%s' \n", node.Content(treeData))
 
 	objectNode := node.ChildByFieldName("object")
 	subAttributeNode := node.ChildByFieldName("attribute")

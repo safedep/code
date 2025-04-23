@@ -5,17 +5,24 @@ import (
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
-	"github.com/safedep/code/pkg/helpers"
+	sitter "github.com/smacker/go-tree-sitter"
 )
 
-// Parses namespaces for imported identifiers
+// Parses namespaces & sitter nodes for imported identifiers
 // eg. import pprint is parsed as:
 // pprint -> pprint
 // eg. from os import listdir as listdirfn, chmod is parsed as:
 // listdirfn -> os//listdir
 // chmod -> os//chmod
-func parseImportedIdentifierNamespaces(imports []*ast.ImportNode, lang core.Language) map[string]string {
-	importedIdentifierNamespaces := make(map[string]string)
+type parsedImport struct {
+	Identifier         string
+	IdentifierTreeNode *sitter.Node
+	Namespace          string
+	NamespaceTreeNode  *sitter.Node
+}
+
+func parseImports(imports []*ast.ImportNode, lang core.Language) map[string]parsedImport {
+	importedIdentifierNamespaces := make(map[string]parsedImport)
 	for _, imp := range imports {
 		if imp.IsWildcardImport() {
 			continue
@@ -30,8 +37,22 @@ func parseImportedIdentifierNamespaces(imports []*ast.ImportNode, lang core.Lang
 
 		moduleItemIdentifierKey := resolveSubmoduleIdentifier(imp.ModuleItem(), lang)
 		moduleAliasIdentifierKey := resolveSubmoduleIdentifier(imp.ModuleAlias(), lang)
-		identifierKey := helpers.GetFirstNonEmptyString(moduleAliasIdentifierKey, moduleItemIdentifierKey, moduleNamespace)
-		importedIdentifierNamespaces[identifierKey] = itemNamespace
+
+		identifierKey := moduleNamespace
+		identifierTreeNode := imp.GetModuleNameNode()
+		if moduleAliasIdentifierKey != "" {
+			identifierKey = moduleAliasIdentifierKey
+			identifierTreeNode = imp.GetModuleAliasNode()
+		} else if moduleItemIdentifierKey != "" {
+			identifierKey = moduleItemIdentifierKey
+			identifierTreeNode = imp.GetModuleItemNode()
+		}
+		importedIdentifierNamespaces[identifierKey] = parsedImport{
+			Identifier:         identifierKey,
+			IdentifierTreeNode: identifierTreeNode,
+			Namespace:          itemNamespace,
+			NamespaceTreeNode:  imp.GetModuleNameNode().Parent(),
+		}
 	}
 	return importedIdentifierNamespaces
 }

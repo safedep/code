@@ -73,24 +73,21 @@ func buildCallGraph(tree core.ParseTree, lang core.Language, filePath string) (*
 	}
 
 	// Required to map identifiers to imported modules as assignments
-	importedIdentifierNamespaces := parseImportedIdentifierNamespaces(imports, lang)
+	importedIdentifiers := parseImports(imports, lang)
 
-	fmt.Println()
-	fmt.Println("Imported identifier => namespace:")
-	for identifier, namespace := range importedIdentifierNamespaces {
-		fmt.Printf("  %s => %s\n", identifier, namespace)
+	log.Debugf("Imported identifier => namespace:")
+	for identifier, parsedImport := range importedIdentifiers {
+		log.Debugf("  %s => %s\n", identifier, parsedImport.Namespace)
 	}
-	fmt.Println()
 
-	callGraph, err := NewCallGraph(filePath, importedIdentifierNamespaces, tree)
+	callGraph, err := NewCallGraph(filePath, importedIdentifiers, tree)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create call graph: %w", err)
 	}
 
 	// Add root node to the call graph
-	callGraph.AddNode(filePath)
+	callGraph.AddNode(filePath, astRootNode)
 
-	// traverseTree(astRootNode, treeData, callGraph, filePath, filePath, "", false)
 	processChildren(astRootNode, *treeData, filePath, callGraph, processorMetadata{})
 
 	return callGraph, nil
@@ -103,11 +100,11 @@ func processNode(node *sitter.Node, treeData []byte, currentNamespace string, ca
 
 	nodeProcessor, exists := nodeProcessors[node.Type()]
 	if exists {
+		log.Debugf("Processing %s with namespace: %s => %s", node.Type(), currentNamespace, node.Content(treeData))
 		return nodeProcessor(node, treeData, currentNamespace, callGraph, metadata)
 	}
 
-	fmt.Println("Can't process", node.Type(), "with namespace:", currentNamespace, " =>", node.Content(treeData))
-	// fmt.Println("Content - ", node.Content(treeData))
+	log.Debugf("Can't process %s with namespace: %s => %s", node.Type(), currentNamespace, node.Content(treeData))
 	return emptyProcessor(node, treeData, currentNamespace, callGraph, metadata)
 }
 

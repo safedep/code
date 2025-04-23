@@ -72,8 +72,11 @@ func run() error {
 
 		fmt.Println("DFS Traversal results:")
 		for _, resultItem := range cg.DFS() {
-			// fmt.Println(resultItem.Depth, "-", resultItem.Namespace)
-			fmt.Printf("%s %s\n", strings.Repeat(">", resultItem.Depth), resultItem.Namespace)
+			terminalMessage := ""
+			if resultItem.Terminal {
+				terminalMessage = " (terminal)"
+			}
+			fmt.Printf("%s %s%s\n", strings.Repeat(">", resultItem.Depth), resultItem.Namespace, terminalMessage)
 		}
 
 		signatureMatches, err := cg.MatchSignatures(callgraph.ParsedSignatures.Signatures)

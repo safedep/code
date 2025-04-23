@@ -58,8 +58,16 @@ func (i *ImportNode) SetModuleNameNode(node *sitter.Node) {
 	i.moduleNameNode = node
 }
 
+func (i *ImportNode) GetModuleItemNode() *sitter.Node {
+	return i.moduleItemNode
+}
+
 func (i *ImportNode) SetModuleItemNode(node *sitter.Node) {
 	i.moduleItemNode = node
+}
+
+func (i *ImportNode) GetModuleAliasNode() *sitter.Node {
+	return i.moduleAliasNode
 }
 
 func (i *ImportNode) SetModuleAliasNode(node *sitter.Node) {

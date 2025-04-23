@@ -3,7 +3,6 @@ package callgraph
 import (
 	"embed"
 	"encoding/json"
-	"fmt"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/dry/log"
@@ -13,14 +12,12 @@ import (
 var builtinsFS embed.FS
 
 // languageBuiltins holds built-in functions for each language
-type languageBuiltins map[string]map[string]string
+type languageBuiltins map[string][]string
 
 var allBuiltins languageBuiltins
 
 // LoadBuiltins loads built-in functions from the embedded JSON file
 func init() {
-	fmt.Println("Loading built-ins...")
-
 	// Read the builtins.json file
 	data, err := builtinsFS.ReadFile("builtins.json")
 	if err != nil {
@@ -35,11 +32,11 @@ func init() {
 	}
 }
 
-func GetBuiltins(lang core.Language) map[string]string {
+func GetBuiltins(lang core.Language) []string {
 	builtins, ok := allBuiltins[string(lang.Meta().Code)]
 	if !ok {
 		log.Debugf("No built-ins defined for language %s", lang.Meta().Code)
-		return map[string]string{}
+		return []string{}
 	}
 	return builtins
 }
