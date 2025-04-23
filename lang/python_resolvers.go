@@ -86,12 +86,6 @@ func (r *pythonResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode
 			node.SetModuleNameNode(m.Captures[0].Node)
 			node.SetModuleItemNode(m.Captures[1].Node)
 			node.SetModuleAliasNode(m.Captures[2].Node)
-			// print node type and contents of all captures
-			// fmt.Println("Node", m.Captures[0].Node.Content(*data))
-			// for _, capture := range m.Captures {
-			// 	fmt.Printf("Capture: %s, %s\n", capture.Node.Type(), capture.Node.Content(*data))
-			// }
-
 			imports = append(imports, node)
 			return nil
 		}),

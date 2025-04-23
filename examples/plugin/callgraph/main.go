@@ -84,7 +84,7 @@ func run() error {
 			return fmt.Errorf("failed to match signatures: %w", err)
 		}
 
-		fmt.Println("\nSignature matches:")
+		fmt.Printf("\nSignature matches for %s:\n", cg.FileName)
 		for _, match := range signatureMatches {
 			fmt.Printf("Match found: %s (%s)\n", match.MatchedSignature.ID, match.MatchedLanguageCode)
 		}

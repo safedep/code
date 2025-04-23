@@ -67,33 +67,6 @@ func init() {
 		}
 	}
 
-	// fmt.Println("All signatures:")
-	// for _, sig := range ParsedSignatures.Signatures {
-	// 	fmt.Println("Signature ID:", sig.ID)
-	// 	for lang, matchers := range sig.Languages {
-	// 		fmt.Printf("  Language: %s, Match: %s\n", lang, matchers.Match)
-	// 		for _, cond := range matchers.Conditions {
-	// 			fmt.Printf("    - %s: %s\n", cond.Type, cond.Value)
-	// 		}
-	// 	}
-	// }
-
-	// fmt.Println("🔎 signatureByID:")
-	// for id, sig := range signatureByID {
-	// 	fmt.Printf("  %s → %s\n", id, sig.Description)
-	// }
-
-	// fmt.Println("\n🔎 signaturesByPrefix:")
-	// for prefix, sigs := range signaturesByPrefix {
-	// 	fmt.Printf("  %s → [", prefix)
-	// 	for i, sig := range sigs {
-	// 		if i > 0 {
-	// 			fmt.Print(", ")
-	// 		}
-	// 		fmt.Print(sig.ID)
-	// 	}
-	// 	fmt.Println("]")
-	// }
 }
 
 func GetSignatureByID(id string) (*Signature, bool) {

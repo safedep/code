@@ -46,8 +46,7 @@ func (p *callgraphPlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) 
 		return fmt.Errorf("failed to get file: %w", err)
 	}
 
-	log.Debugf("callgraph - Analyzing tree for language: %s, file: %s\n",
-		lang.Meta().Code, file.Name())
+	log.Debugf("callgraph - Analyzing tree for language: %s, file: %s\n", lang.Meta().Code, file.Name())
 
 	cg, err := buildCallGraph(tree, lang, file.Name())
 
@@ -75,10 +74,10 @@ func buildCallGraph(tree core.ParseTree, lang core.Language, filePath string) (*
 	// Required to map identifiers to imported modules as assignments
 	importedIdentifiers := parseImports(imports, lang)
 
-	log.Debugf("Imported identifier => namespace:")
-	for identifier, parsedImport := range importedIdentifiers {
-		log.Debugf("  %s => %s\n", identifier, parsedImport.Namespace)
-	}
+	// log.Debugf("Imported identifier => namespace:")
+	// for identifier, parsedImport := range importedIdentifiers {
+	// 	log.Debugf("  %s => %s\n", identifier, parsedImport.Namespace)
+	// }
 
 	callGraph, err := NewCallGraph(filePath, importedIdentifiers, tree)
 	if err != nil {
@@ -100,11 +99,10 @@ func processNode(node *sitter.Node, treeData []byte, currentNamespace string, ca
 
 	nodeProcessor, exists := nodeProcessors[node.Type()]
 	if exists {
-		log.Debugf("Processing %s with namespace: %s => %s", node.Type(), currentNamespace, node.Content(treeData))
 		return nodeProcessor(node, treeData, currentNamespace, callGraph, metadata)
 	}
 
-	log.Debugf("Can't process %s with namespace: %s => %s", node.Type(), currentNamespace, node.Content(treeData))
+	// log.Debugf("Can't process %s with namespace: %s => %s", node.Type(), currentNamespace, node.Content(treeData))
 	return emptyProcessor(node, treeData, currentNamespace, callGraph, metadata)
 }
 
