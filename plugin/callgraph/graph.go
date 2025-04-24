@@ -95,9 +95,9 @@ func (cg *CallGraph) AddNode(identifier string, treeNode *sitter.Node) {
 }
 
 // AddEdge adds an edge from one function to another
-func (cg *CallGraph) AddEdge(caller string, callerTreeNode *sitter.Node, callee string, caleeTreeNode *sitter.Node) {
+func (cg *CallGraph) AddEdge(caller string, callerTreeNode *sitter.Node, callee string, calleeTreeNode *sitter.Node) {
 	cg.AddNode(caller, callerTreeNode)
-	cg.AddNode(callee, caleeTreeNode)
+	cg.AddNode(callee, calleeTreeNode)
 	if !slices.Contains(cg.Nodes[caller].CallsTo, callee) {
 		cg.Nodes[caller].CallsTo = append(cg.Nodes[caller].CallsTo, callee)
 	}
