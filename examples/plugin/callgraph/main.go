@@ -76,10 +76,18 @@ func run() error {
 			if resultItem.Terminal {
 				terminalMessage = " (terminal)"
 			}
-			fmt.Printf("%s %s%s\n", strings.Repeat(">", resultItem.Depth), resultItem.Namespace, terminalMessage)
+
+			fmt.Printf("%s %s%s\n", strings.Repeat(">", resultItem.Depth), resultItem.Node.Namespace, terminalMessage)
+
+			// treeData, err := cg.Tree.Data()
+			// if err != nil {
+			// 	return fmt.Errorf("failed to get tree data: %w", err)
+			// }
+			// resultContents, _ := resultItem.Node.GetContentDetails(treeData)
+			// fmt.Printf("%s %s%s (%d #%d to %d #%d) => %s\n", strings.Repeat(">", resultItem.Depth), resultItem.Node.Namespace, terminalMessage, resultContents.StartLine, resultContents.StartColumn, resultContents.EndLine, resultContents.EndColumn, resultContents.Content)
 		}
 
-		signatureMatches, err := cg.MatchSignatures(callgraph.ParsedSignatures.Signatures)
+		signatureMatches, err := callgraph.MatchSignatures(cg, callgraph.ParsedSignatures.Signatures)
 		if err != nil {
 			return fmt.Errorf("failed to match signatures: %w", err)
 		}

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/priyakdey/trie"
 	"github.com/safedep/code/core"
 	"github.com/safedep/dry/log"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -17,6 +16,27 @@ type graphNode struct {
 	Namespace string
 	CallsTo   []string
 	TreeNode  *sitter.Node
+}
+
+type ContentDetails struct {
+	StartLine   uint32
+	EndLine     uint32
+	StartColumn uint32
+	EndColumn   uint32
+	Content     string
+}
+
+func (gn *graphNode) GetContentDetails(treeData *[]byte) (ContentDetails, error) {
+	if gn.TreeNode == nil {
+		return ContentDetails{}, fmt.Errorf("TreeNode is nil")
+	}
+	return ContentDetails{
+		StartLine:   gn.TreeNode.StartPoint().Row,
+		EndLine:     gn.TreeNode.EndPoint().Row,
+		StartColumn: gn.TreeNode.StartPoint().Column,
+		EndColumn:   gn.TreeNode.EndPoint().Column,
+		Content:     gn.TreeNode.Content(*treeData),
+	}, nil
 }
 
 func newCallGraphNode(namespace string, treeNode *sitter.Node) *graphNode {
@@ -100,9 +120,9 @@ func (cg *CallGraph) PrintAssignmentGraph() {
 }
 
 type DfsResultItem struct {
-	Namespace string
-	Depth     int
-	Terminal  bool
+	Node     *graphNode
+	Depth    int
+	Terminal bool
 }
 
 func (cg *CallGraph) DFS() []DfsResultItem {
@@ -128,9 +148,9 @@ func (cg *CallGraph) dfsUtil(startNode string, visited map[string]bool, result *
 	// Mark the current node as visited and add it to the result
 	visited[startNode] = true
 	*result = append(*result, DfsResultItem{
-		Namespace: startNode,
-		Depth:     depth,
-		Terminal:  !callgraphNodeExists || len(callgraphNode.CallsTo) == 0,
+		Node:     callgraphNode,
+		Depth:    depth,
+		Terminal: !callgraphNodeExists || len(callgraphNode.CallsTo) == 0,
 	})
 
 	assignmentGraphNode, assignmentNodeExists := cg.assignmentGraph.Assignments[startNode]
@@ -163,56 +183,4 @@ type SignatureMatchResult struct {
 	MatchedSignature    *Signature
 	MatchedLanguageCode core.LanguageCode
 	// MatchedConditions    []string
-}
-
-func (cg *CallGraph) MatchSignatures(targetSignatures []Signature) ([]SignatureMatchResult, error) {
-	language, err := cg.Tree.Language()
-	if err != nil {
-		log.Errorf("failed to get language from parse tree: %v", err)
-		return nil, err
-	}
-
-	languageCode := language.Meta().Code
-
-	matcherResults := []SignatureMatchResult{}
-
-	functionCallTrie := trie.New()
-	functionCallResultItems := cg.DFS()
-	for _, resultItem := range functionCallResultItems {
-		functionCallTrie.Insert(resultItem.Namespace)
-	}
-
-	for _, signature := range targetSignatures {
-		languageSignature, exists := signature.Languages[languageCode]
-		if !exists {
-			continue
-		}
-
-		signatureConditionsMet := 0
-		for _, condition := range languageSignature.Conditions {
-			if condition.Type == "call" {
-				lookupNamespace := resolveNamespaceWithSeparator(condition.Value, language)
-				// Check if any of the functionCalls starts with the prefix - condition.Value
-				// matched := false
-				// for _, resultItem := range functionCallResultItems {
-				// 	if strings.HasPrefix(resultItem.Namespace, lookupNamespace) {
-				// 		matched = true
-				// 		break
-				// 	}
-				// }
-				matched := functionCallTrie.Contains(lookupNamespace) || functionCallTrie.ContainsPrefix(lookupNamespace+namespaceSeparator)
-				if matched {
-					signatureConditionsMet++
-				}
-			}
-		}
-
-		if (languageSignature.Match == MatchAny && signatureConditionsMet > 0) || (languageSignature.Match == MatchAll && signatureConditionsMet == len(languageSignature.Conditions)) {
-			matcherResults = append(matcherResults, SignatureMatchResult{
-				MatchedSignature:    &signature,
-				MatchedLanguageCode: languageCode,
-			})
-		}
-	}
-	return matcherResults, nil
 }

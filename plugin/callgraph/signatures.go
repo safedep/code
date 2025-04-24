@@ -2,10 +2,11 @@ package callgraph
 
 import (
 	_ "embed"
-	"log"
 	"strings"
 
+	"github.com/priyakdey/trie"
 	"github.com/safedep/code/core"
+	"github.com/safedep/dry/log"
 	"gopkg.in/yaml.v3"
 )
 
@@ -66,7 +67,6 @@ func init() {
 			signaturesByPrefix[prefix] = append(signaturesByPrefix[prefix], sig)
 		}
 	}
-
 }
 
 func GetSignatureByID(id string) (*Signature, bool) {
@@ -76,4 +76,56 @@ func GetSignatureByID(id string) (*Signature, bool) {
 
 func GetSignaturesByPrefix(prefix string) []*Signature {
 	return signaturesByPrefix[prefix]
+}
+
+func MatchSignatures(cg *CallGraph, targetSignatures []Signature) ([]SignatureMatchResult, error) {
+	language, err := cg.Tree.Language()
+	if err != nil {
+		log.Errorf("failed to get language from parse tree: %v", err)
+		return nil, err
+	}
+
+	languageCode := language.Meta().Code
+
+	matcherResults := []SignatureMatchResult{}
+
+	functionCallTrie := trie.New()
+	functionCallResultItems := cg.DFS()
+	for _, resultItem := range functionCallResultItems {
+		functionCallTrie.Insert(resultItem.Node.Namespace)
+	}
+
+	for _, signature := range targetSignatures {
+		languageSignature, exists := signature.Languages[languageCode]
+		if !exists {
+			continue
+		}
+
+		signatureConditionsMet := 0
+		for _, condition := range languageSignature.Conditions {
+			if condition.Type == "call" {
+				lookupNamespace := resolveNamespaceWithSeparator(condition.Value, language)
+				// Check if any of the functionCalls starts with the prefix - condition.Value
+				// matched := false
+				// for _, resultItem := range functionCallResultItems {
+				// 	if strings.HasPrefix(resultItem.Namespace, lookupNamespace) {
+				// 		matched = true
+				// 		break
+				// 	}
+				// }
+				matched := functionCallTrie.Contains(lookupNamespace) || functionCallTrie.ContainsPrefix(lookupNamespace+namespaceSeparator)
+				if matched {
+					signatureConditionsMet++
+				}
+			}
+		}
+
+		if (languageSignature.Match == MatchAny && signatureConditionsMet > 0) || (languageSignature.Match == MatchAll && signatureConditionsMet == len(languageSignature.Conditions)) {
+			matcherResults = append(matcherResults, SignatureMatchResult{
+				MatchedSignature:    &signature,
+				MatchedLanguageCode: languageCode,
+			})
+		}
+	}
+	return matcherResults, nil
 }
