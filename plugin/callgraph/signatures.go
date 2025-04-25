@@ -4,8 +4,8 @@ import (
 	_ "embed"
 	"strings"
 
-	"github.com/priyakdey/trie"
 	"github.com/safedep/code/core"
+	"github.com/safedep/dry/ds/trie"
 	"github.com/safedep/dry/log"
 	"gopkg.in/yaml.v3"
 )
@@ -31,13 +31,24 @@ const (
 )
 
 type LanguageMatchers struct {
-	Match      string      `yaml:"match"`
-	Conditions []Condition `yaml:"conditions"`
+	Match      string               `yaml:"match"`
+	Conditions []SignatureCondition `yaml:"conditions"`
 }
 
-type Condition struct {
+type SignatureCondition struct {
 	Type  string `yaml:"type"`  // "call" or "import_module"
 	Value string `yaml:"value"` // function or module name
+}
+
+type MatchCondition struct {
+	Condition SignatureCondition
+	Evidences []*graphNode
+}
+
+type SignatureMatchResult struct {
+	MatchedSignature    *Signature
+	MatchedLanguageCode core.LanguageCode
+	MatchedConditions   []MatchCondition
 }
 
 var (
@@ -89,10 +100,12 @@ func MatchSignatures(cg *CallGraph, targetSignatures []Signature) ([]SignatureMa
 
 	matcherResults := []SignatureMatchResult{}
 
-	functionCallTrie := trie.New()
+	functionCallTrie := trie.NewTrie[graphNode]()
 	functionCallResultItems := cg.DFS()
 	for _, resultItem := range functionCallResultItems {
-		functionCallTrie.Insert(resultItem.Node.Namespace)
+		// We record the caller node in the trie for every namespace,
+		// since the caller is evidence of that namespace's usage
+		functionCallTrie.Insert(resultItem.Namespace, resultItem.Caller)
 	}
 
 	for _, signature := range targetSignatures {
@@ -101,29 +114,30 @@ func MatchSignatures(cg *CallGraph, targetSignatures []Signature) ([]SignatureMa
 			continue
 		}
 
-		signatureConditionsMet := 0
+		matchedConditions := []MatchCondition{}
 		for _, condition := range languageSignature.Conditions {
 			if condition.Type == "call" {
+				matchCondition := MatchCondition{
+					Condition: condition,
+					Evidences: []*graphNode{},
+				}
 				lookupNamespace := resolveNamespaceWithSeparator(condition.Value, language)
-				// Check if any of the functionCalls starts with the prefix - condition.Value
-				// matched := false
-				// for _, resultItem := range functionCallResultItems {
-				// 	if strings.HasPrefix(resultItem.Namespace, lookupNamespace) {
-				// 		matched = true
-				// 		break
-				// 	}
-				// }
-				matched := functionCallTrie.Contains(lookupNamespace) || functionCallTrie.ContainsPrefix(lookupNamespace+namespaceSeparator)
-				if matched {
-					signatureConditionsMet++
+				lookupEntries := functionCallTrie.WordsWithPrefix(lookupNamespace)
+				for _, lookupEntry := range lookupEntries {
+					matchCondition.Evidences = append(matchCondition.Evidences, lookupEntry.Value)
+				}
+
+				if len(matchCondition.Evidences) > 0 {
+					matchedConditions = append(matchedConditions, matchCondition)
 				}
 			}
 		}
 
-		if (languageSignature.Match == MatchAny && signatureConditionsMet > 0) || (languageSignature.Match == MatchAll && signatureConditionsMet == len(languageSignature.Conditions)) {
+		if (languageSignature.Match == MatchAny && len(matchedConditions) > 0) || (languageSignature.Match == MatchAll && len(matchedConditions) == len(languageSignature.Conditions)) {
 			matcherResults = append(matcherResults, SignatureMatchResult{
 				MatchedSignature:    &signature,
 				MatchedLanguageCode: languageCode,
+				MatchedConditions:   matchedConditions,
 			})
 		}
 	}

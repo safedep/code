@@ -67,6 +67,11 @@ func run() error {
 
 	// consume callgraph
 	var callgraphCallback callgraph.CallgraphCallback = func(cg *callgraph.CallGraph) error {
+		treeData, err := cg.Tree.Data()
+		if err != nil {
+			return fmt.Errorf("failed to get tree data: %w", err)
+		}
+
 		cg.PrintAssignmentGraph()
 		cg.PrintCallGraph()
 
@@ -77,12 +82,8 @@ func run() error {
 				terminalMessage = " (terminal)"
 			}
 
-			fmt.Printf("%s %s%s\n", strings.Repeat(">", resultItem.Depth), resultItem.Node.Namespace, terminalMessage)
+			fmt.Printf("%s %s%s\n", strings.Repeat(">", resultItem.Depth), resultItem.Namespace, terminalMessage)
 
-			// treeData, err := cg.Tree.Data()
-			// if err != nil {
-			// 	return fmt.Errorf("failed to get tree data: %w", err)
-			// }
 			// resultContents, _ := resultItem.Node.GetContentDetails(treeData)
 			// fmt.Printf("%s %s%s (%d #%d to %d #%d) => %s\n", strings.Repeat(">", resultItem.Depth), resultItem.Node.Namespace, terminalMessage, resultContents.StartLine, resultContents.StartColumn, resultContents.EndLine, resultContents.EndColumn, resultContents.Content)
 		}
@@ -95,6 +96,17 @@ func run() error {
 		fmt.Printf("\nSignature matches for %s:\n", cg.FileName)
 		for _, match := range signatureMatches {
 			fmt.Printf("Match found: %s (%s)\n", match.MatchedSignature.ID, match.MatchedLanguageCode)
+			for _, condition := range match.MatchedConditions {
+				fmt.Printf("\tCondition: %s - %s\n", condition.Condition.Type, condition.Condition.Value)
+				for _, evidence := range condition.Evidences {
+					evidenceContent, exists := evidence.GetContentDetails(treeData)
+					evidenceDetailString := ""
+					if exists {
+						evidenceDetailString = fmt.Sprintf("@ (L%d #%d to L%d #%d)", evidenceContent.StartLine, evidenceContent.StartColumn, evidenceContent.EndLine, evidenceContent.EndColumn)
+					}
+					fmt.Printf("\t\tEvidence: %s %s\n", evidence.Namespace, evidenceDetailString)
+				}
+			}
 		}
 		return nil
 	}

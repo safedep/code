@@ -26,9 +26,12 @@ type ContentDetails struct {
 	Content     string
 }
 
-func (gn *graphNode) GetContentDetails(treeData *[]byte) (ContentDetails, error) {
+// GetContentDetails returns the content details of the node
+// If tree sitter node is nil, it returns false indicating that the content details are not available
+// else, it returns the content details and true
+func (gn *graphNode) GetContentDetails(treeData *[]byte) (ContentDetails, bool) {
 	if gn.TreeNode == nil {
-		return ContentDetails{}, fmt.Errorf("TreeNode is nil")
+		return ContentDetails{}, false
 	}
 	return ContentDetails{
 		StartLine:   gn.TreeNode.StartPoint().Row,
@@ -36,7 +39,7 @@ func (gn *graphNode) GetContentDetails(treeData *[]byte) (ContentDetails, error)
 		StartColumn: gn.TreeNode.StartPoint().Column,
 		EndColumn:   gn.TreeNode.EndPoint().Column,
 		Content:     gn.TreeNode.Content(*treeData),
-	}, nil
+	}, true
 }
 
 func newCallGraphNode(namespace string, treeNode *sitter.Node) *graphNode {
@@ -72,12 +75,11 @@ func NewCallGraph(fileName string, importedIdentifiers map[string]parsedImport, 
 	}
 
 	for identifier, importedIdentifier := range importedIdentifiers {
+		cg.AddNode(importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
 		if identifier == importedIdentifier.Namespace {
 			cg.assignmentGraph.AddIdentifier(importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
-			cg.AddNode(importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
 		} else {
 			cg.assignmentGraph.AddAssignment(identifier, importedIdentifier.IdentifierTreeNode, importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
-			cg.AddEdge(identifier, importedIdentifier.IdentifierTreeNode, importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
 		}
 	}
 
@@ -120,44 +122,42 @@ func (cg *CallGraph) PrintAssignmentGraph() {
 }
 
 type DfsResultItem struct {
-	Node     *graphNode
-	Depth    int
-	Terminal bool
+	Namespace string
+	Node      *graphNode
+	Caller    *graphNode
+	Depth     int
+	Terminal  bool
 }
 
 func (cg *CallGraph) DFS() []DfsResultItem {
 	visited := make(map[string]bool)
 	var dfsResult []DfsResultItem
-	cg.dfsUtil(cg.FileName, visited, &dfsResult, 0)
+	cg.dfsUtil(cg.FileName, nil, visited, &dfsResult, 0)
 	return dfsResult
 }
 
-func (cg *CallGraph) dfsUtil(startNode string, visited map[string]bool, result *[]DfsResultItem, depth int) {
-	if visited[startNode] {
-		// For debugging
-		// *result = append(*result, DfsResultItem{
-		// 	Namespace: fmt.Sprintf("|- Stopped at %s (Already visited)", startNode),
-		// 	Depth:     depth,
-		// 	Terminal:  false,
-		// })
+func (cg *CallGraph) dfsUtil(namespace string, caller *graphNode, visited map[string]bool, result *[]DfsResultItem, depth int) {
+	if visited[namespace] {
 		return
 	}
 
-	callgraphNode, callgraphNodeExists := cg.Nodes[startNode]
+	callgraphNode, callgraphNodeExists := cg.Nodes[namespace]
 
 	// Mark the current node as visited and add it to the result
-	visited[startNode] = true
+	visited[namespace] = true
 	*result = append(*result, DfsResultItem{
-		Node:     callgraphNode,
-		Depth:    depth,
-		Terminal: !callgraphNodeExists || len(callgraphNode.CallsTo) == 0,
+		Namespace: namespace,
+		Node:      callgraphNode,
+		Caller:    caller,
+		Depth:     depth,
+		Terminal:  !callgraphNodeExists || len(callgraphNode.CallsTo) == 0,
 	})
 
-	assignmentGraphNode, assignmentNodeExists := cg.assignmentGraph.Assignments[startNode]
+	assignmentGraphNode, assignmentNodeExists := cg.assignmentGraph.Assignments[namespace]
 	if assignmentNodeExists {
 		// Recursively visit all the nodes assigned to the current node
 		for _, assigned := range assignmentGraphNode.AssignedTo {
-			cg.dfsUtil(assigned, visited, result, depth)
+			cg.dfsUtil(assigned, caller, visited, result, depth)
 		}
 	}
 
@@ -165,7 +165,7 @@ func (cg *CallGraph) dfsUtil(startNode string, visited map[string]bool, result *
 	// Any variable assignment would be ignored here, since it won't be in callgraph
 	if callgraphNodeExists {
 		for _, callee := range callgraphNode.CallsTo {
-			cg.dfsUtil(callee, visited, result, depth+1)
+			cg.dfsUtil(callee, callgraphNode, visited, result, depth+1)
 		}
 	}
 }
@@ -177,10 +177,4 @@ func (cg *CallGraph) GetInstanceKeyword() (string, bool) {
 		return "", false
 	}
 	return resolveInstanceKeyword(language)
-}
-
-type SignatureMatchResult struct {
-	MatchedSignature    *Signature
-	MatchedLanguageCode core.LanguageCode
-	// MatchedConditions    []string
 }

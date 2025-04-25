@@ -3,7 +3,7 @@ package callgraph
 import (
 	"slices"
 
-	"github.com/safedep/code/pkg/helpers"
+	"github.com/safedep/dry/utils"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -73,7 +73,7 @@ func (ag *AssignmentGraph) resolveUtil(currentIdentifier string, visited map[str
 
 // Resolve an identifier to its targets (leaf nodes of the DFS tree)
 func (ag *AssignmentGraph) Resolve(identifier string) []*assignmentNode {
-	targets := helpers.PtrTo([]*assignmentNode{})
+	targets := utils.PtrTo([]*assignmentNode{})
 	visited := make(map[string]bool)
 	ag.resolveUtil(identifier, visited, targets)
 	return *targets
