@@ -22,8 +22,8 @@ class TesterClass:
     def aboutme(self):
         print(f"Name: {self.name}")
     
-# Correctly identifies that adfff is instance of TesterClass
-# so any qualifier on adfff is resolved as member of TesterClass
+# Correctly identifies that alice is an instance of TesterClass
+# so any qualifier on alice is resolved as a member of TesterClass
 alice = TesterClass()
 alice.aboutme()
 bannername = alice.name
