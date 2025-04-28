@@ -1,0 +1,277 @@
+version: 0.1
+signatures:
+  - id: gcp.storage
+    description: "Google Cloud Storage Client"
+    tags: [storage, google-cloud, bucket]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "google.cloud.storage.Client"
+      javascript:
+        match: all
+        conditions:
+          - type: call
+            value: "@google-cloud/storage.Storage"
+
+  - id: azure.storage.blob
+    description: "Azure Blob Storage Client"
+    tags: [storage, azure, blob]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "azure.storage.blob.BlobServiceClient"
+      javascript:
+        match: all
+        conditions:
+          - type: call
+            value: "@azure/storage-blob.BlobServiceClient"
+
+  - id: gcp.bigquery
+    description: "Google Cloud BigQuery Client"
+    tags: [bigquery, google-cloud, data-warehouse]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "google.cloud.bigquery.Client"
+      javascript:
+        match: all
+        conditions:
+          - type: call
+            value: "@google-cloud/bigquery.BigQuery"
+
+  - id: azure.cosmos
+    description: "Azure Cosmos DB Client"
+    tags: [cosmos, database, azure, nosql]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "azure.cosmos.CosmosClient"
+      javascript:
+        match: all
+        conditions:
+          - type: call
+            value: "@azure/cosmos.CosmosClient"
+
+  - id: gcp.pubsub
+    description: "Google Cloud Pub/Sub Client"
+    tags: [pubsub, messaging, google-cloud]
+    languages:
+      python:
+        match: all
+        conditions:
+          - type: call
+            value: "google.cloud.pubsub.PublisherClient"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@google-cloud/pubsub.PubSub"
+
+  - id: azure.servicebus
+    description: "Azure Service Bus Client"
+    tags: [servicebus, messaging, azure]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "azure.servicebus.ServiceBusClient"
+      javascript:
+        match: all
+        conditions:
+          - type: call
+            value: "@azure/service-bus.ServiceBusClient"
+
+  - id: gcp.firestore
+    description: "Google Cloud Firestore Client"
+    tags: [firestore, database, google-cloud]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "google.cloud.firestore.Client"
+      javascript:
+        match: all
+        conditions:
+          - type: call
+            value: "@google-cloud/firestore.Firestore"
+
+  - id: azure.cosmos.container
+    description: "Azure Cosmos DB Container Client"
+    tags: [cosmos, database, container, azure]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "azure.cosmos.ContainerProxy"
+      javascript:
+        match: all
+        conditions:
+          - type: call
+            value: "@azure/cosmos.Container"
+
+  - id: gcp.vision
+    description: "Google Cloud Vision API Client"
+    tags: [vision, image-analysis, ai, google-cloud]
+    languages:
+      python:
+        match: all
+        conditions:
+          - type: call
+            value: "google.cloud.vision.ImageAnnotatorClient"
+      javascript:
+        match: all
+        conditions:
+          - type: call
+            value: "@google-cloud/vision.ImageAnnotatorClient"
+
+  - id: azure.vision
+    description: "Azure Computer Vision Client"
+    tags: [vision, image-analysis, ai, azure]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "azure.ai.vision.ContentAnalysisClient"
+      javascript:
+        match: all
+        conditions:
+          - type: call
+            value: "@azure/ai-vision-image-analysis.ImageAnalysisClient"
+
+  - id: gcp.translate
+    description: "Google Cloud Translation Client"
+    tags: [translate, nlp, language, google-cloud]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "google.cloud.translate.TranslationServiceClient"
+          - type: call
+            value: "google.cloud.translate_v2.Client"
+      javascript:
+        match: all
+        conditions:
+          - type: call
+            value: "@google-cloud/translate.TranslationServiceClient"
+
+  - id: azure.translator
+    description: "Azure Translator Client"
+    tags: [translate, nlp, language, azure]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "azure.ai.translation.text.TextTranslationClient"
+      javascript:
+        match: all
+        conditions:
+          - type: call
+            value: "@azure/ai-translation-text.TextTranslationClient"
+
+  - id: gcp.pubsub_v1.publisher
+    description: "Google Cloud Pub/Sub Publisher Client"
+    tags: [pubsub, messaging, google-cloud]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "google.cloud.pubsub_v1.PublisherClient"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@google-cloud/pubsub.PublisherClient"
+
+  - id: gcp.pubsub_v1.subscriber
+    description: "Google Cloud Pub/Sub Subscriber Client"
+    tags: [pubsub, messaging, google-cloud]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "google.cloud.pubsub_v1.SubscriberClient"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@google-cloud/pubsub.SubscriberClient"
+
+  - id: azure.servicebus.sender
+    description: "Azure Service Bus Sender Client"
+    tags: [servicebus, messaging, sender, azure]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "azure.servicebus.ServiceBusSender"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@azure/service-bus.ServiceBusSender"
+
+  - id: azure.servicebus.receiver
+    description: "Azure Service Bus Receiver Client"
+    tags: [servicebus, messaging, receiver, azure]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "azure.servicebus.ServiceBusReceiver"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@azure/service-bus.ServiceBusReceiver"
+
+  - id: gcp.secretmanager
+    description: "Google Cloud Secret Manager Client"
+    tags: [secret-manager, google-cloud]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "google.cloud.secretmanager.SecretManagerServiceClient"
+      javascript:
+        match: all
+        conditions:
+          - type: call
+            value: "@google-cloud/secret-manager.SecretManagerServiceClient"
+
+  - id: azure.IAM
+    description: "Azure IAM services"
+    tags: [keyvault, secrets, azure, credentials]
+    languages:
+      python:
+        match: any
+        conditions:
+         -
+            type: call
+            value: "azure.identity.DefaultAzureCredential"
+         - 
+            type: call
+            value: "azure.keyvault.secrets.SecretClient"
+      javascript:
+        match: all
+        conditions:
+          - type: call
+            value: "@azure/keyvault-secrets.SecretClient"

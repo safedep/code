@@ -63,7 +63,11 @@ func TestStripComments(t *testing.T) {
 			strippedBytes, err := io.ReadAll(readers[0])
 			assert.NoError(t, err)
 
-			defer expectedReader.Close()
+			defer func() {
+				err = expectedReader.Close()
+				assert.NoError(t, err)
+			}()
+
 			expectedBytes, err := io.ReadAll(expectedReader)
 			assert.NoError(t, err)
 
