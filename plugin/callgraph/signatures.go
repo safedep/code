@@ -2,21 +2,11 @@ package callgraph
 
 import (
 	_ "embed"
-	"strings"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/dry/ds/trie"
 	"github.com/safedep/dry/log"
-	"gopkg.in/yaml.v3"
 )
-
-//go:embed signatures.yaml
-var signatureYAML []byte
-
-type SignatureFile struct {
-	Version    string      `yaml:"version"`
-	Signatures []Signature `yaml:"signatures"`
-}
 
 type Signature struct {
 	ID          string                                 `yaml:"id"`
@@ -42,7 +32,7 @@ type SignatureCondition struct {
 
 type MatchCondition struct {
 	Condition SignatureCondition
-	Evidences []*graphNode
+	Evidences []*CallGraphNode
 }
 
 type SignatureMatchResult struct {
@@ -51,45 +41,17 @@ type SignatureMatchResult struct {
 	MatchedConditions   []MatchCondition
 }
 
-var (
-	ParsedSignatures   SignatureFile
-	signatureByID      map[string]*Signature
-	signaturesByPrefix map[string][]*Signature
-)
+type SignatureMatcher struct {
+	targetSignatures []Signature
+}
 
-func init() {
-	err := yaml.Unmarshal(signatureYAML, &ParsedSignatures)
-	if err != nil {
-		log.Fatalf("Failed to parse signature YAML: %v", err)
-	}
-
-	// Initialize lookup maps
-	signatureByID = make(map[string]*Signature)
-	signaturesByPrefix = make(map[string][]*Signature)
-
-	for i := range ParsedSignatures.Signatures {
-		sig := &ParsedSignatures.Signatures[i]
-		signatureByID[sig.ID] = sig
-
-		// build hierarchical prefix map (e.g., "gcp", "gcp.storage", etc.)
-		parts := strings.Split(sig.ID, ".")
-		for i := 1; i <= len(parts); i++ {
-			prefix := strings.Join(parts[:i], ".")
-			signaturesByPrefix[prefix] = append(signaturesByPrefix[prefix], sig)
-		}
+func NewSignatureMatcher(targetSignatures []Signature) *SignatureMatcher {
+	return &SignatureMatcher{
+		targetSignatures: targetSignatures,
 	}
 }
 
-func GetSignatureByID(id string) (*Signature, bool) {
-	sig, ok := signatureByID[id]
-	return sig, ok
-}
-
-func GetSignaturesByPrefix(prefix string) []*Signature {
-	return signaturesByPrefix[prefix]
-}
-
-func MatchSignatures(cg *CallGraph, targetSignatures []Signature) ([]SignatureMatchResult, error) {
+func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResult, error) {
 	language, err := cg.Tree.Language()
 	if err != nil {
 		log.Errorf("failed to get language from parse tree: %v", err)
@@ -100,7 +62,7 @@ func MatchSignatures(cg *CallGraph, targetSignatures []Signature) ([]SignatureMa
 
 	matcherResults := []SignatureMatchResult{}
 
-	functionCallTrie := trie.NewTrie[graphNode]()
+	functionCallTrie := trie.NewTrie[CallGraphNode]()
 	functionCallResultItems := cg.DFS()
 	for _, resultItem := range functionCallResultItems {
 		// We record the caller node in the trie for every namespace,
@@ -108,7 +70,7 @@ func MatchSignatures(cg *CallGraph, targetSignatures []Signature) ([]SignatureMa
 		functionCallTrie.Insert(resultItem.Namespace, resultItem.Caller)
 	}
 
-	for _, signature := range targetSignatures {
+	for _, signature := range sm.targetSignatures {
 		languageSignature, exists := signature.Languages[languageCode]
 		if !exists {
 			continue
@@ -119,7 +81,7 @@ func MatchSignatures(cg *CallGraph, targetSignatures []Signature) ([]SignatureMa
 			if condition.Type == "call" {
 				matchCondition := MatchCondition{
 					Condition: condition,
-					Evidences: []*graphNode{},
+					Evidences: []*CallGraphNode{},
 				}
 				lookupNamespace := resolveNamespaceWithSeparator(condition.Value, language)
 				lookupEntries := functionCallTrie.WordsWithPrefix(lookupNamespace)

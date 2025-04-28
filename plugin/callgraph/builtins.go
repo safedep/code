@@ -16,8 +16,8 @@ type languageBuiltins map[string][]string
 
 var allBuiltins languageBuiltins
 
-// LoadBuiltins loads built-in functions from the embedded JSON file
-func init() {
+// Loads built-in functions from the embedded JSON file
+func initBuiltins() {
 	// Read the builtins.json file
 	data, err := builtinsFS.ReadFile("builtins.json")
 	if err != nil {
@@ -32,7 +32,7 @@ func init() {
 	}
 }
 
-func GetBuiltins(lang core.Language) []string {
+func getBuiltins(lang core.Language) []string {
 	builtins, ok := allBuiltins[string(lang.Meta().Code)]
 	if !ok {
 		log.Debugf("No built-ins defined for language %s", lang.Meta().Code)

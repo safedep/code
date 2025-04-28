@@ -14,18 +14,18 @@ type processorMetadata struct {
 }
 
 type processorResult struct {
-	ImmediateCalls       []*graphNode // Will be needed to manage assignment-for-call-returned values
+	ImmediateCalls       []*CallGraphNode // Will be needed to manage assignment-for-call-returned values
 	ImmediateAssignments []*assignmentNode
 }
 
 func newProcessorResult() processorResult {
 	return processorResult{
-		ImmediateCalls:       []*graphNode{},
+		ImmediateCalls:       []*CallGraphNode{},
 		ImmediateAssignments: []*assignmentNode{},
 	}
 }
 
-// Create a ProcessorResult.addResults which takes variable number of ProcessorResult and adds them to the current ProcessorResult
+// addResults adds the results of the provided processorResults to the current (callee) processorResult
 func (pr *processorResult) addResults(results ...processorResult) {
 	for _, result := range results {
 		pr.ImmediateAssignments = append(pr.ImmediateAssignments, result.ImmediateAssignments...)

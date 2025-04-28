@@ -66,7 +66,7 @@ func run() error {
 	}
 
 	// consume callgraph
-	var callgraphCallback callgraph.CallgraphCallback = func(cg *callgraph.CallGraph) error {
+	var callgraphCallback callgraph.CallgraphCallback = func(_ context.Context, cg *callgraph.CallGraph) error {
 		treeData, err := cg.Tree.Data()
 		if err != nil {
 			return fmt.Errorf("failed to get tree data: %w", err)
@@ -83,12 +83,10 @@ func run() error {
 			}
 
 			fmt.Printf("%s %s%s\n", strings.Repeat(">", resultItem.Depth), resultItem.Namespace, terminalMessage)
-
-			// resultContents, _ := resultItem.Node.GetContentDetails(treeData)
-			// fmt.Printf("%s %s%s (%d #%d to %d #%d) => %s\n", strings.Repeat(">", resultItem.Depth), resultItem.Node.Namespace, terminalMessage, resultContents.StartLine, resultContents.StartColumn, resultContents.EndLine, resultContents.EndColumn, resultContents.Content)
 		}
 
-		signatureMatches, err := callgraph.MatchSignatures(cg, callgraph.ParsedSignatures.Signatures)
+		signatureMatcher := callgraph.NewSignatureMatcher(parsedSignatures.Signatures)
+		signatureMatches, err := signatureMatcher.MatchSignatures(cg)
 		if err != nil {
 			return fmt.Errorf("failed to match signatures: %w", err)
 		}

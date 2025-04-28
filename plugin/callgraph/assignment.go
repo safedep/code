@@ -21,15 +21,15 @@ func newAssignmentGraphNode(namespace string, treeNode *sitter.Node) *assignment
 	}
 }
 
-type AssignmentGraph struct {
+type assignmentGraph struct {
 	Assignments map[string]*assignmentNode // Map of identifier to possible namespaces or other identifiers
 }
 
-func NewAssignmentGraph() *AssignmentGraph {
-	return &AssignmentGraph{Assignments: make(map[string]*assignmentNode)}
+func newAssignmentGraph() *assignmentGraph {
+	return &assignmentGraph{Assignments: make(map[string]*assignmentNode)}
 }
 
-func (ag *AssignmentGraph) AddIdentifier(identifier string, treeNode *sitter.Node) *assignmentNode {
+func (ag *assignmentGraph) AddIdentifier(identifier string, treeNode *sitter.Node) *assignmentNode {
 	if _, exists := ag.Assignments[identifier]; !exists {
 		ag.Assignments[identifier] = newAssignmentGraphNode(identifier, treeNode)
 	}
@@ -37,7 +37,7 @@ func (ag *AssignmentGraph) AddIdentifier(identifier string, treeNode *sitter.Nod
 }
 
 // Add an assignment
-func (ag *AssignmentGraph) AddAssignment(identifier string, identifierTreeNode *sitter.Node, target string, targetTreeNode *sitter.Node) {
+func (ag *assignmentGraph) AddAssignment(identifier string, identifierTreeNode *sitter.Node, target string, targetTreeNode *sitter.Node) {
 	if _, exists := ag.Assignments[identifier]; !exists {
 		ag.Assignments[identifier] = newAssignmentGraphNode(identifier, identifierTreeNode)
 	}
@@ -49,7 +49,16 @@ func (ag *AssignmentGraph) AddAssignment(identifier string, identifierTreeNode *
 	}
 }
 
-func (ag *AssignmentGraph) resolveUtil(currentIdentifier string, visited map[string]bool, targets *[]*assignmentNode) {
+// Resolve an identifier to its targets (leaf nodes of the DFS tree)
+func (ag *assignmentGraph) Resolve(identifier string) []*assignmentNode {
+	targets := utils.PtrTo([]*assignmentNode{})
+	visited := make(map[string]bool)
+	ag.resolveUtil(identifier, visited, targets)
+	return *targets
+}
+
+// Utility function to resolve the identifier to its targets recursively
+func (ag *assignmentGraph) resolveUtil(currentIdentifier string, visited map[string]bool, targets *[]*assignmentNode) {
 	if visited[currentIdentifier] {
 		return
 	}
@@ -69,12 +78,4 @@ func (ag *AssignmentGraph) resolveUtil(currentIdentifier string, visited map[str
 	for _, targetIdentifier := range identifierNode.AssignedTo {
 		ag.resolveUtil(targetIdentifier, visited, targets)
 	}
-}
-
-// Resolve an identifier to its targets (leaf nodes of the DFS tree)
-func (ag *AssignmentGraph) Resolve(identifier string) []*assignmentNode {
-	targets := utils.PtrTo([]*assignmentNode{})
-	visited := make(map[string]bool)
-	ag.resolveUtil(identifier, visited, targets)
-	return *targets
 }
