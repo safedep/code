@@ -4,9 +4,12 @@ import base64
 from utils import printinit, printenc, printdec, printf2
 
 class SomeClass:
-   def __init__(self):
+    def __init__(self):
         printinit("Initialized")
         pass
+    def outer_method(self):
+        print("Called outer_method")
+        return self
 
 # @TODO - Refer attributeResolver for more details
 deepresultvalue = SomeClass().outer_method().inner_method()
