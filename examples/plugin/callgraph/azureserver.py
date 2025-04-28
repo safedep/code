@@ -8,7 +8,7 @@ from azure.servicebus import ServiceBusClient, ServiceBusMessage
 from azure.identity import DefaultAzureCredential
 
 class BaseAzureService:
-    # Note - this block is unreachabel in DFS, as parent constructors aren't resolved yet
+    # Note - this block is unreachable in DFS, as parent constructors aren't resolved yet
     def __init__(self, config: dict):
         # Use DefaultAzureCredential which supports multiple authentication methods
         self.credential = DefaultAzureCredential() 
