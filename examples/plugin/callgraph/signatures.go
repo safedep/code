@@ -3,11 +3,11 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"log"
 	"os"
 
 	callgraphv1 "buf.build/gen/go/safedep/api/protocolbuffers/go/safedep/messages/code/callgraph/v1"
 	"github.com/safedep/code/plugin/callgraph"
-	"github.com/safedep/dry/log"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,7 +26,6 @@ func init() {
 	err := yaml.Unmarshal(signatureYAML, &parsedSignatureFile)
 	if err != nil {
 		log.Fatalf("Failed to parse signature YAML: %v", err)
-		os.Exit(1)
 	}
 
 	ParsedSignatures = make([]*callgraphv1.Signature, len(parsedSignatureFile.Signatures))
