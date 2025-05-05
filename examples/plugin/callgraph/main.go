@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/safedep/code/core"
-	"github.com/safedep/code/examples/plugin/callgraph/signatures"
 	"github.com/safedep/code/fs"
 	"github.com/safedep/code/lang"
 	"github.com/safedep/code/parser"
@@ -86,7 +85,11 @@ func run() error {
 			fmt.Printf("%s %s%s\n", strings.Repeat(">", resultItem.Depth), resultItem.Namespace, terminalMessage)
 		}
 
-		signatureMatcher := callgraph.NewSignatureMatcher(signatures.ParsedSignatures)
+		signatureMatcher, err := callgraph.NewSignatureMatcher(ParsedSignatures)
+		if err != nil {
+			return fmt.Errorf("failed to create signature matcher: %w", err)
+		}
+
 		signatureMatches, err := signatureMatcher.MatchSignatures(cg)
 		if err != nil {
 			return fmt.Errorf("failed to match signatures: %w", err)

@@ -2,8 +2,10 @@ package callgraph
 
 import (
 	_ "embed"
+	"fmt"
 
 	callgraphv1 "buf.build/gen/go/safedep/api/protocolbuffers/go/safedep/messages/code/callgraph/v1"
+	"buf.build/go/protovalidate"
 	"github.com/safedep/code/core"
 	"github.com/safedep/dry/ds/trie"
 	"github.com/safedep/dry/log"
@@ -29,10 +31,15 @@ type SignatureMatcher struct {
 	targetSignatures []*callgraphv1.Signature
 }
 
-func NewSignatureMatcher(targetSignatures []*callgraphv1.Signature) *SignatureMatcher {
+func NewSignatureMatcher(targetSignatures []*callgraphv1.Signature) (*SignatureMatcher, error) {
+	validateErr := ValidateSignatures(targetSignatures)
+	if validateErr != nil {
+		return nil, fmt.Errorf("failed to validate signatures: %w", validateErr)
+	}
+
 	return &SignatureMatcher{
 		targetSignatures: targetSignatures,
-	}
+	}, nil
 }
 
 func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResult, error) {
@@ -89,4 +96,27 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 		}
 	}
 	return matcherResults, nil
+}
+
+// signature validaton based on protovalidate specification
+func ValidateSignatures(signatures []*callgraphv1.Signature) error {
+	v, err := protovalidate.New()
+	if err != nil {
+		return err
+	}
+
+	for i := range signatures {
+		if signatures[i] == nil {
+			return fmt.Errorf("signature %d is nil", i)
+		}
+
+		signature := &signatures[i]
+		if err := v.Validate(*signature); err != nil {
+			return err
+		}
+	}
+
+	log.Infof("Successfully validated %d signatures", len(signatures))
+
+	return nil
 }
