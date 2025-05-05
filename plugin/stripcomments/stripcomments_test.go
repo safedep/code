@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"testing"
 
 	"github.com/safedep/code/core"
@@ -72,5 +73,38 @@ func TestStripComments(t *testing.T) {
 
 			assert.Equal(t, string(expectedBytes), string(strippedBytes))
 		})
+	}
+}
+
+func benchmarkStripComments(b *testing.B) {
+	treeWalker, fileSystem, err := test.SetupBasicPluginContext([]string{
+		"fixtures/commented.js",
+		"fixtures/commented.py",
+	}, []core.LanguageCode{core.LanguageCodeJavascript})
+	assert.NoError(b, err)
+
+	pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+		NewStripCommentsPlugin(func(ctx context.Context, scpd *StripCommentsPluginData) error {
+			assert.NotNil(b, scpd)
+			assert.NotNil(b, scpd.File)
+			assert.NotNil(b, scpd.Reader)
+			return nil
+		}),
+	})
+	assert.NoError(b, err)
+
+	err = pluginExecutor.Execute(context.Background(), fileSystem)
+	assert.NoError(b, err)
+}
+
+func BenchmarkStripComments(b *testing.B) {
+	n := runtime.NumCPU()
+	defer runtime.GOMAXPROCS(n)
+
+	// Use a single core of CPU
+	runtime.GOMAXPROCS(1)
+
+	for i := 0; i < b.N; i++ {
+		benchmarkStripComments(b)
 	}
 }

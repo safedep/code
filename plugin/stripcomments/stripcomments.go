@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"runtime"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/pkg/ds"
@@ -78,7 +79,10 @@ func (p *stripCommentsPlugin) AnalyzeTree(ctx context.Context, tree core.ParseTr
 	// @TODO - If performance issues arise due to copying the entire file contents
 	// into memory, consider storing in a temporary file and create reader on that file
 	var output bytes.Buffer
-	stripComments(tree.Tree().RootNode(), *treeData, &output, lang)
+	err = stripComments(tree.Tree().RootNode(), treeData, &output, lang)
+	if err != nil {
+		return fmt.Errorf("failed to strip comments: %w", err)
+	}
 
 	err = p.stripCommentsCallback(ctx, newStripCommentsPluginData(file, &output))
 	if err != nil {
@@ -88,16 +92,20 @@ func (p *stripCommentsPlugin) AnalyzeTree(ctx context.Context, tree core.ParseTr
 	return nil
 }
 
-func stripComments(node *sitter.Node, source []byte, output *bytes.Buffer, lang core.Language) {
+// We use pointer to source to avoid copying the entire file contents across function calls
+func stripComments(node *sitter.Node, source *[]byte, output *bytes.Buffer, lang core.Language) error {
 	if node == nil {
-		return
+		return fmt.Errorf("node is nil")
+	}
+
+	if source == nil {
+		return fmt.Errorf("source is nil")
 	}
 
 	stack := ds.NewStack[*sitter.Node]()
 	stack.Push(node)
 
-	var prevNode *sitter.Node = nil
-
+	var prevNode *sitter.Node
 	for !stack.IsEmpty() {
 		currentNode, _ := stack.Pop()
 
@@ -115,12 +123,12 @@ func stripComments(node *sitter.Node, source []byte, output *bytes.Buffer, lang 
 			//
 			// Note - prevNode.Child() consumes lesser time than currentNode.Parent()
 			if prevNode.Child(0) == currentNode && prevStart < currStart {
-				output.Write(source[prevStart:currStart])
+				output.Write((*source)[prevStart:currStart])
 			}
 
 			// Preserve whitespace and newlines between previous node's end and current node
 			if currStart > prevEnd {
-				output.Write(source[prevEnd:currStart])
+				output.Write((*source)[prevEnd:currStart])
 			}
 		}
 
@@ -133,7 +141,7 @@ func stripComments(node *sitter.Node, source []byte, output *bytes.Buffer, lang 
 		if currentNode.ChildCount() == 0 {
 			start := currentNode.StartByte()
 			end := currentNode.EndByte()
-			output.Write(source[start:end])
+			output.Write((*source)[start:end])
 		} else {
 			// Push children onto the stack in reverse order due to LIFO nature
 			for i := int(currentNode.ChildCount()) - 1; i >= 0; i-- {
@@ -142,6 +150,13 @@ func stripComments(node *sitter.Node, source []byte, output *bytes.Buffer, lang 
 			}
 		}
 
+		// Let Go switch to other goroutines if there are any
+		// This is to avoid CPU spikes for this Go routine while avoiding
+		// starvation of other goroutines
+		runtime.Gosched()
+
 		prevNode = currentNode
 	}
+
+	return nil
 }
