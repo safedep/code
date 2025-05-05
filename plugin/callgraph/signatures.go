@@ -108,13 +108,12 @@ func ValidateSignatures(signatures []*callgraphv1.Signature) error {
 		return err
 	}
 
-	for i := range signatures {
-		if signatures[i] == nil {
+	for i, signature := range signatures {
+		if signature == nil {
 			return fmt.Errorf("signature %d is nil", i)
 		}
 
-		signature := &signatures[i]
-		if err := v.Validate(*signature); err != nil {
+		if err := v.Validate(signature); err != nil {
 			return err
 		}
 	}
