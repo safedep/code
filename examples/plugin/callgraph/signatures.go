@@ -26,7 +26,7 @@ func init() {
 	err := yaml.Unmarshal(signatureYAML, &parsedSignatureFile)
 	if err != nil {
 		log.Fatalf("Failed to parse signature YAML: %v", err)
-		os.Exit(-1)
+		os.Exit(1)
 	}
 
 	ParsedSignatures = make([]*callgraphv1.Signature, len(parsedSignatureFile.Signatures))
@@ -37,6 +37,6 @@ func init() {
 	err = callgraph.ValidateSignatures(ParsedSignatures)
 	if err != nil {
 		fmt.Printf("Signature validation failed: %v\n", err)
-		os.Exit(-1)
+		os.Exit(1)
 	}
 }
