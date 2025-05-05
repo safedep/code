@@ -31,10 +31,13 @@ type SignatureMatcher struct {
 	targetSignatures []*callgraphv1.Signature
 }
 
+// Creates a new SignatureMatcher instance with the provided target signatures.
+// It validates the signatures using the ValidateSignatures function.
+// If the validation fails, it returns an error.
 func NewSignatureMatcher(targetSignatures []*callgraphv1.Signature) (*SignatureMatcher, error) {
-	validateErr := ValidateSignatures(targetSignatures)
-	if validateErr != nil {
-		return nil, fmt.Errorf("failed to validate signatures: %w", validateErr)
+	validationErr := ValidateSignatures(targetSignatures)
+	if validationErr != nil {
+		return nil, fmt.Errorf("failed to validate signatures: %w", validationErr)
 	}
 
 	return &SignatureMatcher{
@@ -98,7 +101,7 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 	return matcherResults, nil
 }
 
-// signature validaton based on protovalidate specification
+// Validates list of callgraphv1.Signature based on protovalidate specification
 func ValidateSignatures(signatures []*callgraphv1.Signature) error {
 	v, err := protovalidate.New()
 	if err != nil {
