@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/safedep/code/core"
+	"github.com/safedep/code/examples/plugin/callgraph/signatures"
 	"github.com/safedep/code/fs"
 	"github.com/safedep/code/lang"
 	"github.com/safedep/code/parser"
@@ -85,7 +86,7 @@ func run() error {
 			fmt.Printf("%s %s%s\n", strings.Repeat(">", resultItem.Depth), resultItem.Namespace, terminalMessage)
 		}
 
-		signatureMatcher := callgraph.NewSignatureMatcher(parsedSignatures.Signatures)
+		signatureMatcher := callgraph.NewSignatureMatcher(signatures.ParsedSignatures)
 		signatureMatches, err := signatureMatcher.MatchSignatures(cg)
 		if err != nil {
 			return fmt.Errorf("failed to match signatures: %w", err)
@@ -93,7 +94,7 @@ func run() error {
 
 		fmt.Printf("\nSignature matches for %s:\n", cg.FileName)
 		for _, match := range signatureMatches {
-			fmt.Printf("Match found: %s (%s)\n", match.MatchedSignature.ID, match.MatchedLanguageCode)
+			fmt.Printf("Match found: %s (%s)\n", match.MatchedSignature.Id, match.MatchedLanguageCode)
 			for _, condition := range match.MatchedConditions {
 				fmt.Printf("\tCondition: %s - %s\n", condition.Condition.Type, condition.Condition.Value)
 				for _, evidence := range condition.Evidences {

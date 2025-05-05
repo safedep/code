@@ -3,49 +3,33 @@ package callgraph
 import (
 	_ "embed"
 
+	callgraphv1 "buf.build/gen/go/safedep/api/protocolbuffers/go/safedep/messages/code/callgraph/v1"
 	"github.com/safedep/code/core"
 	"github.com/safedep/dry/ds/trie"
 	"github.com/safedep/dry/log"
 )
-
-type Signature struct {
-	ID          string                                 `yaml:"id"`
-	Description string                                 `yaml:"description"`
-	Tags        []string                               `yaml:"tags"`
-	Languages   map[core.LanguageCode]LanguageMatchers `yaml:"languages"`
-}
 
 const (
 	MatchAny = "any"
 	MatchAll = "all"
 )
 
-type LanguageMatchers struct {
-	Match      string               `yaml:"match"`
-	Conditions []SignatureCondition `yaml:"conditions"`
-}
-
-type SignatureCondition struct {
-	Type  string `yaml:"type"`  // "call" or "import_module"
-	Value string `yaml:"value"` // function or module name
-}
-
-type MatchCondition struct {
-	Condition SignatureCondition
+type MatchedCondition struct {
+	Condition *callgraphv1.Signature_LanguageMatcher_SignatureCondition
 	Evidences []*CallGraphNode
 }
 
 type SignatureMatchResult struct {
-	MatchedSignature    *Signature
+	MatchedSignature    *callgraphv1.Signature
 	MatchedLanguageCode core.LanguageCode
-	MatchedConditions   []MatchCondition
+	MatchedConditions   []MatchedCondition
 }
 
 type SignatureMatcher struct {
-	targetSignatures []Signature
+	targetSignatures []*callgraphv1.Signature
 }
 
-func NewSignatureMatcher(targetSignatures []Signature) *SignatureMatcher {
+func NewSignatureMatcher(targetSignatures []*callgraphv1.Signature) *SignatureMatcher {
 	return &SignatureMatcher{
 		targetSignatures: targetSignatures,
 	}
@@ -71,18 +55,19 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 	}
 
 	for _, signature := range sm.targetSignatures {
-		languageSignature, exists := signature.Languages[languageCode]
+		languageSignature, exists := signature.Languages[string(languageCode)]
 		if !exists {
 			continue
 		}
 
-		matchedConditions := []MatchCondition{}
+		matchedConditions := []MatchedCondition{}
 		for _, condition := range languageSignature.Conditions {
 			if condition.Type == "call" {
-				matchCondition := MatchCondition{
+				matchCondition := MatchedCondition{
 					Condition: condition,
 					Evidences: []*CallGraphNode{},
 				}
+
 				lookupNamespace := resolveNamespaceWithSeparator(condition.Value, language)
 				lookupEntries := functionCallTrie.WordsWithPrefix(lookupNamespace)
 				for _, lookupEntry := range lookupEntries {
@@ -97,7 +82,7 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 
 		if (languageSignature.Match == MatchAny && len(matchedConditions) > 0) || (languageSignature.Match == MatchAll && len(matchedConditions) == len(languageSignature.Conditions)) {
 			matcherResults = append(matcherResults, SignatureMatchResult{
-				MatchedSignature:    &signature,
+				MatchedSignature:    signature,
 				MatchedLanguageCode: languageCode,
 				MatchedConditions:   matchedConditions,
 			})
