@@ -2,6 +2,9 @@ version: 0.1
 signatures:
   - id: gcp.storage
     description: "Google Cloud Storage Client"
+    vendor: "Google"
+    product: "Google Cloud Platform"
+    service: "Storage client"
     tags: [storage, google-cloud, bucket]
     languages:
       python:
@@ -17,6 +20,9 @@ signatures:
 
   - id: azure.storage.blob
     description: "Azure Blob Storage Client"
+    vendor: "Microsoft"
+    product: "Azure"
+    service: "Blob Storage client"
     tags: [storage, azure, blob]
     languages:
       python:
@@ -32,6 +38,9 @@ signatures:
 
   - id: gcp.bigquery
     description: "Google Cloud BigQuery Client"
+    vendor: "Google"
+    product: "Google Cloud Platform"
+    service: "BigQuery client"
     tags: [bigquery, google-cloud, data-warehouse]
     languages:
       python:
@@ -47,6 +56,9 @@ signatures:
 
   - id: azure.cosmos
     description: "Azure Cosmos DB Client"
+    vendor: "Microsoft"
+    product: "Azure"
+    service: "Cosmos DB client"
     tags: [cosmos, database, azure, nosql]
     languages:
       python:
@@ -62,6 +74,9 @@ signatures:
 
   - id: gcp.pubsub
     description: "Google Cloud Pub/Sub Client"
+    vendor: "Google"
+    product: "Google Cloud Platform"
+    service: "Pub/Sub client"
     tags: [pubsub, messaging, google-cloud]
     languages:
       python:
@@ -77,6 +92,9 @@ signatures:
 
   - id: azure.servicebus
     description: "Azure Service Bus Client"
+    vendor: "Microsoft"
+    product: "Azure"
+    service: "Service Bus client"
     tags: [servicebus, messaging, azure]
     languages:
       python:
@@ -92,6 +110,9 @@ signatures:
 
   - id: gcp.firestore
     description: "Google Cloud Firestore Client"
+    vendor: "Google"
+    product: "Google Cloud Platform"
+    service: "Firestore client"
     tags: [firestore, database, google-cloud]
     languages:
       python:
@@ -107,6 +128,9 @@ signatures:
 
   - id: azure.cosmos.container
     description: "Azure Cosmos DB Container Client"
+    vendor: "Microsoft"
+    product: "Azure"
+    service: "Cosmos DB Container client"
     tags: [cosmos, database, container, azure]
     languages:
       python:
@@ -122,6 +146,9 @@ signatures:
 
   - id: gcp.vision
     description: "Google Cloud Vision API Client"
+    vendor: "Google"
+    product: "Google Cloud Platform"
+    service: "Vision API client"
     tags: [vision, image-analysis, ai, google-cloud]
     languages:
       python:
@@ -137,6 +164,9 @@ signatures:
 
   - id: azure.vision
     description: "Azure Computer Vision Client"
+    vendor: "Microsoft"
+    product: "Azure"
+    service: "Computer Vision client"
     tags: [vision, image-analysis, ai, azure]
     languages:
       python:
@@ -152,6 +182,9 @@ signatures:
 
   - id: gcp.translate
     description: "Google Cloud Translation Client"
+    vendor: "Google"
+    product: "Google Cloud Platform"
+    service: "Translation client"
     tags: [translate, nlp, language, google-cloud]
     languages:
       python:
@@ -169,6 +202,9 @@ signatures:
 
   - id: azure.translator
     description: "Azure Translator Client"
+    vendor: "Microsoft"
+    product: "Azure"
+    service: "Translator client"
     tags: [translate, nlp, language, azure]
     languages:
       python:
@@ -184,6 +220,9 @@ signatures:
 
   - id: gcp.pubsub_v1.publisher
     description: "Google Cloud Pub/Sub Publisher Client"
+    vendor: "Google"
+    product: "Google Cloud Platform"
+    service: "Pub/Sub Publisher client"
     tags: [pubsub, messaging, google-cloud]
     languages:
       python:
@@ -199,6 +238,9 @@ signatures:
 
   - id: gcp.pubsub_v1.subscriber
     description: "Google Cloud Pub/Sub Subscriber Client"
+    vendor: "Google"
+    product: "Google Cloud Platform"
+    service: "Pub/Sub Subscriber client"
     tags: [pubsub, messaging, google-cloud]
     languages:
       python:
@@ -214,6 +256,9 @@ signatures:
 
   - id: azure.servicebus.sender
     description: "Azure Service Bus Sender Client"
+    vendor: "Microsoft"
+    product: "Azure"
+    service: "Service Bus Sender client"
     tags: [servicebus, messaging, sender, azure]
     languages:
       python:
@@ -229,6 +274,9 @@ signatures:
 
   - id: azure.servicebus.receiver
     description: "Azure Service Bus Receiver Client"
+    vendor: "Microsoft"
+    product: "Azure"
+    service: "Service Bus Receiver client"
     tags: [servicebus, messaging, receiver, azure]
     languages:
       python:
@@ -244,6 +292,9 @@ signatures:
 
   - id: gcp.secretmanager
     description: "Google Cloud Secret Manager Client"
+    vendor: "Google"
+    product: "Google Cloud Platform"
+    service: "Secret Manager client"
     tags: [secret-manager, google-cloud]
     languages:
       python:
@@ -259,6 +310,9 @@ signatures:
 
   - id: azure.IAM
     description: "Azure IAM services"
+    vendor: "Microsoft"
+    product: "Azure"
+    service: "Identity and Access Management"
     tags: [keyvault, secrets, azure, credentials]
     languages:
       python:

@@ -2,53 +2,47 @@ package callgraph
 
 import (
 	_ "embed"
+	"fmt"
 
+	callgraphv1 "buf.build/gen/go/safedep/api/protocolbuffers/go/safedep/messages/code/callgraph/v1"
+	"buf.build/go/protovalidate"
 	"github.com/safedep/code/core"
 	"github.com/safedep/dry/ds/trie"
 	"github.com/safedep/dry/log"
 )
-
-type Signature struct {
-	ID          string                                 `yaml:"id"`
-	Description string                                 `yaml:"description"`
-	Tags        []string                               `yaml:"tags"`
-	Languages   map[core.LanguageCode]LanguageMatchers `yaml:"languages"`
-}
 
 const (
 	MatchAny = "any"
 	MatchAll = "all"
 )
 
-type LanguageMatchers struct {
-	Match      string               `yaml:"match"`
-	Conditions []SignatureCondition `yaml:"conditions"`
-}
-
-type SignatureCondition struct {
-	Type  string `yaml:"type"`  // "call" or "import_module"
-	Value string `yaml:"value"` // function or module name
-}
-
-type MatchCondition struct {
-	Condition SignatureCondition
+type MatchedCondition struct {
+	Condition *callgraphv1.Signature_LanguageMatcher_SignatureCondition
 	Evidences []*CallGraphNode
 }
 
 type SignatureMatchResult struct {
-	MatchedSignature    *Signature
+	MatchedSignature    *callgraphv1.Signature
 	MatchedLanguageCode core.LanguageCode
-	MatchedConditions   []MatchCondition
+	MatchedConditions   []MatchedCondition
 }
 
 type SignatureMatcher struct {
-	targetSignatures []Signature
+	targetSignatures []*callgraphv1.Signature
 }
 
-func NewSignatureMatcher(targetSignatures []Signature) *SignatureMatcher {
+// Creates a new SignatureMatcher instance with the provided target signatures.
+// It validates the signatures using the ValidateSignatures function.
+// If the validation fails, it returns an error.
+func NewSignatureMatcher(targetSignatures []*callgraphv1.Signature) (*SignatureMatcher, error) {
+	validationErr := ValidateSignatures(targetSignatures)
+	if validationErr != nil {
+		return nil, fmt.Errorf("failed to validate signatures: %w", validationErr)
+	}
+
 	return &SignatureMatcher{
 		targetSignatures: targetSignatures,
-	}
+	}, nil
 }
 
 func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResult, error) {
@@ -71,18 +65,19 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 	}
 
 	for _, signature := range sm.targetSignatures {
-		languageSignature, exists := signature.Languages[languageCode]
+		languageSignature, exists := signature.Languages[string(languageCode)]
 		if !exists {
 			continue
 		}
 
-		matchedConditions := []MatchCondition{}
+		matchedConditions := []MatchedCondition{}
 		for _, condition := range languageSignature.Conditions {
 			if condition.Type == "call" {
-				matchCondition := MatchCondition{
+				matchCondition := MatchedCondition{
 					Condition: condition,
 					Evidences: []*CallGraphNode{},
 				}
+
 				lookupNamespace := resolveNamespaceWithSeparator(condition.Value, language)
 				lookupEntries := functionCallTrie.WordsWithPrefix(lookupNamespace)
 				for _, lookupEntry := range lookupEntries {
@@ -97,11 +92,33 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 
 		if (languageSignature.Match == MatchAny && len(matchedConditions) > 0) || (languageSignature.Match == MatchAll && len(matchedConditions) == len(languageSignature.Conditions)) {
 			matcherResults = append(matcherResults, SignatureMatchResult{
-				MatchedSignature:    &signature,
+				MatchedSignature:    signature,
 				MatchedLanguageCode: languageCode,
 				MatchedConditions:   matchedConditions,
 			})
 		}
 	}
 	return matcherResults, nil
+}
+
+// Validates list of callgraphv1.Signature based on protovalidate specification
+func ValidateSignatures(signatures []*callgraphv1.Signature) error {
+	v, err := protovalidate.New()
+	if err != nil {
+		return err
+	}
+
+	for i, signature := range signatures {
+		if signature == nil {
+			return fmt.Errorf("signature %d is nil", i)
+		}
+
+		if err := v.Validate(signature); err != nil {
+			return err
+		}
+	}
+
+	log.Infof("Successfully validated %d signatures", len(signatures))
+
+	return nil
 }
