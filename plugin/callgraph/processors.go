@@ -272,7 +272,7 @@ func attributeProcessor(attributeNode *sitter.Node, treeData []byte, currentName
 
 	objectSymbol, attributeQualifierNamespace, err := attributeResolver(attributeNode, treeData, currentNamespace, callGraph, metadata)
 	if err != nil {
-		log.Errorf("Error resolving attribute - %v", err)
+		// log.Debugf("Error resolving attribute - %v", err)
 		return newProcessorResult()
 	}
 
@@ -403,7 +403,7 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 
 		objectSymbol, attributeQualifierNamespace, err := attributeResolver(functionObjectNode, treeData, currentNamespace, callGraph, metadata)
 		if err != nil {
-			log.Errorf("Error resolving function attribute - %v", err)
+			// log.Debugf("Error resolving function attribute - %v", err)
 			return newProcessorResult()
 		}
 		finalAttributeNamespace := functionAttributeNode.Content(treeData)
@@ -440,7 +440,7 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 	// Builtin assignment already available
 	// @TODO - Handle class qualified builtins eg. console.log, console.warn etc
 
-	log.Errorf("Couldn't process function call - %s", functionName)
+	// log.Debug("Couldn't process function call - %s", functionName)
 	return newProcessorResult()
 }
 

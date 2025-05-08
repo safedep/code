@@ -18,28 +18,34 @@ type CallGraphNode struct {
 	TreeNode  *sitter.Node
 }
 
-type ContentDetails struct {
+type CallGraphNodeMetadata struct {
 	StartLine   uint32
 	EndLine     uint32
 	StartColumn uint32
 	EndColumn   uint32
-	Content     string
 }
 
-// GetContentDetails returns the content details of the node
 // If tree sitter node is nil, it returns false indicating that the content details are not available
 // else, it returns the content details and true
-func (gn *CallGraphNode) GetContentDetails(treeData *[]byte) (ContentDetails, bool) {
+func (gn *CallGraphNode) Metadata() (CallGraphNodeMetadata, bool) {
 	if gn.TreeNode == nil {
-		return ContentDetails{}, false
+		return CallGraphNodeMetadata{}, false
 	}
-	return ContentDetails{
+	return CallGraphNodeMetadata{
 		StartLine:   gn.TreeNode.StartPoint().Row,
 		EndLine:     gn.TreeNode.EndPoint().Row,
 		StartColumn: gn.TreeNode.StartPoint().Column,
 		EndColumn:   gn.TreeNode.EndPoint().Column,
-		Content:     gn.TreeNode.Content(*treeData),
 	}, true
+}
+
+// If tree sitter node is nil, it returns false indicating that the content details are not available
+// else, it returns the content details and true
+func (gn *CallGraphNode) Content(treeData *[]byte) (string, bool) {
+	if gn.TreeNode == nil {
+		return "", false
+	}
+	return gn.TreeNode.Content(*treeData), true
 }
 
 func newCallGraphNode(namespace string, treeNode *sitter.Node) *CallGraphNode {
