@@ -67,11 +67,6 @@ func run() error {
 
 	// consume callgraph
 	var callgraphCallback callgraph.CallgraphCallback = func(_ context.Context, cg *callgraph.CallGraph) error {
-		treeData, err := cg.Tree.Data()
-		if err != nil {
-			return fmt.Errorf("failed to get tree data: %w", err)
-		}
-
 		cg.PrintAssignmentGraph()
 		cg.PrintCallGraph()
 
@@ -101,10 +96,10 @@ func run() error {
 			for _, condition := range match.MatchedConditions {
 				fmt.Printf("\tCondition: %s - %s\n", condition.Condition.Type, condition.Condition.Value)
 				for _, evidence := range condition.Evidences {
-					evidenceContent, exists := evidence.GetContentDetails(treeData)
+					evidenceMetadata, metadataExists := evidence.Metadata()
 					evidenceDetailString := ""
-					if exists {
-						evidenceDetailString = fmt.Sprintf("@ (L%d #%d to L%d #%d)", evidenceContent.StartLine, evidenceContent.StartColumn, evidenceContent.EndLine, evidenceContent.EndColumn)
+					if metadataExists {
+						evidenceDetailString = fmt.Sprintf("@ (L%d #%d to L%d #%d)", evidenceMetadata.StartLine, evidenceMetadata.StartColumn, evidenceMetadata.EndLine, evidenceMetadata.EndColumn)
 					}
 					fmt.Printf("\t\tEvidence: %s %s\n", evidence.Namespace, evidenceDetailString)
 				}
