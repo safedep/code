@@ -22,6 +22,7 @@ type MatchedCondition struct {
 }
 
 type SignatureMatchResult struct {
+	FilePath            string
 	MatchedSignature    *callgraphv1.Signature
 	MatchedLanguageCode core.LanguageCode
 	MatchedConditions   []MatchedCondition
@@ -92,6 +93,7 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 
 		if (languageSignature.Match == MatchAny && len(matchedConditions) > 0) || (languageSignature.Match == MatchAll && len(matchedConditions) == len(languageSignature.Conditions)) {
 			matcherResults = append(matcherResults, SignatureMatchResult{
+				FilePath:            cg.FileName,
 				MatchedSignature:    signature,
 				MatchedLanguageCode: languageCode,
 				MatchedConditions:   matchedConditions,
@@ -117,8 +119,6 @@ func ValidateSignatures(signatures []*callgraphv1.Signature) error {
 			return err
 		}
 	}
-
-	log.Infof("Successfully validated %d signatures", len(signatures))
 
 	return nil
 }
