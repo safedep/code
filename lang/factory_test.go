@@ -17,7 +17,8 @@ var resolveLanguageTestcases = []struct {
 	{filePath: "test.cjs", exists: true, expectedLanguageCode: core.LanguageCodeJavascript},
 	{filePath: "test.mjs", exists: true, expectedLanguageCode: core.LanguageCodeJavascript},
 	{filePath: "test.go", exists: true, expectedLanguageCode: core.LanguageCodeGo},
-	{filePath: "test.java", exists: false, expectedLanguageCode: ""},
+	{filePath: "test.java", exists: true, expectedLanguageCode: core.LanguageCodeJava},
+	{filePath: "test.rs", exists: false, expectedLanguageCode: ""},
 	{filePath: "README.md", exists: false, expectedLanguageCode: ""},
 	{filePath: "withoutextension", exists: false, expectedLanguageCode: ""},
 }

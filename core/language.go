@@ -34,6 +34,7 @@ type LanguageCode string
 const (
 	LanguageCodePython     LanguageCode = "python"
 	LanguageCodeJavascript LanguageCode = "javascript"
+	LanguageCodeJava       LanguageCode = "java"
 	LanguageCodeGo         LanguageCode = "go"
 )
 

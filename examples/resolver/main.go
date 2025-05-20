@@ -76,6 +76,7 @@ func (v *treeVisitor) VisitTree(tree core.ParseTree) error {
 		return fmt.Errorf("failed to resolve imports: %w", err)
 	}
 
+	log.Infof("Found %d imports in file: %s", len(imports), file.Name())
 	for _, imp := range imports {
 		log.Infof("Import: %s", imp.String())
 	}

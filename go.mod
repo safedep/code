@@ -5,7 +5,7 @@ go 1.24.1
 require (
 	buf.build/gen/go/safedep/api/protocolbuffers/go v1.36.6-20250505130535-49e4fdd3000a.1
 	buf.build/go/protovalidate v0.12.0
-	github.com/safedep/dry v0.0.0-20250503192646-7368bcb4e650
+	github.com/safedep/dry v0.0.0-20250519134135-e68014c3479f
 	github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82
 	github.com/stretchr/testify v1.10.0
 	gopkg.in/yaml.v3 v3.0.1
