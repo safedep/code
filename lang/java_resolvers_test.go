@@ -44,10 +44,10 @@ func TestJavaLanguageResolvers(t *testing.T) {
 			importExpectationsMapper[ie.filePath] = ie.imports
 		}
 
-		javaLanugage, err := lang.NewJavaLanguage()
+		javaLanguage, err := lang.NewJavaLanguage()
 		assert.NoError(t, err)
 
-		fileParser, err := parser.NewParser([]core.Language{javaLanugage})
+		fileParser, err := parser.NewParser([]core.Language{javaLanguage})
 		assert.NoError(t, err)
 
 		fileSystem, err := fs.NewLocalFileSystem(fs.LocalFileSystemConfig{
