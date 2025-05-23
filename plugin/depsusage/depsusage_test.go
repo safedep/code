@@ -88,6 +88,22 @@ var testcases = []DepsTestcase{
 			newUsageEvidence("dotenv", "dotenv", "", "DotEnv", false, "DotEnv", "fixtures/testcases.js", 86),
 		},
 	},
+	{
+		Language: core.LanguageCodeJava,
+		FilePath: "fixtures/testcases.java",
+		ExpectedEvicences: []*UsageEvidence{
+			newUsageEvidence("java.util", "java.util", "", "", true, "", "fixtures/testcases.java", 12),
+			newUsageEvidence("java.awt", "java.awt.print", "", "", true, "", "fixtures/testcases.java", 13),
+			newUsageEvidence("", "org.springframework.beans.factory.annotation", "", "", true, "", "fixtures/testcases.java", 14),
+			newUsageEvidence("java.lang", "java.lang.Math", "", "", true, "", "fixtures/testcases.java", 15),
+			newUsageEvidence("java.util", "java.util.List", "", "List", false, "List", "fixtures/testcases.java", 19),
+			newUsageEvidence("java.util", "java.util.stream.Collectors", "", "Collectors", false, "Collectors", "fixtures/testcases.java", 20),
+			newUsageEvidence("", "com.sun.activation.registries.MailcapFile", "", "MailcapFile", false, "MailcapFile", "fixtures/testcases.java", 21),
+			newUsageEvidence("", "com.sun.activation.registries.MailcapFile", "", "MailcapFile", false, "MailcapFile", "fixtures/testcases.java", 21),
+			newUsageEvidence("java.lang", "java.lang.Math.PI", "", "PI", false, "PI", "fixtures/testcases.java", 23),
+			newUsageEvidence("", "org.junit.jupiter.api.Assertions.assertEquals", "", "assertEquals", false, "assertEquals", "fixtures/testcases.java", 24),
+		},
+	},
 }
 
 func TestDepsusageEvidences(t *testing.T) {

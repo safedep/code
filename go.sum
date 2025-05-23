@@ -41,6 +41,12 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/safedep/dry v0.0.0-20250503192646-7368bcb4e650 h1:KOx8HYCorE5ClNjpY6AG/oQB4Roi7PymA02ByikNlnE=
 github.com/safedep/dry v0.0.0-20250503192646-7368bcb4e650/go.mod h1:Mdqx/Q2DhAcN38XiUNTGCC5MktofYDQW9Az7YWGEF0s=
+github.com/safedep/dry v0.0.0-20250513161346-1fc9a2f2f53e h1:za+SRn5TcygK8xaN6jRRl8JQAujw7/DHwXaYyUIRIBU=
+github.com/safedep/dry v0.0.0-20250513161346-1fc9a2f2f53e/go.mod h1:Mdqx/Q2DhAcN38XiUNTGCC5MktofYDQW9Az7YWGEF0s=
+github.com/safedep/dry v0.0.0-20250519055529-adb20c717eb6 h1:Znq9Hd6el2KN4SZ1NyaUZG4ZCOn+YnzhKlU0gGAI+GU=
+github.com/safedep/dry v0.0.0-20250519055529-adb20c717eb6/go.mod h1:Mdqx/Q2DhAcN38XiUNTGCC5MktofYDQW9Az7YWGEF0s=
+github.com/safedep/dry v0.0.0-20250519134135-e68014c3479f h1:2fhp4R3yeITCKo868OfURmFWrTHU4ZoQSfgrTfy8YcA=
+github.com/safedep/dry v0.0.0-20250519134135-e68014c3479f/go.mod h1:Mdqx/Q2DhAcN38XiUNTGCC5MktofYDQW9Az7YWGEF0s=
 github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82 h1:6C8qej6f1bStuePVkLSFxoU22XBS165D3klxlzRg8F4=
 github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82/go.mod h1:xe4pgH49k4SsmkQq5OT8abwhWmnzkhpgnXeekbx2efw=
 github.com/stoewer/go-strcase v1.3.0 h1:g0eASXYtp+yvN9fK8sH94oCIk0fau9uV1/ZdJ0AVEzs=

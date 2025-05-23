@@ -23,6 +23,7 @@ func resolvePackageHint(moduleName string, lang core.Language) (string, error) {
 		core.LanguageCodePython:     resolvePythonPackageHint,
 		core.LanguageCodeGo:         resolveGoPackageHint,
 		core.LanguageCodeJavascript: resolveJavascriptPackageHint,
+		core.LanguageCodeJava:       resolveJavaPackageHint,
 	}
 	if resolver, ok := resolvers[lang.Meta().Code]; ok {
 		return resolver(moduleName)
@@ -30,16 +31,16 @@ func resolvePackageHint(moduleName string, lang core.Language) (string, error) {
 	return moduleName, nil
 }
 
-func resolvePythonPackageHint(s string) (string, error) {
-	if s == "" {
-		return "", fmt.Errorf("invalid module name: %s", s)
+func resolvePythonPackageHint(moduleName string) (string, error) {
+	if moduleName == "" {
+		return "", fmt.Errorf("invalid module name: %s", moduleName)
 	}
 	// @TODO - Resolve package name for popular top level modules
 	// eg. yaml -> pyyaml, usb -> pyusb
-	if strings.Contains(s, ".") {
-		return s[:strings.Index(s, ".")], nil
+	if strings.Contains(moduleName, ".") {
+		return moduleName[:strings.Index(moduleName, ".")], nil
 	}
-	return s, nil
+	return moduleName, nil
 }
 
 func resolveGoPackageHint(moduleName string) (string, error) {
@@ -107,4 +108,24 @@ func resolveJavascriptPackageHint(moduleName string) (string, error) {
 	}
 
 	return parts[0], nil
+}
+
+func resolveJavaPackageHint(moduleName string) (string, error) {
+	if moduleName == "" {
+		return "", fmt.Errorf("invalid module name: %s", moduleName)
+	}
+
+	builtinJavaPackageRoots := []string{"java", "jdk"}
+
+	// If the module name starts with a builtin package root, return package name with root and next qualifier
+	// eg. java.lang.Math.PI -> java.lang
+	for _, root := range builtinJavaPackageRoots {
+		parts := strings.Split(moduleName, ".")
+		if strings.HasPrefix(moduleName, root) {
+			return strings.Join(parts[:min(2, len(parts))], "."), nil
+		}
+	}
+
+	// For other packages, we can't determine a hint deterministically without known external sources
+	return "", fmt.Errorf("unable to resolve package hint for module: %s", moduleName)
 }
