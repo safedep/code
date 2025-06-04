@@ -247,12 +247,6 @@
     "Integer",
     "Long",
     "Float",
-    "Double",
-    "Math",
-    "StrictMath",
-    "Runtime",
-    "System",
-    "Thread",
-    "ThreadLocal"
+    "Double"
   ]
 }
