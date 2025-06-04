@@ -2,7 +2,7 @@ package callgraph
 
 import "strings"
 
-func resolveRootQualifier(namespace string) string {
+func resolveRootNamespaceQualifier(namespace string) string {
 	parts := strings.Split(namespace, namespaceSeparator)
 
 	if len(parts) == 0 {

@@ -72,6 +72,7 @@ func init() {
 		"subscript":            skippedProcessor,
 
 		// Java-specific
+		"method_invocation":          methodInvocationProcessor,
 		"class_declaration":          classDefinitionProcessor,
 		"scoped_type_identifier":     scopedIdentifierProcessor,
 		"variable_declarator":        variableDeclaratorProcessor,
@@ -193,7 +194,7 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 
 	// Java - Register direct call from root namespace to main function
 	if treeLanguage.Meta().Code == core.LanguageCodeJava && funcName == "main" {
-		rootNamespace := resolveRootQualifier(currentNamespace)
+		rootNamespace := resolveRootNamespaceQualifier(currentNamespace)
 		callGraph.AddEdge(rootNamespace, nil, functionNamespace, functionDefNode)
 	}
 
@@ -498,6 +499,7 @@ func searchSymbolInScopeChain(symbol string, currentNamespace string, callGraph 
 		// Note - We're searching in assignment graph currently, since callgraph includes only nodes from defined functions, however assignment graph also has imported function items
 		searchedAssignmentNode, exists := callGraph.assignmentGraph.Assignments[searchNamespace]
 		if exists {
+			fmt.Printf("Found %s as %s\n", symbol, searchedAssignmentNode.Namespace)
 			return searchedAssignmentNode, true
 		}
 	}
@@ -690,7 +692,7 @@ func objectCreationExpressionProcessor(objectCreationNode *sitter.Node, treeData
 		processNode(argumentsNode, treeData, currentNamespace, callGraph, metadata)
 	}
 
-	// fmt.Printf("Object creation result for %s - %s\n", objectCreationNode.Content(treeData), result.ToString())
+	fmt.Printf("Object creation result for %s - %s\n", objectCreationNode.Content(treeData), result.ToString())
 	return result
 }
 
@@ -738,4 +740,91 @@ func localVariableDeclarationProcessor(declarationNode *sitter.Node, treeData []
 	}
 
 	return newProcessorResult()
+}
+
+func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if methodInvocationNode == nil {
+		return newProcessorResult()
+	}
+
+	argumentsNode := methodInvocationNode.ChildByFieldName("arguments")
+	// Process function arguments
+	if argumentsNode != nil {
+		// @TODO - Ideally, the result.ImmediateAssignments should be associated with called function
+		// but, we don't have parameter and their positional information, which is a complex task
+		// Hence, we're not processing argument results here
+		processNode(argumentsNode, treeData, currentNamespace, callGraph, metadata)
+	}
+
+	methodNameNode := methodInvocationNode.ChildByFieldName("name")
+	if methodNameNode == nil {
+		log.Errorf("Method invocation without name - %s", methodInvocationNode.Content(treeData))
+		return newProcessorResult()
+	}
+
+	methodName := methodNameNode.Content(treeData)
+
+	methodQualifierObjectNode := methodInvocationNode.ChildByFieldName("object")
+	if methodQualifierObjectNode != nil {
+		methodObjectQualifierNamespace := resolveQualifierObjectFieldaccess(methodQualifierObjectNode, treeData)
+		qualifiers := strings.Split(methodObjectQualifierNamespace, namespaceSeparator)
+
+		callerObjectNamespaces := []string{}
+
+		if len(qualifiers) > 1 {
+			// methodObjectQualifierNamespace includes a separator eg. "xyz//attr"
+
+			rootObjNode, rootObjNodeExists := searchSymbolInScopeChain(qualifiers[0], currentNamespace, callGraph)
+			rootCallerObjAssignments := []*assignmentNode{}
+			if rootObjNodeExists {
+				rootCallerObjAssignments = callGraph.assignmentGraph.Resolve(rootObjNode.Namespace)
+			}
+			// @TODO - Handle case where root object is not found in any of the scope chains
+
+			remainingQualifiers := strings.Join(qualifiers[1:], namespaceSeparator)
+
+			for _, rootCallerObjAssignment := range rootCallerObjAssignments {
+				callerObjectNamespaces = append(callerObjectNamespaces, rootCallerObjAssignment.Namespace + namespaceSeparator + remainingQualifiers)
+			}
+		} else {
+			rootObjNode, rootObjNodeExists := searchSymbolInScopeChain(qualifiers[0], currentNamespace, callGraph)
+			if rootObjNodeExists {
+				rootCallerObjAssignments := callGraph.assignmentGraph.Resolve(rootObjNode.Namespace)
+				for _, rootCallerObjAssignment := range rootCallerObjAssignments {
+					callerObjectNamespaces = append(callerObjectNamespaces, rootCallerObjAssignment.Namespace)
+				}
+			}
+			// @TODO - Handle case where root object is not found in any of the scope chains
+		}
+
+		for _, callerObjectNamespace := range callerObjectNamespaces {
+			calledNamespace := callerObjectNamespace + namespaceSeparator + methodName
+			log.Debugf("Method invocation %s searched (object qualified) & resolved to - %s\n", methodName, calledNamespace)
+			callGraph.AddEdge(currentNamespace, nil, calledNamespace, methodInvocationNode) // Assumption - current namespace exists in the graph
+		}
+
+		return newProcessorResult()
+	}
+
+	// Simple function call lookup without any qualifiers
+	functionAssignmentNode, functionResolvedBySearch := searchSymbolInScopeChain(methodName, currentNamespace, callGraph)
+	if functionResolvedBySearch {
+		log.Debugf("Method invocation %s searched (direct) & resolved to %s\n", methodName, functionAssignmentNode.Namespace)
+		callGraph.AddEdge(currentNamespace, nil, functionAssignmentNode.Namespace, functionAssignmentNode.TreeNode) // Assumption - current namespace exists in the graph
+		return newProcessorResult()
+	}
+
+	fmt.Println("Method invocation processor - ", methodInvocationNode.Content(treeData))
+
+	return newProcessorResult()
+}
+
+// resolveQualifierObjectFieldaccess resolves the namespace for object and qualified field, used by methodInvocationProcessor
+// eg. for "xyz.attr.subattr.fncall", it returns xyz//attr//subattr//fncall"]
+func resolveQualifierObjectFieldaccess(invokedObjNode *sitter.Node, treeData []byte) string {
+	if invokedObjNode == nil {
+		return ""
+	}
+
+	return strings.ReplaceAll(invokedObjNode.Content(treeData), ".", namespaceSeparator)
 }

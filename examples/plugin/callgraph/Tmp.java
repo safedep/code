@@ -5,19 +5,22 @@ import java.awt.Window;
 import java.util.ArrayList;
 import java.util.Map.Entry;
 import com.sun.activation.registries.MailcapFile;
+import static somelib.xyz.somelibfn;
 
-Dialog dg = new Dialog(new Window(new Frame()));
-System.out.println(dg);
-
-public void start() {
-  System.out.println("Starting...");
-}
 
 public class Tmp {
   public static void main(String[] args) {
     try {
-        MailcapFile mailcapFile = new MailcapFile();
-        System.out.println(mailcapFile.getMimeTypes());
+        // Done --------------------
+        somelibfn();
+        Dialog dg = new Dialog(new Window(new Frame()));
+        dg.setTitle("Test Dialog");
+        dg.subobj.getSomething();
+        dg.subobj.subobj2.getSomethingElse();
+        System.out.println(dg);
+        // Done ^^^^^^^^^^^^^
+
+
       LayoutManager lm = new java.awt.BorderLayout();
       java.awt.Component cb = new java.awt.Checkbox("label", new java.awt.CheckboxGroup(), false);
       cb = new java.awt.Dialog(new Dialog(new Window(new Frame()))); // Not assigned properly yet to cb
