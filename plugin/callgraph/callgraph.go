@@ -15,6 +15,7 @@ const namespaceSeparator = "//"
 type CallGraphNode struct {
 	Namespace string
 	CallsTo   []string
+	CalledBy [] string
 	TreeNode  *sitter.Node
 }
 
@@ -52,6 +53,7 @@ func newCallGraphNode(namespace string, treeNode *sitter.Node) *CallGraphNode {
 	return &CallGraphNode{
 		Namespace: namespace,
 		CallsTo:   []string{},
+		CalledBy: []string{},
 		TreeNode:  treeNode,
 	}
 }
@@ -109,6 +111,9 @@ func (cg *CallGraph) AddEdge(caller string, callerTreeNode *sitter.Node, callee 
 	if !slices.Contains(cg.Nodes[caller].CallsTo, callee) {
 		cg.Nodes[caller].CallsTo = append(cg.Nodes[caller].CallsTo, callee)
 	}
+	if !slices.Contains(cg.Nodes[callee].CalledBy, caller) {
+		cg.Nodes[callee].CalledBy = append(cg.Nodes[callee].CalledBy, caller)
+	}
 }
 
 func (cg *CallGraph) PrintCallGraph() error {
@@ -124,7 +129,7 @@ func (cg *CallGraph) PrintCallGraph() error {
 		if builtInsMap[caller] && len(node.CallsTo) == 0 {
 			continue // Skip built-in functions with no calls
 		}
-		fmt.Printf("  %s (calls)=> %v\n", caller, node.CallsTo)
+		fmt.Printf("  %s (->%d) (calls)=> %v\n", caller, len(node.CalledBy), node.CallsTo)
 	}
 	fmt.Println()
 
@@ -144,10 +149,10 @@ func (cg *CallGraph) PrintAssignmentGraph() error {
 		if builtInsMap[assignmentNamespace] && len(assignmentNode.AssignedTo) == 0 {
 			continue // Skip built-in functions with no calls
 		}
-		fmt.Printf("  %s => %v\n", assignmentNamespace, assignmentNode.AssignedTo)
+		fmt.Printf("  %s (->%d) => %v\n", assignmentNamespace, len(assignmentNode.AssignedBy), assignmentNode.AssignedTo)
 	}
 	fmt.Println()
-	
+
 	return nil
 }
 

@@ -65,6 +65,10 @@ func (r *javaResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, 
 	return imports, err
 }
 
+// resolveAliasNode resolves the alias node for the import declaration.
+// In Java, the alias is typically the last part of the scoped identifier.
+// For example, in `import com.example.MyClass`, the alias is `MyClass`.
+// If the alias is not present, it returns the module name node itself.
 func (r *javaResolvers) resolveAliasNode(moduleNameNode *sitter.Node) *sitter.Node {
 	aliasNode := moduleNameNode.ChildByFieldName("name")
 	if aliasNode == nil {
