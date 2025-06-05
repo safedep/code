@@ -2,6 +2,7 @@ package callgraph
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/safedep/code/core"
@@ -90,12 +91,12 @@ func init() {
 	skippedNodeTypes := []string{
 		// Imports
 		"import_statement", "import", "import_from_statement", "import_declaration",
+		// Comments and fillers
+		"comment", "whitespace", "newline", "line_comment",
 		// Operators
 		"+", "-", "*", "/", "%", "**", "//", "=", "+=", "-=", "*=", "/=", "%=",
 		// Symbols
 		",", ":", ";", ".", "(", ")", "{", "}", "[", "]",
-		// Comments and fillers
-		"comment", "whitespace", "newline",
 		// Other
 	}
 	for _, symbol := range skippedNodeTypes {
@@ -742,8 +743,23 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 
 	methodName := methodNameNode.Content(treeData)
 
+	// For chained method invocations eg. xyz.method1().method2().method3()
+	// we will ignore methodName ie. method3 in this case, and only resolve the first method in the chain
+	hasChainedMethodInvocations := false
+
 	methodQualifierObjectNode := methodInvocationNode.ChildByFieldName("object")
 	if methodQualifierObjectNode != nil {
+		// Extract first called method from chain of method invocations
+		// eg. xyz.method1().method2().method3() => xyz.method1
+		for methodQualifierObjectNode.Type() == "method_invocation" {
+			hasChainedMethodInvocations = true
+			nextObjNode := methodQualifierObjectNode.ChildByFieldName("object")
+			if nextObjNode == nil || nextObjNode.Type() != "method_invocation" {
+				break
+			}
+			methodQualifierObjectNode = nextObjNode
+		}
+
 		methodObjectQualifierNamespace := resolveQualifierObjectFieldaccess(methodQualifierObjectNode, treeData)
 		qualifiers := strings.Split(methodObjectQualifierNamespace, namespaceSeparator)
 
@@ -783,7 +799,10 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 
 
 		for _, callerObjectNamespace := range callerObjectNamespaces {
-			calledNamespace := callerObjectNamespace + namespaceSeparator + methodName
+			calledNamespace := callerObjectNamespace 
+			if !hasChainedMethodInvocations {
+				calledNamespace = calledNamespace + namespaceSeparator + methodName
+			}
 			log.Debugf("Method invocation %s searched (object qualified) & resolved to - %s\n", methodName, calledNamespace)
 			callGraph.AddEdge(currentNamespace, nil, calledNamespace, methodInvocationNode) // Assumption - current namespace exists in the graph
 		}
@@ -799,15 +818,22 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 		return newProcessorResult()
 	}
 
+	log.Debugf("Method invocation %s couldn't be processed", methodName)
+
 	return newProcessorResult()
 }
 
-// resolveQualifierObjectFieldaccess resolves the namespace for object and qualified field, used by methodInvocationProcessor
+var methodInvocationNormaliserRegexp = regexp.MustCompile(`[-()\n ]`)
+
+// resolveQualifierObjectFieldaccess resolves the namespace for object and qualified field
+// and removes if any call Parentheses symbols present; intended to be used by methodInvocationProcessor
 // eg. for "xyz.attr.subattr.fncall", it returns xyz//attr//subattr//fncall"]
 func resolveQualifierObjectFieldaccess(invokedObjNode *sitter.Node, treeData []byte) string {
 	if invokedObjNode == nil {
 		return ""
 	}
 
-	return strings.ReplaceAll(invokedObjNode.Content(treeData), ".", namespaceSeparator)
+	normalisedString := methodInvocationNormaliserRegexp.ReplaceAllString(invokedObjNode.Content(treeData), "")
+
+	return strings.ReplaceAll(normalisedString, ".", namespaceSeparator)
 }

@@ -141,8 +141,13 @@ var testcases = []callgraphTestcase{
 			"fixtures/CallgraphTestcases.java": {
 				"fixtures/CallgraphTestcases.java//CallgraphTestcases//main",
 			},
+			"fixtures/CallgraphTestcases.java//CallgraphTestcases": {
+				"com//custompkg//SomeClass//defaultConstructor",
+				"com//custompkg//SomeClass//someMethod",
+				"com//custompkg//SomeClass//someOtherMethod",
+			} ,
 			"fixtures/CallgraphTestcases.java//CallgraphTestcases//myfunc": {
-				"System//err//println",
+				"String//valueOf",
 			},
 			"fixtures/CallgraphTestcases.java//CallgraphTestcases//this//myfunc": {
 			 	"fixtures/CallgraphTestcases.java//CallgraphTestcases//myfunc",
@@ -176,6 +181,9 @@ var testcases = []callgraphTestcase{
 				"somelibfn",
 				"fixtures/CallgraphTestcases.java//CallgraphTestcases//myfunc",
 				"System//out//println",
+				"System//out//xyz//println",
+				"System//console",
+				"System//getenv",
 				"Math//atan",
 				"com//somecompany//customlib//datatransfer//DataTransferer//getInstance",
 				"org//mycompany//mylib//SomeClass",

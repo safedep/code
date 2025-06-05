@@ -111,20 +111,44 @@ func (cg *CallGraph) AddEdge(caller string, callerTreeNode *sitter.Node, callee 
 	}
 }
 
-func (cg *CallGraph) PrintCallGraph() {
+func (cg *CallGraph) PrintCallGraph() error {
+	lang, err := cg.Tree.Language()
+	if err != nil {
+		return fmt.Errorf("failed to get language from callgraph: %w", err)
+	}
+
+	builtInsMap := getBuiltinsMap(lang)
+
 	fmt.Println("Call Graph:")
 	for caller, node := range cg.Nodes {
+		if builtInsMap[caller] && len(node.CallsTo) == 0 {
+			continue // Skip built-in functions with no calls
+		}
 		fmt.Printf("  %s (calls)=> %v\n", caller, node.CallsTo)
 	}
 	fmt.Println()
+
+	return nil
 }
 
-func (cg *CallGraph) PrintAssignmentGraph() {
+func (cg *CallGraph) PrintAssignmentGraph() error {
+	lang, err := cg.Tree.Language()
+	if err != nil {
+		return fmt.Errorf("failed to get language from callgraph: %w", err)
+	}
+
+	builtInsMap := getBuiltinsMap(lang)
+
 	fmt.Println("Assignment Graph:")
 	for assignmentNamespace, assignmentNode := range cg.assignmentGraph.Assignments {
+		if builtInsMap[assignmentNamespace] && len(assignmentNode.AssignedTo) == 0 {
+			continue // Skip built-in functions with no calls
+		}
 		fmt.Printf("  %s => %v\n", assignmentNamespace, assignmentNode.AssignedTo)
 	}
 	fmt.Println()
+	
+	return nil
 }
 
 type DfsResultItem struct {

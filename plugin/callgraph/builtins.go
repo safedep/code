@@ -40,3 +40,12 @@ func getBuiltins(lang core.Language) []string {
 	}
 	return builtins
 }
+
+func getBuiltinsMap(lang core.Language) map[string]bool {
+	builtins := getBuiltins(lang)
+	builtinsMap := make(map[string]bool, len(builtins))
+	for _, builtin := range builtins {
+		builtinsMap[builtin] = true
+	}
+	return builtinsMap
+}

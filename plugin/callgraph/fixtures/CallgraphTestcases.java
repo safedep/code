@@ -8,8 +8,18 @@ import com.sun.activation.registries.MailcapFile;
 import static somelib.xyz.somelibfn;
 
 public class CallgraphTestcases {
+  public CallgraphTestcases() {
+    com.custompkg.SomeClass.defaultConstructor();
+  }
+  public CallgraphTestcases(int i) {
+    com.custompkg.SomeClass.someMethod(i);
+  }
+  public CallgraphTestcases(int i, String s) {
+    com.custompkg.SomeClass.someOtherMethod(i, s);
+  }
+
   public static void myfunc(){
-    System.err.println("myfunc called");
+    String.valueOf('c');
   }
   
   public static void main(String[] args) {
@@ -37,6 +47,11 @@ public class CallgraphTestcases {
     somelibfn();
     myfunc();
     System.out.println("GG");
+    System.out.xyz.println("GG");
+
+    // Function call chain
+    System.console().readPassword();
+    System.getenv().keySet().iterator().hasNext();
     Math.atan(1.0);
 
     // Unknown standalone function call

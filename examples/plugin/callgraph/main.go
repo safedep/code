@@ -67,8 +67,16 @@ func run() error {
 
 	// consume callgraph
 	var callgraphCallback callgraph.CallgraphCallback = func(_ context.Context, cg *callgraph.CallGraph) error {
-		cg.PrintAssignmentGraph()
-		cg.PrintCallGraph()
+		err := cg.PrintAssignmentGraph()
+		if err != nil {
+			return fmt.Errorf("failed to print assignment graph: %w", err)
+		}
+
+
+		err = cg.PrintCallGraph()
+		if err != nil {
+			return fmt.Errorf("failed to print call graph: %w", err)
+		}
 
 		fmt.Println("DFS Traversal results:")
 		for _, resultItem := range cg.DFS() {
