@@ -763,7 +763,10 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 			// @TODO - Immediate members of constructed class can be handled here
 			// eg. in new xyz().method1().method2() => xyz//method1 can be resolved
 			if nextObjNode.Type() == "object_creation_expression" {
-				return objectCreationExpressionProcessor(nextObjNode, treeData, currentNamespace, callGraph, metadata)
+				// No need to process assignments here as the actual returned value is not this object
+				// In case of immediate members, it can be possibly resolved
+				objectCreationExpressionProcessor(nextObjNode, treeData, currentNamespace, callGraph, metadata)
+				return newProcessorResult()
 			}
 
 			if nextObjNode.Type() != "method_invocation" {
