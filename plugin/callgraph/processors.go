@@ -80,7 +80,7 @@ func init() {
 		"local_variable_declaration": localVariableDeclarationProcessor,
 		"object_creation_expression": objectCreationExpressionProcessor,
 		"method_declaration":         functionDefinitionProcessor,
-		"assignment_expression": assignmentProcessor,
+		"assignment_expression":      assignmentProcessor,
 	}
 
 	// Literals
@@ -754,7 +754,19 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 		for methodQualifierObjectNode.Type() == "method_invocation" {
 			hasChainedMethodInvocations = true
 			nextObjNode := methodQualifierObjectNode.ChildByFieldName("object")
-			if nextObjNode == nil || nextObjNode.Type() != "method_invocation" {
+			if nextObjNode == nil {
+				break
+			}
+
+			// For a method_invocation over new objects, perform object creation expression processing
+			// eg. new xyz().method1().method2() => perform only new xyz()
+			// @TODO - Immediate members of constructed class can be handled here
+			// eg. in new xyz().method1().method2() => xyz//method1 can be resolved
+			if nextObjNode.Type() == "object_creation_expression" {
+				return objectCreationExpressionProcessor(nextObjNode, treeData, currentNamespace, callGraph, metadata)
+			}
+
+			if nextObjNode.Type() != "method_invocation" {
 				break
 			}
 			methodQualifierObjectNode = nextObjNode
@@ -762,29 +774,28 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 
 		methodObjectQualifierNamespace := resolveQualifierObjectFieldaccess(methodQualifierObjectNode, treeData)
 		qualifiers := strings.Split(methodObjectQualifierNamespace, namespaceSeparator)
-
 		callerObjectNamespaces := []string{}
 
 		if len(qualifiers) > 0 {
 			rootObjKeyword := qualifiers[0]
 			rootObjNode, rootObjNodeExists := searchSymbolInScopeChain(rootObjKeyword, currentNamespace, callGraph)
-			
+
 			var rootCallerObjAssignments []*assignmentNode
 			if rootObjNodeExists {
 				rootCallerObjAssignments = callGraph.assignmentGraph.Resolve(rootObjNode.Namespace)
-			} else {				
+			} else {
 				// If root object is not found, we can assume it is a fully qualified object
 				// eg. sun.reflect.Method here, sun couldn't be identified, so assume its a library root keyword
-				callGraph.AddNode(rootObjKeyword, nil) // @TODO - Can't create sitter node for fully qualified object
+				callGraph.AddNode(rootObjKeyword, nil)                       // @TODO - Can't create sitter node for fully qualified object
 				callGraph.assignmentGraph.AddIdentifier(rootObjKeyword, nil) // @TODO - Can't create sitter node for fully qualified object
-				rootCallerObjAssignments = callGraph.assignmentGraph.Resolve(rootObjKeyword)	
+				rootCallerObjAssignments = callGraph.assignmentGraph.Resolve(rootObjKeyword)
 			}
 
 			// len(qualifiers)>1 means methodObjectQualifierNamespace includes a separator eg. "xyz//attr"
 			if len(qualifiers) > 1 {
 				remainingQualifiersNamespaceSuffix := strings.Join(qualifiers[1:], namespaceSeparator)
 				for _, rootCallerObjAssignment := range rootCallerObjAssignments {
-					callerObjectNamespaces = append(callerObjectNamespaces, rootCallerObjAssignment.Namespace + namespaceSeparator + remainingQualifiersNamespaceSuffix)
+					callerObjectNamespaces = append(callerObjectNamespaces, rootCallerObjAssignment.Namespace+namespaceSeparator+remainingQualifiersNamespaceSuffix)
 				}
 			} else {
 				if rootObjNodeExists {
@@ -797,9 +808,8 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 			}
 		}
 
-
 		for _, callerObjectNamespace := range callerObjectNamespaces {
-			calledNamespace := callerObjectNamespace 
+			calledNamespace := callerObjectNamespace
 			if !hasChainedMethodInvocations {
 				calledNamespace = calledNamespace + namespaceSeparator + methodName
 			}

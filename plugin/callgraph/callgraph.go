@@ -15,7 +15,7 @@ const namespaceSeparator = "//"
 type CallGraphNode struct {
 	Namespace string
 	CallsTo   []string
-	CalledBy [] string
+	CalledBy  []string
 	TreeNode  *sitter.Node
 }
 
@@ -53,7 +53,7 @@ func newCallGraphNode(namespace string, treeNode *sitter.Node) *CallGraphNode {
 	return &CallGraphNode{
 		Namespace: namespace,
 		CallsTo:   []string{},
-		CalledBy: []string{},
+		CalledBy:  []string{},
 		TreeNode:  treeNode,
 	}
 }
@@ -156,6 +156,16 @@ func (cg *CallGraph) PrintAssignmentGraph() error {
 	return nil
 }
 
+// Assumption - All functions and class constructors are reachable
+var dfsSourceNodeTypes = map[string]bool{
+	"program": true,
+	"file": true,
+	"function_definition": true,
+	"method_declaration": true,
+	"class_definition": true,
+	"class_declaration": true,
+}
+
 type DfsResultItem struct {
 	Namespace string
 	Node      *CallGraphNode
@@ -167,7 +177,21 @@ type DfsResultItem struct {
 func (cg *CallGraph) DFS() []DfsResultItem {
 	visited := make(map[string]bool)
 	var dfsResult []DfsResultItem
+
+	// Initially Interpret callgraph in its natural execution order starting from
+	// the file name which has reference for entrypoints (if any)
 	cg.dfsUtil(cg.FileName, nil, visited, &dfsResult, 0)
+
+	// Assumption - All functions and class constructors are reachable
+	// This is required because most files only expose their classes/functions
+	// which are imported and used by other files, so an entrypoint may not be 
+	// present in every file.
+	for namespace, node := range cg.Nodes {
+		if node.TreeNode != nil && dfsSourceNodeTypes[node.TreeNode.Type()] {
+			cg.dfsUtil(namespace, nil, visited, &dfsResult, 0)
+		}
+	}
+
 	return dfsResult
 }
 
