@@ -83,10 +83,9 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 				lookupNamespace := resolveNamespaceWithSeparator(condition.Value, language)
 				lookupNamespace, isWildcardLookup := trimWildcardLookupNamespace(lookupNamespace, language)
 
-
 				if isWildcardLookup {
 					// Look up any children of the namespace in the trie
-					lookupEntries := functionCallTrie.WordsWithPrefix(lookupNamespace+namespaceSeparator)
+					lookupEntries := functionCallTrie.WordsWithPrefix(lookupNamespace + namespaceSeparator)
 					for _, lookupEntry := range lookupEntries {
 						matchCondition.Evidences = append(matchCondition.Evidences, lookupEntry.Value)
 					}

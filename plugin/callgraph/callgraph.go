@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/safedep/code/core"
+	"github.com/safedep/code/core/ast"
 	"github.com/safedep/dry/log"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -66,7 +67,7 @@ type CallGraph struct {
 	classConstructors map[string]bool
 }
 
-func newCallGraph(fileName string, importedIdentifiers map[string]parsedImport, tree core.ParseTree) (*CallGraph, error) {
+func newCallGraph(fileName string, rootNode *sitter.Node, imports []*ast.ImportNode, tree core.ParseTree) (*CallGraph, error) {
 	language, err := tree.Language()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get language from parse tree: %w", err)
@@ -82,8 +83,22 @@ func newCallGraph(fileName string, importedIdentifiers map[string]parsedImport, 
 		classConstructors: make(map[string]bool),
 	}
 
+	// Add root node to the call graph
+	cg.AddNode(fileName, rootNode)
+
+	// Required to map identifiers to imported modules as assignments
+	// and register default calls for wildcard imports
+	importedIdentifiers, wildcardImports := parseImports(imports, language)
+
+	for _, wildcardImport := range wildcardImports {
+		// For wildcard imports, we add a call to importeditem//*
+		// assuming that anything under that namespace is posssibly used
+		cg.AddEdge(fileName, rootNode, wildcardImport.Namespace, wildcardImport.NamespaceTreeNode)
+	}
+
 	for identifier, importedIdentifier := range importedIdentifiers {
 		cg.AddNode(importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
+
 		if identifier == importedIdentifier.Namespace {
 			cg.assignmentGraph.AddIdentifier(importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
 		} else {
@@ -158,12 +173,14 @@ func (cg *CallGraph) PrintAssignmentGraph() error {
 
 // Assumption - All functions and class constructors are reachable
 var dfsSourceNodeTypes = map[string]bool{
-	"program": true,
-	"file": true,
+	"program":             true,
+	"file":                true,
+	"module":              true,
 	"function_definition": true,
-	"method_declaration": true,
-	"class_definition": true,
-	"class_declaration": true,
+	"method_declaration":  true,
+	"class_definition":    true,
+	"class_body":          true,
+	"class_declaration":   true,
 }
 
 type DfsResultItem struct {
@@ -184,7 +201,7 @@ func (cg *CallGraph) DFS() []DfsResultItem {
 
 	// Assumption - All functions and class constructors are reachable
 	// This is required because most files only expose their classes/functions
-	// which are imported and used by other files, so an entrypoint may not be 
+	// which are imported and used by other files, so an entrypoint may not be
 	// present in every file.
 	for namespace, node := range cg.Nodes {
 		if node.TreeNode != nil && dfsSourceNodeTypes[node.TreeNode.Type()] {

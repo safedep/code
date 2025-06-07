@@ -1,265 +1,1032 @@
 version: 0.1
+
 signatures:
   - id: gcp.storage
-    description: "Google Cloud Storage Client"
+    description: "Google Cloud Storage"
     vendor: "Google"
     product: "Google Cloud Platform"
-    service: "Storage client"
-    tags: [storage, google-cloud, bucket]
+    service: "GCP Storage"
+    tags: [storage, iaas]
     languages:
       python:
         match: any
         conditions:
           - type: call
-            value: "google.cloud.storage.Client"
+            value: "google.cloud.storage.*"
       javascript:
-        match: all
-        conditions:
-          - type: call
-            value: "@google-cloud/storage.Storage"
-
-  - id: azure.storage.blob
-    description: "Azure Blob Storage Client"
-    vendor: "Microsoft"
-    product: "Azure"
-    service: "Blob Storage client"
-    tags: [storage, azure, blob]
-    languages:
-      python:
         match: any
         conditions:
           - type: call
-            value: "azure.storage.blob.BlobServiceClient"
-      javascript:
-        match: all
-        conditions:
-          - type: call
-            value: "@azure/storage-blob.BlobServiceClient"
+            value: "@google-cloud/storage.*"
 
   - id: gcp.bigquery
-    description: "Google Cloud BigQuery Client"
+    description: "Google Cloud BigQuery"
     vendor: "Google"
     product: "Google Cloud Platform"
-    service: "BigQuery client"
-    tags: [bigquery, google-cloud, data-warehouse]
+    service: "BigQuery"
+    tags: [bigquery, data, paas]
     languages:
       python:
         match: any
         conditions:
           - type: call
-            value: "google.cloud.bigquery.Client"
+            value: "google.cloud.bigquery.*"
+          - type: call
+            value: "google.cloud.bigquery_v2.*"
+          - type: call
+            value: "google.cloud.bigquery_storage.*"
+          - type: call
+            value: "google.cloud.bigquery_storage_v1.*"
+          - type: call
+            value: "google.cloud.bigquery_storage_v1beta2.*"
       javascript:
-        match: all
+        match: any
         conditions:
           - type: call
-            value: "@google-cloud/bigquery.BigQuery"
+            value: "@google-cloud/bigquery.*"
 
-  - id: azure.cosmos
-    description: "Azure Cosmos DB Client"
-    vendor: "Microsoft"
-    product: "Azure"
-    service: "Cosmos DB client"
-    tags: [cosmos, database, azure, nosql]
+  - id: gcp.firestore
+    description: "Google Cloud Firestore"
+    vendor: "Google"
+    product: "Google Cloud Platform"
+    service: "GCP Firestore"
+    tags: [firestore, database, paas]
     languages:
       python:
         match: any
         conditions:
           - type: call
-            value: "azure.cosmos.CosmosClient"
+            value: "google.cloud.firestore.*"
+          - type: call
+            value: "google.cloud.firestore_v1.*"
+          - type: call
+            value: "google.cloud.firestore_admin_v1.*"
+          - type: call
+            value: "google.cloud.firestore_bundle.*"
       javascript:
-        match: all
+        match: any
         conditions:
           - type: call
-            value: "@azure/cosmos.CosmosClient"
+            value: "@google-cloud/firestore.*"
+
+  - id: gcp.vision
+    description: "Google Cloud Vision API"
+    vendor: "Google"
+    product: "Google Cloud Platform"
+    service: "GCP Vision"
+    tags: [vision, image-analysis, ai, saas]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "google.cloud.vision.*"
+          - type: call
+            value: "google.cloud.vision_v1.*"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@google-cloud/vision.*"
+
+  - id: gcp.translate
+    description: "Google Cloud Translation"
+    vendor: "Google"
+    product: "Google Cloud Platform"
+    service: "GCP Language translation"
+    tags: [translate, nlp, language, ai, saas]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "google.cloud.translate.*"
+          - type: call
+            value: "google.cloud.translate_v2.*"
+          - type: call
+            value: "google.cloud.translate_v3.*"
+          - type: call
+            value: "google.cloud.translate_v3beta1.*"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@google-cloud/translate.*"
 
   - id: gcp.pubsub
-    description: "Google Cloud Pub/Sub Client"
+    description: "Google Cloud Pub/Sub"
     vendor: "Google"
     product: "Google Cloud Platform"
-    service: "Pub/Sub client"
-    tags: [pubsub, messaging, google-cloud]
+    service: "GCP PubSub"
+    tags: [pubsub, messaging, paas]
     languages:
       python:
-        match: all
+        match: any
+        conditions:
+          - type: call
+            value: "google.cloud.pubsub.*"
+          - type: call
+            value: "google.cloud.pubsub_v1.*"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@google-cloud/pubsub.*"
+
+  - id: gcp.pubsub.publisher
+    description: "Google Cloud Pub/Sub"
+    vendor: "Google"
+    product: "Google Cloud Platform"
+    service: "GCP PubSub"
+    tags: [pubsub, messaging, paas]
+    languages:
+      python:
+        match: any
         conditions:
           - type: call
             value: "google.cloud.pubsub.PublisherClient"
-      javascript:
-        match: any
-        conditions:
-          - type: call
-            value: "@google-cloud/pubsub.PubSub"
-
-  - id: azure.servicebus
-    description: "Azure Service Bus Client"
-    vendor: "Microsoft"
-    product: "Azure"
-    service: "Service Bus client"
-    tags: [servicebus, messaging, azure]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "azure.servicebus.ServiceBusClient"
-      javascript:
-        match: all
-        conditions:
-          - type: call
-            value: "@azure/service-bus.ServiceBusClient"
-
-  - id: gcp.firestore
-    description: "Google Cloud Firestore Client"
-    vendor: "Google"
-    product: "Google Cloud Platform"
-    service: "Firestore client"
-    tags: [firestore, database, google-cloud]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "google.cloud.firestore.Client"
-      javascript:
-        match: all
-        conditions:
-          - type: call
-            value: "@google-cloud/firestore.Firestore"
-
-  - id: azure.cosmos.container
-    description: "Azure Cosmos DB Container Client"
-    vendor: "Microsoft"
-    product: "Azure"
-    service: "Cosmos DB Container client"
-    tags: [cosmos, database, container, azure]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "azure.cosmos.ContainerProxy"
-      javascript:
-        match: all
-        conditions:
-          - type: call
-            value: "@azure/cosmos.Container"
-
-  - id: gcp.vision
-    description: "Google Cloud Vision API Client"
-    vendor: "Google"
-    product: "Google Cloud Platform"
-    service: "Vision API client"
-    tags: [vision, image-analysis, ai, google-cloud]
-    languages:
-      python:
-        match: all
-        conditions:
-          - type: call
-            value: "google.cloud.vision.ImageAnnotatorClient"
-      javascript:
-        match: all
-        conditions:
-          - type: call
-            value: "@google-cloud/vision.ImageAnnotatorClient"
-
-  - id: azure.vision
-    description: "Azure Computer Vision Client"
-    vendor: "Microsoft"
-    product: "Azure"
-    service: "Computer Vision client"
-    tags: [vision, image-analysis, ai, azure]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "azure.ai.vision.ContentAnalysisClient"
-      javascript:
-        match: all
-        conditions:
-          - type: call
-            value: "@azure/ai-vision-image-analysis.ImageAnalysisClient"
-
-  - id: gcp.translate
-    description: "Google Cloud Translation Client"
-    vendor: "Google"
-    product: "Google Cloud Platform"
-    service: "Translation client"
-    tags: [translate, nlp, language, google-cloud]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "google.cloud.translate.TranslationServiceClient"
-          - type: call
-            value: "google.cloud.translate_v2.Client"
-      javascript:
-        match: all
-        conditions:
-          - type: call
-            value: "@google-cloud/translate.TranslationServiceClient"
-
-  - id: azure.translator
-    description: "Azure Translator Client"
-    vendor: "Microsoft"
-    product: "Azure"
-    service: "Translator client"
-    tags: [translate, nlp, language, azure]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "azure.ai.translation.text.TextTranslationClient"
-      javascript:
-        match: all
-        conditions:
-          - type: call
-            value: "@azure/ai-translation-text.TextTranslationClient"
-
-  - id: gcp.pubsub_v1.publisher
-    description: "Google Cloud Pub/Sub Publisher Client"
-    vendor: "Google"
-    product: "Google Cloud Platform"
-    service: "Pub/Sub Publisher client"
-    tags: [pubsub, messaging, google-cloud]
-    languages:
-      python:
-        match: any
-        conditions:
           - type: call
             value: "google.cloud.pubsub_v1.PublisherClient"
       javascript:
         match: any
         conditions:
           - type: call
-            value: "@google-cloud/pubsub.PublisherClient"
+            value: "@google-cloud/pubsub.v1.PublisherClient"
 
   - id: gcp.pubsub_v1.subscriber
-    description: "Google Cloud Pub/Sub Subscriber Client"
+    description: "Google Cloud Pub/Sub"
     vendor: "Google"
     product: "Google Cloud Platform"
-    service: "Pub/Sub Subscriber client"
-    tags: [pubsub, messaging, google-cloud]
+    service: "GCP PubSub"
+    tags: [pubsub, messaging, paas]
     languages:
       python:
         match: any
         conditions:
+          - type: call
+            value: "google.cloud.pubsub.SubscriberClient"
           - type: call
             value: "google.cloud.pubsub_v1.SubscriberClient"
       javascript:
         match: any
         conditions:
           - type: call
-            value: "@google-cloud/pubsub.SubscriberClient"
+            value: "@google-cloud/pubsub.v1.SubscriberClient"
+
+  - id: gcp.secretmanager
+    description: "Google Cloud Secret Manager"
+    vendor: "Google"
+    product: "Google Cloud Platform"
+    service: "GCP Secret Manager"
+    tags: [secret-manager, paas]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "google.cloud.secretmanager.*"
+          - type: call
+            value: "google.cloud.secretmanager_v1.*"
+          - type: call
+            value: "google.cloud.secretmanager.*"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@google-cloud/secret-manager.*"
+
+  - id: langchain_core.agents
+    description: "Schema definitions for representing agent actions, observations, and return values"
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Agents"
+    tags: [ai, text, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.agents.*"
+
+  - id: langchain_core.beta
+    description: "Some beta features that are not yet ready for production"
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Beta"
+    tags: [ai, text, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.beta.*"
+
+  - id: langchain_core.document_loaders
+    description: "Document loaders"
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Document Loaders"
+    tags: [ai, documents, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.document_loaders.*"
+
+  - id: langchain_core.documents
+    description: "Document module is a collection of classes that handle documents and their transformations."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Documents"
+    tags: [ai, documents, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.documents.*"
+
+  - id: langchain_core.embeddings
+    description: "Interface for embedding models."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Embeddings"
+    tags: [ai, embeddings, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.embeddings.*"
+
+  - id: langchain_core.example_selectors
+    description: "Example selector implements logic for selecting examples to include them in prompts. This allows us to select examples that are most relevant to the input."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Example Selectors"
+    tags: [ai, example-selector, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.example_selectors.*"
+
+
+  - id: langchain_core.exceptions
+    description: "Custom exceptions for LangChain"
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Exceptions"
+    tags: [ai, exceptions, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.exceptions.*"
+
+  - id: langchain_core.globals
+    description: "Global values and configuration that apply to all of LangChain."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Globals Values"
+    tags: [ai, global, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.globals.*"
+
+  - id: langchain_core.graph_vectorstores
+    description: "Langchain Core graph vector store interface"
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Graph VectorStore"
+    tags: [ai, graph, vector-store, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.graph_vectorstores.*"
+
+  - id: langchain_core.indexing
+    description: "Code to help indexing data into a vectorstore. This package contains helper logic to help deal with indexing data into a vectorstore while avoiding duplicated content and over-writing content if it’s unchanged."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Indexing"
+    tags: [ai, indexing, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.indexing.*"
+
+  - id: langchain_core.language_models
+    description: "Language Model is a type of model that can generate text or complete text prompts."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Language Models"
+    tags: [ai, language-models, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.language_models.*"
+
+  - id: langchain_core.load
+    description: "Load module helps with serialization and deserialization."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Load"
+    tags: [ai, load, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.load.*"
+
+  - id: langchain_core.memory
+    description: "Memory maintains Chain state, incorporating context from past runs"
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Memory"
+    tags: [ai, memory, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.memory.*"
+
+  - id: langchain_core.messages
+    description: "Messages are objects used in prompts and chat conversations."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Messages"
+    tags: [ai, Messages, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.messages.*"
+
+  - id: langchain_core.output_parsers
+    description: "OutputParser classes parse the output of an LLM call."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Parsers"
+    tags: [ai, Parsers, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.output_parsers.*"
+
+  - id: langchain_core.output
+    description: "Output classes are used to represent the output of a language model call and the output of a chat."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Output"
+    tags: [ai, output, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.output.*"
+
+  - id: langchain_core.prompt_values
+    description: "Prompt values for language model prompts. Prompt values are used to represent different pieces of prompts. They can be used to represent text, images, or chat message pieces."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Prompt Values"
+    tags: [ai, prompt-values, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.prompt_values.*"
+
+  - id: langchain_core.prompt
+    description: "Prompt is the input to the model. Prompt is often constructed from multiple components and prompt values. Prompt classes and functions make constructing"
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Prompt"
+    tags: [ai, prompt, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.prompt.*"
+
+  - id: langchain_core.rate_limiters
+    description: "Interface for a rate limiter and an in-memory rate limiter."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Rate Limiters"
+    tags: [ai, rate-limiting, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.rate_limiters.*"
+
+  - id: langchain_core.retrievers
+    description: "Retriever class returns Documents given a text query."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Retrievers"
+    tags: [ai, retrievers, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.retrievers.*"
+
+  - id: langchain_core.runnables
+    description: "LangChain Runnable and the LangChain Expression Language (LCEL). The LangChain Expression Language (LCEL) offers a declarative method to build production-grade programs that harness the power of LLMs."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Runnables"
+    tags: [ai, runnables, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.runnables.*"
+
+  - id: langchain_core.stores
+    description: "Store implements the key-value stores and storage helpers."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Store"
+    tags: [ai, store, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.stores.*"
+
+  - id: langchain_core.structured_query
+    description: "Internal representation of a structured query language."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Structured Query"
+    tags: [ai, structured-query, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.structured_query.*"
+
+  - id: langchain_core.sys_info
+    description: "sys_info prints information about the system and langchain packages for debugging purposes."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Sys Info"
+    tags: [ai, sys-info, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.sys_info.*"
+
+  - id: langchain_core.tools
+    description: "Tools are classes that an Agent uses to interact with the world."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Sys Info"
+    tags: [ai, sys-info, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.tools.*"
+
+  - id: langchain_core.tracers
+    description: "Tracers are classes for tracing runs."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Tracers"
+    tags: [ai, tracers, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.tracers.*"
+
+  - id: langchain_core.utils
+    description: "Utility functions for LangChain."
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Utils"
+    tags: [ai, utils, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.utils.*"
+
+  - id: langchain_core.vectorstores
+    description: "LangChain Core vector store"
+    vendor: "Langchain"
+    product: "Langchain Core Library"
+    service: "Vector Stores"
+    tags: [ai, vector-stores, langchain, langchain-core]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_core.vectorstores.*"
+
+  - id: langchain.agents
+    description: "Agent is a class that uses an LLM to choose a sequence of actions to take"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Language Models"
+    tags: [ai, text, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.agents.*"
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.agent.*"
+
+  - id: langchain.mcp
+    description: "Model Context Protocol support in Langchain"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Langchain MCP Support"
+    tags: [ai, mcp, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_mcp_adapters.*"
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.mcp.*"
+
+  - id: langchain.callbacks
+    description: "Callback handlers allow listening to events in LangChain"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Language Models"
+    tags: [ai, text, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.callbacks.*"
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.model.chat.listener.*"
+
+  - id: langchain.chains
+    description: "Chains are easily reusable components linked together. While Chat Models use language models under the hood, the interface they expose is a bit different. Rather than expose a “text in, text out” API, they expose an interface where “chat messages” are the inputs and outputs."
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Language Models"
+    tags: [ai, text, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.chains.*"
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.chain.*"
+
+  - id: langchain.chat_models
+    description: "Chat Models are a variation on language models, While Chat Models use language models under the hood, the interface they expose is a bit different. Rather than expose a “text in, text out” API, they expose an interface where “chat messages” are the inputs and outputs"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Chat Models"
+    tags: [ai, chat, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.chat_models.*"
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.model.chat.*"
+
+  - id: langchain.embeddings
+    description: "Embedding models are wrappers around embedding models from different APIs and services. Embedding models can be LLMs or not."
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Embeddings"
+    tags: [ai, embeddings, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.embeddings.*"
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.data.embedding.*"
+          - type: call
+            value: "dev.langchain4j.store.embedding.*"
+          - type: call
+            value: "dev.langchain4j.spi.model.embedding.*"
+          - type: call
+            value: "dev.langchain4j.spi.store.embedding.*"
+
+  - id: langchain.evaluation
+    description: "Evaluation chains for grading LLM and Chain outputs."
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Evaluation"
+    tags: [ai, evaluation, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.evaluation.*"
+
+  - id: langchain.globals
+    description: "Global values and configuration that apply to all of LangChain"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "LLM"
+    tags: [ai, llm, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.globals.*"
+
+  - id: langchain.hub
+    description: "Interface with LangChain Hub"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Hub Interface"
+    tags: [ai, hub, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.hub.*"
+
+  - id: langchain.indexes
+    description: "Index is used to avoid writing duplicated content into the vectostore and to avoid over-writing content if it’s unchanged"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Indexes"
+    tags: [ai, indexes, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.indexes.*"
+
+  - id: langchain.memory
+    description: "Memory maintains Chain state, incorporating context from past runs"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Memory"
+    tags: [ai, memory, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.memory.*"
+
+  - id: langchain.model_laboratory
+    description: "Experiment with different models"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Model Laboratory"
+    tags: [ai, models, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.model_laboratory.*"
+
+  - id: langchain.output_parsers
+    description: "OutputParser classes parse the output of an LLM call"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Parsers"
+    tags: [ai, parsers, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.output_parsers.*"
+
+  - id: langchain.retrievers
+    description: "Retriever class returns Documents given a text query"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Retrievers"
+    tags: [ai, retrievers, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.retrievers.*"
+
+  - id: langchain.runnables
+    description: "LangChain Runnables and the LangChain Expression Language (LCEL) provide a declarative way to compose and orchestrate LLM-powered programs that natively support synchronous, asynchronous, batch, and streaming operations for scalable, production-grade applications"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Runnables"
+    tags: [ai, runnables, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.runnables.*"
+
+  - id: langchain.smith
+    description: "This module provides utilities for connecting to LangSmith"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Smith Interface"
+    tags: [ai, smith, interface, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.smith.*"
+
+  - id: langchain.storage
+    description: "Module provides implementations of various key-value stores that conform to a simple key-value interface"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Storage"
+    tags: [ai, storage, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.storage.*"
+
+  - id: langchain.code_execution
+    description: "Code execution with LangChain"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Langchain Code Execution"
+    tags: [ai, code, langchain]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.code.*"
+
+  - id: langchain.audio
+    description: "Audio processing with LangChain"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Langchain Audio Processing"
+    tags: [ai, audio, langchain]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.data.audio.*"
+
+  - id: langchain.document
+    description: "Document processing with LangChain"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Langchain Document Processing"
+    tags: [ai, document, langchain]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.data.document.*"
+
+  - id: langchain.image
+    description: "Image processing with LangChain"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Langchain Image Processing"
+    tags: [ai, image, langchain]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.data.image.*"
+
+  - id: langchain.pdf
+    description: "PDF processing with LangChain"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Langchain PDF Processing"
+    tags: [ai, pdf, langchain]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.data.pdf.*"
+
+  - id: langchain.video
+    description: "Video processing with LangChain"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Langchain Video Processing"
+    tags: [ai, video, langchain]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.data.video.*"
+
+  - id: azure.vision
+    description: "Azure Computer Vision"
+    vendor: "Microsoft"
+    product: "Azure"
+    service: "Azure Vision"
+    tags: [vision, image-analysis, ai, saas]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "azure.ai.vision.*"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@azure-rest/ai-vision-image-analysis.*"
+
+  - id: azure.translator
+    description: "Azure Text Translator"
+    vendor: "Microsoft"
+    product: "Azure"
+    service: "Azure Translation"
+    tags: [translate, nlp, language, ai, saas]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "azure.ai.translation.text.*"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@azure-rest/ai-translation-text.*"
+
+  - id: azure.storage.blob
+    description: "Azure Blob Storage"
+    vendor: "Microsoft"
+    product: "Azure"
+    service: "Blob Storage"
+    tags: [storage, blob, paas]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "azure.storage.blob.*"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@azure/storage-blob.*"
+
+  - id: azure.cosmos
+    description: "Azure Cosmos DB"
+    vendor: "Microsoft"
+    product: "Azure"
+    service: "Cosmos DB"
+    tags: [cosmos, database, nosql, paas]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "azure.cosmos.*"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@azure/cosmos.*"
+
+  - id: azure.cosmos.container
+    description: "Azure Cosmos DB Container"
+    vendor: "Microsoft"
+    product: "Azure"
+    service: "Cosmos DB Container"
+    tags: [cosmos, database, container, paas]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "azure.cosmos.*"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@azure/cosmos.*"
+
+  - id: azure.IAM
+    description: "Azure IAM services"
+    vendor: "Microsoft"
+    product: "Azure"
+    service: "IAM services"
+    tags: [keyvault, secrets, credentials, paas]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "azure.identity.*"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@azure/identity.*"
+
+  - id: azure.servicebus
+    description: "Azure Service Bus"
+    vendor: "Microsoft"
+    product: "Azure"
+    service: "Azure Service Bus"
+    tags: [servicebus, messaging, paas]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "azure.servicebus.*"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@azure/service-bus.*"
 
   - id: azure.servicebus.sender
     description: "Azure Service Bus Sender Client"
     vendor: "Microsoft"
     product: "Azure"
     service: "Service Bus Sender client"
-    tags: [servicebus, messaging, sender, azure]
+    tags: [servicebus, messaging, sender, paas]
     languages:
       python:
         match: any
@@ -277,7 +1044,7 @@ signatures:
     vendor: "Microsoft"
     product: "Azure"
     service: "Service Bus Receiver client"
-    tags: [servicebus, messaging, receiver, azure]
+    tags: [servicebus, messaging, receiver, paas]
     languages:
       python:
         match: any
@@ -290,42 +1057,68 @@ signatures:
           - type: call
             value: "@azure/service-bus.ServiceBusReceiver"
 
-  - id: gcp.secretmanager
-    description: "Google Cloud Secret Manager Client"
-    vendor: "Google"
-    product: "Google Cloud Platform"
-    service: "Secret Manager client"
-    tags: [secret-manager, google-cloud]
+  - id: openai.client
+    description: "OpenAI client"
+    vendor: "OpenAI"
+    product: "OpenAI"
+    service: "AI client"
+    tags: [ai, text]
     languages:
       python:
         match: any
         conditions:
           - type: call
-            value: "google.cloud.secretmanager.SecretManagerServiceClient"
-      javascript:
-        match: all
+            value: "openai.*"
+      java:
+        match: any
         conditions:
           - type: call
-            value: "@google-cloud/secret-manager.SecretManagerServiceClient"
+            value: "com.openai.client.*"
 
-  - id: azure.IAM
-    description: "Azure IAM services"
-    vendor: "Microsoft"
-    product: "Azure"
-    service: "Identity and Access Management"
-    tags: [keyvault, secrets, azure, credentials]
+  - id: openai.sync
+    description: "OpenAI AI Sync Responses"
+    vendor: "OpenAI"
+    product: "OpenAI API"
+    service: "AI response"
+    tags: [ai, text]
     languages:
       python:
         match: any
         conditions:
-         -
-            type: call
-            value: "azure.identity.DefaultAzureCredential"
-         - 
-            type: call
-            value: "azure.keyvault.secrets.SecretClient"
-      javascript:
-        match: all
+          - type: call
+            value: "openai.OpenAI"
+
+  - id: openai.async
+    description: "OpenAI AI Async Responses"
+    vendor: "OpenAI"
+    product: "OpenAI API"
+    service: "Async AI response"
+    tags: [ai, text, async]
+    languages:
+      python:
+        match: any
         conditions:
           - type: call
-            value: "@azure/keyvault-secrets.SecretClient"
+            value: "openai.AsyncOpenAI"
+
+  - id: openai.azure
+    description: "Azure OpenAI AI Responses"
+    vendor: "Azure OpenAI"
+    product: "Azure OpenAI API"
+    service: "AI response"
+    tags: [ai, text, azure]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "openai.AzureOpenAI"
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "com.azure.ai.openai.OpenAIClientBuilder"
+          - type: call
+            value: "com.azure.ai.openai.OpenAIAsyncClient"
+          - type: call
+            value: "com.azure.ai.openai.OpenAIClient"

@@ -45,7 +45,6 @@ func run() error {
 	fileSystem, err := fs.NewLocalFileSystem(fs.LocalFileSystemConfig{
 		AppDirectories: []string{dirToWalk},
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed to create local filesystem: %w", err)
 	}
@@ -120,7 +119,6 @@ func run() error {
 	pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
 		callgraph.NewCallGraphPlugin(callgraphCallback),
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed to create plugin executor: %w", err)
 	}

@@ -20,19 +20,34 @@ type parsedImport struct {
 	Namespace          string
 	NamespaceTreeNode  *sitter.Node
 }
+type wildcardImport struct {
+	Namespace         string
+	NamespaceTreeNode *sitter.Node
+}
 
-func parseImports(imports []*ast.ImportNode, lang core.Language) map[string]parsedImport {
+// Parses the imports from AST and returns map of identified imports and a list of wildcard imports.
+func parseImports(imports []*ast.ImportNode, lang core.Language) (map[string]parsedImport, []wildcardImport) {
 	importedIdentifierNamespaces := make(map[string]parsedImport)
+	wildcardImports := []wildcardImport{}
+
 	for _, imp := range imports {
+		moduleNamespace := resolveNamespaceWithSeparator(imp.ModuleName(), lang)
+
 		if imp.IsWildcardImport() {
+			wildcardImports = append(wildcardImports, wildcardImport{
+				Namespace:         moduleNamespace + namespaceSeparator + "*",
+				NamespaceTreeNode: imp.GetModuleNameNode().Parent(),
+			})
 			continue
 		}
-		itemNamespace := imp.ModuleItem()
-		moduleNamespace := resolveNamespaceWithSeparator(imp.ModuleName(), lang)
-		if itemNamespace == "" {
-			itemNamespace = moduleNamespace
+
+		finalisedNamespace := imp.ModuleItem()
+
+		// If not imported as item, consider entire module namespace
+		if finalisedNamespace == "" {
+			finalisedNamespace = moduleNamespace
 		} else {
-			itemNamespace = moduleNamespace + namespaceSeparator + itemNamespace
+			finalisedNamespace = moduleNamespace + namespaceSeparator + finalisedNamespace
 		}
 
 		moduleItemIdentifierKey := resolveSubmoduleIdentifier(imp.ModuleItem(), lang)
@@ -47,14 +62,16 @@ func parseImports(imports []*ast.ImportNode, lang core.Language) map[string]pars
 			identifierKey = moduleItemIdentifierKey
 			identifierTreeNode = imp.GetModuleItemNode()
 		}
+
 		importedIdentifierNamespaces[identifierKey] = parsedImport{
 			Identifier:         identifierKey,
 			IdentifierTreeNode: identifierTreeNode,
-			Namespace:          itemNamespace,
-			NamespaceTreeNode:  imp.GetModuleNameNode().Parent(),
+			Namespace:          finalisedNamespace,
+			NamespaceTreeNode:  imp.GetModuleNameNode().Parent(), // The parent node is the entire module import node
 		}
 	}
-	return importedIdentifierNamespaces
+
+	return importedIdentifierNamespaces, wildcardImports
 }
 
 // For submodule imports, we need to replace separator with our namespaceSeparator for consistency
