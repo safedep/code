@@ -45,7 +45,6 @@ func run() error {
 	fileSystem, err := fs.NewLocalFileSystem(fs.LocalFileSystemConfig{
 		AppDirectories: []string{dirToWalk},
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed to create local filesystem: %w", err)
 	}
@@ -67,10 +66,17 @@ func run() error {
 
 	// consume callgraph
 	var callgraphCallback callgraph.CallgraphCallback = func(_ context.Context, cg *callgraph.CallGraph) error {
-		cg.PrintAssignmentGraph()
-		cg.PrintCallGraph()
+		err := cg.PrintAssignmentGraph()
+		if err != nil {
+			return fmt.Errorf("failed to print assignment graph: %w", err)
+		}
 
-		fmt.Println("DFS Traversal results:")
+		err = cg.PrintCallGraph()
+		if err != nil {
+			return fmt.Errorf("failed to print call graph: %w", err)
+		}
+
+		fmt.Printf("DFS Traversal results for %s:\n", cg.FileName)
 		for _, resultItem := range cg.DFS() {
 			terminalMessage := ""
 			if resultItem.Terminal {
@@ -99,19 +105,20 @@ func run() error {
 					evidenceMetadata, metadataExists := evidence.Metadata()
 					evidenceDetailString := ""
 					if metadataExists {
-						evidenceDetailString = fmt.Sprintf("@ (L%d #%d to L%d #%d)", evidenceMetadata.StartLine, evidenceMetadata.StartColumn, evidenceMetadata.EndLine, evidenceMetadata.EndColumn)
+						evidenceDetailString = fmt.Sprintf("@ (L%d #%d to L%d #%d)", evidenceMetadata.StartLine+1, evidenceMetadata.StartColumn+1, evidenceMetadata.EndLine+1, evidenceMetadata.EndColumn+1)
 					}
 					fmt.Printf("\t\tEvidence: %s %s\n", evidence.Namespace, evidenceDetailString)
 				}
 			}
 		}
+		fmt.Println()
+
 		return nil
 	}
 
 	pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
 		callgraph.NewCallGraphPlugin(callgraphCallback),
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed to create plugin executor: %w", err)
 	}

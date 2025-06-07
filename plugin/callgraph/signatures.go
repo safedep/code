@@ -3,6 +3,7 @@ package callgraph
 import (
 	_ "embed"
 	"fmt"
+	"strings"
 
 	callgraphv1 "buf.build/gen/go/safedep/api/protocolbuffers/go/safedep/messages/code/callgraph/v1"
 	"buf.build/go/protovalidate"
@@ -80,9 +81,20 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 				}
 
 				lookupNamespace := resolveNamespaceWithSeparator(condition.Value, language)
-				lookupEntries := functionCallTrie.WordsWithPrefix(lookupNamespace)
-				for _, lookupEntry := range lookupEntries {
-					matchCondition.Evidences = append(matchCondition.Evidences, lookupEntry.Value)
+				lookupNamespace, isWildcardLookup := trimWildcardLookupNamespace(lookupNamespace, language)
+
+				if isWildcardLookup {
+					// Look up any children of the namespace in the trie
+					lookupEntries := functionCallTrie.WordsWithPrefix(lookupNamespace + namespaceSeparator)
+					for _, lookupEntry := range lookupEntries {
+						matchCondition.Evidences = append(matchCondition.Evidences, lookupEntry.Value)
+					}
+				} else {
+					// Lookup the exact namespace in the trie
+					lookupNode, nodeExists := functionCallTrie.GetWord(lookupNamespace)
+					if nodeExists && lookupNode != nil {
+						matchCondition.Evidences = append(matchCondition.Evidences, lookupNode)
+					}
 				}
 
 				if len(matchCondition.Evidences) > 0 {
@@ -101,6 +113,18 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 		}
 	}
 	return matcherResults, nil
+}
+
+// Identifies if the namespace is a wildcard lookup and returns the namespace without the wildcard
+// qualifier and a boolean indicating if it was a wildcard lookup.
+// Note - We only support wildcard lookup qualifier at the end of the namespace.
+// eg. "foo//bar//*" is a valid wildcard lookup namespace, but "foo//*//bar" is not valid
+func trimWildcardLookupNamespace(namespace string, language core.Language) (string, bool) {
+	if strings.HasSuffix(namespace, "//*") {
+		// Remove the wildcard qualifier from the namespace
+		return strings.TrimSuffix(namespace, "//*"), true
+	}
+	return namespace, false
 }
 
 // Validates list of callgraphv1.Signature based on protovalidate specification

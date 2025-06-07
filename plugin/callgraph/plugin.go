@@ -35,7 +35,10 @@ func (p *callgraphPlugin) Name() string {
 	return "CallgraphPlugin"
 }
 
-var supportedLanguages = []core.LanguageCode{core.LanguageCodePython}
+var supportedLanguages = []core.LanguageCode{
+	core.LanguageCodePython,
+	core.LanguageCodeJava,
+}
 
 func (p *callgraphPlugin) SupportedLanguages() []core.LanguageCode {
 	return supportedLanguages
@@ -55,7 +58,6 @@ func (p *callgraphPlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) 
 	log.Debugf("callgraph - Analyzing tree for language: %s, file: %s\n", lang.Meta().Code, file.Name())
 
 	cg, err := buildCallGraph(tree, lang, file.Name())
-
 	if err != nil {
 		return fmt.Errorf("failed to build call graph: %w", err)
 	}
@@ -77,21 +79,15 @@ func buildCallGraph(tree core.ParseTree, lang core.Language, filePath string) (*
 		return nil, fmt.Errorf("failed to resolve imports: %w", err)
 	}
 
-	// Required to map identifiers to imported modules as assignments
-	importedIdentifiers := parseImports(imports, lang)
-
 	// log.Debugf("Imported identifier => namespace:")
 	// for identifier, parsedImport := range importedIdentifiers {
 	// 	log.Debugf("  %s => %s\n", identifier, parsedImport.Namespace)
 	// }
 
-	callGraph, err := newCallGraph(filePath, importedIdentifiers, tree)
+	callGraph, err := newCallGraph(filePath, astRootNode, imports, tree)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create call graph: %w", err)
 	}
-
-	// Add root node to the call graph
-	callGraph.AddNode(filePath, astRootNode)
 
 	processChildren(astRootNode, *treeData, filePath, callGraph, processorMetadata{})
 

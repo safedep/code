@@ -33,10 +33,20 @@ func (p *dependencyUsagePlugin) Name() string {
 	return "DependencyUsagePlugin"
 }
 
-var supportedLanguages = []core.LanguageCode{core.LanguageCodePython, core.LanguageCodeGo, core.LanguageCodeJavascript}
+var supportedLanguages = []core.LanguageCode{
+	core.LanguageCodePython,
+	core.LanguageCodeGo,
+	core.LanguageCodeJavascript,
+	core.LanguageCodeJava,
+}
 
 func (p *dependencyUsagePlugin) SupportedLanguages() []core.LanguageCode {
 	return supportedLanguages
+}
+
+var usageEvidentNodeTypes = map[string]bool{
+	"identifier":      true,
+	"type_identifier": true,
 }
 
 func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) error {
@@ -67,7 +77,7 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 
 		packageHint, err := resolvePackageHint(importContents.ModuleName, lang)
 		if err != nil {
-			return fmt.Errorf("failed to resolve package hint: %w", err)
+			log.Debugf("failed to resolve package hint: %s", err)
 		}
 
 		if imp.IsWildcardImport() {
@@ -98,14 +108,15 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 
 	err = traverse(cursor, &treeLanguage, treeData, func(n *sitter.Node) error {
 		nodeType := n.Type()
-		content := n.Content(*treeData)
-		identifierKey := string(content)
-		identifiedItem, exists := moduleIdentifiers[identifierKey]
 
-		if nodeType == "identifier" && exists {
-			evidence := newUsageEvidence(identifiedItem.PackageHint, identifiedItem.Module, identifiedItem.Item, identifiedItem.Alias, false, identifierKey, file.Name(), uint(n.StartPoint().Row)+1)
-			if err := p.usageCallback(ctx, evidence); err != nil {
-				return fmt.Errorf("failed to call usage callback: %w", err)
+		if _, usageEvidentNode := usageEvidentNodeTypes[nodeType]; usageEvidentNode {
+			identifierKey := n.Content(*treeData)
+			identifiedItem, identifierKeyExists := moduleIdentifiers[identifierKey]
+			if identifierKeyExists {
+				evidence := newUsageEvidence(identifiedItem.PackageHint, identifiedItem.Module, identifiedItem.Item, identifiedItem.Alias, false, identifierKey, file.Name(), uint(n.StartPoint().Row)+1)
+				if err := p.usageCallback(ctx, evidence); err != nil {
+					return fmt.Errorf("failed to call usage callback: %w", err)
+				}
 			}
 		}
 		return nil

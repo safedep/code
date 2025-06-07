@@ -10,6 +10,7 @@ import (
 type assignmentNode struct {
 	Namespace  string
 	AssignedTo []string
+	AssignedBy []string
 	TreeNode   *sitter.Node
 }
 
@@ -17,6 +18,7 @@ func newAssignmentGraphNode(namespace string, treeNode *sitter.Node) *assignment
 	return &assignmentNode{
 		Namespace:  namespace,
 		AssignedTo: []string{},
+		AssignedBy: []string{},
 		TreeNode:   treeNode,
 	}
 }
@@ -46,6 +48,9 @@ func (ag *assignmentGraph) AddAssignment(identifier string, identifierTreeNode *
 	}
 	if !slices.Contains(ag.Assignments[identifier].AssignedTo, target) {
 		ag.Assignments[identifier].AssignedTo = append(ag.Assignments[identifier].AssignedTo, target)
+	}
+	if !slices.Contains(ag.Assignments[target].AssignedBy, identifier) {
+		ag.Assignments[target].AssignedBy = append(ag.Assignments[target].AssignedBy, identifier)
 	}
 }
 
