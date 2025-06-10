@@ -51,7 +51,7 @@ public class CallgraphTestcases {
 
     // Function call chain
     System.console().readPassword();
-    System.getenv().keySet().iterator().hasNext();
+    System.getenv().keySet().iterator(com.companyX.fn1()).hasNext();
     Math.atan(1.0);
 
     // Unknown standalone function call
