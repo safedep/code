@@ -721,19 +721,31 @@ func localVariableDeclarationProcessor(declarationNode *sitter.Node, treeData []
 	return newProcessorResult()
 }
 
+func processMethodArgs(methodInvocationNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if methodInvocationNode == nil || methodInvocationNode.Type() != "method_invocation" {
+		log.Warnf("Incorrect method invocation node processed for args - %s", methodInvocationNode.Content(treeData))
+		return newProcessorResult()
+	}
+
+	argumentsNode := methodInvocationNode.ChildByFieldName("arguments")
+	if argumentsNode == nil {
+		// log.Infof("No arguments found for method invocation - %s", methodInvocationNode.Content(treeData))
+		return newProcessorResult()
+	}
+
+	// Process function arguments
+	// @TODO - Ideally, the result.ImmediateAssignments should be associated with called function
+	// but, we don't have parameter and their positional information, which is a complex task
+	// Hence, we're not processing argument results here
+	return processNode(argumentsNode, treeData, currentNamespace, callGraph, metadata)
+}
+
 func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
 	if methodInvocationNode == nil {
 		return newProcessorResult()
 	}
 
-	argumentsNode := methodInvocationNode.ChildByFieldName("arguments")
-	// Process function arguments
-	if argumentsNode != nil {
-		// @TODO - Ideally, the result.ImmediateAssignments should be associated with called function
-		// but, we don't have parameter and their positional information, which is a complex task
-		// Hence, we're not processing argument results here
-		processNode(argumentsNode, treeData, currentNamespace, callGraph, metadata)
-	}
+	processMethodArgs(methodInvocationNode, treeData, currentNamespace, callGraph, metadata)
 
 	methodNameNode := methodInvocationNode.ChildByFieldName("name")
 	if methodNameNode == nil {
@@ -748,10 +760,13 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 	hasChainedMethodInvocations := false
 
 	methodQualifierObjectNode := methodInvocationNode.ChildByFieldName("object")
+
 	if methodQualifierObjectNode != nil {
 		// Extract first called method from chain of method invocations
 		// eg. xyz.method1().method2().method3() => xyz.method1
 		for methodQualifierObjectNode.Type() == "method_invocation" {
+			processMethodArgs(methodQualifierObjectNode, treeData, currentNamespace, callGraph, metadata)
+
 			hasChainedMethodInvocations = true
 			nextObjNode := methodQualifierObjectNode.ChildByFieldName("object")
 			if nextObjNode == nil {
@@ -772,6 +787,9 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 			if nextObjNode.Type() != "method_invocation" {
 				break
 			}
+
+			processMethodArgs(nextObjNode, treeData, currentNamespace, callGraph, metadata)
+
 			methodQualifierObjectNode = nextObjNode
 		}
 

@@ -145,12 +145,12 @@ var testcases = []callgraphTestcase{
 				"com//custompkg//SomeClass//defaultConstructor",
 				"com//custompkg//SomeClass//someMethod",
 				"com//custompkg//SomeClass//someOtherMethod",
-			} ,
+			},
 			"fixtures/CallgraphTestcases.java//CallgraphTestcases//myfunc": {
 				"String//valueOf",
 			},
 			"fixtures/CallgraphTestcases.java//CallgraphTestcases//this//myfunc": {
-			 	"fixtures/CallgraphTestcases.java//CallgraphTestcases//myfunc",
+				"fixtures/CallgraphTestcases.java//CallgraphTestcases//myfunc",
 			},
 			"fixtures/CallgraphTestcases.java//CallgraphTestcases//main": {
 				"Dialog",
@@ -183,6 +183,7 @@ var testcases = []callgraphTestcase{
 				"System//out//println",
 				"System//out//xyz//println",
 				"System//console",
+				"com//companyX//fn1",
 				"System//getenv",
 				"Math//atan",
 				"com//somecompany//customlib//datatransfer//DataTransferer//getInstance",

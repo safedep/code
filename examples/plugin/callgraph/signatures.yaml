@@ -113,66 +113,6 @@ signatures:
           - type: call
             value: "@google-cloud/translate.*"
 
-  - id: gcp.pubsub
-    description: "Google Cloud Pub/Sub"
-    vendor: "Google"
-    product: "Google Cloud Platform"
-    service: "GCP PubSub"
-    tags: [pubsub, messaging, paas]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "google.cloud.pubsub.*"
-          - type: call
-            value: "google.cloud.pubsub_v1.*"
-      javascript:
-        match: any
-        conditions:
-          - type: call
-            value: "@google-cloud/pubsub.*"
-
-  - id: gcp.pubsub.publisher
-    description: "Google Cloud Pub/Sub"
-    vendor: "Google"
-    product: "Google Cloud Platform"
-    service: "GCP PubSub"
-    tags: [pubsub, messaging, paas]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "google.cloud.pubsub.PublisherClient"
-          - type: call
-            value: "google.cloud.pubsub_v1.PublisherClient"
-      javascript:
-        match: any
-        conditions:
-          - type: call
-            value: "@google-cloud/pubsub.v1.PublisherClient"
-
-  - id: gcp.pubsub_v1.subscriber
-    description: "Google Cloud Pub/Sub"
-    vendor: "Google"
-    product: "Google Cloud Platform"
-    service: "GCP PubSub"
-    tags: [pubsub, messaging, paas]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "google.cloud.pubsub.SubscriberClient"
-          - type: call
-            value: "google.cloud.pubsub_v1.SubscriberClient"
-      javascript:
-        match: any
-        conditions:
-          - type: call
-            value: "@google-cloud/pubsub.v1.SubscriberClient"
-
   - id: gcp.secretmanager
     description: "Google Cloud Secret Manager"
     vendor: "Google"
@@ -194,6 +134,401 @@ signatures:
         conditions:
           - type: call
             value: "@google-cloud/secret-manager.*"
+
+  - id: gcp.pubsub
+    description: "Google Cloud Pub/Sub"
+    vendor: "Google"
+    product: "Google Cloud Platform"
+    service: "GCP PubSub"
+    tags: [pubsub, messaging, paas]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "google.cloud.pubsub.*"
+          - type: call
+            value: "google.cloud.pubsub_v1.*"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@google-cloud/pubsub.*"
+
+  - id: gcp.pubsub.publisher
+    description: "Google Cloud Pub/Sub Publisher"
+    vendor: "Google"
+    product: "Google Cloud Platform"
+    service: "GCP PubSub"
+    tags: [pubsub, messaging, paas]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "google.cloud.pubsub.PublisherClient"
+          - type: call
+            value: "google.cloud.pubsub_v1.PublisherClient"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@google-cloud/pubsub.v1.PublisherClient"
+
+  - id: gcp.pubsub_v1.subscriber
+    description: "Google Cloud Pub/Sub Subscriber"
+    vendor: "Google"
+    product: "Google Cloud Platform"
+    service: "GCP PubSub"
+    tags: [pubsub, messaging, paas]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "google.cloud.pubsub.SubscriberClient"
+          - type: call
+            value: "google.cloud.pubsub_v1.SubscriberClient"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@google-cloud/pubsub.v1.SubscriberClient"
+
+  - id: langchain.agents
+    description: "Agent is a class that uses an LLM to choose a sequence of actions to take"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Language Models"
+    tags: [ai, text, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.agents.*"
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.agent.*"
+
+  - id: langchain.mcp
+    description: "Model Context Protocol support in Langchain"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Langchain MCP Support"
+    tags: [ai, mcp, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain_mcp_adapters.*"
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.mcp.*"
+
+  - id: langchain.callbacks
+    description: "Callback handlers allow listening to events in LangChain"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Language Models"
+    tags: [ai, text, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.callbacks.*"
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.model.chat.listener.*"
+
+  - id: langchain.chains
+    description: "Chains are easily reusable components linked together. While Chat Models use language models under the hood, the interface they expose is a bit different. Rather than expose a “text in, text out” API, they expose an interface where “chat messages” are the inputs and outputs."
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Language Models"
+    tags: [ai, text, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.chains.*"
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.chain.*"
+
+  - id: langchain.chat_models
+    description: "Chat Models are a variation on language models, While Chat Models use language models under the hood, the interface they expose is a bit different. Rather than expose a “text in, text out” API, they expose an interface where “chat messages” are the inputs and outputs"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Chat Models"
+    tags: [ai, chat, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.chat_models.*"
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.model.chat.*"
+
+  - id: langchain.embeddings
+    description: "Embedding models are wrappers around embedding models from different APIs and services. Embedding models can be LLMs or not."
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Embeddings"
+    tags: [ai, embeddings, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.embeddings.*"
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.data.embedding.*"
+          - type: call
+            value: "dev.langchain4j.store.embedding.*"
+          - type: call
+            value: "dev.langchain4j.spi.model.embedding.*"
+          - type: call
+            value: "dev.langchain4j.spi.store.embedding.*"
+
+  - id: langchain.evaluation
+    description: "Evaluation chains for grading LLM and Chain outputs."
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Evaluation"
+    tags: [ai, evaluation, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.evaluation.*"
+
+  - id: langchain.globals
+    description: "Global values and configuration that apply to all of LangChain"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "LLM"
+    tags: [ai, llm, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.globals.*"
+
+  - id: langchain.hub
+    description: "Interface with LangChain Hub"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Hub Interface"
+    tags: [ai, hub, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.hub.*"
+
+  - id: langchain.indexes
+    description: "Index is used to avoid writing duplicated content into the vectostore and to avoid over-writing content if it’s unchanged"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Indexes"
+    tags: [ai, indexes, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.indexes.*"
+
+  - id: langchain.memory
+    description: "Memory maintains Chain state, incorporating context from past runs"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Memory"
+    tags: [ai, memory, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.memory.*"
+
+  - id: langchain.model_laboratory
+    description: "Experiment with different models"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Model Laboratory"
+    tags: [ai, models, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.model_laboratory.*"
+
+  - id: langchain.output_parsers
+    description: "OutputParser classes parse the output of an LLM call"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Parsers"
+    tags: [ai, parsers, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.output_parsers.*"
+
+  - id: langchain.retrievers
+    description: "Retriever class returns Documents given a text query"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Retrievers"
+    tags: [ai, retrievers, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.retrievers.*"
+
+  - id: langchain.runnables
+    description: "LangChain Runnables and the LangChain Expression Language (LCEL) provide a declarative way to compose and orchestrate LLM-powered programs that natively support synchronous, asynchronous, batch, and streaming operations for scalable, production-grade applications"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Runnables"
+    tags: [ai, runnables, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.runnables.*"
+
+  - id: langchain.smith
+    description: "This module provides utilities for connecting to LangSmith"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Smith Interface"
+    tags: [ai, smith, interface, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.smith.*"
+
+  - id: langchain.storage
+    description: "Module provides implementations of various key-value stores that conform to a simple key-value interface"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Storage"
+    tags: [ai, storage, langchain]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "langchain.storage.*"
+
+  - id: langchain.code_execution
+    description: "Code execution with LangChain"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Langchain Code Execution"
+    tags: [ai, code, langchain]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.code.*"
+
+  - id: langchain.audio
+    description: "Audio processing with LangChain"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Langchain Audio Processing"
+    tags: [ai, audio, langchain]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.data.audio.*"
+
+  - id: langchain.document
+    description: "Document processing with LangChain"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Langchain Document Processing"
+    tags: [ai, document, langchain]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.data.document.*"
+
+  - id: langchain.image
+    description: "Image processing with LangChain"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Langchain Image Processing"
+    tags: [ai, image, langchain]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.data.image.*"
+
+  - id: langchain.pdf
+    description: "PDF processing with LangChain"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Langchain PDF Processing"
+    tags: [ai, pdf, langchain]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.data.pdf.*"
+
+  - id: langchain.video
+    description: "Video processing with LangChain"
+    vendor: "Langchain"
+    product: "Langchain"
+    service: "Langchain Video Processing"
+    tags: [ai, video, langchain]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "dev.langchain4j.data.video.*"
 
   - id: langchain_core.agents
     description: "Schema definitions for representing agent actions, observations, and return values"
@@ -560,341 +895,6 @@ signatures:
           - type: call
             value: "langchain_core.vectorstores.*"
 
-  - id: langchain.agents
-    description: "Agent is a class that uses an LLM to choose a sequence of actions to take"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Language Models"
-    tags: [ai, text, langchain]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "langchain.agents.*"
-      java:
-        match: any
-        conditions:
-          - type: call
-            value: "dev.langchain4j.agent.*"
-
-  - id: langchain.mcp
-    description: "Model Context Protocol support in Langchain"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Langchain MCP Support"
-    tags: [ai, mcp, langchain]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "langchain_mcp_adapters.*"
-      java:
-        match: any
-        conditions:
-          - type: call
-            value: "dev.langchain4j.mcp.*"
-
-  - id: langchain.callbacks
-    description: "Callback handlers allow listening to events in LangChain"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Language Models"
-    tags: [ai, text, langchain]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "langchain.callbacks.*"
-      java:
-        match: any
-        conditions:
-          - type: call
-            value: "dev.langchain4j.model.chat.listener.*"
-
-  - id: langchain.chains
-    description: "Chains are easily reusable components linked together. While Chat Models use language models under the hood, the interface they expose is a bit different. Rather than expose a “text in, text out” API, they expose an interface where “chat messages” are the inputs and outputs."
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Language Models"
-    tags: [ai, text, langchain]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "langchain.chains.*"
-      java:
-        match: any
-        conditions:
-          - type: call
-            value: "dev.langchain4j.chain.*"
-
-  - id: langchain.chat_models
-    description: "Chat Models are a variation on language models, While Chat Models use language models under the hood, the interface they expose is a bit different. Rather than expose a “text in, text out” API, they expose an interface where “chat messages” are the inputs and outputs"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Chat Models"
-    tags: [ai, chat, langchain]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "langchain.chat_models.*"
-      java:
-        match: any
-        conditions:
-          - type: call
-            value: "dev.langchain4j.model.chat.*"
-
-  - id: langchain.embeddings
-    description: "Embedding models are wrappers around embedding models from different APIs and services. Embedding models can be LLMs or not."
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Embeddings"
-    tags: [ai, embeddings, langchain]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "langchain.embeddings.*"
-      java:
-        match: any
-        conditions:
-          - type: call
-            value: "dev.langchain4j.data.embedding.*"
-          - type: call
-            value: "dev.langchain4j.store.embedding.*"
-          - type: call
-            value: "dev.langchain4j.spi.model.embedding.*"
-          - type: call
-            value: "dev.langchain4j.spi.store.embedding.*"
-
-  - id: langchain.evaluation
-    description: "Evaluation chains for grading LLM and Chain outputs."
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Evaluation"
-    tags: [ai, evaluation, langchain]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "langchain.evaluation.*"
-
-  - id: langchain.globals
-    description: "Global values and configuration that apply to all of LangChain"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "LLM"
-    tags: [ai, llm, langchain]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "langchain.globals.*"
-
-  - id: langchain.hub
-    description: "Interface with LangChain Hub"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Hub Interface"
-    tags: [ai, hub, langchain]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "langchain.hub.*"
-
-  - id: langchain.indexes
-    description: "Index is used to avoid writing duplicated content into the vectostore and to avoid over-writing content if it’s unchanged"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Indexes"
-    tags: [ai, indexes, langchain]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "langchain.indexes.*"
-
-  - id: langchain.memory
-    description: "Memory maintains Chain state, incorporating context from past runs"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Memory"
-    tags: [ai, memory, langchain]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "langchain.memory.*"
-
-  - id: langchain.model_laboratory
-    description: "Experiment with different models"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Model Laboratory"
-    tags: [ai, models, langchain]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "langchain.model_laboratory.*"
-
-  - id: langchain.output_parsers
-    description: "OutputParser classes parse the output of an LLM call"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Parsers"
-    tags: [ai, parsers, langchain]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "langchain.output_parsers.*"
-
-  - id: langchain.retrievers
-    description: "Retriever class returns Documents given a text query"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Retrievers"
-    tags: [ai, retrievers, langchain]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "langchain.retrievers.*"
-
-  - id: langchain.runnables
-    description: "LangChain Runnables and the LangChain Expression Language (LCEL) provide a declarative way to compose and orchestrate LLM-powered programs that natively support synchronous, asynchronous, batch, and streaming operations for scalable, production-grade applications"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Runnables"
-    tags: [ai, runnables, langchain]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "langchain.runnables.*"
-
-  - id: langchain.smith
-    description: "This module provides utilities for connecting to LangSmith"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Smith Interface"
-    tags: [ai, smith, interface, langchain]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "langchain.smith.*"
-
-  - id: langchain.storage
-    description: "Module provides implementations of various key-value stores that conform to a simple key-value interface"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Storage"
-    tags: [ai, storage, langchain]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "langchain.storage.*"
-
-  - id: langchain.code_execution
-    description: "Code execution with LangChain"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Langchain Code Execution"
-    tags: [ai, code, langchain]
-    languages:
-      java:
-        match: any
-        conditions:
-          - type: call
-            value: "dev.langchain4j.code.*"
-
-  - id: langchain.audio
-    description: "Audio processing with LangChain"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Langchain Audio Processing"
-    tags: [ai, audio, langchain]
-    languages:
-      java:
-        match: any
-        conditions:
-          - type: call
-            value: "dev.langchain4j.data.audio.*"
-
-  - id: langchain.document
-    description: "Document processing with LangChain"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Langchain Document Processing"
-    tags: [ai, document, langchain]
-    languages:
-      java:
-        match: any
-        conditions:
-          - type: call
-            value: "dev.langchain4j.data.document.*"
-
-  - id: langchain.image
-    description: "Image processing with LangChain"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Langchain Image Processing"
-    tags: [ai, image, langchain]
-    languages:
-      java:
-        match: any
-        conditions:
-          - type: call
-            value: "dev.langchain4j.data.image.*"
-
-  - id: langchain.pdf
-    description: "PDF processing with LangChain"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Langchain PDF Processing"
-    tags: [ai, pdf, langchain]
-    languages:
-      java:
-        match: any
-        conditions:
-          - type: call
-            value: "dev.langchain4j.data.pdf.*"
-
-  - id: langchain.video
-    description: "Video processing with LangChain"
-    vendor: "Langchain"
-    product: "Langchain"
-    service: "Langchain Video Processing"
-    tags: [ai, video, langchain]
-    languages:
-      java:
-        match: any
-        conditions:
-          - type: call
-            value: "dev.langchain4j.data.video.*"
-
   - id: azure.vision
     description: "Azure Computer Vision"
     vendor: "Microsoft"
@@ -1057,12 +1057,117 @@ signatures:
           - type: call
             value: "@azure/service-bus.ServiceBusReceiver"
 
+  - id: msoffice.graph
+    description: "Microsoft Graph SDK Client"
+    vendor: "Microsoft"
+    product: "Microsoft Office"
+    service: "Graph SDK client"
+    tags: [graph, microsoft, api, users, mail, saas]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "msgraph.core.GraphClient"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@microsoft/microsoft-graph-client.Client"
+
+  - id: msoffice.office365.outlook
+    description: "Office 365 Outlook API Client"
+    vendor: "Microsoft"
+    product: "Microsoft Office"
+    service: "Outlook API client"
+    tags: [office365, email, outlook, microsoft, saas]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: import
+            value: "O365.Account"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@microsoft/microsoft-graph-client.Client"
+
+  - id: msoffice.teams.botbuilder
+    description: "Microsoft Teams Bot Builder SDK"
+    vendor: "Microsoft"
+    product: "Microsoft Office"
+    service: "Teams Bot Builder SDK"
+    tags: [teams, bot, chat, microsoft, saas]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: import
+            value: "botbuilder.core"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "botbuilder.core.TurnContext"
+
+  - id: msoffice.powerbi.client
+    description: "Power BI Embedded Client SDK"
+    vendor: "Microsoft"
+    product: "Microsoft Office"
+    service: "Power BI Embedded client"
+    tags: [powerbi, visualization, dashboard, microsoft, saas]
+    languages:
+      javascript:
+        match: any
+        conditions:
+          - type: import
+            value: "powerbi-client"
+          - type: call
+            value: "powerbi.embed"
+
+  - id: msoffice.auth.msal
+    description: "Microsoft Authentication Library (MSAL)"
+    vendor: "Microsoft"
+    product: "Microsoft Office"
+    service: "MSAL client"
+    tags: [msal, authentication, oauth, login, microsoft, saas]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "msal.PublicClientApplication"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@azure/msal-browser.PublicClientApplication"
+
+  - id: msoffice.onedrive.sdk
+    description: "OneDrive SDK Client"
+    vendor: "Microsoft"
+    product: "Microsoft Office"
+    service: "OneDrive SDK client"
+    tags: [onedrive, microsoft, sdk, storage, saas]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: import
+            value: "O365.Account"
+      javascript:
+        match: any
+        conditions:
+          - type: call
+            value: "@microsoft/microsoft-graph-client.Client"
+
   - id: openai.client
     description: "OpenAI client"
     vendor: "OpenAI"
     product: "OpenAI"
     service: "AI client"
-    tags: [ai, text]
+    tags: [ai, text, llm]
     languages:
       python:
         match: any
@@ -1080,7 +1185,7 @@ signatures:
     vendor: "OpenAI"
     product: "OpenAI API"
     service: "AI response"
-    tags: [ai, text]
+    tags: [ai, text, llm]
     languages:
       python:
         match: any
@@ -1093,7 +1198,7 @@ signatures:
     vendor: "OpenAI"
     product: "OpenAI API"
     service: "Async AI response"
-    tags: [ai, text, async]
+    tags: [ai, text, llm, async]
     languages:
       python:
         match: any
@@ -1106,7 +1211,7 @@ signatures:
     vendor: "Azure OpenAI"
     product: "Azure OpenAI API"
     service: "AI response"
-    tags: [ai, text, azure]
+    tags: [ai, text, llm, azure]
     languages:
       python:
         match: any
@@ -1122,3 +1227,100 @@ signatures:
             value: "com.azure.ai.openai.OpenAIAsyncClient"
           - type: call
             value: "com.azure.ai.openai.OpenAIClient"
+
+  - id: anthropic.client
+    description: "Anthropic client"
+    vendor: "Anthropic"
+    product: "Anthropic API"
+    service: "AI client"
+    tags: [ai, text, llm]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "anthropic.Anthropic"
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "com.anthropic.client.okhttp.AnthropicOkHttpClient.fromEnv"
+          - type: call
+            value: "com.anthropic.client.okhttp.AnthropicOkHttpClient.builder"
+          - type: call
+            value: "com.anthropic.client.AnthropicClient.*"
+
+  - id: anthropic.async
+    description: "Anthropic async client"
+    vendor: "Anthropic"
+    product: "Anthropic API"
+    service: "Async AI client"
+    tags: [ai, text, llm]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "anthropic.AsyncAnthropic"
+          - type: call
+            value: "anthropic.AsyncAnthropicVertex"
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "com.anthropic.client.okhttp.AnthropicOkHttpClientAsync.fromEnv"
+          - type: call
+            value: "com.anthropic.client.okhttp.AnthropicOkHttpClientAsync.builder"
+          - type: call
+            value: "com.anthropic.client.AnthropicClientAsync.*"
+
+  - id: anthropic.bedrock
+    description: "Anthropic Bedrock AI client for Integration with AWS Bedrock"
+    vendor: "Anthropic"
+    product: "Anthropic Bedrock Integration"
+    service: "Anthropic AWS Bedrock AI client"
+    tags: [ai, text, llm, bedrock]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "anthropic.AnthropicBedrock"
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "com.anthropic.bedrock.*"
+
+  - id: anthropic.vertexai
+    description: "Anthropic client for Integration with Claude on Vertex AI"
+    vendor: "Anthropic"
+    product: "Anthropic VertexAI Integration"
+    service: "Anthropic VertexAI client"
+    tags: [ai, text, llm, vertexai]
+    languages:
+      python:
+        match: any
+        conditions:
+          - type: call
+            value: "anthropic.AnthropicVertex"
+          - type: call
+            value: "anthropic.AsyncAnthropicVertex"
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "com.anthropic.vertex.*"
+
+  - id: anthropic.batch
+    description: "Anthropic batch processing"
+    vendor: "Anthropic"
+    product: "Anthropic API"
+    service: "Anthropic batch responses"
+    tags: [ai, text, llm, batch]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "com.anthropic.models.messages.batches.*"

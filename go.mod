@@ -1,6 +1,6 @@
 module github.com/safedep/code
 
-go 1.24.1
+go 1.24.3
 
 require (
 	buf.build/gen/go/safedep/api/protocolbuffers/go v1.36.6-20250606064815-fafeb46ec6a1.1
@@ -34,3 +34,5 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
+
+tool github.com/golangci/golangci-lint/cmd/golangci-lint
