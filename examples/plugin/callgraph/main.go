@@ -10,6 +10,7 @@ import (
 	"github.com/safedep/code/fs"
 	"github.com/safedep/code/lang"
 	"github.com/safedep/code/parser"
+	"github.com/safedep/code/pkg/helpers"
 	"github.com/safedep/code/plugin"
 	"github.com/safedep/code/plugin/callgraph"
 	"github.com/safedep/dry/log"
@@ -96,18 +97,30 @@ func run() error {
 			return fmt.Errorf("failed to match signatures: %w", err)
 		}
 
+		treeData, err := cg.Tree.Data()
+		if err != nil {
+			return fmt.Errorf("failed to get tree data: %w", err)
+		}
+
 		fmt.Printf("\nSignature matches for %s:\n", cg.FileName)
 		for _, match := range signatureMatches {
 			fmt.Printf("Match found: %s (%s)\n", match.MatchedSignature.Id, match.MatchedLanguageCode)
 			for _, condition := range match.MatchedConditions {
 				fmt.Printf("\tCondition: %s - %s\n", condition.Condition.Type, condition.Condition.Value)
 				for _, evidence := range condition.Evidences {
-					evidenceMetadata, metadataExists := evidence.Metadata()
-					evidenceDetailString := ""
-					if metadataExists {
-						evidenceDetailString = fmt.Sprintf("@ (L%d #%d to L%d #%d)", evidenceMetadata.StartLine+1, evidenceMetadata.StartColumn+1, evidenceMetadata.EndLine+1, evidenceMetadata.EndColumn+1)
+					evidenceMetadata := evidence.Metadata(treeData)
+
+					calledByStr := "called by " + evidenceMetadata.CallerNamespace
+					if evidenceMetadata.CallerMetadata != nil {
+						calledByStr += fmt.Sprintf(" (L%d - L%d)", evidenceMetadata.CallerMetadata.StartLine+1, evidenceMetadata.CallerMetadata.EndLine+1)
 					}
-					fmt.Printf("\t\tEvidence: %s %s\n", evidence.Namespace, evidenceDetailString)
+
+					calledAtStr := " exact location not available"
+					if evidenceMetadata.CallerIdentifierMetadata != nil {
+						calledAtStr = fmt.Sprintf(" at L%d:%d (%s)", evidenceMetadata.CallerIdentifierMetadata.StartLine+1, evidenceMetadata.CallerIdentifierMetadata.StartColumn+1, helpers.TrimWithEllipsis(evidenceMetadata.CallerIdentifierContent, 100, true))
+					}
+
+					fmt.Printf("\t\tEvidence: %s %s %s \n", evidenceMetadata.CalleeNamespace, calledByStr, calledAtStr)
 				}
 			}
 		}

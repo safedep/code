@@ -16,20 +16,20 @@ type processorMetadata struct {
 }
 
 type processorResult struct {
-	ImmediateCalls       []*CallGraphNode // Will be needed to manage assignment-for-call-returned values
+	ImmediateCallRefs    []CallReference
 	ImmediateAssignments []*assignmentNode
 }
 
 func newProcessorResult() processorResult {
 	return processorResult{
-		ImmediateCalls:       []*CallGraphNode{},
+		ImmediateCallRefs:    []CallReference{},
 		ImmediateAssignments: []*assignmentNode{},
 	}
 }
 func (pr *processorResult) ToString() string {
 	result := "Immediate Calls:\n"
-	for _, call := range pr.ImmediateCalls {
-		result += fmt.Sprintf("\t%s\n", call.Namespace)
+	for _, call := range pr.ImmediateCallRefs {
+		result += fmt.Sprintf("\t%s\n", call.CalleeNamespace)
 	}
 	result += "Immediate Assignments:\n"
 	for _, assignment := range pr.ImmediateAssignments {
@@ -197,7 +197,7 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 	// Java - Register direct call from root namespace to main function
 	if treeLanguage.Meta().Code == core.LanguageCodeJava && funcName == "main" {
 		rootNamespace := resolveRootNamespaceQualifier(currentNamespace)
-		callGraph.AddEdge(rootNamespace, nil, functionNamespace, functionDefNode)
+		callGraph.AddEdge(rootNamespace, nil, functionDefNode, functionNamespace, functionDefNode)
 	}
 
 	// Add function to the call graph
@@ -211,11 +211,11 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 			instanceKeyword, exists := callGraph.GetInstanceKeyword()
 			if exists {
 				instanceNamespace := currentNamespace + namespaceSeparator + instanceKeyword + namespaceSeparator + funcName
-				callGraph.AddEdge(instanceNamespace, nil, functionNamespace, functionDefNode) // @TODO - Can't create sitter node for instance keyword
+				callGraph.AddEdge(instanceNamespace, nil, functionDefNode, functionNamespace, functionDefNode) // @TODO - Can't create sitter node for instance keyword
 				log.Debugf("Register instance member function definition for %s - %s\n", funcName, instanceNamespace)
 			}
 			if funcName == "__init__" {
-				callGraph.AddEdge(currentNamespace, nil, functionNamespace, functionDefNode) // @TODO - Can't create sitter node for instance keyword
+				callGraph.AddEdge(currentNamespace, nil, functionDefNode, functionNamespace, functionDefNode) // @TODO - Can't create sitter node for instance keyword
 				log.Debugf("Register class constructor for %s", currentNamespace)
 			}
 		}
@@ -288,8 +288,8 @@ func assignmentProcessor(node *sitter.Node, treeData []byte, currentNamespace st
 	// Process & note direct calls of processChildren(right,...), and assign returned values in assignment graph
 
 	for _, assigneeNode := range assigneeNodes {
-		for _, immediateCall := range result.ImmediateCalls {
-			callGraph.AddEdge(assigneeNode.Namespace, assigneeNode.TreeNode, immediateCall.Namespace, immediateCall.TreeNode)
+		for _, immediateCall := range result.ImmediateCallRefs {
+			callGraph.AddEdge(assigneeNode.Namespace, assigneeNode.TreeNode, immediateCall.CallerIdentifier, immediateCall.CalleeNamespace, immediateCall.CalleeTreeNode)
 		}
 		for _, immediateAssignment := range result.ImmediateAssignments {
 			callGraph.assignmentGraph.AddAssignment(assigneeNode.Namespace, assigneeNode.TreeNode, immediateAssignment.Namespace, immediateAssignment.TreeNode)
@@ -424,7 +424,7 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 	functionAssignmentNode, functionResolvedBySearch := searchSymbolInScopeChain(functionName, currentNamespace, callGraph)
 	if functionResolvedBySearch {
 		log.Debugf("Call %s searched (direct) & resolved to %s\n", functionName, functionAssignmentNode.Namespace)
-		callGraph.AddEdge(currentNamespace, nil, functionAssignmentNode.Namespace, functionAssignmentNode.TreeNode) // Assumption - current namespace exists in the graph
+		callGraph.AddEdge(currentNamespace, nil, functionCallNode, functionAssignmentNode.Namespace, functionAssignmentNode.TreeNode) // Assumption - current namespace exists in the graph
 		markClassAssignment(functionAssignmentNode)
 		return result
 	}
@@ -457,7 +457,7 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 				functionNamespace := resolvedObjectNode.Namespace + namespaceSeparator + finalAttributeNamespace
 
 				// log.Debugf("Call %s searched (attr qualified) & resolved to %s\n", functionName, functionNamespace)
-				callGraph.AddEdge(currentNamespace, nil, functionNamespace, nil) // @TODO - Assumed current namespace & functionNamespace to be pre-existing
+				callGraph.AddEdge(currentNamespace, nil, functionCallNode, functionNamespace, nil) // @TODO - Assumed current namespace & functionNamespace to be pre-existing
 
 				markClassAssignment(callGraph.assignmentGraph.Assignments[functionNamespace])
 			}
@@ -654,7 +654,7 @@ func objectCreationExpressionProcessor(objectCreationNode *sitter.Node, treeData
 		if classResolvedBySearch {
 			log.Debugf("Constructor %s searched (direct) & resolved to %s\n", constructedClassName, classNode.Namespace)
 
-			callGraph.AddEdge(currentNamespace, nil, classNode.Namespace, classNode.TreeNode) // Assumption - current namespace exists in the graph
+			callGraph.AddEdge(currentNamespace, nil, objectCreationNode, classNode.Namespace, classNode.TreeNode) // Assumption - current namespace exists in the graph
 
 			markClassAssignment(classNode)
 		} else if constructedClassNode.Type() == "scoped_type_identifier" {
@@ -663,7 +663,7 @@ func objectCreationExpressionProcessor(objectCreationNode *sitter.Node, treeData
 
 			for _, scopedIdentifierAssignment := range scopedIdentifierResult.ImmediateAssignments {
 				// Register class constructor as Function call in callgraph
-				callGraph.AddEdge(currentNamespace, nil, scopedIdentifierAssignment.Namespace, scopedIdentifierAssignment.TreeNode) // Assumption - current namespace exists in the graph
+				callGraph.AddEdge(currentNamespace, nil, objectCreationNode, scopedIdentifierAssignment.Namespace, scopedIdentifierAssignment.TreeNode) // Assumption - current namespace exists in the graph
 
 				// Mark assignments for parent
 				markClassAssignment(scopedIdentifierAssignment)
@@ -835,7 +835,7 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 				calledNamespace = calledNamespace + namespaceSeparator + methodName
 			}
 			log.Debugf("Method invocation %s searched (object qualified) & resolved to - %s\n", methodName, calledNamespace)
-			callGraph.AddEdge(currentNamespace, nil, calledNamespace, methodInvocationNode) // Assumption - current namespace exists in the graph
+			callGraph.AddEdge(currentNamespace, nil, methodInvocationNode, calledNamespace, methodInvocationNode) // Assumption - current namespace exists in the graph
 		}
 
 		return newProcessorResult()
@@ -845,7 +845,7 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 	functionAssignmentNode, functionResolvedBySearch := searchSymbolInScopeChain(methodName, currentNamespace, callGraph)
 	if functionResolvedBySearch {
 		log.Debugf("Method invocation %s searched (direct) & resolved to %s\n", methodName, functionAssignmentNode.Namespace)
-		callGraph.AddEdge(currentNamespace, nil, functionAssignmentNode.Namespace, functionAssignmentNode.TreeNode) // Assumption - current namespace exists in the graph
+		callGraph.AddEdge(currentNamespace, nil, methodInvocationNode, functionAssignmentNode.Namespace, functionAssignmentNode.TreeNode) // Assumption - current namespace exists in the graph
 		return newProcessorResult()
 	}
 

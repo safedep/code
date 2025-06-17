@@ -46,6 +46,8 @@ var testcases = []callgraphTestcase{
 				"fixtures/testClass.py//ClassA",
 				"fixtures/testClass.py//ClassB",
 				"fixtures/testClass.py//ClassA//method1",
+				"fixtures/testClass.py//ClassA//method1",
+				"fixtures/testClass.py//ClassB//method1",
 				"fixtures/testClass.py//ClassB//method1",
 				"fixtures/testClass.py//ClassA//method2",
 				"fixtures/testClass.py//ClassB//method2",
@@ -223,7 +225,13 @@ func TestCallgraphPlugin(t *testing.T) {
 					}
 
 					assert.Equal(t, sourceNamespace, sourceNode.Namespace)
-					assert.ElementsMatch(t, expectedTargetNamespaces, sourceNode.CallsTo)
+
+					targetNamespaces := []string{}
+					for _, call := range sourceNode.CallsTo {
+						targetNamespaces = append(targetNamespaces, call.CalleeNamespace)
+					}
+
+					assert.ElementsMatch(t, expectedTargetNamespaces, targetNamespaces, "Expected target namespaces for source node %s to match", sourceNamespace)
 				}
 				return nil
 			}
