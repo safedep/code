@@ -26,8 +26,8 @@ type MatchedEvidence struct {
 }
 
 // Note - We're only providing content details for the caller identifier since its
-// expected to be at most one line from entire file, but calllerNamespace is an entire
-// scope (fn/class/module) which consumes lot of repetetive memory
+// expected to be at most one line from the entire file, but callerNamespace is an entire
+// scope (fn/class/module) which consumes a lot of repetitive memory
 type EvidenceMetadata struct {
 	CallerNamespace string
 	CallerMetadata  *TreeNodeMetadata
