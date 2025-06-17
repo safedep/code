@@ -116,18 +116,6 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 	functionCallTrie := trie.NewTrie[[]DfsResultItem]()
 	functionCallResultItems := cg.DFS()
 	for _, resultItem := range functionCallResultItems {
-		// We record the caller node in the trie for every namespace,
-		// since the caller is evidence of that namespace's usage
-		data := "not avl"
-		if resultItem.CallerIdentifier != nil {
-			tmpCg := newCallGraphNode(resultItem.Namespace, resultItem.CallerIdentifier)
-			mtd, avl := tmpCg.Metadata()
-			if avl {
-				data = fmt.Sprint(mtd)
-			}
-		}
-		fmt.Println("register -", resultItem.Namespace, "->", data)
-
 		existingResultItem, exists := functionCallTrie.GetWord(resultItem.Namespace)
 		if !exists {
 			existingResultItem = utils.PtrTo(make([]DfsResultItem, 0))
