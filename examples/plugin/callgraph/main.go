@@ -117,7 +117,7 @@ func run() error {
 
 					calledAtStr := " exact location not available"
 					if evidenceMetadata.CallerIdentifierMetadata != nil {
-						calledAtStr = fmt.Sprintf(" at L%d:%d (%s)", evidenceMetadata.CallerIdentifierMetadata.StartLine+1, evidenceMetadata.CallerIdentifierMetadata.StartColumn+1, helpers.TrimWithEllipsis(evidenceMetadata.CallerIdentifierContent, 100, true))
+						calledAtStr = fmt.Sprintf(" at L%d:%d (%s)", evidenceMetadata.CallerIdentifierMetadata.StartLine+1, evidenceMetadata.CallerIdentifierMetadata.StartColumn+1, helpers.TrimWithEllipsis(evidenceMetadata.CallerIdentifierContent, 100, true, 3))
 					}
 
 					fmt.Printf("\t\tEvidence: %s %s %s \n", evidenceMetadata.CalleeNamespace, calledByStr, calledAtStr)

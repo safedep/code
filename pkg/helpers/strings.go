@@ -1,24 +1,44 @@
 package helpers
 
-func TrimWithEllipsis(s string, maxLength int, showEnding bool) string {
+import (
+	"strings"
+)
+
+// TrimWithEllipsis trims the string `s` to `maxLength` characters.
+// If `centered` is true, it shows the start and end of the string with ellipsis in the middle.
+// The ellipsis length is controlled by `dots`.
+// If remaining characters after dots are odd, extra character is shown on the prefix side.
+func TrimWithEllipsis(s string, maxLength int, centered bool, dots int) string {
+	if maxLength <= 0 || dots < 0 {
+		return ""
+	}
+
 	if len(s) <= maxLength {
 		return s
 	}
 
-	if maxLength <= 5 {
-		return s[:maxLength] // not enough space for 5 dots and both sides
+	if dots == 0 || maxLength <= dots {
+		return s[:maxLength]
 	}
 
-	dots := "....."
-	remaining := maxLength - len(dots)
+	ellipsis := strings.Repeat(".", dots)
 
-	if showEnding {
-		// split remaining between prefix and suffix
-		prefixLength := remaining / 2
-		suffixLength := remaining - prefixLength
-		return s[:prefixLength] + dots + s[len(s)-suffixLength:]
+	if !centered {
+		trimLen := maxLength - dots
+		if trimLen <= 0 {
+			return s[:maxLength]
+		}
+		return s[:trimLen] + ellipsis
 	}
 
-	// Only show the prefix and dots
-	return s[:remaining] + dots
+	remaining := maxLength - dots
+	if remaining <= 0 {
+		return s[:maxLength]
+	}
+
+	// Extra character to prefix if odd
+	leftLen := (remaining + 1) / 2
+	rightLen := remaining - leftLen
+
+	return s[:leftLen] + ellipsis + s[len(s)-rightLen:]
 }
