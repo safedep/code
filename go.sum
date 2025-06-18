@@ -65,6 +65,8 @@ github.com/safedep/dry v0.0.0-20250603124321-c8255e47954f h1:wlUDnDSp1wPAXrv88eC
 github.com/safedep/dry v0.0.0-20250603124321-c8255e47954f/go.mod h1:nU5w9Xb5Ja2wq5PU/K8r8r1Dc25ApJXKKqvwju99G2w=
 github.com/safedep/dry v0.0.0-20250613153337-39475c3f0d64 h1:bUjtTt0UlCEHqjl3V4dOiA+sj2Lf4B/lvSuIK5DPhSM=
 github.com/safedep/dry v0.0.0-20250613153337-39475c3f0d64/go.mod h1:nU5w9Xb5Ja2wq5PU/K8r8r1Dc25ApJXKKqvwju99G2w=
+github.com/safedep/dry v0.0.0-20250618113059-9f8b677e299c h1:xr6P3xzQqxPx93qbH/LPjyK46oEEA6N0nYyiQSjikkI=
+github.com/safedep/dry v0.0.0-20250618113059-9f8b677e299c/go.mod h1:8GbUOzdf46FT4j5h9lw9DdA3wM9NgIVEZjTfkzNe+Cw=
 github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82 h1:6C8qej6f1bStuePVkLSFxoU22XBS165D3klxlzRg8F4=
 github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82/go.mod h1:xe4pgH49k4SsmkQq5OT8abwhWmnzkhpgnXeekbx2efw=
 github.com/stoewer/go-strcase v1.3.0 h1:g0eASXYtp+yvN9fK8sH94oCIk0fau9uV1/ZdJ0AVEzs=
