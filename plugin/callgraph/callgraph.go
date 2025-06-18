@@ -18,7 +18,7 @@ type CallReference struct {
 	// Tree sitter node for the called function or method
 	CalleeTreeNode *sitter.Node
 
-	// Identifier which has
+	// Identifier keyword node which actually invokes the function call
 	CallerIdentifier *sitter.Node
 }
 
