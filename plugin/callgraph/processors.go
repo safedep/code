@@ -216,7 +216,7 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 			}
 
 			// Python - Register direct call from current namespace to class constructor
-			if funcName == "__init__" {
+			if treeLanguage.Meta().Code == core.LanguageCodePython && funcName == "__init__" {
 				callGraph.AddEdge(currentNamespace, nil, nil, functionNamespace, functionDefNode) // @TODO - Can't create sitter node for instance keyword
 				log.Debugf("Register class constructor for %s", currentNamespace)
 			}

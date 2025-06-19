@@ -359,13 +359,9 @@ func assertCallGraph(t *testing.T, cg *CallGraph, expectedCallGraph map[string][
 }
 
 func assertDfs(t *testing.T, cg *CallGraph, expectedDfsResults []dfsResultExpectation, treeData *[]byte) {
-	type dfsItemKey struct {
-		Namespace, CallerNamespace, CallerIdentifierContent string
-	}
-
 	dfsResults := cg.DFS()
 
-	actualDfsItems := make(map[dfsItemKey]int)
+	actualDfsItems := make(map[dfsResultExpectation]int)
 	for _, dfsResultItem := range dfsResults {
 		namespace := dfsResultItem.Namespace
 
@@ -379,7 +375,7 @@ func assertDfs(t *testing.T, cg *CallGraph, expectedDfsResults []dfsResultExpect
 			callerIdentifierContent = dfsResultItem.CallerIdentifier.Content(*treeData)
 		}
 
-		key := dfsItemKey{
+		key := dfsResultExpectation{
 			Namespace:               namespace,
 			CallerNamespace:         callerNamespace,
 			CallerIdentifierContent: callerIdentifierContent,
@@ -387,14 +383,9 @@ func assertDfs(t *testing.T, cg *CallGraph, expectedDfsResults []dfsResultExpect
 		actualDfsItems[key]++
 	}
 
-	expectedDfsItems := make(map[dfsItemKey]int)
+	expectedDfsItems := make(map[dfsResultExpectation]int)
 	for _, expectedItem := range expectedDfsResults {
-		key := dfsItemKey{
-			Namespace:               expectedItem.Namespace,
-			CallerNamespace:         expectedItem.CallerNamespace,
-			CallerIdentifierContent: expectedItem.CallerIdentifierContent,
-		}
-		expectedDfsItems[key]++
+		expectedDfsItems[expectedItem]++
 	}
 
 	// Ensure expectedDfsItems are present in actualDfsItems
