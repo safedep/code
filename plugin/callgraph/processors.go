@@ -197,7 +197,7 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 	// Java - Register direct call from root namespace to main function
 	if treeLanguage.Meta().Code == core.LanguageCodeJava && funcName == "main" {
 		rootNamespace := resolveRootNamespaceQualifier(currentNamespace)
-		callGraph.AddEdge(rootNamespace, nil, functionDefNode, functionNamespace, functionDefNode)
+		callGraph.AddEdge(rootNamespace, nil, nil, functionNamespace, functionDefNode)
 	}
 
 	// Add function to the call graph
@@ -211,11 +211,13 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 			instanceKeyword, exists := callGraph.GetInstanceKeyword()
 			if exists {
 				instanceNamespace := currentNamespace + namespaceSeparator + instanceKeyword + namespaceSeparator + funcName
-				callGraph.AddEdge(instanceNamespace, nil, functionDefNode, functionNamespace, functionDefNode) // @TODO - Can't create sitter node for instance keyword
+				callGraph.AddEdge(instanceNamespace, nil, nil, functionNamespace, functionDefNode) // @TODO - Can't create sitter node for instance keyword
 				log.Debugf("Register instance member function definition for %s - %s\n", funcName, instanceNamespace)
 			}
+
+			// Python - Register direct call from current namespace to class constructor
 			if funcName == "__init__" {
-				callGraph.AddEdge(currentNamespace, nil, functionDefNode, functionNamespace, functionDefNode) // @TODO - Can't create sitter node for instance keyword
+				callGraph.AddEdge(currentNamespace, nil, nil, functionNamespace, functionDefNode) // @TODO - Can't create sitter node for instance keyword
 				log.Debugf("Register class constructor for %s", currentNamespace)
 			}
 		}

@@ -77,6 +77,11 @@ func run() error {
 			return fmt.Errorf("failed to print call graph: %w", err)
 		}
 
+		treedata, err := cg.Tree.Data()
+		if err != nil {
+			return fmt.Errorf("failed to get tree data: %w", err)
+		}
+
 		fmt.Printf("DFS Traversal results for %s:\n", cg.FileName)
 		for _, resultItem := range cg.DFS() {
 			terminalMessage := ""
@@ -84,7 +89,12 @@ func run() error {
 				terminalMessage = " (terminal)"
 			}
 
-			fmt.Printf("%s %s%s\n", strings.Repeat(">", resultItem.Depth), resultItem.Namespace, terminalMessage)
+			callerIdentifierStr := "(callerIdentifier not avl)"
+			if resultItem.CallerIdentifier != nil {
+				callerIdentifierStr = fmt.Sprintf("(L%d:%d - %s)", resultItem.CallerIdentifier.StartPoint().Row+1, resultItem.CallerIdentifier.StartPoint().Column+1, utils.TrimWithEllipsis(resultItem.CallerIdentifier.Content(*treedata), 100, true, 3))
+			}
+
+			fmt.Printf("%s %s %s %s\n", strings.Repeat(">", resultItem.Depth), resultItem.Namespace, callerIdentifierStr, terminalMessage)
 		}
 
 		signatureMatcher, err := callgraph.NewSignatureMatcher(ParsedSignatures)
@@ -115,9 +125,9 @@ func run() error {
 						calledByStr += fmt.Sprintf(" (L%d - L%d)", evidenceMetadata.CallerMetadata.StartLine+1, evidenceMetadata.CallerMetadata.EndLine+1)
 					}
 
-					calledAtStr := " exact location not available"
+					calledAtStr := "exact location not available"
 					if evidenceMetadata.CallerIdentifierMetadata != nil {
-						calledAtStr = fmt.Sprintf(" at L%d:%d (%s)", evidenceMetadata.CallerIdentifierMetadata.StartLine+1, evidenceMetadata.CallerIdentifierMetadata.StartColumn+1, utils.TrimWithEllipsis(evidenceMetadata.CallerIdentifierContent, 100, true, 3))
+						calledAtStr = fmt.Sprintf("at L%d:%d (%s)", evidenceMetadata.CallerIdentifierMetadata.StartLine+1, evidenceMetadata.CallerIdentifierMetadata.StartColumn+1, utils.TrimWithEllipsis(evidenceMetadata.CallerIdentifierContent, 100, true, 3))
 					}
 
 					fmt.Printf("\t\tEvidence: %s %s %s \n", evidenceMetadata.CalleeNamespace, calledByStr, calledAtStr)

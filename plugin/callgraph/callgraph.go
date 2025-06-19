@@ -213,7 +213,7 @@ func (cg *CallGraph) DFS() []DfsResultItem {
 
 	// Initially Interpret callgraph in its natural execution order starting from
 	// the file name which has reference for entrypoints (if any)
-	cg.dfsUtil(cg.FileName, cg.RootNode, cg.RootNode.TreeNode, visited, &dfsResult, 0)
+	cg.dfsUtil(cg.FileName, cg.RootNode, nil, visited, &dfsResult, 0)
 
 	// Assumption - All functions and class constructors are reachable
 	// This is required because most files only expose their classes/functions
@@ -222,7 +222,7 @@ func (cg *CallGraph) DFS() []DfsResultItem {
 	for namespace, node := range cg.Nodes {
 		if node.TreeNode != nil && dfsSourceNodeTypes[node.TreeNode.Type()] {
 			if !visited[namespace] {
-				cg.dfsUtil(namespace, cg.RootNode, cg.RootNode.TreeNode, visited, &dfsResult, 0)
+				cg.dfsUtil(namespace, cg.RootNode, nil, visited, &dfsResult, 0)
 			}
 		}
 	}
