@@ -77,7 +77,7 @@ func run() error {
 			return fmt.Errorf("failed to print call graph: %w", err)
 		}
 
-		treedata, err := cg.Tree.Data()
+		treeData, err := cg.Tree.Data()
 		if err != nil {
 			return fmt.Errorf("failed to get tree data: %w", err)
 		}
@@ -91,7 +91,7 @@ func run() error {
 
 			callerIdentifierStr := "(callerIdentifier not avl)"
 			if resultItem.CallerIdentifier != nil {
-				callerIdentifierStr = fmt.Sprintf("(L%d:%d - %s)", resultItem.CallerIdentifier.StartPoint().Row+1, resultItem.CallerIdentifier.StartPoint().Column+1, utils.TrimWithEllipsis(resultItem.CallerIdentifier.Content(*treedata), 100, true, 3))
+				callerIdentifierStr = fmt.Sprintf("(L%d:%d - %s)", resultItem.CallerIdentifier.StartPoint().Row+1, resultItem.CallerIdentifier.StartPoint().Column+1, utils.TrimWithEllipsis(resultItem.CallerIdentifier.Content(*treeData), 100, true, 3))
 			}
 
 			fmt.Printf("%s %s %s %s\n", strings.Repeat(">", resultItem.Depth), resultItem.Namespace, callerIdentifierStr, terminalMessage)
@@ -105,11 +105,6 @@ func run() error {
 		signatureMatches, err := signatureMatcher.MatchSignatures(cg)
 		if err != nil {
 			return fmt.Errorf("failed to match signatures: %w", err)
-		}
-
-		treeData, err := cg.Tree.Data()
-		if err != nil {
-			return fmt.Errorf("failed to get tree data: %w", err)
 		}
 
 		fmt.Printf("\nSignature matches for %s:\n", cg.FileName)
