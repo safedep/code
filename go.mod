@@ -3,9 +3,9 @@ module github.com/safedep/code
 go 1.24.3
 
 require (
-	buf.build/gen/go/safedep/api/protocolbuffers/go v1.36.6-20250606064815-fafeb46ec6a1.1
+	buf.build/gen/go/safedep/api/protocolbuffers/go v1.36.6-20250610075857-7cfdb61a0bfa.1
 	buf.build/go/protovalidate v0.12.0
-	github.com/safedep/dry v0.0.0-20250603124321-c8255e47954f
+	github.com/safedep/dry v0.0.0-20250618113059-9f8b677e299c
 	github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82
 	github.com/stretchr/testify v1.10.0
 	gopkg.in/yaml.v3 v3.0.1

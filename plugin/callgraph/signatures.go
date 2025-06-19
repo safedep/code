@@ -10,6 +10,8 @@ import (
 	"github.com/safedep/code/core"
 	"github.com/safedep/dry/ds/trie"
 	"github.com/safedep/dry/log"
+	"github.com/safedep/dry/utils"
+	sitter "github.com/smacker/go-tree-sitter"
 )
 
 const (
@@ -17,9 +19,62 @@ const (
 	MatchAll = "all"
 )
 
+type MatchedEvidence struct {
+	Caller           *CallGraphNode
+	Callee           *CallGraphNode
+	CallerIdentifier *sitter.Node
+}
+
+// Note - We're only providing content details for the caller identifier since its
+// expected to be at most one line from the entire file, but callerNamespace is an entire
+// scope (fn/class/module) which consumes a lot of repetitive memory
+type EvidenceMetadata struct {
+	CallerNamespace string
+	CallerMetadata  *TreeNodeMetadata
+
+	CalleeNamespace string
+	CalleeMetadata  *TreeNodeMetadata
+
+	// Keyword / statement that caused the match
+	CallerIdentifierContent  string
+	CallerIdentifierMetadata *TreeNodeMetadata
+}
+
+func (evidence *MatchedEvidence) Metadata(treeData *[]byte) EvidenceMetadata {
+	result := EvidenceMetadata{}
+
+	if evidence.Caller != nil {
+		result.CallerNamespace = evidence.Caller.Namespace
+		callerMetadata, exists := evidence.Caller.Metadata()
+		if exists {
+			result.CallerMetadata = &callerMetadata
+		}
+	}
+
+	if evidence.Callee != nil {
+		result.CalleeNamespace = evidence.Callee.Namespace
+		calleeMetadata, exists := evidence.Callee.Metadata()
+		if exists {
+			result.CalleeMetadata = &calleeMetadata
+		}
+	}
+
+	if evidence.CallerIdentifier != nil {
+		result.CallerIdentifierContent = evidence.CallerIdentifier.Content(*treeData)
+		result.CallerIdentifierMetadata = &TreeNodeMetadata{
+			StartLine:   evidence.CallerIdentifier.StartPoint().Row,
+			EndLine:     evidence.CallerIdentifier.EndPoint().Row,
+			StartColumn: evidence.CallerIdentifier.StartPoint().Column,
+			EndColumn:   evidence.CallerIdentifier.EndPoint().Column,
+		}
+	}
+
+	return result
+}
+
 type MatchedCondition struct {
 	Condition *callgraphv1.Signature_LanguageMatcher_SignatureCondition
-	Evidences []*CallGraphNode
+	Evidences []MatchedEvidence
 }
 
 type SignatureMatchResult struct {
@@ -58,12 +113,17 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 
 	matcherResults := []SignatureMatchResult{}
 
-	functionCallTrie := trie.NewTrie[CallGraphNode]()
+	functionCallTrie := trie.NewTrie[[]DfsResultItem]()
 	functionCallResultItems := cg.DFS()
 	for _, resultItem := range functionCallResultItems {
-		// We record the caller node in the trie for every namespace,
-		// since the caller is evidence of that namespace's usage
-		functionCallTrie.Insert(resultItem.Namespace, resultItem.Caller)
+		existingResultItem, exists := functionCallTrie.GetWord(resultItem.Namespace)
+		if !exists {
+			existingResultItem = utils.PtrTo(make([]DfsResultItem, 0))
+		}
+
+		*existingResultItem = append(*existingResultItem, resultItem)
+
+		functionCallTrie.Insert(resultItem.Namespace, existingResultItem)
 	}
 
 	for _, signature := range sm.targetSignatures {
@@ -77,24 +137,35 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 			if condition.Type == "call" {
 				matchCondition := MatchedCondition{
 					Condition: condition,
-					Evidences: []*CallGraphNode{},
+					Evidences: []MatchedEvidence{},
 				}
 
 				lookupNamespace := resolveNamespaceWithSeparator(condition.Value, language)
 				lookupNamespace, isWildcardLookup := trimWildcardLookupNamespace(lookupNamespace, language)
 
+				var evidenceDfsResultItems []DfsResultItem
+
 				if isWildcardLookup {
 					// Look up any children of the namespace in the trie
 					lookupEntries := functionCallTrie.WordsWithPrefix(lookupNamespace + namespaceSeparator)
+					evidenceDfsResultItems = []DfsResultItem{}
 					for _, lookupEntry := range lookupEntries {
-						matchCondition.Evidences = append(matchCondition.Evidences, lookupEntry.Value)
+						evidenceDfsResultItems = append(evidenceDfsResultItems, *lookupEntry.Value...)
 					}
 				} else {
 					// Lookup the exact namespace in the trie
 					lookupNode, nodeExists := functionCallTrie.GetWord(lookupNamespace)
 					if nodeExists && lookupNode != nil {
-						matchCondition.Evidences = append(matchCondition.Evidences, lookupNode)
+						evidenceDfsResultItems = *lookupNode
 					}
+				}
+
+				for _, evidenceResultItem := range evidenceDfsResultItems {
+					matchCondition.Evidences = append(matchCondition.Evidences, MatchedEvidence{
+						Caller:           evidenceResultItem.Caller,
+						Callee:           evidenceResultItem.Node,
+						CallerIdentifier: evidenceResultItem.CallerIdentifier,
+					})
 				}
 
 				if len(matchCondition.Evidences) > 0 {

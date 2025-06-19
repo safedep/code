@@ -2,7 +2,6 @@ package callgraph
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
@@ -12,15 +11,25 @@ import (
 
 const namespaceSeparator = "//"
 
+type CallReference struct {
+	// Namespace of the called function or method
+	CalleeNamespace string
+
+	// Tree sitter node for the called function or method
+	CalleeTreeNode *sitter.Node
+
+	// Identifier keyword node which actually invokes the function call
+	CallerIdentifier *sitter.Node
+}
+
 // CallGraphNode represents a single node in the call graph
 type CallGraphNode struct {
 	Namespace string
-	CallsTo   []string
-	CalledBy  []string
+	CallsTo   []CallReference
 	TreeNode  *sitter.Node
 }
 
-type CallGraphNodeMetadata struct {
+type TreeNodeMetadata struct {
 	StartLine   uint32
 	EndLine     uint32
 	StartColumn uint32
@@ -29,11 +38,12 @@ type CallGraphNodeMetadata struct {
 
 // If tree sitter node is nil, it returns false indicating that the content details are not available
 // else, it returns the content details and true
-func (gn *CallGraphNode) Metadata() (CallGraphNodeMetadata, bool) {
+func (gn *CallGraphNode) Metadata() (TreeNodeMetadata, bool) {
 	if gn.TreeNode == nil {
-		return CallGraphNodeMetadata{}, false
+		return TreeNodeMetadata{}, false
 	}
-	return CallGraphNodeMetadata{
+
+	return TreeNodeMetadata{
 		StartLine:   gn.TreeNode.StartPoint().Row,
 		EndLine:     gn.TreeNode.EndPoint().Row,
 		StartColumn: gn.TreeNode.StartPoint().Column,
@@ -53,8 +63,7 @@ func (gn *CallGraphNode) Content(treeData *[]byte) (string, bool) {
 func newCallGraphNode(namespace string, treeNode *sitter.Node) *CallGraphNode {
 	return &CallGraphNode{
 		Namespace: namespace,
-		CallsTo:   []string{},
-		CalledBy:  []string{},
+		CallsTo:   []CallReference{},
 		TreeNode:  treeNode,
 	}
 }
@@ -62,6 +71,7 @@ func newCallGraphNode(namespace string, treeNode *sitter.Node) *CallGraphNode {
 type CallGraph struct {
 	FileName          string
 	Nodes             map[string]*CallGraphNode
+	RootNode          *CallGraphNode
 	Tree              core.ParseTree
 	assignmentGraph   assignmentGraph
 	classConstructors map[string]bool
@@ -84,7 +94,7 @@ func newCallGraph(fileName string, rootNode *sitter.Node, imports []*ast.ImportN
 	}
 
 	// Add root node to the call graph
-	cg.AddNode(fileName, rootNode)
+	cg.addRootNode(rootNode)
 
 	// Required to map identifiers to imported modules as assignments
 	// and register default calls for wildcard imports
@@ -93,7 +103,7 @@ func newCallGraph(fileName string, rootNode *sitter.Node, imports []*ast.ImportN
 	for _, wildcardImport := range wildcardImports {
 		// For wildcard imports, we add a call to importeditem//*
 		// assuming that anything under that namespace is posssibly used
-		cg.AddEdge(fileName, rootNode, wildcardImport.Namespace, wildcardImport.NamespaceTreeNode)
+		cg.AddEdge(fileName, rootNode, wildcardImport.NamespaceTreeNode, wildcardImport.Namespace, wildcardImport.NamespaceTreeNode)
 	}
 
 	for identifier, importedIdentifier := range importedIdentifiers {
@@ -113,6 +123,11 @@ func newCallGraph(fileName string, rootNode *sitter.Node, imports []*ast.ImportN
 	return cg, nil
 }
 
+func (cg *CallGraph) addRootNode(treeNode *sitter.Node) {
+	cg.AddNode(cg.FileName, treeNode)
+	cg.RootNode = cg.Nodes[cg.FileName]
+}
+
 func (cg *CallGraph) AddNode(identifier string, treeNode *sitter.Node) {
 	if _, exists := cg.Nodes[identifier]; !exists {
 		cg.Nodes[identifier] = newCallGraphNode(identifier, treeNode)
@@ -120,15 +135,15 @@ func (cg *CallGraph) AddNode(identifier string, treeNode *sitter.Node) {
 }
 
 // AddEdge adds an edge from one function to another
-func (cg *CallGraph) AddEdge(caller string, callerTreeNode *sitter.Node, callee string, calleeTreeNode *sitter.Node) {
+func (cg *CallGraph) AddEdge(caller string, callerTreeNode *sitter.Node, CallerIdentifier *sitter.Node, callee string, calleeTreeNode *sitter.Node) {
 	cg.AddNode(caller, callerTreeNode)
 	cg.AddNode(callee, calleeTreeNode)
-	if !slices.Contains(cg.Nodes[caller].CallsTo, callee) {
-		cg.Nodes[caller].CallsTo = append(cg.Nodes[caller].CallsTo, callee)
-	}
-	if !slices.Contains(cg.Nodes[callee].CalledBy, caller) {
-		cg.Nodes[callee].CalledBy = append(cg.Nodes[callee].CalledBy, caller)
-	}
+
+	cg.Nodes[caller].CallsTo = append(cg.Nodes[caller].CallsTo, CallReference{
+		CalleeNamespace:  callee,
+		CalleeTreeNode:   calleeTreeNode,
+		CallerIdentifier: CallerIdentifier,
+	})
 }
 
 func (cg *CallGraph) PrintCallGraph() error {
@@ -144,7 +159,7 @@ func (cg *CallGraph) PrintCallGraph() error {
 		if builtInsMap[caller] && len(node.CallsTo) == 0 {
 			continue // Skip built-in functions with no calls
 		}
-		fmt.Printf("  %s (->%d) (calls)=> %v\n", caller, len(node.CalledBy), node.CallsTo)
+		fmt.Printf("  %s (calls)=> %v\n", caller, node.CallsTo)
 	}
 	fmt.Println()
 
@@ -184,11 +199,12 @@ var dfsSourceNodeTypes = map[string]bool{
 }
 
 type DfsResultItem struct {
-	Namespace string
-	Node      *CallGraphNode
-	Caller    *CallGraphNode
-	Depth     int
-	Terminal  bool
+	Namespace        string
+	Node             *CallGraphNode
+	Caller           *CallGraphNode
+	CallerIdentifier *sitter.Node // This is the identifier keyword node from which the fn call was made
+	Depth            int
+	Terminal         bool
 }
 
 func (cg *CallGraph) DFS() []DfsResultItem {
@@ -197,7 +213,7 @@ func (cg *CallGraph) DFS() []DfsResultItem {
 
 	// Initially Interpret callgraph in its natural execution order starting from
 	// the file name which has reference for entrypoints (if any)
-	cg.dfsUtil(cg.FileName, nil, visited, &dfsResult, 0)
+	cg.dfsUtil(cg.FileName, cg.RootNode, nil, visited, &dfsResult, 0)
 
 	// Assumption - All functions and class constructors are reachable
 	// This is required because most files only expose their classes/functions
@@ -205,43 +221,60 @@ func (cg *CallGraph) DFS() []DfsResultItem {
 	// present in every file.
 	for namespace, node := range cg.Nodes {
 		if node.TreeNode != nil && dfsSourceNodeTypes[node.TreeNode.Type()] {
-			cg.dfsUtil(namespace, nil, visited, &dfsResult, 0)
+			if !visited[namespace] {
+				cg.dfsUtil(namespace, cg.RootNode, nil, visited, &dfsResult, 0)
+			}
 		}
 	}
 
 	return dfsResult
 }
 
-func (cg *CallGraph) dfsUtil(namespace string, caller *CallGraphNode, visited map[string]bool, result *[]DfsResultItem, depth int) {
+func (cg *CallGraph) dfsUtil(namespace string, caller *CallGraphNode, callerIdentifier *sitter.Node, visited map[string]bool, result *[]DfsResultItem, depth int) {
+	callgraphNode, callgraphNodeExists := cg.Nodes[namespace]
+
 	if visited[namespace] {
+		terminalAssignmentNodes := cg.assignmentGraph.Resolve(namespace)
+		for _, terminalAssignmentNode := range terminalAssignmentNodes {
+			terminalCallgraphNode, terminalCallgraphNodeExists := cg.Nodes[terminalAssignmentNode.Namespace]
+			if terminalCallgraphNodeExists {
+				*result = append(*result, DfsResultItem{
+					Namespace:        terminalAssignmentNode.Namespace,
+					Node:             terminalCallgraphNode,
+					Caller:           caller,
+					CallerIdentifier: callerIdentifier,
+					Depth:            depth,
+					Terminal:         true,
+				})
+			}
+		}
 		return
 	}
-
-	callgraphNode, callgraphNodeExists := cg.Nodes[namespace]
 
 	// Mark the current node as visited and add it to the result
 	visited[namespace] = true
 	*result = append(*result, DfsResultItem{
-		Namespace: namespace,
-		Node:      callgraphNode,
-		Caller:    caller,
-		Depth:     depth,
-		Terminal:  !callgraphNodeExists || len(callgraphNode.CallsTo) == 0,
+		Namespace:        namespace,
+		Node:             callgraphNode,
+		Caller:           caller,
+		CallerIdentifier: callerIdentifier,
+		Depth:            depth,
+		Terminal:         !callgraphNodeExists || len(callgraphNode.CallsTo) == 0,
 	})
 
 	assignmentGraphNode, assignmentNodeExists := cg.assignmentGraph.Assignments[namespace]
 	if assignmentNodeExists {
 		// Recursively visit all the nodes assigned to the current node
 		for _, assigned := range assignmentGraphNode.AssignedTo {
-			cg.dfsUtil(assigned, caller, visited, result, depth)
+			cg.dfsUtil(assigned, caller, callerIdentifier, visited, result, depth)
 		}
 	}
 
 	// Recursively visit all the nodes called by the current node
 	// Any variable assignment would be ignored here, since it won't be in callgraph
 	if callgraphNodeExists {
-		for _, callee := range callgraphNode.CallsTo {
-			cg.dfsUtil(callee, callgraphNode, visited, result, depth+1)
+		for _, callRef := range callgraphNode.CallsTo {
+			cg.dfsUtil(callRef.CalleeNamespace, callgraphNode, callRef.CallerIdentifier, visited, result, depth+1)
 		}
 	}
 }
