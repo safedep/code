@@ -29,6 +29,10 @@ type CallGraphNode struct {
 	TreeNode  *sitter.Node
 }
 
+type NormalisedCallGraphNode struct {
+	CallGraphNode
+}
+
 type TreeNodeMetadata struct {
 	StartLine   uint32
 	EndLine     uint32
@@ -66,6 +70,11 @@ func newCallGraphNode(namespace string, treeNode *sitter.Node) *CallGraphNode {
 		CallsTo:   []CallReference{},
 		TreeNode:  treeNode,
 	}
+}
+
+type NormalisedCallGraph struct {
+	FileName string
+	Nodes    map[string]*NormalisedCallGraphNode
 }
 
 type CallGraph struct {
@@ -205,6 +214,117 @@ type DfsResultItem struct {
 	CallerIdentifier *sitter.Node // This is the identifier keyword node from which the fn call was made
 	Depth            int
 	Terminal         bool
+}
+
+// GenerateNormalisedGraph produces a call graph after resolving assignments
+// and consolidating existing calls already available
+func (cg *CallGraph) GenerateNormalisedGraph() (*NormalisedCallGraph, error) {
+	visited := make(map[string]bool)
+	normalisedGraph := &NormalisedCallGraph{
+		FileName: cg.FileName,
+		Nodes:    make(map[string]*NormalisedCallGraphNode),
+	}
+
+	// Copy existing nodes to the normalised graph
+	for _, node := range cg.Nodes {
+		normalisedGraph.Nodes[node.Namespace] = &NormalisedCallGraphNode{
+			// CallGraphNode: *node,
+			CallGraphNode: CallGraphNode{
+				Namespace: node.Namespace,
+				CallsTo:   node.CallsTo,
+				// CallsTo:   []CallReference{},
+				TreeNode: node.TreeNode,
+			},
+		}
+	}
+
+	// Initially Interpret callgraph in its natural execution order starting from
+	// the file name which has reference for entrypoints (if any)
+	cg.normaliseUtil(cg.FileName, cg.RootNode, nil, visited, normalisedGraph)
+
+	for namespace, node := range cg.Nodes {
+		if node.TreeNode != nil && dfsSourceNodeTypes[node.TreeNode.Type()] {
+			if !visited[namespace] {
+				cg.normaliseUtil(namespace, cg.RootNode, nil, visited, normalisedGraph)
+			}
+		}
+	}
+
+	fmt.Println("Normalised Call Graph:")
+	for namespace, node := range normalisedGraph.Nodes {
+		if len(node.CallsTo) > 0 {
+			callsToNamespaces := make([]string, len(node.CallsTo))
+			for idx, callRef := range node.CallsTo {
+				callsToNamespaces[idx] = callRef.CalleeNamespace
+			}
+			fmt.Printf("  %s (calls)=> %v\n", namespace, callsToNamespaces)
+		} else {
+			fmt.Printf("  %s (no calls)\n", namespace)
+		}
+	}
+
+	return normalisedGraph, nil
+}
+
+func (cg *CallGraph) normaliseUtil(namespace string, caller *CallGraphNode, callerIdentifier *sitter.Node, visited map[string]bool, normalisedGraph *NormalisedCallGraph) {
+	treeData, err := cg.Tree.Data()
+	if err != nil {
+		log.Errorf("failed to get tree data: %v", err)
+		return
+	}
+
+	callgraphNode, callgraphNodeExists := cg.Nodes[namespace]
+	assignmentGraphNode, assignmentNodeExists := cg.assignmentGraph.Assignments[namespace]
+
+	if !callgraphNodeExists {
+		var treeNode *sitter.Node = nil
+		if assignmentNodeExists {
+			treeNode = assignmentGraphNode.TreeNode // Use the tree node from assignment graph if available
+		}
+		callgraphNode = newCallGraphNode(namespace, treeNode)
+		normalisedGraph.Nodes[namespace] = &NormalisedCallGraphNode{
+			CallGraphNode: *callgraphNode,
+		}
+	}
+
+	// If current node is already visited, skip
+	if visited[namespace] {
+		return
+	}
+
+	visited[namespace] = true
+
+	// Recursively process all the nodes called by the current node
+	// Any variable assignment would be ignored here, since it won't be in callgraph
+	if callgraphNodeExists {
+		for _, callRef := range callgraphNode.CallsTo {
+			// Register a normalised call reference to assigned items
+			for _, terminalAssignmentNode := range cg.assignmentGraph.Resolve(callRef.CalleeNamespace) {
+				callIdentifierContent := ""
+				if callRef.CallerIdentifier != nil {
+					callIdentifierContent = fmt.Sprintf("(%s)", callRef.CallerIdentifier.Content(*treeData))
+				}
+				fmt.Printf("Add assigned edge %s (%s)-> %s\n", namespace, callIdentifierContent, terminalAssignmentNode.Namespace)
+
+				normalisedGraph.Nodes[namespace].CallsTo = append(normalisedGraph.Nodes[namespace].CallsTo, CallReference{
+					CalleeNamespace:  terminalAssignmentNode.Namespace,
+					CalleeTreeNode:   terminalAssignmentNode.TreeNode,
+					CallerIdentifier: callerIdentifier,
+				})
+			}
+
+			cg.normaliseUtil(callRef.CalleeNamespace, callgraphNode, callRef.CallerIdentifier, visited, normalisedGraph)
+		}
+	}
+
+	// if assignmentNodeExists {
+	// 	// Recursively process all the nodes assigned to the current node
+	// 	// This handles cases where a variable is assigned to multiple namespaces
+	// 	// and we need to resolve all of them in the normalised graph
+	// 	for _, assigned := range assignmentGraphNode.AssignedTo {
+	// 		cg.normaliseUtil(assigned, caller, callerIdentifier, visited, normalisedGraph)
+	// 	}
+	// }
 }
 
 func (cg *CallGraph) DFS() []DfsResultItem {
