@@ -23,6 +23,10 @@ func newAssignmentGraphNode(namespace string, treeNode *sitter.Node) *assignment
 	}
 }
 
+func (an *assignmentNode) IsLiteralValue() bool {
+	return an.TreeNode != nil && literalNodeTypes[an.TreeNode.Type()]
+}
+
 type assignmentGraph struct {
 	Assignments map[string]*assignmentNode // Map of identifier to possible namespaces or other identifiers
 }
@@ -31,10 +35,16 @@ func newAssignmentGraph() *assignmentGraph {
 	return &assignmentGraph{Assignments: make(map[string]*assignmentNode)}
 }
 
-func (ag *assignmentGraph) AddIdentifier(identifier string, treeNode *sitter.Node) *assignmentNode {
-	if _, exists := ag.Assignments[identifier]; !exists {
+func (ag *assignmentGraph) AddNode(identifier string, treeNode *sitter.Node) *assignmentNode {
+	existingAssignmentNode, exists := ag.Assignments[identifier]
+
+	if !exists {
 		ag.Assignments[identifier] = newAssignmentGraphNode(identifier, treeNode)
+	} else if treeNode != nil && existingAssignmentNode.TreeNode == nil {
+		// If the existing node has no tree node, we can set it now
+		ag.Assignments[identifier].TreeNode = treeNode
 	}
+
 	return ag.Assignments[identifier]
 }
 
@@ -54,7 +64,8 @@ func (ag *assignmentGraph) AddAssignment(identifier string, identifierTreeNode *
 	}
 }
 
-// Resolve an identifier to its targets (leaf nodes of the DFS tree)
+// Resolve an identifier to its assignment targets (leaf nodes of the DFS tree)
+// For example, if a = b, b = c, b = d, then resolving a will return {c, d}
 func (ag *assignmentGraph) Resolve(identifier string) []*assignmentNode {
 	targets := utils.PtrTo([]*assignmentNode{})
 	visited := make(map[string]bool)

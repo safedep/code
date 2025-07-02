@@ -91,10 +91,21 @@ func run() error {
 
 			callerIdentifierStr := "(callerIdentifier not avl)"
 			if resultItem.CallerIdentifier != nil {
-				callerIdentifierStr = fmt.Sprintf("(L%d:%d - %s)", resultItem.CallerIdentifier.StartPoint().Row+1, resultItem.CallerIdentifier.StartPoint().Column+1, utils.TrimWithEllipsis(resultItem.CallerIdentifier.Content(*treeData), 100, true, 3))
+				callerIdentifierStr = fmt.Sprintf(
+					"(L%d:%d - %s)",
+					resultItem.CallerIdentifier.StartPoint().Row+1,
+					resultItem.CallerIdentifier.StartPoint().Column+1,
+					utils.TrimWithEllipsis(resultItem.CallerIdentifier.Content(*treeData), 100, true, 3),
+				)
 			}
 
-			fmt.Printf("%s %s %s %s\n", strings.Repeat(">", resultItem.Depth), resultItem.Namespace, callerIdentifierStr, terminalMessage)
+			fmt.Printf(
+				"%s %s %s %s\n",
+				strings.Repeat(">", resultItem.Depth),
+				resultItem.Namespace,
+				callerIdentifierStr,
+				terminalMessage,
+			)
 		}
 
 		signatureMatcher, err := callgraph.NewSignatureMatcher(ParsedSignatures)
@@ -126,6 +137,21 @@ func run() error {
 					}
 
 					fmt.Printf("\t\tEvidence: %s %s %s \n", evidenceMetadata.CalleeNamespace, calledByStr, calledAtStr)
+
+					argString := ""
+					for _, arg := range evidence.Arguments {
+						argNamespaces := make([]string, len(arg.Nodes))
+						for i, node := range arg.Nodes {
+							if node.TreeNode != nil {
+								argNamespaces[i] = node.Namespace
+							} else {
+								argNamespaces[i] = "(no namespace)"
+							}
+						}
+						argString += fmt.Sprintf("(%s), ", strings.Join(argNamespaces, ", "))
+					}
+
+					fmt.Printf("\t\tArgs (%d): [%s]\n", len(evidence.Arguments), argString)
 				}
 			}
 		}

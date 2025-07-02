@@ -23,6 +23,7 @@ type MatchedEvidence struct {
 	Caller           *CallGraphNode
 	Callee           *CallGraphNode
 	CallerIdentifier *sitter.Node
+	Arguments        []CallArgument
 }
 
 // Note - We're only providing content details for the caller identifier since its
@@ -165,6 +166,7 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 						Caller:           evidenceResultItem.Caller,
 						Callee:           evidenceResultItem.Node,
 						CallerIdentifier: evidenceResultItem.CallerIdentifier,
+						Arguments:        evidenceResultItem.Arguments,
 					})
 				}
 
@@ -183,6 +185,7 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 			})
 		}
 	}
+
 	return matcherResults, nil
 }
 

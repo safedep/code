@@ -36,7 +36,11 @@ public class CallgraphTestcases {
 
     // Multiple classes assigned
     LayoutManager lm = new java.awt.BorderLayout();
-    lm.addLayoutComponent("North", new java.awt.Button("North Button"));
+    String componentName = "North";
+    if (Math.random() < 0.5) {
+      componentName = "South";
+    }
+    lm.addLayoutComponent(componentName, new java.awt.Button("North Button"));
     lm = new java.awt.FlowLayout();
     lm.minimumLayoutSize(new java.awt.Container());
     lm = new GridLayout();

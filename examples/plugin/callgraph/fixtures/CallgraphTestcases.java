@@ -1,8 +1,3 @@
-package examples;
-import java.awt.BorderLayout;
-import java.awt.Button;
-import java.awt.desktop.SystemEventListener;
-import java.awt.desktop.ScreenSleepEvent;
 import java.awt.Dialog;
 import java.awt.Frame;
 import java.awt.GridLayout;
@@ -11,34 +6,6 @@ import java.awt.LayoutManager;
 import java.awt.Window;
 import com.sun.activation.registries.MailcapFile;
 import static somelib.xyz.somelibfn;
-
-// Add call on class (indirectly to constructor) in every DFS
-class JavaExamples {
-    public JavaExamples() {
-        BorderLayout layout = new BorderLayout();
-        System.out.println("MyService initialized with layout: " + layout);
-    }
-    public JavaExamples(string xyz) {
-        BorderLayout layout = new BorderLayout();
-        System.out.println("MyService initialized with layout: " + layout);
-    }
-    public JavaExamples(bool xyz) {
-        BorderLayout layout = new BorderLayout();
-        System.out.println("MyService initialized with layout: " + layout);
-    }
-
-    // Call these methods also by default ?
-    public void performAction() {
-        Button button = new Button("Click Me");
-        System.out.println(button.getLabel());
-    }
-
-    public void anotherAction() {
-        ScreenSleepEvent event = new ScreenSleepEvent();
-        System.out.println("MyService initialized with event: " + event);
-    }
-}
-
 
 public class CallgraphTestcases {
   public CallgraphTestcases() {
@@ -64,12 +31,22 @@ public class CallgraphTestcases {
     // Member functions / sub-functions accessed on fully qualified class
     java.awt.Component cnv = new java.awt.Canvas();
     cnv = new ScrollPane();
-    cnv.setSize(100, 100);
+    int width = cnv.getWidth();
+    if (Math.random() < 0.5) {
+      width = 32;
+    } else {
+      width = 64;
+    }
+    cnv.setSize(width, (Math.random() < 0.5) ? 55 : 57);
     cnv.prop.subprop.subsubprop.getSomething();
 
     // Multiple classes assigned
     LayoutManager lm = new java.awt.BorderLayout();
-    lm.addLayoutComponent("North", new java.awt.Button("North Button"));
+    String componentName = "North";
+    if (Math.random() < 0.5) {
+      componentName = "South";
+    }
+    lm.addLayoutComponent(componentName, new java.awt.Button("North Button"));
     lm = new java.awt.FlowLayout();
     lm.minimumLayoutSize(new java.awt.Container());
     lm = new GridLayout();
@@ -84,7 +61,7 @@ public class CallgraphTestcases {
 
     // Function call chain
     System.console().readPassword();
-    System.getenv().keySet().iterator().hasNext();
+    System.getenv().keySet().iterator(com.companyX.fn1()).hasNext();
     Math.atan(1.0);
 
     // Unknown standalone function call
