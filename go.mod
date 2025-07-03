@@ -4,7 +4,7 @@ go 1.24.3
 
 require (
 	buf.build/gen/go/safedep/api/protocolbuffers/go v1.36.6-20250610075857-7cfdb61a0bfa.1
-	buf.build/go/protovalidate v0.12.0
+	buf.build/go/protovalidate v0.13.1
 	github.com/safedep/dry v0.0.0-20250618113059-9f8b677e299c
 	github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82
 	github.com/stretchr/testify v1.10.0
@@ -12,7 +12,7 @@ require (
 )
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.6-20250425153114-8976f5be98c1.1 // indirect
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.6-20250625184727-c923a0c2a132.1 // indirect
 	cel.dev/expr v0.24.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
