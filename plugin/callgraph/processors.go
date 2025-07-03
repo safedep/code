@@ -72,8 +72,11 @@ func init() {
 		"attribute":            attributeProcessor,
 		"assignment":           assignmentProcessor,
 		"subscript":            skippedProcessor,
+		"ternary_expression":   ternaryExpressionProcessor,
 
 		// Java-specific
+		"consequence":                skipResultsProcessor,
+		"alternative":                skipResultsProcessor,
 		"method_invocation":          methodInvocationProcessor,
 		"class_declaration":          classDefinitionProcessor,
 		"scoped_type_identifier":     scopedIdentifierProcessor,
@@ -343,6 +346,29 @@ func assignmentProcessor(node *sitter.Node, treeData []byte, currentNamespace st
 	}
 
 	return newProcessorResult()
+}
+
+func ternaryExpressionProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if node == nil {
+		return newProcessorResult()
+	}
+
+	accumulatedResult := newProcessorResult()
+
+	// Process condition part (without propagating assignments)
+	conditionNode := node.ChildByFieldName("condition")
+	processNode(conditionNode, treeData, currentNamespace, callGraph, metadata)
+
+	// Accumulate and return results from consequence/alternative
+	consequenceNode := node.ChildByFieldName("consequence")
+	alternativeNode := node.ChildByFieldName("alternative")
+
+	accumulatedResult.addResults(
+		processNode(consequenceNode, treeData, currentNamespace, callGraph, metadata),
+		processNode(alternativeNode, treeData, currentNamespace, callGraph, metadata),
+	)
+
+	return accumulatedResult
 }
 
 func attributeProcessor(attributeNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
