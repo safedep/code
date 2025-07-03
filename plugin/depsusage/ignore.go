@@ -10,11 +10,11 @@ import (
 var commonIgnoredTypesList = []string{"comment", "import_statement", "import_from_statement", "import_declaration"}
 var commonIgnoredTypes = make(map[string]bool)
 
-type LanguageIgnoreRules struct {
+type languageIgnoreRules struct {
 	rule []func(node *sitter.Node, data *[]byte) bool
 }
 
-var ignoreRules = map[core.LanguageCode]LanguageIgnoreRules{
+var ignoreRules = map[core.LanguageCode]languageIgnoreRules{
 	core.LanguageCodePython: {
 		rule: []func(node *sitter.Node, data *[]byte) bool{},
 	},

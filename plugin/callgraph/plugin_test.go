@@ -26,11 +26,11 @@ type callgraphTestcase struct {
 	Language core.LanguageCode
 	FilePath string
 
-	// Namezpaces representing assignment graph nodes (not exhaustive)
+	// Namespaces representing assignment graph nodes (not exhaustive)
 	ExpectedAssignmentGraph map[string][]string
 
-	// Namezpaces representing callgraph nodes (not exhaustive)
-	ExpectedCallGraph map[string][]expectedCallgraphRefs // @TODO - store args also
+	// Namespaces representing callgraph nodes (not exhaustive)
+	ExpectedCallGraph map[string][]expectedCallgraphRefs
 
 	// This is the list of minimum expected DFS results items needed to be present as result of cg.DFS()
 	// This should not be exhaustive, but should cover most edge cases

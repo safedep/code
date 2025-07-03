@@ -18,7 +18,7 @@ const namespaceSeparator = "//"
 type CallArgument struct {
 	// An argument may be resolved to multiple values (due to assignments)
 	// For example, a function call may have an argument like `foo(a)` where
-	// a was assigneed to multiple values in the code previously
+	// a was assigned to multiple values in the code previously
 	// eg. `a = 1`, `a = 2`, `a = 3
 	Nodes []*assignmentNode
 }
@@ -118,37 +118,37 @@ func newCallGraph(fileName string, rootNode *sitter.Node, imports []*ast.ImportN
 	for _, wildcardImport := range wildcardImports {
 		// For wildcard imports, we add a call to importeditem//*
 		// assuming that anything under that namespace is posssibly used
-		cg.AddEdge(fileName, rootNode, wildcardImport.NamespaceTreeNode, wildcardImport.Namespace, wildcardImport.NamespaceTreeNode, []CallArgument{})
+		cg.addEdge(fileName, rootNode, wildcardImport.NamespaceTreeNode, wildcardImport.Namespace, wildcardImport.NamespaceTreeNode, []CallArgument{})
 	}
 
 	for identifier, importedIdentifier := range importedIdentifiers {
-		cg.AddNode(importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
+		cg.addNode(importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
 
 		if identifier == importedIdentifier.Namespace {
-			cg.assignmentGraph.AddNode(importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
+			cg.assignmentGraph.addNode(importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
 		} else {
-			cg.assignmentGraph.AddAssignment(identifier, importedIdentifier.IdentifierTreeNode, importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
+			cg.assignmentGraph.addAssignment(identifier, importedIdentifier.IdentifierTreeNode, importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
 		}
 	}
 
 	for _, namespace := range builtIns {
 		// @TODO - Can't create sitter node for imported keywords
-		cg.assignmentGraph.AddNode(namespace, nil)
+		cg.assignmentGraph.addNode(namespace, nil)
 	}
 
 	return cg, nil
 }
 
 func (cg *CallGraph) addRootNode(treeNode *sitter.Node) {
-	cg.AddNode(cg.FileName, treeNode)
+	cg.addNode(cg.FileName, treeNode)
 	cg.RootNode = cg.Nodes[cg.FileName]
 }
 
 func (cg *CallGraph) ensureNodeInAssignmentGraph(identifier string, treeNode *sitter.Node) {
-	cg.assignmentGraph.AddNode(identifier, treeNode)
+	cg.assignmentGraph.addNode(identifier, treeNode)
 }
 
-func (cg *CallGraph) AddNode(identifier string, treeNode *sitter.Node) *CallGraphNode {
+func (cg *CallGraph) addNode(identifier string, treeNode *sitter.Node) *CallGraphNode {
 	cg.ensureNodeInAssignmentGraph(identifier, treeNode)
 
 	existingCgNode, exists := cg.Nodes[identifier]
@@ -162,10 +162,10 @@ func (cg *CallGraph) AddNode(identifier string, treeNode *sitter.Node) *CallGrap
 	return cg.Nodes[identifier]
 }
 
-// AddEdge adds an edge from one function to another
-func (cg *CallGraph) AddEdge(caller string, callerTreeNode *sitter.Node, CallerIdentifier *sitter.Node, callee string, calleeTreeNode *sitter.Node, arguments []CallArgument) {
-	cg.AddNode(caller, callerTreeNode)
-	cg.AddNode(callee, calleeTreeNode)
+// addEdge adds an edge from one function to another
+func (cg *CallGraph) addEdge(caller string, callerTreeNode *sitter.Node, CallerIdentifier *sitter.Node, callee string, calleeTreeNode *sitter.Node, arguments []CallArgument) {
+	cg.addNode(caller, callerTreeNode)
+	cg.addNode(callee, calleeTreeNode)
 
 	cg.Nodes[caller].CallsTo = append(cg.Nodes[caller].CallsTo, CallReference{
 		CalleeNamespace:  callee,
@@ -190,9 +190,10 @@ func (cg *CallGraph) PrintCallGraph() error {
 		}
 
 		callsToNamespaces := make([]string, len(node.CallsTo))
-		for _, callRef := range node.CallsTo {
-			callsToNamespaces = append(callsToNamespaces, callRef.CalleeNamespace)
+		for i, callRef := range node.CallsTo {
+			callsToNamespaces[i] = callRef.CalleeNamespace
 		}
+
 		fmt.Printf("  %s (calls)=> %v\n", caller, callsToNamespaces)
 	}
 	fmt.Println()
@@ -283,7 +284,7 @@ func (cg *CallGraph) dfsUtil(namespace string, caller *CallGraphNode, callerIden
 	callgraphNode, callgraphNodeExists := cg.Nodes[namespace]
 
 	if visited[namespace] {
-		resolvedAssignmentTerminals := cg.assignmentGraph.Resolve(namespace)
+		resolvedAssignmentTerminals := cg.assignmentGraph.resolve(namespace)
 		for _, terminalAssignmentNode := range resolvedAssignmentTerminals {
 			terminalCallgraphNode, terminalCallgraphNodeExists := cg.Nodes[terminalAssignmentNode.Namespace]
 			if terminalCallgraphNodeExists {
@@ -330,7 +331,7 @@ func (cg *CallGraph) dfsUtil(namespace string, caller *CallGraphNode, callerIden
 	}
 }
 
-func (cg *CallGraph) GetInstanceKeyword() (string, bool) {
+func (cg *CallGraph) getInstanceKeyword() (string, bool) {
 	language, err := cg.Tree.Language()
 	if err != nil {
 		log.Errorf("failed to get language from parse tree: %v", err)

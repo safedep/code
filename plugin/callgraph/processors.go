@@ -146,7 +146,7 @@ func literalValueProcessor(literalNode *sitter.Node, treeData []byte, currentNam
 	result := newProcessorResult()
 
 	// Register literal values without namespace qualifier
-	literalAssignmentNode := callGraph.assignmentGraph.AddNode(
+	literalAssignmentNode := callGraph.assignmentGraph.addNode(
 		literalNode.Content(treeData),
 		literalNode,
 	)
@@ -168,16 +168,16 @@ func classDefinitionProcessor(classDefNode *sitter.Node, treeData []byte, curren
 
 	// Class definition has its own scope, hence its own namespace
 	classNamespace := currentNamespace + namespaceSeparator + classNameNode.Content(treeData)
-	callGraph.AddNode(classNamespace, classDefNode)
+	callGraph.addNode(classNamespace, classDefNode)
 
 	// Assignment is added so that we can resolve class constructor when a function with same name as classname is called
-	callGraph.assignmentGraph.AddNode(classNamespace, classDefNode)
+	callGraph.assignmentGraph.addNode(classNamespace, classDefNode)
 	callGraph.classConstructors[classNamespace] = true
 
-	instanceKeyword, exists := callGraph.GetInstanceKeyword()
+	instanceKeyword, exists := callGraph.getInstanceKeyword()
 	if exists {
 		instanceNamespace := classNamespace + namespaceSeparator + instanceKeyword
-		callGraph.AddNode(instanceNamespace, nil) // @TODO - Can't create sitter node for instance keyword
+		callGraph.addNode(instanceNamespace, nil) // @TODO - Can't create sitter node for instance keyword
 	}
 
 	classBody := classDefNode.ChildByFieldName("body")
@@ -219,7 +219,7 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 	// Java - Register direct call from root namespace to main function
 	if treeLanguage.Meta().Code == core.LanguageCodeJava && funcName == "main" {
 		rootNamespace := resolveRootNamespaceQualifier(currentNamespace)
-		callGraph.AddEdge(
+		callGraph.addEdge(
 			rootNamespace, nil, nil,
 			functionNamespace, functionDefNode,
 			[]CallArgument{}, // we don't know values for "String[] args" passed to main method
@@ -228,15 +228,15 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 
 	// Add function to the call graph
 	if _, exists := callGraph.Nodes[functionNamespace]; !exists {
-		callGraph.AddNode(functionNamespace, functionDefNode)
+		callGraph.addNode(functionNamespace, functionDefNode)
 		log.Debugf("Register function definition for %s - %s", funcName, functionNamespace)
 
 		// Add virtual fn call from class => classConstructor
 		if metadata.insideClass {
-			instanceKeyword, exists := callGraph.GetInstanceKeyword()
+			instanceKeyword, exists := callGraph.getInstanceKeyword()
 			if exists {
 				instanceNamespace := currentNamespace + namespaceSeparator + instanceKeyword + namespaceSeparator + funcName
-				callGraph.AddEdge(
+				callGraph.addEdge(
 					instanceNamespace, nil, nil,
 					functionNamespace, functionDefNode,
 					[]CallArgument{},
@@ -246,7 +246,7 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 
 			// Python - Register direct call from current namespace to class constructor
 			if treeLanguage.Meta().Code == core.LanguageCodePython && funcName == "__init__" {
-				callGraph.AddEdge(
+				callGraph.addEdge(
 					currentNamespace, nil, nil,
 					functionNamespace, functionDefNode,
 					[]CallArgument{},
@@ -314,7 +314,7 @@ func assignmentProcessor(node *sitter.Node, treeData []byte, currentNamespace st
 	// Create new fallback assignment node for leftNode if not found
 	if len(assigneeNodes) == 0 {
 		assigneeNodes = []*assignmentNode{
-			callGraph.assignmentGraph.AddNode(
+			callGraph.assignmentGraph.addNode(
 				currentNamespace+namespaceSeparator+leftNode.Content(treeData),
 				leftNode,
 			),
@@ -326,11 +326,11 @@ func assignmentProcessor(node *sitter.Node, treeData []byte, currentNamespace st
 	// Assign/Call edge from all resolutions of left part => all resolutions of right part
 	for _, assigneeNode := range assigneeNodes {
 		for _, immediateCall := range result.ImmediateCallRefs {
-			callGraph.AddEdge(assigneeNode.Namespace, assigneeNode.TreeNode, immediateCall.CallerIdentifier, immediateCall.CalleeNamespace, immediateCall.CalleeTreeNode, immediateCall.Arguments)
+			callGraph.addEdge(assigneeNode.Namespace, assigneeNode.TreeNode, immediateCall.CallerIdentifier, immediateCall.CalleeNamespace, immediateCall.CalleeTreeNode, immediateCall.Arguments)
 		}
 
 		for _, immediateAssignment := range result.ImmediateAssignments {
-			callGraph.assignmentGraph.AddAssignment(
+			callGraph.assignmentGraph.addAssignment(
 				assigneeNode.Namespace, assigneeNode.TreeNode,
 				immediateAssignment.Namespace, immediateAssignment.TreeNode,
 			)
@@ -362,7 +362,7 @@ func attributeProcessor(attributeNode *sitter.Node, treeData []byte, currentName
 		return newProcessorResult()
 	}
 
-	resolvedObjects := callGraph.assignmentGraph.Resolve(targetObject.Namespace)
+	resolvedObjects := callGraph.assignmentGraph.resolve(targetObject.Namespace)
 
 	// log.Debugf("Resolved attribute for `%s` => %v // %s\n", node.Content(treeData), resolvedObjectNamespaces, attributeQualifierNamespace)
 
@@ -371,7 +371,7 @@ func attributeProcessor(attributeNode *sitter.Node, treeData []byte, currentName
 	result := newProcessorResult()
 	for _, resolvedObject := range resolvedObjects {
 		finalAttributeNamespace := resolvedObject.Namespace + namespaceSeparator + attributeQualifierNamespace
-		finalAttributeNode := callGraph.assignmentGraph.AddNode(
+		finalAttributeNode := callGraph.assignmentGraph.addNode(
 			finalAttributeNamespace,
 			attributeNode,
 		)
@@ -421,7 +421,7 @@ func identifierProcessor(identifierNode *sitter.Node, treeData []byte, currentNa
 	}
 
 	// If not found by search, we can assume it is a new identifier
-	identifierAssignmentNode = callGraph.assignmentGraph.AddNode(
+	identifierAssignmentNode = callGraph.assignmentGraph.addNode(
 		currentNamespace+namespaceSeparator+identifierNode.Content(treeData),
 		identifierNode,
 	)
@@ -474,7 +474,7 @@ func resolveCallArguments(argumentsListNode *sitter.Node, treeData []byte, curre
 		// eg. if we're processing args for "foo(a, b, bar(x))" in main function
 		// this will register call from "main" to "bar"
 		for _, callRef := range childProcessorResult.ImmediateCallRefs {
-			callGraph.AddEdge(
+			callGraph.addEdge(
 				currentNamespace, nil, callRef.CallerIdentifier,
 				callRef.CalleeNamespace, callRef.CalleeTreeNode,
 				callRef.Arguments,
@@ -484,17 +484,12 @@ func resolveCallArguments(argumentsListNode *sitter.Node, treeData []byte, curre
 		resolvedTerminalAssignmentNodes := []*assignmentNode{}
 		for _, assignmentNode := range childProcessorResult.ImmediateAssignments {
 			// Resolve the assignment node to its terminal nodes
-			resolvedNodes := callGraph.assignmentGraph.Resolve(assignmentNode.Namespace)
+			resolvedNodes := callGraph.assignmentGraph.resolve(assignmentNode.Namespace)
 			resolvedTerminalAssignmentNodes = append(resolvedTerminalAssignmentNodes, resolvedNodes...)
 		}
 
 		result[i] = CallArgument{
 			Nodes: resolvedTerminalAssignmentNodes,
-		}
-
-		assignmentNamespaces := []string{}
-		for _, assignmentNode := range resolvedTerminalAssignmentNodes {
-			assignmentNamespaces = append(assignmentNamespaces, assignmentNode.Namespace)
 		}
 	}
 
@@ -524,7 +519,7 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 	functionAssignmentNode, functionResolvedBySearch := searchSymbolInScopeChain(functionName, currentNamespace, callGraph)
 	if functionResolvedBySearch {
 		log.Debugf("Call %s searched (direct) & resolved to %s\n", functionName, functionAssignmentNode.Namespace)
-		callGraph.AddEdge(
+		callGraph.addEdge(
 			currentNamespace, nil, functionCallNode,
 			functionAssignmentNode.Namespace, functionAssignmentNode.TreeNode,
 			callArguments,
@@ -557,12 +552,12 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 		objectAssignmentNode, functionResolvedByObjectQualifiedSearch := searchSymbolInScopeChain(objectSymbol, currentNamespace, callGraph)
 
 		if functionResolvedByObjectQualifiedSearch {
-			resolvedObjectNodes := callGraph.assignmentGraph.Resolve(objectAssignmentNode.Namespace)
+			resolvedObjectNodes := callGraph.assignmentGraph.resolve(objectAssignmentNode.Namespace)
 			for _, resolvedObjectNode := range resolvedObjectNodes {
 				functionNamespace := resolvedObjectNode.Namespace + namespaceSeparator + finalAttributeNamespace
 
 				// log.Debugf("Call %s searched (attr qualified) & resolved to %s\n", functionName, functionNamespace)
-				callGraph.AddEdge(
+				callGraph.addEdge(
 					currentNamespace, nil, functionCallNode,
 					functionNamespace, nil, // actual function definition node can't be resolved here
 					callArguments,
@@ -677,12 +672,12 @@ func scopedIdentifierProcessor(scopedIdentifierNode *sitter.Node, treeData []byt
 
 	targetObject, objectResolved := searchSymbolInScopeChain(targetObjectIdentifier, currentNamespace, callGraph)
 	if objectResolved {
-		resolvedObjects := callGraph.assignmentGraph.Resolve(targetObject.Namespace)
+		resolvedObjects := callGraph.assignmentGraph.resolve(targetObject.Namespace)
 
 		result := newProcessorResult()
 		for _, resolvedObject := range resolvedObjects {
 			finalIdentifierNamespace := resolvedObject.Namespace + namespaceSeparator + objectQualifierNamespace
-			finalAttributeNode := callGraph.assignmentGraph.AddNode(
+			finalAttributeNode := callGraph.assignmentGraph.addNode(
 				finalIdentifierNamespace,
 				scopedIdentifierNode,
 			)
@@ -694,7 +689,7 @@ func scopedIdentifierProcessor(scopedIdentifierNode *sitter.Node, treeData []byt
 	// Consider this as fully qualified usage of a type without importing it
 	// eg. directly using - "java.awt.event.MouseEvent"
 	importNamespace := targetObjectIdentifier + namespaceSeparator + objectQualifierNamespace
-	callGraph.assignmentGraph.AddNode(
+	callGraph.assignmentGraph.addNode(
 		importNamespace,
 		scopedIdentifierNode,
 	)
@@ -776,7 +771,7 @@ func objectCreationExpressionProcessor(objectCreationNode *sitter.Node, treeData
 		if classResolvedBySearch {
 			log.Debugf("Constructor %s searched (direct) & resolved to %s\n", constructedClassName, classNode.Namespace)
 
-			callGraph.AddEdge(
+			callGraph.addEdge(
 				currentNamespace, nil, objectCreationNode,
 				classNode.Namespace, classNode.TreeNode,
 				argsResult,
@@ -789,7 +784,7 @@ func objectCreationExpressionProcessor(objectCreationNode *sitter.Node, treeData
 
 			for _, scopedIdentifierAssignment := range scopedIdentifierResult.ImmediateAssignments {
 				// Register class constructor as Function call in callgraph
-				callGraph.AddEdge(
+				callGraph.addEdge(
 					currentNamespace, nil, objectCreationNode,
 					scopedIdentifierAssignment.Namespace, nil,
 					argsResult,
@@ -823,7 +818,7 @@ func variableDeclaratorProcessor(declaratorNode *sitter.Node, treeData []byte, c
 		declaredVariableNamespace := currentNamespace + namespaceSeparator + declaredVariableNode.Content(treeData)
 
 		for _, immediateAssignment := range accumulatedResult.ImmediateAssignments {
-			callGraph.assignmentGraph.AddAssignment(
+			callGraph.assignmentGraph.addAssignment(
 				declaredVariableNamespace, declaredVariableNode,
 				immediateAssignment.Namespace, immediateAssignment.TreeNode,
 			)
@@ -931,12 +926,12 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 
 			var rootCallerObjAssignments []*assignmentNode
 			if rootObjNodeExists {
-				rootCallerObjAssignments = callGraph.assignmentGraph.Resolve(rootObjNode.Namespace)
+				rootCallerObjAssignments = callGraph.assignmentGraph.resolve(rootObjNode.Namespace)
 			} else {
 				// If root object is not found, we can assume it is a fully qualified object
 				// eg. sun.reflect.Method here, sun couldn't be identified, so assume its a library root keyword
-				callGraph.AddNode(rootObjKeyword, nil) // @TODO - Can't create sitter node for fully qualified object
-				rootCallerObjAssignments = callGraph.assignmentGraph.Resolve(rootObjKeyword)
+				callGraph.addNode(rootObjKeyword, nil) // @TODO - Can't create sitter node for fully qualified object
+				rootCallerObjAssignments = callGraph.assignmentGraph.resolve(rootObjKeyword)
 			}
 
 			// len(qualifiers)>1 means methodObjectQualifierNamespace includes a separator eg. "xyz//attr"
@@ -962,7 +957,7 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 				calledNamespace = calledNamespace + namespaceSeparator + methodName
 			}
 			log.Debugf("Method invocation %s searched (object qualified) & resolved to - %s\n", methodName, calledNamespace)
-			callGraph.AddEdge(
+			callGraph.addEdge(
 				currentNamespace, nil, methodInvocationNode,
 				calledNamespace, methodInvocationNode,
 				argsResult,
@@ -976,7 +971,7 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 	functionAssignmentNode, functionResolvedBySearch := searchSymbolInScopeChain(methodName, currentNamespace, callGraph)
 	if functionResolvedBySearch {
 		log.Debugf("Method invocation %s searched (direct) & resolved to %s\n", methodName, functionAssignmentNode.Namespace)
-		callGraph.AddEdge(
+		callGraph.addEdge(
 			currentNamespace, nil, methodInvocationNode,
 			functionAssignmentNode.Namespace, functionAssignmentNode.TreeNode,
 			argsResult,
