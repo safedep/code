@@ -3,6 +3,7 @@ package callgraph
 import (
 	_ "embed"
 	"fmt"
+	"slices"
 	"strings"
 
 	callgraphv1 "buf.build/gen/go/safedep/api/protocolbuffers/go/safedep/messages/code/callgraph/v1"
@@ -144,30 +145,36 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 				lookupNamespace := resolveNamespaceWithSeparator(condition.Value, language)
 				lookupNamespace, isWildcardLookup := trimWildcardLookupNamespace(lookupNamespace, language)
 
-				var evidenceDfsResultItems []DfsResultItem
+				var dfsResultItemsWithMatchedFunctionName []DfsResultItem
 
 				if isWildcardLookup {
 					// Look up any children of the namespace in the trie
 					lookupEntries := functionCallTrie.WordsWithPrefix(lookupNamespace + namespaceSeparator)
-					evidenceDfsResultItems = []DfsResultItem{}
+					dfsResultItemsWithMatchedFunctionName = []DfsResultItem{}
 					for _, lookupEntry := range lookupEntries {
-						evidenceDfsResultItems = append(evidenceDfsResultItems, *lookupEntry.Value...)
+						dfsResultItemsWithMatchedFunctionName = append(dfsResultItemsWithMatchedFunctionName, *lookupEntry.Value...)
 					}
 				} else {
 					// Lookup the exact namespace in the trie
 					lookupNode, nodeExists := functionCallTrie.GetWord(lookupNamespace)
 					if nodeExists && lookupNode != nil {
-						evidenceDfsResultItems = *lookupNode
+						dfsResultItemsWithMatchedFunctionName = *lookupNode
 					}
 				}
 
-				for _, evidenceResultItem := range evidenceDfsResultItems {
-					matchCondition.Evidences = append(matchCondition.Evidences, MatchedEvidence{
-						Caller:           evidenceResultItem.Caller,
-						Callee:           evidenceResultItem.Node,
-						CallerIdentifier: evidenceResultItem.CallerIdentifier,
-						Arguments:        evidenceResultItem.Arguments,
-					})
+				for _, evidenceResultItem := range dfsResultItemsWithMatchedFunctionName {
+					if matchesArgumentConstraints(evidenceResultItem, condition.Args, language) {
+						// If the arguments match the required constraints, we can add this evidence
+						matchCondition.Evidences = append(matchCondition.Evidences, MatchedEvidence{
+							Caller:           evidenceResultItem.Caller,
+							Callee:           evidenceResultItem.Node,
+							CallerIdentifier: evidenceResultItem.CallerIdentifier,
+							Arguments:        evidenceResultItem.Arguments,
+						})
+					} else {
+						// Skip this evidence if it doesn't match the argument constraints
+						continue
+					}
 				}
 
 				if len(matchCondition.Evidences) > 0 {
@@ -187,6 +194,70 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 	}
 
 	return matcherResults, nil
+}
+
+// matchesArgumentConstraints checks if the arguments in the DFS result item
+// match the required argument constraints specified in the signature condition.
+// It returns true if "all" required arguments match their respective constraints,
+func matchesArgumentConstraints(
+	dfsResultItem DfsResultItem,
+	requiredArgs []*callgraphv1.Signature_LanguageMatcher_SignatureCondition_Argument,
+	language core.Language,
+) bool {
+	if len(requiredArgs) == 0 {
+		return true // No conditions to match, so it matches by default
+	}
+
+	callArguments := dfsResultItem.Arguments
+
+	// Strictly all arguments must match their respective constraints
+	for _, requiredArg := range requiredArgs {
+		requiredArgResolvesToNamespaces := make([]string, len(requiredArg.ResolvesTo))
+		for i, resolvesTo := range requiredArg.ResolvesTo {
+			requiredArgResolvesToNamespaces[i] = resolveNamespaceWithSeparator(resolvesTo, language)
+		}
+
+		// No values or resolves_to specified, so no constraints to satisfy
+		if len(requiredArg.Values) == 0 && len(requiredArg.ResolvesTo) == 0 {
+			continue
+		}
+
+		// Not enough arguments, so this positioned arg constraint cannot be satisfied
+		if requiredArg.Index >= uint64(len(callArguments)) {
+			return false
+		}
+
+		argAtIndex := callArguments[requiredArg.Index]
+
+		constraintsSatisfied := false
+
+		// an argument can be resolved to multiple namespaces or literal nodes
+		// so we need to check if "any" of the resolved nodes satisfy the constraints
+		for _, argNode := range argAtIndex.Nodes {
+			if argNode.IsLiteralValue() {
+				if slices.Contains(requiredArg.Values, argNode.Namespace) {
+					// If this is a literal value and it matches any of the required values,
+					// then this arg's constraints are satisfied
+					constraintsSatisfied = true
+					break
+				}
+			} else {
+				if slices.Contains(requiredArgResolvesToNamespaces, argNode.Namespace) {
+					// If this is a resolved type and it matches any of the required
+					// arg resolves_to namespaces, then this arg's constraints are satisfied
+					constraintsSatisfied = true
+					break
+				}
+			}
+		}
+
+		if !constraintsSatisfied {
+			// If this arg's constraints are not satisfied, then the entire condition is not satisfied
+			return false
+		}
+	}
+
+	return true
 }
 
 // Identifies if the namespace is a wildcard lookup and returns the namespace without the wildcard
