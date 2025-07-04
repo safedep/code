@@ -16,7 +16,6 @@ signatures:
             args:
               - index: 0
                 resolvesto: ["java.awt.Window"]
-                values: ["\"Test Dialog\""]
 
   - id: crypto.md5
     description: "MD5 hash"
