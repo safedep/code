@@ -1,6 +1,376 @@
 version: 0.1
 
 signatures:
+  - id: test.signature.dialog.with.window
+    description: "Test signature for matching resolves"
+    vendor: "Test Vendor"
+    product: "Test Product"
+    service: "Test Service"
+    tags: [cryptography, hash]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "java.awt.Dialog"
+            args:
+              - index: 0
+                resolvesto: ["java.awt.Window"]
+
+  - id: test.signature.canvas.setSize.32.99
+    description: "Test signature for matching resolves"
+    vendor: "Test Vendor"
+    product: "Test Product"
+    service: "Test Service"
+    tags: [cryptography, hash]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "java.awt.Canvas.setSize"
+            args:
+              - index: 0
+                values: ["32"]
+              - index: 1
+                values: ["99"]
+
+  - id: test.signature.canvas.setSize.32.100.should.not.match
+    description: "Test signature for matching resolves - should not match"
+    vendor: "Test Vendor"
+    product: "Test Product"
+    service: "Test Service"
+    tags: [cryptography, hash]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "java.awt.Canvas.setSize"
+            args:
+              - index: 0
+                values: ["32"]
+              - index: 1
+                values: ["100"]
+
+  - id: crypto.md5
+    description: "MD5 hash"
+    vendor: ""
+    product: "Hash algorithm"
+    service: "MD5 hash"
+    tags: [cryptography, hash]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "java.security.MessageDigest.getInstance"
+            args:
+              - index: 0
+                values: ["\"md5\"", "\"MD5\"", "\"mD5\"", "\"Md5\""]
+
+  - id: crypto.md2
+    description: "MD2 hash"
+    vendor: ""
+    product: "Hash algorithm"
+    service: "MD2 hash"
+    tags: [cryptography, hash, weak]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "java.security.MessageDigest.getInstance"
+            args:
+              - index: 0
+                values: ["\"md2\"", "\"MD2\"", "\"mD2\"", "\"Md2\""]
+
+  - id: crypto.sha1
+    description: "SHA-1 hash"
+    vendor: ""
+    product: "Hash algorithm"
+    service: "SHA-1 hash"
+    tags: [cryptography, hash, weak]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "java.security.MessageDigest.getInstance"
+            args:
+              - index: 0
+                values: ["\"sha-1\"", "\"SHA-1\"", "\"Sha-1\""]
+
+  - id: crypto.sha224
+    description: "SHA-224 hash"
+    vendor: ""
+    product: "Hash algorithm"
+    service: "SHA-224 hash"
+    tags: [cryptography, hash]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "java.security.MessageDigest.getInstance"
+            args:
+              - index: 0
+                values: ["\"sha-224\"", "\"SHA-224\"", "\"Sha-224\""]
+
+  - id: crypto.sha256
+    description: "SHA-256 hash"
+    vendor: ""
+    product: "Hash algorithm"
+    service: "SHA-256 hash"
+    tags: [cryptography, hash]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "java.security.MessageDigest.getInstance"
+            args:
+              - index: 0
+                values: ["\"sha-256\"", "\"SHA-256\"", "\"Sha-256\""]
+
+  - id: crypto.sha384
+    description: "SHA-384 hash"
+    vendor: ""
+    product: "Hash algorithm"
+    service: "SHA-384 hash"
+    tags: [cryptography, hash]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "java.security.MessageDigest.getInstance"
+            args:
+              - index: 0
+                values: ["\"sha-384\"", "\"SHA-384\"", "\"Sha384\""]
+
+  - id: crypto.sha512
+    description: "SHA-512 hash"
+    vendor: ""
+    product: "Hash algorithm"
+    service: "SHA-512 hash"
+    tags: [cryptography, hash]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "java.security.MessageDigest.getInstance"
+            args:
+              - index: 0
+                values: ["\"sha-512\"", "\"SHA-512\"", "\"Sha512\""]
+
+  - id: crypto.sha3-224
+    description: "SHA3-224 hash"
+    vendor: ""
+    product: "Hash algorithm"
+    service: "SHA3-224 hash"
+    tags: [cryptography, hash, sha3]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "java.security.MessageDigest.getInstance"
+            args:
+              - index: 0
+                values: ["\"sha3-224\"", "\"SHA3-224\"", "\"Sha3-224\""]
+
+  - id: crypto.sha3-256
+    description: "SHA3-256 hash"
+    vendor: ""
+    product: "Hash algorithm"
+    service: "SHA3-256 hash"
+    tags: [cryptography, hash, sha3]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "java.security.MessageDigest.getInstance"
+            args:
+              - index: 0
+                values: ["\"sha3-256\"", "\"SHA3-256\"", "\"Sha3-256\""]
+
+  - id: crypto.sha3-384
+    description: "SHA3-384 hash"
+    vendor: ""
+    product: "Hash algorithm"
+    service: "SHA3-384 hash"
+    tags: [cryptography, hash, sha3]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "java.security.MessageDigest.getInstance"
+            args:
+              - index: 0
+                values: ["\"sha3-384\"", "\"SHA3-384\"", "\"Sha3-384\""]
+
+  - id: crypto.sha3-512
+    description: "SHA3-512 hash"
+    vendor: ""
+    product: "Hash algorithm"
+    service: "SHA3-512 hash"
+    tags: [cryptography, hash, sha3]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "java.security.MessageDigest.getInstance"
+            args:
+              - index: 0
+                values: ["\"sha3-512\"", "\"SHA3-512\"", "\"Sha3-512\""]
+
+  - id: crypto.aes
+    description: "AES encryption/decryption"
+    vendor: ""
+    product: "Symmetric encryption algorithm"
+    service: "AES encryption"
+    tags: [cryptography, encryption, symmetric]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "javax.crypto.Cipher.getInstance"
+            args:
+              - index: 0
+                values: ["\"aes\"", "\"AES\""]
+          - type: call
+            value: "javax.crypto.spec.SecretKeySpec"
+            args:
+              - index: 1
+                values: ["\"aes\"", "\"AES\"", "\"Aes\""]
+
+  - id: crypto.des
+    description: "DES encryption/decryption"
+    vendor: ""
+    product: "Symmetric encryption algorithm"
+    service: "DES encryption"
+    tags: [cryptography, encryption, symmetric, weak]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "javax.crypto.Cipher.getInstance"
+            args:
+              - index: 0
+                values: ["\"des\"", "\"DES\"", "\"Des\""]
+          - type: call
+            value: "javax.crypto.spec.SecretKeySpec"
+            args:
+              - index: 1
+                values: ["\"des\"", "\"DES\"", "\"Des\""]
+
+  - id: crypto.3des
+    description: "3DES (Triple DES) encryption/decryption"
+    vendor: ""
+    product: "Symmetric encryption algorithm"
+    service: "3DES encryption"
+    tags: [cryptography, encryption, symmetric]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "javax.crypto.Cipher.getInstance"
+            args:
+              - index: 0
+                values: ["\"desede\"", "\"DESede\""]
+          - type: call
+            value: "javax.crypto.spec.SecretKeySpec"
+            args:
+              - index: 1
+                values: ["\"desede\"", "\"DESede\""]
+
+  - id: crypto.blowfish
+    description: "Blowfish encryption/decryption"
+    vendor: ""
+    product: "Symmetric encryption algorithm"
+    service: "Blowfish encryption"
+    tags: [cryptography, encryption, symmetric]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "javax.crypto.Cipher.getInstance"
+            args:
+              - index: 0
+                values: ["\"blowfish\"", "\"Blowfish\"", "\"BLOWFISH\""]
+          - type: call
+            value: "javax.crypto.spec.SecretKeySpec"
+            args:
+              - index: 1
+                values: ["\"blowfish\"", "\"Blowfish\"", "\"BLOWFISH\""]
+
+  - id: crypto.rc2
+    description: "RC2 encryption/decryption"
+    vendor: ""
+    product: "Symmetric encryption algorithm"
+    service: "RC2 encryption"
+    tags: [cryptography, encryption, symmetric]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "javax.crypto.Cipher.getInstance"
+            args:
+              - index: 0
+                values: ["\"rc2\"", "\"RC2\""]
+          - type: call
+            value: "javax.crypto.spec.SecretKeySpec"
+            args:
+              - index: 1
+                values: ["\"rc2\"", "\"RC2\""]
+
+  - id: crypto.rc4
+    description: "RC4 encryption/decryption"
+    vendor: ""
+    product: "Stream cipher algorithm"
+    service: "RC4 encryption"
+    tags: [cryptography, encryption, stream-cipher, weak]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "javax.crypto.Cipher.getInstance"
+            args:
+              - index: 0
+                values: ["\"rc4\"", "\"RC4\""]
+          - type: call
+            value: "javax.crypto.spec.SecretKeySpec"
+            args:
+              - index: 1
+                values: ["\"rc4\"", "\"RC4\""]
+
+  - id: crypto.rsa
+    description: "RSA encryption/decryption"
+    vendor: ""
+    product: "Asymmetric encryption algorithm"
+    service: "RSA encryption"
+    tags: [cryptography, encryption, asymmetric]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "javax.crypto.Cipher.getInstance"
+            args:
+              - index: 0
+                values: ["\"RSA/ECB/PKCS1Padding\""]
+
   - id: gcp.storage
     description: "Google Cloud Storage"
     vendor: "Google"
@@ -955,24 +1325,6 @@ signatures:
     product: "Azure"
     service: "Cosmos DB"
     tags: [cosmos, database, nosql, paas]
-    languages:
-      python:
-        match: any
-        conditions:
-          - type: call
-            value: "azure.cosmos.*"
-      javascript:
-        match: any
-        conditions:
-          - type: call
-            value: "@azure/cosmos.*"
-
-  - id: azure.cosmos.container
-    description: "Azure Cosmos DB Container"
-    vendor: "Microsoft"
-    product: "Azure"
-    service: "Cosmos DB Container"
-    tags: [cosmos, database, container, paas]
     languages:
       python:
         match: any
