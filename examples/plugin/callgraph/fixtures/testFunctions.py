@@ -75,7 +75,7 @@ nestParent()
 
 
 
-# Assignments, return values aren't consume, since its a complex taxk
+# Assignments, return values aren't consumed, since its a complex task
 def add(a, b):
     return a + b
 def sub(a, b):
