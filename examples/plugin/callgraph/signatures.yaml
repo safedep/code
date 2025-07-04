@@ -17,6 +17,42 @@ signatures:
               - index: 0
                 resolvesto: ["java.awt.Window"]
 
+  - id: test.signature.canvas.setSize.32.99
+    description: "Test signature for matching resolves"
+    vendor: "Test Vendor"
+    product: "Test Product"
+    service: "Test Service"
+    tags: [cryptography, hash]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "java.awt.Canvas.setSize"
+            args:
+              - index: 0
+                values: ["32"]
+              - index: 1
+                values: ["99"]
+
+  - id: test.signature.canvas.setSize.32.100.should.not.match
+    description: "Test signature for matching resolves - should not match"
+    vendor: "Test Vendor"
+    product: "Test Product"
+    service: "Test Service"
+    tags: [cryptography, hash]
+    languages:
+      java:
+        match: any
+        conditions:
+          - type: call
+            value: "java.awt.Canvas.setSize"
+            args:
+              - index: 0
+                values: ["32"]
+              - index: 1
+                values: ["100"]
+
   - id: crypto.md5
     description: "MD5 hash"
     vendor: ""
