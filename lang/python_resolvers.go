@@ -273,13 +273,7 @@ func (r *pythonResolvers) extractClassDefinitions(data *[]byte, tree core.ParseT
 				classNode.SetBaseClassNodes(baseClassNodes)
 			}
 
-			// Handle class body
-			if len(m.Captures) >= 2 {
-				bodyIndex := len(m.Captures) - 1 // Body is always the last capture
-				if m.Captures[bodyIndex].Node.Type() == "block" {
-					// Body will be processed by other extraction methods
-				}
-			}
+			// Class body will be processed by other extraction methods
 
 			return nil
 		}),
@@ -427,17 +421,3 @@ func (r *pythonResolvers) findParentClassName(node *sitter.Node, data []byte) st
 	return ""
 }
 
-func (r *pythonResolvers) findFollowingClassName(decoratorNode *sitter.Node, data []byte) string {
-	if decoratorNode == nil {
-		return ""
-	}
-
-	parent := decoratorNode.Parent()
-	if parent != nil && parent.Type() == "class_definition" {
-		nameNode := parent.ChildByFieldName("name")
-		if nameNode != nil {
-			return nameNode.Content(data)
-		}
-	}
-	return ""
-}
