@@ -13,12 +13,12 @@ import (
 )
 
 // Test visitor for finding specific fixture files
-type fixtureVisitor struct {
+type javaFixtureVisitor struct {
 	targetFilename string
 	foundTree      *core.ParseTree
 }
 
-func (v *fixtureVisitor) VisitTree(tree core.ParseTree) error {
+func (v *javaFixtureVisitor) VisitTree(tree core.ParseTree) error {
 	file, err := tree.File()
 	if err != nil {
 		return err
@@ -30,48 +30,52 @@ func (v *fixtureVisitor) VisitTree(tree core.ParseTree) error {
 	return nil
 }
 
-func TestPythonClassResolutionWithRealFixtures(t *testing.T) {
+func TestJavaClassResolutionWithRealFixtures(t *testing.T) {
 	// Test simple classes first
 	t.Run("SimpleClasses", func(t *testing.T) {
-		testPythonClassResolution(t, "fixtures/python_simple_classes.py", map[string][]string{
+		testJavaClassResolution(t, "fixtures/java_simple_classes.java", map[string][]string{
 			"SimpleClass":      {}, // No inheritance
 			"ClassWithMethods": {}, // No inheritance
 			"ClassWithFields":  {}, // No inheritance
-			"DecoratedClass":   {}, // No inheritance
+			"AnnotatedClass":   {}, // No inheritance
+			"SimpleInterface":  {}, // Interface (no inheritance)
 			"StandaloneClass":  {}, // No inheritance
 		})
 	})
 
 	// Test complex inheritance hierarchy
 	t.Run("InheritanceHierarchy", func(t *testing.T) {
-		testPythonClassResolution(t, "fixtures/python_class_hierarchy.py", map[string][]string{
-			"BaseService":            {},                                          // No inheritance
-			"StorageService":         {"BaseService"},                             // Single inheritance
-			"Cacheable":              {},                                          // No inheritance
-			"Loggable":               {},                                          // No inheritance
-			"AdvancedStorageService": {"StorageService", "Cacheable", "Loggable"}, // Multiple inheritance
-			"CloudStorageService":    {"AdvancedStorageService"},                  // Single inheritance
-			"AbstractProcessor":      {"ABC"},                                     // From abc import
-			"DataProcessor":          {"AbstractProcessor"},                       // Single inheritance
-			"Level1":                 {"BaseService"},                             // Single inheritance
-			"Level2":                 {"Level1"},                                  // Deep inheritance chain
-			"Level3":                 {"Level2"},                                  // Deep inheritance chain
-			"Level4":                 {"Level3"},                                  // Deep inheritance chain
-			"ServiceWithDefaults":    {"BaseService"},                             // Single inheritance
+		testJavaClassResolution(t, "fixtures/java_class_hierarchy.java", map[string][]string{
+			"BaseService":            {},                         // Abstract class (no inheritance)
+			"StorageService":         {"BaseService"},            // Single inheritance
+			"Cacheable":              {},                         // Interface (no inheritance)
+			"Loggable":               {},                         // Interface (no inheritance)
+			"AdvancedStorageService": {"StorageService"},         // Single class inheritance + interfaces
+			"CloudStorageService":    {"AdvancedStorageService"}, // Single inheritance
+			"AbstractProcessor":      {},                         // Abstract class (no inheritance)
+			"DataProcessor":          {"AbstractProcessor"},      // Single inheritance
+			"Level1":                 {"BaseService"},            // Single inheritance
+			"Level2":                 {"Level1"},                 // Deep inheritance chain
+			"Level3":                 {"Level2"},                 // Deep inheritance chain
+			"Level4":                 {"Level3"},                 // Deep inheritance chain
+			"GenericService":         {"BaseService"},            // Generic class inheritance
+			"OuterClass":             {},                         // No inheritance
+			"ExtendedInterface":      {},                         // Interface inheritance (handled as class)
+			"TestRunner":             {},                         // No inheritance
 		})
 	})
 }
 
-func TestPythonInheritanceGraphConstruction(t *testing.T) {
+func TestJavaInheritanceGraphConstruction(t *testing.T) {
 	// Test inheritance graph construction with complex hierarchy
-	parseTree := parseFixtureFile(t, "fixtures/python_class_hierarchy.py")
+	parseTree := parseJavaFixtureFile(t, "fixtures/java_class_hierarchy.java")
 
-	pythonLang, err := lang.NewPythonLanguage()
+	javaLang, err := lang.NewJavaLanguage()
 	if err != nil {
-		t.Fatalf("Failed to create Python language: %v", err)
+		t.Fatalf("Failed to create Java language: %v", err)
 	}
 
-	resolvers := pythonLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
+	resolvers := javaLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
 
 	inheritanceGraph, err := resolvers.ResolveInheritance(parseTree)
 	if err != nil {
@@ -86,12 +90,11 @@ func TestPythonInheritanceGraphConstruction(t *testing.T) {
 	}{
 		{"StorageService", "BaseService", true},
 		{"AdvancedStorageService", "StorageService", true},
-		{"AdvancedStorageService", "Cacheable", true},
-		{"AdvancedStorageService", "Loggable", true},
 		{"CloudStorageService", "AdvancedStorageService", true},
 		{"Level4", "Level3", true},
 		{"Level4", "Level2", false}, // Direct relationship only
 		{"DataProcessor", "AbstractProcessor", true},
+		{"GenericService", "BaseService", true},
 		{"BaseService", "StorageService", false}, // Wrong direction
 	}
 
@@ -123,20 +126,20 @@ func TestPythonInheritanceGraphConstruction(t *testing.T) {
 
 	// Test that graph has expected number of classes
 	allClasses := inheritanceGraph.GetAllClasses()
-	if len(allClasses) < 10 { // Should have at least 10 classes from fixture
-		t.Errorf("Expected at least 10 classes in inheritance graph, got %d", len(allClasses))
+	if len(allClasses) < 5 { // Should have at least 5 classes with inheritance from fixture
+		t.Errorf("Expected at least 5 classes in inheritance graph, got %d", len(allClasses))
 	}
 }
 
-func TestPythonClassMethodExtraction(t *testing.T) {
-	parseTree := parseFixtureFile(t, "fixtures/python_class_hierarchy.py")
+func TestJavaClassMethodExtraction(t *testing.T) {
+	parseTree := parseJavaFixtureFile(t, "fixtures/java_class_hierarchy.java")
 
-	pythonLang, err := lang.NewPythonLanguage()
+	javaLang, err := lang.NewJavaLanguage()
 	if err != nil {
-		t.Fatalf("Failed to create Python language: %v", err)
+		t.Fatalf("Failed to create Java language: %v", err)
 	}
 
-	resolvers := pythonLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
+	resolvers := javaLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
 
 	classes, err := resolvers.ResolveClasses(parseTree)
 	if err != nil {
@@ -152,56 +155,47 @@ func TestPythonClassMethodExtraction(t *testing.T) {
 	// Test BaseService methods
 	if baseService, exists := classMap["BaseService"]; exists {
 		methods := baseService.GetMethodNodes()
-		if len(methods) < 3 { // __init__, get_config, status
-			t.Errorf("BaseService should have at least 3 methods, got %d", len(methods))
+		if len(methods) < 2 { // Should have getConfig, getServiceType, isInitialized
+			t.Errorf("BaseService should have at least 2 methods, got %d", len(methods))
 		}
 
 		// Should have constructor
 		if baseService.GetConstructorNode() == nil {
-			t.Error("BaseService should have constructor (__init__)")
+			t.Error("BaseService should have constructor")
+		}
+
+		// Should be marked as abstract
+		if !baseService.IsAbstract() {
+			t.Error("BaseService should be marked as abstract")
 		}
 	} else {
 		t.Error("BaseService not found in resolved classes")
 	}
 
-	// Test AdvancedStorageService with multiple inheritance
+	// Test AdvancedStorageService with multiple interface implementation
 	if advancedService, exists := classMap["AdvancedStorageService"]; exists {
 		baseClasses := advancedService.BaseClasses()
-		if len(baseClasses) != 3 {
-			t.Errorf("AdvancedStorageService should have 3 base classes, got %d", len(baseClasses))
+		if len(baseClasses) != 1 { // Java single inheritance - only StorageService
+			t.Errorf("AdvancedStorageService should have 1 base class, got %d", len(baseClasses))
 		}
 
-		expectedBases := map[string]bool{
-			"StorageService": false,
-			"Cacheable":      false,
-			"Loggable":       false,
-		}
-
-		for _, base := range baseClasses {
-			if _, exists := expectedBases[base]; exists {
-				expectedBases[base] = true
-			}
-		}
-
-		for base, found := range expectedBases {
-			if !found {
-				t.Errorf("AdvancedStorageService should inherit from %s", base)
-			}
+		if baseClasses[0] != "StorageService" {
+			t.Errorf("AdvancedStorageService should inherit from StorageService, got %s", baseClasses[0])
 		}
 	} else {
 		t.Error("AdvancedStorageService not found in resolved classes")
 	}
 }
 
-func TestPythonClassDecoratorsAndAbstractClasses(t *testing.T) {
-	parseTree := parseFixtureFile(t, "fixtures/python_class_hierarchy.py")
+func TestJavaClassAnnotationsAndAbstractClasses(t *testing.T) {
+	parseTree := parseJavaFixtureFile(t, "fixtures/java_class_hierarchy.java")
 
-	pythonLang, err := lang.NewPythonLanguage()
+	javaLang, err := lang.NewJavaLanguage()
 	if err != nil {
-		t.Fatalf("Failed to create Python language: %v", err)
+		t.Fatalf("Failed to create Java language: %v", err)
 	}
 
-	resolvers := pythonLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
+	resolvers := javaLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
 
 	classes, err := resolvers.ResolveClasses(parseTree)
 	if err != nil {
@@ -226,24 +220,63 @@ func TestPythonClassDecoratorsAndAbstractClasses(t *testing.T) {
 		t.Error("AbstractProcessor should be marked as abstract")
 	}
 
-	// Test that it has decorators
+	// Test that it has annotations (decorators)
 	decorators := abstractProcessor.GetDecoratorNodes()
 	if len(decorators) == 0 {
-		t.Error("AbstractProcessor should have decorators")
+		t.Error("AbstractProcessor should have annotations")
+	}
+}
+
+func TestJavaInterfaceResolution(t *testing.T) {
+	parseTree := parseJavaFixtureFile(t, "fixtures/java_simple_classes.java")
+
+	javaLang, err := lang.NewJavaLanguage()
+	if err != nil {
+		t.Fatalf("Failed to create Java language: %v", err)
+	}
+
+	resolvers := javaLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
+
+	classes, err := resolvers.ResolveClasses(parseTree)
+	if err != nil {
+		t.Fatalf("Failed to resolve classes: %v", err)
+	}
+
+	// Find SimpleInterface
+	var simpleInterface *ast.ClassDeclarationNode
+	for _, class := range classes {
+		if class.ClassName() == "SimpleInterface" {
+			simpleInterface = class
+			break
+		}
+	}
+
+	if simpleInterface == nil {
+		t.Fatal("SimpleInterface not found in resolved classes")
+	}
+
+	// Interfaces should be marked as abstract
+	if !simpleInterface.IsAbstract() {
+		t.Error("SimpleInterface should be marked as abstract (interfaces are abstract)")
+	}
+
+	// Should have public access modifier
+	if simpleInterface.AccessModifier() != ast.AccessModifierPublic {
+		t.Error("SimpleInterface should have public access modifier")
 	}
 }
 
 // Helper functions
 
-func testPythonClassResolution(t *testing.T, fixturePath string, expectedClasses map[string][]string) {
-	parseTree := parseFixtureFile(t, fixturePath)
+func testJavaClassResolution(t *testing.T, fixturePath string, expectedClasses map[string][]string) {
+	parseTree := parseJavaFixtureFile(t, fixturePath)
 
-	pythonLang, err := lang.NewPythonLanguage()
+	javaLang, err := lang.NewJavaLanguage()
 	if err != nil {
-		t.Fatalf("Failed to create Python language: %v", err)
+		t.Fatalf("Failed to create Java language: %v", err)
 	}
 
-	resolvers := pythonLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
+	resolvers := javaLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
 
 	classes, err := resolvers.ResolveClasses(parseTree)
 	if err != nil {
@@ -293,12 +326,12 @@ func testPythonClassResolution(t *testing.T, fixturePath string, expectedClasses
 	// Check for unexpected classes (optional - helps catch over-extraction)
 	for foundName := range foundClasses {
 		if _, expected := expectedClasses[foundName]; !expected {
-			t.Logf("Note: Found unexpected class %s (may be from imports or nested classes)", foundName)
+			t.Logf("Note: Found unexpected class %s (may be from imports or inner classes)", foundName)
 		}
 	}
 }
 
-func parseFixtureFile(t *testing.T, relativePath string) core.ParseTree {
+func parseJavaFixtureFile(t *testing.T, relativePath string) core.ParseTree {
 	// Get absolute path to fixture
 	fixtureDir := filepath.Join(".", relativePath)
 
@@ -310,26 +343,26 @@ func parseFixtureFile(t *testing.T, relativePath string) core.ParseTree {
 		t.Fatalf("Failed to create filesystem: %v", err)
 	}
 
-	// Create Python language
-	pythonLang, err := lang.NewPythonLanguage()
+	// Create Java language
+	javaLang, err := lang.NewJavaLanguage()
 	if err != nil {
-		t.Fatalf("Failed to create Python language: %v", err)
+		t.Fatalf("Failed to create Java language: %v", err)
 	}
 
 	// Create walker and parser
-	walker, err := fs.NewSourceWalker(fs.SourceWalkerConfig{}, []core.Language{pythonLang})
+	walker, err := fs.NewSourceWalker(fs.SourceWalkerConfig{}, []core.Language{javaLang})
 	if err != nil {
 		t.Fatalf("Failed to create walker: %v", err)
 	}
 
-	treeWalker, err := parser.NewWalkingParser(walker, []core.Language{pythonLang})
+	treeWalker, err := parser.NewWalkingParser(walker, []core.Language{javaLang})
 	if err != nil {
 		t.Fatalf("Failed to create parser: %v", err)
 	}
 
 	// Find and parse the specific file
 	var parseTree core.ParseTree
-	visitor := &fixtureVisitor{
+	visitor := &javaFixtureVisitor{
 		targetFilename: filepath.Base(relativePath),
 		foundTree:      &parseTree,
 	}
