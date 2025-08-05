@@ -25,8 +25,13 @@ type ObjectOrientedLanguageResolvers interface {
 	// programming. This is at the cost of analyzers having to
 	// check for the supported resolvers before using them.
 
-	// Placeholder operation, remove when adding real operations
-	Nop() error
+	// ResolveClasses returns a list of class declarations
+	// identified from the parse tree
+	ResolveClasses(tree ParseTree) ([]*ast.ClassDeclarationNode, error)
+
+	// ResolveInheritance returns the inheritance graph
+	// constructed from class definitions in the parse tree
+	ResolveInheritance(tree ParseTree) (*ast.InheritanceGraph, error)
 }
 
 type LanguageCode string
