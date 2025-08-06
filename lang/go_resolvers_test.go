@@ -2,6 +2,7 @@ package lang_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/safedep/code/core"
@@ -27,6 +28,15 @@ var goImportExpectations = []ImportExpectations{
 			"ImportNode{ModuleName: \"net/http\", ModuleItem: , ModuleAlias: , WildcardImport: true}",
 			"ImportNode{ModuleName: \"strings\", ModuleItem: , ModuleAlias: \"strings\", WildcardImport: false}",
 		},
+	},
+}
+
+var goFunctionExpectations = map[string][]string{
+	"fixtures/functions.go": {
+		"FunctionDeclarationNode{Name: simpleFunction, Type: function, Access: public, ParentClass: }",
+		"FunctionDeclarationNode{Name: functionWithArgs, Type: function, Access: public, ParentClass: }",
+		"FunctionDeclarationNode{Name: MyMethod, Type: method, Access: public, ParentClass: MyStruct}",
+		"FunctionDeclarationNode{Name: privateFunction, Type: function, Access: package, ParentClass: }",
 	},
 }
 
@@ -76,6 +86,50 @@ func TestGoLanguageResolvers(t *testing.T) {
 			}
 
 			return err
+		})
+		assert.NoError(t, err)
+	})
+
+	t.Run("ResolveFunctions", func(t *testing.T) {
+		l, err := lang.NewGoLanguage()
+		assert.NoError(t, err)
+
+		var filePaths []string
+		for path := range goFunctionExpectations {
+			filePaths = append(filePaths, path)
+		}
+
+		goLanguage, err := lang.NewGoLanguage()
+		assert.NoError(t, err)
+
+		fileParser, err := parser.NewParser([]core.Language{goLanguage})
+		assert.NoError(t, err)
+
+		fileSystem, err := fs.NewLocalFileSystem(fs.LocalFileSystemConfig{
+			AppDirectories: filePaths,
+		})
+		assert.NoError(t, err)
+
+		err = fileSystem.EnumerateApp(context.Background(), func(f core.File) error {
+			parseTree, err := fileParser.Parse(context.Background(), f)
+			assert.NoError(t, err)
+
+			functions, err := l.Resolvers().ResolveFunctions(parseTree)
+			assert.NoError(t, err)
+
+			expectedFunctions, ok := goFunctionExpectations[f.Name()]
+			assert.True(t, ok)
+
+			var foundFunctions []string
+			for _, fun := range functions {
+				foundFunctions = append(foundFunctions,
+					fmt.Sprintf("FunctionDeclarationNode{Name: %s, Type: %s, Access: %s, ParentClass: %s}",
+						fun.FunctionName(), fun.GetFunctionType(), fun.GetAccessModifier(), fun.GetParentClassName()))
+			}
+
+			assert.ElementsMatch(t, expectedFunctions, foundFunctions)
+
+			return nil
 		})
 		assert.NoError(t, err)
 	})

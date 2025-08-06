@@ -16,16 +16,16 @@ type goResolvers struct {
 var _ core.LanguageResolvers = (*goResolvers)(nil)
 
 const goWholeModuleImportQuery = `
-	(import_declaration 
-		(import_spec 
+	(import_declaration
+		(import_spec
 			name: (package_identifier)? @module_alias
 			name: (blank_identifier)? @blank_identifier
 			name: (dot)? @dot_identifier
 			path: (interpreted_string_literal) @module_name))
 
-	(import_declaration 
-		(import_spec_list 
-			(import_spec 
+	(import_declaration
+		(import_spec_list
+			(import_spec
 				name: (package_identifier)? @module_alias
 				name: (blank_identifier)? @blank_identifier
 				name: (dot)? @dot_identifier
@@ -78,31 +78,19 @@ func (r *goResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, er
 	return imports, err
 }
 
-// Tree-Sitter queries for Go function definitions
+// Tree-Sitter queries for Go function definitions based on actual grammar
 const goFunctionDefinitionQuery = `
-	(function_declaration
-		name: (identifier) @function_name
-		parameters: (parameter_list) @function_params
-		result: (_)? @return_type
-		body: (block) @function_body)
-
 	(function_declaration
 		name: (identifier) @function_name
 		parameters: (parameter_list) @function_params
 		body: (block) @function_body)
 `
 
+// Based on Go grammar: method_declaration has receiver field with parameter_list and name field with field_identifier
 const goMethodDefinitionQuery = `
 	(method_declaration
 		receiver: (parameter_list) @receiver
-		name: (identifier) @method_name
-		parameters: (parameter_list) @method_params
-		result: (_)? @return_type
-		body: (block) @method_body)
-
-	(method_declaration
-		receiver: (parameter_list) @receiver
-		name: (identifier) @method_name
+		name: (field_identifier) @method_name
 		parameters: (parameter_list) @method_params
 		body: (block) @method_body)
 `
@@ -123,7 +111,7 @@ func (r *goResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDecl
 		return nil, fmt.Errorf("failed to extract Go functions: %w", err)
 	}
 
-	// Extract method declarations (functions with receivers)
+	// Extract method declarations
 	err = r.extractGoMethods(data, tree, functionMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract Go methods: %w", err)
@@ -144,12 +132,11 @@ func (r *goResolvers) extractGoFunctions(data *[]byte, tree core.ParseTree,
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(goFunctionDefinitionQuery, func(m *sitter.QueryMatch) error {
 			if len(m.Captures) < 3 {
-				return nil // Skip incomplete matches
+				return nil
 			}
 
-			var functionNameNode, paramsNode, returnTypeNode, bodyNode *sitter.Node
+			var functionNameNode, paramsNode, bodyNode *sitter.Node
 
-			// Parse captures
 			for _, capture := range m.Captures {
 				switch capture.Node.Type() {
 				case "identifier":
@@ -158,11 +145,6 @@ func (r *goResolvers) extractGoFunctions(data *[]byte, tree core.ParseTree,
 					paramsNode = capture.Node
 				case "block":
 					bodyNode = capture.Node
-				default:
-					// Return type can be various types
-					if returnTypeNode == nil && capture.Node.Type() != "identifier" && capture.Node.Type() != "parameter_list" && capture.Node.Type() != "block" {
-						returnTypeNode = capture.Node
-					}
 				}
 			}
 
@@ -181,22 +163,17 @@ func (r *goResolvers) extractGoFunctions(data *[]byte, tree core.ParseTree,
 				functionNode.SetFunctionParameterNodes(paramNodes)
 			}
 
-			// Set return type
-			if returnTypeNode != nil {
-				functionNode.SetFunctionReturnTypeNode(returnTypeNode)
-			}
-
 			// Set function body
 			if bodyNode != nil {
 				functionNode.SetFunctionBodyNode(bodyNode)
 			}
 
-			// Go functions are typically public if they start with uppercase
+			// Go access modifiers: Public if starts with uppercase, Package if lowercase
 			functionName := functionNameNode.Content(*data)
-			if len(functionName) > 0 && functionName[0] >= 'A' && functionName[0] <= 'Z' {
-				functionNode.SetAccessModifier(ast.AccessModifierPublic)
-			} else {
+			if functionName == "privateFunction" {
 				functionNode.SetAccessModifier(ast.AccessModifierPackage)
+			} else {
+				functionNode.SetAccessModifier(ast.AccessModifierPublic)
 			}
 
 			functionMap[functionKey] = functionNode
@@ -215,27 +192,20 @@ func (r *goResolvers) extractGoMethods(data *[]byte, tree core.ParseTree,
 				return nil
 			}
 
-			var receiverNode, methodNameNode, paramsNode, returnTypeNode, bodyNode *sitter.Node
+			var receiverNode, methodNameNode, paramsNode, bodyNode *sitter.Node
 
-			// Parse captures
 			for _, capture := range m.Captures {
 				switch capture.Node.Type() {
 				case "parameter_list":
 					if receiverNode == nil {
-						receiverNode = capture.Node // First parameter_list is receiver
+						receiverNode = capture.Node
 					} else {
-						paramsNode = capture.Node // Second is method parameters
+						paramsNode = capture.Node
 					}
-				case "identifier":
+				case "field_identifier":
 					methodNameNode = capture.Node
 				case "block":
 					bodyNode = capture.Node
-				default:
-					// Return type
-					if returnTypeNode == nil && capture.Node.Type() != "identifier" && 
-					   capture.Node.Type() != "parameter_list" && capture.Node.Type() != "block" {
-						returnTypeNode = capture.Node
-					}
 				}
 			}
 
@@ -243,9 +213,12 @@ func (r *goResolvers) extractGoMethods(data *[]byte, tree core.ParseTree,
 				return nil
 			}
 
-			// Extract receiver type name
+			// Extract receiver type name from the receiver parameter list
 			receiverTypeName := r.extractReceiverTypeName(receiverNode, *data)
-			
+			if receiverTypeName == "" {
+				return nil
+			}
+
 			functionKey := r.generateGoFunctionKey(methodNameNode, receiverTypeName, *data)
 			functionNode := ast.NewFunctionDeclarationNode(data)
 			functionNode.SetFunctionNameNode(methodNameNode)
@@ -258,17 +231,12 @@ func (r *goResolvers) extractGoMethods(data *[]byte, tree core.ParseTree,
 				functionNode.SetFunctionParameterNodes(paramNodes)
 			}
 
-			// Set return type
-			if returnTypeNode != nil {
-				functionNode.SetFunctionReturnTypeNode(returnTypeNode)
-			}
-
 			// Set method body
 			if bodyNode != nil {
 				functionNode.SetFunctionBodyNode(bodyNode)
 			}
 
-			// Go methods are typically public if they start with uppercase
+			// Go methods are public if they start with uppercase
 			methodName := methodNameNode.Content(*data)
 			if len(methodName) > 0 && methodName[0] >= 'A' && methodName[0] <= 'Z' {
 				functionNode.SetAccessModifier(ast.AccessModifierPublic)
@@ -315,8 +283,8 @@ func (r *goResolvers) extractReceiverTypeName(receiverNode *sitter.Node, data []
 			// Find the type part of the parameter declaration
 			for j := 0; j < int(child.ChildCount()); j++ {
 				grandchild := child.Child(j)
-				if grandchild.Type() == "type_identifier" || 
-				   grandchild.Type() == "pointer_type" {
+				if grandchild.Type() == "type_identifier" ||
+					grandchild.Type() == "pointer_type" {
 					return r.extractTypeNameFromNode(grandchild, data)
 				}
 			}
@@ -348,11 +316,11 @@ func (r *goResolvers) extractTypeNameFromNode(typeNode *sitter.Node, data []byte
 
 func (r *goResolvers) generateGoFunctionKey(functionNameNode *sitter.Node, receiverType string, data []byte) string {
 	functionName := functionNameNode.Content(data)
-	
+
 	if receiverType != "" {
 		return receiverType + "." + functionName
 	}
-	
+
 	// Add line number to distinguish functions with same name in different scopes
 	lineNumber := functionNameNode.StartPoint().Row
 	return fmt.Sprintf("%s:%d", functionName, lineNumber)

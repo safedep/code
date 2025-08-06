@@ -79,7 +79,6 @@ const javaClassFieldQuery = `
 					name: (identifier) @field_name)) @field_def))
 `
 
-
 const javaInheritanceQuery = `
 	(class_declaration
 		name: (identifier) @class_name
@@ -236,10 +235,10 @@ func (r *javaResolvers) extractClassDefinitions(data *[]byte, tree core.ParseTre
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(javaClassDefinitionQuery, func(m *sitter.QueryMatch) error {
 			classNode := ast.NewClassDeclarationNode(ast.ToContent(*data))
-			
+
 			var className string
 			var modifiersNode *sitter.Node
-			
+
 			for _, capture := range m.Captures {
 				switch capture.Node.Type() {
 				case "identifier":
@@ -255,7 +254,7 @@ func (r *javaResolvers) extractClassDefinitions(data *[]byte, tree core.ParseTre
 					modifiersNode = capture.Node
 				}
 			}
-			
+
 			if className != "" {
 				// Check for abstract modifier and extract annotations
 				if modifiersNode != nil {
@@ -264,7 +263,7 @@ func (r *javaResolvers) extractClassDefinitions(data *[]byte, tree core.ParseTre
 					}
 					r.extractAnnotationsFromModifiers(modifiersNode, classNode)
 				}
-				
+
 				classNode.SetAccessModifier(r.extractAccessModifier(m))
 				*classes = append(*classes, classNode)
 				classMap[className] = classNode
@@ -272,14 +271,14 @@ func (r *javaResolvers) extractClassDefinitions(data *[]byte, tree core.ParseTre
 
 			return nil
 		}),
-		
+
 		// Also handle interfaces as classes (Java interfaces are class-like)
 		ts.NewQueryItem(javaInterfaceDefinitionQuery, func(m *sitter.QueryMatch) error {
 			classNode := ast.NewClassDeclarationNode(ast.ToContent(*data))
 			classNode.SetIsAbstract(true) // Interfaces are abstract by nature
-			
+
 			var className string
-			
+
 			for _, capture := range m.Captures {
 				switch capture.Node.Type() {
 				case "identifier":
@@ -292,7 +291,7 @@ func (r *javaResolvers) extractClassDefinitions(data *[]byte, tree core.ParseTre
 					classNode.AddBaseClassNode(capture.Node)
 				}
 			}
-			
+
 			if className != "" {
 				classNode.SetAccessModifier(ast.AccessModifierPublic) // Interfaces are public by default
 				*classes = append(*classes, classNode)
@@ -310,7 +309,7 @@ func (r *javaResolvers) extractClassMethods(data *[]byte, tree core.ParseTree, c
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(javaClassMethodQuery, func(m *sitter.QueryMatch) error {
 			var methodNameNode, methodDefNode *sitter.Node
-			
+
 			for _, capture := range m.Captures {
 				if capture.Node.Type() == "identifier" {
 					methodNameNode = capture.Node
@@ -318,7 +317,7 @@ func (r *javaResolvers) extractClassMethods(data *[]byte, tree core.ParseTree, c
 					methodDefNode = capture.Node
 				}
 			}
-			
+
 			if methodNameNode == nil || methodDefNode == nil {
 				return nil
 			}
@@ -335,12 +334,12 @@ func (r *javaResolvers) extractClassMethods(data *[]byte, tree core.ParseTree, c
 
 			return nil
 		}),
-		
+
 		// Handle constructors separately
 		ts.NewQueryItem(javaClassConstructorQuery, func(m *sitter.QueryMatch) error {
 			var constructorDefNode *sitter.Node
 			var className string
-			
+
 			for _, capture := range m.Captures {
 				if capture.Node.Type() == "identifier" {
 					className = capture.Node.Content(*data)
@@ -348,7 +347,7 @@ func (r *javaResolvers) extractClassMethods(data *[]byte, tree core.ParseTree, c
 					constructorDefNode = capture.Node
 				}
 			}
-			
+
 			if className != "" && constructorDefNode != nil {
 				if classNode, exists := classMap[className]; exists {
 					classNode.SetConstructorNode(constructorDefNode)
@@ -366,14 +365,14 @@ func (r *javaResolvers) extractClassFields(data *[]byte, tree core.ParseTree, cl
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(javaClassFieldQuery, func(m *sitter.QueryMatch) error {
 			var fieldDefNode *sitter.Node
-			
+
 			for _, capture := range m.Captures {
 				if capture.Node.Type() == "field_declaration" {
 					fieldDefNode = capture.Node
 					break
 				}
 			}
-			
+
 			if fieldDefNode == nil {
 				return nil
 			}
@@ -400,7 +399,7 @@ func (r *javaResolvers) extractClassAnnotations(data *[]byte, tree core.ParseTre
 		ts.NewQueryItem(javaClassAnnotationQuery, func(m *sitter.QueryMatch) error {
 			var annotationNode *sitter.Node
 			var className string
-			
+
 			for _, capture := range m.Captures {
 				if capture.Node.Type() == "annotation" || capture.Node.Type() == "marker_annotation" {
 					annotationNode = capture.Node
@@ -408,7 +407,7 @@ func (r *javaResolvers) extractClassAnnotations(data *[]byte, tree core.ParseTre
 					className = capture.Node.Content(*data)
 				}
 			}
-			
+
 			if className != "" && annotationNode != nil {
 				if classNode, exists := classMap[className]; exists {
 					classNode.AddDecoratorNode(annotationNode)
@@ -444,12 +443,11 @@ func (r *javaResolvers) extractAccessModifier(m *sitter.QueryMatch) ast.AccessMo
 	return ast.AccessModifierPublic
 }
 
-
 func (r *javaResolvers) hasAbstractModifier(modifiersNode *sitter.Node, data []byte) bool {
 	if modifiersNode == nil {
 		return false
 	}
-	
+
 	// Traverse child nodes looking for "abstract" keyword
 	for i := 0; i < int(modifiersNode.ChildCount()); i++ {
 		child := modifiersNode.Child(i)
@@ -464,7 +462,7 @@ func (r *javaResolvers) extractAnnotationsFromModifiers(modifiersNode *sitter.No
 	if modifiersNode == nil {
 		return
 	}
-	
+
 	// Traverse child nodes looking for annotations
 	for i := 0; i < int(modifiersNode.ChildCount()); i++ {
 		child := modifiersNode.Child(i)
@@ -769,11 +767,11 @@ func (r *javaResolvers) processJavaModifiers(modifiersNode *sitter.Node, functio
 func (r *javaResolvers) generateJavaFunctionKey(functionNameNode *sitter.Node, data []byte) string {
 	functionName := functionNameNode.Content(data)
 	parentClassName := r.findParentClassName(functionNameNode, data)
-	
+
 	if parentClassName != "" {
 		return parentClassName + "." + functionName
 	}
-	
+
 	// Add line number to distinguish functions with same name in different scopes
 	lineNumber := functionNameNode.StartPoint().Row
 	return fmt.Sprintf("%s:%d", functionName, lineNumber)

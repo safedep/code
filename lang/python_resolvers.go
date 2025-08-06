@@ -453,11 +453,7 @@ func (r *pythonResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.Function
 		return nil, fmt.Errorf("failed to extract function definitions: %w", err)
 	}
 
-	// Extract async functions
-	err = r.extractAsyncFunctions(data, tree, functionMap)
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract async functions: %w", err)
-	}
+	// Async functions are now handled in the main function extraction
 
 	// Extract function decorators
 	err = r.extractFunctionDecorators(data, tree, functionMap)
@@ -465,8 +461,13 @@ func (r *pythonResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.Function
 		return nil, fmt.Errorf("failed to extract function decorators: %w", err)
 	}
 
-	// Convert map to slice
+	// Convert map to slice and ensure all functions have proper access modifiers
 	for _, function := range functionMap {
+		// Ensure every function has a proper access modifier (not Unknown)
+		currentModifier := function.GetAccessModifier()
+		if currentModifier == ast.AccessModifierUnknown || currentModifier == "" {
+			function.SetAccessModifier(ast.AccessModifierPublic)
+		}
 		functions = append(functions, function)
 	}
 
@@ -514,6 +515,21 @@ func (r *pythonResolvers) extractFunctionDefinitions(data *[]byte, tree core.Par
 				functionNode.SetFunctionReturnTypeNode(m.Captures[3].Node)
 			}
 
+			// Check for async function by looking at the function_definition parent for async keyword
+			isAsync := false
+			current := functionNameNode.Parent()
+			for current != nil && current.Type() == "function_definition" {
+				// Check if any child node is "async"
+				for i := 0; i < int(current.ChildCount()); i++ {
+					child := current.Child(i)
+					if child.Type() == "async" {
+						isAsync = true
+						break
+					}
+				}
+				break
+			}
+
 			// Determine function type based on context
 			parentClassName := r.findParentClassName(functionNameNode, *data)
 			if parentClassName != "" {
@@ -524,8 +540,16 @@ func (r *pythonResolvers) extractFunctionDefinitions(data *[]byte, tree core.Par
 					functionNode.SetFunctionType(ast.FunctionTypeMethod)
 				}
 			} else {
-				functionNode.SetFunctionType(ast.FunctionTypeFunction)
+				if isAsync {
+					functionNode.SetFunctionType(ast.FunctionTypeAsync)
+					functionNode.SetIsAsync(true)
+				} else {
+					functionNode.SetFunctionType(ast.FunctionTypeFunction)
+				}
 			}
+
+			// Python functions are typically public by default
+			functionNode.SetAccessModifier(ast.AccessModifierPublic)
 
 			return nil
 		}),
@@ -616,6 +640,9 @@ func (r *pythonResolvers) extractFunctionDecorators(data *[]byte, tree core.Pars
 				} else if decoratorName == "abstractmethod" {
 					functionNode.SetIsAbstract(true)
 				}
+
+				// Ensure access modifier is set to public for decorated functions
+				functionNode.SetAccessModifier(ast.AccessModifierPublic)
 			}
 
 			return nil
@@ -647,11 +674,11 @@ func (r *pythonResolvers) extractParameterNodes(parametersNode *sitter.Node) []*
 func (r *pythonResolvers) generateFunctionKey(functionNameNode *sitter.Node, data []byte) string {
 	functionName := functionNameNode.Content(data)
 	parentClassName := r.findParentClassName(functionNameNode, data)
-	
+
 	if parentClassName != "" {
 		return parentClassName + "." + functionName
 	}
-	
+
 	// Add line number to distinguish functions with same name in different scopes
 	lineNumber := functionNameNode.StartPoint().Row
 	return fmt.Sprintf("%s:%d", functionName, lineNumber)
