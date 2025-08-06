@@ -34,6 +34,7 @@ func AllLanguages() ([]core.Language, error) {
 		}
 		langs = append(langs, lang)
 	}
+
 	return langs, nil
 }
 
@@ -64,5 +65,6 @@ func ResolveLanguageFromPath(filePath string) (core.Language, bool) {
 			return l, true
 		}
 	}
+
 	return nil, false
 }
