@@ -152,6 +152,12 @@ func (r *goResolvers) extractGoFunctions(data *[]byte, tree core.ParseTree,
 				return nil
 			}
 
+			// Validate function name
+			functionName := functionNameNode.Content(*data)
+			if !r.isValidGoIdentifier(functionName) {
+				return nil // Skip invalid identifiers
+			}
+
 			functionKey := r.generateGoFunctionKey(functionNameNode, "", *data)
 			functionNode := ast.NewFunctionDeclarationNode(data)
 			functionNode.SetFunctionNameNode(functionNameNode)
@@ -169,11 +175,10 @@ func (r *goResolvers) extractGoFunctions(data *[]byte, tree core.ParseTree,
 			}
 
 			// Go access modifiers: Public if starts with uppercase, Package if lowercase
-			functionName := functionNameNode.Content(*data)
-			if functionName == "privateFunction" {
-				functionNode.SetAccessModifier(ast.AccessModifierPackage)
-			} else {
+			if r.isExportedGoIdentifier(functionName) {
 				functionNode.SetAccessModifier(ast.AccessModifierPublic)
+			} else {
+				functionNode.SetAccessModifier(ast.AccessModifierPackage)
 			}
 
 			functionMap[functionKey] = functionNode
@@ -213,10 +218,21 @@ func (r *goResolvers) extractGoMethods(data *[]byte, tree core.ParseTree,
 				return nil
 			}
 
+			// Validate method name
+			methodName := methodNameNode.Content(*data)
+			if !r.isValidGoIdentifier(methodName) {
+				return nil // Skip invalid identifiers
+			}
+
 			// Extract receiver type name from the receiver parameter list
 			receiverTypeName := r.extractReceiverTypeName(receiverNode, *data)
 			if receiverTypeName == "" {
 				return nil
+			}
+
+			// Validate receiver type name
+			if !r.isValidGoIdentifier(receiverTypeName) {
+				return nil // Skip invalid receiver types
 			}
 
 			functionKey := r.generateGoFunctionKey(methodNameNode, receiverTypeName, *data)
@@ -237,8 +253,7 @@ func (r *goResolvers) extractGoMethods(data *[]byte, tree core.ParseTree,
 			}
 
 			// Go methods are public if they start with uppercase
-			methodName := methodNameNode.Content(*data)
-			if len(methodName) > 0 && methodName[0] >= 'A' && methodName[0] <= 'Z' {
+			if r.isExportedGoIdentifier(methodName) {
 				functionNode.SetAccessModifier(ast.AccessModifierPublic)
 			} else {
 				functionNode.SetAccessModifier(ast.AccessModifierPackage)
@@ -324,4 +339,40 @@ func (r *goResolvers) generateGoFunctionKey(functionNameNode *sitter.Node, recei
 	// Add line number to distinguish functions with same name in different scopes
 	lineNumber := functionNameNode.StartPoint().Row
 	return fmt.Sprintf("%s:%d", functionName, lineNumber)
+}
+
+// isExportedGoIdentifier checks if a Go identifier is exported (public) based on Go naming conventions.
+// In Go, an identifier is exported if it starts with an uppercase letter.
+func (r *goResolvers) isExportedGoIdentifier(identifier string) bool {
+	if len(identifier) == 0 {
+		return false
+	}
+
+	// Check if the first character is an uppercase letter
+	firstChar := identifier[0]
+	return firstChar >= 'A' && firstChar <= 'Z'
+}
+
+// isValidGoIdentifier validates if a string is a valid Go identifier.
+// A valid Go identifier starts with a letter or underscore, followed by letters, digits, or underscores.
+func (r *goResolvers) isValidGoIdentifier(identifier string) bool {
+	if len(identifier) == 0 {
+		return false
+	}
+
+	// First character must be a letter or underscore
+	firstChar := identifier[0]
+	if !((firstChar >= 'a' && firstChar <= 'z') || (firstChar >= 'A' && firstChar <= 'Z') || firstChar == '_') {
+		return false
+	}
+
+	// Remaining characters must be letters, digits, or underscores
+	for i := 1; i < len(identifier); i++ {
+		char := identifier[i]
+		if !((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || (char >= '0' && char <= '9') || char == '_') {
+			return false
+		}
+	}
+
+	return true
 }

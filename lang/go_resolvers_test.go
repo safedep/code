@@ -33,10 +33,17 @@ var goImportExpectations = []ImportExpectations{
 
 var goFunctionExpectations = map[string][]string{
 	"fixtures/functions.go": {
-		"FunctionDeclarationNode{Name: simpleFunction, Type: function, Access: public, ParentClass: }",
-		"FunctionDeclarationNode{Name: functionWithArgs, Type: function, Access: public, ParentClass: }",
+		"FunctionDeclarationNode{Name: simpleFunction, Type: function, Access: package, ParentClass: }",
+		"FunctionDeclarationNode{Name: functionWithArgs, Type: function, Access: package, ParentClass: }",
 		"FunctionDeclarationNode{Name: MyMethod, Type: method, Access: public, ParentClass: MyStruct}",
 		"FunctionDeclarationNode{Name: privateFunction, Type: function, Access: package, ParentClass: }",
+		"FunctionDeclarationNode{Name: ExportedFunction, Type: function, Access: public, ParentClass: }",
+		"FunctionDeclarationNode{Name: unexportedFunction, Type: function, Access: package, ParentClass: }",
+		"FunctionDeclarationNode{Name: _underscoreFunction, Type: function, Access: package, ParentClass: }",
+		"FunctionDeclarationNode{Name: ExportedMethod, Type: method, Access: public, ParentClass: myPrivateStruct}",
+		"FunctionDeclarationNode{Name: unexportedMethod, Type: method, Access: package, ParentClass: myPrivateStruct}",
+		"FunctionDeclarationNode{Name: PublicMethod, Type: method, Access: public, ParentClass: PublicStruct}",
+		"FunctionDeclarationNode{Name: privateMethod, Type: method, Access: package, ParentClass: PublicStruct}",
 	},
 }
 
