@@ -380,7 +380,7 @@ func (ig *InheritanceGraph) DetectCircularInheritance() [][]string {
 		for _, rel := range ig.directParents[class] {
 			// Intentionally ignoring the return value of dfs() here because
 			// cycle detection is handled via side effects (appending to cycles).
-			// nolint:staticcheck -- return value not needed in this context.
+			// nolint:staticcheck
 			if dfs(rel.ParentClassName, path) {
 				// Continue searching for more cycles if nesting required
 			}
