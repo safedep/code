@@ -26,7 +26,7 @@ const jsWholeModuleImportQuery = `
 		(import_clause
 			(namespace_import (identifier) @module_alias))
 		source: (string (string_fragment) @module_name))
-	
+
 	; const xyz = await import('xyz)
 	(lexical_declaration
 		(variable_declarator
@@ -44,7 +44,7 @@ const jsRequireModuleQuery = `
 		value: (call_expression
 			function: (identifier) @require_function
 			arguments: (arguments (string (string_fragment) @module_name)))))
-	
+
 	(lexical_declaration
 		(variable_declarator
 			name: (object_pattern
@@ -67,9 +67,9 @@ const jsRequireModuleQuery = `
 const jsSpecifiedItemImportQuery = `
 	(import_statement
 		(import_clause
-			(named_imports 
-				(import_specifier 
-					name: (identifier) @module_item 
+			(named_imports
+				(import_specifier
+					name: (identifier) @module_item
 					alias: (identifier)? @module_alias)))
 		source: (string (string_fragment) @module_name))
 `
@@ -152,4 +152,468 @@ func (r *javascriptResolvers) ResolveImports(tree core.ParseTree) ([]*ast.Import
 	}
 
 	return imports, err
+}
+
+// Tree-Sitter queries for JavaScript function definitions based on actual grammar
+const jsFunctionDefinitionQuery = `
+	(function_declaration
+		name: (identifier) @function_name
+		parameters: (formal_parameters) @function_params
+		body: (statement_block) @function_body)
+`
+
+const jsArrowFunctionQuery = `
+	(variable_declarator
+		name: (identifier) @function_name
+		value: (arrow_function
+			parameters: (_) @function_params
+			body: (_) @function_body))
+
+	(assignment_expression
+		left: (identifier) @function_name
+		right: (arrow_function
+			parameters: (_) @function_params
+			body: (_) @function_body))
+`
+
+const jsMethodDefinitionQuery = `
+	(method_definition
+		name: (property_identifier) @method_name
+		parameters: (formal_parameters) @method_params
+		body: (statement_block) @method_body)
+
+	(method_definition
+		(decorator)* @decorator
+		name: (property_identifier) @method_name
+		parameters: (formal_parameters) @method_params
+		body: (statement_block) @method_body)
+`
+
+const jsFunctionExpressionQuery = `
+	(function_expression
+		name: (identifier)? @function_name
+		parameters: (formal_parameters) @function_params
+		body: (statement_block) @function_body)
+`
+
+// ResolveFunctions extracts function declarations from JavaScript parse tree
+func (r *javascriptResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
+	data, err := tree.Data()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
+	}
+
+	var functions []*ast.FunctionDeclarationNode
+	functionMap := make(map[string]*ast.FunctionDeclarationNode) // To avoid duplicates
+
+	// Extract regular function declarations
+	err = r.extractJSFunctions(data, tree, functionMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract JavaScript functions: %w", err)
+	}
+
+	// Extract arrow functions
+	err = r.extractJSArrowFunctions(data, tree, functionMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract JavaScript arrow functions: %w", err)
+	}
+
+	// Extract method definitions (class methods)
+	err = r.extractJSMethods(data, tree, functionMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract JavaScript methods: %w", err)
+	}
+
+	// Extract function expressions
+	err = r.extractJSFunctionExpressions(data, tree, functionMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract JavaScript function expressions: %w", err)
+	}
+
+	// Convert map to slice
+	for _, function := range functionMap {
+		functions = append(functions, function)
+	}
+
+	return functions, nil
+}
+
+// Helper methods for JavaScript function extraction
+
+func (r *javascriptResolvers) extractJSFunctions(data *[]byte, tree core.ParseTree,
+	functionMap map[string]*ast.FunctionDeclarationNode) error {
+	queryRequestItems := []ts.QueryItem{
+		ts.NewQueryItem(jsFunctionDefinitionQuery, func(m *sitter.QueryMatch) error {
+			if len(m.Captures) < 3 {
+				return nil
+			}
+
+			var functionNameNode, paramsNode, bodyNode *sitter.Node
+
+			for _, capture := range m.Captures {
+				switch capture.Node.Type() {
+				case "identifier":
+					functionNameNode = capture.Node
+				case "formal_parameters":
+					paramsNode = capture.Node
+				case "statement_block":
+					bodyNode = capture.Node
+				}
+			}
+
+			if functionNameNode == nil {
+				return nil
+			}
+
+			// Check for async function by looking at the function_declaration parent for async keyword
+			isAsync := false
+			current := functionNameNode.Parent()
+			if current != nil && current.Type() == "function_declaration" {
+				// Check if any child node is "async"
+				for i := 0; i < int(current.ChildCount()); i++ {
+					child := current.Child(i)
+					if child.Type() == "async" {
+						isAsync = true
+						break
+					}
+				}
+			}
+
+			functionKey := r.generateJSFunctionKey(functionNameNode, "", *data)
+			functionNode := ast.NewFunctionDeclarationNode(data)
+			functionNode.SetFunctionNameNode(functionNameNode)
+
+			if isAsync {
+				functionNode.SetFunctionType(ast.FunctionTypeAsync)
+				functionNode.SetIsAsync(true)
+			} else {
+				functionNode.SetFunctionType(ast.FunctionTypeFunction)
+			}
+
+			// Set parameters
+			if paramsNode != nil {
+				paramNodes := r.extractJSParameterNodes(paramsNode)
+				functionNode.SetFunctionParameterNodes(paramNodes)
+			}
+
+			// Set function body
+			if bodyNode != nil {
+				functionNode.SetFunctionBodyNode(bodyNode)
+			}
+
+			// JavaScript functions are typically public
+			functionNode.SetAccessModifier(ast.AccessModifierPublic)
+
+			functionMap[functionKey] = functionNode
+			return nil
+		}),
+	}
+
+	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+}
+
+func (r *javascriptResolvers) extractJSArrowFunctions(data *[]byte, tree core.ParseTree,
+	functionMap map[string]*ast.FunctionDeclarationNode) error {
+	queryRequestItems := []ts.QueryItem{
+		ts.NewQueryItem(jsArrowFunctionQuery, func(m *sitter.QueryMatch) error {
+			if len(m.Captures) < 3 {
+				return nil
+			}
+
+			var functionNameNode, paramsNode, bodyNode *sitter.Node
+
+			for _, capture := range m.Captures {
+				switch capture.Node.Type() {
+				case "identifier":
+					if functionNameNode == nil {
+						functionNameNode = capture.Node
+					} else if paramsNode == nil && capture.Node != functionNameNode {
+						paramsNode = capture.Node
+					}
+				case "formal_parameters":
+					if paramsNode == nil {
+						paramsNode = capture.Node
+					}
+				default:
+					if bodyNode == nil && capture.Node != functionNameNode && capture.Node != paramsNode {
+						bodyNode = capture.Node
+					}
+				}
+			}
+
+			if functionNameNode == nil {
+				return nil
+			}
+
+			// Check for async arrow function by looking at the arrow_function node for async keyword
+			isAsync := false
+			current := functionNameNode.Parent()
+			for current != nil {
+				if current.Type() == "arrow_function" {
+					// Check if the arrow function has async keyword
+					parent := current.Parent()
+					if parent != nil {
+						for i := 0; i < int(parent.ChildCount()); i++ {
+							child := parent.Child(i)
+							if child.Type() == "async" {
+								isAsync = true
+								break
+							}
+						}
+					}
+					break
+				}
+				current = current.Parent()
+			}
+
+			functionKey := r.generateJSFunctionKey(functionNameNode, "", *data)
+			functionNode := ast.NewFunctionDeclarationNode(data)
+			functionNode.SetFunctionNameNode(functionNameNode)
+
+			if isAsync {
+				functionNode.SetFunctionType(ast.FunctionTypeAsync)
+				functionNode.SetIsAsync(true)
+			} else {
+				functionNode.SetFunctionType(ast.FunctionTypeArrow)
+			}
+
+			// Set parameters
+			if paramsNode != nil {
+				if paramsNode.Type() == "formal_parameters" {
+					paramNodes := r.extractJSParameterNodes(paramsNode)
+					functionNode.SetFunctionParameterNodes(paramNodes)
+				} else {
+					// Single parameter without parentheses
+					functionNode.AddFunctionParameterNode(paramsNode)
+				}
+			}
+
+			// Set function body
+			if bodyNode != nil {
+				functionNode.SetFunctionBodyNode(bodyNode)
+			}
+
+			functionNode.SetAccessModifier(ast.AccessModifierPublic)
+			functionMap[functionKey] = functionNode
+			return nil
+		}),
+	}
+
+	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+}
+
+func (r *javascriptResolvers) extractJSMethods(data *[]byte, tree core.ParseTree,
+	functionMap map[string]*ast.FunctionDeclarationNode) error {
+	queryRequestItems := []ts.QueryItem{
+		ts.NewQueryItem(jsMethodDefinitionQuery, func(m *sitter.QueryMatch) error {
+			if len(m.Captures) < 3 {
+				return nil
+			}
+
+			var methodNameNode, paramsNode, bodyNode *sitter.Node
+			var decoratorNodes []*sitter.Node
+
+			for _, capture := range m.Captures {
+				switch capture.Node.Type() {
+				case "property_identifier":
+					methodNameNode = capture.Node
+				case "formal_parameters":
+					paramsNode = capture.Node
+				case "statement_block":
+					bodyNode = capture.Node
+				case "decorator":
+					decoratorNodes = append(decoratorNodes, capture.Node)
+				}
+			}
+
+			if methodNameNode == nil {
+				return nil
+			}
+
+			// Check for async method by looking at the method_definition parent for async keyword
+			isAsync := false
+			current := methodNameNode.Parent()
+			if current != nil && current.Type() == "method_definition" {
+				// Check if any child node is "async"
+				for i := 0; i < int(current.ChildCount()); i++ {
+					child := current.Child(i)
+					if child.Type() == "async" {
+						isAsync = true
+						break
+					}
+				}
+			}
+
+			// Find parent class name
+			parentClassName := r.findJSParentClassName(methodNameNode, *data)
+
+			functionKey := r.generateJSFunctionKey(methodNameNode, parentClassName, *data)
+			functionNode := ast.NewFunctionDeclarationNode(data)
+			functionNode.SetFunctionNameNode(methodNameNode)
+
+			// Check for constructor first, then async, then default to method
+			methodName := methodNameNode.Content(*data)
+			if methodName == "constructor" {
+				functionNode.SetFunctionType(ast.FunctionTypeConstructor)
+			} else if isAsync {
+				functionNode.SetFunctionType(ast.FunctionTypeAsync)
+				functionNode.SetIsAsync(true)
+			} else {
+				functionNode.SetFunctionType(ast.FunctionTypeMethod)
+			}
+
+			if parentClassName != "" {
+				functionNode.SetParentClassName(parentClassName)
+			}
+
+			// Set parameters
+			if paramsNode != nil {
+				paramNodes := r.extractJSParameterNodes(paramsNode)
+				functionNode.SetFunctionParameterNodes(paramNodes)
+			}
+
+			// Set method body
+			if bodyNode != nil {
+				functionNode.SetFunctionBodyNode(bodyNode)
+			}
+
+			// Add decorators
+			for _, decoratorNode := range decoratorNodes {
+				functionNode.AddDecoratorNode(decoratorNode)
+			}
+
+			functionNode.SetAccessModifier(ast.AccessModifierPublic)
+			functionMap[functionKey] = functionNode
+			return nil
+		}),
+	}
+
+	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+}
+
+func (r *javascriptResolvers) extractJSFunctionExpressions(data *[]byte, tree core.ParseTree,
+	functionMap map[string]*ast.FunctionDeclarationNode) error {
+	queryRequestItems := []ts.QueryItem{
+		ts.NewQueryItem(jsFunctionExpressionQuery, func(m *sitter.QueryMatch) error {
+			if len(m.Captures) < 2 {
+				return nil
+			}
+
+			var functionNameNode, paramsNode, bodyNode *sitter.Node
+
+			for _, capture := range m.Captures {
+				switch capture.Node.Type() {
+				case "identifier":
+					if functionNameNode == nil {
+						functionNameNode = capture.Node
+					}
+				case "formal_parameters":
+					paramsNode = capture.Node
+				case "statement_block":
+					bodyNode = capture.Node
+				}
+			}
+
+			// Anonymous functions don't have names, skip them
+			if functionNameNode == nil {
+				return nil
+			}
+
+			// Check for async function expression by looking for async keyword
+			isAsync := false
+			current := functionNameNode.Parent()
+			if current != nil && current.Type() == "function_expression" {
+				parent := current.Parent()
+				if parent != nil {
+					for i := 0; i < int(parent.ChildCount()); i++ {
+						child := parent.Child(i)
+						if child.Type() == "async" {
+							isAsync = true
+							break
+						}
+					}
+				}
+			}
+
+			functionKey := r.generateJSFunctionKey(functionNameNode, "", *data)
+			functionNode := ast.NewFunctionDeclarationNode(data)
+			functionNode.SetFunctionNameNode(functionNameNode)
+
+			if isAsync {
+				functionNode.SetFunctionType(ast.FunctionTypeAsync)
+				functionNode.SetIsAsync(true)
+			} else {
+				functionNode.SetFunctionType(ast.FunctionTypeFunction)
+			}
+
+			// Set parameters
+			if paramsNode != nil {
+				paramNodes := r.extractJSParameterNodes(paramsNode)
+				functionNode.SetFunctionParameterNodes(paramNodes)
+			}
+
+			// Set function body
+			if bodyNode != nil {
+				functionNode.SetFunctionBodyNode(bodyNode)
+			}
+
+			functionNode.SetAccessModifier(ast.AccessModifierPublic)
+			functionMap[functionKey] = functionNode
+			return nil
+		}),
+	}
+
+	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+}
+
+// Helper methods for JavaScript function processing
+
+func (r *javascriptResolvers) extractJSParameterNodes(parametersNode *sitter.Node) []*sitter.Node {
+	var paramNodes []*sitter.Node
+
+	if parametersNode == nil {
+		return paramNodes
+	}
+
+	for i := 0; i < int(parametersNode.ChildCount()); i++ {
+		child := parametersNode.Child(i)
+		if child.Type() == "identifier" || child.Type() == "assignment_pattern" ||
+			child.Type() == "rest_pattern" || child.Type() == "array_pattern" ||
+			child.Type() == "object_pattern" {
+			paramNodes = append(paramNodes, child)
+		}
+	}
+
+	return paramNodes
+}
+
+func (r *javascriptResolvers) findJSParentClassName(node *sitter.Node, data []byte) string {
+	if node == nil {
+		return ""
+	}
+
+	current := node.Parent()
+	for current != nil {
+		if current.Type() == "class_declaration" {
+			nameNode := current.ChildByFieldName("name")
+			if nameNode != nil {
+				return nameNode.Content(data)
+			}
+		}
+		current = current.Parent()
+	}
+
+	return ""
+}
+
+func (r *javascriptResolvers) generateJSFunctionKey(functionNameNode *sitter.Node, parentClassName string, data []byte) string {
+	functionName := functionNameNode.Content(data)
+
+	if parentClassName != "" {
+		return parentClassName + "." + functionName
+	}
+
+	// Add line number to distinguish functions with same name in different scopes
+	lineNumber := functionNameNode.StartPoint().Row
+	return fmt.Sprintf("%s:%d", functionName, lineNumber)
 }
