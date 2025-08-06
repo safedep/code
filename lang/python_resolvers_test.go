@@ -109,16 +109,13 @@ func TestPythonLanguageResolvers(t *testing.T) {
 	})
 
 	t.Run("ResolveFunctions", func(t *testing.T) {
-		l, err := lang.NewPythonLanguage()
+		pythonLanguage, err := lang.NewPythonLanguage()
 		assert.NoError(t, err)
 
 		var filePaths []string
 		for path := range pythonFunctionExpectations {
 			filePaths = append(filePaths, path)
 		}
-
-		pythonLanguage, err := lang.NewPythonLanguage()
-		assert.NoError(t, err)
 
 		fileParser, err := parser.NewParser([]core.Language{pythonLanguage})
 		assert.NoError(t, err)
@@ -132,7 +129,7 @@ func TestPythonLanguageResolvers(t *testing.T) {
 			parseTree, err := fileParser.Parse(context.Background(), f)
 			assert.NoError(t, err)
 
-			functions, err := l.Resolvers().ResolveFunctions(parseTree)
+			functions, err := pythonLanguage.Resolvers().ResolveFunctions(parseTree)
 			assert.NoError(t, err)
 
 			expectedFunctions, ok := pythonFunctionExpectations[f.Name()]
