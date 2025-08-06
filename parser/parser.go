@@ -34,6 +34,7 @@ func NewParser(languages []core.Language) (*parserWrapper, error) {
 		parser.SetLanguage(lang.Language())
 		langParsers[lang.Meta().Code] = parser
 	}
+
 	return &parserWrapper{
 		langParsers: langParsers,
 	}, nil
