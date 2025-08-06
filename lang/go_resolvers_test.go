@@ -56,9 +56,6 @@ func TestGoLanguageResolvers(t *testing.T) {
 	})
 
 	t.Run("ResolveImports", func(t *testing.T) {
-		l, err := lang.NewGoLanguage()
-		assert.NoError(t, err)
-
 		importExpectationsMapper := make(map[string][]string)
 		importFilePaths := []string{}
 		for _, ie := range goImportExpectations {
@@ -81,7 +78,7 @@ func TestGoLanguageResolvers(t *testing.T) {
 			parseTree, err := fileParser.Parse(context.Background(), f)
 			assert.NoError(t, err)
 
-			imports, err := l.Resolvers().ResolveImports(parseTree)
+			imports, err := goLanguage.Resolvers().ResolveImports(parseTree)
 			assert.NoError(t, err)
 
 			expectedImports, ok := importExpectationsMapper[f.Name()]
@@ -98,9 +95,6 @@ func TestGoLanguageResolvers(t *testing.T) {
 	})
 
 	t.Run("ResolveFunctions", func(t *testing.T) {
-		l, err := lang.NewGoLanguage()
-		assert.NoError(t, err)
-
 		var filePaths []string
 		for path := range goFunctionExpectations {
 			filePaths = append(filePaths, path)
@@ -121,7 +115,7 @@ func TestGoLanguageResolvers(t *testing.T) {
 			parseTree, err := fileParser.Parse(context.Background(), f)
 			assert.NoError(t, err)
 
-			functions, err := l.Resolvers().ResolveFunctions(parseTree)
+			functions, err := goLanguage.Resolvers().ResolveFunctions(parseTree)
 			assert.NoError(t, err)
 
 			expectedFunctions, ok := goFunctionExpectations[f.Name()]
