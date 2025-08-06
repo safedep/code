@@ -1,42 +1,23 @@
 package ast
 
 import (
-	"slices"
 	"testing"
 
-	sitter "github.com/smacker/go-tree-sitter"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewInheritanceRelationship(t *testing.T) {
 	rel := NewInheritanceRelationship("Child", "Parent", RelationshipTypeExtends, "file.go", 10)
 
-	if rel.ChildClassName != "Child" {
-		t.Errorf("Expected child class name 'Child', got '%s'", rel.ChildClassName)
-	}
-
-	if rel.ParentClassName != "Parent" {
-		t.Errorf("Expected parent class name 'Parent', got '%s'", rel.ParentClassName)
-	}
-
-	if rel.RelationshipType != RelationshipTypeExtends {
-		t.Errorf("Expected relationship type 'extends', got '%s'", rel.RelationshipType)
-	}
-
-	if rel.FileLocation != "file.go" {
-		t.Errorf("Expected file location 'file.go', got '%s'", rel.FileLocation)
-	}
-
-	if rel.LineNumber != 10 {
-		t.Errorf("Expected line number 10, got %d", rel.LineNumber)
-	}
-
-	if !rel.IsDirectInheritance {
-		t.Error("Expected direct inheritance to be true")
-	}
-
-	if rel.InheritanceDepth != 1 {
-		t.Errorf("Expected inheritance depth 1, got %d", rel.InheritanceDepth)
-	}
+	assert.Equal(t, "Child", rel.ChildClassName, "Expected child class name 'Child'")
+	assert.Equal(t, "Parent", rel.ParentClassName, "Expected parent class name 'Parent'")
+	assert.Equal(t, RelationshipTypeExtends, rel.RelationshipType, "Expected relationship type 'extends'")
+	assert.Equal(t, "file.go", rel.FileLocation, "Expected file location 'file.go'")
+	assert.Equal(t, uint32(10), rel.LineNumber, "Expected line number 10")
+	assert.True(t, rel.IsDirectInheritance, "Expected direct inheritance to be true")
+	assert.Equal(t, 1, rel.InheritanceDepth, "Expected inheritance depth 1")
+	assert.True(t, rel.IsDirectInheritance, "Expected direct inheritance to be true")
+	assert.Equal(t, 1, rel.InheritanceDepth, "Expected inheritance depth 1")
 }
 
 func TestInheritanceRelationshipString(t *testing.T) {
@@ -45,9 +26,7 @@ func TestInheritanceRelationshipString(t *testing.T) {
 
 	expectedSubstrings := []string{"Child", "extends", "Parent", "file.go:10"}
 	for _, substring := range expectedSubstrings {
-		if !containsSubstring(str, substring) {
-			t.Errorf("String representation should contain '%s', got: %s", substring, str)
-		}
+		assert.Contains(t, str, substring, "String representation should contain '%s'", substring)
 	}
 }
 
@@ -63,30 +42,17 @@ func TestRelationshipTypeConstants(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if string(test.relType) != test.expected {
-			t.Errorf("Expected %s, got %s", test.expected, string(test.relType))
-		}
+		assert.Equal(t, test.expected, string(test.relType), "RelationshipType string representation should match expected value")
 	}
 }
 
 func TestNewInheritanceGraph(t *testing.T) {
 	ig := NewInheritanceGraph()
 
-	if ig == nil {
-		t.Fatal("Expected non-nil InheritanceGraph")
-	}
-
-	if len(ig.GetAllClasses()) != 0 {
-		t.Error("Expected empty inheritance graph")
-	}
-
-	if len(ig.GetRootClasses()) != 0 {
-		t.Error("Expected no root classes in empty graph")
-	}
-
-	if len(ig.GetLeafClasses()) != 0 {
-		t.Error("Expected no leaf classes in empty graph")
-	}
+	assert.NotNil(t, ig, "Expected non-nil InheritanceGraph")
+	assert.Empty(t, ig.GetAllClasses(), "Expected empty inheritance graph")
+	assert.Empty(t, ig.GetRootClasses(), "Expected no root classes in empty graph")
+	assert.Empty(t, ig.GetLeafClasses(), "Expected no leaf classes in empty graph")
 }
 
 func TestInheritanceGraphAddRelationship(t *testing.T) {
@@ -94,35 +60,23 @@ func TestInheritanceGraphAddRelationship(t *testing.T) {
 
 	rel := ig.AddRelationship("Child", "Parent", RelationshipTypeExtends, "file.go", 10)
 
-	if rel == nil {
-		t.Fatal("Expected non-nil relationship")
-	}
+	assert.NotNil(t, rel, "Expected non-nil relationship")
 
 	// Test that both classes are tracked
 	allClasses := ig.GetAllClasses()
-	if len(allClasses) != 2 {
-		t.Errorf("Expected 2 classes, got %d", len(allClasses))
-	}
-
-	if !slices.Contains(allClasses, "Child") {
-		t.Error("Expected Child class to be tracked")
-	}
-
-	if !slices.Contains(allClasses, "Parent") {
-		t.Error("Expected Parent class to be tracked")
-	}
+	assert.Len(t, allClasses, 2, "Expected 2 classes")
+	assert.Contains(t, allClasses, "Child", "Expected Child class to be tracked")
+	assert.Contains(t, allClasses, "Parent", "Expected Parent class to be tracked")
 
 	// Test direct parent relationship
 	parents := ig.GetDirectParentNames("Child")
-	if len(parents) != 1 || parents[0] != "Parent" {
-		t.Errorf("Expected Child to have Parent as direct parent, got %v", parents)
-	}
+	assert.Len(t, parents, 1, "Expected Child to have exactly one parent")
+	assert.Equal(t, "Parent", parents[0], "Expected Child to have Parent as direct parent")
 
 	// Test direct child relationship
 	children := ig.GetDirectChildNames("Parent")
-	if len(children) != 1 || children[0] != "Child" {
-		t.Errorf("Expected Parent to have Child as direct child, got %v", children)
-	}
+	assert.Len(t, children, 1, "Expected Parent to have exactly one child")
+	assert.Equal(t, "Child", children[0], "Expected Parent to have Child as direct child")
 }
 
 func TestInheritanceGraphAncestryQueries(t *testing.T) {
@@ -136,45 +90,27 @@ func TestInheritanceGraphAncestryQueries(t *testing.T) {
 	// Test ancestry queries
 	ancestry := ig.GetAncestry("GrandChild")
 	expectedAncestry := []string{"Child", "Parent", "Root"}
-	if !sliceEqual(ancestry, expectedAncestry) {
-		t.Errorf("Expected ancestry %v, got %v", expectedAncestry, ancestry)
-	}
+	assert.Equal(t, expectedAncestry, ancestry, "Expected ancestry to match")
 
 	// Test descendant queries
 	descendants := ig.GetDescendants("Root")
 	expectedDescendants := []string{"Parent", "Child", "GrandChild"}
-	if !sliceEqual(descendants, expectedDescendants) {
-		t.Errorf("Expected descendants %v, got %v", expectedDescendants, descendants)
-	}
+	assert.Equal(t, expectedDescendants, descendants, "Expected descendants to match")
 
 	// Test ancestor/descendant checks
-	if !ig.IsAncestor("Root", "GrandChild") {
-		t.Error("Expected Root to be ancestor of GrandChild")
-	}
-
-	if !ig.IsDescendant("GrandChild", "Root") {
-		t.Error("Expected GrandChild to be descendant of Root")
-	}
-
-	if ig.IsAncestor("GrandChild", "Root") {
-		t.Error("Expected GrandChild to NOT be ancestor of Root")
-	}
+	assert.True(t, ig.IsAncestor("Root", "GrandChild"), "Expected Root to be ancestor of GrandChild")
+	assert.True(t, ig.IsDescendant("GrandChild", "Root"), "Expected GrandChild to be descendant of Root")
+	assert.False(t, ig.IsAncestor("GrandChild", "Root"), "Expected GrandChild to NOT be ancestor of Root")
 
 	// Test inheritance depth
 	depth := ig.GetInheritanceDepth("GrandChild", "Root")
-	if depth != 3 {
-		t.Errorf("Expected inheritance depth 3, got %d", depth)
-	}
+	assert.Equal(t, 3, depth, "Expected inheritance depth 3")
 
 	depth = ig.GetInheritanceDepth("Child", "Parent")
-	if depth != 1 {
-		t.Errorf("Expected inheritance depth 1, got %d", depth)
-	}
+	assert.Equal(t, 1, depth, "Expected inheritance depth 1")
 
 	depth = ig.GetInheritanceDepth("Root", "GrandChild")
-	if depth != -1 {
-		t.Errorf("Expected inheritance depth -1 (no relationship), got %d", depth)
-	}
+	assert.Equal(t, -1, depth, "Expected inheritance depth -1 (no relationship)")
 }
 
 func TestInheritanceGraphRootAndLeafClasses(t *testing.T) {
@@ -182,20 +118,20 @@ func TestInheritanceGraphRootAndLeafClasses(t *testing.T) {
 
 	// Build hierarchy: Child -> Parent, Orphan (no parents/children)
 	ig.AddRelationship("Child", "Parent", RelationshipTypeExtends, "file.go", 10)
-	
+
 	// Add orphan class (no inheritance)
 	ig.allClasses["Orphan"] = true
 
 	roots := ig.GetRootClasses()
 	expectedRoots := []string{"Parent", "Orphan"}
-	if !sliceContainsAll(roots, expectedRoots) {
-		t.Errorf("Expected root classes %v, got %v", expectedRoots, roots)
+	for _, expectedRoot := range expectedRoots {
+		assert.Contains(t, roots, expectedRoot, "Expected root classes to contain %s", expectedRoot)
 	}
 
 	leaves := ig.GetLeafClasses()
 	expectedLeaves := []string{"Child", "Orphan"}
-	if !sliceContainsAll(leaves, expectedLeaves) {
-		t.Errorf("Expected leaf classes %v, got %v", expectedLeaves, leaves)
+	for _, expectedLeaf := range expectedLeaves {
+		assert.Contains(t, leaves, expectedLeaf, "Expected leaf classes to contain %s", expectedLeaf)
 	}
 }
 
@@ -208,18 +144,13 @@ func TestInheritanceGraphMultipleInheritance(t *testing.T) {
 
 	parents := ig.GetDirectParentNames("Child")
 	expectedParents := []string{"Parent1", "Parent2"}
-	if !sliceContainsAll(parents, expectedParents) {
-		t.Errorf("Expected parents %v, got %v", expectedParents, parents)
+	for _, expectedParent := range expectedParents {
+		assert.Contains(t, parents, expectedParent, "Expected parents to contain %s", expectedParent)
 	}
 
 	// Both parents should have Child as descendant
-	if !ig.IsDescendant("Child", "Parent1") {
-		t.Error("Expected Child to be descendant of Parent1")
-	}
-
-	if !ig.IsDescendant("Child", "Parent2") {
-		t.Error("Expected Child to be descendant of Parent2")
-	}
+	assert.True(t, ig.IsDescendant("Child", "Parent1"), "Expected Child to be descendant of Parent1")
+	assert.True(t, ig.IsDescendant("Child", "Parent2"), "Expected Child to be descendant of Parent2")
 }
 
 func TestMethodResolutionOrder(t *testing.T) {
@@ -233,11 +164,10 @@ func TestMethodResolutionOrder(t *testing.T) {
 	ig.AddRelationship("D", "C", RelationshipTypeInherits, "file.py", 30)
 
 	mro := ig.GetMethodResolutionOrder("D")
-	
+
 	// MRO should start with the class itself
-	if len(mro) == 0 || mro[0] != "D" {
-		t.Errorf("Expected MRO to start with 'D', got %v", mro)
-	}
+	assert.NotEmpty(t, mro, "Expected non-empty MRO")
+	assert.Equal(t, "D", mro[0], "Expected MRO to start with 'D'")
 
 	// A should appear only once (at the end in proper C3 linearization)
 	aCount := 0
@@ -246,19 +176,15 @@ func TestMethodResolutionOrder(t *testing.T) {
 			aCount++
 		}
 	}
-	if aCount != 1 {
-		t.Errorf("Expected 'A' to appear exactly once in MRO, got %d times", aCount)
-	}
+	assert.Equal(t, 1, aCount, "Expected 'A' to appear exactly once in MRO")
 
 	// Test simple case - single inheritance
 	ig2 := NewInheritanceGraph()
 	ig2.AddRelationship("Child", "Parent", RelationshipTypeInherits, "file.py", 10)
-	
+
 	mro2 := ig2.GetMethodResolutionOrder("Child")
 	expectedMRO := []string{"Child", "Parent"}
-	if !sliceEqual(mro2, expectedMRO) {
-		t.Errorf("Expected simple MRO %v, got %v", expectedMRO, mro2)
-	}
+	assert.Equal(t, expectedMRO, mro2, "Expected simple MRO to match")
 }
 
 func TestCircularInheritanceDetection(t *testing.T) {
@@ -270,9 +196,7 @@ func TestCircularInheritanceDetection(t *testing.T) {
 	ig.AddRelationship("C", "A", RelationshipTypeExtends, "file.go", 30)
 
 	cycles := ig.DetectCircularInheritance()
-	if len(cycles) == 0 {
-		t.Error("Expected to detect circular inheritance")
-	}
+	assert.NotEmpty(t, cycles, "Expected to detect circular inheritance")
 
 	// Test acyclic graph
 	ig2 := NewInheritanceGraph()
@@ -280,9 +204,7 @@ func TestCircularInheritanceDetection(t *testing.T) {
 	ig2.AddRelationship("Parent", "GrandParent", RelationshipTypeExtends, "file.go", 20)
 
 	cycles2 := ig2.DetectCircularInheritance()
-	if len(cycles2) != 0 {
-		t.Errorf("Expected no circular inheritance in acyclic graph, got %d cycles", len(cycles2))
-	}
+	assert.Empty(t, cycles2, "Expected no circular inheritance in acyclic graph")
 }
 
 func TestInheritanceGraphMerge(t *testing.T) {
@@ -296,8 +218,8 @@ func TestInheritanceGraphMerge(t *testing.T) {
 
 	allClasses := ig1.GetAllClasses()
 	expectedClasses := []string{"Child1", "Parent1", "Child2", "Parent2"}
-	if !sliceContainsAll(allClasses, expectedClasses) {
-		t.Errorf("Expected merged classes %v, got %v", expectedClasses, allClasses)
+	for _, expectedClass := range expectedClasses {
+		assert.Contains(t, allClasses, expectedClass, "Expected merged classes to contain %s", expectedClass)
 	}
 }
 
@@ -311,66 +233,46 @@ func TestInheritanceGraphStatistics(t *testing.T) {
 
 	stats := ig.GetStatistics()
 
-	if stats["total_classes"] != 4 {
-		t.Errorf("Expected 4 total classes, got %v", stats["total_classes"])
-	}
-
-	if stats["total_relationships"] != 2 {
-		t.Errorf("Expected 2 total relationships, got %v", stats["total_relationships"])
-	}
-
-	if stats["root_classes"] != 2 { // GrandParent and Orphan
-		t.Errorf("Expected 2 root classes, got %v", stats["root_classes"])
-	}
-
-	if stats["leaf_classes"] != 2 { // Child and Orphan
-		t.Errorf("Expected 2 leaf classes, got %v", stats["leaf_classes"])
-	}
-
-	if stats["max_inheritance_depth"] != 2 { // Child -> Parent -> GrandParent
-		t.Errorf("Expected max inheritance depth 2, got %v", stats["max_inheritance_depth"])
-	}
-
-	if stats["circular_inheritance"] != 0 {
-		t.Errorf("Expected 0 circular inheritance, got %v", stats["circular_inheritance"])
-	}
+	assert.Equal(t, 4, stats["total_classes"], "Expected 4 total classes")
+	assert.Equal(t, 2, stats["total_relationships"], "Expected 2 total relationships")
+	assert.Equal(t, 2, stats["root_classes"], "Expected 2 root classes (GrandParent and Orphan)")
+	assert.Equal(t, 2, stats["leaf_classes"], "Expected 2 leaf classes (Child and Orphan)")
+	assert.Equal(t, 2, stats["max_inheritance_depth"], "Expected max inheritance depth 2 (Child -> Parent -> GrandParent)")
+	assert.Equal(t, 0, stats["circular_inheritance"], "Expected 0 circular inheritance")
 }
 
 func TestBuildInheritanceGraphFromClasses(t *testing.T) {
 	// Test the integration by directly setting the class names and base classes
 	// since we can't easily mock sitter.Node content in tests
-	
+
 	// Create a mock class manually for testing
 	content := ToContent([]byte("class Child(Parent): pass"))
 	class1 := NewClassDeclarationNode(content)
-	
+
 	// Simulate the class having been parsed - we'll test with direct manipulation
 	// In real usage, the language resolvers would populate these from Tree-Sitter nodes
-	
+
 	// Test empty classes (no names)
 	classes := []*ClassDeclarationNode{class1}
 	ig := BuildInheritanceGraphFromClasses(classes, "test.py")
-	
+
 	// Since the mock nodes return empty content, we should get an empty graph
 	allClasses := ig.GetAllClasses()
-	if len(allClasses) != 0 {
-		t.Errorf("Expected 0 classes for empty content nodes, got %d", len(allClasses))
-	}
-	
+	assert.Empty(t, allClasses, "Expected 0 classes for empty content nodes")
+
 	// Test the function with pre-built inheritance graph to verify the logic
 	ig2 := NewInheritanceGraph()
 	ig2.AddRelationship("Child", "Parent", RelationshipTypeInherits, "test.py", 1)
-	
+
 	allClasses2 := ig2.GetAllClasses()
 	expectedClasses := []string{"Child", "Parent"}
-	if !sliceContainsAll(allClasses2, expectedClasses) {
-		t.Errorf("Expected classes %v, got %v", expectedClasses, allClasses2)
+	for _, expectedClass := range expectedClasses {
+		assert.Contains(t, allClasses2, expectedClass, "Expected classes to contain %s", expectedClass)
 	}
 
 	parents := ig2.GetDirectParentNames("Child")
-	if len(parents) != 1 || parents[0] != "Parent" {
-		t.Errorf("Expected Child to have Parent as parent, got %v", parents)
-	}
+	assert.Len(t, parents, 1, "Expected Child to have exactly one parent")
+	assert.Equal(t, "Parent", parents[0], "Expected Child to have Parent as parent")
 }
 
 func TestInheritanceGraphString(t *testing.T) {
@@ -378,47 +280,10 @@ func TestInheritanceGraphString(t *testing.T) {
 	ig.AddRelationship("Child", "Parent", RelationshipTypeExtends, "file.go", 10)
 
 	str := ig.String()
-	if str == "" {
-		t.Error("String method should not return empty string")
-	}
+	assert.NotEmpty(t, str, "String method should not return empty string")
 
 	expectedSubstrings := []string{"InheritanceGraph", "classes:", "relationships:"}
 	for _, substring := range expectedSubstrings {
-		if !containsSubstring(str, substring) {
-			t.Errorf("String representation should contain '%s', got: %s", substring, str)
-		}
+		assert.Contains(t, str, substring, "String representation should contain '%s'", substring)
 	}
 }
-
-// Helper functions for testing
-
-func sliceEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, v := range a {
-		if v != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
-func sliceContainsAll(slice, elements []string) bool {
-	for _, element := range elements {
-		if !slices.Contains(slice, element) {
-			return false
-		}
-	}
-	return true
-}
-
-// Mock helper to create nodes with content for testing
-func createMockNodeWithContent(content string) *sitter.Node {
-	// In real usage, this would be a proper Tree-Sitter node
-	// For testing, we return nil since contentForNode handles nil gracefully
-	return nil
-}
-
-// Note: The mock node approach means some content-based tests won't work fully,
-// but the core relationship logic is thoroughly tested

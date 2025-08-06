@@ -4,45 +4,25 @@ import (
 	"testing"
 
 	sitter "github.com/smacker/go-tree-sitter"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewClassDeclarationNode(t *testing.T) {
 	content := ToContent([]byte("class TestClass: pass"))
 	node := NewClassDeclarationNode(content)
 
-	if node == nil {
-		t.Fatal("Expected non-nil ClassDeclarationNode")
-	}
+	assert.NotNil(t, node, "Expected non-nil ClassDeclarationNode")
 
 	// Test default values
-	if node.IsAbstract() {
-		t.Error("Expected new class to not be abstract by default")
-	}
-
-	if node.AccessModifier() != AccessModifierPublic {
-		t.Errorf("Expected default access modifier to be public, got %s", node.AccessModifier())
-	}
-
-	if node.HasInheritance() {
-		t.Error("Expected new class to have no inheritance by default")
-	}
+	assert.False(t, node.IsAbstract(), "Expected new class to not be abstract by default")
+	assert.Equal(t, AccessModifierPublic, node.AccessModifier(), "Expected default access modifier to be public")
+	assert.False(t, node.HasInheritance(), "Expected new class to have no inheritance by default")
 
 	// Test empty collections
-	if len(node.BaseClasses()) != 0 {
-		t.Error("Expected empty base classes list")
-	}
-
-	if len(node.Methods()) != 0 {
-		t.Error("Expected empty methods list")
-	}
-
-	if len(node.Fields()) != 0 {
-		t.Error("Expected empty fields list")
-	}
-
-	if len(node.Decorators()) != 0 {
-		t.Error("Expected empty decorators list")
-	}
+	assert.Empty(t, node.BaseClasses(), "Expected empty base classes list")
+	assert.Empty(t, node.Methods(), "Expected empty methods list")
+	assert.Empty(t, node.Fields(), "Expected empty fields list")
+	assert.Empty(t, node.Decorators(), "Expected empty decorators list")
 }
 
 func TestAccessModifierConstants(t *testing.T) {
@@ -58,9 +38,7 @@ func TestAccessModifierConstants(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if string(test.modifier) != test.expected {
-			t.Errorf("Expected %s, got %s", test.expected, string(test.modifier))
-		}
+		assert.Equal(t, test.expected, string(test.modifier), "Access modifier string representation should match expected value")
 	}
 }
 
@@ -78,80 +56,58 @@ func TestClassDeclarationNodeSettersAndGetters(t *testing.T) {
 
 	// Test class name node
 	node.SetClassNameNode(mockClassNode)
-	if node.GetClassNameNode() != mockClassNode {
-		t.Error("Class name node setter/getter failed")
-	}
+	assert.Equal(t, mockClassNode, node.GetClassNameNode(), "Class name node setter/getter should work correctly")
 
 	// Test base class nodes
 	node.AddBaseClassNode(mockBaseClassNode)
 	baseClassNodes := node.GetBaseClassNodes()
-	if len(baseClassNodes) != 1 || baseClassNodes[0] != mockBaseClassNode {
-		t.Error("Base class node addition failed")
-	}
+	assert.Len(t, baseClassNodes, 1, "Should have one base class node after addition")
+	assert.Equal(t, mockBaseClassNode, baseClassNodes[0], "Base class node should match the added node")
 
 	node.SetBaseClassNodes([]*sitter.Node{mockBaseClassNode, mockBaseClassNode})
-	if len(node.GetBaseClassNodes()) != 2 {
-		t.Error("Base class nodes setter failed")
-	}
+	assert.Len(t, node.GetBaseClassNodes(), 2, "Should have two base class nodes after setting")
 
 	// Test inheritance detection
-	if !node.HasInheritance() {
-		t.Error("Expected class to have inheritance after adding base class")
-	}
+	assert.True(t, node.HasInheritance(), "Expected class to have inheritance after adding base class")
 
 	// Test method nodes
 	node.AddMethodNode(mockMethodNode)
 	methodNodes := node.GetMethodNodes()
-	if len(methodNodes) != 1 || methodNodes[0] != mockMethodNode {
-		t.Error("Method node addition failed")
-	}
+	assert.Len(t, methodNodes, 1, "Should have one method node after addition")
+	assert.Equal(t, mockMethodNode, methodNodes[0], "Method node should match the added node")
 
 	node.SetMethodNodes([]*sitter.Node{mockMethodNode, mockMethodNode})
-	if len(node.GetMethodNodes()) != 2 {
-		t.Error("Method nodes setter failed")
-	}
+	assert.Len(t, node.GetMethodNodes(), 2, "Should have two method nodes after setting")
 
 	// Test field nodes
 	node.AddFieldNode(mockFieldNode)
 	fieldNodes := node.GetFieldNodes()
-	if len(fieldNodes) != 1 || fieldNodes[0] != mockFieldNode {
-		t.Error("Field node addition failed")
-	}
+	assert.Len(t, fieldNodes, 1, "Should have one field node after addition")
+	assert.Equal(t, mockFieldNode, fieldNodes[0], "Field node should match the added node")
 
 	node.SetFieldNodes([]*sitter.Node{mockFieldNode, mockFieldNode})
-	if len(node.GetFieldNodes()) != 2 {
-		t.Error("Field nodes setter failed")
-	}
+	assert.Len(t, node.GetFieldNodes(), 2, "Should have two field nodes after setting")
 
 	// Test constructor node
 	node.SetConstructorNode(mockConstructorNode)
-	if node.GetConstructorNode() != mockConstructorNode {
-		t.Error("Constructor node setter/getter failed")
-	}
+	assert.Equal(t, mockConstructorNode, node.GetConstructorNode(), "Constructor node setter/getter should work correctly")
 
 	// Test decorator nodes
 	node.AddDecoratorNode(mockDecoratorNode)
 	decoratorNodes := node.GetDecoratorNodes()
-	if len(decoratorNodes) != 1 || decoratorNodes[0] != mockDecoratorNode {
-		t.Error("Decorator node addition failed")
-	}
+	assert.Len(t, decoratorNodes, 1, "Should have one decorator node after addition")
+	assert.Equal(t, mockDecoratorNode, decoratorNodes[0], "Decorator node should match the added node")
 
 	node.SetDecoratorNodes([]*sitter.Node{mockDecoratorNode, mockDecoratorNode})
-	if len(node.GetDecoratorNodes()) != 2 {
-		t.Error("Decorator nodes setter failed")
-	}
+	assert.Len(t, node.GetDecoratorNodes(), 2, "Should have two decorator nodes after setting")
 
 	// Test abstract flag
 	node.SetIsAbstract(true)
-	if !node.IsAbstract() {
-		t.Error("Abstract flag setter failed")
-	}
+	assert.True(t, node.IsAbstract(), "Abstract flag setter should work correctly")
 
 	// Test access modifier
 	node.SetAccessModifier(AccessModifierPrivate)
-	if node.AccessModifier() != AccessModifierPrivate {
-		t.Error("Access modifier setter failed")
-	}
+	assert.Equal(t, AccessModifierPrivate, node.AccessModifier(), "Access modifier setter should work correctly")
 }
 
 func TestClassDeclarationNodeStringMethod(t *testing.T) {
@@ -160,31 +116,23 @@ func TestClassDeclarationNodeStringMethod(t *testing.T) {
 
 	// Test basic string representation
 	str := node.String()
-	if str == "" {
-		t.Error("String method should not return empty string")
-	}
+	assert.NotEmpty(t, str, "String method should not return empty string")
 
 	// Should contain class information
 	expectedSubstrings := []string{"ClassDeclarationNode", "class:", "methods:", "fields:", "constructor:"}
 	for _, substring := range expectedSubstrings {
-		if !containsSubstring(str, substring) {
-			t.Errorf("String representation should contain '%s', got: %s", substring, str)
-		}
+		assert.Contains(t, str, substring, "String representation should contain expected substring")
 	}
 
 	// Test with abstract class
 	node.SetIsAbstract(true)
 	str = node.String()
-	if !containsSubstring(str, "abstract") {
-		t.Errorf("String representation should contain 'abstract' for abstract class, got: %s", str)
-	}
+	assert.Contains(t, str, "abstract", "String representation should contain 'abstract' for abstract class")
 
 	// Test with private access modifier
 	node.SetAccessModifier(AccessModifierPrivate)
 	str = node.String()
-	if !containsSubstring(str, "private") {
-		t.Errorf("String representation should contain 'private' for private class, got: %s", str)
-	}
+	assert.Contains(t, str, "private", "String representation should contain 'private' for private class")
 }
 
 func TestClassDeclarationNodeContentMethods(t *testing.T) {
@@ -193,54 +141,10 @@ func TestClassDeclarationNodeContentMethods(t *testing.T) {
 	node := NewClassDeclarationNode(content)
 
 	// Test with nil nodes (should return empty strings/slices)
-	if node.ClassName() != "" {
-		t.Error("Expected empty class name for nil class name node")
-	}
-
-	if len(node.BaseClasses()) != 0 {
-		t.Error("Expected empty base classes for no base class nodes")
-	}
-
-	if len(node.Methods()) != 0 {
-		t.Error("Expected empty methods for no method nodes")
-	}
-
-	if len(node.Fields()) != 0 {
-		t.Error("Expected empty fields for no field nodes")
-	}
-
-	if node.Constructor() != "" {
-		t.Error("Expected empty constructor for nil constructor node")
-	}
-
-	if len(node.Decorators()) != 0 {
-		t.Error("Expected empty decorators for no decorator nodes")
-	}
-}
-
-// Helper function to check if a string contains a substring
-func containsSubstring(str, substr string) bool {
-	return len(str) >= len(substr) && findSubstring(str, substr)
-}
-
-func findSubstring(str, substr string) bool {
-	if len(substr) == 0 {
-		return true
-	}
-	if len(str) < len(substr) {
-		return false
-	}
-	for i := 0; i <= len(str)-len(substr); i++ {
-		match := true
-		for j := 0; j < len(substr); j++ {
-			if str[i+j] != substr[j] {
-				match = false
-				break
-			}
-		}
-		if match {
-			return true
-		}
-	}
-	return false
+	assert.Empty(t, node.ClassName(), "Expected empty class name for nil class name node")
+	assert.Empty(t, node.BaseClasses(), "Expected empty base classes for no base class nodes")
+	assert.Empty(t, node.Methods(), "Expected empty methods for no method nodes")
+	assert.Empty(t, node.Fields(), "Expected empty fields for no field nodes")
+	assert.Empty(t, node.Constructor(), "Expected empty constructor for nil constructor node")
+	assert.Empty(t, node.Decorators(), "Expected empty decorators for no decorator nodes")
 }
