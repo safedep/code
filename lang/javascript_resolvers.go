@@ -281,7 +281,7 @@ func (r *javascriptResolvers) extractJSFunctions(data *[]byte, tree core.ParseTr
 			// Check for async function by looking at the function_declaration parent for async keyword
 			isAsync := false
 			current := functionNameNode.Parent()
-			for current != nil && current.Type() == "function_declaration" {
+			if current != nil && current.Type() == "function_declaration" {
 				// Check if any child node is "async"
 				for i := 0; i < int(current.ChildCount()); i++ {
 					child := current.Child(i)
@@ -290,7 +290,6 @@ func (r *javascriptResolvers) extractJSFunctions(data *[]byte, tree core.ParseTr
 						break
 					}
 				}
-				break
 			}
 
 			functionKey := r.generateJSFunctionKey(functionNameNode, "", *data)
@@ -447,7 +446,7 @@ func (r *javascriptResolvers) extractJSMethods(data *[]byte, tree core.ParseTree
 			// Check for async method by looking at the method_definition parent for async keyword
 			isAsync := false
 			current := methodNameNode.Parent()
-			for current != nil && current.Type() == "method_definition" {
+			if current != nil && current.Type() == "method_definition" {
 				// Check if any child node is "async"
 				for i := 0; i < int(current.ChildCount()); i++ {
 					child := current.Child(i)
@@ -456,7 +455,6 @@ func (r *javascriptResolvers) extractJSMethods(data *[]byte, tree core.ParseTree
 						break
 					}
 				}
-				break
 			}
 
 			// Find parent class name
@@ -534,7 +532,7 @@ func (r *javascriptResolvers) extractJSAsyncFunctions(data *[]byte, tree core.Pa
 			// Check if this is an async function by looking at the function_declaration parent for async keyword
 			isAsync := false
 			current := functionNameNode.Parent()
-			for current != nil && current.Type() == "function_declaration" {
+			if current != nil && current.Type() == "function_declaration" {
 				// Check if any child node is "async"
 				for i := 0; i < int(current.ChildCount()); i++ {
 					child := current.Child(i)
@@ -543,7 +541,6 @@ func (r *javascriptResolvers) extractJSAsyncFunctions(data *[]byte, tree core.Pa
 						break
 					}
 				}
-				break
 			}
 
 			// Only process if it's actually an async function
@@ -616,7 +613,7 @@ func (r *javascriptResolvers) extractJSFunctionExpressions(data *[]byte, tree co
 			// Check for async function expression by looking for async keyword
 			isAsync := false
 			current := functionNameNode.Parent()
-			for current != nil && current.Type() == "function_expression" {
+			if current != nil && current.Type() == "function_expression" {
 				parent := current.Parent()
 				if parent != nil {
 					for i := 0; i < int(parent.ChildCount()); i++ {
@@ -627,7 +624,6 @@ func (r *javascriptResolvers) extractJSFunctionExpressions(data *[]byte, tree co
 						}
 					}
 				}
-				break
 			}
 
 			functionKey := r.generateJSFunctionKey(functionNameNode, "", *data)

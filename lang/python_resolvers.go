@@ -510,7 +510,7 @@ func (r *pythonResolvers) extractFunctionDefinitions(data *[]byte, tree core.Par
 			// Check for async function by looking at the function_definition parent for async keyword
 			isAsync := false
 			current := functionNameNode.Parent()
-			for current != nil && current.Type() == "function_definition" {
+			if current != nil && current.Type() == "function_definition" {
 				// Check if any child node is "async"
 				for i := 0; i < int(current.ChildCount()); i++ {
 					child := current.Child(i)
@@ -519,7 +519,6 @@ func (r *pythonResolvers) extractFunctionDefinitions(data *[]byte, tree core.Par
 						break
 					}
 				}
-				break
 			}
 
 			// Determine function type based on context
