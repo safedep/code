@@ -189,13 +189,6 @@ const jsMethodDefinitionQuery = `
 		body: (statement_block) @method_body)
 `
 
-const jsAsyncFunctionQuery = `
-	(function_declaration
-		name: (identifier) @function_name
-		parameters: (formal_parameters) @function_params
-		body: (statement_block) @function_body)
-`
-
 const jsFunctionExpressionQuery = `
 	(function_expression
 		name: (identifier)? @function_name
@@ -229,12 +222,6 @@ func (r *javascriptResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.Func
 	err = r.extractJSMethods(data, tree, functionMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract JavaScript methods: %w", err)
-	}
-
-	// Extract async functions using Tree-sitter queries
-	err = r.extractJSAsyncFunctions(data, tree, functionMap)
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract JavaScript async functions: %w", err)
 	}
 
 	// Extract function expressions
@@ -497,84 +484,6 @@ func (r *javascriptResolvers) extractJSMethods(data *[]byte, tree core.ParseTree
 
 			functionNode.SetAccessModifier(ast.AccessModifierPublic)
 			functionMap[functionKey] = functionNode
-			return nil
-		}),
-	}
-
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
-}
-
-func (r *javascriptResolvers) extractJSAsyncFunctions(data *[]byte, tree core.ParseTree,
-	functionMap map[string]*ast.FunctionDeclarationNode) error {
-	queryRequestItems := []ts.QueryItem{
-		ts.NewQueryItem(jsAsyncFunctionQuery, func(m *sitter.QueryMatch) error {
-			if len(m.Captures) < 3 {
-				return nil
-			}
-
-			var functionNameNode, paramsNode, bodyNode *sitter.Node
-
-			for _, capture := range m.Captures {
-				switch capture.Node.Type() {
-				case "identifier":
-					functionNameNode = capture.Node
-				case "formal_parameters":
-					paramsNode = capture.Node
-				case "statement_block":
-					bodyNode = capture.Node
-				}
-			}
-
-			if functionNameNode == nil {
-				return nil
-			}
-
-			// Check if this is an async function by looking at the function_declaration parent for async keyword
-			isAsync := false
-			current := functionNameNode.Parent()
-			if current != nil && current.Type() == "function_declaration" {
-				// Check if any child node is "async"
-				for i := 0; i < int(current.ChildCount()); i++ {
-					child := current.Child(i)
-					if child.Type() == "async" {
-						isAsync = true
-						break
-					}
-				}
-			}
-
-			// Only process if it's actually an async function
-			if !isAsync {
-				return nil
-			}
-
-			functionKey := r.generateJSFunctionKey(functionNameNode, "", *data)
-			if functionNode, exists := functionMap[functionKey]; exists {
-				// Update existing function to be async
-				functionNode.SetIsAsync(true)
-				functionNode.SetFunctionType(ast.FunctionTypeAsync)
-			} else {
-				// Create new async function
-				functionNode := ast.NewFunctionDeclarationNode(data)
-				functionNode.SetFunctionNameNode(functionNameNode)
-				functionNode.SetIsAsync(true)
-				functionNode.SetFunctionType(ast.FunctionTypeAsync)
-				functionNode.SetAccessModifier(ast.AccessModifierPublic)
-
-				// Set parameters
-				if paramsNode != nil {
-					paramNodes := r.extractJSParameterNodes(paramsNode)
-					functionNode.SetFunctionParameterNodes(paramNodes)
-				}
-
-				// Set function body
-				if bodyNode != nil {
-					functionNode.SetFunctionBodyNode(bodyNode)
-				}
-
-				functionMap[functionKey] = functionNode
-			}
-
 			return nil
 		}),
 	}
