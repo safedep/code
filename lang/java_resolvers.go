@@ -475,3 +475,306 @@ func (r *javaResolvers) extractAnnotationsFromModifiers(modifiersNode *sitter.No
 		}
 	}
 }
+
+// Tree-Sitter queries for Java function definitions
+const javaFunctionDefinitionQuery = `
+	(method_declaration
+		(modifiers)? @modifiers
+		type: (_) @return_type
+		name: (identifier) @function_name
+		parameters: (formal_parameters) @function_params
+		body: (block) @function_body)
+`
+
+const javaConstructorDefinitionQuery = `
+	(constructor_declaration
+		(modifiers)? @modifiers
+		name: (identifier) @constructor_name
+		parameters: (formal_parameters) @constructor_params
+		body: (constructor_body) @constructor_body)
+`
+
+const javaFunctionAnnotationQuery = `
+	(method_declaration
+		(modifiers
+			(annotation) @annotation)
+		name: (identifier) @function_name)
+`
+
+// ResolveFunctions extracts function declarations from Java parse tree
+func (r *javaResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
+	data, err := tree.Data()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
+	}
+
+	var functions []*ast.FunctionDeclarationNode
+	functionMap := make(map[string]*ast.FunctionDeclarationNode) // To avoid duplicates and allow enhancement
+
+	// Extract method declarations
+	err = r.extractJavaFunctions(data, tree, functionMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract Java functions: %w", err)
+	}
+
+	// Extract constructor declarations
+	err = r.extractJavaConstructors(data, tree, functionMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract Java constructors: %w", err)
+	}
+
+	// Extract function annotations
+	err = r.extractJavaFunctionAnnotations(data, tree, functionMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract Java function annotations: %w", err)
+	}
+
+	// Convert map to slice
+	for _, function := range functionMap {
+		functions = append(functions, function)
+	}
+
+	return functions, nil
+}
+
+// Helper methods for Java function extraction
+
+func (r *javaResolvers) extractJavaFunctions(data *[]byte, tree core.ParseTree,
+	functionMap map[string]*ast.FunctionDeclarationNode) error {
+	queryRequestItems := []ts.QueryItem{
+		ts.NewQueryItem(javaFunctionDefinitionQuery, func(m *sitter.QueryMatch) error {
+			if len(m.Captures) < 4 {
+				return nil // Skip incomplete matches
+			}
+
+			var functionNameNode, returnTypeNode, paramsNode, bodyNode, modifiersNode *sitter.Node
+
+			// Parse captures
+			for _, capture := range m.Captures {
+				switch capture.Node.Type() {
+				case "identifier":
+					functionNameNode = capture.Node
+				case "formal_parameters":
+					paramsNode = capture.Node
+				case "block":
+					bodyNode = capture.Node
+				case "modifiers":
+					modifiersNode = capture.Node
+				default:
+					// Return type can be various types (type_identifier, primitive_type, etc.)
+					if returnTypeNode == nil {
+						returnTypeNode = capture.Node
+					}
+				}
+			}
+
+			if functionNameNode == nil {
+				return nil
+			}
+
+			functionKey := r.generateJavaFunctionKey(functionNameNode, *data)
+			functionNode := ast.NewFunctionDeclarationNode(data)
+			functionNode.SetFunctionNameNode(functionNameNode)
+
+			// Set parameters
+			if paramsNode != nil {
+				paramNodes := r.extractJavaParameterNodes(paramsNode)
+				functionNode.SetFunctionParameterNodes(paramNodes)
+			}
+
+			// Set return type
+			if returnTypeNode != nil {
+				functionNode.SetFunctionReturnTypeNode(returnTypeNode)
+			}
+
+			// Set function body
+			if bodyNode != nil {
+				functionNode.SetFunctionBodyNode(bodyNode)
+			}
+
+			// Determine function type and access modifier
+			parentClassName := r.findParentClassName(functionNameNode, *data)
+			if parentClassName != "" {
+				functionNode.SetParentClassName(parentClassName)
+				functionNode.SetFunctionType(ast.FunctionTypeMethod)
+			} else {
+				functionNode.SetFunctionType(ast.FunctionTypeFunction)
+			}
+
+			// Process modifiers
+			if modifiersNode != nil {
+				r.processJavaModifiers(modifiersNode, functionNode, *data)
+			} else {
+				functionNode.SetAccessModifier(ast.AccessModifierPackage) // Default in Java
+			}
+
+			functionMap[functionKey] = functionNode
+			return nil
+		}),
+	}
+
+	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+}
+
+func (r *javaResolvers) extractJavaConstructors(data *[]byte, tree core.ParseTree,
+	functionMap map[string]*ast.FunctionDeclarationNode) error {
+	queryRequestItems := []ts.QueryItem{
+		ts.NewQueryItem(javaConstructorDefinitionQuery, func(m *sitter.QueryMatch) error {
+			if len(m.Captures) < 3 {
+				return nil
+			}
+
+			var constructorNameNode, paramsNode, bodyNode, modifiersNode *sitter.Node
+
+			for _, capture := range m.Captures {
+				switch capture.Node.Type() {
+				case "identifier":
+					constructorNameNode = capture.Node
+				case "formal_parameters":
+					paramsNode = capture.Node
+				case "constructor_body":
+					bodyNode = capture.Node
+				case "modifiers":
+					modifiersNode = capture.Node
+				}
+			}
+
+			if constructorNameNode == nil {
+				return nil
+			}
+
+			functionKey := r.generateJavaFunctionKey(constructorNameNode, *data)
+			functionNode := ast.NewFunctionDeclarationNode(data)
+			functionNode.SetFunctionNameNode(constructorNameNode)
+			functionNode.SetFunctionType(ast.FunctionTypeConstructor)
+
+			// Set parameters
+			if paramsNode != nil {
+				paramNodes := r.extractJavaParameterNodes(paramsNode)
+				functionNode.SetFunctionParameterNodes(paramNodes)
+			}
+
+			// Set constructor body
+			if bodyNode != nil {
+				functionNode.SetFunctionBodyNode(bodyNode)
+			}
+
+			// Set parent class
+			parentClassName := r.findParentClassName(constructorNameNode, *data)
+			if parentClassName != "" {
+				functionNode.SetParentClassName(parentClassName)
+			}
+
+			// Process modifiers
+			if modifiersNode != nil {
+				r.processJavaModifiers(modifiersNode, functionNode, *data)
+			} else {
+				functionNode.SetAccessModifier(ast.AccessModifierPackage) // Default in Java
+			}
+
+			functionMap[functionKey] = functionNode
+			return nil
+		}),
+	}
+
+	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+}
+
+func (r *javaResolvers) extractJavaFunctionAnnotations(data *[]byte, tree core.ParseTree,
+	functionMap map[string]*ast.FunctionDeclarationNode) error {
+	queryRequestItems := []ts.QueryItem{
+		ts.NewQueryItem(javaFunctionAnnotationQuery, func(m *sitter.QueryMatch) error {
+			if len(m.Captures) < 2 {
+				return nil
+			}
+
+			var annotationNode, functionNameNode *sitter.Node
+			for _, capture := range m.Captures {
+				if capture.Node.Type() == "annotation" {
+					annotationNode = capture.Node
+				} else if capture.Node.Type() == "identifier" {
+					functionNameNode = capture.Node
+				}
+			}
+
+			if annotationNode == nil || functionNameNode == nil {
+				return nil
+			}
+
+			functionKey := r.generateJavaFunctionKey(functionNameNode, *data)
+			if functionNode, exists := functionMap[functionKey]; exists {
+				functionNode.AddDecoratorNode(annotationNode)
+			}
+
+			return nil
+		}),
+	}
+
+	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+}
+
+// Helper methods for Java function processing
+
+func (r *javaResolvers) extractJavaParameterNodes(parametersNode *sitter.Node) []*sitter.Node {
+	var paramNodes []*sitter.Node
+
+	if parametersNode == nil {
+		return paramNodes
+	}
+
+	for i := 0; i < int(parametersNode.ChildCount()); i++ {
+		child := parametersNode.Child(i)
+		if child.Type() == "formal_parameter" || child.Type() == "spread_parameter" {
+			paramNodes = append(paramNodes, child)
+		}
+	}
+
+	return paramNodes
+}
+
+func (r *javaResolvers) processJavaModifiers(modifiersNode *sitter.Node, functionNode *ast.FunctionDeclarationNode, data []byte) {
+	if modifiersNode == nil {
+		return
+	}
+
+	// Default access modifier
+	accessModifier := ast.AccessModifierPackage
+
+	for i := 0; i < int(modifiersNode.ChildCount()); i++ {
+		child := modifiersNode.Child(i)
+		if child != nil {
+			switch child.Type() {
+			case "public":
+				accessModifier = ast.AccessModifierPublic
+			case "private":
+				accessModifier = ast.AccessModifierPrivate
+			case "protected":
+				accessModifier = ast.AccessModifierProtected
+			case "static":
+				functionNode.SetIsStatic(true)
+				if functionNode.GetFunctionType() == ast.FunctionTypeMethod {
+					functionNode.SetFunctionType(ast.FunctionTypeStaticMethod)
+				}
+			case "abstract":
+				functionNode.SetIsAbstract(true)
+			case "annotation":
+				functionNode.AddDecoratorNode(child)
+			}
+		}
+	}
+
+	functionNode.SetAccessModifier(accessModifier)
+}
+
+func (r *javaResolvers) generateJavaFunctionKey(functionNameNode *sitter.Node, data []byte) string {
+	functionName := functionNameNode.Content(data)
+	parentClassName := r.findParentClassName(functionNameNode, data)
+	
+	if parentClassName != "" {
+		return parentClassName + "." + functionName
+	}
+	
+	// Add line number to distinguish functions with same name in different scopes
+	lineNumber := functionNameNode.StartPoint().Row
+	return fmt.Sprintf("%s:%d", functionName, lineNumber)
+}

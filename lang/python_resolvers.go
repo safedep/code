@@ -407,6 +407,256 @@ func (r *pythonResolvers) extractBaseClassNodes(superclassesNode *sitter.Node) [
 	return baseClassNodes
 }
 
+// Tree-Sitter queries for Python function definitions
+const pyFunctionDefinitionQuery = `
+	(function_definition
+		name: (identifier) @function_name
+		parameters: (parameters) @function_params
+		body: (block) @function_body
+		return_type: (type)? @return_type)
+
+	(function_definition
+		name: (identifier) @function_name
+		parameters: (parameters) @function_params
+		body: (block) @function_body)
+`
+
+const pyAsyncFunctionQuery = `
+	(function_definition
+		(async) @async_keyword
+		name: (identifier) @function_name
+		parameters: (parameters) @function_params
+		body: (block) @function_body)
+`
+
+const pyFunctionDecoratorQuery = `
+	(decorated_definition
+		(decorator
+			(identifier) @decorator_name) @decorator
+		definition: (function_definition
+			name: (identifier) @function_name))
+`
+
+// ResolveFunctions extracts function declarations from the parse tree
+func (r *pythonResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
+	data, err := tree.Data()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
+	}
+
+	var functions []*ast.FunctionDeclarationNode
+	functionMap := make(map[string]*ast.FunctionDeclarationNode) // To avoid duplicates and allow enhancement
+
+	// Extract basic function definitions
+	err = r.extractFunctionDefinitions(data, tree, functionMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract function definitions: %w", err)
+	}
+
+	// Extract async functions
+	err = r.extractAsyncFunctions(data, tree, functionMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract async functions: %w", err)
+	}
+
+	// Extract function decorators
+	err = r.extractFunctionDecorators(data, tree, functionMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract function decorators: %w", err)
+	}
+
+	// Convert map to slice
+	for _, function := range functionMap {
+		functions = append(functions, function)
+	}
+
+	return functions, nil
+}
+
+// Helper methods for function extraction
+
+func (r *pythonResolvers) extractFunctionDefinitions(data *[]byte, tree core.ParseTree,
+	functionMap map[string]*ast.FunctionDeclarationNode) error {
+	queryRequestItems := []ts.QueryItem{
+		ts.NewQueryItem(pyFunctionDefinitionQuery, func(m *sitter.QueryMatch) error {
+			if len(m.Captures) < 3 {
+				return nil // Skip incomplete matches
+			}
+
+			functionNameNode := m.Captures[0].Node
+			functionName := functionNameNode.Content(*data)
+
+			// Create or get existing function
+			var functionNode *ast.FunctionDeclarationNode
+			functionKey := r.generateFunctionKey(functionNameNode, *data)
+			if existing, exists := functionMap[functionKey]; exists {
+				functionNode = existing
+			} else {
+				functionNode = ast.NewFunctionDeclarationNode(data)
+				functionNode.SetFunctionNameNode(functionNameNode)
+				functionMap[functionKey] = functionNode
+			}
+
+			// Set function parameters
+			if len(m.Captures) >= 2 && m.Captures[1].Node.Type() == "parameters" {
+				paramsNode := m.Captures[1].Node
+				paramNodes := r.extractParameterNodes(paramsNode)
+				functionNode.SetFunctionParameterNodes(paramNodes)
+			}
+
+			// Set function body
+			if len(m.Captures) >= 3 && m.Captures[2].Node.Type() == "block" {
+				functionNode.SetFunctionBodyNode(m.Captures[2].Node)
+			}
+
+			// Set return type if present
+			if len(m.Captures) >= 4 && m.Captures[3].Node.Type() == "type" {
+				functionNode.SetFunctionReturnTypeNode(m.Captures[3].Node)
+			}
+
+			// Determine function type based on context
+			parentClassName := r.findParentClassName(functionNameNode, *data)
+			if parentClassName != "" {
+				functionNode.SetParentClassName(parentClassName)
+				if functionName == "__init__" {
+					functionNode.SetFunctionType(ast.FunctionTypeConstructor)
+				} else {
+					functionNode.SetFunctionType(ast.FunctionTypeMethod)
+				}
+			} else {
+				functionNode.SetFunctionType(ast.FunctionTypeFunction)
+			}
+
+			return nil
+		}),
+	}
+
+	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+}
+
+func (r *pythonResolvers) extractAsyncFunctions(data *[]byte, tree core.ParseTree,
+	functionMap map[string]*ast.FunctionDeclarationNode) error {
+	queryRequestItems := []ts.QueryItem{
+		ts.NewQueryItem(pyAsyncFunctionQuery, func(m *sitter.QueryMatch) error {
+			if len(m.Captures) < 4 {
+				return nil
+			}
+
+			var functionNameNode *sitter.Node
+			for _, capture := range m.Captures {
+				if capture.Node.Type() == "identifier" {
+					functionNameNode = capture.Node
+					break
+				}
+			}
+
+			if functionNameNode == nil {
+				return nil
+			}
+
+			// Get or create function node
+			functionKey := r.generateFunctionKey(functionNameNode, *data)
+			var functionNode *ast.FunctionDeclarationNode
+			if existing, exists := functionMap[functionKey]; exists {
+				functionNode = existing
+			} else {
+				functionNode = ast.NewFunctionDeclarationNode(data)
+				functionNode.SetFunctionNameNode(functionNameNode)
+				functionMap[functionKey] = functionNode
+			}
+
+			// Mark as async
+			functionNode.SetIsAsync(true)
+			functionNode.SetFunctionType(ast.FunctionTypeAsync)
+
+			return nil
+		}),
+	}
+
+	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+}
+
+func (r *pythonResolvers) extractFunctionDecorators(data *[]byte, tree core.ParseTree,
+	functionMap map[string]*ast.FunctionDeclarationNode) error {
+	queryRequestItems := []ts.QueryItem{
+		ts.NewQueryItem(pyFunctionDecoratorQuery, func(m *sitter.QueryMatch) error {
+			if len(m.Captures) < 3 {
+				return nil
+			}
+
+			var decoratorNode, functionNameNode *sitter.Node
+			for _, capture := range m.Captures {
+				if capture.Node.Type() == "decorator" {
+					decoratorNode = capture.Node
+				} else if capture.Node.Type() == "identifier" {
+					functionNameNode = capture.Node
+				}
+			}
+
+			if decoratorNode == nil || functionNameNode == nil {
+				return nil
+			}
+
+			functionKey := r.generateFunctionKey(functionNameNode, *data)
+			if functionNode, exists := functionMap[functionKey]; exists {
+				functionNode.AddDecoratorNode(decoratorNode)
+
+				// Check for special decorators
+				decoratorName := ""
+				for _, capture := range m.Captures {
+					if capture.Node.Type() == "identifier" && capture.Node.Parent().Type() == "decorator" {
+						decoratorName = capture.Node.Content(*data)
+						break
+					}
+				}
+
+				if decoratorName == "staticmethod" {
+					functionNode.SetIsStatic(true)
+					functionNode.SetFunctionType(ast.FunctionTypeStaticMethod)
+				} else if decoratorName == "abstractmethod" {
+					functionNode.SetIsAbstract(true)
+				}
+			}
+
+			return nil
+		}),
+	}
+
+	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+}
+
+// Helper methods
+
+func (r *pythonResolvers) extractParameterNodes(parametersNode *sitter.Node) []*sitter.Node {
+	var paramNodes []*sitter.Node
+
+	if parametersNode == nil {
+		return paramNodes
+	}
+
+	for i := 0; i < int(parametersNode.ChildCount()); i++ {
+		child := parametersNode.Child(i)
+		if child.Type() == "identifier" || child.Type() == "typed_parameter" || child.Type() == "default_parameter" {
+			paramNodes = append(paramNodes, child)
+		}
+	}
+
+	return paramNodes
+}
+
+func (r *pythonResolvers) generateFunctionKey(functionNameNode *sitter.Node, data []byte) string {
+	functionName := functionNameNode.Content(data)
+	parentClassName := r.findParentClassName(functionNameNode, data)
+	
+	if parentClassName != "" {
+		return parentClassName + "." + functionName
+	}
+	
+	// Add line number to distinguish functions with same name in different scopes
+	lineNumber := functionNameNode.StartPoint().Row
+	return fmt.Sprintf("%s:%d", functionName, lineNumber)
+}
+
 func (r *pythonResolvers) findParentClassName(node *sitter.Node, data []byte) string {
 	if node == nil {
 		return ""

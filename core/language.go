@@ -12,6 +12,10 @@ type LanguageResolvers interface {
 	// ResolveImports returns a list of import statements
 	// identified from the parse tree
 	ResolveImports(tree ParseTree) ([]*ast.ImportNode, error)
+
+	// ResolveFunctions returns a list of function declarations
+	// identified from the parse tree
+	ResolveFunctions(tree ParseTree) ([]*ast.FunctionDeclarationNode, error)
 }
 
 // ObjectOrientedLanguageResolvers define the additional contract
