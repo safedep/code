@@ -378,8 +378,9 @@ func (ig *InheritanceGraph) DetectCircularInheritance() [][]string {
 
 		// Visit all direct parents
 		for _, rel := range ig.directParents[class] {
+			// nolint:staticcheck
 			if dfs(rel.ParentClassName, path) {
-				// Continue searching for more cycles
+				// Continue searching for more cycles if nesting required
 			}
 		}
 

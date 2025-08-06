@@ -162,7 +162,7 @@ func (r *pythonResolvers) ResolveClasses(tree core.ParseTree) ([]*ast.ClassDecla
 	classMap := make(map[string]*ast.ClassDeclarationNode) // To avoid duplicates and allow enhancement
 
 	// Extract basic class definitions
-	err = r.extractClassDefinitions(data, tree, classes, classMap)
+	err = r.extractClassDefinitions(data, tree, classMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract class definitions: %w", err)
 	}
@@ -246,7 +246,8 @@ func (r *pythonResolvers) ResolveInheritance(tree core.ParseTree) (*ast.Inherita
 
 // Helper methods for class extraction
 
-func (r *pythonResolvers) extractClassDefinitions(data *[]byte, tree core.ParseTree, classes []*ast.ClassDeclarationNode, classMap map[string]*ast.ClassDeclarationNode) error {
+func (r *pythonResolvers) extractClassDefinitions(data *[]byte, tree core.ParseTree,
+	classMap map[string]*ast.ClassDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(pyClassDefinitionQuery, func(m *sitter.QueryMatch) error {
 			if len(m.Captures) < 2 {
@@ -282,7 +283,8 @@ func (r *pythonResolvers) extractClassDefinitions(data *[]byte, tree core.ParseT
 	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
 }
 
-func (r *pythonResolvers) extractClassMethods(data *[]byte, tree core.ParseTree, classMap map[string]*ast.ClassDeclarationNode) error {
+func (r *pythonResolvers) extractClassMethods(data *[]byte, tree core.ParseTree,
+	classMap map[string]*ast.ClassDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(pyClassMethodQuery, func(m *sitter.QueryMatch) error {
 			if len(m.Captures) < 2 {
@@ -327,7 +329,8 @@ func (r *pythonResolvers) extractClassMethods(data *[]byte, tree core.ParseTree,
 	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
 }
 
-func (r *pythonResolvers) extractClassFields(data *[]byte, tree core.ParseTree, classMap map[string]*ast.ClassDeclarationNode) error {
+func (r *pythonResolvers) extractClassFields(data *[]byte, tree core.ParseTree,
+	classMap map[string]*ast.ClassDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(pyClassFieldQuery, func(m *sitter.QueryMatch) error {
 			if len(m.Captures) < 3 {
@@ -356,7 +359,8 @@ func (r *pythonResolvers) extractClassFields(data *[]byte, tree core.ParseTree, 
 	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
 }
 
-func (r *pythonResolvers) extractClassDecorators(data *[]byte, tree core.ParseTree, classMap map[string]*ast.ClassDeclarationNode) error {
+func (r *pythonResolvers) extractClassDecorators(data *[]byte, tree core.ParseTree,
+	classMap map[string]*ast.ClassDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(pyClassDecoratorQuery, func(m *sitter.QueryMatch) error {
 			if len(m.Captures) < 3 {
@@ -416,8 +420,9 @@ func (r *pythonResolvers) findParentClassName(node *sitter.Node, data []byte) st
 				return nameNode.Content(data)
 			}
 		}
+
 		current = current.Parent()
 	}
+
 	return ""
 }
-
