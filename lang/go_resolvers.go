@@ -362,14 +362,14 @@ func (r *goResolvers) isValidGoIdentifier(identifier string) bool {
 
 	// First character must be a letter or underscore
 	firstChar := identifier[0]
-	if !((firstChar >= 'a' && firstChar <= 'z') || (firstChar >= 'A' && firstChar <= 'Z') || firstChar == '_') {
+	if (firstChar < 'a' || firstChar > 'z') && (firstChar < 'A' || firstChar > 'Z') && firstChar != '_' {
 		return false
 	}
 
 	// Remaining characters must be letters, digits, or underscores
 	for i := 1; i < len(identifier); i++ {
 		char := identifier[i]
-		if !((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || (char >= '0' && char <= '9') || char == '_') {
+		if (char < 'a' || char > 'z') && (char < 'A' || char > 'Z') && (char < '0' || char > '9') && char != '_' {
 			return false
 		}
 	}

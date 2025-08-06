@@ -583,10 +583,11 @@ func (r *pythonResolvers) extractFunctionDecorators(data *[]byte, tree core.Pars
 					}
 				}
 
-				if decoratorName == "staticmethod" {
+				switch decoratorName {
+				case "staticmethod":
 					functionNode.SetIsStatic(true)
 					functionNode.SetFunctionType(ast.FunctionTypeStaticMethod)
-				} else if decoratorName == "abstractmethod" {
+				case "abstractmethod":
 					functionNode.SetIsAbstract(true)
 				}
 
