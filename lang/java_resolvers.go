@@ -231,7 +231,8 @@ func (r *javaResolvers) ResolveInheritance(tree core.ParseTree) (*ast.Inheritanc
 
 // Helper methods for Java class extraction
 
-func (r *javaResolvers) extractClassDefinitions(data *[]byte, tree core.ParseTree, classes *[]*ast.ClassDeclarationNode, classMap map[string]*ast.ClassDeclarationNode) error {
+func (r *javaResolvers) extractClassDefinitions(data *[]byte, tree core.ParseTree,
+	classes *[]*ast.ClassDeclarationNode, classMap map[string]*ast.ClassDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(javaClassDefinitionQuery, func(m *sitter.QueryMatch) error {
 			classNode := ast.NewClassDeclarationNode(ast.ToContent(*data))
@@ -261,6 +262,7 @@ func (r *javaResolvers) extractClassDefinitions(data *[]byte, tree core.ParseTre
 					if r.hasAbstractModifier(modifiersNode, *data) {
 						classNode.SetIsAbstract(true)
 					}
+
 					r.extractAnnotationsFromModifiers(modifiersNode, classNode)
 				}
 
@@ -437,7 +439,7 @@ func (r *javaResolvers) findParentClassName(node *sitter.Node, data []byte) stri
 	return ""
 }
 
-func (r *javaResolvers) extractAccessModifier(m *sitter.QueryMatch) ast.AccessModifier {
+func (r *javaResolvers) extractAccessModifier(_ *sitter.QueryMatch) ast.AccessModifier {
 	// In Java, we need to look for modifiers in the parent nodes
 	// For now, default to public (can be enhanced later)
 	return ast.AccessModifierPublic
@@ -730,7 +732,9 @@ func (r *javaResolvers) extractJavaParameterNodes(parametersNode *sitter.Node) [
 	return paramNodes
 }
 
-func (r *javaResolvers) processJavaModifiers(modifiersNode *sitter.Node, functionNode *ast.FunctionDeclarationNode, data []byte) {
+// Note: We are not handling the modifier based on content currently.
+func (r *javaResolvers) processJavaModifiers(modifiersNode *sitter.Node,
+	functionNode *ast.FunctionDeclarationNode, _ []byte) {
 	if modifiersNode == nil {
 		return
 	}
