@@ -421,14 +421,6 @@ const pyFunctionDefinitionQuery = `
 		body: (block) @function_body)
 `
 
-const pyAsyncFunctionQuery = `
-	(function_definition
-		(async) @async_keyword
-		name: (identifier) @function_name
-		parameters: (parameters) @function_params
-		body: (block) @function_body)
-`
-
 const pyFunctionDecoratorQuery = `
 	(decorated_definition
 		(decorator
@@ -550,48 +542,6 @@ func (r *pythonResolvers) extractFunctionDefinitions(data *[]byte, tree core.Par
 
 			// Python functions are typically public by default
 			functionNode.SetAccessModifier(ast.AccessModifierPublic)
-
-			return nil
-		}),
-	}
-
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
-}
-
-func (r *pythonResolvers) extractAsyncFunctions(data *[]byte, tree core.ParseTree,
-	functionMap map[string]*ast.FunctionDeclarationNode) error {
-	queryRequestItems := []ts.QueryItem{
-		ts.NewQueryItem(pyAsyncFunctionQuery, func(m *sitter.QueryMatch) error {
-			if len(m.Captures) < 4 {
-				return nil
-			}
-
-			var functionNameNode *sitter.Node
-			for _, capture := range m.Captures {
-				if capture.Node.Type() == "identifier" {
-					functionNameNode = capture.Node
-					break
-				}
-			}
-
-			if functionNameNode == nil {
-				return nil
-			}
-
-			// Get or create function node
-			functionKey := r.generateFunctionKey(functionNameNode, *data)
-			var functionNode *ast.FunctionDeclarationNode
-			if existing, exists := functionMap[functionKey]; exists {
-				functionNode = existing
-			} else {
-				functionNode = ast.NewFunctionDeclarationNode(data)
-				functionNode.SetFunctionNameNode(functionNameNode)
-				functionMap[functionKey] = functionNode
-			}
-
-			// Mark as async
-			functionNode.SetIsAsync(true)
-			functionNode.SetFunctionType(ast.FunctionTypeAsync)
 
 			return nil
 		}),
