@@ -141,6 +141,11 @@ func (f *FunctionDeclarationNode) GetParentClassName() string {
 	return f.parentClassName
 }
 
+// GetFunctionNameNode returns the function name node
+func (f *FunctionDeclarationNode) GetFunctionNameNode() *sitter.Node {
+	return f.functionNameNode
+}
+
 // IsAbstract returns true if the function is abstract
 func (f *FunctionDeclarationNode) IsAbstract() bool {
 	return f.isAbstract
