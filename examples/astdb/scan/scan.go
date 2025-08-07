@@ -43,6 +43,9 @@ type Config struct {
 	ShowProgress bool
 	Verbose      bool
 	OutputFormat string
+
+	// AST extraction options
+	PersistASTNodes bool
 }
 
 type scanner struct {
@@ -257,10 +260,12 @@ func (fp *fileProcessor) VisitTree(tree core.ParseTree) error {
 		return fmt.Errorf("failed to create file record for %s: %w", file.Name(), err)
 	}
 
-	// Extract and persist AST nodes
-	err = fp.extractAndPersistASTNodes(tree, fileRecord)
-	if err != nil {
-		return fmt.Errorf("failed to extract AST nodes from %s: %w", file.Name(), err)
+	// Extract and persist AST nodes (only if flag is enabled)
+	if fp.scanner.config.PersistASTNodes {
+		err = fp.extractAndPersistASTNodes(tree, fileRecord)
+		if err != nil {
+			return fmt.Errorf("failed to extract AST nodes from %s: %w", file.Name(), err)
+		}
 	}
 
 	// Extract and persist symbols (classes, functions)

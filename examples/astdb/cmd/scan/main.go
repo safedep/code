@@ -37,6 +37,9 @@ var (
 	showProgress bool
 	verbose      bool
 	outputFormat string
+
+	// AST extraction options
+	persistASTNodes bool
 )
 
 func NewScanCommand() *cobra.Command {
@@ -108,6 +111,9 @@ Examples:
 	cmd.Flags().BoolVar(&verbose, "verbose", false, "Enable verbose output")
 	cmd.Flags().StringVar(&outputFormat, "format", scan.OutputFormatText, fmt.Sprintf("Output format (%s, %s)", scan.OutputFormatText, scan.OutputFormatJSON))
 
+	// AST extraction options
+	cmd.Flags().BoolVar(&persistASTNodes, "persist-ast-nodes", false, "Persist all AST nodes to database (disabled by default)")
+
 	// Mark required flags
 	_ = cmd.MarkFlagRequired("dir")
 	_ = cmd.MarkFlagRequired("output")
@@ -173,6 +179,7 @@ func executeScan() error {
 		ShowProgress:       showProgress,
 		Verbose:            verbose,
 		OutputFormat:       outputFormat,
+		PersistASTNodes:    persistASTNodes,
 	}
 
 	scanner, err := scan.New(config)
