@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -202,7 +203,7 @@ func (s *scanner) internalStartScan(db *ent.Client) error {
 		fmt.Printf("Processed %d files successfully\n", visitor.fileCount)
 	}
 
-	// NEW: Project-level inheritance analysis
+	// Project level inheritance analysis is possible only after all files are processed
 	err = s.performProjectLevelAnalysis(ctx, db, project.ID, visitor.symbolRegistry)
 	if err != nil {
 		return fmt.Errorf("failed to perform project-level analysis: %w", err)
@@ -222,7 +223,7 @@ func (s *scanner) createProject(ctx context.Context, db *ent.Client) (*ent.Proje
 	}
 
 	// Add metadata
-	metadata := map[string]interface{}{
+	metadata := map[string]any{
 		"languages":        s.getLanguageNames(),
 		"max_depth":        s.config.MaxDepth,
 		"include_patterns": s.config.IncludePatterns,
@@ -306,7 +307,8 @@ func (fp *fileProcessor) createFileRecord(file core.File) (*ent.File, error) {
 	absPath := file.Name()
 	relPath, err := filepath.Rel(fp.scanner.config.InputDirectory, absPath)
 	if err != nil {
-		relPath = absPath // Fallback to absolute path
+		// Fallback to absolute path
+		relPath = absPath
 	}
 
 	// Get file content and calculate stats
@@ -314,6 +316,7 @@ func (fp *fileProcessor) createFileRecord(file core.File) (*ent.File, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get file reader: %w", err)
 	}
+
 	defer reader.Close()
 
 	content, err := io.ReadAll(reader)
@@ -355,16 +358,15 @@ func (fp *fileProcessor) countLines(content []byte) int {
 			lines++
 		}
 	}
+
 	return lines
 }
 
 func (fp *fileProcessor) detectLanguage(file core.File) string {
 	// Try to detect language from file extension
 	for _, lang := range fp.scanner.languages {
-		for _, ext := range lang.Meta().SourceFileExtensions {
-			if filepath.Ext(file.Name()) == ext {
-				return string(lang.Meta().Code)
-			}
+		if slices.Contains(lang.Meta().SourceFileExtensions, filepath.Ext(file.Name())) {
+			return string(lang.Meta().Code)
 		}
 	}
 

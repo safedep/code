@@ -2,6 +2,7 @@ package scan
 
 import (
 	"fmt"
+	"slices"
 
 	sitter "github.com/smacker/go-tree-sitter"
 
@@ -57,7 +58,7 @@ func (fp *fileProcessor) extractASTNode(node *sitter.Node, parentRecord *ent.AST
 	}
 
 	// Add metadata with byte offset information
-	metadata := map[string]interface{}{
+	metadata := map[string]any{
 		"start_byte": position.StartByte,
 		"end_byte":   position.EndByte,
 		"depth":      depth,
@@ -81,7 +82,7 @@ func (fp *fileProcessor) extractASTNode(node *sitter.Node, parentRecord *ent.AST
 
 	// Process child nodes
 	childCount := int(node.ChildCount())
-	for i := 0; i < childCount; i++ {
+	for i := range childCount {
 		child := node.Child(i)
 		_, err := fp.extractASTNode(child, astNodeRecord, fileRecord, depth+1)
 		if err != nil {
@@ -157,16 +158,14 @@ func (fp *fileProcessor) findNameInChildren(node *sitter.Node, targetTypes []str
 	// Simple helper to find name nodes in children
 	// In a real implementation, this would be more sophisticated
 	childCount := int(node.ChildCount())
-	for i := 0; i < childCount; i++ {
+	for i := range childCount {
 		child := node.Child(i)
 		childType := child.Type()
 
-		for _, targetType := range targetTypes {
-			if childType == targetType {
-				// Would extract content here, but following user guidance to avoid it
-				// Instead, we could store a placeholder or compute it later when needed
-				return "" // Placeholder - content extraction avoided per user instructions
-			}
+		if slices.Contains(targetTypes, childType) {
+			// Would extract content here, but following user guidance to avoid it
+			// Instead, we could store a placeholder or compute it later when needed
+			return "" // Placeholder - content extraction avoided per user instructions
 		}
 	}
 
