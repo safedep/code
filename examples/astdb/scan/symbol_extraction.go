@@ -94,7 +94,7 @@ func (fp *fileProcessor) persistClass(class *ast.ClassDeclarationNode, fileRecor
 		classBuilder = classBuilder.SetIsAbstract(true)
 	}
 
-	// Add metadata
+	// Enhanced metadata with inheritance analysis
 	metadata := map[string]interface{}{
 		"has_constructor": class.GetConstructorNode() != nil,
 		"method_count":    len(class.GetMethodNodes()),
@@ -102,11 +102,30 @@ func (fp *fileProcessor) persistClass(class *ast.ClassDeclarationNode, fileRecor
 		"decorator_count": len(class.GetDecoratorNodes()),
 		"base_classes":    class.BaseClasses(),
 	}
+
+	// Add inheritance metadata if class has inheritance
+	if class.HasInheritance() {
+		inheritanceMetadata := fp.buildClassInheritanceMetadata(class, fileRecord)
+		for k, v := range inheritanceMetadata {
+			metadata[k] = v
+		}
+	}
+
 	classBuilder = classBuilder.SetMetadata(metadata)
 
 	classSymbol, err := classBuilder.Save(fp.ctx)
 	if err != nil {
 		return fmt.Errorf("failed to save class symbol: %w", err)
+	}
+
+	// Register class symbol in the registry for cross-file resolution
+	if fp.symbolRegistry != nil {
+		err = fp.symbolRegistry.RegisterSymbol(classSymbol)
+		if err != nil {
+			if fp.scanner.config.Verbose {
+				fmt.Printf("Warning: failed to register class symbol: %v\n", err)
+			}
+		}
 	}
 
 	// Extract and persist methods
@@ -236,8 +255,22 @@ func (fp *fileProcessor) persistFunction(function *ast.FunctionDeclarationNode, 
 
 	functionBuilder = functionBuilder.SetMetadata(metadata)
 
-	_, err := functionBuilder.Save(fp.ctx)
-	return err
+	functionSymbol, err := functionBuilder.Save(fp.ctx)
+	if err != nil {
+		return err
+	}
+
+	// Register function symbol in the registry for cross-file resolution
+	if fp.symbolRegistry != nil {
+		err = fp.symbolRegistry.RegisterSymbol(functionSymbol)
+		if err != nil {
+			if fp.scanner.config.Verbose {
+				fmt.Printf("Warning: failed to register function symbol: %v\n", err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (fp *fileProcessor) extractInheritanceRelationships(tree core.ParseTree, resolvers core.ObjectOrientedLanguageResolvers, fileRecord *ent.File) error {
@@ -281,15 +314,150 @@ func (fp *fileProcessor) persistInheritanceRelationship(relationship *ast.Inheri
 		inhBuilder = inhBuilder.SetModuleName(relationship.ModuleName)
 	}
 
-	// TODO: Implement cross-file symbol linking in Phase 2
-	// Note: ENT schema doesn't support metadata for InheritanceRelationship
-	// Store relationship information using the built-in fields
-
-	_, err := inhBuilder.Save(fp.ctx)
+	inhRecord, err := inhBuilder.Save(fp.ctx)
 	if err != nil {
 		return fmt.Errorf("failed to save inheritance relationship %s -> %s: %w", 
 			relationship.ChildClassName, relationship.ParentClassName, err)
 	}
 
+	// Enhanced: Implement cross-file symbol linking
+	if fp.symbolRegistry != nil {
+		// Build qualified names for child and parent
+		childQualifiedName := fp.buildQualifiedName(childClassName, fileRecord)
+		parentQualifiedName := fp.buildQualifiedName(relationship.ParentClassName, fileRecord)
+
+		// Try immediate resolution first
+		childSymbol, childErr := fp.symbolRegistry.ResolveSymbol(childQualifiedName)
+		parentSymbol, parentErr := fp.symbolRegistry.ResolveSymbol(parentQualifiedName)
+
+		if childErr == nil && childSymbol != nil {
+			// Link child symbol immediately
+			_, err = fp.db.InheritanceRelationship.UpdateOneID(inhRecord.ID).
+				SetChildID(childSymbol.ID).
+				Save(fp.ctx)
+			if err != nil {
+				return fmt.Errorf("failed to link child symbol: %w", err)
+			}
+		}
+
+		if parentErr == nil && parentSymbol != nil {
+			// Link parent symbol immediately
+			_, err = fp.db.InheritanceRelationship.UpdateOneID(inhRecord.ID).
+				SetParentID(parentSymbol.ID).
+				Save(fp.ctx)
+			if err != nil {
+				return fmt.Errorf("failed to link parent symbol: %w", err)
+			}
+		} else {
+			// Add to pending resolution queue for cross-file linking
+			var childSymbolID int
+			if childSymbol != nil {
+				childSymbolID = childSymbol.ID
+			}
+
+			pendingLink := PendingInheritanceLink{
+				ChildSymbolID:       childSymbolID,
+				ChildQualifiedName:  childQualifiedName,
+				ParentQualifiedName: parentQualifiedName,
+				Relationship:        relationship,
+				FileRecord:          fileRecord,
+				InheritanceRecordID: inhRecord.ID,
+			}
+
+			err = fp.symbolRegistry.AddPendingInheritance(pendingLink)
+			if err != nil {
+				if fp.scanner.config.Verbose {
+					fmt.Printf("Warning: failed to add pending inheritance link: %v\n", err)
+				}
+			}
+		}
+	}
+
 	return nil
+}
+
+// buildClassInheritanceMetadata creates inheritance analysis metadata for a class
+func (fp *fileProcessor) buildClassInheritanceMetadata(class *ast.ClassDeclarationNode, fileRecord *ent.File) map[string]interface{} {
+	metadata := make(map[string]interface{})
+
+	// Basic inheritance information
+	baseClasses := class.BaseClasses()
+	metadata["has_multiple_inheritance"] = len(baseClasses) > 1
+	metadata["inheritance_count"] = len(baseClasses)
+	metadata["direct_parents"] = baseClasses
+
+	// Create a mini inheritance graph for this class
+	if len(baseClasses) > 0 {
+		inheritanceGraph := fp.buildMiniInheritanceGraph(class, fileRecord)
+		if inheritanceGraph != nil {
+			className := class.ClassName()
+			
+			// Method Resolution Order (for languages that support it)
+			mro := inheritanceGraph.GetMethodResolutionOrder(className)
+			if len(mro) > 0 {
+				metadata["method_resolution_order"] = mro
+			}
+			
+			// Ancestry information (what we can determine from current context)
+			ancestry := inheritanceGraph.GetAncestry(className)
+			if len(ancestry) > 0 {
+				metadata["ancestry_classes"] = ancestry
+			}
+			
+			// Compute inheritance depth
+			maxDepth := fp.calculateMaxInheritanceDepth(inheritanceGraph, className)
+			metadata["max_inheritance_depth"] = maxDepth
+			
+			// Check if this is a root class (no parents in current context)
+			directParents := inheritanceGraph.GetDirectParents(className)
+			metadata["is_root_class"] = len(directParents) == 0
+			
+			// Language-specific inheritance analysis
+			language := fp.detectLanguageFromFileRecord(fileRecord)
+			if language == "python" && len(baseClasses) > 1 {
+				// Python-specific multiple inheritance analysis
+				metadata["python_mro_linearization"] = true
+				metadata["complex_multiple_inheritance"] = len(baseClasses) > 2
+			}
+		}
+	}
+
+	return metadata
+}
+
+// buildMiniInheritanceGraph creates a small inheritance graph for local analysis
+func (fp *fileProcessor) buildMiniInheritanceGraph(class *ast.ClassDeclarationNode, fileRecord *ent.File) *ast.InheritanceGraph {
+	graph := ast.NewInheritanceGraph()
+	
+	className := class.ClassName()
+	baseClasses := class.BaseClasses()
+	
+	// Add relationships for this class
+	for _, baseClass := range baseClasses {
+		// Add relationship using the correct signature
+		relationship := graph.AddRelationship(
+			className,
+			baseClass,
+			ast.RelationshipTypeExtends, // Default, could be enhanced
+			fileRecord.RelativePath,     // File location
+			1, // TODO: Extract actual line number from node
+		)
+		
+		// Update metadata
+		relationship.IsDirectInheritance = true
+		relationship.InheritanceDepth = 1
+	}
+	
+	return graph
+}
+
+// calculateMaxInheritanceDepth calculates the maximum inheritance depth for a class
+func (fp *fileProcessor) calculateMaxInheritanceDepth(graph *ast.InheritanceGraph, className string) int {
+	ancestry := graph.GetAncestry(className)
+	// Ancestry includes the class itself, so depth is len - 1
+	depth := len(ancestry) - 1
+	if depth < 0 {
+		depth = 0
+	}
+	return depth
 }

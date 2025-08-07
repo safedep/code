@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/safedep/code/core"
@@ -165,12 +166,22 @@ func (s *scanner) internalStartScan(db *ent.Client) error {
 		fmt.Printf("Created project record: ID=%d, Name=%s\n", project.ID, project.Name)
 	}
 
+	// Create symbol registry for cross-file resolution
+	symbolRegistry := NewSymbolRegistry(db, ctx, project.ID)
+	err = symbolRegistry.LoadExistingSymbols()
+	if err != nil {
+		if s.config.Verbose {
+			fmt.Printf("Warning: failed to load existing symbols: %v\n", err)
+		}
+	}
+
 	// Create visitor for processing files
 	visitor := &fileProcessor{
-		scanner:   s,
-		db:        db,
-		ctx:       ctx,
-		fileCount: 0,
+		scanner:        s,
+		db:             db,
+		ctx:            ctx,
+		fileCount:      0,
+		symbolRegistry: symbolRegistry,
 	}
 
 	// Start progress reporting if enabled
@@ -189,6 +200,12 @@ func (s *scanner) internalStartScan(db *ent.Client) error {
 
 	if s.config.ShowProgress {
 		fmt.Printf("Processed %d files successfully\n", visitor.fileCount)
+	}
+
+	// NEW: Project-level inheritance analysis
+	err = s.performProjectLevelAnalysis(ctx, db, project.ID, visitor.symbolRegistry)
+	if err != nil {
+		return fmt.Errorf("failed to perform project-level analysis: %w", err)
 	}
 
 	return nil
@@ -232,10 +249,11 @@ func (s *scanner) reportProgress() {
 }
 
 type fileProcessor struct {
-	scanner   *scanner
-	db        *ent.Client
-	ctx       context.Context
-	fileCount int
+	scanner        *scanner
+	db             *ent.Client
+	ctx            context.Context
+	fileCount      int
+	symbolRegistry *SymbolRegistry
 }
 
 func (fp *fileProcessor) VisitTree(tree core.ParseTree) error {
@@ -351,4 +369,128 @@ func (fp *fileProcessor) detectLanguage(file core.File) string {
 	}
 
 	return LanguageUnknown
+}
+
+// performProjectLevelAnalysis performs comprehensive project-level inheritance analysis
+func (s *scanner) performProjectLevelAnalysis(ctx context.Context, db *ent.Client, projectID int, symbolRegistry *SymbolRegistry) error {
+	if s.config.ShowProgress {
+		fmt.Println("Performing project-level inheritance analysis...")
+	}
+
+	// Initialize project inheritance analyzer
+	analyzer := NewProjectInheritanceAnalyzer(db, ctx, symbolRegistry, s.config)
+
+	// 1. Resolve pending cross-file symbol links
+	err := symbolRegistry.ResolvePendingInheritance()
+	if err != nil {
+		return fmt.Errorf("failed to resolve pending inheritance: %w", err)
+	}
+
+	// 2. Build global inheritance graph
+	err = analyzer.BuildGlobalGraph(projectID)
+	if err != nil {
+		return fmt.Errorf("failed to build global inheritance graph: %w", err)
+	}
+
+	// 3. Store computed relationships
+	computedProcessor := NewComputedInheritanceProcessor(db, ctx, symbolRegistry, s.config)
+	err = computedProcessor.StoreComputedRelationships(projectID, analyzer.GetGlobalGraph())
+	if err != nil {
+		return fmt.Errorf("failed to store computed relationships: %w", err)
+	}
+
+	// 4. Update symbols with computed inheritance data
+	err = computedProcessor.UpdateSymbolsWithComputedData(projectID, analyzer.GetGlobalGraph())
+	if err != nil {
+		return fmt.Errorf("failed to update symbols with computed data: %w", err)
+	}
+
+	// 5. Generate and store hierarchy statistics
+	stats, err := analyzer.GenerateHierarchyStatistics()
+	if err != nil {
+		return fmt.Errorf("failed to generate hierarchy statistics: %w", err)
+	}
+
+	// Update project metadata with inheritance statistics
+	symbolRegistryStats := symbolRegistry.GetStatistics()
+	currentMetadata := map[string]any{
+		"languages":              s.getLanguageNames(),
+		"max_depth":              s.config.MaxDepth,
+		"include_patterns":       s.config.IncludePatterns,
+		"exclude_patterns":       s.config.ExcludePatterns,
+		"inheritance_statistics": stats,
+		"symbol_registry_stats": map[string]any{
+			"total_symbols":        symbolRegistryStats.TotalSymbols,
+			"pending_links":        symbolRegistryStats.PendingLinks,
+			"cache_entries":        symbolRegistryStats.CacheEntries,
+			"module_cache_entries": symbolRegistryStats.ModuleCacheEntries,
+		},
+	}
+
+	_, err = db.Project.UpdateOneID(projectID).
+		SetMetadata(currentMetadata).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update project with inheritance statistics: %w", err)
+	}
+
+	// 6. Detect and report inheritance issues
+	if s.config.Verbose {
+		issues, err := analyzer.DetectHierarchyIssues()
+		if err == nil && len(issues) > 0 {
+			fmt.Println("Inheritance Quality Issues Detected:")
+			for _, issue := range issues {
+				fmt.Printf("  [%s] %s: %s\n",
+					strings.ToUpper(issue.Severity),
+					issue.Type,
+					issue.Description)
+				if s.config.Verbose && issue.Suggestion != "" {
+					fmt.Printf("    Suggestion: %s\n", issue.Suggestion)
+				}
+			}
+		}
+
+		// Show project statistics in verbose mode
+		if s.config.ShowProgress {
+			fmt.Printf("  Project Statistics:\n")
+			if totalClasses, ok := stats["total_classes"].(int); ok {
+				fmt.Printf("    Total Classes: %d\n", totalClasses)
+			}
+			if withInheritance, ok := stats["classes_with_inheritance"].(int); ok {
+				fmt.Printf("    Classes with Inheritance: %d\n", withInheritance)
+			}
+			if multipleInheritance, ok := stats["multiple_inheritance_count"].(int); ok {
+				fmt.Printf("    Multiple Inheritance: %d\n", multipleInheritance)
+			}
+			if maxDepth, ok := stats["max_inheritance_depth"].(int); ok {
+				fmt.Printf("    Max Inheritance Depth: %d\n", maxDepth)
+			}
+			if circularErrors, ok := stats["circular_inheritance_errors"].(int); ok && circularErrors > 0 {
+				fmt.Printf("    Circular Inheritance Errors: %d\n", circularErrors)
+			}
+		}
+	}
+
+	// 7. Generate quality processing results
+	qualityIssues, err := computedProcessor.ProcessInheritanceQuality(projectID, analyzer.GetGlobalGraph())
+	if err == nil && len(qualityIssues) > 0 && s.config.Verbose {
+		fmt.Printf("Additional Quality Analysis: %d issues found\n", len(qualityIssues))
+	}
+
+	// 8. Validate global graph consistency
+	if s.config.Verbose {
+		warnings := analyzer.ValidateGlobalGraph()
+		if len(warnings) > 0 {
+			fmt.Println("Graph Validation Warnings:")
+			for _, warning := range warnings {
+				fmt.Printf("  Warning: %s\n", warning)
+			}
+		}
+	}
+
+	if s.config.ShowProgress {
+		fmt.Println("Project-level analysis completed successfully!")
+	}
+
+	return nil
 }
