@@ -21,6 +21,13 @@ var literalNodeTypes = map[string]bool{
 	"undefined":                      true,
 	"true":                           true,
 	"false":                          true,
+	// Go literals
+	"int_literal":                true,
+	"float_literal":              true,
+	"imaginary_literal":          true,
+	"rune_literal":               true,
+	"raw_string_literal":         true,
+	"interpreted_string_literal": true,
 }
 
 var initialisedDataStructures = map[string]bool{
@@ -31,4 +38,7 @@ var initialisedDataStructures = map[string]bool{
 	"array":      true,
 	"map":        true,
 	"object":     true,
+	// Go data structures
+	"composite_literal": true,
+	"slice_expression":  true,
 }

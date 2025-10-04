@@ -83,8 +83,13 @@ func init() {
 		"variable_declarator":        variableDeclaratorProcessor,
 		"local_variable_declaration": localVariableDeclarationProcessor,
 		"object_creation_expression": objectCreationExpressionProcessor,
-		"method_declaration":         functionDefinitionProcessor,
+		"method_declaration":         goMethodDeclarationProcessorWrapper,
 		"assignment_expression":      assignmentProcessor,
+
+		// Go-specific
+		"call_expression":      goCallExpressionProcessorWrapper,
+		"function_declaration": goFunctionDeclarationProcessorWrapper,
+		"source_file":          emptyProcessor,
 	}
 
 	for literalNodeType := range literalNodeTypes {
@@ -1023,4 +1028,341 @@ func resolveQualifierObjectFieldaccess(invokedObjNode *sitter.Node, treeData []b
 	normalisedString := methodInvocationNormaliserRegexp.ReplaceAllString(invokedObjNode.Content(treeData), "")
 
 	return strings.ReplaceAll(normalisedString, ".", namespaceSeparator)
+}
+
+// Go-specific ------
+
+// Wrapper functions to check language before processing Go-specific nodes
+
+func goCallExpressionProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	treeLanguage, err := callGraph.Tree.Language()
+	if err != nil || treeLanguage.Meta().Code != core.LanguageCodeGo {
+		// Not Go, skip
+		return newProcessorResult()
+	}
+	return goCallExpressionProcessor(node, treeData, currentNamespace, callGraph, metadata)
+}
+
+func goFunctionDeclarationProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	treeLanguage, err := callGraph.Tree.Language()
+	if err != nil {
+		return newProcessorResult()
+	}
+
+	if treeLanguage.Meta().Code == core.LanguageCodeGo {
+		return goFunctionDeclarationProcessor(node, treeData, currentNamespace, callGraph, metadata)
+	}
+
+	// Fallback to default function definition processor for other languages
+	return functionDefinitionProcessor(node, treeData, currentNamespace, callGraph, metadata)
+}
+
+func goMethodDeclarationProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	treeLanguage, err := callGraph.Tree.Language()
+	if err != nil {
+		return newProcessorResult()
+	}
+
+	if treeLanguage.Meta().Code == core.LanguageCodeGo {
+		return goMethodDeclarationProcessor(node, treeData, currentNamespace, callGraph, metadata)
+	}
+
+	// Fallback to default function definition processor for other languages (Java)
+	return functionDefinitionProcessor(node, treeData, currentNamespace, callGraph, metadata)
+}
+
+// goCallExpressionProcessor handles Go call_expression nodes
+// Examples:
+// - os.WriteFile(filename, data, 0644) -> os//WriteFile
+// - fmt.Println("hello") -> fmt//Println
+// - helper(10) -> helper (unqualified function call)
+func goCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if callNode == nil {
+		return newProcessorResult()
+	}
+
+	result := newProcessorResult()
+
+	// Get function node
+	functionNode := callNode.ChildByFieldName("function")
+	if functionNode == nil {
+		return result
+	}
+
+	// Get arguments node
+	argumentsNode := callNode.ChildByFieldName("arguments")
+	callArguments := []CallArgument{}
+	if argumentsNode != nil {
+		callArguments = resolveGoCallArguments(argumentsNode, treeData, currentNamespace, callGraph, metadata)
+	}
+
+	// Resolve function name based on node type
+	var qualifiedName string
+	var resolved bool
+
+	switch functionNode.Type() {
+	case "selector_expression":
+		// Package-qualified or method call: pkg.Func or obj.Method
+		qualifiedName, resolved = resolveGoSelectorExpression(functionNode, treeData, currentNamespace, callGraph)
+	case "identifier":
+		// Simple function call: func()
+		funcName := functionNode.Content(treeData)
+		qualifiedName, resolved = resolveGoIdentifier(funcName, currentNamespace, callGraph)
+	default:
+		// Other types (e.g., function literals, etc.) - try as identifier
+		qualifiedName = functionNode.Content(treeData)
+		resolved = true
+	}
+
+	if !resolved {
+		return result
+	}
+
+	// Add edge to call graph
+	callGraph.addEdge(
+		currentNamespace, nil, functionNode,
+		qualifiedName, nil,
+		callArguments,
+	)
+
+	log.Debugf("Go call: %s -> %s", currentNamespace, qualifiedName)
+
+	return result
+}
+
+// resolveGoCallArguments processes arguments for Go function calls
+func resolveGoCallArguments(argumentsNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) []CallArgument {
+	if argumentsNode == nil {
+		return []CallArgument{}
+	}
+
+	if argumentsNode.Type() != "argument_list" {
+		log.Errorf("Expected argument_list node, got %s for %s", argumentsNode.Type(), argumentsNode.Content(treeData))
+		return []CallArgument{}
+	}
+
+	result := make([]CallArgument, 0, argumentsNode.NamedChildCount())
+
+	for i := 0; uint32(i) < argumentsNode.NamedChildCount(); i++ {
+		childNode := argumentsNode.NamedChild(i)
+		if childNode == nil {
+			continue
+		}
+
+		childProcessorResult := processNode(childNode, treeData, currentNamespace, callGraph, metadata)
+
+		// Register ImmediateCallRefs from arguments
+		for _, callRef := range childProcessorResult.ImmediateCallRefs {
+			callGraph.addEdge(
+				currentNamespace, nil, callRef.CallerIdentifier,
+				callRef.CalleeNamespace, callRef.CalleeTreeNode,
+				callRef.Arguments,
+			)
+		}
+
+		resolvedTerminalAssignmentNodes := []*assignmentNode{}
+		for _, assignmentNode := range childProcessorResult.ImmediateAssignments {
+			resolvedNodes := callGraph.assignmentGraph.resolve(assignmentNode.Namespace)
+			resolvedTerminalAssignmentNodes = append(resolvedTerminalAssignmentNodes, resolvedNodes...)
+		}
+
+		result = append(result, CallArgument{
+			Nodes: resolvedTerminalAssignmentNodes,
+		})
+	}
+
+	return result
+}
+
+// resolveGoSelectorExpression resolves Go selector expressions like pkg.Func or obj.Method
+// Returns the qualified name and whether it was resolved
+func resolveGoSelectorExpression(selectorNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph) (string, bool) {
+	if selectorNode == nil || selectorNode.Type() != "selector_expression" {
+		return "", false
+	}
+
+	// Get operand (left side) and field (right side)
+	operandNode := selectorNode.ChildByFieldName("operand")
+	fieldNode := selectorNode.ChildByFieldName("field")
+
+	if operandNode == nil || fieldNode == nil {
+		return "", false
+	}
+
+	operandName := operandNode.Content(treeData)
+	fieldName := fieldNode.Content(treeData)
+
+	// Check if operand is a package import
+	// Look up in assignment graph for imported packages
+	operandAssignment, operandResolved := searchSymbolInScopeChain(operandName, currentNamespace, callGraph)
+
+	if operandResolved {
+		// Could be an imported package or a variable
+		resolvedObjects := callGraph.assignmentGraph.resolve(operandAssignment.Namespace)
+
+		// If it resolves to a single namespace without further qualification, it's likely a package
+		// Build qualified name from resolved object
+		if len(resolvedObjects) > 0 {
+			// For packages, the namespace is the package name, field is the function
+			qualifiedName := resolvedObjects[0].Namespace + namespaceSeparator + fieldName
+
+			// Add edges for all resolved objects (in case of multiple assignments)
+			for _, resolvedObj := range resolvedObjects {
+				qualifiedName := resolvedObj.Namespace + namespaceSeparator + fieldName
+				log.Debugf("Resolved Go selector (assigned): %s.%s -> %s", operandName, fieldName, qualifiedName)
+				return qualifiedName, true
+			}
+
+			return qualifiedName, true
+		}
+	}
+
+	// Fallback: construct qualified name directly
+	// This handles cases where the package is not explicitly in scope chain
+	// e.g., standard library packages
+	qualifiedName := operandName + namespaceSeparator + fieldName
+	log.Debugf("Resolved Go selector (direct): %s.%s -> %s", operandName, fieldName, qualifiedName)
+
+	return qualifiedName, true
+}
+
+// resolveGoIdentifier resolves unqualified Go identifiers
+// Returns the qualified name and whether it was resolved
+func resolveGoIdentifier(identifier string, currentNamespace string, callGraph *CallGraph) (string, bool) {
+	// Try to find in scope chain
+	assignmentNode, found := searchSymbolInScopeChain(identifier, currentNamespace, callGraph)
+
+	if found {
+		return assignmentNode.Namespace, true
+	}
+
+	// If not found in scope chain, it might be a builtin or unqualified call
+	// Construct namespace-qualified name
+	qualifiedName := currentNamespace + namespaceSeparator + identifier
+
+	return qualifiedName, true
+}
+
+// goFunctionDeclarationProcessor handles Go function and method declarations
+func goFunctionDeclarationProcessor(funcDefNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if funcDefNode == nil {
+		return newProcessorResult()
+	}
+
+	functionNameNode := funcDefNode.ChildByFieldName("name")
+	if functionNameNode == nil {
+		log.Errorf("Go function declaration without name - %s", funcDefNode.Content(treeData))
+		return newProcessorResult()
+	}
+
+	funcName := functionNameNode.Content(treeData)
+	functionNamespace := currentNamespace + namespaceSeparator + funcName
+
+	// Add function to call graph
+	if _, exists := callGraph.Nodes[functionNamespace]; !exists {
+		callGraph.addNode(functionNamespace, funcDefNode)
+		log.Debugf("Register Go function definition for %s - %s", funcName, functionNamespace)
+	}
+
+	results := newProcessorResult()
+
+	// Process function body
+	functionBody := funcDefNode.ChildByFieldName("body")
+	if functionBody != nil {
+		metadata.insideFunction = true
+		result := processChildren(functionBody, treeData, functionNamespace, callGraph, metadata)
+		metadata.insideFunction = false
+		results.addResults(result)
+	}
+
+	return results
+}
+
+// goMethodDeclarationProcessor handles Go method declarations (functions with receivers)
+func goMethodDeclarationProcessor(methodDefNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if methodDefNode == nil {
+		return newProcessorResult()
+	}
+
+	methodNameNode := methodDefNode.ChildByFieldName("name")
+	if methodNameNode == nil {
+		log.Errorf("Go method declaration without name - %s", methodDefNode.Content(treeData))
+		return newProcessorResult()
+	}
+
+	// Extract receiver type
+	receiverNode := methodDefNode.ChildByFieldName("receiver")
+	receiverType := extractGoReceiverType(receiverNode, treeData)
+
+	methodName := methodNameNode.Content(treeData)
+
+	// Method namespace includes receiver type
+	var methodNamespace string
+	if receiverType != "" {
+		// Namespace: file//ReceiverType//MethodName
+		methodNamespace = currentNamespace + namespaceSeparator + receiverType + namespaceSeparator + methodName
+	} else {
+		// Fallback if receiver type can't be extracted
+		methodNamespace = currentNamespace + namespaceSeparator + methodName
+	}
+
+	// Add method to call graph
+	if _, exists := callGraph.Nodes[methodNamespace]; !exists {
+		callGraph.addNode(methodNamespace, methodDefNode)
+		log.Debugf("Register Go method definition for %s on %s - %s", methodName, receiverType, methodNamespace)
+	}
+
+	results := newProcessorResult()
+
+	// Process method body
+	methodBody := methodDefNode.ChildByFieldName("body")
+	if methodBody != nil {
+		metadata.insideFunction = true
+		result := processChildren(methodBody, treeData, methodNamespace, callGraph, metadata)
+		metadata.insideFunction = false
+		results.addResults(result)
+	}
+
+	return results
+}
+
+// extractGoReceiverType extracts the receiver type name from a receiver parameter list
+// Example: (m *MyType) -> MyType
+func extractGoReceiverType(receiverNode *sitter.Node, treeData []byte) string {
+	if receiverNode == nil {
+		return ""
+	}
+
+	// Receiver is a parameter_list containing parameter_declaration
+	for i := 0; uint32(i) < receiverNode.ChildCount(); i++ {
+		child := receiverNode.Child(i)
+		if child == nil {
+			continue
+		}
+
+		if child.Type() == "parameter_declaration" {
+			// Look for type_identifier or pointer_type
+			for j := 0; uint32(j) < child.ChildCount(); j++ {
+				typeNode := child.Child(j)
+				if typeNode == nil {
+					continue
+				}
+
+				switch typeNode.Type() {
+				case "type_identifier":
+					return typeNode.Content(treeData)
+				case "pointer_type":
+					// Extract the underlying type from pointer
+					for k := 0; uint32(k) < typeNode.ChildCount(); k++ {
+						pointerChild := typeNode.Child(k)
+						if pointerChild != nil && pointerChild.Type() == "type_identifier" {
+							return pointerChild.Content(treeData)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return ""
 }

@@ -193,8 +193,10 @@ var testcases = []callgraphTestcase{
 				{"print", [][]string{{"\"gg\""}, {"1"}, {"2.5"}, {"True"}, {"None"}, {"mypkg//SOME_CONSTANT"}, {}, {}, {}, {}, {}, {}, {}}},
 			},
 			"fixtures/testFunctions.py//factorial": {
-				{"fixtures/testFunctions.py//factorial", [][]string{
-					{"fixtures/testFunctions.py//factorial//x", "1"}},
+				{
+					"fixtures/testFunctions.py//factorial", [][]string{
+						{"fixtures/testFunctions.py//factorial//x", "1"},
+					},
 				},
 			},
 			"fixtures/testFunctions.py//foo": {
@@ -477,6 +479,81 @@ var testcases = []callgraphTestcase{
 			{Namespace: "com//custompkg//SomeClass//defaultConstructor", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases", CallerIdentifierContent: "com.custompkg.SomeClass.defaultConstructor()"},
 			{Namespace: "com//custompkg//SomeClass//someMethod", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases", CallerIdentifierContent: "com.custompkg.SomeClass.someMethod(i)"},
 			{Namespace: "com//custompkg//SomeClass//someOtherMethod", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases", CallerIdentifierContent: "com.custompkg.SomeClass.someOtherMethod(i, s)"},
+		},
+	},
+	{
+		Language: core.LanguageCodeGo,
+		FilePath: "fixtures/testCallGraph.go",
+		ExpectedAssignmentGraph: map[string][]string{
+			"fmt":       {"fmt"},
+			"os":        {"os"},
+			"f":         {"fmt"},
+			"net//http": {"net//http"},
+			"http":      {"net//http"},
+			"strings":   {"strings"},
+		},
+		ExpectedCallGraph: map[string][]expectedCallgraphRefs{
+			"fixtures/testCallGraph.go": {
+				{"fixtures/testCallGraph.go//helper", [][]string{{"10"}}},
+				{"fixtures/testCallGraph.go//processFile", [][]string{{"\"test.txt\""}}},
+				{"fixtures/testCallGraph.go//useAliases", [][]string{}},
+				{"fixtures/testCallGraph.go//nestedCalls", [][]string{}},
+				{"fixtures/testCallGraph.go//makeRequest", [][]string{}},
+				{"fixtures/testCallGraph.go//chainedCalls", [][]string{}},
+				{"fixtures/testCallGraph.go//useVariadic", [][]string{}},
+				{"fixtures/testCallGraph.go//useStructs", [][]string{}},
+				{"os//Getenv", [][]string{{"\"HOME\""}}},
+				{"fmt//Sprintf", [][]string{{"\"formatted: %v\""}, {"123"}}},
+			},
+			"fixtures/testCallGraph.go//helper": {
+				{"fmt//Println", [][]string{{"\"helper called\""}}},
+			},
+			"fixtures/testCallGraph.go//processFile": {
+				{"os//WriteFile", [][]string{
+					{"fixtures/testCallGraph.go//processFile//filename"},
+					{"fixtures/testCallGraph.go//processFile//data"},
+					{"0644"},
+				}},
+				{"fmt//Printf", [][]string{
+					{"\"Wrote file: %s\\n\""},
+					{"fixtures/testCallGraph.go//processFile//filename"},
+				}},
+			},
+			"fixtures/testCallGraph.go//useAliases": {
+				{"fmt//Println", [][]string{{"\"Using alias import\""}}},
+				{"strings//ToUpper", [][]string{{"\"hello\""}}},
+				{"fmt//Println", [][]string{}},
+			},
+			"fixtures/testCallGraph.go//nestedCalls": {
+				{"fixtures/testCallGraph.go//helper", [][]string{{"5"}}},
+				{"fixtures/testCallGraph.go//helper", [][]string{}},
+				{"fmt//Println", [][]string{}},
+			},
+			"fixtures/testCallGraph.go//makeRequest": {
+				{"net//http//Get", [][]string{{"\"https://example.com\""}}},
+				{"fmt//Println", [][]string{}},
+			},
+			"fixtures/testCallGraph.go//chainedCalls": {
+				{"net//http//NewRequest", [][]string{{"\"GET\""}, {"\"https://example.com\""}}},
+				{"fmt//Println", [][]string{}},
+			},
+			"fixtures/testCallGraph.go//useVariadic": {
+				{"fmt//Println", [][]string{{"\"one\""}, {"\"two\""}, {"\"three\""}}},
+				{"fmt//Printf", [][]string{{"\"Number: %d, String: %s\\n\""}, {"42"}, {"\"test\""}}},
+			},
+			"fixtures/testCallGraph.go//useStructs": {
+				{"fmt//Println", [][]string{}},
+			},
+		},
+		ExpectedDfsResults: []dfsResultExpectation{
+			{Namespace: "fixtures/testCallGraph.go", CallerNamespace: "fixtures/testCallGraph.go", CallerIdentifierContent: ""},
+			{Namespace: "fixtures/testCallGraph.go//helper", CallerNamespace: "fixtures/testCallGraph.go", CallerIdentifierContent: "helper"},
+			{Namespace: "fixtures/testCallGraph.go//processFile", CallerNamespace: "fixtures/testCallGraph.go", CallerIdentifierContent: "processFile"},
+			{Namespace: "fmt//Println", CallerNamespace: "fixtures/testCallGraph.go//helper", CallerIdentifierContent: "fmt.Println"},
+			{Namespace: "os//WriteFile", CallerNamespace: "fixtures/testCallGraph.go//processFile", CallerIdentifierContent: "os.WriteFile"},
+			{Namespace: "fmt//Printf", CallerNamespace: "fixtures/testCallGraph.go//processFile", CallerIdentifierContent: "fmt.Printf"},
+			{Namespace: "os//Getenv", CallerNamespace: "fixtures/testCallGraph.go", CallerIdentifierContent: "os.Getenv"},
+			{Namespace: "fmt//Sprintf", CallerNamespace: "fixtures/testCallGraph.go", CallerIdentifierContent: "fmt.Sprintf"},
 		},
 	},
 }
