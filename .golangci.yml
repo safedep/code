@@ -1,5 +1,8 @@
-run:
-  # Skip fixture directories to avoid linting test data files
-  skip-dirs:
+# golangci-lint configuration file
+# See https://golangci-lint.run/usage/configuration/
+
+issues:
+  # Exclude fixture directories from linting (test data files)
+  exclude-dirs:
     - plugin/callgraph/fixtures
     - lang/fixtures
