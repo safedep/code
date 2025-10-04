@@ -1,0 +1,5 @@
+run:
+  # Skip fixture directories to avoid linting test data files
+  skip-dirs:
+    - plugin/callgraph/fixtures
+    - lang/fixtures
