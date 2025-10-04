@@ -1201,18 +1201,11 @@ func resolveGoSelectorExpression(selectorNode *sitter.Node, treeData []byte, cur
 		resolvedObjects := callGraph.assignmentGraph.resolve(operandAssignment.Namespace)
 
 		// If it resolves to a single namespace without further qualification, it's likely a package
-		// Build qualified name from resolved object
+		// Build qualified name from resolved object (use first object if multiple)
 		if len(resolvedObjects) > 0 {
 			// For packages, the namespace is the package name, field is the function
 			qualifiedName := resolvedObjects[0].Namespace + namespaceSeparator + fieldName
-
-			// Add edges for all resolved objects (in case of multiple assignments)
-			for _, resolvedObj := range resolvedObjects {
-				qualifiedName := resolvedObj.Namespace + namespaceSeparator + fieldName
-				log.Debugf("Resolved Go selector (assigned): %s.%s -> %s", operandName, fieldName, qualifiedName)
-				return qualifiedName, true
-			}
-
+			log.Debugf("Resolved Go selector (assigned): %s.%s -> %s", operandName, fieldName, qualifiedName)
 			return qualifiedName, true
 		}
 	}
