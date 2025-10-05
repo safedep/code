@@ -115,8 +115,19 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 
 	matcherResults := []SignatureMatchResult{}
 
+	// Early termination if callgraph is too large or was truncated
+	if cg.limitExceeded {
+		log.Warnf("CallGraph for %s was truncated due to size limits, signature matching may be incomplete", cg.FileName)
+	}
+
 	functionCallTrie := trie.NewTrie[[]DfsResultItem]()
 	functionCallResultItems := cg.DFS()
+
+	// Warn if DFS results are very large
+	if len(functionCallResultItems) > 50000 {
+		log.Warnf("Large DFS result set (%d items) for file %s, signature matching may be slow", len(functionCallResultItems), cg.FileName)
+	}
+
 	for _, resultItem := range functionCallResultItems {
 		existingResultItem, exists := functionCallTrie.GetWord(resultItem.Namespace)
 		if !exists {

@@ -10,9 +10,22 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
+const (
+	// Maximum recursion depth for nested member expressions and attributes
+	// Prevents infinite recursion in pathological JavaScript files
+	maxMemberExpressionDepth = 10
+	maxAttributeDepth        = 10
+	maxProcessingDepth       = 50
+
+	// Maximum number of resolved objects to process for polymorphic variables
+	// Prevents combinatorial explosion in complex type scenarios
+	maxPolymorphicResolutions = 20
+)
+
 type processorMetadata struct {
 	insideClass    bool
 	insideFunction bool
+	processingDepth int // Track recursion depth for processChildren
 }
 
 type processorResult struct {
@@ -696,8 +709,19 @@ func searchSymbolInScopeChain(symbol string, currentNamespace string, callGraph 
 // This can be used to identify correct objNamespace for objectSymbol, finally resulting
 // objNamespace//attributeQualifierNamespace
 func dissectAttributeQualifier(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) (string, string, error) {
+	return dissectAttributeQualifierWithDepth(node, treeData, currentNamespace, callGraph, metadata, 0)
+}
+
+// dissectAttributeQualifierWithDepth is the internal implementation with depth tracking
+func dissectAttributeQualifierWithDepth(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata, depth int) (string, string, error) {
 	if node == nil {
 		return "", "", fmt.Errorf("fnAttributeResolver - node is nil")
+	}
+
+	// Prevent excessive recursion in deeply nested attributes
+	if depth > maxAttributeDepth {
+		log.Warnf("Maximum attribute depth (%d) exceeded for %s, truncating", maxAttributeDepth, node.Content(treeData))
+		return node.Content(treeData), "", nil
 	}
 
 	if node.Type() == "identifier" {
@@ -721,7 +745,7 @@ func dissectAttributeQualifier(node *sitter.Node, treeData []byte, currentNamesp
 		return "", "", fmt.Errorf("sub-attribute node not found for attribute - %s", node.Content(treeData))
 	}
 
-	objectSymbol, objectSubAttributeNamespace, err := dissectAttributeQualifier(objectNode, treeData, currentNamespace, callGraph, metadata)
+	objectSymbol, objectSubAttributeNamespace, err := dissectAttributeQualifierWithDepth(objectNode, treeData, currentNamespace, callGraph, metadata, depth+1)
 	if err != nil {
 		return "", "", err
 	}
@@ -1541,8 +1565,20 @@ func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 // resolveJSMemberExpression resolves JavaScript member expressions like obj.method or pkg.func
 // Returns the qualified name and whether it was resolved
 func resolveJSMemberExpression(memberNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph) (string, bool) {
+	return resolveJSMemberExpressionWithDepth(memberNode, treeData, currentNamespace, callGraph, 0)
+}
+
+// resolveJSMemberExpressionWithDepth is the internal implementation with depth tracking
+func resolveJSMemberExpressionWithDepth(memberNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, depth int) (string, bool) {
 	if memberNode == nil || memberNode.Type() != "member_expression" {
 		return "", false
+	}
+
+	// Prevent excessive recursion in deeply nested member expressions
+	if depth > maxMemberExpressionDepth {
+		log.Warnf("Maximum member expression depth (%d) exceeded for %s, using direct resolution", maxMemberExpressionDepth, memberNode.Content(treeData))
+		// Fallback: use the entire expression as-is
+		return memberNode.Content(treeData), true
 	}
 
 	// Get object (left side) and property (right side)
@@ -1551,6 +1587,17 @@ func resolveJSMemberExpression(memberNode *sitter.Node, treeData []byte, current
 
 	if objectNode == nil || propertyNode == nil {
 		return "", false
+	}
+
+	// Handle nested member expressions recursively with depth tracking
+	if objectNode.Type() == "member_expression" {
+		nestedQualified, resolved := resolveJSMemberExpressionWithDepth(objectNode, treeData, currentNamespace, callGraph, depth+1)
+		if resolved {
+			propertyName := propertyNode.Content(treeData)
+			qualifiedName := nestedQualified + namespaceSeparator + propertyName
+			log.Debugf("Resolved nested JS member (depth %d): %s", depth, qualifiedName)
+			return qualifiedName, true
+		}
 	}
 
 	objectName := objectNode.Content(treeData)
@@ -1618,6 +1665,13 @@ func memberExpressionProcessor(memberNode *sitter.Node, treeData []byte, current
 	}
 
 	resolvedObjects := callGraph.assignmentGraph.resolve(targetObject.Namespace)
+
+	// Limit polymorphic expansion to prevent combinatorial explosion
+	if len(resolvedObjects) > maxPolymorphicResolutions {
+		log.Warnf("Member expression %s.%s resolved to %d objects (limit: %d), truncating to prevent explosion",
+			objectSymbol, propertyName, len(resolvedObjects), maxPolymorphicResolutions)
+		resolvedObjects = resolvedObjects[:maxPolymorphicResolutions]
+	}
 
 	result := newProcessorResult()
 	for _, resolvedObject := range resolvedObjects {
