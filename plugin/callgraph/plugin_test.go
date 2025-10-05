@@ -646,6 +646,7 @@ var testcases = []callgraphTestcase{
 		ExpectedAssignmentGraph: map[string][]string{
 			"fs":       {},
 			"axios":    {},
+			"sqlite3":  {},
 			"readFile": {"fs//promises//readFile"},
 			"writeFile": {"fs//promises//writeFile"},
 			"log":  {"console//log"},
@@ -653,9 +654,11 @@ var testcases = []callgraphTestcase{
 			"fixtures/testJavascript.js//simpleFunction": {},
 			"fixtures/testJavascript.js//TestClass":      {},
 			"fixtures/testJavascript.js//instance":       {"fixtures/testJavascript.js//TestClass"},
+			"fixtures/testJavascript.js//db":             {"sqlite3//Database"},
 		},
 		ExpectedCallGraph: map[string][]expectedCallgraphRefs{
 			"fixtures/testJavascript.js": {
+				{"fixtures/testJavascript.js//require", [][]string{}},
 				{"fixtures/testJavascript.js//require", [][]string{}},
 				{"fixtures/testJavascript.js//require", [][]string{}},
 				{"fixtures/testJavascript.js//TestClass", [][]string{}},
@@ -674,6 +677,7 @@ var testcases = []callgraphTestcase{
 				{"fixtures/testJavascript.js//ClassA//method1", [][]string{}},
 				{"fixtures/testJavascript.js//ClassA//method2", [][]string{}},
 				{"fixtures/testJavascript.js//ClassA//methodUnique", [][]string{}},
+				{"sqlite3//Database", [][]string{}},
 			},
 			"fixtures/testJavascript.js//simpleFunction": {
 				{"log", [][]string{}},

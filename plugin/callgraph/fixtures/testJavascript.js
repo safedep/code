@@ -3,6 +3,7 @@ const fs = require('fs');
 const { readFile, writeFile } = require('fs/promises');
 import axios from 'axios';
 import { log, warn } from 'console';
+const sqlite3 = require('sqlite3');
 
 // Simple function declaration
 function simpleFunction(param1, param2) {
@@ -96,3 +97,6 @@ const y = x;
 y.method1();
 y.method2();
 y.methodUnique();
+
+// Member expression constructor test
+const db = new sqlite3.Database(':memory:');

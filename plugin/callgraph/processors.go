@@ -1754,7 +1754,9 @@ func methodDefinitionProcessor(methodDefNode *sitter.Node, treeData []byte, curr
 }
 
 // jsNewExpressionProcessor handles JavaScript new_expression nodes (constructor calls)
-// Examples: new TestClass("test", 42)
+// Examples:
+// - new TestClass("test", 42) - simple identifier constructor
+// - new sqlite3.Database(':memory:') - member expression constructor
 func jsNewExpressionProcessor(newNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
 	if newNode == nil {
 		return newProcessorResult()
@@ -1775,30 +1777,41 @@ func jsNewExpressionProcessor(newNode *sitter.Node, treeData []byte, currentName
 		callArguments = resolveCallArguments(argumentsNode, treeData, currentNamespace, callGraph, metadata)
 	}
 
-	constructorName := constructorNode.Content(treeData)
+	// Resolve constructor name based on node type (similar to jsCallExpressionProcessor)
+	var constructorNamespace string
+	var resolved bool
 
-	// Resolve class name
-	classAssignment, classResolved := searchSymbolInScopeChain(constructorName, currentNamespace, callGraph)
+	switch constructorNode.Type() {
+	case "member_expression":
+		// Constructor like: new sqlite3.Database() or new pkg.ClassName()
+		constructorNamespace, resolved = resolveJSMemberExpression(constructorNode, treeData, currentNamespace, callGraph)
+	case "identifier":
+		// Simple constructor: new TestClass()
+		constructorName := constructorNode.Content(treeData)
+		constructorNamespace, resolved = resolveJSIdentifier(constructorName, currentNamespace, callGraph)
+	default:
+		// Fallback: use content as-is
+		constructorNamespace = constructorNode.Content(treeData)
+		resolved = true
+	}
+
+	if !resolved {
+		return result
+	}
+
+	log.Debugf("JS constructor resolved to %s", constructorNamespace)
+
+	// Add constructor call edge
+	callGraph.addEdge(
+		currentNamespace, nil, newNode,
+		constructorNamespace, nil,
+		callArguments,
+	)
+
+	// Try to find the class/constructor in the assignment graph for return value tracking
+	classAssignment, classResolved := searchSymbolInScopeChain(constructorNamespace, currentNamespace, callGraph)
 	if classResolved {
-		log.Debugf("JS constructor %s resolved to %s", constructorName, classAssignment.Namespace)
-
-		// Call to class constructor
-		callGraph.addEdge(
-			currentNamespace, nil, newNode,
-			classAssignment.Namespace, classAssignment.TreeNode,
-			callArguments,
-		)
-
-		// Mark the class assignment for return value
 		result.ImmediateAssignments = append(result.ImmediateAssignments, classAssignment)
-	} else {
-		// Unresolved constructor, create fallback namespace
-		classNamespace := currentNamespace + namespaceSeparator + constructorName
-		callGraph.addEdge(
-			currentNamespace, nil, newNode,
-			classNamespace, nil,
-			callArguments,
-		)
 	}
 
 	return result

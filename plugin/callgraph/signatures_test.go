@@ -131,6 +131,20 @@ func TestSignatureMatcher(t *testing.T) {
 						},
 					},
 				},
+				{
+					Id: "js.database.constructor",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"javascript": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "sqlite3/Database",
+								},
+							},
+						},
+					},
+				},
 			},
 			ExpectedMatches: []signatureMatchExpectation{
 				{
@@ -153,6 +167,13 @@ func TestSignatureMatcher(t *testing.T) {
 					ExpectedLanguage: core.LanguageCodeJavascript,
 					MinEvidenceCount: 1,
 					CalleeContains:   "get",
+				},
+				{
+					SignatureID:      "js.database.constructor",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodeJavascript,
+					MinEvidenceCount: 1,
+					CalleeContains:   "Database",
 				},
 			},
 		},
