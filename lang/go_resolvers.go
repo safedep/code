@@ -61,10 +61,11 @@ func (r *goResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, er
 			node.SetModuleNameNode(moduleNameNode)
 			if explicitModuleAliasNode != nil {
 				node.SetModuleAliasNode(explicitModuleAliasNode)
+			} else if !node.IsWildcardImport() {
+				// For Go imports without explicit alias, set alias node to module name node
+				// The helpers.ResolveImportContentsGo() will extract the package name from it
+				node.SetModuleAliasNode(moduleNameNode)
 			}
-			// For Go, the default alias is the last segment of the import path
-			// We don't set an alias node here - let the import processing extract it
-			// from the module name
 
 			imports = append(imports, node)
 			return nil
@@ -129,7 +130,8 @@ func (r *goResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDecl
 // Helper methods for Go function extraction
 
 func (r *goResolvers) extractGoFunctions(data *[]byte, tree core.ParseTree,
-	functionMap map[string]*ast.FunctionDeclarationNode) error {
+	functionMap map[string]*ast.FunctionDeclarationNode,
+) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(goFunctionDefinitionQuery, func(m *sitter.QueryMatch) error {
 			if len(m.Captures) < 3 {
@@ -191,7 +193,8 @@ func (r *goResolvers) extractGoFunctions(data *[]byte, tree core.ParseTree,
 }
 
 func (r *goResolvers) extractGoMethods(data *[]byte, tree core.ParseTree,
-	functionMap map[string]*ast.FunctionDeclarationNode) error {
+	functionMap map[string]*ast.FunctionDeclarationNode,
+) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(goMethodDefinitionQuery, func(m *sitter.QueryMatch) error {
 			if len(m.Captures) < 4 {
