@@ -1,0 +1,9 @@
+# golangci-lint configuration file
+# See https://golangci-lint.run/usage/configuration/
+
+version: "2"
+linters:
+  exclusions:
+    paths:
+      - plugin/callgraph/fixtures
+      - lang/fixtures

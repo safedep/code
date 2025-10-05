@@ -193,8 +193,10 @@ var testcases = []callgraphTestcase{
 				{"print", [][]string{{"\"gg\""}, {"1"}, {"2.5"}, {"True"}, {"None"}, {"mypkg//SOME_CONSTANT"}, {}, {}, {}, {}, {}, {}, {}}},
 			},
 			"fixtures/testFunctions.py//factorial": {
-				{"fixtures/testFunctions.py//factorial", [][]string{
-					{"fixtures/testFunctions.py//factorial//x", "1"}},
+				{
+					"fixtures/testFunctions.py//factorial", [][]string{
+						{"fixtures/testFunctions.py//factorial//x", "1"},
+					},
 				},
 			},
 			"fixtures/testFunctions.py//foo": {
@@ -477,6 +479,165 @@ var testcases = []callgraphTestcase{
 			{Namespace: "com//custompkg//SomeClass//defaultConstructor", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases", CallerIdentifierContent: "com.custompkg.SomeClass.defaultConstructor()"},
 			{Namespace: "com//custompkg//SomeClass//someMethod", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases", CallerIdentifierContent: "com.custompkg.SomeClass.someMethod(i)"},
 			{Namespace: "com//custompkg//SomeClass//someOtherMethod", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases", CallerIdentifierContent: "com.custompkg.SomeClass.someOtherMethod(i, s)"},
+		},
+	},
+	{
+		Language: core.LanguageCodeGo,
+		FilePath: "fixtures/testCallGraph.go",
+		ExpectedAssignmentGraph: map[string][]string{
+			"fmt": {},
+			"os":  {},
+		},
+		ExpectedCallGraph: map[string][]expectedCallgraphRefs{
+			"fixtures/testCallGraph.go": {
+				{"fixtures/testCallGraph.go//helper", [][]string{}},
+				{"fixtures/testCallGraph.go//processFile", [][]string{}},
+				{"fixtures/testCallGraph.go//main", [][]string{}},
+			},
+			"fixtures/testCallGraph.go//main": {
+				{"fixtures/testCallGraph.go//helper", [][]string{{"10"}}},
+				{"fixtures/testCallGraph.go//processFile", [][]string{{"\"test.txt\""}}},
+				{"os//Getenv", [][]string{{"\"HOME\""}}},
+				{"fmt//Sprintf", [][]string{{"\"formatted: %v\""}, {"123"}}},
+				{"fmt//Println", [][]string{{"fixtures/testCallGraph.go//main//result"}}},
+			},
+			"fixtures/testCallGraph.go//helper": {
+				{"fmt//Println", [][]string{{"\"helper called\""}}},
+			},
+			"fixtures/testCallGraph.go//processFile": {
+				{"os//WriteFile", [][]string{
+					{"fixtures/testCallGraph.go//processFile//filename"},
+					{"fixtures/testCallGraph.go//processFile//data"},
+					{"0644"},
+				}},
+				{"fmt//Printf", [][]string{
+					{"\"Wrote file: %s\\n\""},
+					{"fixtures/testCallGraph.go//processFile//filename"},
+				}},
+			},
+		},
+		ExpectedDfsResults: []dfsResultExpectation{
+			{Namespace: "fixtures/testCallGraph.go", CallerNamespace: "fixtures/testCallGraph.go", CallerIdentifierContent: ""},
+			{Namespace: "fixtures/testCallGraph.go//helper", CallerNamespace: "fixtures/testCallGraph.go", CallerIdentifierContent: ""},
+			{Namespace: "fixtures/testCallGraph.go//processFile", CallerNamespace: "fixtures/testCallGraph.go", CallerIdentifierContent: ""},
+			{Namespace: "fixtures/testCallGraph.go//main", CallerNamespace: "fixtures/testCallGraph.go", CallerIdentifierContent: ""},
+			{Namespace: "fixtures/testCallGraph.go//helper", CallerNamespace: "fixtures/testCallGraph.go//main", CallerIdentifierContent: "helper"},
+			{Namespace: "fixtures/testCallGraph.go//processFile", CallerNamespace: "fixtures/testCallGraph.go//main", CallerIdentifierContent: "processFile"},
+			{Namespace: "fmt//Println", CallerNamespace: "fixtures/testCallGraph.go//helper", CallerIdentifierContent: "fmt.Println"},
+			{Namespace: "os//WriteFile", CallerNamespace: "fixtures/testCallGraph.go//processFile", CallerIdentifierContent: "os.WriteFile"},
+			{Namespace: "fmt//Printf", CallerNamespace: "fixtures/testCallGraph.go//processFile", CallerIdentifierContent: "fmt.Printf"},
+			{Namespace: "os//Getenv", CallerNamespace: "fixtures/testCallGraph.go//main", CallerIdentifierContent: "os.Getenv"},
+			{Namespace: "fmt//Sprintf", CallerNamespace: "fixtures/testCallGraph.go//main", CallerIdentifierContent: "fmt.Sprintf"},
+		},
+	},
+	{
+		Language: core.LanguageCodeGo,
+		FilePath: "fixtures/testGoLibrary.go",
+		ExpectedAssignmentGraph: map[string][]string{
+			"fmt":     {},
+			"strings": {},
+		},
+		ExpectedCallGraph: map[string][]expectedCallgraphRefs{
+			"fixtures/testGoLibrary.go": {
+				{"fixtures/testGoLibrary.go//ProcessData", [][]string{}},
+				{"fixtures/testGoLibrary.go//ValidateInput", [][]string{}},
+				{"fixtures/testGoLibrary.go//logError", [][]string{}},
+				{"fixtures/testGoLibrary.go//Transform", [][]string{}},
+			},
+			"fixtures/testGoLibrary.go//ProcessData": {
+				{"strings//ToUpper", [][]string{{"fixtures/testGoLibrary.go//ProcessData//data"}}},
+				{"fmt//Printf", [][]string{{"\"Processed: %s\\n\""}, {"fixtures/testGoLibrary.go//ProcessData//result"}}},
+			},
+			"fixtures/testGoLibrary.go//ValidateInput": {
+				{"fixtures/testGoLibrary.go//logError", [][]string{{"\"Empty input\""}}},
+			},
+			"fixtures/testGoLibrary.go//logError": {
+				{"fmt//Println", [][]string{{"\"Error:\""}, {"fixtures/testGoLibrary.go//logError//msg"}}},
+			},
+			"fixtures/testGoLibrary.go//Transform": {
+				{"fixtures/testGoLibrary.go//ValidateInput", [][]string{{"fixtures/testGoLibrary.go//Transform//s"}}},
+				{"fixtures/testGoLibrary.go//ProcessData", [][]string{{"fixtures/testGoLibrary.go//Transform//s"}}},
+			},
+		},
+		ExpectedDfsResults: []dfsResultExpectation{
+			{Namespace: "fixtures/testGoLibrary.go", CallerNamespace: "fixtures/testGoLibrary.go", CallerIdentifierContent: ""},
+			{Namespace: "fixtures/testGoLibrary.go//ProcessData", CallerNamespace: "fixtures/testGoLibrary.go", CallerIdentifierContent: ""},
+			{Namespace: "fixtures/testGoLibrary.go//ValidateInput", CallerNamespace: "fixtures/testGoLibrary.go", CallerIdentifierContent: ""},
+			{Namespace: "fixtures/testGoLibrary.go//logError", CallerNamespace: "fixtures/testGoLibrary.go", CallerIdentifierContent: ""},
+			{Namespace: "fixtures/testGoLibrary.go//Transform", CallerNamespace: "fixtures/testGoLibrary.go", CallerIdentifierContent: ""},
+			{Namespace: "strings//ToUpper", CallerNamespace: "fixtures/testGoLibrary.go//ProcessData", CallerIdentifierContent: "strings.ToUpper"},
+			{Namespace: "fmt//Printf", CallerNamespace: "fixtures/testGoLibrary.go//ProcessData", CallerIdentifierContent: "fmt.Printf"},
+			{Namespace: "fixtures/testGoLibrary.go//logError", CallerNamespace: "fixtures/testGoLibrary.go//ValidateInput", CallerIdentifierContent: "logError"},
+			{Namespace: "fmt//Println", CallerNamespace: "fixtures/testGoLibrary.go//logError", CallerIdentifierContent: "fmt.Println"},
+			{Namespace: "fixtures/testGoLibrary.go//ValidateInput", CallerNamespace: "fixtures/testGoLibrary.go//Transform", CallerIdentifierContent: "ValidateInput"},
+			{Namespace: "fixtures/testGoLibrary.go//ProcessData", CallerNamespace: "fixtures/testGoLibrary.go//Transform", CallerIdentifierContent: "ProcessData"},
+		},
+	},
+	{
+		Language: core.LanguageCodeGo,
+		FilePath: "fixtures/testGoNestedImports.go",
+		ExpectedAssignmentGraph: map[string][]string{
+			"json":     {"encoding//json"},
+			"http":     {"net//http"},
+			"filepath": {"path//filepath"},
+			"ioutil":   {"io//ioutil"},
+		},
+		ExpectedCallGraph: map[string][]expectedCallgraphRefs{
+			"fixtures/testGoNestedImports.go": {
+				{"fixtures/testGoNestedImports.go//makeHTTPRequest", [][]string{}},
+				{"fixtures/testGoNestedImports.go//parseJSON", [][]string{}},
+				{"fixtures/testGoNestedImports.go//processPath", [][]string{}},
+				{"fixtures/testGoNestedImports.go//readConfig", [][]string{}},
+				{"fixtures/testGoNestedImports.go//fetchAndParse", [][]string{}},
+				{"fixtures/testGoNestedImports.go//main", [][]string{}},
+			},
+			"fixtures/testGoNestedImports.go//makeHTTPRequest": {
+				{"net//http//Get", [][]string{{"\"https://api.example.com/data\""}}},
+			},
+			"fixtures/testGoNestedImports.go//parseJSON": {
+				{"encoding//json//Unmarshal", [][]string{
+					{"fixtures/testGoNestedImports.go//parseJSON//data"},
+					{"fixtures/testGoNestedImports.go//parseJSON//result"},
+				}},
+			},
+			"fixtures/testGoNestedImports.go//processPath": {
+				{"path//filepath//Join", [][]string{
+					{"fixtures/testGoNestedImports.go//processPath//dir"},
+					{"fixtures/testGoNestedImports.go//processPath//file"},
+				}},
+			},
+			"fixtures/testGoNestedImports.go//readConfig": {
+				{"io//ioutil//ReadFile", [][]string{{"fixtures/testGoNestedImports.go//readConfig//filename"}}},
+			},
+			"fixtures/testGoNestedImports.go//fetchAndParse": {
+				{"net//http//Get", [][]string{{"\"https://api.example.com/config\""}}},
+				{"io//ioutil//ReadAll", [][]string{{}}},
+				{"fixtures/testGoNestedImports.go//parseJSON", [][]string{{"fixtures/testGoNestedImports.go//fetchAndParse//data"}}},
+				{"path//filepath//Join", [][]string{{"\"/etc\""}, {"\"app.conf\""}}},
+				{"encoding//json//Marshal", [][]string{{"fixtures/testGoNestedImports.go//fetchAndParse//config"}}},
+				{"net//http//NewRequest", [][]string{{"\"POST\""}, {"\"/api\""}, {}}},
+			},
+			"fixtures/testGoNestedImports.go//main": {
+				{"fixtures/testGoNestedImports.go//makeHTTPRequest", [][]string{}},
+				{"fixtures/testGoNestedImports.go//readConfig", [][]string{{"\"config.json\""}}},
+				{"fixtures/testGoNestedImports.go//parseJSON", [][]string{{"fixtures/testGoNestedImports.go//main//data"}}},
+				{"fixtures/testGoNestedImports.go//processPath", [][]string{{"\"/tmp\""}, {"\"test.txt\""}}},
+				{"fixtures/testGoNestedImports.go//fetchAndParse", [][]string{}},
+				{"net//http//Head", [][]string{{"\"https://example.com\""}}},
+				{"encoding//json//Valid", [][]string{{"fixtures/testGoNestedImports.go//main//result"}}},
+				{"path//filepath//Abs", [][]string{{"\"/tmp\""}}},
+			},
+		},
+		ExpectedDfsResults: []dfsResultExpectation{
+			{Namespace: "fixtures/testGoNestedImports.go", CallerNamespace: "fixtures/testGoNestedImports.go", CallerIdentifierContent: ""},
+			{Namespace: "fixtures/testGoNestedImports.go//main", CallerNamespace: "fixtures/testGoNestedImports.go", CallerIdentifierContent: ""},
+			{Namespace: "net//http//Get", CallerNamespace: "fixtures/testGoNestedImports.go//makeHTTPRequest", CallerIdentifierContent: "http.Get"},
+			{Namespace: "encoding//json//Unmarshal", CallerNamespace: "fixtures/testGoNestedImports.go//parseJSON", CallerIdentifierContent: "json.Unmarshal"},
+			{Namespace: "path//filepath//Join", CallerNamespace: "fixtures/testGoNestedImports.go//processPath", CallerIdentifierContent: "filepath.Join"},
+			{Namespace: "io//ioutil//ReadFile", CallerNamespace: "fixtures/testGoNestedImports.go//readConfig", CallerIdentifierContent: "ioutil.ReadFile"},
+			{Namespace: "fixtures/testGoNestedImports.go//makeHTTPRequest", CallerNamespace: "fixtures/testGoNestedImports.go//main", CallerIdentifierContent: "makeHTTPRequest"},
+			{Namespace: "fixtures/testGoNestedImports.go//readConfig", CallerNamespace: "fixtures/testGoNestedImports.go//main", CallerIdentifierContent: "readConfig"},
+			{Namespace: "fixtures/testGoNestedImports.go//parseJSON", CallerNamespace: "fixtures/testGoNestedImports.go//main", CallerIdentifierContent: "parseJSON"},
 		},
 	},
 }

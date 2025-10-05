@@ -61,6 +61,10 @@ func parseImports(imports []*ast.ImportNode, lang core.Language) (map[string]par
 		} else if moduleItemIdentifierKey != "" {
 			identifierKey = moduleItemIdentifierKey
 			identifierTreeNode = imp.GetModuleItemNode()
+		} else if lang.Meta().Code == core.LanguageCodeGo {
+			// For Go, when there's no explicit alias, use the last segment of the import path
+			// e.g., "net/http" -> http
+			identifierKey = resolveSubmoduleIdentifier(imp.ModuleName(), lang)
 		}
 
 		importedIdentifierNamespaces[identifierKey] = parsedImport{
@@ -84,6 +88,11 @@ var submoduleSeparator = map[core.LanguageCode]string{
 }
 
 func resolveNamespaceWithSeparator(moduleName string, lang core.Language) string {
+	// Strip quotes for Go string literals
+	if lang.Meta().Code == core.LanguageCodeGo {
+		moduleName = strings.Trim(moduleName, "\"")
+	}
+
 	separator, exists := submoduleSeparator[lang.Meta().Code]
 	if exists {
 		return strings.Join(strings.Split(moduleName, separator), namespaceSeparator)
@@ -92,6 +101,11 @@ func resolveNamespaceWithSeparator(moduleName string, lang core.Language) string
 }
 
 func resolveSubmoduleIdentifier(identifier string, lang core.Language) string {
+	// Strip quotes for Go string literals
+	if lang.Meta().Code == core.LanguageCodeGo {
+		identifier = strings.Trim(identifier, "\"")
+	}
+
 	separator, exists := submoduleSeparator[lang.Meta().Code]
 	if exists && strings.Contains(identifier, separator) {
 		parts := strings.Split(identifier, separator)
