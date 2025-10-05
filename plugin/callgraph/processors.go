@@ -1251,6 +1251,15 @@ func goFunctionDeclarationProcessor(funcDefNode *sitter.Node, treeData []byte, c
 	funcName := functionNameNode.Content(treeData)
 	functionNamespace := currentNamespace + namespaceSeparator + funcName
 
+	// Go - Register package-level functions as callable from root namespace
+	// This includes main() and all other top-level functions (library code, tests, etc.)
+	// For library packages without main(), this makes exported functions discoverable
+	callGraph.addEdge(
+		currentNamespace, nil, nil,
+		functionNamespace, funcDefNode,
+		[]CallArgument{},
+	)
+
 	// Add function to call graph
 	if _, exists := callGraph.Nodes[functionNamespace]; !exists {
 		callGraph.addNode(functionNamespace, funcDefNode)

@@ -61,9 +61,10 @@ func (r *goResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, er
 			node.SetModuleNameNode(moduleNameNode)
 			if explicitModuleAliasNode != nil {
 				node.SetModuleAliasNode(explicitModuleAliasNode)
-			} else if !node.IsWildcardImport() {
-				node.SetModuleAliasNode(moduleNameNode)
 			}
+			// For Go, the default alias is the last segment of the import path
+			// We don't set an alias node here - let the import processing extract it
+			// from the module name
 
 			imports = append(imports, node)
 			return nil
