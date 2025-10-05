@@ -55,7 +55,7 @@ func init() {
 	nodeProcessors = map[string]nodeProcessor{
 		"module":               emptyProcessor,
 		"program":              emptyProcessor,
-		"expression_statement": skipResultsProcessor,
+		"expression_statement": expressionStatementProcessorWrapper,
 		"binary_operator":      binaryOperatorProcessor,
 		"identifier":           identifierProcessor,
 		"class_definition":     classDefinitionProcessor,
@@ -92,10 +92,11 @@ func init() {
 		"source_file":          emptyProcessor,
 
 		// JavaScript-specific
-		"member_expression": memberExpressionProcessor,
-		"arrow_function":    arrowFunctionProcessor,
-		"method_definition": methodDefinitionProcessor,
-		"new_expression":    jsNewExpressionProcessor,
+		"member_expression":   memberExpressionProcessor,
+		"arrow_function":      arrowFunctionProcessor,
+		"method_definition":   methodDefinitionProcessor,
+		"new_expression":      jsNewExpressionProcessor,
+		"lexical_declaration": lexicalDeclarationProcessor,
 	}
 
 	for literalNodeType := range literalNodeTypes {
@@ -131,6 +132,43 @@ func skipResultsProcessor(emptyNode *sitter.Node, treeData []byte, currentNamesp
 	}
 
 	processChildren(emptyNode, treeData, currentNamespace, callGraph, metadata)
+
+	return newProcessorResult()
+}
+
+// expressionStatementProcessorWrapper handles expression_statement nodes
+// For module-level statements in JavaScript, we want to track calls
+// For statements inside functions/classes, we skip result propagation
+func expressionStatementProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if node == nil {
+		return newProcessorResult()
+	}
+
+	// Check if we're at module level (not inside a function or class method body)
+	// For JavaScript at module level, we want to track the calls
+	if !metadata.insideFunction && !metadata.insideClass {
+		// Module-level: process children and track calls in the module namespace
+		for i := 0; i < int(node.ChildCount()); i++ {
+			childNode := node.Child(i)
+			if childNode == nil {
+				continue
+			}
+
+			childResult := processNode(childNode, treeData, currentNamespace, callGraph, metadata)
+
+			// Register any immediate calls from module level
+			for _, callRef := range childResult.ImmediateCallRefs {
+				callGraph.addEdge(
+					currentNamespace, nil, callRef.CallerIdentifier,
+					callRef.CalleeNamespace, callRef.CalleeTreeNode,
+					callRef.Arguments,
+				)
+			}
+		}
+	} else {
+		// Inside function/class: skip results propagation (original behavior)
+		processChildren(node, treeData, currentNamespace, callGraph, metadata)
+	}
 
 	return newProcessorResult()
 }
@@ -1062,12 +1100,15 @@ func goFunctionDeclarationProcessorWrapper(node *sitter.Node, treeData []byte, c
 		return newProcessorResult()
 	}
 
-	if treeLanguage.Meta().Code == core.LanguageCodeGo {
+	switch treeLanguage.Meta().Code {
+	case core.LanguageCodeGo:
 		return goFunctionDeclarationProcessor(node, treeData, currentNamespace, callGraph, metadata)
+	case core.LanguageCodeJavascript:
+		return jsFunctionDeclarationProcessor(node, treeData, currentNamespace, callGraph, metadata)
+	default:
+		// Fallback to default function definition processor for other languages
+		return functionDefinitionProcessor(node, treeData, currentNamespace, callGraph, metadata)
 	}
-
-	// Fallback to default function definition processor for other languages
-	return functionDefinitionProcessor(node, treeData, currentNamespace, callGraph, metadata)
 }
 
 func goMethodDeclarationProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
@@ -1384,6 +1425,60 @@ func extractGoReceiverType(receiverNode *sitter.Node, treeData []byte) string {
 
 // JavaScript-specific ------
 
+// lexicalDeclarationProcessor handles JavaScript lexical_declaration nodes (const, let, var)
+// Routes to variableDeclaratorProcessor which handles the actual assignments
+func lexicalDeclarationProcessor(declarationNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if declarationNode == nil {
+		return newProcessorResult()
+	}
+
+	// Process all variable_declarator children
+	for i := 0; uint32(i) < declarationNode.NamedChildCount(); i++ {
+		declaratorNode := declarationNode.NamedChild(i)
+		if declaratorNode != nil && declaratorNode.Type() == "variable_declarator" {
+			processNode(declaratorNode, treeData, currentNamespace, callGraph, metadata)
+		}
+	}
+
+	return newProcessorResult()
+}
+
+// jsFunctionDeclarationProcessor handles JavaScript function declarations
+// Similar to Go, we register top-level functions as callable from the module namespace
+func jsFunctionDeclarationProcessor(funcDefNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if funcDefNode == nil {
+		return newProcessorResult()
+	}
+
+	functionNameNode := funcDefNode.ChildByFieldName("name")
+	if functionNameNode == nil {
+		log.Errorf("JS function declaration without name - %s", funcDefNode.Content(treeData))
+		return newProcessorResult()
+	}
+
+	funcName := functionNameNode.Content(treeData)
+	functionNamespace := currentNamespace + namespaceSeparator + funcName
+
+	// Add function to call graph
+	if _, exists := callGraph.Nodes[functionNamespace]; !exists {
+		callGraph.addNode(functionNamespace, funcDefNode)
+		log.Debugf("Register JS function declaration for %s - %s", funcName, functionNamespace)
+	}
+
+	results := newProcessorResult()
+
+	// Process function body
+	functionBody := funcDefNode.ChildByFieldName("body")
+	if functionBody != nil {
+		metadata.insideFunction = true
+		result := processChildren(functionBody, treeData, functionNamespace, callGraph, metadata)
+		metadata.insideFunction = false
+		results.addResults(result)
+	}
+
+	return results
+}
+
 // jsCallExpressionProcessor handles JavaScript call_expression nodes
 // Examples:
 // - console.log("hello") -> console//log
@@ -1544,16 +1639,53 @@ func arrowFunctionProcessor(arrowNode *sitter.Node, treeData []byte, currentName
 		return newProcessorResult()
 	}
 
-	// For arrow functions assigned to variables, the variable_declarator processor handles registration
-	// Here we just process the body
 	results := newProcessorResult()
 
-	// Arrow functions can have different body types: statement_block or expression
+	// Try to find the function name from parent variable_declarator
+	// e.g., const arrowFunc = (x) => { ... }
+	functionName := ""
+	parentNode := arrowNode.Parent()
+
+	for parentNode != nil && functionName == "" {
+		if parentNode.Type() == "variable_declarator" {
+			nameNode := parentNode.ChildByFieldName("name")
+			if nameNode != nil {
+				functionName = nameNode.Content(treeData)
+				break
+			}
+		}
+		// Also check for assignment_expression: arrowFunc = (x) => { ... }
+		if parentNode.Type() == "assignment_expression" {
+			leftNode := parentNode.ChildByFieldName("left")
+			if leftNode != nil && leftNode.Type() == "identifier" {
+				functionName = leftNode.Content(treeData)
+				break
+			}
+		}
+		parentNode = parentNode.Parent()
+	}
+
+	// Determine the namespace for this arrow function
+	arrowFunctionNamespace := currentNamespace
+	if functionName != "" {
+		arrowFunctionNamespace = currentNamespace + namespaceSeparator + functionName
+
+		// Register arrow function as a callable node
+		if _, exists := callGraph.Nodes[arrowFunctionNamespace]; !exists {
+			callGraph.addNode(arrowFunctionNamespace, arrowNode)
+			log.Debugf("Register arrow function definition for %s - %s", functionName, arrowFunctionNamespace)
+		}
+
+		// Mark this as an assignment so it can be resolved when called
+		callGraph.assignmentGraph.addNode(arrowFunctionNamespace, arrowNode)
+	}
+
+	// Process arrow function body
 	bodyNode := arrowNode.ChildByFieldName("body")
 	if bodyNode != nil {
-		// Note: Arrow functions don't create their own namespace in this simplified implementation
-		// They're processed within the context of their enclosing scope
-		result := processChildren(bodyNode, treeData, currentNamespace, callGraph, metadata)
+		metadata.insideFunction = true
+		result := processChildren(bodyNode, treeData, arrowFunctionNamespace, callGraph, metadata)
+		metadata.insideFunction = false
 		results.addResults(result)
 	}
 

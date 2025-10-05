@@ -47,9 +47,12 @@ const instance = new TestClass("test", 42);
 instance.helperMethod();
 instance.deepMethod();
 
-// Function calls
+// Module-level function calls - these should now be tracked!
 simpleFunction(1, 2);
 arrowFunc(5);
+
+// Additional module-level test
+log("Module level call");
 
 // Method calls on imported modules
 fs.readFileSync("file.txt");
