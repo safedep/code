@@ -10,9 +10,22 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
+const (
+	// Maximum recursion depth for nested member expressions and attributes
+	// Prevents infinite recursion in pathological JavaScript files
+	maxMemberExpressionDepth = 10
+	maxAttributeDepth        = 10
+	maxProcessingDepth       = 50
+
+	// Maximum number of resolved objects to process for polymorphic variables
+	// Prevents combinatorial explosion in complex type scenarios
+	maxPolymorphicResolutions = 20
+)
+
 type processorMetadata struct {
 	insideClass    bool
 	insideFunction bool
+	processingDepth int // Track recursion depth for processChildren
 }
 
 type processorResult struct {
@@ -55,7 +68,7 @@ func init() {
 	nodeProcessors = map[string]nodeProcessor{
 		"module":               emptyProcessor,
 		"program":              emptyProcessor,
-		"expression_statement": skipResultsProcessor,
+		"expression_statement": expressionStatementProcessorWrapper,
 		"binary_operator":      binaryOperatorProcessor,
 		"identifier":           identifierProcessor,
 		"class_definition":     classDefinitionProcessor,
@@ -86,10 +99,17 @@ func init() {
 		"method_declaration":         goMethodDeclarationProcessorWrapper,
 		"assignment_expression":      assignmentProcessor,
 
-		// Go-specific
-		"call_expression":      goCallExpressionProcessorWrapper,
-		"function_declaration": goFunctionDeclarationProcessorWrapper,
+		// Go and JavaScript shared
+		"call_expression":      callExpressionProcessorWrapper,
+		"function_declaration": functionDeclarationProcessorWrapper,
 		"source_file":          emptyProcessor,
+
+		// JavaScript-specific
+		"member_expression":   memberExpressionProcessor,
+		"arrow_function":      arrowFunctionProcessor,
+		"method_definition":   methodDefinitionProcessor,
+		"new_expression":      jsNewExpressionProcessor,
+		"lexical_declaration": lexicalDeclarationProcessor,
 	}
 
 	for literalNodeType := range literalNodeTypes {
@@ -125,6 +145,43 @@ func skipResultsProcessor(emptyNode *sitter.Node, treeData []byte, currentNamesp
 	}
 
 	processChildren(emptyNode, treeData, currentNamespace, callGraph, metadata)
+
+	return newProcessorResult()
+}
+
+// expressionStatementProcessorWrapper handles expression_statement nodes
+// For module-level statements in JavaScript, we want to track calls
+// For statements inside functions/classes, we skip result propagation
+func expressionStatementProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if node == nil {
+		return newProcessorResult()
+	}
+
+	// Check if we're at module level (not inside a function or class method body)
+	// For JavaScript at module level, we want to track the calls
+	if !metadata.insideFunction && !metadata.insideClass {
+		// Module-level: process children and track calls in the module namespace
+		for i := 0; i < int(node.ChildCount()); i++ {
+			childNode := node.Child(i)
+			if childNode == nil {
+				continue
+			}
+
+			childResult := processNode(childNode, treeData, currentNamespace, callGraph, metadata)
+
+			// Register any immediate calls from module level
+			for _, callRef := range childResult.ImmediateCallRefs {
+				callGraph.addEdge(
+					currentNamespace, nil, callRef.CallerIdentifier,
+					callRef.CalleeNamespace, callRef.CalleeTreeNode,
+					callRef.Arguments,
+				)
+			}
+		}
+	} else {
+		// Inside function/class: skip results propagation (original behavior)
+		processChildren(node, treeData, currentNamespace, callGraph, metadata)
+	}
 
 	return newProcessorResult()
 }
@@ -652,8 +709,19 @@ func searchSymbolInScopeChain(symbol string, currentNamespace string, callGraph 
 // This can be used to identify correct objNamespace for objectSymbol, finally resulting
 // objNamespace//attributeQualifierNamespace
 func dissectAttributeQualifier(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) (string, string, error) {
+	return dissectAttributeQualifierWithDepth(node, treeData, currentNamespace, callGraph, metadata, 0)
+}
+
+// dissectAttributeQualifierWithDepth is the internal implementation with depth tracking
+func dissectAttributeQualifierWithDepth(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata, depth int) (string, string, error) {
 	if node == nil {
 		return "", "", fmt.Errorf("fnAttributeResolver - node is nil")
+	}
+
+	// Prevent excessive recursion in deeply nested attributes
+	if depth > maxAttributeDepth {
+		log.Warnf("Maximum attribute depth (%d) exceeded for %s, truncating", maxAttributeDepth, node.Content(treeData))
+		return node.Content(treeData), "", nil
 	}
 
 	if node.Type() == "identifier" {
@@ -677,7 +745,7 @@ func dissectAttributeQualifier(node *sitter.Node, treeData []byte, currentNamesp
 		return "", "", fmt.Errorf("sub-attribute node not found for attribute - %s", node.Content(treeData))
 	}
 
-	objectSymbol, objectSubAttributeNamespace, err := dissectAttributeQualifier(objectNode, treeData, currentNamespace, callGraph, metadata)
+	objectSymbol, objectSubAttributeNamespace, err := dissectAttributeQualifierWithDepth(objectNode, treeData, currentNamespace, callGraph, metadata, depth+1)
 	if err != nil {
 		return "", "", err
 	}
@@ -1032,29 +1100,39 @@ func resolveQualifierObjectFieldaccess(invokedObjNode *sitter.Node, treeData []b
 
 // Go-specific ------
 
-// Wrapper functions to check language before processing Go-specific nodes
+// Wrapper functions to check language before processing language-specific nodes
 
-func goCallExpressionProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	treeLanguage, err := callGraph.Tree.Language()
-	if err != nil || treeLanguage.Meta().Code != core.LanguageCodeGo {
-		// Not Go, skip
-		return newProcessorResult()
-	}
-	return goCallExpressionProcessor(node, treeData, currentNamespace, callGraph, metadata)
-}
-
-func goFunctionDeclarationProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+func callExpressionProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
 	treeLanguage, err := callGraph.Tree.Language()
 	if err != nil {
 		return newProcessorResult()
 	}
 
-	if treeLanguage.Meta().Code == core.LanguageCodeGo {
-		return goFunctionDeclarationProcessor(node, treeData, currentNamespace, callGraph, metadata)
+	switch treeLanguage.Meta().Code {
+	case core.LanguageCodeGo:
+		return goCallExpressionProcessor(node, treeData, currentNamespace, callGraph, metadata)
+	case core.LanguageCodeJavascript:
+		return jsCallExpressionProcessor(node, treeData, currentNamespace, callGraph, metadata)
+	default:
+		return newProcessorResult()
+	}
+}
+
+func functionDeclarationProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	treeLanguage, err := callGraph.Tree.Language()
+	if err != nil {
+		return newProcessorResult()
 	}
 
-	// Fallback to default function definition processor for other languages
-	return functionDefinitionProcessor(node, treeData, currentNamespace, callGraph, metadata)
+	switch treeLanguage.Meta().Code {
+	case core.LanguageCodeGo:
+		return goFunctionDeclarationProcessor(node, treeData, currentNamespace, callGraph, metadata)
+	case core.LanguageCodeJavascript:
+		return jsFunctionDeclarationProcessor(node, treeData, currentNamespace, callGraph, metadata)
+	default:
+		// Fallback to default function definition processor for other languages
+		return functionDefinitionProcessor(node, treeData, currentNamespace, callGraph, metadata)
+	}
 }
 
 func goMethodDeclarationProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
@@ -1367,4 +1445,428 @@ func extractGoReceiverType(receiverNode *sitter.Node, treeData []byte) string {
 	}
 
 	return ""
+}
+
+// JavaScript-specific ------
+
+// lexicalDeclarationProcessor handles JavaScript lexical_declaration nodes (const, let, var)
+// Routes to variableDeclaratorProcessor which handles the actual assignments
+func lexicalDeclarationProcessor(declarationNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if declarationNode == nil {
+		return newProcessorResult()
+	}
+
+	// Process all variable_declarator children
+	for i := 0; uint32(i) < declarationNode.NamedChildCount(); i++ {
+		declaratorNode := declarationNode.NamedChild(i)
+		if declaratorNode != nil && declaratorNode.Type() == "variable_declarator" {
+			processNode(declaratorNode, treeData, currentNamespace, callGraph, metadata)
+		}
+	}
+
+	return newProcessorResult()
+}
+
+// jsFunctionDeclarationProcessor handles JavaScript function declarations
+// Similar to Go, we register top-level functions as callable from the module namespace
+func jsFunctionDeclarationProcessor(funcDefNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if funcDefNode == nil {
+		return newProcessorResult()
+	}
+
+	functionNameNode := funcDefNode.ChildByFieldName("name")
+	if functionNameNode == nil {
+		log.Errorf("JS function declaration without name - %s", funcDefNode.Content(treeData))
+		return newProcessorResult()
+	}
+
+	funcName := functionNameNode.Content(treeData)
+	functionNamespace := currentNamespace + namespaceSeparator + funcName
+
+	// Add function to call graph
+	if _, exists := callGraph.Nodes[functionNamespace]; !exists {
+		callGraph.addNode(functionNamespace, funcDefNode)
+		log.Debugf("Register JS function declaration for %s - %s", funcName, functionNamespace)
+	}
+
+	results := newProcessorResult()
+
+	// Process function body
+	functionBody := funcDefNode.ChildByFieldName("body")
+	if functionBody != nil {
+		metadata.insideFunction = true
+		result := processChildren(functionBody, treeData, functionNamespace, callGraph, metadata)
+		metadata.insideFunction = false
+		results.addResults(result)
+	}
+
+	return results
+}
+
+// jsCallExpressionProcessor handles JavaScript call_expression nodes
+// Examples:
+// - console.log("hello") -> console//log
+// - myFunc(10) -> myFunc (unqualified function call)
+// - obj.method() -> obj//method (method call)
+func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if callNode == nil {
+		return newProcessorResult()
+	}
+
+	result := newProcessorResult()
+
+	// Get function node
+	functionNode := callNode.ChildByFieldName("function")
+	if functionNode == nil {
+		return result
+	}
+
+	// Get arguments node
+	argumentsNode := callNode.ChildByFieldName("arguments")
+	callArguments := []CallArgument{}
+	if argumentsNode != nil {
+		callArguments = resolveCallArguments(argumentsNode, treeData, currentNamespace, callGraph, metadata)
+	}
+
+	// Resolve function name based on node type
+	var qualifiedName string
+	var resolved bool
+
+	switch functionNode.Type() {
+	case "member_expression":
+		// Method call: obj.method() or pkg.func()
+		qualifiedName, resolved = resolveJSMemberExpression(functionNode, treeData, currentNamespace, callGraph)
+	case "identifier":
+		// Simple function call: func()
+		funcName := functionNode.Content(treeData)
+		qualifiedName, resolved = resolveJSIdentifier(funcName, currentNamespace, callGraph)
+	default:
+		// Other types (e.g., function expressions) - try as identifier
+		qualifiedName = functionNode.Content(treeData)
+		resolved = true
+	}
+
+	if !resolved {
+		return result
+	}
+
+	// Add edge to call graph
+	callGraph.addEdge(
+		currentNamespace, nil, functionNode,
+		qualifiedName, nil,
+		callArguments,
+	)
+
+	log.Debugf("JS call: %s -> %s", currentNamespace, qualifiedName)
+
+	return result
+}
+
+// resolveJSMemberExpression resolves JavaScript member expressions like obj.method or pkg.func
+// Returns the qualified name and whether it was resolved
+func resolveJSMemberExpression(memberNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph) (string, bool) {
+	return resolveJSMemberExpressionWithDepth(memberNode, treeData, currentNamespace, callGraph, 0)
+}
+
+// resolveJSMemberExpressionWithDepth is the internal implementation with depth tracking
+func resolveJSMemberExpressionWithDepth(memberNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, depth int) (string, bool) {
+	if memberNode == nil || memberNode.Type() != "member_expression" {
+		return "", false
+	}
+
+	// Prevent excessive recursion in deeply nested member expressions
+	if depth > maxMemberExpressionDepth {
+		log.Warnf("Maximum member expression depth (%d) exceeded for %s, using direct resolution", maxMemberExpressionDepth, memberNode.Content(treeData))
+		// Fallback: use the entire expression as-is
+		return memberNode.Content(treeData), true
+	}
+
+	// Get object (left side) and property (right side)
+	objectNode := memberNode.ChildByFieldName("object")
+	propertyNode := memberNode.ChildByFieldName("property")
+
+	if objectNode == nil || propertyNode == nil {
+		return "", false
+	}
+
+	// Handle nested member expressions recursively with depth tracking
+	if objectNode.Type() == "member_expression" {
+		nestedQualified, resolved := resolveJSMemberExpressionWithDepth(objectNode, treeData, currentNamespace, callGraph, depth+1)
+		if resolved {
+			propertyName := propertyNode.Content(treeData)
+			qualifiedName := nestedQualified + namespaceSeparator + propertyName
+			log.Debugf("Resolved nested JS member (depth %d): %s", depth, qualifiedName)
+			return qualifiedName, true
+		}
+	}
+
+	objectName := objectNode.Content(treeData)
+	propertyName := propertyNode.Content(treeData)
+
+	// Check if object is an imported module or variable
+	objectAssignment, objectResolved := searchSymbolInScopeChain(objectName, currentNamespace, callGraph)
+
+	if objectResolved {
+		// Could be an imported module or a variable
+		resolvedObjects := callGraph.assignmentGraph.resolve(objectAssignment.Namespace)
+
+		// Build qualified name from resolved object
+		if len(resolvedObjects) > 0 {
+			qualifiedName := resolvedObjects[0].Namespace + namespaceSeparator + propertyName
+			log.Debugf("Resolved JS member (assigned): %s.%s -> %s", objectName, propertyName, qualifiedName)
+			return qualifiedName, true
+		}
+	}
+
+	// Fallback: construct qualified name directly
+	qualifiedName := objectName + namespaceSeparator + propertyName
+	log.Debugf("Resolved JS member (direct): %s.%s -> %s", objectName, propertyName, qualifiedName)
+
+	return qualifiedName, true
+}
+
+// resolveJSIdentifier resolves unqualified JavaScript identifiers
+// Returns the qualified name and whether it was resolved
+func resolveJSIdentifier(identifier string, currentNamespace string, callGraph *CallGraph) (string, bool) {
+	// Try to find in scope chain
+	assignmentNode, found := searchSymbolInScopeChain(identifier, currentNamespace, callGraph)
+
+	if found {
+		return assignmentNode.Namespace, true
+	}
+
+	// If not found in scope chain, construct namespace-qualified name
+	qualifiedName := currentNamespace + namespaceSeparator + identifier
+
+	return qualifiedName, true
+}
+
+// memberExpressionProcessor handles JavaScript member_expression nodes
+// This is used for property access, not method calls (which are handled by call_expression)
+func memberExpressionProcessor(memberNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if memberNode == nil {
+		return newProcessorResult()
+	}
+
+	objectNode := memberNode.ChildByFieldName("object")
+	propertyNode := memberNode.ChildByFieldName("property")
+
+	if objectNode == nil || propertyNode == nil {
+		return newProcessorResult()
+	}
+
+	objectSymbol := objectNode.Content(treeData)
+	propertyName := propertyNode.Content(treeData)
+
+	targetObject, objectResolved := searchSymbolInScopeChain(objectSymbol, currentNamespace, callGraph)
+	if !objectResolved {
+		log.Errorf("Object not found in namespace for member expression - %s.%s", objectSymbol, propertyName)
+		return newProcessorResult()
+	}
+
+	resolvedObjects := callGraph.assignmentGraph.resolve(targetObject.Namespace)
+
+	// Limit polymorphic expansion to prevent combinatorial explosion
+	if len(resolvedObjects) > maxPolymorphicResolutions {
+		log.Warnf("Member expression %s.%s resolved to %d objects (limit: %d), truncating to prevent explosion",
+			objectSymbol, propertyName, len(resolvedObjects), maxPolymorphicResolutions)
+		resolvedObjects = resolvedObjects[:maxPolymorphicResolutions]
+	}
+
+	result := newProcessorResult()
+	for _, resolvedObject := range resolvedObjects {
+		finalMemberNamespace := resolvedObject.Namespace + namespaceSeparator + propertyName
+		finalMemberNode := callGraph.assignmentGraph.addNode(
+			finalMemberNamespace,
+			memberNode,
+		)
+		result.ImmediateAssignments = append(result.ImmediateAssignments, finalMemberNode)
+	}
+
+	return result
+}
+
+// arrowFunctionProcessor handles JavaScript arrow function expressions
+// Arrow functions are treated similarly to function declarations
+func arrowFunctionProcessor(arrowNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if arrowNode == nil {
+		return newProcessorResult()
+	}
+
+	results := newProcessorResult()
+
+	// Try to find the function name from parent variable_declarator
+	// e.g., const arrowFunc = (x) => { ... }
+	functionName := ""
+	parentNode := arrowNode.Parent()
+
+	for parentNode != nil && functionName == "" {
+		if parentNode.Type() == "variable_declarator" {
+			nameNode := parentNode.ChildByFieldName("name")
+			if nameNode != nil {
+				functionName = nameNode.Content(treeData)
+				break
+			}
+		}
+		// Also check for assignment_expression: arrowFunc = (x) => { ... }
+		if parentNode.Type() == "assignment_expression" {
+			leftNode := parentNode.ChildByFieldName("left")
+			if leftNode != nil && leftNode.Type() == "identifier" {
+				functionName = leftNode.Content(treeData)
+				break
+			}
+		}
+		parentNode = parentNode.Parent()
+	}
+
+	// Determine the namespace for this arrow function
+	arrowFunctionNamespace := currentNamespace
+	if functionName != "" {
+		arrowFunctionNamespace = currentNamespace + namespaceSeparator + functionName
+
+		// Register arrow function as a callable node
+		if _, exists := callGraph.Nodes[arrowFunctionNamespace]; !exists {
+			callGraph.addNode(arrowFunctionNamespace, arrowNode)
+			log.Debugf("Register arrow function definition for %s - %s", functionName, arrowFunctionNamespace)
+		}
+
+		// Mark this as an assignment so it can be resolved when called
+		callGraph.assignmentGraph.addNode(arrowFunctionNamespace, arrowNode)
+	}
+
+	// Process arrow function body
+	bodyNode := arrowNode.ChildByFieldName("body")
+	if bodyNode != nil {
+		metadata.insideFunction = true
+		result := processChildren(bodyNode, treeData, arrowFunctionNamespace, callGraph, metadata)
+		metadata.insideFunction = false
+		results.addResults(result)
+	}
+
+	return results
+}
+
+// methodDefinitionProcessor handles JavaScript method_definition nodes in classes
+// This is for class methods, similar to Java methods
+func methodDefinitionProcessor(methodDefNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if methodDefNode == nil {
+		return newProcessorResult()
+	}
+
+	methodNameNode := methodDefNode.ChildByFieldName("name")
+	if methodNameNode == nil {
+		log.Errorf("Method definition without name - %s", methodDefNode.Content(treeData))
+		return newProcessorResult()
+	}
+
+	// Method definition has its own scope, hence its own namespace
+	methodName := methodNameNode.Content(treeData)
+	methodNamespace := currentNamespace + namespaceSeparator + methodName
+
+	// Add method to the call graph
+	if _, exists := callGraph.Nodes[methodNamespace]; !exists {
+		callGraph.addNode(methodNamespace, methodDefNode)
+		log.Debugf("Register JavaScript method definition for %s - %s", methodName, methodNamespace)
+
+		// Add virtual method call from class instance => method
+		if metadata.insideClass {
+			instanceKeyword, exists := callGraph.getInstanceKeyword()
+			if exists {
+				instanceNamespace := currentNamespace + namespaceSeparator + instanceKeyword + namespaceSeparator + methodName
+				callGraph.addEdge(
+					instanceNamespace, nil, nil,
+					methodNamespace, methodDefNode,
+					[]CallArgument{},
+				)
+				log.Debugf("Register instance method definition for %s - %s\n", methodName, instanceNamespace)
+			}
+
+			// Register constructor
+			if methodName == "constructor" {
+				callGraph.addEdge(
+					currentNamespace, nil, nil,
+					methodNamespace, methodDefNode,
+					[]CallArgument{},
+				)
+				log.Debugf("Register class constructor for %s", currentNamespace)
+			}
+		}
+	}
+
+	results := newProcessorResult()
+
+	// Process method body
+	methodBody := methodDefNode.ChildByFieldName("body")
+	if methodBody != nil {
+		metadata.insideFunction = true
+		result := processChildren(methodBody, treeData, methodNamespace, callGraph, metadata)
+		metadata.insideFunction = false
+		results.addResults(result)
+	}
+
+	return results
+}
+
+// jsNewExpressionProcessor handles JavaScript new_expression nodes (constructor calls)
+// Examples:
+// - new TestClass("test", 42) - simple identifier constructor
+// - new sqlite3.Database(':memory:') - member expression constructor
+func jsNewExpressionProcessor(newNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if newNode == nil {
+		return newProcessorResult()
+	}
+
+	result := newProcessorResult()
+
+	// Get constructor name
+	constructorNode := newNode.ChildByFieldName("constructor")
+	if constructorNode == nil {
+		return result
+	}
+
+	// Get arguments
+	argumentsNode := newNode.ChildByFieldName("arguments")
+	callArguments := []CallArgument{}
+	if argumentsNode != nil {
+		callArguments = resolveCallArguments(argumentsNode, treeData, currentNamespace, callGraph, metadata)
+	}
+
+	// Resolve constructor name based on node type (similar to jsCallExpressionProcessor)
+	var constructorNamespace string
+	var resolved bool
+
+	switch constructorNode.Type() {
+	case "member_expression":
+		// Constructor like: new sqlite3.Database() or new pkg.ClassName()
+		constructorNamespace, resolved = resolveJSMemberExpression(constructorNode, treeData, currentNamespace, callGraph)
+	case "identifier":
+		// Simple constructor: new TestClass()
+		constructorName := constructorNode.Content(treeData)
+		constructorNamespace, resolved = resolveJSIdentifier(constructorName, currentNamespace, callGraph)
+	default:
+		// Fallback: use content as-is
+		constructorNamespace = constructorNode.Content(treeData)
+		resolved = true
+	}
+
+	if !resolved {
+		return result
+	}
+
+	log.Debugf("JS constructor resolved to %s", constructorNamespace)
+
+	// Add constructor call edge
+	callGraph.addEdge(
+		currentNamespace, nil, newNode,
+		constructorNamespace, nil,
+		callArguments,
+	)
+
+	// Try to find the class/constructor in the assignment graph for return value tracking
+	classAssignment, classResolved := searchSymbolInScopeChain(constructorNamespace, currentNamespace, callGraph)
+	if classResolved {
+		result.ImmediateAssignments = append(result.ImmediateAssignments, classAssignment)
+	}
+
+	return result
 }

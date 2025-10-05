@@ -39,6 +39,7 @@ var supportedLanguages = []core.LanguageCode{
 	core.LanguageCodePython,
 	core.LanguageCodeJava,
 	core.LanguageCodeGo,
+	core.LanguageCodeJavascript,
 }
 
 func (p *callgraphPlugin) SupportedLanguages() []core.LanguageCode {
@@ -114,10 +115,20 @@ func processChildren(node *sitter.Node, treeData []byte, currentNamespace string
 		return newProcessorResult()
 	}
 
+	// Check processing depth to prevent stack overflow in deeply nested structures
+	if metadata.processingDepth > maxProcessingDepth {
+		log.Warnf("Maximum processing depth (%d) exceeded at namespace %s, skipping children", maxProcessingDepth, currentNamespace)
+		return newProcessorResult()
+	}
+
 	childrenResults := newProcessorResult()
 
+	// Increment depth for child processing
+	childMetadata := metadata
+	childMetadata.processingDepth++
+
 	for i := 0; i < int(node.ChildCount()); i++ {
-		result := processNode(node.Child(i), treeData, currentNamespace, callGraph, metadata)
+		result := processNode(node.Child(i), treeData, currentNamespace, callGraph, childMetadata)
 		childrenResults.addResults(result)
 	}
 

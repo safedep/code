@@ -12,6 +12,14 @@ import (
 
 const namespaceSeparator = "//"
 
+const (
+	// Maximum number of nodes in callgraph before warning
+	// Prevents memory exhaustion in extremely large/complex files
+	maxCallGraphNodes      = 50000
+	maxAssignmentGraphNodes = 100000
+	maxDFSResultItems      = 100000
+)
+
 // Refers to one argument passed to a function call
 // For example, in the function call `foo(a, b, c)`, there are
 // three CallArgument instances, one for each of `a`, `b`, and `c
@@ -90,6 +98,8 @@ type CallGraph struct {
 	Tree              core.ParseTree
 	assignmentGraph   assignmentGraph
 	classConstructors map[string]bool
+	nodeCount         int  // Track total nodes added
+	limitExceeded     bool // Flag to indicate if processing was truncated
 }
 
 func newCallGraph(fileName string, rootNode *sitter.Node, imports []*ast.ImportNode, tree core.ParseTree) (*CallGraph, error) {
@@ -149,11 +159,28 @@ func (cg *CallGraph) ensureNodeInAssignmentGraph(identifier string, treeNode *si
 }
 
 func (cg *CallGraph) addNode(identifier string, treeNode *sitter.Node) *CallGraphNode {
+	// Check if we've exceeded node limits
+	if cg.nodeCount >= maxCallGraphNodes && !cg.limitExceeded {
+		log.Warnf("CallGraph node limit (%d) exceeded for file %s, some nodes may be skipped", maxCallGraphNodes, cg.FileName)
+		cg.limitExceeded = true
+	}
+
+	// Still add to assignment graph for resolution, but skip callgraph if limit exceeded
 	cg.ensureNodeInAssignmentGraph(identifier, treeNode)
 
 	existingCgNode, exists := cg.Nodes[identifier]
 	if !exists {
-		cg.Nodes[identifier] = newCallGraphNode(identifier, treeNode)
+		if cg.nodeCount < maxCallGraphNodes {
+			cg.Nodes[identifier] = newCallGraphNode(identifier, treeNode)
+			cg.nodeCount++
+		} else {
+			// Return a stub node to prevent nil pointer errors
+			return &CallGraphNode{
+				Namespace: identifier,
+				CallsTo:   []CallReference{},
+				TreeNode:  treeNode,
+			}
+		}
 	} else if treeNode != nil && existingCgNode.TreeNode == nil {
 		// If the existing node has no tree node, we can set it now
 		cg.Nodes[identifier].TreeNode = treeNode
@@ -260,19 +287,31 @@ func (dri DfsResultItem) ToString() string {
 func (cg *CallGraph) DFS() []DfsResultItem {
 	visited := make(map[string]bool)
 	var dfsResult []DfsResultItem
+	resultCount := 0
 
 	// Initially Interpret callgraph in its natural execution order starting from
 	// the file name which has reference for entrypoints (if any)
-	cg.dfsUtil(cg.FileName, cg.RootNode, nil, []CallArgument{}, visited, &dfsResult, 0)
+	cg.dfsUtil(cg.FileName, cg.RootNode, nil, []CallArgument{}, visited, &dfsResult, 0, &resultCount)
+
+	// Check if we hit the limit during initial traversal
+	if resultCount >= maxDFSResultItems {
+		log.Warnf("DFS result limit (%d) reached for file %s, some paths may be incomplete", maxDFSResultItems, cg.FileName)
+		return dfsResult
+	}
 
 	// Assumption - All functions and class constructors are reachable
 	// This is required because most files only expose their classes/functions
 	// which are imported and used by other files, so an entrypoint may not be
 	// present in every file.
 	for namespace, node := range cg.Nodes {
+		if resultCount >= maxDFSResultItems {
+			log.Warnf("DFS result limit (%d) reached for file %s, stopping traversal", maxDFSResultItems, cg.FileName)
+			break
+		}
+
 		if node.TreeNode != nil && dfsSourceNodeTypes[node.TreeNode.Type()] {
 			if !visited[namespace] {
-				cg.dfsUtil(namespace, cg.RootNode, nil, []CallArgument{}, visited, &dfsResult, 0)
+				cg.dfsUtil(namespace, cg.RootNode, nil, []CallArgument{}, visited, &dfsResult, 0, &resultCount)
 			}
 		}
 	}
@@ -280,12 +319,21 @@ func (cg *CallGraph) DFS() []DfsResultItem {
 	return dfsResult
 }
 
-func (cg *CallGraph) dfsUtil(namespace string, caller *CallGraphNode, callerIdentifier *sitter.Node, arguments []CallArgument, visited map[string]bool, result *[]DfsResultItem, depth int) {
+func (cg *CallGraph) dfsUtil(namespace string, caller *CallGraphNode, callerIdentifier *sitter.Node, arguments []CallArgument, visited map[string]bool, result *[]DfsResultItem, depth int, resultCount *int) {
+	// Check result count limit
+	if *resultCount >= maxDFSResultItems {
+		return
+	}
+
 	callgraphNode, callgraphNodeExists := cg.Nodes[namespace]
 
 	if visited[namespace] {
 		resolvedAssignmentTerminals := cg.assignmentGraph.resolve(namespace)
 		for _, terminalAssignmentNode := range resolvedAssignmentTerminals {
+			if *resultCount >= maxDFSResultItems {
+				return
+			}
+
 			terminalCallgraphNode, terminalCallgraphNodeExists := cg.Nodes[terminalAssignmentNode.Namespace]
 			if terminalCallgraphNodeExists {
 				*result = append(*result, DfsResultItem{
@@ -297,6 +345,7 @@ func (cg *CallGraph) dfsUtil(namespace string, caller *CallGraphNode, callerIden
 					Depth:            depth,
 					Terminal:         true,
 				})
+				*resultCount++
 			}
 		}
 		return
@@ -313,12 +362,16 @@ func (cg *CallGraph) dfsUtil(namespace string, caller *CallGraphNode, callerIden
 		Depth:            depth,
 		Terminal:         !callgraphNodeExists || len(callgraphNode.CallsTo) == 0,
 	})
+	*resultCount++
 
 	assignmentGraphNode, assignmentNodeExists := cg.assignmentGraph.Assignments[namespace]
 	if assignmentNodeExists {
 		// Recursively visit all the nodes assigned to the current node
 		for _, assigned := range assignmentGraphNode.AssignedTo {
-			cg.dfsUtil(assigned, caller, callerIdentifier, arguments, visited, result, depth)
+			if *resultCount >= maxDFSResultItems {
+				return
+			}
+			cg.dfsUtil(assigned, caller, callerIdentifier, arguments, visited, result, depth, resultCount)
 		}
 	}
 
@@ -326,7 +379,10 @@ func (cg *CallGraph) dfsUtil(namespace string, caller *CallGraphNode, callerIden
 	// Any variable assignment would be ignored here, since it won't be in callgraph
 	if callgraphNodeExists {
 		for _, callRef := range callgraphNode.CallsTo {
-			cg.dfsUtil(callRef.CalleeNamespace, callgraphNode, callRef.CallerIdentifier, callRef.Arguments, visited, result, depth+1)
+			if *resultCount >= maxDFSResultItems {
+				return
+			}
+			cg.dfsUtil(callRef.CalleeNamespace, callgraphNode, callRef.CallerIdentifier, callRef.Arguments, visited, result, depth+1, resultCount)
 		}
 	}
 }
@@ -338,4 +394,9 @@ func (cg *CallGraph) getInstanceKeyword() (string, bool) {
 		return "", false
 	}
 	return resolveInstanceKeyword(language)
+}
+
+// LimitExceeded returns true if processing was truncated due to complexity limits
+func (cg *CallGraph) LimitExceeded() bool {
+	return cg.limitExceeded
 }

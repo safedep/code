@@ -640,6 +640,91 @@ var testcases = []callgraphTestcase{
 			{Namespace: "fixtures/testGoNestedImports.go//parseJSON", CallerNamespace: "fixtures/testGoNestedImports.go//main", CallerIdentifierContent: "parseJSON"},
 		},
 	},
+	{
+		Language: core.LanguageCodeJavascript,
+		FilePath: "fixtures/testJavascript.js",
+		ExpectedAssignmentGraph: map[string][]string{
+			"fs":       {},
+			"axios":    {},
+			"sqlite3":  {},
+			"readFile": {"fs//promises//readFile"},
+			"writeFile": {"fs//promises//writeFile"},
+			"log":  {"console//log"},
+			"warn": {"console//warn"},
+			"fixtures/testJavascript.js//simpleFunction": {},
+			"fixtures/testJavascript.js//TestClass":      {},
+			"fixtures/testJavascript.js//instance":       {"fixtures/testJavascript.js//TestClass"},
+			"fixtures/testJavascript.js//db":             {"sqlite3//Database"},
+		},
+		ExpectedCallGraph: map[string][]expectedCallgraphRefs{
+			"fixtures/testJavascript.js": {
+				{"fixtures/testJavascript.js//require", [][]string{}},
+				{"fixtures/testJavascript.js//require", [][]string{}},
+				{"fixtures/testJavascript.js//require", [][]string{}},
+				{"fixtures/testJavascript.js//TestClass", [][]string{}},
+				{"fixtures/testJavascript.js//TestClass//helperMethod", [][]string{}},
+				{"fixtures/testJavascript.js//TestClass//deepMethod", [][]string{}},
+				{"fixtures/testJavascript.js//simpleFunction", [][]string{}},
+				{"fixtures/testJavascript.js//arrowFunc", [][]string{}},
+				{"log", [][]string{}},
+				{"fs//readFileSync", [][]string{}},
+				{"axios//get", [][]string{}},
+				{"instance.helperMethod()//toString", [][]string{}},
+				{"fixtures/testJavascript.js//TestClass//helperMethod", [][]string{}},
+				{"fixtures/testJavascript.js//ClassA", [][]string{}},
+				{"fixtures/testJavascript.js//ClassB", [][]string{}},
+				{"fixtures/testJavascript.js//ClassA//method1", [][]string{}},
+				{"fixtures/testJavascript.js//ClassA//method1", [][]string{}},
+				{"fixtures/testJavascript.js//ClassA//method2", [][]string{}},
+				{"fixtures/testJavascript.js//ClassA//methodUnique", [][]string{}},
+				{"sqlite3//Database", [][]string{}},
+			},
+			"fixtures/testJavascript.js//simpleFunction": {
+				{"log", [][]string{}},
+			},
+			"fixtures/testJavascript.js//arrowFunc": {
+				{"warn", [][]string{}},
+			},
+			"fixtures/testJavascript.js//TestClass//constructor": {
+				{"log", [][]string{}},
+			},
+			"fixtures/testJavascript.js//TestClass//helperMethod": {
+				{"log", [][]string{}},
+			},
+			"fixtures/testJavascript.js//TestClass//deepMethod": {
+				{"fixtures/testJavascript.js//TestClass//this//helperMethod", [][]string{}},
+				{"log", [][]string{}},
+			},
+			"fixtures/testJavascript.js//ClassA//method1": {
+				{"log", [][]string{}},
+			},
+			"fixtures/testJavascript.js//ClassA//method2": {
+				{"warn", [][]string{}},
+			},
+			"fixtures/testJavascript.js//ClassB//method1": {
+				{"log", [][]string{}},
+			},
+			"fixtures/testJavascript.js//ClassB//method2": {
+				{"warn", [][]string{}},
+			},
+			"fixtures/testJavascript.js//ClassB//methodUnique": {
+				{"log", [][]string{}},
+			},
+		},
+		ExpectedDfsResults: []dfsResultExpectation{
+			{Namespace: "fixtures/testJavascript.js//simpleFunction", CallerNamespace: "fixtures/testJavascript.js", CallerIdentifierContent: "simpleFunction"},
+			{Namespace: "fixtures/testJavascript.js//arrowFunc", CallerNamespace: "fixtures/testJavascript.js", CallerIdentifierContent: "arrowFunc"},
+			{Namespace: "console//log", CallerNamespace: "fixtures/testJavascript.js", CallerIdentifierContent: "log"},
+			{Namespace: "console//log", CallerNamespace: "fixtures/testJavascript.js//simpleFunction", CallerIdentifierContent: "log"},
+			{Namespace: "console//warn", CallerNamespace: "fixtures/testJavascript.js//arrowFunc", CallerIdentifierContent: "warn"},
+			{Namespace: "console//log", CallerNamespace: "fixtures/testJavascript.js//TestClass//constructor", CallerIdentifierContent: "log"},
+			{Namespace: "console//log", CallerNamespace: "fixtures/testJavascript.js//TestClass//helperMethod", CallerIdentifierContent: "log"},
+			{Namespace: "console//log", CallerNamespace: "fixtures/testJavascript.js//TestClass//deepMethod", CallerIdentifierContent: "log"},
+			{Namespace: "console//log", CallerNamespace: "fixtures/testJavascript.js//ClassA//method1", CallerIdentifierContent: "log"},
+			{Namespace: "console//warn", CallerNamespace: "fixtures/testJavascript.js//ClassA//method2", CallerIdentifierContent: "warn"},
+			{Namespace: "fs//readFileSync", CallerNamespace: "fixtures/testJavascript.js", CallerIdentifierContent: "fs.readFileSync"},
+		},
+	},
 }
 
 func TestCallgraphPlugin(t *testing.T) {
