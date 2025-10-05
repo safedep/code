@@ -39,6 +39,7 @@ var supportedLanguages = []core.LanguageCode{
 	core.LanguageCodePython,
 	core.LanguageCodeJava,
 	core.LanguageCodeGo,
+	core.LanguageCodeJavascript,
 }
 
 func (p *callgraphPlugin) SupportedLanguages() []core.LanguageCode {

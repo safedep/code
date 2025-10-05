@@ -87,9 +87,15 @@ func init() {
 		"assignment_expression":      assignmentProcessor,
 
 		// Go-specific
-		"call_expression":      goCallExpressionProcessorWrapper,
+		"call_expression":      callExpressionProcessorWrapper,
 		"function_declaration": goFunctionDeclarationProcessorWrapper,
 		"source_file":          emptyProcessor,
+
+		// JavaScript-specific
+		"member_expression": memberExpressionProcessor,
+		"arrow_function":    arrowFunctionProcessor,
+		"method_definition": methodDefinitionProcessor,
+		"new_expression":    jsNewExpressionProcessor,
 	}
 
 	for literalNodeType := range literalNodeTypes {
@@ -1032,15 +1038,22 @@ func resolveQualifierObjectFieldaccess(invokedObjNode *sitter.Node, treeData []b
 
 // Go-specific ------
 
-// Wrapper functions to check language before processing Go-specific nodes
+// Wrapper functions to check language before processing language-specific nodes
 
-func goCallExpressionProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+func callExpressionProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
 	treeLanguage, err := callGraph.Tree.Language()
-	if err != nil || treeLanguage.Meta().Code != core.LanguageCodeGo {
-		// Not Go, skip
+	if err != nil {
 		return newProcessorResult()
 	}
-	return goCallExpressionProcessor(node, treeData, currentNamespace, callGraph, metadata)
+
+	switch treeLanguage.Meta().Code {
+	case core.LanguageCodeGo:
+		return goCallExpressionProcessor(node, treeData, currentNamespace, callGraph, metadata)
+	case core.LanguageCodeJavascript:
+		return jsCallExpressionProcessor(node, treeData, currentNamespace, callGraph, metadata)
+	default:
+		return newProcessorResult()
+	}
 }
 
 func goFunctionDeclarationProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
@@ -1367,4 +1380,294 @@ func extractGoReceiverType(receiverNode *sitter.Node, treeData []byte) string {
 	}
 
 	return ""
+}
+
+// JavaScript-specific ------
+
+// jsCallExpressionProcessor handles JavaScript call_expression nodes
+// Examples:
+// - console.log("hello") -> console//log
+// - myFunc(10) -> myFunc (unqualified function call)
+// - obj.method() -> obj//method (method call)
+func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if callNode == nil {
+		return newProcessorResult()
+	}
+
+	result := newProcessorResult()
+
+	// Get function node
+	functionNode := callNode.ChildByFieldName("function")
+	if functionNode == nil {
+		return result
+	}
+
+	// Get arguments node
+	argumentsNode := callNode.ChildByFieldName("arguments")
+	callArguments := []CallArgument{}
+	if argumentsNode != nil {
+		callArguments = resolveCallArguments(argumentsNode, treeData, currentNamespace, callGraph, metadata)
+	}
+
+	// Resolve function name based on node type
+	var qualifiedName string
+	var resolved bool
+
+	switch functionNode.Type() {
+	case "member_expression":
+		// Method call: obj.method() or pkg.func()
+		qualifiedName, resolved = resolveJSMemberExpression(functionNode, treeData, currentNamespace, callGraph)
+	case "identifier":
+		// Simple function call: func()
+		funcName := functionNode.Content(treeData)
+		qualifiedName, resolved = resolveJSIdentifier(funcName, currentNamespace, callGraph)
+	default:
+		// Other types (e.g., function expressions) - try as identifier
+		qualifiedName = functionNode.Content(treeData)
+		resolved = true
+	}
+
+	if !resolved {
+		return result
+	}
+
+	// Add edge to call graph
+	callGraph.addEdge(
+		currentNamespace, nil, functionNode,
+		qualifiedName, nil,
+		callArguments,
+	)
+
+	log.Debugf("JS call: %s -> %s", currentNamespace, qualifiedName)
+
+	return result
+}
+
+// resolveJSMemberExpression resolves JavaScript member expressions like obj.method or pkg.func
+// Returns the qualified name and whether it was resolved
+func resolveJSMemberExpression(memberNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph) (string, bool) {
+	if memberNode == nil || memberNode.Type() != "member_expression" {
+		return "", false
+	}
+
+	// Get object (left side) and property (right side)
+	objectNode := memberNode.ChildByFieldName("object")
+	propertyNode := memberNode.ChildByFieldName("property")
+
+	if objectNode == nil || propertyNode == nil {
+		return "", false
+	}
+
+	objectName := objectNode.Content(treeData)
+	propertyName := propertyNode.Content(treeData)
+
+	// Check if object is an imported module or variable
+	objectAssignment, objectResolved := searchSymbolInScopeChain(objectName, currentNamespace, callGraph)
+
+	if objectResolved {
+		// Could be an imported module or a variable
+		resolvedObjects := callGraph.assignmentGraph.resolve(objectAssignment.Namespace)
+
+		// Build qualified name from resolved object
+		if len(resolvedObjects) > 0 {
+			qualifiedName := resolvedObjects[0].Namespace + namespaceSeparator + propertyName
+			log.Debugf("Resolved JS member (assigned): %s.%s -> %s", objectName, propertyName, qualifiedName)
+			return qualifiedName, true
+		}
+	}
+
+	// Fallback: construct qualified name directly
+	qualifiedName := objectName + namespaceSeparator + propertyName
+	log.Debugf("Resolved JS member (direct): %s.%s -> %s", objectName, propertyName, qualifiedName)
+
+	return qualifiedName, true
+}
+
+// resolveJSIdentifier resolves unqualified JavaScript identifiers
+// Returns the qualified name and whether it was resolved
+func resolveJSIdentifier(identifier string, currentNamespace string, callGraph *CallGraph) (string, bool) {
+	// Try to find in scope chain
+	assignmentNode, found := searchSymbolInScopeChain(identifier, currentNamespace, callGraph)
+
+	if found {
+		return assignmentNode.Namespace, true
+	}
+
+	// If not found in scope chain, construct namespace-qualified name
+	qualifiedName := currentNamespace + namespaceSeparator + identifier
+
+	return qualifiedName, true
+}
+
+// memberExpressionProcessor handles JavaScript member_expression nodes
+// This is used for property access, not method calls (which are handled by call_expression)
+func memberExpressionProcessor(memberNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if memberNode == nil {
+		return newProcessorResult()
+	}
+
+	objectNode := memberNode.ChildByFieldName("object")
+	propertyNode := memberNode.ChildByFieldName("property")
+
+	if objectNode == nil || propertyNode == nil {
+		return newProcessorResult()
+	}
+
+	objectSymbol := objectNode.Content(treeData)
+	propertyName := propertyNode.Content(treeData)
+
+	targetObject, objectResolved := searchSymbolInScopeChain(objectSymbol, currentNamespace, callGraph)
+	if !objectResolved {
+		log.Errorf("Object not found in namespace for member expression - %s.%s", objectSymbol, propertyName)
+		return newProcessorResult()
+	}
+
+	resolvedObjects := callGraph.assignmentGraph.resolve(targetObject.Namespace)
+
+	result := newProcessorResult()
+	for _, resolvedObject := range resolvedObjects {
+		finalMemberNamespace := resolvedObject.Namespace + namespaceSeparator + propertyName
+		finalMemberNode := callGraph.assignmentGraph.addNode(
+			finalMemberNamespace,
+			memberNode,
+		)
+		result.ImmediateAssignments = append(result.ImmediateAssignments, finalMemberNode)
+	}
+
+	return result
+}
+
+// arrowFunctionProcessor handles JavaScript arrow function expressions
+// Arrow functions are treated similarly to function declarations
+func arrowFunctionProcessor(arrowNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if arrowNode == nil {
+		return newProcessorResult()
+	}
+
+	// For arrow functions assigned to variables, the variable_declarator processor handles registration
+	// Here we just process the body
+	results := newProcessorResult()
+
+	// Arrow functions can have different body types: statement_block or expression
+	bodyNode := arrowNode.ChildByFieldName("body")
+	if bodyNode != nil {
+		// Note: Arrow functions don't create their own namespace in this simplified implementation
+		// They're processed within the context of their enclosing scope
+		result := processChildren(bodyNode, treeData, currentNamespace, callGraph, metadata)
+		results.addResults(result)
+	}
+
+	return results
+}
+
+// methodDefinitionProcessor handles JavaScript method_definition nodes in classes
+// This is for class methods, similar to Java methods
+func methodDefinitionProcessor(methodDefNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if methodDefNode == nil {
+		return newProcessorResult()
+	}
+
+	methodNameNode := methodDefNode.ChildByFieldName("name")
+	if methodNameNode == nil {
+		log.Errorf("Method definition without name - %s", methodDefNode.Content(treeData))
+		return newProcessorResult()
+	}
+
+	// Method definition has its own scope, hence its own namespace
+	methodName := methodNameNode.Content(treeData)
+	methodNamespace := currentNamespace + namespaceSeparator + methodName
+
+	// Add method to the call graph
+	if _, exists := callGraph.Nodes[methodNamespace]; !exists {
+		callGraph.addNode(methodNamespace, methodDefNode)
+		log.Debugf("Register JavaScript method definition for %s - %s", methodName, methodNamespace)
+
+		// Add virtual method call from class instance => method
+		if metadata.insideClass {
+			instanceKeyword, exists := callGraph.getInstanceKeyword()
+			if exists {
+				instanceNamespace := currentNamespace + namespaceSeparator + instanceKeyword + namespaceSeparator + methodName
+				callGraph.addEdge(
+					instanceNamespace, nil, nil,
+					methodNamespace, methodDefNode,
+					[]CallArgument{},
+				)
+				log.Debugf("Register instance method definition for %s - %s\n", methodName, instanceNamespace)
+			}
+
+			// Register constructor
+			if methodName == "constructor" {
+				callGraph.addEdge(
+					currentNamespace, nil, nil,
+					methodNamespace, methodDefNode,
+					[]CallArgument{},
+				)
+				log.Debugf("Register class constructor for %s", currentNamespace)
+			}
+		}
+	}
+
+	results := newProcessorResult()
+
+	// Process method body
+	methodBody := methodDefNode.ChildByFieldName("body")
+	if methodBody != nil {
+		metadata.insideFunction = true
+		result := processChildren(methodBody, treeData, methodNamespace, callGraph, metadata)
+		metadata.insideFunction = false
+		results.addResults(result)
+	}
+
+	return results
+}
+
+// jsNewExpressionProcessor handles JavaScript new_expression nodes (constructor calls)
+// Examples: new TestClass("test", 42)
+func jsNewExpressionProcessor(newNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if newNode == nil {
+		return newProcessorResult()
+	}
+
+	result := newProcessorResult()
+
+	// Get constructor name
+	constructorNode := newNode.ChildByFieldName("constructor")
+	if constructorNode == nil {
+		return result
+	}
+
+	// Get arguments
+	argumentsNode := newNode.ChildByFieldName("arguments")
+	callArguments := []CallArgument{}
+	if argumentsNode != nil {
+		callArguments = resolveCallArguments(argumentsNode, treeData, currentNamespace, callGraph, metadata)
+	}
+
+	constructorName := constructorNode.Content(treeData)
+
+	// Resolve class name
+	classAssignment, classResolved := searchSymbolInScopeChain(constructorName, currentNamespace, callGraph)
+	if classResolved {
+		log.Debugf("JS constructor %s resolved to %s", constructorName, classAssignment.Namespace)
+
+		// Call to class constructor
+		callGraph.addEdge(
+			currentNamespace, nil, newNode,
+			classAssignment.Namespace, classAssignment.TreeNode,
+			callArguments,
+		)
+
+		// Mark the class assignment for return value
+		result.ImmediateAssignments = append(result.ImmediateAssignments, classAssignment)
+	} else {
+		// Unresolved constructor, create fallback namespace
+		classNamespace := currentNamespace + namespaceSeparator + constructorName
+		callGraph.addEdge(
+			currentNamespace, nil, newNode,
+			classNamespace, nil,
+			callArguments,
+		)
+	}
+
+	return result
 }

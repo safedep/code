@@ -640,6 +640,58 @@ var testcases = []callgraphTestcase{
 			{Namespace: "fixtures/testGoNestedImports.go//parseJSON", CallerNamespace: "fixtures/testGoNestedImports.go//main", CallerIdentifierContent: "parseJSON"},
 		},
 	},
+	{
+		Language: core.LanguageCodeJavascript,
+		FilePath: "fixtures/testJavascript.js",
+		ExpectedAssignmentGraph: map[string][]string{
+			"fs":                    {},
+			"axios":                 {},
+			"readFile":              {"fs//promises//readFile"},
+			"writeFile":             {"fs//promises//writeFile"},
+			"log":                   {"console//log"},
+			"warn":                  {"console//warn"},
+			"fixtures/testJavascript.js//simpleFunction": {},
+			"fixtures/testJavascript.js//TestClass":      {},
+		},
+		ExpectedCallGraph: map[string][]expectedCallgraphRefs{
+			"fixtures/testJavascript.js//simpleFunction": {
+				{"log", [][]string{}},
+			},
+			"fixtures/testJavascript.js//TestClass//constructor": {
+				{"log", [][]string{}},
+			},
+			"fixtures/testJavascript.js//TestClass//helperMethod": {
+				{"log", [][]string{}},
+			},
+			"fixtures/testJavascript.js//TestClass//deepMethod": {
+				{"fixtures/testJavascript.js//TestClass//this//helperMethod", [][]string{}},
+				{"log", [][]string{}},
+			},
+			"fixtures/testJavascript.js//ClassA//method1": {
+				{"log", [][]string{}},
+			},
+			"fixtures/testJavascript.js//ClassA//method2": {
+				{"warn", [][]string{}},
+			},
+			"fixtures/testJavascript.js//ClassB//method1": {
+				{"log", [][]string{}},
+			},
+			"fixtures/testJavascript.js//ClassB//method2": {
+				{"warn", [][]string{}},
+			},
+			"fixtures/testJavascript.js//ClassB//methodUnique": {
+				{"log", [][]string{}},
+			},
+		},
+		ExpectedDfsResults: []dfsResultExpectation{
+			{Namespace: "console//log", CallerNamespace: "fixtures/testJavascript.js//simpleFunction", CallerIdentifierContent: "log"},
+			{Namespace: "console//log", CallerNamespace: "fixtures/testJavascript.js//TestClass//constructor", CallerIdentifierContent: "log"},
+			{Namespace: "console//log", CallerNamespace: "fixtures/testJavascript.js//TestClass//helperMethod", CallerIdentifierContent: "log"},
+			{Namespace: "console//log", CallerNamespace: "fixtures/testJavascript.js//TestClass//deepMethod", CallerIdentifierContent: "log"},
+			{Namespace: "console//log", CallerNamespace: "fixtures/testJavascript.js//ClassA//method1", CallerIdentifierContent: "log"},
+			{Namespace: "console//warn", CallerNamespace: "fixtures/testJavascript.js//ClassA//method2", CallerIdentifierContent: "warn"},
+		},
+	},
 }
 
 func TestCallgraphPlugin(t *testing.T) {
