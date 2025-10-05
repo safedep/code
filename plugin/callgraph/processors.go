@@ -86,9 +86,9 @@ func init() {
 		"method_declaration":         goMethodDeclarationProcessorWrapper,
 		"assignment_expression":      assignmentProcessor,
 
-		// Go-specific
+		// Go and JavaScript shared
 		"call_expression":      callExpressionProcessorWrapper,
-		"function_declaration": goFunctionDeclarationProcessorWrapper,
+		"function_declaration": functionDeclarationProcessorWrapper,
 		"source_file":          emptyProcessor,
 
 		// JavaScript-specific
@@ -1094,7 +1094,7 @@ func callExpressionProcessorWrapper(node *sitter.Node, treeData []byte, currentN
 	}
 }
 
-func goFunctionDeclarationProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+func functionDeclarationProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
 	treeLanguage, err := callGraph.Tree.Language()
 	if err != nil {
 		return newProcessorResult()
