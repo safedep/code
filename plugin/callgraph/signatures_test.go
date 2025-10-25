@@ -456,6 +456,158 @@ func TestSignatureMatcher(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name:      "Java argument matching by index",
+			Language:  core.LanguageCodeJava,
+			FilePaths: []string{"fixtures/testJavaArguments.java"},
+			Signatures: []*callgraphv1.Signature{
+				{
+					Id: "java.crypto.md5.literal",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"java": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "java.security.MessageDigest.getInstance",
+									Args: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition_Argument{
+										{
+											Index:  0,
+											Values: []string{"\"MD5\"", "\"md5\""},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Id: "java.crypto.sha256.literal",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"java": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "java.security.MessageDigest.getInstance",
+									Args: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition_Argument{
+										{
+											Index:  0,
+											Values: []string{"\"SHA-256\""},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Id: "java.awt.canvas.setsize.32.99",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"java": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "java.awt.Canvas.setSize",
+									Args: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition_Argument{
+										{
+											Index:  0,
+											Values: []string{"32"},
+										},
+										{
+											Index:  1,
+											Values: []string{"99"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Id: "java.awt.dialog.with.window.type",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"java": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "java.awt.Dialog",
+									Args: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition_Argument{
+										{
+											Index:      0,
+											ResolvesTo: []string{"java.awt.Window"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Id: "java.awt.canvas.setsize.32.200.should.not.match",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"java": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "java.awt.Canvas.setSize",
+									Args: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition_Argument{
+										{
+											Index:  0,
+											Values: []string{"32"},
+										},
+										{
+											Index:  1,
+											Values: []string{"200"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{
+					SignatureID:      "java.crypto.md5.literal",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodeJava,
+					MinEvidenceCount: 1,
+					CalleeContains:   "MessageDigest",
+				},
+				{
+					SignatureID:      "java.crypto.sha256.literal",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodeJava,
+					MinEvidenceCount: 1,
+					CalleeContains:   "MessageDigest",
+				},
+				{
+					SignatureID:      "java.awt.canvas.setsize.32.99",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodeJava,
+					MinEvidenceCount: 1,
+					CalleeContains:   "setSize",
+				},
+				{
+					SignatureID:      "java.awt.dialog.with.window.type",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodeJava,
+					MinEvidenceCount: 1,
+					CalleeContains:   "Dialog",
+				},
+				{
+					SignatureID:      "java.awt.canvas.setsize.32.200.should.not.match",
+					ShouldMatch:      false,
+					ExpectedLanguage: core.LanguageCodeJava,
+					MinEvidenceCount: 0,
+					CalleeContains:   "",
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
