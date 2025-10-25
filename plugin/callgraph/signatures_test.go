@@ -177,6 +177,285 @@ func TestSignatureMatcher(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name:      "Python signatures",
+			Language:  core.LanguageCodePython,
+			FilePaths: []string{"fixtures/testFunctions.py"},
+			Signatures: []*callgraphv1.Signature{
+				{
+					Id: "python.print.usage",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"python": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "print",
+								},
+							},
+						},
+					},
+				},
+				{
+					Id: "python.pprint.pprint.usage",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"python": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "pprint.pprint",
+								},
+							},
+						},
+					},
+				},
+				{
+					Id: "python.os.getenv.usage",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"python": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "os.getenv",
+								},
+							},
+						},
+					},
+				},
+				{
+					Id: "python.pstats.getsomestat.usage",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"python": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "pstats.getsomestat",
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{
+					SignatureID:      "python.print.usage",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodePython,
+					MinEvidenceCount: 1,
+					CalleeContains:   "print",
+				},
+				{
+					SignatureID:      "python.pprint.pprint.usage",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodePython,
+					MinEvidenceCount: 1,
+					CalleeContains:   "pprint",
+				},
+				{
+					SignatureID:      "python.os.getenv.usage",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodePython,
+					MinEvidenceCount: 1,
+					CalleeContains:   "getenv",
+				},
+				{
+					SignatureID:      "python.pstats.getsomestat.usage",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodePython,
+					MinEvidenceCount: 1,
+					CalleeContains:   "getsomestat",
+				},
+			},
+		},
+		{
+			Name:      "Go signatures",
+			Language:  core.LanguageCodeGo,
+			FilePaths: []string{"fixtures/testCallGraph.go"},
+			Signatures: []*callgraphv1.Signature{
+				{
+					Id: "go.fmt.println.usage",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"go": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "fmt/Println",
+								},
+							},
+						},
+					},
+				},
+				{
+					Id: "go.os.writefile.usage",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"go": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "os/WriteFile",
+								},
+							},
+						},
+					},
+				},
+				{
+					Id: "go.os.getenv.usage",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"go": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "os/Getenv",
+								},
+							},
+						},
+					},
+				},
+				{
+					Id: "go.fmt.sprintf.usage",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"go": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "fmt/Sprintf",
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{
+					SignatureID:      "go.fmt.println.usage",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodeGo,
+					MinEvidenceCount: 1,
+					CalleeContains:   "Println",
+				},
+				{
+					SignatureID:      "go.os.writefile.usage",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodeGo,
+					MinEvidenceCount: 1,
+					CalleeContains:   "WriteFile",
+				},
+				{
+					SignatureID:      "go.os.getenv.usage",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodeGo,
+					MinEvidenceCount: 1,
+					CalleeContains:   "Getenv",
+				},
+				{
+					SignatureID:      "go.fmt.sprintf.usage",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodeGo,
+					MinEvidenceCount: 1,
+					CalleeContains:   "Sprintf",
+				},
+			},
+		},
+		{
+			Name:      "Java signatures",
+			Language:  core.LanguageCodeJava,
+			FilePaths: []string{"fixtures/CallgraphTestcases.java"},
+			Signatures: []*callgraphv1.Signature{
+				{
+					Id: "java.system.println.usage",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"java": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "System.out.println",
+								},
+							},
+						},
+					},
+				},
+				{
+					Id: "java.math.random.usage",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"java": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "Math.random",
+								},
+							},
+						},
+					},
+				},
+				{
+					Id: "java.awt.dialog.constructor",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"java": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "java.awt.Dialog",
+								},
+							},
+						},
+					},
+				},
+				{
+					Id: "java.string.valueof.usage",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"java": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "String.valueOf",
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{
+					SignatureID:      "java.system.println.usage",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodeJava,
+					MinEvidenceCount: 1,
+					CalleeContains:   "println",
+				},
+				{
+					SignatureID:      "java.math.random.usage",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodeJava,
+					MinEvidenceCount: 1,
+					CalleeContains:   "random",
+				},
+				{
+					SignatureID:      "java.awt.dialog.constructor",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodeJava,
+					MinEvidenceCount: 1,
+					CalleeContains:   "Dialog",
+				},
+				{
+					SignatureID:      "java.string.valueof.usage",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodeJava,
+					MinEvidenceCount: 1,
+					CalleeContains:   "valueOf",
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
