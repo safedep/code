@@ -97,6 +97,7 @@ func resolveNamespaceWithSeparator(moduleName string, lang core.Language) string
 	if exists {
 		return strings.Join(strings.Split(moduleName, separator), namespaceSeparator)
 	}
+
 	return moduleName
 }
 
@@ -111,5 +112,6 @@ func resolveSubmoduleIdentifier(identifier string, lang core.Language) string {
 		parts := strings.Split(identifier, separator)
 		return parts[len(parts)-1]
 	}
+
 	return identifier
 }
