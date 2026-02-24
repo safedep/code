@@ -1137,7 +1137,7 @@ func callExpressionProcessorWrapper(node *sitter.Node, treeData []byte, currentN
 	switch treeLanguage.Meta().Code {
 	case core.LanguageCodeGo:
 		return goCallExpressionProcessor(node, treeData, currentNamespace, callGraph, metadata)
-	case core.LanguageCodeJavascript:
+	case core.LanguageCodeJavascript, core.LanguageCodeTypescript:
 		return jsCallExpressionProcessor(node, treeData, currentNamespace, callGraph, metadata)
 	default:
 		return newProcessorResult()
@@ -1153,7 +1153,7 @@ func functionDeclarationProcessorWrapper(node *sitter.Node, treeData []byte, cur
 	switch treeLanguage.Meta().Code {
 	case core.LanguageCodeGo:
 		return goFunctionDeclarationProcessor(node, treeData, currentNamespace, callGraph, metadata)
-	case core.LanguageCodeJavascript:
+	case core.LanguageCodeJavascript, core.LanguageCodeTypescript:
 		return jsFunctionDeclarationProcessor(node, treeData, currentNamespace, callGraph, metadata)
 	default:
 		// Fallback to default function definition processor for other languages

@@ -725,6 +725,132 @@ var testcases = []callgraphTestcase{
 			{Namespace: "fs//readFileSync", CallerNamespace: "fixtures/testJavascript.js", CallerIdentifierContent: "fs.readFileSync"},
 		},
 	},
+	{
+		Language: core.LanguageCodeTypescript,
+		FilePath: "fixtures/testTypescript.ts",
+		ExpectedAssignmentGraph: map[string][]string{
+			// Import aliases
+			"axios":      {},
+			"log":        {"console//log"},
+			"warn":       {"console//warn"},
+			"createHash": {"crypto//createHash"},
+			"printA1":    {"printers//printA1"},
+			"printA2":    {"printers//printA2"},
+			"printB1":    {"printers//printB1"},
+			"printB2":    {"printers//printB2"},
+			"printBU":    {"printers//printBU"},
+			// Type-only import: should appear in assignment graph but NOT generate call edges
+			"AxiosResponse": {"axios//AxiosResponse"},
+			// Class/function definitions
+			"fixtures/testTypescript.ts//simpleFunction": {},
+			"fixtures/testTypescript.ts//TestClass":      {},
+			// Instance tracking
+			"fixtures/testTypescript.ts//instance": {"fixtures/testTypescript.ts//TestClass"},
+			// Polymorphic variable tracking
+			"fixtures/testTypescript.ts//x": {"fixtures/testTypescript.ts//ClassA", "fixtures/testTypescript.ts//ClassB"},
+			"fixtures/testTypescript.ts//y": {"fixtures/testTypescript.ts//x"},
+			// Constructor this-assignment tracking
+			"fixtures/testTypescript.ts//TestClass//constructor//this.name":  {"fixtures/testTypescript.ts//TestClass//constructor//name"},
+			"fixtures/testTypescript.ts//TestClass//constructor//this.value": {"fixtures/testTypescript.ts//TestClass//constructor//value"},
+		},
+		ExpectedCallGraph: map[string][]expectedCallgraphRefs{
+			// Root-level calls
+			"fixtures/testTypescript.ts": {
+				{"fixtures/testTypescript.ts//TestClass", [][]string{{"\"test\""}, {"42"}}},
+				{"fixtures/testTypescript.ts//TestClass//helperMethod", [][]string{}},
+				{"fixtures/testTypescript.ts//TestClass//deepMethod", [][]string{}},
+				{"fixtures/testTypescript.ts//simpleFunction", [][]string{{"1"}, {"2"}}},
+				{"fixtures/testTypescript.ts//arrowFunc", [][]string{{"5"}}},
+				{"log", [][]string{{"\"Module level call\""}}},
+				{"axios//get", [][]string{{"\"https://example.com\""}}},
+				{"createHash", [][]string{{"\"sha256\""}}},
+				{"instance.helperMethod()//toString", [][]string{}},
+				{"fixtures/testTypescript.ts//TestClass//helperMethod", [][]string{}},
+				{"fixtures/testTypescript.ts//ClassA", [][]string{}},
+				{"fixtures/testTypescript.ts//ClassB", [][]string{}},
+				// Polymorphic dispatch: x/y resolve to ClassA, so method calls go to ClassA
+				{"fixtures/testTypescript.ts//ClassA//method1", [][]string{}},
+				{"fixtures/testTypescript.ts//ClassA//method1", [][]string{}},
+				{"fixtures/testTypescript.ts//ClassA//method2", [][]string{}},
+				{"fixtures/testTypescript.ts//ClassA//methodUnique", [][]string{}},
+			},
+			// Function internals
+			"fixtures/testTypescript.ts//simpleFunction": {
+				{"log", [][]string{{"\"Simple function called\""}}},
+			},
+			"fixtures/testTypescript.ts//arrowFunc": {
+				{"warn", [][]string{{"\"Arrow function called\""}}},
+			},
+			// Class constructor dispatches to constructor method
+			"fixtures/testTypescript.ts//TestClass": {
+				{"fixtures/testTypescript.ts//TestClass//constructor", [][]string{}},
+			},
+			// Constructor calls log
+			"fixtures/testTypescript.ts//TestClass//constructor": {
+				{"log", [][]string{{"\"TestClass constructor\""}}},
+			},
+			"fixtures/testTypescript.ts//TestClass//helperMethod": {
+				{"log", [][]string{{"\"Called helper method\""}}},
+			},
+			// deepMethod calls this.helperMethod() and log
+			"fixtures/testTypescript.ts//TestClass//deepMethod": {
+				{"fixtures/testTypescript.ts//TestClass//this//helperMethod", [][]string{}},
+				{"log", [][]string{{"\"Called deep method\""}}},
+			},
+			// print method uses this.name as argument
+			"fixtures/testTypescript.ts//TestClass//print": {
+				{"log", [][]string{{"fixtures/testTypescript.ts//TestClass//this//name"}}},
+			},
+			// ClassA methods call distinct imported functions
+			"fixtures/testTypescript.ts//ClassA//method1": {
+				{"printA1", [][]string{{"\"ClassA method1\""}}},
+			},
+			"fixtures/testTypescript.ts//ClassA//method2": {
+				{"printA2", [][]string{{"\"ClassA method2\""}}},
+			},
+			// ClassB methods call distinct imported functions
+			"fixtures/testTypescript.ts//ClassB//method1": {
+				{"printB1", [][]string{{"\"ClassB method1\""}}},
+			},
+			"fixtures/testTypescript.ts//ClassB//method2": {
+				{"printB2", [][]string{{"\"ClassB method2\""}}},
+			},
+			"fixtures/testTypescript.ts//ClassB//methodUnique": {
+				{"printBU", [][]string{{"\"ClassB unique\""}}},
+			},
+		},
+		ExpectedDfsResults: []dfsResultExpectation{
+			// Constructor chain: new TestClass -> constructor -> log
+			{Namespace: "fixtures/testTypescript.ts//TestClass", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "new TestClass(\"test\", 42)"},
+			{Namespace: "fixtures/testTypescript.ts//TestClass//constructor", CallerNamespace: "fixtures/testTypescript.ts//TestClass", CallerIdentifierContent: ""},
+			{Namespace: "console//log", CallerNamespace: "fixtures/testTypescript.ts//TestClass//constructor", CallerIdentifierContent: "log"},
+			// Method calls on instance
+			{Namespace: "fixtures/testTypescript.ts//TestClass//helperMethod", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "instance.helperMethod"},
+			{Namespace: "console//log", CallerNamespace: "fixtures/testTypescript.ts//TestClass//helperMethod", CallerIdentifierContent: "log"},
+			{Namespace: "fixtures/testTypescript.ts//TestClass//deepMethod", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "instance.deepMethod"},
+			{Namespace: "fixtures/testTypescript.ts//TestClass//this//helperMethod", CallerNamespace: "fixtures/testTypescript.ts//TestClass//deepMethod", CallerIdentifierContent: "this.helperMethod"},
+			{Namespace: "console//log", CallerNamespace: "fixtures/testTypescript.ts//TestClass//deepMethod", CallerIdentifierContent: "log"},
+			// Module-level function calls
+			{Namespace: "fixtures/testTypescript.ts//simpleFunction", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "simpleFunction"},
+			{Namespace: "console//log", CallerNamespace: "fixtures/testTypescript.ts//simpleFunction", CallerIdentifierContent: "log"},
+			{Namespace: "fixtures/testTypescript.ts//arrowFunc", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "arrowFunc"},
+			{Namespace: "console//warn", CallerNamespace: "fixtures/testTypescript.ts//arrowFunc", CallerIdentifierContent: "warn"},
+			// Module-level log call
+			{Namespace: "console//log", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "log"},
+			// Imported module calls
+			{Namespace: "axios//get", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "axios.get"},
+			{Namespace: "crypto//createHash", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "createHash"},
+			// Polymorphic dispatch: new ClassA/ClassB
+			{Namespace: "fixtures/testTypescript.ts//ClassA", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "new ClassA()"},
+			{Namespace: "fixtures/testTypescript.ts//ClassB", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "new ClassB()"},
+			// x.method1()/y.method1() resolve to ClassA methods
+			{Namespace: "fixtures/testTypescript.ts//ClassA//method1", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "x.method1"},
+			{Namespace: "fixtures/testTypescript.ts//ClassA//method1", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "y.method1"},
+			// ClassA methods reach their distinct imported callees
+			{Namespace: "printers//printA1", CallerNamespace: "fixtures/testTypescript.ts//ClassA//method1", CallerIdentifierContent: "printA1"},
+			{Namespace: "printers//printA2", CallerNamespace: "fixtures/testTypescript.ts//ClassA//method2", CallerIdentifierContent: "printA2"},
+		},
+	},
 }
 
 func TestCallgraphPlugin(t *testing.T) {
