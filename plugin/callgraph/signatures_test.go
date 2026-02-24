@@ -608,6 +608,153 @@ func TestSignatureMatcher(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name:      "TypeScript falls back to JavaScript signatures",
+			Language:  core.LanguageCodeTypescript,
+			FilePaths: []string{"fixtures/testTypescript.ts"},
+			Signatures: []*callgraphv1.Signature{
+				// JS-only signature: should match TS via fallback
+				{
+					Id: "js.console.log.usage",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"javascript": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "console/log",
+								},
+							},
+						},
+					},
+				},
+				// JS-only signature with argument matching
+				{
+					Id: "js.crypto.createhash.sha256",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"javascript": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "crypto/createHash",
+									Args: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition_Argument{
+										{
+											Index:  0,
+											Values: []string{"\"sha256\""},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				// Signature with explicit typescript key: should use TS matcher, not JS fallback
+				{
+					Id: "ts.axios.get.usage",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"typescript": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "axios/get",
+								},
+							},
+						},
+						"javascript": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									// Different condition to prove TS key is preferred
+									Type:  "call",
+									Value: "nonexistent/function",
+								},
+							},
+						},
+					},
+				},
+				// When typescript key exists but doesn't match, should NOT fall back to javascript
+				{
+					Id: "ts.no.fallback.when.ts.key.exists",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"typescript": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "nonexistent/tsFunction",
+								},
+							},
+						},
+						"javascript": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									// This would match, but should not be used since typescript key exists
+									Type:  "call",
+									Value: "console/log",
+								},
+							},
+						},
+					},
+				},
+				// Python-only signature: should NOT match TS
+				{
+					Id: "python.only.signature",
+					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+						"python": {
+							Match: "any",
+							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
+								{
+									Type:  "call",
+									Value: "print",
+								},
+							},
+						},
+					},
+				},
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{
+					SignatureID:      "js.console.log.usage",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodeTypescript,
+					MinEvidenceCount: 1,
+					CalleeContains:   "log",
+				},
+				{
+					SignatureID:      "js.crypto.createhash.sha256",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodeTypescript,
+					MinEvidenceCount: 1,
+					CalleeContains:   "createHash",
+				},
+				{
+					SignatureID:      "ts.axios.get.usage",
+					ShouldMatch:      true,
+					ExpectedLanguage: core.LanguageCodeTypescript,
+					MinEvidenceCount: 1,
+					CalleeContains:   "get",
+				},
+				{
+					// TS key exists with non-matching condition, JS key has matching condition
+					// Should NOT match because TS key takes priority and its condition doesn't match
+					SignatureID:      "ts.no.fallback.when.ts.key.exists",
+					ShouldMatch:      false,
+					ExpectedLanguage: core.LanguageCodeTypescript,
+					MinEvidenceCount: 0,
+					CalleeContains:   "",
+				},
+				{
+					SignatureID:      "python.only.signature",
+					ShouldMatch:      false,
+					ExpectedLanguage: core.LanguageCodePython,
+					MinEvidenceCount: 0,
+					CalleeContains:   "",
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
