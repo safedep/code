@@ -85,6 +85,7 @@ var submoduleSeparator = map[core.LanguageCode]string{
 	core.LanguageCodeJavascript: "/",
 	core.LanguageCodePython:     ".",
 	core.LanguageCodeJava:       ".",
+	core.LanguageCodeTypescript: "/",
 }
 
 func resolveNamespaceWithSeparator(moduleName string, lang core.Language) string {

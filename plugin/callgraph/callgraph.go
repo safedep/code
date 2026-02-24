@@ -250,14 +250,15 @@ func (cg *CallGraph) PrintAssignmentGraph() error {
 
 // Assumption - All functions and class constructors are reachable
 var dfsSourceNodeTypes = map[string]bool{
-	"program":             true,
-	"file":                true,
-	"module":              true,
-	"function_definition": true,
-	"method_declaration":  true,
-	"class_definition":    true,
-	"class_body":          true,
-	"class_declaration":   true,
+	"program":                    true,
+	"file":                       true,
+	"module":                     true,
+	"function_definition":        true,
+	"method_declaration":         true,
+	"class_definition":           true,
+	"class_body":                 true,
+	"class_declaration":          true,
+	"abstract_class_declaration": true,
 }
 
 type DfsResultItem struct {

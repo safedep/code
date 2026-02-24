@@ -51,7 +51,7 @@ func (p *stripCommentsPlugin) Name() string {
 	return "StripCommentsPlugin"
 }
 
-var supportedLanguages = []core.LanguageCode{core.LanguageCodePython, core.LanguageCodeJavascript}
+var supportedLanguages = []core.LanguageCode{core.LanguageCodePython, core.LanguageCodeJavascript, core.LanguageCodeTypescript}
 
 func (p *stripCommentsPlugin) SupportedLanguages() []core.LanguageCode {
 	return supportedLanguages

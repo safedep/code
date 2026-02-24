@@ -658,17 +658,17 @@ var testcases = []callgraphTestcase{
 		},
 		ExpectedCallGraph: map[string][]expectedCallgraphRefs{
 			"fixtures/testJavascript.js": {
-				{"fixtures/testJavascript.js//require", [][]string{}},
-				{"fixtures/testJavascript.js//require", [][]string{}},
-				{"fixtures/testJavascript.js//require", [][]string{}},
-				{"fixtures/testJavascript.js//TestClass", [][]string{}},
+				{"fixtures/testJavascript.js//require", [][]string{{"'fs'"}}},
+				{"fixtures/testJavascript.js//require", [][]string{{"'fs/promises'"}}},
+				{"fixtures/testJavascript.js//require", [][]string{{"'sqlite3'"}}},
+				{"fixtures/testJavascript.js//TestClass", [][]string{{"\"test\""}, {"42"}}},
 				{"fixtures/testJavascript.js//TestClass//helperMethod", [][]string{}},
 				{"fixtures/testJavascript.js//TestClass//deepMethod", [][]string{}},
-				{"fixtures/testJavascript.js//simpleFunction", [][]string{}},
-				{"fixtures/testJavascript.js//arrowFunc", [][]string{}},
-				{"log", [][]string{}},
-				{"fs//readFileSync", [][]string{}},
-				{"axios//get", [][]string{}},
+				{"fixtures/testJavascript.js//simpleFunction", [][]string{{"1"}, {"2"}}},
+				{"fixtures/testJavascript.js//arrowFunc", [][]string{{"5"}}},
+				{"log", [][]string{{"\"Module level call\""}}},
+				{"fs//readFileSync", [][]string{{"\"file.txt\""}}},
+				{"axios//get", [][]string{{"\"https://example.com\""}}},
 				{"instance.helperMethod()//toString", [][]string{}},
 				{"fixtures/testJavascript.js//TestClass//helperMethod", [][]string{}},
 				{"fixtures/testJavascript.js//ClassA", [][]string{}},
@@ -677,38 +677,38 @@ var testcases = []callgraphTestcase{
 				{"fixtures/testJavascript.js//ClassA//method1", [][]string{}},
 				{"fixtures/testJavascript.js//ClassA//method2", [][]string{}},
 				{"fixtures/testJavascript.js//ClassA//methodUnique", [][]string{}},
-				{"sqlite3//Database", [][]string{}},
+				{"sqlite3//Database", [][]string{{"':memory:'"}}},
 			},
 			"fixtures/testJavascript.js//simpleFunction": {
-				{"log", [][]string{}},
+				{"log", [][]string{{"\"Simple function called\""}}},
 			},
 			"fixtures/testJavascript.js//arrowFunc": {
-				{"warn", [][]string{}},
+				{"warn", [][]string{{"\"Arrow function called\""}}},
 			},
 			"fixtures/testJavascript.js//TestClass//constructor": {
-				{"log", [][]string{}},
+				{"log", [][]string{{"\"TestClass constructor\""}}},
 			},
 			"fixtures/testJavascript.js//TestClass//helperMethod": {
-				{"log", [][]string{}},
+				{"log", [][]string{{"\"Called helper method\""}}},
 			},
 			"fixtures/testJavascript.js//TestClass//deepMethod": {
 				{"fixtures/testJavascript.js//TestClass//this//helperMethod", [][]string{}},
-				{"log", [][]string{}},
+				{"log", [][]string{{"\"Called deep method\""}}},
 			},
 			"fixtures/testJavascript.js//ClassA//method1": {
-				{"log", [][]string{}},
+				{"log", [][]string{{"\"ClassA method1\""}}},
 			},
 			"fixtures/testJavascript.js//ClassA//method2": {
-				{"warn", [][]string{}},
+				{"warn", [][]string{{"\"ClassA method2\""}}},
 			},
 			"fixtures/testJavascript.js//ClassB//method1": {
-				{"log", [][]string{}},
+				{"log", [][]string{{"\"ClassB method1\""}}},
 			},
 			"fixtures/testJavascript.js//ClassB//method2": {
-				{"warn", [][]string{}},
+				{"warn", [][]string{{"\"ClassB method2\""}}},
 			},
 			"fixtures/testJavascript.js//ClassB//methodUnique": {
-				{"log", [][]string{}},
+				{"log", [][]string{{"\"ClassB unique\""}}},
 			},
 		},
 		ExpectedDfsResults: []dfsResultExpectation{

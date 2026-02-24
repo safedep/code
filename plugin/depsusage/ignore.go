@@ -14,6 +14,31 @@ type languageIgnoreRules struct {
 	rule []func(node *sitter.Node, data *[]byte) bool
 }
 
+// isRequireCallIgnoreRule checks if a variable_declarator contains a require() call.
+// These are already handled as imports and should be skipped during traversal.
+func isRequireCallIgnoreRule(node *sitter.Node, data *[]byte) bool {
+	if node.Type() != "variable_declarator" {
+		return false
+	}
+
+	for i := range int(node.ChildCount()) {
+		if node.Child(i).Type() != "call_expression" {
+			continue
+		}
+
+		callExpression := node.Child(i)
+		for j := range int(callExpression.ChildCount()) {
+			identifier := callExpression.Child(j)
+			if identifier.Type() == "identifier" && identifier.Content(*data) == "require" {
+				return true
+			}
+		}
+		break
+	}
+
+	return false
+}
+
 var ignoreRules = map[core.LanguageCode]languageIgnoreRules{
 	core.LanguageCodePython: {
 		rule: []func(node *sitter.Node, data *[]byte) bool{},
@@ -23,29 +48,19 @@ var ignoreRules = map[core.LanguageCode]languageIgnoreRules{
 	},
 	core.LanguageCodeJavascript: {
 		rule: []func(node *sitter.Node, data *[]byte) bool{
-			func(node *sitter.Node, data *[]byte) bool {
-				// requires aren't identified as import by tree sitter, instead they follow
-				// the pattern - variable_declarator -> call_expression -> (identifier = "require")
-				if node.Type() != "variable_declarator" {
-					return false
-				}
-
-				for i := range int(node.ChildCount()) {
-					if node.Child(i).Type() != "call_expression" {
-						continue
-					}
-
-					callExpression := node.Child(i)
-					for j := range int(callExpression.ChildCount()) {
-						identifier := callExpression.Child(j)
-						if identifier.Type() == "identifier" && identifier.Content(*data) == "require" {
-							return true
-						}
-					}
-					break
-				}
-
-				return false
+			isRequireCallIgnoreRule,
+		},
+	},
+	core.LanguageCodeTypescript: {
+		rule: []func(node *sitter.Node, data *[]byte) bool{
+			isRequireCallIgnoreRule,
+			// Skip type_alias_declaration nodes (e.g., type Foo = Bar)
+			func(node *sitter.Node, _ *[]byte) bool {
+				return node.Type() == "type_alias_declaration"
+			},
+			// Skip interface_declaration nodes
+			func(node *sitter.Node, _ *[]byte) bool {
+				return node.Type() == "interface_declaration"
 			},
 		},
 	},

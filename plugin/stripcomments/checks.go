@@ -40,6 +40,7 @@ func isCommentNode(node *sitter.Node, lang core.Language) bool {
 	commentNodeChecks := map[core.LanguageCode]isCommentNodeCheck{
 		core.LanguageCodeJavascript: isJavascriptCommentNode,
 		core.LanguageCodePython:     isPythonCommentNode,
+		core.LanguageCodeTypescript: isJavascriptCommentNode,
 	}
 	if check, ok := commentNodeChecks[lang.Meta().Code]; ok {
 		return check(node)
