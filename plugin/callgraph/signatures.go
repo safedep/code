@@ -142,7 +142,14 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 	for _, signature := range sm.targetSignatures {
 		languageSignature, exists := signature.Languages[string(languageCode)]
 		if !exists {
-			continue
+			// TypeScript falls back to JavaScript signatures since they share
+			// the same library ecosystem and call patterns
+			if languageCode == core.LanguageCodeTypescript {
+				languageSignature, exists = signature.Languages[string(core.LanguageCodeJavascript)]
+			}
+			if !exists {
+				continue
+			}
 		}
 
 		matchedConditions := []MatchedCondition{}
