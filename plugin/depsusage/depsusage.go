@@ -38,6 +38,7 @@ var supportedLanguages = []core.LanguageCode{
 	core.LanguageCodeGo,
 	core.LanguageCodeJavascript,
 	core.LanguageCodeJava,
+	core.LanguageCodeTypescript,
 }
 
 func (p *dependencyUsagePlugin) SupportedLanguages() []core.LanguageCode {

@@ -104,12 +104,38 @@ func init() {
 		"function_declaration": functionDeclarationProcessorWrapper,
 		"source_file":          emptyProcessor,
 
-		// JavaScript-specific
+		// JavaScript-specific (also used by TypeScript)
 		"member_expression":   memberExpressionProcessor,
 		"arrow_function":      arrowFunctionProcessor,
 		"method_definition":   methodDefinitionProcessor,
 		"new_expression":      jsNewExpressionProcessor,
 		"lexical_declaration": lexicalDeclarationProcessor,
+
+		// TypeScript-specific: skip type-level nodes to avoid false-positive call edges
+		"type_annotation":              skippedProcessor,
+		"type_alias_declaration":       skippedProcessor,
+		"interface_declaration":        skipResultsProcessor,
+		"enum_declaration":             skipResultsProcessor,
+		"abstract_class_declaration":   classDefinitionProcessor,
+		"abstract_method_signature":    skippedProcessor,
+		"as_expression":                skippedProcessor,
+		"satisfies_expression":         skippedProcessor,
+		"non_null_expression":          emptyProcessor,
+		"type_arguments":               skippedProcessor,
+		"accessibility_modifier":       skippedProcessor,
+		"override_modifier":            skippedProcessor,
+		"readonly":                     skippedProcessor,
+		"required_parameter":           emptyProcessor,
+		"optional_parameter":           emptyProcessor,
+		"predefined_type":              skippedProcessor,
+		"type_identifier":              skippedProcessor,
+		"interface_body":               skippedProcessor,
+		"abstract_method_definition":   skippedProcessor,
+		"public_field_definition":      skipResultsProcessor,
+		"extends_clause":               skippedProcessor,
+		"implements_clause":            skippedProcessor,
+		"extends_type_clause":          skippedProcessor,
+		"class_heritage":               skippedProcessor,
 	}
 
 	for literalNodeType := range literalNodeTypes {
@@ -543,8 +569,8 @@ func resolveCallArguments(argumentsListNode *sitter.Node, treeData []byte, curre
 		return []CallArgument{}
 	}
 
-	if argumentsListNode.Type() != "argument_list" {
-		log.Errorf("Expected argument_list node, got %s for %s", argumentsListNode.Type(), argumentsListNode.Content(treeData))
+	if argumentsListNode.Type() != "argument_list" && argumentsListNode.Type() != "arguments" {
+		log.Errorf("Expected argument_list or arguments node, got %s for %s", argumentsListNode.Type(), argumentsListNode.Content(treeData))
 		return []CallArgument{}
 	}
 
@@ -1111,7 +1137,7 @@ func callExpressionProcessorWrapper(node *sitter.Node, treeData []byte, currentN
 	switch treeLanguage.Meta().Code {
 	case core.LanguageCodeGo:
 		return goCallExpressionProcessor(node, treeData, currentNamespace, callGraph, metadata)
-	case core.LanguageCodeJavascript:
+	case core.LanguageCodeJavascript, core.LanguageCodeTypescript:
 		return jsCallExpressionProcessor(node, treeData, currentNamespace, callGraph, metadata)
 	default:
 		return newProcessorResult()
@@ -1127,7 +1153,7 @@ func functionDeclarationProcessorWrapper(node *sitter.Node, treeData []byte, cur
 	switch treeLanguage.Meta().Code {
 	case core.LanguageCodeGo:
 		return goFunctionDeclarationProcessor(node, treeData, currentNamespace, callGraph, metadata)
-	case core.LanguageCodeJavascript:
+	case core.LanguageCodeJavascript, core.LanguageCodeTypescript:
 		return jsFunctionDeclarationProcessor(node, treeData, currentNamespace, callGraph, metadata)
 	default:
 		// Fallback to default function definition processor for other languages

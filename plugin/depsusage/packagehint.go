@@ -24,6 +24,7 @@ func resolvePackageHint(moduleName string, lang core.Language) (string, error) {
 		core.LanguageCodeGo:         resolveGoPackageHint,
 		core.LanguageCodeJavascript: resolveJavascriptPackageHint,
 		core.LanguageCodeJava:       resolveJavaPackageHint,
+		core.LanguageCodeTypescript: resolveJavascriptPackageHint,
 	}
 	if resolver, ok := resolvers[lang.Meta().Code]; ok {
 		return resolver(moduleName)

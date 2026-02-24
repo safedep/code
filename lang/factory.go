@@ -22,6 +22,9 @@ var languages = map[core.LanguageCode]func() (core.Language, error){
 	core.LanguageCodeJava: func() (core.Language, error) {
 		return NewJavaLanguage()
 	},
+	core.LanguageCodeTypescript: func() (core.Language, error) {
+		return NewTypescriptLanguage()
+	},
 }
 
 func AllLanguages() ([]core.Language, error) {
