@@ -52,6 +52,18 @@ func TestValidateSignatures(t *testing.T) {
 			},
 			expectedError: true,
 		},
+		{
+			signature:     callSignature("ruby.language", core.LanguageCodeRuby, MatchAny, "OpenAI::Client.new"),
+			expectedError: false,
+		},
+		{
+			signature:     callSignature("kotlin.language", core.LanguageCodeKotlin, MatchAny, "okhttp3.OkHttpClient"),
+			expectedError: true,
+		},
+		{
+			signature:     callSignature("csharp.invalid.match", core.LanguageCodeCSharp, "invalid_match_type", "OpenAI.*"),
+			expectedError: true,
+		},
 	}
 
 	for _, tc := range signatureValidationTestCases {
@@ -175,6 +187,178 @@ func TestSignatureMatcher(t *testing.T) {
 					MinEvidenceCount: 1,
 					CalleeContains:   "Database",
 				},
+			},
+		},
+		{
+			Name:      "JavaScript CommonJS signatures",
+			Language:  core.LanguageCodeJavascript,
+			FilePaths: []string{"fixtures/testCommonJS.js"},
+			Signatures: []*callgraphv1.Signature{
+				callSignature("anthropic.client", core.LanguageCodeJavascript, MatchAny, "@anthropic-ai/sdk"),
+				callSignature("node.events.emitter", core.LanguageCodeJavascript, MatchAny, "events/EventEmitter"),
+				callSignature("debug.logger", core.LanguageCodeJavascript, MatchAny, "debug"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "anthropic.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
+				{SignatureID: "node.events.emitter", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
+				{SignatureID: "debug.logger", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
+			},
+		},
+		{
+			Name:      "C# signatures",
+			Language:  core.LanguageCodeCSharp,
+			FilePaths: []string{"fixtures/testShapes.cs"},
+			Signatures: []*callgraphv1.Signature{
+				callSignature("openai.chat", core.LanguageCodeCSharp, MatchAll, "OpenAI.Chat.*", "ChatClient.CompleteChatAsync"),
+				callSignature("http.client", core.LanguageCodeCSharp, MatchAny, "System.Net.Http.HttpClient.*"),
+				callSignature("anthropic.client", core.LanguageCodeCSharp, MatchAll, "Anthropic.*", "AnthropicClient"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "openai.chat", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeCSharp, MinEvidenceCount: 1},
+				{SignatureID: "http.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeCSharp, MinEvidenceCount: 1},
+				{SignatureID: "anthropic.client", ShouldMatch: false},
+			},
+		},
+		{
+			Name:      "Rust signatures",
+			Language:  core.LanguageCodeRust,
+			FilePaths: []string{"fixtures/testShapes.rs"},
+			Signatures: []*callgraphv1.Signature{
+				callSignature("openai.client", core.LanguageCodeRust, MatchAny, "async_openai::Client::new"),
+				callSignature("http.client", core.LanguageCodeRust, MatchAny, "reqwest::*"),
+				callSignature("anthropic.client", core.LanguageCodeRust, MatchAny, "anthropic::Client::new"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "openai.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeRust, MinEvidenceCount: 1},
+				{SignatureID: "http.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeRust, MinEvidenceCount: 1},
+				{SignatureID: "anthropic.client", ShouldMatch: false},
+			},
+		},
+		{
+			Name:      "PHP signatures",
+			Language:  core.LanguageCodePHP,
+			FilePaths: []string{"fixtures/testShapes.php"},
+			Signatures: []*callgraphv1.Signature{
+				callSignature("openai.client", core.LanguageCodePHP, MatchAny, "OpenAI::client"),
+				callSignature("http.client", core.LanguageCodePHP, MatchAny, "GuzzleHttp\\Client"),
+				callSignature("anthropic.client", core.LanguageCodePHP, MatchAny, "Anthropic::client"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "openai.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePHP, MinEvidenceCount: 1},
+				{SignatureID: "http.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePHP, MinEvidenceCount: 1},
+				{SignatureID: "anthropic.client", ShouldMatch: false},
+			},
+		},
+		{
+			Name:      "Ruby signatures",
+			Language:  core.LanguageCodeRuby,
+			FilePaths: []string{"fixtures/testShapes.rb"},
+			Signatures: []*callgraphv1.Signature{
+				callSignature("openai.client", core.LanguageCodeRuby, MatchAny, "OpenAI::Client.new"),
+				callSignature("http.client", core.LanguageCodeRuby, MatchAny, "Net::HTTP.*"),
+				callSignature("anthropic.client", core.LanguageCodeRuby, MatchAny, "Anthropic::Client.new"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "openai.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeRuby, MinEvidenceCount: 2},
+				{SignatureID: "http.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeRuby, MinEvidenceCount: 1},
+				{SignatureID: "anthropic.client", ShouldMatch: false},
+			},
+		},
+		{
+			Name:      "JavaScript chained calls",
+			Language:  core.LanguageCodeJavascript,
+			FilePaths: []string{"fixtures/testChains.js"},
+			Signatures: []*callgraphv1.Signature{
+				argSignature("crypto.md5", core.LanguageCodeJavascript, "crypto/createHash", "'md5'", `"md5"`),
+				callSignature("openai.chat", core.LanguageCodeJavascript, MatchAny, "openai/chat/completions/create"),
+				argSignature("crypto.sha1", core.LanguageCodeJavascript, "crypto/createHash", "'sha1'"),
+				callSignature("transformers", core.LanguageCodeJavascript, MatchAny, "@xenova/transformers/*"),
+				callSignature("openai.factory", core.LanguageCodeJavascript, MatchAll, "openai/createClient", "openai/createClient/chat/completions/create"),
+				callSignature("dynamic.import", core.LanguageCodeJavascript, MatchAny, "import"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "crypto.md5", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
+				{SignatureID: "openai.chat", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
+				{SignatureID: "crypto.sha1", ShouldMatch: false},
+				{SignatureID: "transformers", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
+				{SignatureID: "openai.factory", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
+				{SignatureID: "dynamic.import", ShouldMatch: false},
+			},
+		},
+		{
+			Name:      "Go chained calls and versioned imports",
+			Language:  core.LanguageCodeGo,
+			FilePaths: []string{"fixtures/testChains.go"},
+			Signatures: []*callgraphv1.Signature{
+				callSignature("crypto.ecdh", core.LanguageCodeGo, MatchAny, "crypto/ecdh/X25519/GenerateKey"),
+				callSignature("crypto.jwt", core.LanguageCodeGo, MatchAny, "github.com/golang-jwt/jwt/v5/NewWithClaims"),
+				callSignature("openai.chat", core.LanguageCodeGo, MatchAny, "github.com/sashabaranov/go-openai/NewClient/CreateChatCompletion"),
+				callSignature("openai.config", core.LanguageCodeGo, MatchAll, "github.com/sashabaranov/go-openai/NewClientWithConfig",
+					"github.com/sashabaranov/go-openai/NewClientWithConfig/Config/HTTPClient/Do"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "crypto.ecdh", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeGo, MinEvidenceCount: 1},
+				{SignatureID: "crypto.jwt", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeGo, MinEvidenceCount: 1},
+				{SignatureID: "openai.chat", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeGo, MinEvidenceCount: 1},
+				{SignatureID: "openai.config", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeGo, MinEvidenceCount: 1},
+			},
+		},
+		{
+			Name:      "Python chained calls",
+			Language:  core.LanguageCodePython,
+			FilePaths: []string{"fixtures/testChains.py"},
+			Signatures: []*callgraphv1.Signature{
+				callSignature("crypto.argon2", core.LanguageCodePython, MatchAny, "argon2.PasswordHasher.hash"),
+				callSignature("crypto.sha256", core.LanguageCodePython, MatchAny, "hashlib.sha256.hexdigest"),
+				callSignature("openai.chat", core.LanguageCodePython, MatchAll, "openai.OpenAI", "openai.OpenAI.chat.completions.create"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "crypto.argon2", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePython, MinEvidenceCount: 1},
+				{SignatureID: "crypto.sha256", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePython, MinEvidenceCount: 1},
+				{SignatureID: "openai.chat", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePython, MinEvidenceCount: 1},
+			},
+		},
+		{
+			Name:      "Java calls on new objects",
+			Language:  core.LanguageCodeJava,
+			FilePaths: []string{"fixtures/testChains.java"},
+			Signatures: []*callgraphv1.Signature{
+				callSignature("pinecone.client", core.LanguageCodeJava, MatchAny, "io.pinecone.clients.Pinecone.Builder.build"),
+				callSignature("http.send", core.LanguageCodeJava, MatchAny, "com.example.http.Request.send"),
+				callSignature("http.join", core.LanguageCodeJava, MatchAny, "com.example.http.Request.join"),
+				callSignature("unresolved", core.LanguageCodeJava, MatchAll, "StringBuilder.append", "Local.run"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "pinecone.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJava, MinEvidenceCount: 1},
+				{SignatureID: "http.send", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJava, MinEvidenceCount: 1},
+				{SignatureID: "http.join", ShouldMatch: false},
+				{SignatureID: "unresolved", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJava, MinEvidenceCount: 1},
+			},
+		},
+		{
+			Name:      "Rust turbofish",
+			Language:  core.LanguageCodeRust,
+			FilePaths: []string{"fixtures/testGenerics.rs"},
+			Signatures: []*callgraphv1.Signature{
+				callSignature("crypto.hmac", core.LanguageCodeRust, MatchAny, "hmac::Hmac::new_from_slice"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "crypto.hmac", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeRust, MinEvidenceCount: 1},
+			},
+		},
+		{
+			Name:      "PHP string arguments",
+			Language:  core.LanguageCodePHP,
+			FilePaths: []string{"fixtures/testStrings.php"},
+			Signatures: []*callgraphv1.Signature{
+				argSignature("crypto.sha256", core.LanguageCodePHP, "hash", `"sha256"`, "'sha256'"),
+				argSignature("crypto.md5", core.LanguageCodePHP, "hash", `"md5"`, "'md5'"),
+				argSignature("crypto.sha1", core.LanguageCodePHP, "hash", `"sha1"`, "'sha1'"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "crypto.sha256", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePHP, MinEvidenceCount: 1},
+				{SignatureID: "crypto.md5", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePHP, MinEvidenceCount: 1},
+				{SignatureID: "crypto.sha1", ShouldMatch: false},
 			},
 		},
 		{
@@ -842,4 +1026,39 @@ func TestSignatureMatcher(t *testing.T) {
 			}
 		})
 	}
+}
+
+// argSignature is a signature of one language with one call condition
+// whose first argument is one of values.
+func argSignature(id string, language core.LanguageCode, call string, values ...string) *callgraphv1.Signature {
+	sig := callSignature(id, language, MatchAny, call)
+	sig.Languages[string(language)].Conditions[0].Args = []*callgraphv1.Signature_LanguageMatcher_SignatureCondition_Argument{
+		{Index: 0, Values: values},
+	}
+	return sig
+}
+
+// callSignature is a signature of one language with a call condition for each call.
+func callSignature(id string, language core.LanguageCode, match string, calls ...string) *callgraphv1.Signature {
+	conditions := make([]*callgraphv1.Signature_LanguageMatcher_SignatureCondition, 0, len(calls))
+	for _, call := range calls {
+		conditions = append(conditions, &callgraphv1.Signature_LanguageMatcher_SignatureCondition{Type: "call", Value: call})
+	}
+
+	return &callgraphv1.Signature{
+		Id: id,
+		Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+			string(language): {Match: match, Conditions: conditions},
+		},
+	}
+}
+
+func TestCalleeOfKeepsTheNamespace(t *testing.T) {
+	node := &CallGraphNode{Namespace: "openai//OpenAI"}
+	assert.Same(t, node, calleeOf(DfsResultItem{Namespace: "openai//OpenAI", Node: node}))
+	assert.Equal(t, "crewai//flow//Flow", calleeOf(DfsResultItem{Namespace: "crewai//flow//Flow"}).Namespace)
+
+	evidence := MatchedEvidence{Callee: calleeOf(DfsResultItem{Namespace: "crewai//flow//Flow"})}
+	data := []byte{}
+	assert.Equal(t, "crewai//flow//Flow", evidence.Metadata(&data).CalleeNamespace)
 }

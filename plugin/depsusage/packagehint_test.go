@@ -22,6 +22,14 @@ func TestResolvePackageHint(t *testing.T) {
 				{"foo.bar.baz", "foo", false},
 				{"foo.bar.baz.qux", "foo", false},
 				{"foo.bar.baz.qux.v1", "foo", false},
+				{"yaml", "pyyaml", false},
+				{"PIL.Image", "pillow", false},
+				{"sklearn.linear_model", "scikit-learn", false},
+				{"dotenv", "python-dotenv", false},
+				{"google.protobuf.json_format", "protobuf", false},
+				{"google.cloud.storage", "google", false},
+				{"ruamel.yaml.comments", "ruamel.yaml", false},
+				{"ruamel", "ruamel", false},
 			},
 			core.LanguageCodeGo: {
 				{"os", "os", false},
@@ -72,6 +80,36 @@ func TestResolvePackageHint(t *testing.T) {
 				{"com.google.common.collect", "", true},
 				{"org.springframework.ai.chat.client.ChatClient", "", true},
 				{"lombok.extern.slf4j.Slf4j", "", true},
+				{"javax.servlet.http", "javax.servlet", false},
+			},
+			core.LanguageCodeKotlin: {
+				{"kotlin.collections.List", "kotlin.collections", false},
+				{"android.os.Bundle", "android.os", false},
+				{"kotlinx.coroutines.flow", "", true},
+				{"androidx.compose.runtime", "", true},
+				{"okhttp3.OkHttpClient", "", true},
+			},
+			core.LanguageCodeRust: {
+				{"serde", "serde", false},
+				{"serde::de::Deserialize", "serde", false},
+				{"async_openai::types", "async_openai", false},
+				{"crate::config", "", true},
+				{"super::util", "", true},
+			},
+			core.LanguageCodeRuby: {
+				{"nokogiri", "nokogiri", false},
+				{"net/http", "net", false},
+				{"openai", "ruby-openai", false},
+				{"active_support/core_ext/string", "activesupport", false},
+				{"google/cloud/storage", "google-cloud-storage", false},
+				{"google/cloud", "google", false},
+				{"aws-sdk-s3", "aws-sdk-s3", false},
+			},
+			core.LanguageCodeCSharp: {
+				{"Microsoft.Extensions.Logging", "Microsoft.Extensions.Logging", false},
+			},
+			core.LanguageCodePHP: {
+				{"GuzzleHttp\\Client", "GuzzleHttp\\Client", false},
 			},
 		}
 

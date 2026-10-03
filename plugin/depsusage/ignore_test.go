@@ -112,7 +112,11 @@ somevar2 = uint32(1)`,
 			{snippet: `const { somevar } = require('somemodule')`, ignored: true},
 			{snippet: `const somevar = require('somemodule')`, ignored: true},
 			{snippet: `const abc = somefunc(25)`, ignored: false},
-			{snippet: `const abc = require('somefunc')(25)`, ignored: false},
+			{snippet: `const abc = require('somefunc')(25)`, ignored: true},
+			{snippet: `var abc = require('abc')`, ignored: true},
+			{snippet: `var EventEmitter = require('events').EventEmitter`, ignored: true},
+			{snippet: `const { default: JSZip } = await import('jszip')`, ignored: true},
+			{snippet: `const abc = somefunc(25).require('x')`, ignored: false},
 			{snippet: `let abc = "xyz"`, ignored: false},
 		}
 		for _, testcase := range testcases {
@@ -125,7 +129,7 @@ somevar2 = uint32(1)`,
 				rootNode := tree.RootNode()
 				assert.Equal(t, uint32(1), rootNode.ChildCount())
 				lexicalDeclarationNode := rootNode.Child(0)
-				assert.Equal(t, "lexical_declaration", lexicalDeclarationNode.Type())
+				assert.Contains(t, []string{"lexical_declaration", "variable_declaration"}, lexicalDeclarationNode.Type())
 
 				assert.Equal(t, uint32(2), lexicalDeclarationNode.ChildCount())
 				variableDeclaratorNode := lexicalDeclarationNode.Child(1)

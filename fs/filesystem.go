@@ -2,13 +2,16 @@ package fs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 
 	"github.com/safedep/code/core"
+	"github.com/safedep/dry/log"
 )
 
 type localFile struct {
@@ -180,7 +183,7 @@ func (fs *localFileSystem) enumerateDir(ctx context.Context,
 			return nil
 		}
 
-		if info.IsDir() {
+		if info.IsDir() || !isRegularFile(path, info) {
 			return nil
 		}
 
@@ -196,6 +199,25 @@ func (fs *localFileSystem) enumerateDir(ctx context.Context,
 		}
 		return callback(file)
 	})
+}
+
+// isRegularFile reports a regular file, or a symbolic link to one. A
+// dangling link, as to a build output that is not there, is not a file.
+// A link that cannot be read for another reason, such as a permission or a
+// loop, is not a file either, but it gets a warning. One bad link must not
+// stop the walk of a whole project.
+func isRegularFile(path string, entry os.DirEntry) bool {
+	if entry.Type()&os.ModeSymlink == 0 {
+		return entry.Type().IsRegular()
+	}
+	target, err := os.Stat(path)
+	if err != nil {
+		if !errors.Is(err, iofs.ErrNotExist) {
+			log.Warnf("skipped the link %s: %v", path, err)
+		}
+		return false
+	}
+	return target.Mode().IsRegular()
 }
 
 func (fs *localFileSystem) skipPattern(dir string) bool {

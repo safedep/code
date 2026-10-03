@@ -30,8 +30,8 @@ var testcases = []DepsTestcase{
 			newUsageEvidence("pandas", "pandas", "", "pd", false, "pd", "fixtures/testcases.py", 18),
 			newUsageEvidence("matplotlib", "matplotlib.pyplot", "", "plt", false, "plt", "fixtures/testcases.py", 22),
 			newUsageEvidence("slumber", "slumber", "API", "sl", false, "sl", "fixtures/testcases.py", 27),
-			newUsageEvidence("sklearn", "sklearn", "datasets", "ds", false, "ds", "fixtures/testcases.py", 29),
-			newUsageEvidence("sklearn", "sklearn", "metrics", "met", false, "met", "fixtures/testcases.py", 30),
+			newUsageEvidence("scikit-learn", "sklearn", "datasets", "ds", false, "ds", "fixtures/testcases.py", 29),
+			newUsageEvidence("scikit-learn", "sklearn", "metrics", "met", false, "met", "fixtures/testcases.py", 30),
 			newUsageEvidence("random", "random", "randint", "randint", false, "randint", "fixtures/testcases.py", 35),
 			newUsageEvidence("collections", "collections", "deque", "deque", false, "deque", "fixtures/testcases.py", 37),
 			newUsageEvidence("collections", "collections", "defaultdict", "defaultdict", false, "defaultdict", "fixtures/testcases.py", 39),
@@ -61,6 +61,8 @@ var testcases = []DepsTestcase{
 		Language: core.LanguageCodeJavascript,
 		FilePath: "fixtures/testcases.js",
 		ExpectedEvicences: []*UsageEvidence{
+			// The destructuring assignment of bundled code loads vue with no binding.
+			newUsageEvidence("vue", "vue", "", "", true, "", "fixtures/testcases.js", 85),
 			newUsageEvidence("express", "express", "", "express", false, "express", "fixtures/testcases.js", 10),
 			newUsageEvidence("cluster", "cluster", "", "Cluster", false, "Cluster", "fixtures/testcases.js", 11),
 			newUsageEvidence("@gilbarbara/eslint-config", "@gilbarbara/eslint-config", "", "EslintConfig", false, "EslintConfig", "fixtures/testcases.js", 14),
@@ -72,7 +74,6 @@ var testcases = []DepsTestcase{
 			newUsageEvidence("./data2.json", "./data2.json", "", "jsonData2", false, "jsonData2", "fixtures/testcases.js", 35),
 			newUsageEvidence("lodash", "lodash", "", "lodash", false, "lodash", "fixtures/testcases.js", 42),
 			newUsageEvidence("./math-utils", "./math-utils", "", "mathUtils", false, "mathUtils", "fixtures/testcases.js", 43),
-			newUsageEvidence("./dynamic-module.js", "./dynamic-module.js", "", "dynamicModule", false, "dynamicModule", "fixtures/testcases.js", 46),
 			newUsageEvidence("./dynamic-module.js", "./dynamic-module.js", "", "dynamicModule", false, "dynamicModule", "fixtures/testcases.js", 48),
 			newUsageEvidence("react-dom", "react-dom", "flushSync", "flushIt", false, "flushIt", "fixtures/testcases.js", 53),
 			newUsageEvidence("react-dom", "react-dom", "render", "render", false, "render", "fixtures/testcases.js", 54),
@@ -102,6 +103,52 @@ var testcases = []DepsTestcase{
 			newUsageEvidence("", "com.sun.activation.registries.MailcapFile", "", "MailcapFile", false, "MailcapFile", "fixtures/testcases.java", 21),
 			newUsageEvidence("java.lang", "java.lang.Math.PI", "", "PI", false, "PI", "fixtures/testcases.java", 23),
 			newUsageEvidence("", "org.junit.jupiter.api.Assertions.assertEquals", "", "assertEquals", false, "assertEquals", "fixtures/testcases.java", 24),
+		},
+	},
+	{
+		Language: core.LanguageCodeCSharp,
+		FilePath: "fixtures/testcases.cs",
+		ExpectedEvicences: []*UsageEvidence{
+			newUsageEvidence("System", "System", "", "", true, "", "fixtures/testcases.cs", 1),
+			newUsageEvidence("System.Text.Json", "System.Text.Json", "", "", true, "", "fixtures/testcases.cs", 2),
+			newUsageEvidence("System.Math", "System.Math", "", "", true, "", "fixtures/testcases.cs", 3),
+			newUsageEvidence("Microsoft.Extensions.Logging", "Microsoft.Extensions.Logging", "", "", true, "", "fixtures/testcases.cs", 4),
+			newUsageEvidence("OpenAI.Chat", "OpenAI.Chat", "", "", true, "", "fixtures/testcases.cs", 9),
+		},
+	},
+	{
+		Language: core.LanguageCodeRust,
+		FilePath: "fixtures/testcases.rs",
+		ExpectedEvicences: []*UsageEvidence{
+			newUsageEvidence("tokio", "tokio", "", "", true, "", "fixtures/testcases.rs", 4),
+			newUsageEvidence("serde_json", "serde_json", "", "", false, "serde_json", "fixtures/testcases.rs", 13),
+			newUsageEvidence("std", "std::collections::HashMap", "", "HashMap", false, "HashMap", "fixtures/testcases.rs", 13),
+			newUsageEvidence("serde_json", "serde_json", "", "", false, "serde_json", "fixtures/testcases.rs", 14),
+		},
+	},
+	{
+		Language: core.LanguageCodePHP,
+		FilePath: "fixtures/testcases.php",
+		ExpectedEvicences: []*UsageEvidence{
+			newUsageEvidence("GuzzleHttp\\Client", "GuzzleHttp\\Client", "", "HttpClient", false, "HttpClient", "fixtures/testcases.php", 11),
+			newUsageEvidence("Illuminate\\Support", "Illuminate\\Support", "Str", "Str", false, "Str", "fixtures/testcases.php", 16),
+		},
+	},
+	{
+		Language: core.LanguageCodeRuby,
+		FilePath: "fixtures/testcases.rb",
+		ExpectedEvicences: []*UsageEvidence{
+			newUsageEvidence("ruby-openai", "openai", "", "", true, "", "fixtures/testcases.rb", 1),
+			newUsageEvidence("net", "net/http", "", "", true, "", "fixtures/testcases.rb", 2),
+			newUsageEvidence("google-cloud-storage", "google/cloud/storage", "", "", true, "", "fixtures/testcases.rb", 7),
+		},
+	},
+	{
+		Language: core.LanguageCodeKotlin,
+		FilePath: "fixtures/testcases.kt",
+		ExpectedEvicences: []*UsageEvidence{
+			newUsageEvidence("", "kotlinx.coroutines", "", "", true, "", "fixtures/testcases.kt", 5),
+			newUsageEvidence("", "okhttp3.OkHttpClient", "", "OkHttpClient", false, "OkHttpClient", "fixtures/testcases.kt", 8),
 		},
 	},
 }

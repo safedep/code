@@ -3,6 +3,7 @@ package depsusage
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/safedep/code/core"
@@ -19,12 +20,19 @@ func init() {
 //
 // eg. for a python module "foo.bar" it should return "foo"
 func resolvePackageHint(moduleName string, lang core.Language) (string, error) {
+	if moduleName == "" {
+		return "", fmt.Errorf("invalid module name: %s", moduleName)
+	}
+
 	resolvers := map[core.LanguageCode]func(string) (string, error){
 		core.LanguageCodePython:     resolvePythonPackageHint,
 		core.LanguageCodeGo:         resolveGoPackageHint,
 		core.LanguageCodeJavascript: resolveJavascriptPackageHint,
 		core.LanguageCodeJava:       resolveJavaPackageHint,
 		core.LanguageCodeTypescript: resolveJavascriptPackageHint,
+		core.LanguageCodeKotlin:     resolveKotlinPackageHint,
+		core.LanguageCodeRust:       resolveRustPackageHint,
+		core.LanguageCodeRuby:       resolveRubyPackageHint,
 	}
 	if resolver, ok := resolvers[lang.Meta().Code]; ok {
 		return resolver(moduleName)
@@ -36,12 +44,29 @@ func resolvePythonPackageHint(moduleName string) (string, error) {
 	if moduleName == "" {
 		return "", fmt.Errorf("invalid module name: %s", moduleName)
 	}
-	// @TODO - Resolve package name for popular top level modules
-	// eg. yaml -> pyyaml, usb -> pyusb
+
+	if distribution, ok := pythonDistributionOf(moduleName); ok {
+		return distribution, nil
+	}
+
 	if strings.Contains(moduleName, ".") {
 		return moduleName[:strings.Index(moduleName, ".")], nil
 	}
+
 	return moduleName, nil
+}
+
+// pythonDistributionOf returns the distribution that installs a module whose
+// import name differs from the distribution name, such as yaml from pyyaml.
+// A dotted key matches the module and its submodules.
+func pythonDistributionOf(moduleName string) (string, bool) {
+	parts := strings.Split(moduleName, ".")
+	for n := len(parts); n > 0; n-- {
+		if distribution, ok := pythonModuleDistributions[strings.Join(parts[:n], ".")]; ok {
+			return distribution, true
+		}
+	}
+	return "", false
 }
 
 func resolveGoPackageHint(moduleName string) (string, error) {
@@ -112,21 +137,61 @@ func resolveJavascriptPackageHint(moduleName string) (string, error) {
 }
 
 func resolveJavaPackageHint(moduleName string) (string, error) {
+	return resolveJVMPackageHint(moduleName, []string{"java", "javax", "jdk"})
+}
+
+func resolveKotlinPackageHint(moduleName string) (string, error) {
+	return resolveJVMPackageHint(moduleName, []string{"java", "javax", "jdk", "kotlin", "android"})
+}
+
+func resolveJVMPackageHint(moduleName string, builtinPackageRoots []string) (string, error) {
 	if moduleName == "" {
 		return "", fmt.Errorf("invalid module name: %s", moduleName)
 	}
 
-	builtinJavaPackageRoots := []string{"java", "jdk"}
-
 	// If the module name starts with a builtin package root, return package name with root and next qualifier
-	// eg. java.lang.Math.PI -> java.lang
-	for _, root := range builtinJavaPackageRoots {
-		parts := strings.Split(moduleName, ".")
-		if strings.HasPrefix(moduleName, root) {
-			return strings.Join(parts[:min(2, len(parts))], "."), nil
-		}
+	// eg. java.lang.Math.PI -> java.lang. The root must be a whole segment:
+	// kotlinx.coroutines is a library, not a part of kotlin.
+	parts := strings.Split(moduleName, ".")
+	if slices.Contains(builtinPackageRoots, parts[0]) {
+		return strings.Join(parts[:min(2, len(parts))], "."), nil
 	}
 
 	// For other packages, we can't determine a hint deterministically without known external sources
 	return "", fmt.Errorf("unable to resolve package hint for module: %s", moduleName)
+}
+
+// resolveRustPackageHint returns the crate of a path, as in serde from
+// serde::Serialize. Crate names that differ only in "-" and "_" are the same
+// crate, so a consumer compares them after normalization.
+func resolveRustPackageHint(moduleName string) (string, error) {
+	crate, _, _ := strings.Cut(strings.TrimPrefix(moduleName, "::"), "::")
+	switch crate {
+	case "":
+		return "", fmt.Errorf("invalid module name: %s", moduleName)
+	case "crate", "self", "super":
+		return "", fmt.Errorf("module of the current crate: %s", moduleName)
+	}
+	return crate, nil
+}
+
+// resolveRubyPackageHint returns the gem of a require path, as in nokogiri
+// from nokogiri or activesupport from active_support/core_ext.
+func resolveRubyPackageHint(moduleName string) (string, error) {
+	parts := strings.Split(strings.Trim(moduleName, "/"), "/")
+	if parts[0] == "" {
+		return "", fmt.Errorf("invalid module name: %s", moduleName)
+	}
+
+	for n := len(parts); n > 0; n-- {
+		prefix := strings.Join(parts[:n], "/")
+		if gem, ok := rubyRequireGems[prefix]; ok {
+			return gem, nil
+		}
+		if segments, ok := rubyHyphenatedRoots[prefix]; ok && len(parts) >= segments {
+			return strings.Join(parts[:segments], "-"), nil
+		}
+	}
+
+	return parts[0], nil
 }

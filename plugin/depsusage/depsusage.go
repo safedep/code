@@ -39,6 +39,11 @@ var supportedLanguages = []core.LanguageCode{
 	core.LanguageCodeJavascript,
 	core.LanguageCodeJava,
 	core.LanguageCodeTypescript,
+	core.LanguageCodeCSharp,
+	core.LanguageCodeRust,
+	core.LanguageCodePHP,
+	core.LanguageCodeRuby,
+	core.LanguageCodeKotlin,
 }
 
 func (p *dependencyUsagePlugin) SupportedLanguages() []core.LanguageCode {
@@ -48,6 +53,20 @@ func (p *dependencyUsagePlugin) SupportedLanguages() []core.LanguageCode {
 var usageEvidentNodeTypes = map[string]bool{
 	"identifier":      true,
 	"type_identifier": true,
+}
+
+// languageUsageEvidentNodeTypes replaces usageEvidentNodeTypes for a grammar
+// with other names for identifier nodes.
+var languageUsageEvidentNodeTypes = map[core.LanguageCode]map[string]bool{
+	core.LanguageCodePHP:    {"name": true},
+	core.LanguageCodeKotlin: {"simple_identifier": true, "type_identifier": true},
+}
+
+func usageEvidentNodeTypesOf(code core.LanguageCode) map[string]bool {
+	if nodeTypes, ok := languageUsageEvidentNodeTypes[code]; ok {
+		return nodeTypes
+	}
+	return usageEvidentNodeTypes
 }
 
 func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) error {
@@ -104,13 +123,15 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 		return fmt.Errorf("failed to get tree language: %w", err)
 	}
 
+	evidentNodeTypes := usageEvidentNodeTypesOf(lang.Meta().Code)
+
 	cursor := sitter.NewTreeCursor(tree.Tree().RootNode())
 	defer cursor.Close()
 
 	err = traverse(cursor, &treeLanguage, treeData, func(n *sitter.Node) error {
 		nodeType := n.Type()
 
-		if _, usageEvidentNode := usageEvidentNodeTypes[nodeType]; usageEvidentNode {
+		if evidentNodeTypes[nodeType] {
 			identifierKey := n.Content(*treeData)
 			identifiedItem, identifierKeyExists := moduleIdentifiers[identifierKey]
 			if identifierKeyExists {

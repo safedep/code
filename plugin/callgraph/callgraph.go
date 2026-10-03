@@ -15,9 +15,9 @@ const namespaceSeparator = "//"
 const (
 	// Maximum number of nodes in callgraph before warning
 	// Prevents memory exhaustion in extremely large/complex files
-	maxCallGraphNodes      = 50000
+	maxCallGraphNodes       = 50000
 	maxAssignmentGraphNodes = 100000
-	maxDFSResultItems      = 100000
+	maxDFSResultItems       = 100000
 )
 
 // Refers to one argument passed to a function call
@@ -98,6 +98,7 @@ type CallGraph struct {
 	Tree              core.ParseTree
 	assignmentGraph   assignmentGraph
 	classConstructors map[string]bool
+	languageCode      core.LanguageCode
 	nodeCount         int  // Track total nodes added
 	limitExceeded     bool // Flag to indicate if processing was truncated
 }
@@ -116,6 +117,7 @@ func newCallGraph(fileName string, rootNode *sitter.Node, imports []*ast.ImportN
 		Tree:              tree,
 		assignmentGraph:   *newAssignmentGraph(),
 		classConstructors: make(map[string]bool),
+		languageCode:      language.Meta().Code,
 	}
 
 	// Add root node to the call graph
@@ -259,6 +261,13 @@ var dfsSourceNodeTypes = map[string]bool{
 	"class_body":                 true,
 	"class_declaration":          true,
 	"abstract_class_declaration": true,
+	// JavaScript and TypeScript functions, which a file often exports and
+	// does not call
+	"function_declaration":           true,
+	"generator_function_declaration": true,
+	"function_expression":            true,
+	"arrow_function":                 true,
+	"method_definition":              true,
 }
 
 type DfsResultItem struct {

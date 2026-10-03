@@ -7,35 +7,51 @@ import (
 
 // TS nodes Ignored in all languages when parsing AST
 // eg. comment is useless, imports are already resolved
-var commonIgnoredTypesList = []string{"comment", "import_statement", "import_from_statement", "import_declaration"}
+var commonIgnoredTypesList = []string{
+	"comment", "import_statement", "import_from_statement", "import_declaration",
+	// C#, Rust, PHP and Kotlin imports
+	"using_directive", "use_declaration", "extern_crate_declaration", "namespace_use_declaration", "import_list",
+}
 var commonIgnoredTypes = make(map[string]bool)
 
 type languageIgnoreRules struct {
 	rule []func(node *sitter.Node, data *[]byte) bool
 }
 
-// isRequireCallIgnoreRule checks if a variable_declarator contains a require() call.
-// These are already handled as imports and should be skipped during traversal.
+// isRequireCallIgnoreRule checks if a variable_declarator or an assignment keeps the result of
+// a require() call or of an awaited import(), directly or through a member
+// access or a call, as in require('events').EventEmitter or
+// require('debug')('app'). The resolvers report these as imports, so the
+// declared name is not a usage.
 func isRequireCallIgnoreRule(node *sitter.Node, data *[]byte) bool {
-	if node.Type() != "variable_declarator" {
+	var value *sitter.Node
+	switch node.Type() {
+	case "variable_declarator":
+		value = node.ChildByFieldName("value")
+	case "assignment_expression":
+		value = node.ChildByFieldName("right")
+	default:
 		return false
 	}
-
-	for i := range int(node.ChildCount()) {
-		if node.Child(i).Type() != "call_expression" {
-			continue
-		}
-
-		callExpression := node.Child(i)
-		for j := range int(callExpression.ChildCount()) {
-			identifier := callExpression.Child(j)
-			if identifier.Type() == "identifier" && identifier.Content(*data) == "require" {
+	for value != nil {
+		switch value.Type() {
+		case "member_expression":
+			value = value.ChildByFieldName("object")
+		case "await_expression":
+			value = value.NamedChild(0)
+		case "call_expression":
+			function := value.ChildByFieldName("function")
+			if function == nil {
+				return false
+			}
+			if function.Type() == "import" || (function.Type() == "identifier" && function.Content(*data) == "require") {
 				return true
 			}
+			value = function
+		default:
+			return false
 		}
-		break
 	}
-
 	return false
 }
 

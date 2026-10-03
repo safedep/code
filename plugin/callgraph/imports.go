@@ -5,6 +5,7 @@ import (
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
+	"github.com/safedep/code/pkg/helpers"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -47,11 +48,15 @@ func parseImports(imports []*ast.ImportNode, lang core.Language) (map[string]par
 		if finalisedNamespace == "" {
 			finalisedNamespace = moduleNamespace
 		} else {
-			finalisedNamespace = moduleNamespace + namespaceSeparator + finalisedNamespace
+			finalisedNamespace = moduleNamespace + namespaceSeparator + resolveNamespaceWithSeparator(finalisedNamespace, lang)
 		}
 
 		moduleItemIdentifierKey := resolveSubmoduleIdentifier(imp.ModuleItem(), lang)
 		moduleAliasIdentifierKey := resolveSubmoduleIdentifier(imp.ModuleAlias(), lang)
+		if lang.Meta().Code == core.LanguageCodeGo && imp.ModuleAlias() == imp.ModuleName() {
+			// A Go import with no alias has the module as its alias node
+			moduleAliasIdentifierKey = helpers.GoPackageName(imp.ModuleName())
+		}
 
 		identifierKey := moduleNamespace
 		identifierTreeNode := imp.GetModuleNameNode()
@@ -62,9 +67,9 @@ func parseImports(imports []*ast.ImportNode, lang core.Language) (map[string]par
 			identifierKey = moduleItemIdentifierKey
 			identifierTreeNode = imp.GetModuleItemNode()
 		} else if lang.Meta().Code == core.LanguageCodeGo {
-			// For Go, when there's no explicit alias, use the last segment of the import path
+			// For Go, when there's no explicit alias, use the package name of the import path
 			// e.g., "net/http" -> http
-			identifierKey = resolveSubmoduleIdentifier(imp.ModuleName(), lang)
+			identifierKey = helpers.GoPackageName(imp.ModuleName())
 		}
 
 		importedIdentifierNamespaces[identifierKey] = parsedImport{
@@ -80,12 +85,32 @@ func parseImports(imports []*ast.ImportNode, lang core.Language) (map[string]par
 
 // For submodule imports, we need to replace separator with our namespaceSeparator for consistency
 // eg. in python "from os.path import abspath" -> ModuleName = os.path -> os//path
-var submoduleSeparator = map[core.LanguageCode]string{
-	core.LanguageCodeGo:         "/",
-	core.LanguageCodeJavascript: "/",
-	core.LanguageCodePython:     ".",
-	core.LanguageCodeJava:       ".",
-	core.LanguageCodeTypescript: "/",
+// submoduleSeparators are the separators of a qualified name in a language,
+// as in os.path or OpenAI::Client.new.
+var submoduleSeparators = map[core.LanguageCode][]string{
+	core.LanguageCodeGo:         {"/"},
+	core.LanguageCodeJavascript: {"/"},
+	core.LanguageCodePython:     {"."},
+	core.LanguageCodeJava:       {"."},
+	core.LanguageCodeTypescript: {"/"},
+	core.LanguageCodeCSharp:     {"."},
+	core.LanguageCodeRust:       {"::", "."},
+	core.LanguageCodePHP:        {"\\", "::", "->"},
+	core.LanguageCodeRuby:       {"::", "."},
+}
+
+// splitQualifiedName splits a qualified name at every separator of the
+// language.
+func splitQualifiedName(name string, code core.LanguageCode) []string {
+	parts := []string{name}
+	for _, separator := range submoduleSeparators[code] {
+		var split []string
+		for _, part := range parts {
+			split = append(split, strings.Split(part, separator)...)
+		}
+		parts = split
+	}
+	return parts
 }
 
 func resolveNamespaceWithSeparator(moduleName string, lang core.Language) string {
@@ -94,12 +119,13 @@ func resolveNamespaceWithSeparator(moduleName string, lang core.Language) string
 		moduleName = strings.Trim(moduleName, "\"")
 	}
 
-	separator, exists := submoduleSeparator[lang.Meta().Code]
-	if exists {
-		return strings.Join(strings.Split(moduleName, separator), namespaceSeparator)
+	// A fully qualified PHP name, as in use \GuzzleHttp\Client, has a
+	// leading separator that names no namespace.
+	if lang.Meta().Code == core.LanguageCodePHP {
+		moduleName = strings.TrimPrefix(moduleName, `\`)
 	}
 
-	return moduleName
+	return strings.Join(splitQualifiedName(moduleName, lang.Meta().Code), namespaceSeparator)
 }
 
 func resolveSubmoduleIdentifier(identifier string, lang core.Language) string {
@@ -108,11 +134,6 @@ func resolveSubmoduleIdentifier(identifier string, lang core.Language) string {
 		identifier = strings.Trim(identifier, "\"")
 	}
 
-	separator, exists := submoduleSeparator[lang.Meta().Code]
-	if exists && strings.Contains(identifier, separator) {
-		parts := strings.Split(identifier, separator)
-		return parts[len(parts)-1]
-	}
-
-	return identifier
+	parts := splitQualifiedName(identifier, lang.Meta().Code)
+	return parts[len(parts)-1]
 }

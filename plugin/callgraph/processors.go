@@ -23,8 +23,8 @@ const (
 )
 
 type processorMetadata struct {
-	insideClass    bool
-	insideFunction bool
+	insideClass     bool
+	insideFunction  bool
 	processingDepth int // Track recursion depth for processChildren
 }
 
@@ -63,6 +63,22 @@ func (pr *processorResult) addResults(results ...processorResult) {
 type nodeProcessor func(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult
 
 var nodeProcessors map[string]nodeProcessor
+
+// languageNodeProcessors holds the processors of a language for node types
+// whose shape differs from the shared processors, or that another grammar
+// uses with another meaning. processNode looks here first.
+var languageNodeProcessors = map[core.LanguageCode]map[string]nodeProcessor{}
+
+// registerLanguageProcessors adds the node processors of a language. A
+// language file calls it from init.
+func registerLanguageProcessors(code core.LanguageCode, processors map[string]nodeProcessor) {
+	if languageNodeProcessors[code] == nil {
+		languageNodeProcessors[code] = map[string]nodeProcessor{}
+	}
+	for nodeType, processor := range processors {
+		languageNodeProcessors[code][nodeType] = processor
+	}
+}
 
 func init() {
 	nodeProcessors = map[string]nodeProcessor{
@@ -112,30 +128,30 @@ func init() {
 		"lexical_declaration": lexicalDeclarationProcessor,
 
 		// TypeScript-specific: skip type-level nodes to avoid false-positive call edges
-		"type_annotation":              skippedProcessor,
-		"type_alias_declaration":       skippedProcessor,
-		"interface_declaration":        skipResultsProcessor,
-		"enum_declaration":             skipResultsProcessor,
-		"abstract_class_declaration":   classDefinitionProcessor,
-		"abstract_method_signature":    skippedProcessor,
-		"as_expression":                skippedProcessor,
-		"satisfies_expression":         skippedProcessor,
-		"non_null_expression":          emptyProcessor,
-		"type_arguments":               skippedProcessor,
-		"accessibility_modifier":       skippedProcessor,
-		"override_modifier":            skippedProcessor,
-		"readonly":                     skippedProcessor,
-		"required_parameter":           emptyProcessor,
-		"optional_parameter":           emptyProcessor,
-		"predefined_type":              skippedProcessor,
-		"type_identifier":              skippedProcessor,
-		"interface_body":               skippedProcessor,
-		"abstract_method_definition":   skippedProcessor,
-		"public_field_definition":      skipResultsProcessor,
-		"extends_clause":               skippedProcessor,
-		"implements_clause":            skippedProcessor,
-		"extends_type_clause":          skippedProcessor,
-		"class_heritage":               skippedProcessor,
+		"type_annotation":            skippedProcessor,
+		"type_alias_declaration":     skippedProcessor,
+		"interface_declaration":      skipResultsProcessor,
+		"enum_declaration":           skipResultsProcessor,
+		"abstract_class_declaration": classDefinitionProcessor,
+		"abstract_method_signature":  skippedProcessor,
+		"as_expression":              skippedProcessor,
+		"satisfies_expression":       skippedProcessor,
+		"non_null_expression":        emptyProcessor,
+		"type_arguments":             skippedProcessor,
+		"accessibility_modifier":     skippedProcessor,
+		"override_modifier":          skippedProcessor,
+		"readonly":                   skippedProcessor,
+		"required_parameter":         emptyProcessor,
+		"optional_parameter":         emptyProcessor,
+		"predefined_type":            skippedProcessor,
+		"type_identifier":            skippedProcessor,
+		"interface_body":             skippedProcessor,
+		"abstract_method_definition": skippedProcessor,
+		"public_field_definition":    skipResultsProcessor,
+		"extends_clause":             skippedProcessor,
+		"implements_clause":          skippedProcessor,
+		"extends_type_clause":        skippedProcessor,
+		"class_heritage":             skippedProcessor,
 	}
 
 	for literalNodeType := range literalNodeTypes {
@@ -649,6 +665,22 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 	// Process attributes
 	functionObjectNode := functionCallNode.ChildByFieldName("object")
 	functionAttributeNode := functionCallNode.ChildByFieldName("attribute")
+
+	// A chained call, as in PasswordHasher().hash() or
+	// OpenAI().chat.completions.create(), calls the inner function too, and
+	// the inner function is the base of the name
+	if root := chainRoot(functionObjectNode, "attribute", "object"); functionAttributeNode != nil && root != nil && root.Type() == "call" {
+		processNode(root, treeData, currentNamespace, callGraph, metadata)
+		if callee, ok := pythonCalleeOf(functionCallNode, treeData, currentNamespace, callGraph, metadata, 0); ok {
+			callGraph.addEdge(
+				currentNamespace, nil, functionCallNode,
+				callee, nil,
+				callArguments,
+			)
+		}
+		return result
+	}
+
 	if functionAttributeNode != nil && functionObjectNode != nil {
 		log.Debugf("Call %s searched (attr qualified) & resolved to object - %s (%s), attribute - %s (%s) \n", functionName, functionObjectNode.Content(treeData), functionObjectNode.Type(), functionAttributeNode.Content(treeData), functionAttributeNode.Type())
 
@@ -699,6 +731,63 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 
 	// log.Debug("Couldn't process function call - %s", functionName)
 	return newProcessorResult()
+}
+
+// pythonCalleeOf returns the namespace of the function of a Python call,
+// through the scope chain and the assignment graph. It adds no edge.
+func pythonCalleeOf(function *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata, depth int) (string, bool) {
+	if function == nil || depth > maxAttributeDepth {
+		return "", false
+	}
+
+	terminal := func(symbol string) (string, bool) {
+		assignment, found := searchSymbolInScopeChain(symbol, currentNamespace, callGraph)
+		if !found {
+			return "", false
+		}
+		if targets := callGraph.assignmentGraph.resolve(assignment.Namespace); len(targets) > 0 {
+			return targets[0].Namespace, true
+		}
+		return assignment.Namespace, true
+	}
+
+	switch function.Type() {
+	case "identifier":
+		return terminal(function.Content(treeData))
+	case "attribute":
+		object := function.ChildByFieldName("object")
+		attribute := function.ChildByFieldName("attribute")
+		if object == nil || attribute == nil {
+			return "", false
+		}
+		var base string
+		var ok bool
+		switch root := chainRoot(object, "attribute", "object"); {
+		case object.Type() == "call":
+			base, ok = pythonCalleeOf(object.ChildByFieldName("function"), treeData, currentNamespace, callGraph, metadata, depth+1)
+		case root != nil && root.Type() == "call":
+			base, ok = pythonCalleeOf(object, treeData, currentNamespace, callGraph, metadata, depth+1)
+		}
+		if ok {
+			return base + namespaceSeparator + attribute.Content(treeData), true
+		}
+		if object.Type() == "call" {
+			return "", false
+		}
+		symbol, qualifier, err := dissectAttributeQualifier(object, treeData, currentNamespace, callGraph, metadata)
+		if err != nil {
+			return "", false
+		}
+		base, ok = terminal(symbol)
+		if !ok {
+			return "", false
+		}
+		if qualifier != "" {
+			base += namespaceSeparator + qualifier
+		}
+		return base + namespaceSeparator + attribute.Content(treeData), true
+	}
+	return "", false
 }
 
 // Search symbol in parent namespaces (from self to parent to  grandparent ...)
@@ -1021,17 +1110,6 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 				break
 			}
 
-			// For a method_invocation over new objects, perform object creation expression processing
-			// eg. new xyz().method1().method2() => perform only new xyz()
-			// @TODO - Immediate members of constructed class can be handled here
-			// eg. in new xyz().method1().method2() => xyz//method1 can be resolved
-			if nextObjNode.Type() == "object_creation_expression" {
-				// No need to process assignments here as the actual returned value is not this object
-				// In case of immediate members, it can be possibly resolved
-				objectCreationExpressionProcessor(nextObjNode, treeData, currentNamespace, callGraph, metadata)
-				return newProcessorResult()
-			}
-
 			if nextObjNode.Type() != "method_invocation" {
 				break
 			}
@@ -1039,6 +1117,29 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 			processMethodArgs(nextObjNode, treeData, currentNamespace, callGraph, metadata)
 
 			methodQualifierObjectNode = nextObjNode
+		}
+
+		if creation, calledMethod := createdReceiver(methodQualifierObjectNode, methodName, hasChainedMethodInvocations, treeData); creation != nil {
+			created := objectCreationExpressionProcessor(creation, treeData, currentNamespace, callGraph, metadata)
+			var classes []string
+			for _, class := range created.ImmediateAssignments {
+				for _, target := range callGraph.assignmentGraph.resolve(class.Namespace) {
+					classes = append(classes, target.Namespace)
+				}
+			}
+			if typeNode := creation.ChildByFieldName("type"); len(classes) == 0 && typeNode != nil {
+				// A class with no import, as one of the same package or of
+				// java.lang, keeps its name.
+				classes = append(classes, strings.ReplaceAll(withoutTypeArguments(typeNode.Content(treeData)), ".", namespaceSeparator))
+			}
+			for _, class := range classes {
+				callGraph.addEdge(
+					currentNamespace, nil, methodInvocationNode,
+					class+namespaceSeparator+calledMethod, methodInvocationNode,
+					argsResult,
+				)
+			}
+			return newProcessorResult()
 		}
 
 		methodObjectQualifierNamespace := resolveQualifierObjectFieldaccess(methodQualifierObjectNode, treeData)
@@ -1107,6 +1208,24 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 	log.Debugf("Method invocation %s couldn't be processed", methodName)
 
 	return newProcessorResult()
+}
+
+// createdReceiver returns the object creation that receives the first call
+// of a chain, and the name of that call. In new Builder("k").build(), the
+// call is Builder//build. A chain with no object creation at its root
+// returns nil.
+func createdReceiver(qualifier *sitter.Node, methodName string, chained bool, treeData []byte) (*sitter.Node, string) {
+	if chained && qualifier.Type() == "method_invocation" {
+		name := qualifier.ChildByFieldName("name")
+		if name == nil {
+			return nil, ""
+		}
+		qualifier, methodName = qualifier.ChildByFieldName("object"), name.Content(treeData)
+	}
+	if qualifier == nil || qualifier.Type() != "object_creation_expression" {
+		return nil, ""
+	}
+	return qualifier, methodName
 }
 
 var methodInvocationNormaliserRegexp = regexp.MustCompile(`[-()\n ]`)
@@ -1198,6 +1317,12 @@ func goCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 	callArguments := []CallArgument{}
 	if argumentsNode != nil {
 		callArguments = resolveGoCallArguments(argumentsNode, treeData, currentNamespace, callGraph, metadata)
+	}
+
+	// A chained call, as in ecdh.X25519().GenerateKey() or
+	// openai.NewClient(k).Chat.Completions.New(), calls the inner function too
+	if root := chainRoot(functionNode, "selector_expression", "operand"); root != nil && root.Type() == "call_expression" {
+		processNode(root, treeData, currentNamespace, callGraph, metadata)
 	}
 
 	// Resolve function name based on node type
@@ -1296,6 +1421,19 @@ func resolveGoSelectorExpression(selectorNode *sitter.Node, treeData []byte, cur
 	operandName := operandNode.Content(treeData)
 	fieldName := fieldNode.Content(treeData)
 
+	// A call or a selector as the operand is the base of the name, as in
+	// ecdh.X25519().GenerateKey or client.Chat.Completions.New
+	switch operandNode.Type() {
+	case "call_expression":
+		if base, ok := goCalleeOf(operandNode, treeData, currentNamespace, callGraph); ok {
+			return base + namespaceSeparator + fieldName, true
+		}
+	case "selector_expression":
+		if base, ok := resolveGoSelectorExpression(operandNode, treeData, currentNamespace, callGraph); ok {
+			return base + namespaceSeparator + fieldName, true
+		}
+	}
+
 	// Check if operand is a package import
 	// Look up in assignment graph for imported packages
 	operandAssignment, operandResolved := searchSymbolInScopeChain(operandName, currentNamespace, callGraph)
@@ -1321,6 +1459,22 @@ func resolveGoSelectorExpression(selectorNode *sitter.Node, treeData []byte, cur
 	log.Debugf("Resolved Go selector (direct): %s.%s -> %s", operandName, fieldName, qualifiedName)
 
 	return qualifiedName, true
+}
+
+// goCalleeOf returns the namespace of the function of a Go call. It adds no
+// edge.
+func goCalleeOf(callNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph) (string, bool) {
+	function := callNode.ChildByFieldName("function")
+	if function == nil {
+		return "", false
+	}
+	switch function.Type() {
+	case "selector_expression":
+		return resolveGoSelectorExpression(function, treeData, currentNamespace, callGraph)
+	case "identifier":
+		return resolveGoIdentifier(function.Content(treeData), currentNamespace, callGraph)
+	}
+	return "", false
 }
 
 // resolveGoIdentifier resolves unqualified Go identifiers
@@ -1554,6 +1708,14 @@ func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 		callArguments = resolveCallArguments(argumentsNode, treeData, currentNamespace, callGraph, metadata)
 	}
 
+	// A chained call, as in crypto.createHash('md5').digest(), calls the
+	// inner function too
+	if functionNode.Type() == "member_expression" {
+		if object := chainRoot(functionNode, "member_expression", "object"); object != nil && jsChainable[object.Type()] {
+			processNode(object, treeData, currentNamespace, callGraph, metadata)
+		}
+	}
+
 	// Resolve function name based on node type
 	var qualifiedName string
 	var resolved bool
@@ -1566,6 +1728,8 @@ func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 		// Simple function call: func()
 		funcName := functionNode.Content(treeData)
 		qualifiedName, resolved = resolveJSIdentifier(funcName, currentNamespace, callGraph)
+	case "import":
+		qualifiedName, resolved = jsDynamicImport(argumentsNode, treeData)
 	default:
 		// Other types (e.g., function expressions) - try as identifier
 		qualifiedName = functionNode.Content(treeData)
@@ -1586,6 +1750,25 @@ func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 	log.Debugf("JS call: %s -> %s", currentNamespace, qualifiedName)
 
 	return result
+}
+
+// jsDynamicImport returns the module of a dynamic import, as in
+// await import("x"), in the form of a Ruby require or a C# using: x//*.
+// The import loads the module, but the names it binds are often out of
+// reach, as in import("x").then(({ pipeline }) => pipeline()).
+func jsDynamicImport(argumentsNode *sitter.Node, treeData []byte) (string, bool) {
+	if argumentsNode == nil || argumentsNode.NamedChildCount() == 0 {
+		return "", false
+	}
+	module := argumentsNode.NamedChild(0)
+	if module.Type() != "string" {
+		return "", false
+	}
+	name := strings.Trim(module.Content(treeData), "'\"`")
+	if name == "" {
+		return "", false
+	}
+	return strings.Join(splitQualifiedName(name, core.LanguageCodeJavascript), namespaceSeparator) + namespaceSeparator + "*", true
 }
 
 // resolveJSMemberExpression resolves JavaScript member expressions like obj.method or pkg.func
@@ -1613,6 +1796,14 @@ func resolveJSMemberExpressionWithDepth(memberNode *sitter.Node, treeData []byte
 
 	if objectNode == nil || propertyNode == nil {
 		return "", false
+	}
+
+	// The value of a call or of an object creation is the base of the
+	// member, as in crypto.createHash('md5').digest or new OpenAI().chat
+	if jsChainable[objectNode.Type()] {
+		if base, ok := jsValueOf(objectNode, treeData, currentNamespace, callGraph, depth+1); ok {
+			return base + namespaceSeparator + propertyNode.Content(treeData), true
+		}
 	}
 
 	// Handle nested member expressions recursively with depth tracking
@@ -1649,6 +1840,61 @@ func resolveJSMemberExpressionWithDepth(memberNode *sitter.Node, treeData []byte
 	log.Debugf("Resolved JS member (direct): %s.%s -> %s", objectName, propertyName, qualifiedName)
 
 	return qualifiedName, true
+}
+
+// chainRoot follows the object field of a chain of member nodes to the
+// first node that is not a member, as client for client.chat.completions or
+// the call OpenAI() for OpenAI().chat.completions. A node that is not a
+// member is its own root.
+func chainRoot(node *sitter.Node, memberType, objectField string) *sitter.Node {
+	for depth := 0; node != nil && node.Type() == memberType && depth <= maxMemberExpressionDepth; depth++ {
+		node = node.ChildByFieldName(objectField)
+	}
+	return node
+}
+
+// jsChainable are the JavaScript nodes whose value can start a member chain.
+var jsChainable = map[string]bool{
+	"call_expression":  true,
+	"new_expression":   true,
+	"await_expression": true,
+}
+
+// jsValueOf returns the namespace of the value of a call, an object creation
+// or an await: the called function or the created class. It adds no edge.
+func jsValueOf(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, depth int) (string, bool) {
+	if depth > maxMemberExpressionDepth {
+		return "", false
+	}
+
+	var target *sitter.Node
+	switch node.Type() {
+	case "call_expression":
+		target = node.ChildByFieldName("function")
+	case "new_expression":
+		target = node.ChildByFieldName("constructor")
+	case "await_expression":
+		if node.NamedChildCount() > 0 {
+			return jsValueOf(node.NamedChild(0), treeData, currentNamespace, callGraph, depth+1)
+		}
+	}
+	if target == nil {
+		return "", false
+	}
+
+	switch target.Type() {
+	case "member_expression":
+		return resolveJSMemberExpressionWithDepth(target, treeData, currentNamespace, callGraph, depth+1)
+	case "identifier":
+		// An imported name resolves to its module, as OpenAI to openai
+		if assignment, found := searchSymbolInScopeChain(target.Content(treeData), currentNamespace, callGraph); found {
+			if targets := callGraph.assignmentGraph.resolve(assignment.Namespace); len(targets) > 0 {
+				return targets[0].Namespace, true
+			}
+		}
+		return resolveJSIdentifier(target.Content(treeData), currentNamespace, callGraph)
+	}
+	return "", false
 }
 
 // resolveJSIdentifier resolves unqualified JavaScript identifiers
