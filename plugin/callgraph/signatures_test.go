@@ -945,3 +945,13 @@ func callSignature(id string, language core.LanguageCode, match string, calls ..
 		},
 	}
 }
+
+func TestCalleeOfKeepsTheNamespace(t *testing.T) {
+	node := &CallGraphNode{Namespace: "openai//OpenAI"}
+	assert.Same(t, node, calleeOf(DfsResultItem{Namespace: "openai//OpenAI", Node: node}))
+	assert.Equal(t, "crewai//flow//Flow", calleeOf(DfsResultItem{Namespace: "crewai//flow//Flow"}).Namespace)
+
+	evidence := MatchedEvidence{Callee: calleeOf(DfsResultItem{Namespace: "crewai//flow//Flow"})}
+	data := []byte{}
+	assert.Equal(t, "crewai//flow//Flow", evidence.Metadata(&data).CalleeNamespace)
+}

@@ -186,7 +186,7 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 						// If the arguments match the required constraints, we can add this evidence
 						matchCondition.Evidences = append(matchCondition.Evidences, MatchedEvidence{
 							Caller:           evidenceResultItem.Caller,
-							Callee:           evidenceResultItem.Node,
+							Callee:           calleeOf(evidenceResultItem),
 							CallerIdentifier: evidenceResultItem.CallerIdentifier,
 							Arguments:        evidenceResultItem.Arguments,
 						})
@@ -213,6 +213,17 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 	}
 
 	return matcherResults, nil
+}
+
+// calleeOf returns the call graph node of a DFS result. A namespace that
+// only the assignment graph knows, such as a Python attribute of an
+// imported module, has no node. It gets a node with the namespace, so the
+// evidence still names the callee.
+func calleeOf(item DfsResultItem) *CallGraphNode {
+	if item.Node != nil {
+		return item.Node
+	}
+	return &CallGraphNode{Namespace: item.Namespace}
 }
 
 // matchesArgumentConstraints checks if the arguments in the DFS result item
