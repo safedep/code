@@ -17,3 +17,12 @@ namespace Demo
         }
     }
 }
+
+public class Host
+{
+    public void Run(IServiceProvider services, ChatClient? chatClient)
+    {
+        var chat = services.GetRequiredService<IChatCompletionService>();
+        chatClient?.CompleteChat("hi");
+    }
+}

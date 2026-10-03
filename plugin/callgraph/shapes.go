@@ -259,7 +259,7 @@ func (p *shapedProcessors) resolve(node *sitter.Node, treeData []byte, currentNa
 func (p *shapedProcessors) resolvePath(path string, currentNamespace string, callGraph *CallGraph) string {
 	var segments []string
 	for _, segment := range splitQualifiedName(withoutTypeArguments(path), p.code) {
-		if segment = strings.TrimSpace(segment); segment != "" {
+		if segment = cleanSegment(segment); segment != "" {
 			segments = append(segments, segment)
 		}
 	}
@@ -278,7 +278,14 @@ func (p *shapedProcessors) resolvePath(path string, currentNamespace string, cal
 }
 
 func (p *shapedProcessors) qualifiedName(name string) string {
-	return strings.Join(splitQualifiedName(name, p.code), namespaceSeparator)
+	return strings.Join(splitQualifiedName(withoutTypeArguments(name), p.code), namespaceSeparator)
+}
+
+// cleanSegment removes the spaces and the null-safe marks around a segment
+// of a path, as in C# client?.Send() or client!.Send(). A Ruby predicate,
+// such as empty?, loses its mark too. No signature names a predicate.
+func cleanSegment(segment string) string {
+	return strings.TrimRight(strings.TrimSpace(segment), "?!&")
 }
 
 // instanceOf returns the namespace of the value of a call to callee.

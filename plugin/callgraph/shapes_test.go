@@ -29,6 +29,8 @@ func TestShapedLanguageCalls(t *testing.T) {
 				"System//Net//Http//HttpClient//GetStringAsync",
 				"Console//WriteLine",
 				"fixtures/testShapes.cs//Demo//Agent//Ask",
+				"services//GetRequiredService",
+				"chatClient//CompleteChat",
 			},
 		},
 		{
