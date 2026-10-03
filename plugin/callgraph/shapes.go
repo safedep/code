@@ -236,6 +236,10 @@ func (p *shapedProcessors) resolve(node *sitter.Node, treeData []byte, currentNa
 		return firstValue(processNode(node, treeData, currentNamespace, callGraph, metadata))
 	}
 
+	if parenthesizedTypes[nodeType] && node.NamedChildCount() == 1 {
+		return p.resolve(node.NamedChild(0), treeData, currentNamespace, callGraph, metadata)
+	}
+
 	if shape, isMember := p.shapes.members[nodeType]; isMember {
 		object := fieldChild(node, shape.object)
 		name := fieldChild(node, shape.name)
@@ -251,6 +255,10 @@ func (p *shapedProcessors) resolve(node *sitter.Node, treeData []byte, currentNa
 	p.processNestedCalls(node, treeData, currentNamespace, callGraph, metadata)
 	return p.resolvePath(node.Content(treeData), currentNamespace, callGraph)
 }
+
+// parenthesizedTypes are the node types of an expression in parentheses,
+// as in PHP (new Encoder())->encode().
+var parenthesizedTypes = map[string]bool{"parenthesized_expression": true, "parenthesized_statements": true}
 
 // resolvePath returns the namespace of a qualified name. The first segment
 // resolves through the scope chain, so an imported alias or a variable

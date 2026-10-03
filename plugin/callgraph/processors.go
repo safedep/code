@@ -1102,17 +1102,6 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 				break
 			}
 
-			// For a method_invocation over new objects, perform object creation expression processing
-			// eg. new xyz().method1().method2() => perform only new xyz()
-			// @TODO - Immediate members of constructed class can be handled here
-			// eg. in new xyz().method1().method2() => xyz//method1 can be resolved
-			if nextObjNode.Type() == "object_creation_expression" {
-				// No need to process assignments here as the actual returned value is not this object
-				// In case of immediate members, it can be possibly resolved
-				objectCreationExpressionProcessor(nextObjNode, treeData, currentNamespace, callGraph, metadata)
-				return newProcessorResult()
-			}
-
 			if nextObjNode.Type() != "method_invocation" {
 				break
 			}
@@ -1120,6 +1109,20 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 			processMethodArgs(nextObjNode, treeData, currentNamespace, callGraph, metadata)
 
 			methodQualifierObjectNode = nextObjNode
+		}
+
+		if creation, calledMethod := createdReceiver(methodQualifierObjectNode, methodName, hasChainedMethodInvocations, treeData); creation != nil {
+			created := objectCreationExpressionProcessor(creation, treeData, currentNamespace, callGraph, metadata)
+			for _, class := range created.ImmediateAssignments {
+				for _, target := range callGraph.assignmentGraph.resolve(class.Namespace) {
+					callGraph.addEdge(
+						currentNamespace, nil, methodInvocationNode,
+						target.Namespace+namespaceSeparator+calledMethod, methodInvocationNode,
+						argsResult,
+					)
+				}
+			}
+			return newProcessorResult()
 		}
 
 		methodObjectQualifierNamespace := resolveQualifierObjectFieldaccess(methodQualifierObjectNode, treeData)
@@ -1188,6 +1191,24 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 	log.Debugf("Method invocation %s couldn't be processed", methodName)
 
 	return newProcessorResult()
+}
+
+// createdReceiver returns the object creation that receives the first call
+// of a chain, and the name of that call. In new Builder("k").build(), the
+// call is Builder//build. A chain with no object creation at its root
+// returns nil.
+func createdReceiver(qualifier *sitter.Node, methodName string, chained bool, treeData []byte) (*sitter.Node, string) {
+	if chained && qualifier.Type() == "method_invocation" {
+		name := qualifier.ChildByFieldName("name")
+		if name == nil {
+			return nil, ""
+		}
+		qualifier, methodName = qualifier.ChildByFieldName("object"), name.Content(treeData)
+	}
+	if qualifier == nil || qualifier.Type() != "object_creation_expression" {
+		return nil, ""
+	}
+	return qualifier, methodName
 }
 
 var methodInvocationNormaliserRegexp = regexp.MustCompile(`[-()\n ]`)

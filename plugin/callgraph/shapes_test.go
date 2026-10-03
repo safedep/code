@@ -56,6 +56,7 @@ func TestShapedLanguageCalls(t *testing.T) {
 				"OpenAI//client//chat//create",
 				"GuzzleHttp//Client",
 				"GuzzleHttp//Client//get",
+				"Yethee//Tiktoken//EncoderProvider//getForModel",
 				"getenv",
 				"strtoupper",
 				"fixtures/testShapes.php//Assistant//ask",

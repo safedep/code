@@ -308,6 +308,21 @@ func TestSignatureMatcher(t *testing.T) {
 			},
 		},
 		{
+			Name:      "Java calls on new objects",
+			Language:  core.LanguageCodeJava,
+			FilePaths: []string{"fixtures/testChains.java"},
+			Signatures: []*callgraphv1.Signature{
+				callSignature("pinecone.client", core.LanguageCodeJava, MatchAny, "io.pinecone.clients.Pinecone.Builder.build"),
+				callSignature("http.send", core.LanguageCodeJava, MatchAny, "com.example.http.Request.send"),
+				callSignature("http.join", core.LanguageCodeJava, MatchAny, "com.example.http.Request.join"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "pinecone.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJava, MinEvidenceCount: 1},
+				{SignatureID: "http.send", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJava, MinEvidenceCount: 1},
+				{SignatureID: "http.join", ShouldMatch: false},
+			},
+		},
+		{
 			Name:      "Rust turbofish",
 			Language:  core.LanguageCodeRust,
 			FilePaths: []string{"fixtures/testGenerics.rs"},
