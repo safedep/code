@@ -105,6 +105,52 @@ var testcases = []DepsTestcase{
 			newUsageEvidence("", "org.junit.jupiter.api.Assertions.assertEquals", "", "assertEquals", false, "assertEquals", "fixtures/testcases.java", 24),
 		},
 	},
+	{
+		Language: core.LanguageCodeCSharp,
+		FilePath: "fixtures/testcases.cs",
+		ExpectedEvicences: []*UsageEvidence{
+			newUsageEvidence("System", "System", "", "", true, "", "fixtures/testcases.cs", 1),
+			newUsageEvidence("System.Text.Json", "System.Text.Json", "", "", true, "", "fixtures/testcases.cs", 2),
+			newUsageEvidence("System.Math", "System.Math", "", "", true, "", "fixtures/testcases.cs", 3),
+			newUsageEvidence("Microsoft.Extensions.Logging", "Microsoft.Extensions.Logging", "", "", true, "", "fixtures/testcases.cs", 4),
+			newUsageEvidence("OpenAI.Chat", "OpenAI.Chat", "", "", true, "", "fixtures/testcases.cs", 9),
+		},
+	},
+	{
+		Language: core.LanguageCodeRust,
+		FilePath: "fixtures/testcases.rs",
+		ExpectedEvicences: []*UsageEvidence{
+			newUsageEvidence("tokio", "tokio", "", "", true, "", "fixtures/testcases.rs", 4),
+			newUsageEvidence("serde_json", "serde_json", "", "", false, "serde_json", "fixtures/testcases.rs", 13),
+			newUsageEvidence("std", "std::collections::HashMap", "", "HashMap", false, "HashMap", "fixtures/testcases.rs", 13),
+			newUsageEvidence("serde_json", "serde_json", "", "", false, "serde_json", "fixtures/testcases.rs", 14),
+		},
+	},
+	{
+		Language: core.LanguageCodePHP,
+		FilePath: "fixtures/testcases.php",
+		ExpectedEvicences: []*UsageEvidence{
+			newUsageEvidence("GuzzleHttp\\Client", "GuzzleHttp\\Client", "", "HttpClient", false, "HttpClient", "fixtures/testcases.php", 11),
+			newUsageEvidence("Illuminate\\Support", "Illuminate\\Support", "Str", "Str", false, "Str", "fixtures/testcases.php", 16),
+		},
+	},
+	{
+		Language: core.LanguageCodeRuby,
+		FilePath: "fixtures/testcases.rb",
+		ExpectedEvicences: []*UsageEvidence{
+			newUsageEvidence("ruby-openai", "openai", "", "", true, "", "fixtures/testcases.rb", 1),
+			newUsageEvidence("net", "net/http", "", "", true, "", "fixtures/testcases.rb", 2),
+			newUsageEvidence("google-cloud-storage", "google/cloud/storage", "", "", true, "", "fixtures/testcases.rb", 7),
+		},
+	},
+	{
+		Language: core.LanguageCodeKotlin,
+		FilePath: "fixtures/testcases.kt",
+		ExpectedEvicences: []*UsageEvidence{
+			newUsageEvidence("", "kotlinx.coroutines", "", "", true, "", "fixtures/testcases.kt", 5),
+			newUsageEvidence("", "okhttp3.OkHttpClient", "", "OkHttpClient", false, "OkHttpClient", "fixtures/testcases.kt", 8),
+		},
+	},
 }
 
 func TestDepsusageEvidences(t *testing.T) {

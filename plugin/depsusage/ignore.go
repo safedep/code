@@ -7,7 +7,11 @@ import (
 
 // TS nodes Ignored in all languages when parsing AST
 // eg. comment is useless, imports are already resolved
-var commonIgnoredTypesList = []string{"comment", "import_statement", "import_from_statement", "import_declaration"}
+var commonIgnoredTypesList = []string{
+	"comment", "import_statement", "import_from_statement", "import_declaration",
+	// C#, Rust, PHP and Kotlin imports
+	"using_directive", "use_declaration", "extern_crate_declaration", "namespace_use_declaration", "import_list",
+}
 var commonIgnoredTypes = make(map[string]bool)
 
 type languageIgnoreRules struct {
