@@ -665,6 +665,21 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 	// Process attributes
 	functionObjectNode := functionCallNode.ChildByFieldName("object")
 	functionAttributeNode := functionCallNode.ChildByFieldName("attribute")
+
+	// A chained call, as in PasswordHasher().hash(), calls the inner
+	// function too, and the inner function is the base of the name
+	if functionAttributeNode != nil && functionObjectNode != nil && functionObjectNode.Type() == "call" {
+		processNode(functionObjectNode, treeData, currentNamespace, callGraph, metadata)
+		if base, ok := pythonCalleeOf(functionObjectNode.ChildByFieldName("function"), treeData, currentNamespace, callGraph, metadata, 0); ok {
+			callGraph.addEdge(
+				currentNamespace, nil, functionCallNode,
+				base+namespaceSeparator+functionAttributeNode.Content(treeData), nil,
+				callArguments,
+			)
+		}
+		return result
+	}
+
 	if functionAttributeNode != nil && functionObjectNode != nil {
 		log.Debugf("Call %s searched (attr qualified) & resolved to object - %s (%s), attribute - %s (%s) \n", functionName, functionObjectNode.Content(treeData), functionObjectNode.Type(), functionAttributeNode.Content(treeData), functionAttributeNode.Type())
 
@@ -715,6 +730,56 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 
 	// log.Debug("Couldn't process function call - %s", functionName)
 	return newProcessorResult()
+}
+
+// pythonCalleeOf returns the namespace of the function of a Python call,
+// through the scope chain and the assignment graph. It adds no edge.
+func pythonCalleeOf(function *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata, depth int) (string, bool) {
+	if function == nil || depth > maxAttributeDepth {
+		return "", false
+	}
+
+	terminal := func(symbol string) (string, bool) {
+		assignment, found := searchSymbolInScopeChain(symbol, currentNamespace, callGraph)
+		if !found {
+			return "", false
+		}
+		if targets := callGraph.assignmentGraph.resolve(assignment.Namespace); len(targets) > 0 {
+			return targets[0].Namespace, true
+		}
+		return assignment.Namespace, true
+	}
+
+	switch function.Type() {
+	case "identifier":
+		return terminal(function.Content(treeData))
+	case "attribute":
+		object := function.ChildByFieldName("object")
+		attribute := function.ChildByFieldName("attribute")
+		if object == nil || attribute == nil {
+			return "", false
+		}
+		if object.Type() == "call" {
+			base, ok := pythonCalleeOf(object.ChildByFieldName("function"), treeData, currentNamespace, callGraph, metadata, depth+1)
+			if !ok {
+				return "", false
+			}
+			return base + namespaceSeparator + attribute.Content(treeData), true
+		}
+		symbol, qualifier, err := dissectAttributeQualifier(object, treeData, currentNamespace, callGraph, metadata)
+		if err != nil {
+			return "", false
+		}
+		base, ok := terminal(symbol)
+		if !ok {
+			return "", false
+		}
+		if qualifier != "" {
+			base += namespaceSeparator + qualifier
+		}
+		return base + namespaceSeparator + attribute.Content(treeData), true
+	}
+	return "", false
 }
 
 // Search symbol in parent namespaces (from self to parent to  grandparent ...)
@@ -1216,6 +1281,14 @@ func goCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 		callArguments = resolveGoCallArguments(argumentsNode, treeData, currentNamespace, callGraph, metadata)
 	}
 
+	// A chained call, as in ecdh.X25519().GenerateKey(), calls the inner
+	// function too
+	if functionNode.Type() == "selector_expression" {
+		if operand := functionNode.ChildByFieldName("operand"); operand != nil && operand.Type() == "call_expression" {
+			processNode(operand, treeData, currentNamespace, callGraph, metadata)
+		}
+	}
+
 	// Resolve function name based on node type
 	var qualifiedName string
 	var resolved bool
@@ -1312,6 +1385,19 @@ func resolveGoSelectorExpression(selectorNode *sitter.Node, treeData []byte, cur
 	operandName := operandNode.Content(treeData)
 	fieldName := fieldNode.Content(treeData)
 
+	// A call or a selector as the operand is the base of the name, as in
+	// ecdh.X25519().GenerateKey or client.Chat.Completions.New
+	switch operandNode.Type() {
+	case "call_expression":
+		if base, ok := goCalleeOf(operandNode, treeData, currentNamespace, callGraph); ok {
+			return base + namespaceSeparator + fieldName, true
+		}
+	case "selector_expression":
+		if base, ok := resolveGoSelectorExpression(operandNode, treeData, currentNamespace, callGraph); ok {
+			return base + namespaceSeparator + fieldName, true
+		}
+	}
+
 	// Check if operand is a package import
 	// Look up in assignment graph for imported packages
 	operandAssignment, operandResolved := searchSymbolInScopeChain(operandName, currentNamespace, callGraph)
@@ -1337,6 +1423,22 @@ func resolveGoSelectorExpression(selectorNode *sitter.Node, treeData []byte, cur
 	log.Debugf("Resolved Go selector (direct): %s.%s -> %s", operandName, fieldName, qualifiedName)
 
 	return qualifiedName, true
+}
+
+// goCalleeOf returns the namespace of the function of a Go call. It adds no
+// edge.
+func goCalleeOf(callNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph) (string, bool) {
+	function := callNode.ChildByFieldName("function")
+	if function == nil {
+		return "", false
+	}
+	switch function.Type() {
+	case "selector_expression":
+		return resolveGoSelectorExpression(function, treeData, currentNamespace, callGraph)
+	case "identifier":
+		return resolveGoIdentifier(function.Content(treeData), currentNamespace, callGraph)
+	}
+	return "", false
 }
 
 // resolveGoIdentifier resolves unqualified Go identifiers

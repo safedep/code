@@ -5,6 +5,7 @@ import (
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
+	"github.com/safedep/code/pkg/helpers"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -52,6 +53,10 @@ func parseImports(imports []*ast.ImportNode, lang core.Language) (map[string]par
 
 		moduleItemIdentifierKey := resolveSubmoduleIdentifier(imp.ModuleItem(), lang)
 		moduleAliasIdentifierKey := resolveSubmoduleIdentifier(imp.ModuleAlias(), lang)
+		if lang.Meta().Code == core.LanguageCodeGo && imp.ModuleAlias() == imp.ModuleName() {
+			// A Go import with no alias has the module as its alias node
+			moduleAliasIdentifierKey = helpers.GoPackageName(imp.ModuleName())
+		}
 
 		identifierKey := moduleNamespace
 		identifierTreeNode := imp.GetModuleNameNode()
@@ -62,9 +67,9 @@ func parseImports(imports []*ast.ImportNode, lang core.Language) (map[string]par
 			identifierKey = moduleItemIdentifierKey
 			identifierTreeNode = imp.GetModuleItemNode()
 		} else if lang.Meta().Code == core.LanguageCodeGo {
-			// For Go, when there's no explicit alias, use the last segment of the import path
+			// For Go, when there's no explicit alias, use the package name of the import path
 			// e.g., "net/http" -> http
-			identifierKey = resolveSubmoduleIdentifier(imp.ModuleName(), lang)
+			identifierKey = helpers.GoPackageName(imp.ModuleName())
 		}
 
 		importedIdentifierNamespaces[identifierKey] = parsedImport{

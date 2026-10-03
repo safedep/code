@@ -280,6 +280,34 @@ func TestSignatureMatcher(t *testing.T) {
 			},
 		},
 		{
+			Name:      "Go chained calls and versioned imports",
+			Language:  core.LanguageCodeGo,
+			FilePaths: []string{"fixtures/testChains.go"},
+			Signatures: []*callgraphv1.Signature{
+				callSignature("crypto.ecdh", core.LanguageCodeGo, MatchAny, "crypto/ecdh/X25519/GenerateKey"),
+				callSignature("crypto.jwt", core.LanguageCodeGo, MatchAny, "github.com/golang-jwt/jwt/v5/NewWithClaims"),
+				callSignature("openai.chat", core.LanguageCodeGo, MatchAny, "github.com/sashabaranov/go-openai/NewClient/CreateChatCompletion"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "crypto.ecdh", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeGo, MinEvidenceCount: 1},
+				{SignatureID: "crypto.jwt", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeGo, MinEvidenceCount: 1},
+				{SignatureID: "openai.chat", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeGo, MinEvidenceCount: 1},
+			},
+		},
+		{
+			Name:      "Python chained calls",
+			Language:  core.LanguageCodePython,
+			FilePaths: []string{"fixtures/testChains.py"},
+			Signatures: []*callgraphv1.Signature{
+				callSignature("crypto.argon2", core.LanguageCodePython, MatchAny, "argon2.PasswordHasher.hash"),
+				callSignature("crypto.sha256", core.LanguageCodePython, MatchAny, "hashlib.sha256.hexdigest"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "crypto.argon2", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePython, MinEvidenceCount: 1},
+				{SignatureID: "crypto.sha256", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePython, MinEvidenceCount: 1},
+			},
+		},
+		{
 			Name:      "Rust turbofish",
 			Language:  core.LanguageCodeRust,
 			FilePaths: []string{"fixtures/testGenerics.rs"},
