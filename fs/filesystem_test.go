@@ -2,11 +2,14 @@ package fs
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"regexp"
 	"testing"
 
 	"github.com/safedep/code/core"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLocalFileSystem(t *testing.T) {
@@ -149,4 +152,28 @@ func TestLocalFileSystem(t *testing.T) {
 			assert.Nil(t, file)
 		})
 	})
+}
+
+func TestLocalFileSystemSkipsLinksToNoFile(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "app.js"), []byte("run()"), 0o600))
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "packs"), 0o700))
+	links := map[string]string{"linked.js": "app.js", "sw.js": "packs/sw.js", "packs-link": "packs"}
+	for name, target := range links {
+		if err := os.Symlink(target, filepath.Join(dir, name)); err != nil {
+			t.Skipf("symbolic links are not available: %v", err)
+		}
+	}
+
+	fs, err := NewLocalFileSystem(LocalFileSystemConfig{AppDirectories: []string{dir}})
+	require.NoError(t, err)
+
+	var files []string
+	err = fs.EnumerateApp(context.Background(), func(f core.File) error {
+		files = append(files, filepath.Base(f.Name()))
+		return nil
+	})
+
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"app.js", "linked.js"}, files)
 }

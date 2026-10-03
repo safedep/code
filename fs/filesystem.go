@@ -180,7 +180,7 @@ func (fs *localFileSystem) enumerateDir(ctx context.Context,
 			return nil
 		}
 
-		if info.IsDir() {
+		if info.IsDir() || !isRegularFile(path, info) {
 			return nil
 		}
 
@@ -196,6 +196,16 @@ func (fs *localFileSystem) enumerateDir(ctx context.Context,
 		}
 		return callback(file)
 	})
+}
+
+// isRegularFile reports a regular file, or a symbolic link to one. A
+// dangling link, as to a build output that is not there, is not a file.
+func isRegularFile(path string, entry os.DirEntry) bool {
+	if entry.Type()&os.ModeSymlink == 0 {
+		return entry.Type().IsRegular()
+	}
+	target, err := os.Stat(path)
+	return err == nil && target.Mode().IsRegular()
 }
 
 func (fs *localFileSystem) skipPattern(dir string) bool {
