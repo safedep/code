@@ -46,6 +46,11 @@ const (
 	LanguageCodeJava       LanguageCode = "java"
 	LanguageCodeGo         LanguageCode = "go"
 	LanguageCodeTypescript LanguageCode = "typescript"
+	LanguageCodeCSharp     LanguageCode = "csharp"
+	LanguageCodeRust       LanguageCode = "rust"
+	LanguageCodePHP        LanguageCode = "php"
+	LanguageCodeRuby       LanguageCode = "ruby"
+	LanguageCodeKotlin     LanguageCode = "kotlin"
 )
 
 // LanguageMeta is exposes metadata about a language
