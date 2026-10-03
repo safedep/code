@@ -82,3 +82,39 @@ func (s stringTree) Tree() *sitter.Tree               { return s.tree }
 func (s stringTree) Data() (*[]byte, error)           { return &s.data, nil }
 func (s stringTree) File() (core.File, error)         { return nil, nil }
 func (s stringTree) Language() (core.Language, error) { return s.language, nil }
+
+// otherGrammar has the code of one language and the grammar of another, as
+// a second version of a grammar would.
+type otherGrammar struct {
+	base    core.Language
+	grammar *sitter.Language
+}
+
+func (o otherGrammar) Meta() core.LanguageMeta           { return o.base.Meta() }
+func (o otherGrammar) Language() *sitter.Language        { return o.grammar }
+func (o otherGrammar) Resolvers() core.LanguageResolvers { return o.base.Resolvers() }
+
+func TestExecuteQueriesKeepsAQueryForEachGrammar(t *testing.T) {
+	python, err := lang.NewPythonLanguage()
+	require.NoError(t, err)
+	typescript, err := lang.NewTypescriptLanguage()
+	require.NoError(t, err)
+	strings := func(language core.Language, source string) int {
+		tree := parseString(t, language, source)
+		data, err := tree.Data()
+		require.NoError(t, err)
+		count := 0
+		require.NoError(t, ts.ExecuteQueries(ts.NewQueriesRequest(language, []ts.QueryItem{
+			ts.NewQueryItem(`(string) @s`, func(*sitter.QueryMatch) error {
+				count++
+				return nil
+			}),
+		}), data, tree))
+		return count
+	}
+
+	assert.Equal(t, 1, strings(python, "a = 'x'"))
+	mixed := otherGrammar{base: python, grammar: typescript.Language()}
+	assert.Equal(t, 2, strings(mixed, "const a = 'x' + 'y'"),
+		"a query compiled for the Python grammar does not run on a TypeScript tree")
+}

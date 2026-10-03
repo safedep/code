@@ -65,8 +65,13 @@ func execute(q *sitter.Query, node *sitter.Node, source []byte) *queryMatchWrapp
 	return &queryMatchWrapper{cursor: cursor, source: source}
 }
 
+// queryKey names a compiled query by its language code and by the size of
+// its grammar. Two languages with one code and other grammars, such as two
+// versions of a grammar, get their own query. GetLanguage of a grammar
+// returns a new wrapper on each call, so the key cannot be its pointer.
 type queryKey struct {
 	language core.LanguageCode
+	symbols  uint32
 	query    string
 }
 
@@ -77,7 +82,7 @@ type queryKey struct {
 var compiledQueries sync.Map
 
 func compiledQuery(language core.Language, query string) (*sitter.Query, error) {
-	key := queryKey{language: language.Meta().Code, query: query}
+	key := queryKey{language: language.Meta().Code, symbols: language.Language().SymbolCount(), query: query}
 	if q, ok := compiledQueries.Load(key); ok {
 		return q.(*sitter.Query), nil
 	}
@@ -87,7 +92,11 @@ func compiledQuery(language core.Language, query string) (*sitter.Query, error) 
 		return nil, fmt.Errorf("failed to create query: %w", err)
 	}
 
-	actual, _ := compiledQueries.LoadOrStore(key, q)
+	actual, loaded := compiledQueries.LoadOrStore(key, q)
+	if loaded {
+		// Another file compiled the same query first.
+		q.Close()
+	}
 	return actual.(*sitter.Query), nil
 }
 
