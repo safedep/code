@@ -265,6 +265,47 @@ func TestSignatureMatcher(t *testing.T) {
 			},
 		},
 		{
+			Name:      "JavaScript chained calls",
+			Language:  core.LanguageCodeJavascript,
+			FilePaths: []string{"fixtures/testChains.js"},
+			Signatures: []*callgraphv1.Signature{
+				argSignature("crypto.md5", core.LanguageCodeJavascript, "crypto/createHash", "'md5'", `"md5"`),
+				callSignature("openai.chat", core.LanguageCodeJavascript, MatchAny, "openai/chat/completions/create"),
+				argSignature("crypto.sha1", core.LanguageCodeJavascript, "crypto/createHash", "'sha1'"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "crypto.md5", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
+				{SignatureID: "openai.chat", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
+				{SignatureID: "crypto.sha1", ShouldMatch: false},
+			},
+		},
+		{
+			Name:      "Rust turbofish",
+			Language:  core.LanguageCodeRust,
+			FilePaths: []string{"fixtures/testGenerics.rs"},
+			Signatures: []*callgraphv1.Signature{
+				callSignature("crypto.hmac", core.LanguageCodeRust, MatchAny, "hmac::Hmac::new_from_slice"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "crypto.hmac", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeRust, MinEvidenceCount: 1},
+			},
+		},
+		{
+			Name:      "PHP string arguments",
+			Language:  core.LanguageCodePHP,
+			FilePaths: []string{"fixtures/testStrings.php"},
+			Signatures: []*callgraphv1.Signature{
+				argSignature("crypto.sha256", core.LanguageCodePHP, "hash", `"sha256"`, "'sha256'"),
+				argSignature("crypto.md5", core.LanguageCodePHP, "hash", `"md5"`, "'md5'"),
+				argSignature("crypto.sha1", core.LanguageCodePHP, "hash", `"sha1"`, "'sha1'"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "crypto.sha256", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePHP, MinEvidenceCount: 1},
+				{SignatureID: "crypto.md5", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePHP, MinEvidenceCount: 1},
+				{SignatureID: "crypto.sha1", ShouldMatch: false},
+			},
+		},
+		{
 			Name:      "Python signatures",
 			Language:  core.LanguageCodePython,
 			FilePaths: []string{"fixtures/testFunctions.py"},
@@ -929,6 +970,16 @@ func TestSignatureMatcher(t *testing.T) {
 			}
 		})
 	}
+}
+
+// argSignature is a signature of one language with one call condition
+// whose first argument is one of values.
+func argSignature(id string, language core.LanguageCode, call string, values ...string) *callgraphv1.Signature {
+	sig := callSignature(id, language, MatchAny, call)
+	sig.Languages[string(language)].Conditions[0].Args = []*callgraphv1.Signature_LanguageMatcher_SignatureCondition_Argument{
+		{Index: 0, Values: values},
+	}
+	return sig
 }
 
 // callSignature is a signature of one language with a call condition for each call.

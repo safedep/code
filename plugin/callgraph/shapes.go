@@ -355,11 +355,25 @@ func childOfType(node *sitter.Node, types ...string) *sitter.Node {
 	return nil
 }
 
-// withoutTypeArguments cuts the type arguments from a name, as in
-// List<string> or serde_json::from_str::<Value>.
+// withoutTypeArguments removes each type argument list from a name, as in
+// List<string>, serde_json::from_str::<Value> or Hmac::<Sha256>::new.
 func withoutTypeArguments(name string) string {
-	before, _, _ := strings.Cut(name, "<")
-	return before
+	if !strings.Contains(name, "<") {
+		return name
+	}
+	var b strings.Builder
+	depth := 0
+	for _, r := range name {
+		switch {
+		case r == '<':
+			depth++
+		case r == '>' && depth > 0:
+			depth--
+		case depth == 0:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 func cutLast(s, separator string) (string, string, bool) {

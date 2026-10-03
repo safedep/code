@@ -2,6 +2,7 @@ package callgraph
 
 var literalNodeTypes = map[string]bool{
 	"string":                         true,
+	"encapsed_string":                true,
 	"string_literal":                 true,
 	"number":                         true,
 	"decimal_integer_literal":        true,

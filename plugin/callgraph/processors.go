@@ -23,8 +23,8 @@ const (
 )
 
 type processorMetadata struct {
-	insideClass    bool
-	insideFunction bool
+	insideClass     bool
+	insideFunction  bool
 	processingDepth int // Track recursion depth for processChildren
 }
 
@@ -128,30 +128,30 @@ func init() {
 		"lexical_declaration": lexicalDeclarationProcessor,
 
 		// TypeScript-specific: skip type-level nodes to avoid false-positive call edges
-		"type_annotation":              skippedProcessor,
-		"type_alias_declaration":       skippedProcessor,
-		"interface_declaration":        skipResultsProcessor,
-		"enum_declaration":             skipResultsProcessor,
-		"abstract_class_declaration":   classDefinitionProcessor,
-		"abstract_method_signature":    skippedProcessor,
-		"as_expression":                skippedProcessor,
-		"satisfies_expression":         skippedProcessor,
-		"non_null_expression":          emptyProcessor,
-		"type_arguments":               skippedProcessor,
-		"accessibility_modifier":       skippedProcessor,
-		"override_modifier":            skippedProcessor,
-		"readonly":                     skippedProcessor,
-		"required_parameter":           emptyProcessor,
-		"optional_parameter":           emptyProcessor,
-		"predefined_type":              skippedProcessor,
-		"type_identifier":              skippedProcessor,
-		"interface_body":               skippedProcessor,
-		"abstract_method_definition":   skippedProcessor,
-		"public_field_definition":      skipResultsProcessor,
-		"extends_clause":               skippedProcessor,
-		"implements_clause":            skippedProcessor,
-		"extends_type_clause":          skippedProcessor,
-		"class_heritage":               skippedProcessor,
+		"type_annotation":            skippedProcessor,
+		"type_alias_declaration":     skippedProcessor,
+		"interface_declaration":      skipResultsProcessor,
+		"enum_declaration":           skipResultsProcessor,
+		"abstract_class_declaration": classDefinitionProcessor,
+		"abstract_method_signature":  skippedProcessor,
+		"as_expression":              skippedProcessor,
+		"satisfies_expression":       skippedProcessor,
+		"non_null_expression":        emptyProcessor,
+		"type_arguments":             skippedProcessor,
+		"accessibility_modifier":     skippedProcessor,
+		"override_modifier":          skippedProcessor,
+		"readonly":                   skippedProcessor,
+		"required_parameter":         emptyProcessor,
+		"optional_parameter":         emptyProcessor,
+		"predefined_type":            skippedProcessor,
+		"type_identifier":            skippedProcessor,
+		"interface_body":             skippedProcessor,
+		"abstract_method_definition": skippedProcessor,
+		"public_field_definition":    skipResultsProcessor,
+		"extends_clause":             skippedProcessor,
+		"implements_clause":          skippedProcessor,
+		"extends_type_clause":        skippedProcessor,
+		"class_heritage":             skippedProcessor,
 	}
 
 	for literalNodeType := range literalNodeTypes {
@@ -1570,6 +1570,14 @@ func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 		callArguments = resolveCallArguments(argumentsNode, treeData, currentNamespace, callGraph, metadata)
 	}
 
+	// A chained call, as in crypto.createHash('md5').digest(), calls the
+	// inner function too
+	if functionNode.Type() == "member_expression" {
+		if object := functionNode.ChildByFieldName("object"); object != nil && jsChainable[object.Type()] {
+			processNode(object, treeData, currentNamespace, callGraph, metadata)
+		}
+	}
+
 	// Resolve function name based on node type
 	var qualifiedName string
 	var resolved bool
@@ -1631,6 +1639,14 @@ func resolveJSMemberExpressionWithDepth(memberNode *sitter.Node, treeData []byte
 		return "", false
 	}
 
+	// The value of a call or of an object creation is the base of the
+	// member, as in crypto.createHash('md5').digest or new OpenAI().chat
+	if jsChainable[objectNode.Type()] {
+		if base, ok := jsValueOf(objectNode, treeData, currentNamespace, callGraph, depth+1); ok {
+			return base + namespaceSeparator + propertyNode.Content(treeData), true
+		}
+	}
+
 	// Handle nested member expressions recursively with depth tracking
 	if objectNode.Type() == "member_expression" {
 		nestedQualified, resolved := resolveJSMemberExpressionWithDepth(objectNode, treeData, currentNamespace, callGraph, depth+1)
@@ -1665,6 +1681,50 @@ func resolveJSMemberExpressionWithDepth(memberNode *sitter.Node, treeData []byte
 	log.Debugf("Resolved JS member (direct): %s.%s -> %s", objectName, propertyName, qualifiedName)
 
 	return qualifiedName, true
+}
+
+// jsChainable are the JavaScript nodes whose value can start a member chain.
+var jsChainable = map[string]bool{
+	"call_expression":  true,
+	"new_expression":   true,
+	"await_expression": true,
+}
+
+// jsValueOf returns the namespace of the value of a call, an object creation
+// or an await: the called function or the created class. It adds no edge.
+func jsValueOf(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, depth int) (string, bool) {
+	if depth > maxMemberExpressionDepth {
+		return "", false
+	}
+
+	var target *sitter.Node
+	switch node.Type() {
+	case "call_expression":
+		target = node.ChildByFieldName("function")
+	case "new_expression":
+		target = node.ChildByFieldName("constructor")
+	case "await_expression":
+		if node.NamedChildCount() > 0 {
+			return jsValueOf(node.NamedChild(0), treeData, currentNamespace, callGraph, depth+1)
+		}
+	}
+	if target == nil {
+		return "", false
+	}
+
+	switch target.Type() {
+	case "member_expression":
+		return resolveJSMemberExpressionWithDepth(target, treeData, currentNamespace, callGraph, depth+1)
+	case "identifier":
+		// An imported name resolves to its module, as OpenAI to openai
+		if assignment, found := searchSymbolInScopeChain(target.Content(treeData), currentNamespace, callGraph); found {
+			if targets := callGraph.assignmentGraph.resolve(assignment.Namespace); len(targets) > 0 {
+				return targets[0].Namespace, true
+			}
+		}
+		return resolveJSIdentifier(target.Content(treeData), currentNamespace, callGraph)
+	}
+	return "", false
 }
 
 // resolveJSIdentifier resolves unqualified JavaScript identifiers

@@ -98,3 +98,16 @@ func TestShapedLanguageCalls(t *testing.T) {
 		})
 	}
 }
+
+func TestWithoutTypeArguments(t *testing.T) {
+	for in, want := range map[string]string{
+		"List<string>":                    "List",
+		"serde_json::from_str::<Value>":   "serde_json::from_str::",
+		"Hmac::<Sha256>::new_from_slice":  "Hmac::::new_from_slice",
+		"Dictionary<string, List<int>>.X": "Dictionary.X",
+		"GetRequiredService<IChat>":       "GetRequiredService",
+		"plain::path":                     "plain::path",
+	} {
+		assert.Equal(t, want, withoutTypeArguments(in), in)
+	}
+}

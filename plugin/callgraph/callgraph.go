@@ -15,9 +15,9 @@ const namespaceSeparator = "//"
 const (
 	// Maximum number of nodes in callgraph before warning
 	// Prevents memory exhaustion in extremely large/complex files
-	maxCallGraphNodes      = 50000
+	maxCallGraphNodes       = 50000
 	maxAssignmentGraphNodes = 100000
-	maxDFSResultItems      = 100000
+	maxDFSResultItems       = 100000
 )
 
 // Refers to one argument passed to a function call
@@ -261,6 +261,13 @@ var dfsSourceNodeTypes = map[string]bool{
 	"class_body":                 true,
 	"class_declaration":          true,
 	"abstract_class_declaration": true,
+	// JavaScript and TypeScript functions, which a file often exports and
+	// does not call
+	"function_declaration":           true,
+	"generator_function_declaration": true,
+	"function_expression":            true,
+	"arrow_function":                 true,
+	"method_definition":              true,
 }
 
 type DfsResultItem struct {
