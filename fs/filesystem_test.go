@@ -158,7 +158,7 @@ func TestLocalFileSystemSkipsLinksToNoFile(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "app.js"), []byte("run()"), 0o600))
 	require.NoError(t, os.Mkdir(filepath.Join(dir, "packs"), 0o700))
-	links := map[string]string{"linked.js": "app.js", "sw.js": "packs/sw.js", "packs-link": "packs"}
+	links := map[string]string{"linked.js": "app.js", "sw.js": "packs/sw.js", "packs-link": "packs", "loop.js": "loop.js"}
 	for name, target := range links {
 		if err := os.Symlink(target, filepath.Join(dir, name)); err != nil {
 			t.Skipf("symbolic links are not available: %v", err)
