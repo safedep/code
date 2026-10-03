@@ -81,23 +81,25 @@ type queryKey struct {
 // of many files can share it.
 var compiledQueries sync.Map
 
+// compiledEntry compiles its query once, also when many files miss the
+// cache at the same time.
+type compiledEntry struct {
+	once  sync.Once
+	query *sitter.Query
+	err   error
+}
+
 func compiledQuery(language core.Language, query string) (*sitter.Query, error) {
 	key := queryKey{language: language.Meta().Code, symbols: language.Language().SymbolCount(), query: query}
-	if q, ok := compiledQueries.Load(key); ok {
-		return q.(*sitter.Query), nil
-	}
-
-	q, err := sitter.NewQuery([]byte(query), language.Language())
-	if err != nil {
-		return nil, fmt.Errorf("failed to create query: %w", err)
-	}
-
-	actual, loaded := compiledQueries.LoadOrStore(key, q)
-	if loaded {
-		// Another file compiled the same query first.
-		q.Close()
-	}
-	return actual.(*sitter.Query), nil
+	v, _ := compiledQueries.LoadOrStore(key, &compiledEntry{})
+	entry := v.(*compiledEntry)
+	entry.once.Do(func() {
+		entry.query, entry.err = sitter.NewQuery([]byte(query), language.Language())
+		if entry.err != nil {
+			entry.err = fmt.Errorf("failed to create query: %w", entry.err)
+		}
+	})
+	return entry.query, entry.err
 }
 
 type QueryMatchProcessor func(*sitter.QueryMatch) error

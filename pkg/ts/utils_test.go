@@ -34,16 +34,17 @@ func TestExecuteQueriesSharesCompiledQueries(t *testing.T) {
 	language, err := lang.NewTypescriptLanguage()
 	require.NoError(t, err)
 
-	sources := []string{"const a = b(c)", "x.y(z, w)"}
+	// In x.y(z, w), y is a property_identifier, so the query matches x, z and w.
+	sources := map[string]int{"const a = b(c)": 3, "x.y(z, w)": 3, "f(g)": 2}
 	var wg sync.WaitGroup
 	for i := 0; i < 8; i++ {
-		for _, source := range sources {
+		for source, want := range sources {
 			wg.Add(1)
-			go func(source string) {
+			go func(source string, want int) {
 				defer wg.Done()
 				tree := parseString(t, language, source)
-				assert.Equal(t, 3, countIdentifiers(t, language, tree))
-			}(source)
+				assert.Equal(t, want, countIdentifiers(t, language, tree), source)
+			}(source, want)
 		}
 	}
 	wg.Wait()
