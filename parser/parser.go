@@ -41,14 +41,9 @@ func NewParser(languages []core.Language) (*parserWrapper, error) {
 }
 
 func (p *parserWrapper) Parse(ctx context.Context, file core.File) (core.ParseTree, error) {
-	r, err := file.Reader()
+	data, err := readAll(file)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get reader for file: %w", err)
-	}
-
-	data, err := io.ReadAll(r)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
+		return nil, err
 	}
 
 	language, exists := lang.ResolveLanguageFromPath(file.Name())
@@ -89,4 +84,24 @@ func (t *parseTree) File() (core.File, error) {
 
 func (t *parseTree) Language() (core.Language, error) {
 	return t.lang, nil
+}
+
+// readAll reads the file and closes its reader. An open reader keeps the
+// file in use, and on Windows a file in use cannot be deleted.
+func readAll(file core.File) (data []byte, err error) {
+	r, err := file.Reader()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get reader for file: %w", err)
+	}
+	defer func() {
+		if closeErr := r.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("failed to close file: %w", closeErr)
+		}
+	}()
+
+	data, err = io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+	return data, nil
 }
