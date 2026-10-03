@@ -31,6 +31,8 @@ func TestShapedLanguageCalls(t *testing.T) {
 				"fixtures/testShapes.cs//Demo//Agent//Ask",
 				"services//GetRequiredService",
 				"chatClient//CompleteChat",
+				"ChatOptions",
+				"AIFunctionFactory//Create",
 			},
 		},
 		{
@@ -45,6 +47,7 @@ func TestShapedLanguageCalls(t *testing.T) {
 				"reqwest//Client//get//send",
 				"serde_json//to_string",
 				"candle_core//Tensor//arange//unsqueeze",
+				"async_openai//Client//models//list//data//iter//map//collect",
 				"println",
 				"fixtures/testShapes.rs//main",
 			},
@@ -58,6 +61,7 @@ func TestShapedLanguageCalls(t *testing.T) {
 				"GuzzleHttp//Client",
 				"GuzzleHttp//Client//get",
 				"Yethee//Tiktoken//EncoderProvider//getForModel",
+				"GuzzleHttp//Psr7//Request",
 				"getenv",
 				"strtoupper",
 				"fixtures/testShapes.php//Assistant//ask",
@@ -97,6 +101,9 @@ func TestShapedLanguageCalls(t *testing.T) {
 			require.NoError(t, executor.Execute(context.Background(), fileSystem))
 
 			assert.Subset(t, calls, tc.calls)
+			for _, c := range calls {
+				assert.NotRegexp(t, `[\s()|{}]`, c, "a namespace holds no source text")
+			}
 		})
 	}
 }

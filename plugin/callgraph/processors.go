@@ -666,14 +666,15 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 	functionObjectNode := functionCallNode.ChildByFieldName("object")
 	functionAttributeNode := functionCallNode.ChildByFieldName("attribute")
 
-	// A chained call, as in PasswordHasher().hash(), calls the inner
-	// function too, and the inner function is the base of the name
-	if functionAttributeNode != nil && functionObjectNode != nil && functionObjectNode.Type() == "call" {
-		processNode(functionObjectNode, treeData, currentNamespace, callGraph, metadata)
-		if base, ok := pythonCalleeOf(functionObjectNode.ChildByFieldName("function"), treeData, currentNamespace, callGraph, metadata, 0); ok {
+	// A chained call, as in PasswordHasher().hash() or
+	// OpenAI().chat.completions.create(), calls the inner function too, and
+	// the inner function is the base of the name
+	if root := chainRoot(functionObjectNode, "attribute", "object"); functionAttributeNode != nil && root != nil && root.Type() == "call" {
+		processNode(root, treeData, currentNamespace, callGraph, metadata)
+		if callee, ok := pythonCalleeOf(functionCallNode, treeData, currentNamespace, callGraph, metadata, 0); ok {
 			callGraph.addEdge(
 				currentNamespace, nil, functionCallNode,
-				base+namespaceSeparator+functionAttributeNode.Content(treeData), nil,
+				callee, nil,
 				callArguments,
 			)
 		}
@@ -759,18 +760,25 @@ func pythonCalleeOf(function *sitter.Node, treeData []byte, currentNamespace str
 		if object == nil || attribute == nil {
 			return "", false
 		}
-		if object.Type() == "call" {
-			base, ok := pythonCalleeOf(object.ChildByFieldName("function"), treeData, currentNamespace, callGraph, metadata, depth+1)
-			if !ok {
-				return "", false
-			}
+		var base string
+		var ok bool
+		switch root := chainRoot(object, "attribute", "object"); {
+		case object.Type() == "call":
+			base, ok = pythonCalleeOf(object.ChildByFieldName("function"), treeData, currentNamespace, callGraph, metadata, depth+1)
+		case root != nil && root.Type() == "call":
+			base, ok = pythonCalleeOf(object, treeData, currentNamespace, callGraph, metadata, depth+1)
+		}
+		if ok {
 			return base + namespaceSeparator + attribute.Content(treeData), true
+		}
+		if object.Type() == "call" {
+			return "", false
 		}
 		symbol, qualifier, err := dissectAttributeQualifier(object, treeData, currentNamespace, callGraph, metadata)
 		if err != nil {
 			return "", false
 		}
-		base, ok := terminal(symbol)
+		base, ok = terminal(symbol)
 		if !ok {
 			return "", false
 		}
@@ -1302,12 +1310,10 @@ func goCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 		callArguments = resolveGoCallArguments(argumentsNode, treeData, currentNamespace, callGraph, metadata)
 	}
 
-	// A chained call, as in ecdh.X25519().GenerateKey(), calls the inner
-	// function too
-	if functionNode.Type() == "selector_expression" {
-		if operand := functionNode.ChildByFieldName("operand"); operand != nil && operand.Type() == "call_expression" {
-			processNode(operand, treeData, currentNamespace, callGraph, metadata)
-		}
+	// A chained call, as in ecdh.X25519().GenerateKey() or
+	// openai.NewClient(k).Chat.Completions.New(), calls the inner function too
+	if root := chainRoot(functionNode, "selector_expression", "operand"); root != nil && root.Type() == "call_expression" {
+		processNode(root, treeData, currentNamespace, callGraph, metadata)
 	}
 
 	// Resolve function name based on node type
@@ -1696,7 +1702,7 @@ func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 	// A chained call, as in crypto.createHash('md5').digest(), calls the
 	// inner function too
 	if functionNode.Type() == "member_expression" {
-		if object := functionNode.ChildByFieldName("object"); object != nil && jsChainable[object.Type()] {
+		if object := chainRoot(functionNode, "member_expression", "object"); object != nil && jsChainable[object.Type()] {
 			processNode(object, treeData, currentNamespace, callGraph, metadata)
 		}
 	}
@@ -1825,6 +1831,17 @@ func resolveJSMemberExpressionWithDepth(memberNode *sitter.Node, treeData []byte
 	log.Debugf("Resolved JS member (direct): %s.%s -> %s", objectName, propertyName, qualifiedName)
 
 	return qualifiedName, true
+}
+
+// chainRoot follows the object field of a chain of member nodes to the
+// first node that is not a member, as client for client.chat.completions or
+// the call OpenAI() for OpenAI().chat.completions. A node that is not a
+// member is its own root.
+func chainRoot(node *sitter.Node, memberType, objectField string) *sitter.Node {
+	for depth := 0; node != nil && node.Type() == memberType && depth <= maxMemberExpressionDepth; depth++ {
+		node = node.ChildByFieldName(objectField)
+	}
+	return node
 }
 
 // jsChainable are the JavaScript nodes whose value can start a member chain.

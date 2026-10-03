@@ -162,9 +162,15 @@ func (p *shapedProcessors) creation(node *sitter.Node, treeData []byte, currentN
 	}
 
 	arguments := []CallArgument{}
+	handled := []*sitter.Node{typeNode}
 	if argumentsNode != nil {
 		arguments = resolveCallArguments(argumentsNode, treeData, currentNamespace, callGraph, metadata)
+		handled = append(handled, argumentsNode)
 	}
+
+	// An object initializer can hold calls, as in C#
+	// new ChatOptions { Tools = { AIFunctionFactory.Create(Foo) } }
+	p.processUnhandledChildren(node, handled, treeData, currentNamespace, callGraph, metadata)
 
 	created := p.resolve(typeNode, treeData, currentNamespace, callGraph, metadata)
 	if created == "" {
@@ -239,6 +245,11 @@ func (p *shapedProcessors) resolve(node *sitter.Node, treeData []byte, currentNa
 	if wrapperTypes[nodeType] && node.NamedChildCount() == 1 {
 		return p.resolve(node.NamedChild(0), treeData, currentNamespace, callGraph, metadata)
 	}
+	if field, ok := valueFields[nodeType]; ok {
+		if inner := node.ChildByFieldName(field); inner != nil {
+			return p.resolve(inner, treeData, currentNamespace, callGraph, metadata)
+		}
+	}
 
 	if shape, isMember := p.shapes.members[nodeType]; isMember {
 		object := fieldChild(node, shape.object)
@@ -253,8 +264,25 @@ func (p *shapedProcessors) resolve(node *sitter.Node, treeData []byte, currentNa
 	}
 
 	p.processNestedCalls(node, treeData, currentNamespace, callGraph, metadata)
-	return p.resolvePath(node.Content(treeData), currentNamespace, callGraph)
+	path := withoutTypeArguments(node.Content(treeData))
+	if !qualifiedPathPattern.MatchString(path) {
+		// A lambda, a cast or another expression is not a namespace.
+		return ""
+	}
+	return p.resolvePath(path, currentNamespace, callGraph)
 }
+
+// valueFields are the node types whose value is the expression in one
+// field: the Rust turbofish, as in iter.collect::<Vec<_>>(), and a cast.
+var valueFields = map[string]string{
+	"generic_function":     "function",
+	"cast_expression":      "value",
+	"type_cast_expression": "value",
+}
+
+// qualifiedPathPattern matches a name or a qualified name of a shaped
+// language, as in Client, OpenAI::Client, Http\Client or client?.Chat.
+var qualifiedPathPattern = regexp.MustCompile(`^[\p{L}_$@\\][\p{L}\p{N}_$@\\.:?!&]*$`)
 
 // wrapperTypes are the node types that have the value of their only inner
 // expression: parentheses, as in PHP (new Encoder())->encode(), and the

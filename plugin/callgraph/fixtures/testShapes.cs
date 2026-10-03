@@ -24,5 +24,7 @@ public class Host
     {
         var chat = services.GetRequiredService<IChatCompletionService>();
         chatClient?.CompleteChat("hi");
+        var options = new ChatOptions { Tools = { AIFunctionFactory.Create(Run) } };
+        var later = ((Func<int>)(() => Compute()))();
     }
 }

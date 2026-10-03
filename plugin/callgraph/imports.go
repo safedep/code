@@ -119,6 +119,12 @@ func resolveNamespaceWithSeparator(moduleName string, lang core.Language) string
 		moduleName = strings.Trim(moduleName, "\"")
 	}
 
+	// A fully qualified PHP name, as in use \GuzzleHttp\Client, has a
+	// leading separator that names no namespace.
+	if lang.Meta().Code == core.LanguageCodePHP {
+		moduleName = strings.TrimPrefix(moduleName, `\`)
+	}
+
 	return strings.Join(splitQualifiedName(moduleName, lang.Meta().Code), namespaceSeparator)
 }
 

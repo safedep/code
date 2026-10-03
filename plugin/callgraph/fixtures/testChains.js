@@ -10,3 +10,7 @@ async function ask() {
 async function loadEmbedder() {
   return import("@xenova/transformers").then(({ pipeline }) => pipeline("feature-extraction"));
 }
+
+function client() {
+  return OpenAI.createClient("k").chat.completions.create({});
+}

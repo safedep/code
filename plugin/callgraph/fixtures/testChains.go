@@ -13,4 +13,5 @@ func main() {
 	_ = key
 	jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{})
 	openai.NewClient("k").CreateChatCompletion(nil, openai.ChatCompletionRequest{})
+	openai.NewClientWithConfig(openai.DefaultConfig("k")).Config.HTTPClient.Do(nil)
 }

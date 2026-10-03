@@ -273,6 +273,7 @@ func TestSignatureMatcher(t *testing.T) {
 				callSignature("openai.chat", core.LanguageCodeJavascript, MatchAny, "openai/chat/completions/create"),
 				argSignature("crypto.sha1", core.LanguageCodeJavascript, "crypto/createHash", "'sha1'"),
 				callSignature("transformers", core.LanguageCodeJavascript, MatchAny, "@xenova/transformers/*"),
+				callSignature("openai.factory", core.LanguageCodeJavascript, MatchAll, "openai/createClient", "openai/createClient/chat/completions/create"),
 				callSignature("dynamic.import", core.LanguageCodeJavascript, MatchAny, "import"),
 			},
 			ExpectedMatches: []signatureMatchExpectation{
@@ -280,6 +281,7 @@ func TestSignatureMatcher(t *testing.T) {
 				{SignatureID: "openai.chat", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
 				{SignatureID: "crypto.sha1", ShouldMatch: false},
 				{SignatureID: "transformers", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
+				{SignatureID: "openai.factory", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
 				{SignatureID: "dynamic.import", ShouldMatch: false},
 			},
 		},
@@ -291,11 +293,14 @@ func TestSignatureMatcher(t *testing.T) {
 				callSignature("crypto.ecdh", core.LanguageCodeGo, MatchAny, "crypto/ecdh/X25519/GenerateKey"),
 				callSignature("crypto.jwt", core.LanguageCodeGo, MatchAny, "github.com/golang-jwt/jwt/v5/NewWithClaims"),
 				callSignature("openai.chat", core.LanguageCodeGo, MatchAny, "github.com/sashabaranov/go-openai/NewClient/CreateChatCompletion"),
+				callSignature("openai.config", core.LanguageCodeGo, MatchAll, "github.com/sashabaranov/go-openai/NewClientWithConfig",
+					"github.com/sashabaranov/go-openai/NewClientWithConfig/Config/HTTPClient/Do"),
 			},
 			ExpectedMatches: []signatureMatchExpectation{
 				{SignatureID: "crypto.ecdh", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeGo, MinEvidenceCount: 1},
 				{SignatureID: "crypto.jwt", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeGo, MinEvidenceCount: 1},
 				{SignatureID: "openai.chat", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeGo, MinEvidenceCount: 1},
+				{SignatureID: "openai.config", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeGo, MinEvidenceCount: 1},
 			},
 		},
 		{
@@ -305,10 +310,12 @@ func TestSignatureMatcher(t *testing.T) {
 			Signatures: []*callgraphv1.Signature{
 				callSignature("crypto.argon2", core.LanguageCodePython, MatchAny, "argon2.PasswordHasher.hash"),
 				callSignature("crypto.sha256", core.LanguageCodePython, MatchAny, "hashlib.sha256.hexdigest"),
+				callSignature("openai.chat", core.LanguageCodePython, MatchAll, "openai.OpenAI", "openai.OpenAI.chat.completions.create"),
 			},
 			ExpectedMatches: []signatureMatchExpectation{
 				{SignatureID: "crypto.argon2", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePython, MinEvidenceCount: 1},
 				{SignatureID: "crypto.sha256", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePython, MinEvidenceCount: 1},
+				{SignatureID: "openai.chat", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePython, MinEvidenceCount: 1},
 			},
 		},
 		{
