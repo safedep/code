@@ -52,6 +52,18 @@ func TestValidateSignatures(t *testing.T) {
 			},
 			expectedError: true,
 		},
+		{
+			signature:     callSignature("ruby.language", core.LanguageCodeRuby, MatchAny, "OpenAI::Client.new"),
+			expectedError: false,
+		},
+		{
+			signature:     callSignature("kotlin.language", core.LanguageCodeKotlin, MatchAny, "okhttp3.OkHttpClient"),
+			expectedError: true,
+		},
+		{
+			signature:     callSignature("csharp.invalid.match", core.LanguageCodeCSharp, "invalid_match_type", "OpenAI.*"),
+			expectedError: true,
+		},
 	}
 
 	for _, tc := range signatureValidationTestCases {
@@ -182,14 +194,74 @@ func TestSignatureMatcher(t *testing.T) {
 			Language:  core.LanguageCodeJavascript,
 			FilePaths: []string{"fixtures/testCommonJS.js"},
 			Signatures: []*callgraphv1.Signature{
-				commonJSSignature("anthropic.client", "@anthropic-ai/sdk"),
-				commonJSSignature("node.events.emitter", "events/EventEmitter"),
-				commonJSSignature("debug.logger", "debug"),
+				callSignature("anthropic.client", core.LanguageCodeJavascript, MatchAny, "@anthropic-ai/sdk"),
+				callSignature("node.events.emitter", core.LanguageCodeJavascript, MatchAny, "events/EventEmitter"),
+				callSignature("debug.logger", core.LanguageCodeJavascript, MatchAny, "debug"),
 			},
 			ExpectedMatches: []signatureMatchExpectation{
 				{SignatureID: "anthropic.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
 				{SignatureID: "node.events.emitter", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
 				{SignatureID: "debug.logger", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
+			},
+		},
+		{
+			Name:      "C# signatures",
+			Language:  core.LanguageCodeCSharp,
+			FilePaths: []string{"fixtures/testShapes.cs"},
+			Signatures: []*callgraphv1.Signature{
+				callSignature("openai.chat", core.LanguageCodeCSharp, MatchAll, "OpenAI.Chat.*", "ChatClient.CompleteChatAsync"),
+				callSignature("http.client", core.LanguageCodeCSharp, MatchAny, "System.Net.Http.HttpClient.*"),
+				callSignature("anthropic.client", core.LanguageCodeCSharp, MatchAll, "Anthropic.*", "AnthropicClient"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "openai.chat", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeCSharp, MinEvidenceCount: 1},
+				{SignatureID: "http.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeCSharp, MinEvidenceCount: 1},
+				{SignatureID: "anthropic.client", ShouldMatch: false},
+			},
+		},
+		{
+			Name:      "Rust signatures",
+			Language:  core.LanguageCodeRust,
+			FilePaths: []string{"fixtures/testShapes.rs"},
+			Signatures: []*callgraphv1.Signature{
+				callSignature("openai.client", core.LanguageCodeRust, MatchAny, "async_openai::Client::new"),
+				callSignature("http.client", core.LanguageCodeRust, MatchAny, "reqwest::*"),
+				callSignature("anthropic.client", core.LanguageCodeRust, MatchAny, "anthropic::Client::new"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "openai.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeRust, MinEvidenceCount: 1},
+				{SignatureID: "http.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeRust, MinEvidenceCount: 1},
+				{SignatureID: "anthropic.client", ShouldMatch: false},
+			},
+		},
+		{
+			Name:      "PHP signatures",
+			Language:  core.LanguageCodePHP,
+			FilePaths: []string{"fixtures/testShapes.php"},
+			Signatures: []*callgraphv1.Signature{
+				callSignature("openai.client", core.LanguageCodePHP, MatchAny, "OpenAI::client"),
+				callSignature("http.client", core.LanguageCodePHP, MatchAny, "GuzzleHttp\\Client"),
+				callSignature("anthropic.client", core.LanguageCodePHP, MatchAny, "Anthropic::client"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "openai.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePHP, MinEvidenceCount: 1},
+				{SignatureID: "http.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePHP, MinEvidenceCount: 1},
+				{SignatureID: "anthropic.client", ShouldMatch: false},
+			},
+		},
+		{
+			Name:      "Ruby signatures",
+			Language:  core.LanguageCodeRuby,
+			FilePaths: []string{"fixtures/testShapes.rb"},
+			Signatures: []*callgraphv1.Signature{
+				callSignature("openai.client", core.LanguageCodeRuby, MatchAny, "OpenAI::Client.new"),
+				callSignature("http.client", core.LanguageCodeRuby, MatchAny, "Net::HTTP.*"),
+				callSignature("anthropic.client", core.LanguageCodeRuby, MatchAny, "Anthropic::Client.new"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "openai.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeRuby, MinEvidenceCount: 2},
+				{SignatureID: "http.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeRuby, MinEvidenceCount: 1},
+				{SignatureID: "anthropic.client", ShouldMatch: false},
 			},
 		},
 		{
@@ -859,15 +931,17 @@ func TestSignatureMatcher(t *testing.T) {
 	}
 }
 
-// commonJSSignature is a JavaScript signature with one call condition.
-func commonJSSignature(id, call string) *callgraphv1.Signature {
+// callSignature is a signature of one language with a call condition for each call.
+func callSignature(id string, language core.LanguageCode, match string, calls ...string) *callgraphv1.Signature {
+	conditions := make([]*callgraphv1.Signature_LanguageMatcher_SignatureCondition, 0, len(calls))
+	for _, call := range calls {
+		conditions = append(conditions, &callgraphv1.Signature_LanguageMatcher_SignatureCondition{Type: "call", Value: call})
+	}
+
 	return &callgraphv1.Signature{
 		Id: id,
 		Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
-			"javascript": {
-				Match:      "any",
-				Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{{Type: "call", Value: call}},
-			},
+			string(language): {Match: match, Conditions: conditions},
 		},
 	}
 }

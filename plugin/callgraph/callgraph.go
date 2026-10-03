@@ -98,6 +98,7 @@ type CallGraph struct {
 	Tree              core.ParseTree
 	assignmentGraph   assignmentGraph
 	classConstructors map[string]bool
+	languageCode      core.LanguageCode
 	nodeCount         int  // Track total nodes added
 	limitExceeded     bool // Flag to indicate if processing was truncated
 }
@@ -116,6 +117,7 @@ func newCallGraph(fileName string, rootNode *sitter.Node, imports []*ast.ImportN
 		Tree:              tree,
 		assignmentGraph:   *newAssignmentGraph(),
 		classConstructors: make(map[string]bool),
+		languageCode:      language.Meta().Code,
 	}
 
 	// Add root node to the call graph

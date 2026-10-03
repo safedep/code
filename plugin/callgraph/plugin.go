@@ -41,6 +41,10 @@ var supportedLanguages = []core.LanguageCode{
 	core.LanguageCodeGo,
 	core.LanguageCodeJavascript,
 	core.LanguageCodeTypescript,
+	core.LanguageCodeCSharp,
+	core.LanguageCodeRust,
+	core.LanguageCodePHP,
+	core.LanguageCodeRuby,
 }
 
 func (p *callgraphPlugin) SupportedLanguages() []core.LanguageCode {
@@ -100,6 +104,10 @@ func buildCallGraph(tree core.ParseTree, lang core.Language, filePath string) (*
 func processNode(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
 	if node == nil {
 		return newProcessorResult()
+	}
+
+	if nodeProcessor, exists := languageNodeProcessors[callGraph.languageCode][node.Type()]; exists {
+		return nodeProcessor(node, treeData, currentNamespace, callGraph, metadata)
 	}
 
 	nodeProcessor, exists := nodeProcessors[node.Type()]

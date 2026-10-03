@@ -64,6 +64,22 @@ type nodeProcessor func(node *sitter.Node, treeData []byte, currentNamespace str
 
 var nodeProcessors map[string]nodeProcessor
 
+// languageNodeProcessors holds the processors of a language for node types
+// whose shape differs from the shared processors, or that another grammar
+// uses with another meaning. processNode looks here first.
+var languageNodeProcessors = map[core.LanguageCode]map[string]nodeProcessor{}
+
+// registerLanguageProcessors adds the node processors of a language. A
+// language file calls it from init.
+func registerLanguageProcessors(code core.LanguageCode, processors map[string]nodeProcessor) {
+	if languageNodeProcessors[code] == nil {
+		languageNodeProcessors[code] = map[string]nodeProcessor{}
+	}
+	for nodeType, processor := range processors {
+		languageNodeProcessors[code][nodeType] = processor
+	}
+}
+
 func init() {
 	nodeProcessors = map[string]nodeProcessor{
 		"module":               emptyProcessor,

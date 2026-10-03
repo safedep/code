@@ -2,6 +2,7 @@ package callgraph
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -302,10 +303,45 @@ func ValidateSignatures(signatures []*callgraphv1.Signature) error {
 			return fmt.Errorf("signature %d is nil", i)
 		}
 
-		if err := v.Validate(signature); err != nil {
+		if err := withoutSupportedLanguageKeys(v.Validate(signature)); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// withoutSupportedLanguageKeys drops the violations of the language list in
+// the signature schema for a language that this plugin supports. The schema
+// in safedep/api lists fewer languages than the plugin supports.
+func withoutSupportedLanguageKeys(err error) error {
+	var validationErr *protovalidate.ValidationError
+	if !errors.As(err, &validationErr) {
+		return err
+	}
+
+	var kept []*protovalidate.Violation
+	for _, violation := range validationErr.Violations {
+		if !isSupportedLanguageKey(violation) {
+			kept = append(kept, violation)
+		}
+	}
+
+	if len(kept) == 0 {
+		return nil
+	}
+	return &protovalidate.ValidationError{Violations: kept}
+}
+
+func isSupportedLanguageKey(violation *protovalidate.Violation) bool {
+	if !violation.Proto.GetForKey() || violation.Proto.GetRuleId() != "string.in" {
+		return false
+	}
+
+	elements := violation.Proto.GetField().GetElements()
+	if len(elements) != 1 || elements[0].GetFieldName() != "languages" {
+		return false
+	}
+
+	return slices.Contains(supportedLanguages, core.LanguageCode(elements[0].GetStringKey()))
 }
