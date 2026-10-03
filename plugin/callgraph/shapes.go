@@ -236,7 +236,7 @@ func (p *shapedProcessors) resolve(node *sitter.Node, treeData []byte, currentNa
 		return firstValue(processNode(node, treeData, currentNamespace, callGraph, metadata))
 	}
 
-	if parenthesizedTypes[nodeType] && node.NamedChildCount() == 1 {
+	if wrapperTypes[nodeType] && node.NamedChildCount() == 1 {
 		return p.resolve(node.NamedChild(0), treeData, currentNamespace, callGraph, metadata)
 	}
 
@@ -256,9 +256,15 @@ func (p *shapedProcessors) resolve(node *sitter.Node, treeData []byte, currentNa
 	return p.resolvePath(node.Content(treeData), currentNamespace, callGraph)
 }
 
-// parenthesizedTypes are the node types of an expression in parentheses,
-// as in PHP (new Encoder())->encode().
-var parenthesizedTypes = map[string]bool{"parenthesized_expression": true, "parenthesized_statements": true}
+// wrapperTypes are the node types that have the value of their only inner
+// expression: parentheses, as in PHP (new Encoder())->encode(), and the
+// Rust ? and .await, as in Tensor::arange(0.0, n, &dev)?.unsqueeze(1).
+var wrapperTypes = map[string]bool{
+	"parenthesized_expression": true,
+	"parenthesized_statements": true,
+	"try_expression":           true,
+	"await_expression":         true,
+}
 
 // resolvePath returns the namespace of a qualified name. The first segment
 // resolves through the scope chain, so an imported alias or a variable

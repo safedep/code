@@ -1713,6 +1713,8 @@ func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 		// Simple function call: func()
 		funcName := functionNode.Content(treeData)
 		qualifiedName, resolved = resolveJSIdentifier(funcName, currentNamespace, callGraph)
+	case "import":
+		qualifiedName, resolved = jsDynamicImport(argumentsNode, treeData)
 	default:
 		// Other types (e.g., function expressions) - try as identifier
 		qualifiedName = functionNode.Content(treeData)
@@ -1733,6 +1735,25 @@ func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 	log.Debugf("JS call: %s -> %s", currentNamespace, qualifiedName)
 
 	return result
+}
+
+// jsDynamicImport returns the module of a dynamic import, as in
+// await import("x"), in the form of a Ruby require or a C# using: x//*.
+// The import loads the module, but the names it binds are often out of
+// reach, as in import("x").then(({ pipeline }) => pipeline()).
+func jsDynamicImport(argumentsNode *sitter.Node, treeData []byte) (string, bool) {
+	if argumentsNode == nil || argumentsNode.NamedChildCount() == 0 {
+		return "", false
+	}
+	module := argumentsNode.NamedChild(0)
+	if module.Type() != "string" {
+		return "", false
+	}
+	name := strings.Trim(module.Content(treeData), "'\"`")
+	if name == "" {
+		return "", false
+	}
+	return strings.Join(splitQualifiedName(name, core.LanguageCodeJavascript), namespaceSeparator) + namespaceSeparator + "*", true
 }
 
 // resolveJSMemberExpression resolves JavaScript member expressions like obj.method or pkg.func

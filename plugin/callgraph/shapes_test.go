@@ -44,6 +44,7 @@ func TestShapedLanguageCalls(t *testing.T) {
 				"reqwest//Client//new",
 				"reqwest//Client//get//send",
 				"serde_json//to_string",
+				"candle_core//Tensor//arange//unsqueeze",
 				"println",
 				"fixtures/testShapes.rs//main",
 			},

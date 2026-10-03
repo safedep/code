@@ -272,11 +272,15 @@ func TestSignatureMatcher(t *testing.T) {
 				argSignature("crypto.md5", core.LanguageCodeJavascript, "crypto/createHash", "'md5'", `"md5"`),
 				callSignature("openai.chat", core.LanguageCodeJavascript, MatchAny, "openai/chat/completions/create"),
 				argSignature("crypto.sha1", core.LanguageCodeJavascript, "crypto/createHash", "'sha1'"),
+				callSignature("transformers", core.LanguageCodeJavascript, MatchAny, "@xenova/transformers/*"),
+				callSignature("dynamic.import", core.LanguageCodeJavascript, MatchAny, "import"),
 			},
 			ExpectedMatches: []signatureMatchExpectation{
 				{SignatureID: "crypto.md5", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
 				{SignatureID: "openai.chat", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
 				{SignatureID: "crypto.sha1", ShouldMatch: false},
+				{SignatureID: "transformers", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
+				{SignatureID: "dynamic.import", ShouldMatch: false},
 			},
 		},
 		{
