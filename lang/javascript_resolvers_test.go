@@ -51,6 +51,22 @@ var javascriptImportExpectations = []ImportExpectations{
 			"ImportNode{ModuleName: @xyz/mno, ModuleItem: d, ModuleAlias: d, WildcardImport: false}",
 		},
 	},
+	{
+		filePath: "fixtures/imports_commonjs.js",
+		imports: []string{
+			"ImportNode{ModuleName: router, ModuleItem: , ModuleAlias: Router, WildcardImport: false}",
+			"ImportNode{ModuleName: body-parser, ModuleItem: urlencoded, ModuleAlias: urlEncoded, WildcardImport: false}",
+			"ImportNode{ModuleName: body-parser, ModuleItem: json, ModuleAlias: json, WildcardImport: false}",
+			"ImportNode{ModuleName: merge-descriptors, ModuleItem: , ModuleAlias: mixin, WildcardImport: false}",
+			"ImportNode{ModuleName: events, ModuleItem: EventEmitter, ModuleAlias: EventEmitter, WildcardImport: false}",
+			"ImportNode{ModuleName: debug, ModuleItem: , ModuleAlias: debug, WildcardImport: false}",
+			"ImportNode{ModuleName: jszip, ModuleItem: , ModuleAlias: JSZip, WildcardImport: false}",
+			"ImportNode{ModuleName: jszip, ModuleItem: generate, ModuleAlias: generate, WildcardImport: false}",
+			"ImportNode{ModuleName: reflect-metadata, ModuleItem: , ModuleAlias: , WildcardImport: true}",
+			"ImportNode{ModuleName: dotenv, ModuleItem: , ModuleAlias: , WildcardImport: true}",
+			"ImportNode{ModuleName: ./register-hooks, ModuleItem: , ModuleAlias: , WildcardImport: true}",
+		},
+	},
 }
 
 var javascriptFunctionExpectations = map[string][]string{

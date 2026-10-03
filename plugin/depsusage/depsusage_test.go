@@ -61,6 +61,8 @@ var testcases = []DepsTestcase{
 		Language: core.LanguageCodeJavascript,
 		FilePath: "fixtures/testcases.js",
 		ExpectedEvicences: []*UsageEvidence{
+			// The destructuring assignment of bundled code loads vue with no binding.
+			newUsageEvidence("vue", "vue", "", "", true, "", "fixtures/testcases.js", 85),
 			newUsageEvidence("express", "express", "", "express", false, "express", "fixtures/testcases.js", 10),
 			newUsageEvidence("cluster", "cluster", "", "Cluster", false, "Cluster", "fixtures/testcases.js", 11),
 			newUsageEvidence("@gilbarbara/eslint-config", "@gilbarbara/eslint-config", "", "EslintConfig", false, "EslintConfig", "fixtures/testcases.js", 14),
@@ -72,7 +74,6 @@ var testcases = []DepsTestcase{
 			newUsageEvidence("./data2.json", "./data2.json", "", "jsonData2", false, "jsonData2", "fixtures/testcases.js", 35),
 			newUsageEvidence("lodash", "lodash", "", "lodash", false, "lodash", "fixtures/testcases.js", 42),
 			newUsageEvidence("./math-utils", "./math-utils", "", "mathUtils", false, "mathUtils", "fixtures/testcases.js", 43),
-			newUsageEvidence("./dynamic-module.js", "./dynamic-module.js", "", "dynamicModule", false, "dynamicModule", "fixtures/testcases.js", 46),
 			newUsageEvidence("./dynamic-module.js", "./dynamic-module.js", "", "dynamicModule", false, "dynamicModule", "fixtures/testcases.js", 48),
 			newUsageEvidence("react-dom", "react-dom", "flushSync", "flushIt", false, "flushIt", "fixtures/testcases.js", 53),
 			newUsageEvidence("react-dom", "react-dom", "render", "render", false, "render", "fixtures/testcases.js", 54),

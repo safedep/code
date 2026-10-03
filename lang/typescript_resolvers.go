@@ -16,11 +16,37 @@ type typescriptResolvers struct {
 var _ core.LanguageResolvers = (*typescriptResolvers)(nil)
 var _ core.ObjectOrientedLanguageResolvers = (*typescriptResolvers)(nil)
 
+// import fs = require('fs')
+const tsImportRequireQuery = `
+	(import_statement
+		(import_require_clause
+			(identifier) @module_alias
+			source: (string (string_fragment) @module_name)))
+`
+
 func (r *typescriptResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, error) {
 	// The TypeScript tree-sitter grammar treats `import type` as regular
 	// import_statement nodes, so the shared ES queries already match them.
 	// No additional type-only import resolution is needed.
-	return resolveESImports(r.language, tree)
+	imports, err := resolveESImports(r.language, tree)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := tree.Data()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
+	}
+	err = ts.ExecuteQueries(ts.NewQueriesRequest(r.language, []ts.QueryItem{
+		ts.NewQueryItem(tsImportRequireQuery, func(m *sitter.QueryMatch) error {
+			node := ast.NewImportNode(data)
+			node.SetModuleAliasNode(m.Captures[0].Node)
+			node.SetModuleNameNode(m.Captures[1].Node)
+			imports = append(imports, node)
+			return nil
+		}),
+	}), data, tree)
+	return imports, err
 }
 
 func (r *typescriptResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {

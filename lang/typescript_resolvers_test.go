@@ -48,6 +48,14 @@ var typescriptImportExpectations = []ImportExpectations{
 			"ImportNode{ModuleName: @xyz/pqr, ModuleItem: bar, ModuleAlias: bar, WildcardImport: false}",
 		},
 	},
+	{
+		filePath: "fixtures/imports_require.ts",
+		imports: []string{
+			"ImportNode{ModuleName: path, ModuleItem: , ModuleAlias: path, WildcardImport: false}",
+			"ImportNode{ModuleName: ./types, ModuleItem: Foo, ModuleAlias: Foo, WildcardImport: false}",
+			"ImportNode{ModuleName: fs, ModuleItem: , ModuleAlias: fs, WildcardImport: false}",
+		},
+	},
 }
 
 var typescriptFunctionExpectations = map[string][]string{

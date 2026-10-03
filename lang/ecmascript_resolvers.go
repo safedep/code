@@ -30,41 +30,102 @@ const esWholeModuleImportQuery = `
 			(namespace_import (identifier) @module_alias))
 		source: (string (string_fragment) @module_name))
 
-	; const xyz = await import('xyz)
-	(lexical_declaration
-		(variable_declarator
-			name: (identifier) @module_alias
-			value: (await_expression
-				(call_expression
-					function: (import)
-					arguments: (arguments (string (string_fragment) @module_name))))))
+	; const xyz = await import('xyz'), and the same with var or let
+	(variable_declarator
+		name: (identifier) @module_alias
+		value: (await_expression
+			(call_expression
+				function: (import)
+				arguments: (arguments (string (string_fragment) @module_name)))))
 `
 
+// The require queries match a variable_declarator, so a const, let or var
+// declaration gives the same import.
 const esRequireModuleQuery = `
-	(lexical_declaration
 	(variable_declarator
 		name: (identifier) @module_alias
 		value: (call_expression
 			function: (identifier) @require_function
-			arguments: (arguments (string (string_fragment) @module_name)))))
+			arguments: (arguments (string (string_fragment) @module_name))))
 
-	(lexical_declaration
-		(variable_declarator
-			name: (object_pattern
-				(pair_pattern
-					key: (property_identifier) @module_item
-					value: (identifier) @module_alias))
-			value: (call_expression
+	(variable_declarator
+		name: (object_pattern
+			(pair_pattern
+				key: (property_identifier) @module_item
+				value: (identifier) @module_alias))
+		value: (call_expression
+			function: (identifier) @require_function
+			arguments: (arguments (string (string_fragment) @module_name))))
+
+	(variable_declarator
+		name: (object_pattern
+			(shorthand_property_identifier_pattern) @module_item)
+		value: (call_expression
+			function: (identifier) @require_function
+			arguments: (arguments (string (string_fragment) @module_name))))
+
+	; x = require('x'), as bundled code writes it
+	(assignment_expression
+		left: (identifier) @module_alias
+		right: (call_expression
+			function: (identifier) @require_function
+			arguments: (arguments (string (string_fragment) @module_name))))
+`
+
+// const EventEmitter = require('events').EventEmitter
+const esRequireMemberQuery = `
+	(variable_declarator
+		name: (identifier) @module_alias
+		value: (member_expression
+			object: (call_expression
+				function: (identifier) @require_function
+				arguments: (arguments (string (string_fragment) @module_name)))
+			property: (property_identifier) @module_item))
+`
+
+// const debug = require('debug')('app'): the alias holds what the module
+// returns, so it stands for the module.
+const esRequireCallQuery = `
+	(variable_declarator
+		name: (identifier) @module_alias
+		value: (call_expression
+			function: (call_expression
 				function: (identifier) @require_function
 				arguments: (arguments (string (string_fragment) @module_name)))))
+`
 
-	(lexical_declaration
-		(variable_declarator
-			name: (object_pattern
-				(shorthand_property_identifier_pattern) @module_item)
-			value: (call_expression
-				function: (identifier) @require_function
+// const { default: JSZip, generate } = await import('jszip')
+const esDynamicImportDestructuringQuery = `
+	(variable_declarator
+		name: (object_pattern
+			(pair_pattern
+				key: (property_identifier) @module_item
+				value: (identifier) @module_alias))
+		value: (await_expression
+			(call_expression
+				function: (import)
 				arguments: (arguments (string (string_fragment) @module_name)))))
+
+	(variable_declarator
+		name: (object_pattern
+			(shorthand_property_identifier_pattern) @module_item)
+		value: (await_expression
+			(call_expression
+				function: (import)
+				arguments: (arguments (string (string_fragment) @module_name)))))
+`
+
+// import 'reflect-metadata' loads a module for its side effects.
+const esSideEffectImportQuery = `
+	(import_statement
+		source: (string (string_fragment) @module_name))
+`
+
+// require('dotenv').config() uses a module with no binding.
+const esUnboundRequireQuery = `
+	(call_expression
+		function: (identifier) @require_function
+		arguments: (arguments . (string (string_fragment) @module_name)))
 `
 
 const esSpecifiedItemImportQuery = `
@@ -149,6 +210,92 @@ func resolveESImports(lang core.Language, tree core.ParseTree) ([]*ast.ImportNod
 			imports = append(imports, node)
 			return nil
 		}),
+		ts.NewQueryItem(esRequireMemberQuery, func(m *sitter.QueryMatch) error {
+			if !capturedRequire(m, data) {
+				return nil
+			}
+			node := ast.NewImportNode(data)
+			for _, capture := range m.Captures {
+				switch capture.Node.Type() {
+				case "string_fragment":
+					node.SetModuleNameNode(capture.Node)
+				case "property_identifier":
+					node.SetModuleItemNode(capture.Node)
+				case "identifier":
+					if capture.Node.Content(*data) != "require" {
+						node.SetModuleAliasNode(capture.Node)
+					}
+				}
+			}
+			imports = append(imports, node)
+			return nil
+		}),
+		ts.NewQueryItem(esRequireCallQuery, func(m *sitter.QueryMatch) error {
+			if !capturedRequire(m, data) {
+				return nil
+			}
+			node := ast.NewImportNode(data)
+			for _, capture := range m.Captures {
+				switch {
+				case capture.Node.Type() == "string_fragment":
+					node.SetModuleNameNode(capture.Node)
+				case capture.Node.Content(*data) != "require":
+					node.SetModuleAliasNode(capture.Node)
+				}
+			}
+			imports = append(imports, node)
+			return nil
+		}),
+		ts.NewQueryItem(esDynamicImportDestructuringQuery, func(m *sitter.QueryMatch) error {
+			node := ast.NewImportNode(data)
+			for _, capture := range m.Captures {
+				switch capture.Node.Type() {
+				case "string_fragment":
+					node.SetModuleNameNode(capture.Node)
+				case "property_identifier":
+					// The default export is the module itself.
+					if capture.Node.Content(*data) != "default" {
+						node.SetModuleItemNode(capture.Node)
+					}
+				case "shorthand_property_identifier_pattern":
+					node.SetModuleItemNode(capture.Node)
+					node.SetModuleAliasNode(capture.Node)
+				case "identifier":
+					node.SetModuleAliasNode(capture.Node)
+				}
+			}
+			imports = append(imports, node)
+			return nil
+		}),
+		ts.NewQueryItem(esSideEffectImportQuery, func(m *sitter.QueryMatch) error {
+			statement := m.Captures[0].Node.Parent().Parent()
+			for i := 0; i < int(statement.NamedChildCount()); i++ {
+				if statement.NamedChild(i).Type() == "import_clause" {
+					return nil
+				}
+			}
+			node := ast.NewImportNode(data)
+			node.SetModuleNameNode(m.Captures[0].Node)
+			node.SetIsWildcardImport(true)
+			imports = append(imports, node)
+			return nil
+		}),
+		ts.NewQueryItem(esUnboundRequireQuery, func(m *sitter.QueryMatch) error {
+			if !capturedRequire(m, data) {
+				return nil
+			}
+			node := ast.NewImportNode(data)
+			for _, capture := range m.Captures {
+				if capture.Node.Type() == "string_fragment" {
+					node.SetModuleNameNode(capture.Node)
+				} else if boundRequire(capture.Node.Parent()) {
+					return nil
+				}
+			}
+			node.SetIsWildcardImport(true)
+			imports = append(imports, node)
+			return nil
+		}),
 	}
 
 	err = ts.ExecuteQueries(ts.NewQueriesRequest(lang, queryRequestItems), data, tree)
@@ -157,6 +304,43 @@ func resolveESImports(lang core.Language, tree core.ParseTree) ([]*ast.ImportNod
 	}
 
 	return imports, err
+}
+
+// capturedRequire reports a match whose require_function capture is the
+// identifier require.
+func capturedRequire(m *sitter.QueryMatch, data *[]byte) bool {
+	for _, capture := range m.Captures {
+		if capture.Node.Type() == "identifier" && capture.Node.Content(*data) == "require" {
+			return true
+		}
+	}
+	return false
+}
+
+// boundRequire reports a require call whose result a variable declarator
+// keeps, directly or through a member access, a call or an await. The
+// require queries resolve those.
+func boundRequire(call *sitter.Node) bool {
+	node := call
+	for node.Parent() != nil {
+		parent := node.Parent()
+		switch parent.Type() {
+		case "variable_declarator":
+			return true
+		case "assignment_expression":
+			return parent.ChildByFieldName("left").Type() == "identifier"
+		case "member_expression", "await_expression":
+			node = parent
+		case "call_expression":
+			if parent.ChildByFieldName("function") != node {
+				return false
+			}
+			node = parent
+		default:
+			return false
+		}
+	}
+	return false
 }
 
 // --- Function Queries ---

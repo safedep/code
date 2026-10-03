@@ -178,6 +178,21 @@ func TestSignatureMatcher(t *testing.T) {
 			},
 		},
 		{
+			Name:      "JavaScript CommonJS signatures",
+			Language:  core.LanguageCodeJavascript,
+			FilePaths: []string{"fixtures/testCommonJS.js"},
+			Signatures: []*callgraphv1.Signature{
+				commonJSSignature("anthropic.client", "@anthropic-ai/sdk"),
+				commonJSSignature("node.events.emitter", "events/EventEmitter"),
+				commonJSSignature("debug.logger", "debug"),
+			},
+			ExpectedMatches: []signatureMatchExpectation{
+				{SignatureID: "anthropic.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
+				{SignatureID: "node.events.emitter", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
+				{SignatureID: "debug.logger", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1},
+			},
+		},
+		{
 			Name:      "Python signatures",
 			Language:  core.LanguageCodePython,
 			FilePaths: []string{"fixtures/testFunctions.py"},
@@ -841,5 +856,18 @@ func TestSignatureMatcher(t *testing.T) {
 				})
 			}
 		})
+	}
+}
+
+// commonJSSignature is a JavaScript signature with one call condition.
+func commonJSSignature(id, call string) *callgraphv1.Signature {
+	return &callgraphv1.Signature{
+		Id: id,
+		Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
+			"javascript": {
+				Match:      "any",
+				Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{{Type: "call", Value: call}},
+			},
+		},
 	}
 }
