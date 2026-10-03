@@ -1121,14 +1121,23 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 
 		if creation, calledMethod := createdReceiver(methodQualifierObjectNode, methodName, hasChainedMethodInvocations, treeData); creation != nil {
 			created := objectCreationExpressionProcessor(creation, treeData, currentNamespace, callGraph, metadata)
+			var classes []string
 			for _, class := range created.ImmediateAssignments {
 				for _, target := range callGraph.assignmentGraph.resolve(class.Namespace) {
-					callGraph.addEdge(
-						currentNamespace, nil, methodInvocationNode,
-						target.Namespace+namespaceSeparator+calledMethod, methodInvocationNode,
-						argsResult,
-					)
+					classes = append(classes, target.Namespace)
 				}
+			}
+			if typeNode := creation.ChildByFieldName("type"); len(classes) == 0 && typeNode != nil {
+				// A class with no import, as one of the same package or of
+				// java.lang, keeps its name.
+				classes = append(classes, strings.ReplaceAll(withoutTypeArguments(typeNode.Content(treeData)), ".", namespaceSeparator))
+			}
+			for _, class := range classes {
+				callGraph.addEdge(
+					currentNamespace, nil, methodInvocationNode,
+					class+namespaceSeparator+calledMethod, methodInvocationNode,
+					argsResult,
+				)
 			}
 			return newProcessorResult()
 		}

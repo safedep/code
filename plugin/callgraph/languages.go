@@ -27,7 +27,7 @@ func init() {
 			"constructor_declaration":  {name: "name", body: "body", reachable: true},
 			"local_function_statement": {name: "name", body: "body", reachable: true},
 		},
-		skipped: []string{"using_directive", "file_scoped_namespace_declaration", "attribute_list"},
+		skipped: []string{"using_directive", "attribute_list"},
 	})
 
 	registerShapedLanguage(core.LanguageCodeRust, syntaxShapes{

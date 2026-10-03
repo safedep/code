@@ -326,11 +326,13 @@ func TestSignatureMatcher(t *testing.T) {
 				callSignature("pinecone.client", core.LanguageCodeJava, MatchAny, "io.pinecone.clients.Pinecone.Builder.build"),
 				callSignature("http.send", core.LanguageCodeJava, MatchAny, "com.example.http.Request.send"),
 				callSignature("http.join", core.LanguageCodeJava, MatchAny, "com.example.http.Request.join"),
+				callSignature("unresolved", core.LanguageCodeJava, MatchAll, "StringBuilder.append", "Local.run"),
 			},
 			ExpectedMatches: []signatureMatchExpectation{
 				{SignatureID: "pinecone.client", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJava, MinEvidenceCount: 1},
 				{SignatureID: "http.send", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJava, MinEvidenceCount: 1},
 				{SignatureID: "http.join", ShouldMatch: false},
+				{SignatureID: "unresolved", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJava, MinEvidenceCount: 1},
 			},
 		},
 		{

@@ -36,6 +36,19 @@ func TestShapedLanguageCalls(t *testing.T) {
 			},
 		},
 		{
+			// A file-scoped namespace, as in namespace Demo.App;, is a
+			// sibling of the declarations in this grammar. vet walks its
+			// children too, so a grammar that nests them keeps the calls.
+			language: core.LanguageCodeCSharp,
+			filePath: "fixtures/testFileScoped.cs",
+			calls: []string{
+				"OpenAI//Chat//*",
+				"fixtures/testFileScoped.cs//Agent//Ask",
+				"ChatClient",
+				"ChatClient//CompleteChat",
+			},
+		},
+		{
 			language: core.LanguageCodeRust,
 			filePath: "fixtures/testShapes.rs",
 			calls: []string{
@@ -84,7 +97,7 @@ func TestShapedLanguageCalls(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(string(tc.language), func(t *testing.T) {
+		t.Run(tc.filePath, func(t *testing.T) {
 			treeWalker, fileSystem, err := test.SetupBasicPluginContext([]string{tc.filePath}, []core.LanguageCode{tc.language})
 			require.NoError(t, err)
 
