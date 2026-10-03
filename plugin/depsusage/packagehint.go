@@ -36,12 +36,29 @@ func resolvePythonPackageHint(moduleName string) (string, error) {
 	if moduleName == "" {
 		return "", fmt.Errorf("invalid module name: %s", moduleName)
 	}
-	// @TODO - Resolve package name for popular top level modules
-	// eg. yaml -> pyyaml, usb -> pyusb
+
+	if distribution, ok := pythonDistributionOf(moduleName); ok {
+		return distribution, nil
+	}
+
 	if strings.Contains(moduleName, ".") {
 		return moduleName[:strings.Index(moduleName, ".")], nil
 	}
+
 	return moduleName, nil
+}
+
+// pythonDistributionOf returns the distribution that installs a module whose
+// import name differs from the distribution name, such as yaml from pyyaml.
+// A dotted key matches the module and its submodules.
+func pythonDistributionOf(moduleName string) (string, bool) {
+	parts := strings.Split(moduleName, ".")
+	for n := len(parts); n > 0; n-- {
+		if distribution, ok := pythonModuleDistributions[strings.Join(parts[:n], ".")]; ok {
+			return distribution, true
+		}
+	}
+	return "", false
 }
 
 func resolveGoPackageHint(moduleName string) (string, error) {
