@@ -72,11 +72,20 @@ const esRequireModuleQuery = `
 			arguments: (arguments (string (string_fragment) @module_name))))
 `
 
-// const EventEmitter = require('events').EventEmitter
+// const EventEmitter = require('events').EventEmitter, and the same as an
+// assignment, as bundled code writes it
 const esRequireMemberQuery = `
 	(variable_declarator
 		name: (identifier) @module_alias
 		value: (member_expression
+			object: (call_expression
+				function: (identifier) @require_function
+				arguments: (arguments (string (string_fragment) @module_name)))
+			property: (property_identifier) @module_item))
+
+	(assignment_expression
+		left: (identifier) @module_alias
+		right: (member_expression
 			object: (call_expression
 				function: (identifier) @require_function
 				arguments: (arguments (string (string_fragment) @module_name)))
@@ -89,6 +98,13 @@ const esRequireCallQuery = `
 	(variable_declarator
 		name: (identifier) @module_alias
 		value: (call_expression
+			function: (call_expression
+				function: (identifier) @require_function
+				arguments: (arguments (string (string_fragment) @module_name)))))
+
+	(assignment_expression
+		left: (identifier) @module_alias
+		right: (call_expression
 			function: (call_expression
 				function: (identifier) @require_function
 				arguments: (arguments (string (string_fragment) @module_name)))))
@@ -306,39 +322,50 @@ func resolveESImports(lang core.Language, tree core.ParseTree) ([]*ast.ImportNod
 	return imports, err
 }
 
-// capturedRequire reports a match whose require_function capture is the
-// identifier require.
+// capturedRequire reports a match whose called function is the identifier
+// require. An alias named require, as in const require = load('x').value,
+// does not count.
 func capturedRequire(m *sitter.QueryMatch, data *[]byte) bool {
 	for _, capture := range m.Captures {
-		if capture.Node.Type() == "identifier" && capture.Node.Content(*data) == "require" {
+		node := capture.Node
+		if node.Type() != "identifier" || node.Content(*data) != "require" {
+			continue
+		}
+		if call := node.Parent(); call != nil && call.Type() == "call_expression" && call.ChildByFieldName("function") == node {
 			return true
 		}
 	}
 	return false
 }
 
-// boundRequire reports a require call whose result a variable declarator
-// keeps, directly or through a member access, a call or an await. The
-// require queries resolve those.
+// boundRequire reports a require call that a require query resolves: the
+// value of a variable declarator or of an assignment to a name, directly,
+// through one member access or through one call. Any other form, as in
+// const config = require('dotenv').config(), stays an unbound import.
 func boundRequire(call *sitter.Node) bool {
-	node := call
-	for node.Parent() != nil {
-		parent := node.Parent()
-		switch parent.Type() {
-		case "variable_declarator":
-			return true
-		case "assignment_expression":
-			return parent.ChildByFieldName("left").Type() == "identifier"
-		case "member_expression", "await_expression":
-			node = parent
-		case "call_expression":
-			if parent.ChildByFieldName("function") != node {
-				return false
-			}
-			node = parent
-		default:
-			return false
-		}
+	value := call
+	parent := call.Parent()
+	if parent == nil {
+		return false
+	}
+	switch {
+	case parent.Type() == "member_expression" && parent.ChildByFieldName("object") == call,
+		parent.Type() == "call_expression" && parent.ChildByFieldName("function") == call:
+		value = parent
+	}
+	direct := value == call
+	holder := value.Parent()
+	if holder == nil {
+		return false
+	}
+	switch holder.Type() {
+	case "variable_declarator":
+		name := holder.ChildByFieldName("name")
+		return holder.ChildByFieldName("value") == value && name != nil &&
+			(name.Type() == "identifier" || direct && name.Type() == "object_pattern")
+	case "assignment_expression":
+		left := holder.ChildByFieldName("left")
+		return holder.ChildByFieldName("right") == value && left != nil && left.Type() == "identifier"
 	}
 	return false
 }
