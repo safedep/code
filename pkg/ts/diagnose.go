@@ -36,16 +36,17 @@ type Diagnostics struct {
 }
 
 // Diagnose walks the tree from root and reports its parse problems and its
-// node kinds. On ErrNodeLimit or a done ctx it returns the diagnostics of
-// the nodes before the stop with the error.
-func Diagnose(ctx context.Context, root *sitter.Node, opts WalkOptions) (Diagnostics, error) {
+// node kinds. maxNodes is the node limit of the walk, as WalkOptions.MaxNodes
+// sets it. On ErrNodeLimit or a done ctx it returns the diagnostics of the
+// nodes before the stop with the error.
+func Diagnose(ctx context.Context, root *sitter.Node, maxNodes int) (Diagnostics, error) {
 	d := Diagnostics{Kinds: map[string]bool{}}
 	if root == nil {
 		return d, nil
 	}
 	d.HasError = root.HasError()
-	opts.Anonymous = true
-	err := Walk(ctx, root, opts, func(n *sitter.Node) bool {
+	// A MISSING node can be anonymous, as a missing semicolon.
+	err := Walk(ctx, root, WalkOptions{MaxNodes: maxNodes, Anonymous: true}, func(n *sitter.Node) bool {
 		d.Nodes++
 		switch {
 		case n.IsMissing():

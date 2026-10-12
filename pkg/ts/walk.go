@@ -21,12 +21,13 @@ const ctxCheckInterval = 4096
 
 // WalkOptions bound a walk.
 type WalkOptions struct {
-	// MaxNodes is the largest number of nodes that the walk visits. Zero
-	// selects DefaultMaxNodes. A negative value removes the limit.
+	// MaxNodes is the largest number of named nodes that the walk visits.
+	// Zero selects DefaultMaxNodes. A negative value removes the limit.
 	MaxNodes int
 
 	// Anonymous makes the walk visit anonymous nodes too, such as the
-	// punctuation and the keywords.
+	// punctuation and the keywords. The node limit does not count them, so
+	// a walk with them stops at the same node as a walk without them.
 	Anonymous bool
 }
 
@@ -54,20 +55,22 @@ func Walk(ctx context.Context, root *sitter.Node, opts WalkOptions, visit Visit)
 	c := sitter.NewTreeCursor(root)
 	defer c.Close()
 
-	visited := 0
+	named := 0
 	for {
 		n := c.CurrentNode()
 		descend := true
-		if opts.Anonymous || n.IsNamed() {
-			if limit > 0 && visited >= limit {
+		if n.IsNamed() {
+			if limit > 0 && named >= limit {
 				return fmt.Errorf("%w of %d", ErrNodeLimit, limit)
 			}
-			visited++
-			if visited%ctxCheckInterval == 0 {
+			named++
+			if named%ctxCheckInterval == 0 {
 				if err := ctx.Err(); err != nil {
 					return err
 				}
 			}
+		}
+		if opts.Anonymous || n.IsNamed() {
 			descend = visit(n)
 		}
 		if descend && c.GoToFirstChild() {

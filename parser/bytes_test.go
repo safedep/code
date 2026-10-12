@@ -28,9 +28,9 @@ func TestParseBytes(t *testing.T) {
 		root    string
 	}{
 		{name: "parses with no file name", data: "require('x')", root: "program"},
-		{name: "ignores the name for the language", data: "a()", opts: []BytesOption{WithName("logo.svg")}, root: "program"},
+		{name: "ignores the name for the language", data: "a()", opts: []BytesOption{WithFileName("logo.svg")}, root: "program"},
 		{name: "rejects input over the limit", data: "a()", opts: []BytesOption{WithMaxBytes(2)}, wantErr: ErrInputTooLarge},
-		{name: "no limit at zero", data: strings.Repeat("a;", 10), opts: []BytesOption{WithMaxBytes(0)}, root: "program"},
+		{name: "no limit when negative", data: strings.Repeat("a;", 10), opts: []BytesOption{WithMaxBytes(-1)}, root: "program"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -54,7 +54,7 @@ func TestParseBytes(t *testing.T) {
 }
 
 func TestParseBytesFile(t *testing.T) {
-	tree, err := ParseBytes(context.Background(), javascript(t), []byte("a()"), WithName("dir/logo.svg"))
+	tree, err := ParseBytes(context.Background(), javascript(t), []byte("a()"), WithFileName("dir/logo.svg"))
 	require.NoError(t, err)
 
 	f, err := tree.File()
@@ -85,7 +85,7 @@ func TestParseBytesStopsAtDeadline(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel()
 	start := time.Now()
-	_, err := ParseBytes(ctx, javascript(t), data, WithMaxBytes(0))
+	_, err := ParseBytes(ctx, javascript(t), data, WithMaxBytes(-1))
 	assert.ErrorIs(t, err, context.DeadlineExceeded)
 	assert.Less(t, time.Since(start), 5*time.Second)
 }

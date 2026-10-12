@@ -18,7 +18,7 @@ import (
 func parseJS(t testing.TB, source string) core.ParseTree {
 	l, err := lang.NewJavascriptLanguage()
 	require.NoError(t, err)
-	tree, err := parser.ParseBytes(context.Background(), l, []byte(source), parser.WithMaxBytes(0))
+	tree, err := parser.ParseBytes(context.Background(), l, []byte(source), parser.WithMaxBytes(-1))
 	require.NoError(t, err)
 	return tree
 }
@@ -132,7 +132,7 @@ func TestDiagnose(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			root := parseJS(t, tc.source).Tree().RootNode()
-			d, err := ts.Diagnose(context.Background(), root, ts.WalkOptions{})
+			d, err := ts.Diagnose(context.Background(), root, 0)
 			require.NoError(t, err)
 			assert.Equal(t, tc.hasError, d.HasError)
 			assert.Equal(t, tc.missing, d.MissingCount)
@@ -157,7 +157,7 @@ func TestDiagnose(t *testing.T) {
 
 func TestDiagnoseKeepsFewPositions(t *testing.T) {
 	root := parseJS(t, strings.Repeat("let a = {\n", 150)).Tree().RootNode()
-	d, err := ts.Diagnose(context.Background(), root, ts.WalkOptions{})
+	d, err := ts.Diagnose(context.Background(), root, 0)
 	require.NoError(t, err)
 	assert.Greater(t, d.ErrorCount, 100)
 	assert.Len(t, d.Errors, 100)
@@ -169,7 +169,7 @@ func FuzzDiagnose(f *testing.F) {
 	}
 	f.Fuzz(func(t *testing.T, source string) {
 		root := parseJS(t, source).Tree().RootNode()
-		d, err := ts.Diagnose(context.Background(), root, ts.WalkOptions{})
+		d, err := ts.Diagnose(context.Background(), root, 0)
 		require.NoError(t, err)
 		assert.Equal(t, d.HasError, d.ErrorCount+d.MissingCount > 0)
 	})

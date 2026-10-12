@@ -15,7 +15,7 @@ func Example() {
 		panic(err)
 	}
 	source := "global['r'] = require\nconst { exec: run } = global.r('child_process')\nrun(atob(c))\n"
-	tree, err := parser.ParseBytes(context.Background(), l, []byte(source), parser.WithName("logo.svg"))
+	tree, err := parser.ParseBytes(context.Background(), l, []byte(source), parser.WithFileName("logo.svg"))
 	if err != nil {
 		panic(err)
 	}

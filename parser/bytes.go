@@ -26,15 +26,15 @@ type bytesConfig struct {
 // BytesOption changes how ParseBytes parses.
 type BytesOption func(*bytesConfig)
 
-// WithName sets the name that the File of the tree reports. A resolver that
-// keys its results by file name, such as the call graph, reads it. The
+// WithFileName sets the name that the File of the tree reports. A resolver
+// that keys its results by file name, such as the call graph, reads it. The
 // name does not select the language.
-func WithName(name string) BytesOption {
+func WithFileName(name string) BytesOption {
 	return func(c *bytesConfig) { c.name = name }
 }
 
-// WithMaxBytes sets the size limit of the input. A value of zero or less
-// removes the limit.
+// WithMaxBytes sets the size limit of the input. Zero selects
+// DefaultMaxBytes. A negative value removes the limit.
 func WithMaxBytes(n int) BytesOption {
 	return func(c *bytesConfig) { c.maxBytes = n }
 }
@@ -48,9 +48,12 @@ func ParseBytes(ctx context.Context, language core.Language, data []byte, opts .
 	if language == nil {
 		return nil, errors.New("no language to parse with")
 	}
-	cfg := bytesConfig{maxBytes: DefaultMaxBytes}
+	var cfg bytesConfig
 	for _, opt := range opts {
 		opt(&cfg)
+	}
+	if cfg.maxBytes == 0 {
+		cfg.maxBytes = DefaultMaxBytes
 	}
 	if cfg.maxBytes > 0 && len(data) > cfg.maxBytes {
 		return nil, fmt.Errorf("%w: %d bytes, limit %d", ErrInputTooLarge, len(data), cfg.maxBytes)

@@ -18,7 +18,7 @@ import (
 func analyze(t testing.TB, code core.LanguageCode, source string) *ecmascript.File {
 	l, err := lang.GetLanguage(string(code))
 	require.NoError(t, err)
-	tree, err := parser.ParseBytes(context.Background(), l, []byte(source), parser.WithMaxBytes(0))
+	tree, err := parser.ParseBytes(context.Background(), l, []byte(source), parser.WithMaxBytes(-1))
 	require.NoError(t, err)
 	f, err := ecmascript.Analyze(context.Background(), tree, ecmascript.Options{})
 	require.NoError(t, err)

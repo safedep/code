@@ -1,10 +1,13 @@
 package lang
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
+	"github.com/safedep/code/pkg/ts"
+	"github.com/safedep/dry/log"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -77,22 +80,16 @@ func resolveFunctionsByShape(tree core.ParseTree, shapes map[string]functionShap
 }
 
 // walkNamed visits the node and its named descendants in source order. It does
-// not visit the children of a node for which visit returns false.
+// not visit the children of a node for which visit returns false. The walk
+// has no node limit, as the resolvers had before ts.Walk.
 func walkNamed(node *sitter.Node, visit func(*sitter.Node) bool) {
-	if node == nil || !visit(node) {
-		return
-	}
-	for i := 0; i < int(node.NamedChildCount()); i++ {
-		walkNamed(node.NamedChild(i), visit)
+	if err := ts.Walk(context.Background(), node, ts.WalkOptions{MaxNodes: -1}, visit); err != nil {
+		log.Warnf("failed to walk the tree: %v", err)
 	}
 }
 
 func namedChildren(node *sitter.Node) []*sitter.Node {
-	children := make([]*sitter.Node, 0, node.NamedChildCount())
-	for i := 0; i < int(node.NamedChildCount()); i++ {
-		children = append(children, node.NamedChild(i))
-	}
-	return children
+	return ts.NamedChildren(node)
 }
 
 func firstNamedChildOfType(node *sitter.Node, types ...string) *sitter.Node {
