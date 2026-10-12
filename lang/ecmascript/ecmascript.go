@@ -531,7 +531,10 @@ func (a *Analysis) solve(ctx context.Context, names []string) error {
 		}
 		values := a.resolved[name]
 		before := len(values)
-		if before >= maxValues {
+		// A full name can still gain a value from a dependency that grows.
+		// appendValues then marks the analysis as truncated, so only a full
+		// name of a truncated analysis has nothing left to report.
+		if before >= maxValues && a.truncated {
 			continue
 		}
 		for _, s := range a.sources[name] {
