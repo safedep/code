@@ -7,3 +7,4 @@ SafeDep Code Analysis Framework
 > Code Analysis Framework (CAF) is under active development. Contracts and APIs are subject to change.
 
 See [docs/ADR.md](./docs/ADR.md) for architectural decisions.
+See [docs/detection.md](./docs/detection.md) for the APIs that security detections use.
