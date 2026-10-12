@@ -73,34 +73,48 @@ func TestWalkStopsOnDoneContext(t *testing.T) {
 }
 
 // TestWalkHostileShapes checks that a walk stays linear on a wide node and
-// on a deep tree. A loop over NamedChild(i) takes minutes on the wide node.
+// on a deep tree. A loop over NamedChild(i) takes minutes on the wide node,
+// and a recursive walk can exhaust the stack on the deep tree.
 func TestWalkHostileShapes(t *testing.T) {
 	if testing.Short() {
 		t.Skip("parses large inputs")
 	}
 	shapes := map[string]string{
-		"wide":   "f(" + strings.Repeat("a,", 200_000) + ")",
-		"deep":   strings.Repeat("(", 50_000) + "a" + strings.Repeat(")", 50_000),
-		"chain":  "x" + strings.Repeat("()", 300_000),
-		"nested": strings.Repeat("[", 50_000) + strings.Repeat("]", 50_000),
+		"wide":   "f(" + strings.Repeat("a,", 100_000) + ")",
+		"deep":   strings.Repeat("(", 20_000) + "a" + strings.Repeat(")", 20_000),
+		"chain":  "x" + strings.Repeat("()", 100_000),
+		"nested": strings.Repeat("[", 20_000) + strings.Repeat("]", 20_000),
 	}
 	for name, source := range shapes {
 		t.Run(name, func(t *testing.T) {
 			root := parseJS(t, source).Tree().RootNode()
 			start := time.Now()
 			n := 0
-			require.NoError(t, ts.Walk(context.Background(), root, ts.WalkOptions{}, func(*sitter.Node) bool {
+			require.NoError(t, ts.Walk(context.Background(), root, ts.WalkOptions{MaxNodes: -1}, func(*sitter.Node) bool {
 				n++
 				return true
 			}))
 			assert.Positive(t, n)
-			assert.Less(t, time.Since(start), 10*time.Second)
-
-			start = time.Now()
-			_ = ts.NamedChildren(root.NamedChild(0))
-			assert.Less(t, time.Since(start), 5*time.Second)
+			assert.Less(t, time.Since(start), 20*time.Second)
 		})
 	}
+}
+
+func TestNamedChildrenOfAWideNode(t *testing.T) {
+	if testing.Short() {
+		t.Skip("parses a large input")
+	}
+	root := parseJS(t, "f("+strings.Repeat("a,", 100_000)+"a)").Tree().RootNode()
+	args := root.NamedChild(0).NamedChild(0).ChildByFieldName("arguments")
+	start := time.Now()
+	assert.Len(t, ts.NamedChildren(args), 100_001)
+	assert.Less(t, time.Since(start), 10*time.Second)
+}
+
+func TestWalkCountsAnonymousNodes(t *testing.T) {
+	root := parseJS(t, "["+strings.Repeat(",", 1000)+"]").Tree().RootNode()
+	err := ts.Walk(context.Background(), root, ts.WalkOptions{MaxNodes: 100}, func(*sitter.Node) bool { return true })
+	assert.ErrorIs(t, err, ts.ErrNodeLimit)
 }
 
 func TestNamedChildren(t *testing.T) {

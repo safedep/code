@@ -19,13 +19,13 @@ func Example() {
 	if err != nil {
 		panic(err)
 	}
-	f, err := ecmascript.Analyze(context.Background(), tree, ecmascript.Options{})
+	a, err := ecmascript.Analyze(context.Background(), tree, ecmascript.Options{})
 	if err != nil {
 		panic(err)
 	}
-	for _, c := range f.Calls() {
-		for _, v := range f.Eval(c.Callee) {
-			if v.IsModuleMember("exec", "child_process") && ecmascript.ClassifyArg(c.Args[0]) == ecmascript.ArgComputed {
+	for _, c := range a.Calls() {
+		for _, v := range a.Eval(c.Callee) {
+			if v.IsModuleMember("exec", "child_process") && a.ClassifyArg(c.Arg(0)) == ecmascript.ArgComputed {
 				fmt.Printf("line %d runs a computed command\n", c.Node.StartPoint().Row+1)
 			}
 		}
