@@ -84,7 +84,7 @@ declaration in a function, or a `let` or `const` in a block, hides the global on
 stands for the global, so `globalThis.eval` is `eval` also in a file that declares a local `eval`.
 
 After the walk, the analysis solves the names to a fixed point. A result does not depend on the order
-of the calls of a detection. A set of values holds at most 16 values. At the node limit, at the
+of the calls of a detection. A set of values holds at most 16 values. A value that the limit drops marks the analysis as truncated. At the node limit, at the
 work budget of the fixed point, or after four rounds of aliases of the global object, `Analyze`
 returns what it has and `Truncated` reports it. A detection
 that must not miss a call can also check the callee name in `Call.Name`.
