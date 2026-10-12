@@ -94,6 +94,7 @@ func TestResolve(t *testing.T) {
 		{"destructured require", "const { exec } = require('child_process')", "exec", execV},
 		{"renamed destructure", "const { exec: run } = require('child_process')", "run", execV},
 		{"destructure with default", "const { exec: run = null } = require('child_process')", "run", execV},
+		{"shorthand destructure default", "const { run = eval } = cfg", "run", evalV},
 		{"destructure of an alias", "const c = require('child_process'); const { exec } = c", "exec", execV},
 		{"destructure of the global object", "const { eval: e } = globalThis", "e", evalV},
 		{"member of a module", "const run = require('child_process').exec", "run", execV},
@@ -109,6 +110,8 @@ func TestResolve(t *testing.T) {
 		{"default member of a dynamic import", "const { default: c } = await import('child_process')", "c", cpV},
 		{"two values", "let x = eval; x = require", "x", requireV},
 		{"local binding keeps the global", "function f() { var require = 0 }\nconst { exec } = require('child_process')", "exec", execV},
+		{"block binding keeps the global", "{ const eval = f }\neval(x)", "eval", evalV},
+		{"block let keeps the global", "if (c) { let eval = f }", "eval", evalV},
 		{"cycle with a value", "let a = eval; let b = a; a = b", "b", evalV},
 		{"unicode escape in a name", "const e = " + bs + "u0065val", "e", evalV},
 		{"unicode escape with braces", "const e = " + bs + "u{65}val", "e", evalV},
@@ -135,6 +138,7 @@ func TestResolveGlobals(t *testing.T) {
 		{"import x from 'm'", "x", []ecmascript.Value{{Module: "m"}}},
 		{"function f() { const x = eval }", "x", []ecmascript.Value{{Global: "x"}, evalV}},
 		{"x = eval", "x", []ecmascript.Value{{Global: "x"}, evalV}},
+		{"if (c) { var x = f() }", "x", nil},
 		{"const eval = f; globalThis.eval(x)", "eval", []ecmascript.Value{{Global: "f"}}},
 	}
 	for _, tc := range cases {
@@ -145,6 +149,15 @@ func TestResolveGlobals(t *testing.T) {
 	a := js(t, "x")
 	assert.Nil(t, a.Resolve(""))
 	assert.Nil(t, a.Resolve(strings.Repeat("a", 1000)))
+}
+
+func TestGlobalAliasRounds(t *testing.T) {
+	short := js(t, "global.g1 = globalThis; g1.g2 = globalThis; g2.r = eval")
+	assert.True(t, has(short.Resolve("r"), evalV))
+	assert.False(t, short.Truncated())
+
+	long := js(t, "global.g1 = globalThis; g1.g2 = globalThis; g2.g3 = globalThis; g3.g4 = globalThis; g4.g5 = globalThis; g5.r = eval")
+	assert.True(t, long.Truncated())
 }
 
 func TestGlobalObjectMemberReadsTheGlobal(t *testing.T) {

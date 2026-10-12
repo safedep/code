@@ -64,6 +64,19 @@ func TestWalkNodeLimit(t *testing.T) {
 	assert.Equal(t, 3, n)
 }
 
+func TestWalkStopsOnDoneContextOnASmallTree(t *testing.T) {
+	root := parseJS(t, "f(a)").Tree().RootNode()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	n := 0
+	err := ts.Walk(ctx, root, ts.WalkOptions{}, func(*sitter.Node) bool {
+		n++
+		return true
+	})
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.Zero(t, n)
+}
+
 func TestWalkStopsOnDoneContext(t *testing.T) {
 	root := parseJS(t, strings.Repeat("a;", 10_000)).Tree().RootNode()
 	ctx, cancel := context.WithCancel(context.Background())

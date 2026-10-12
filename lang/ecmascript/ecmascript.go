@@ -191,8 +191,10 @@ type Analysis struct {
 	// topLevel holds the names that a declaration or an import at the top
 	// level of the file binds. Such a name does not stand for its global.
 	topLevel map[string]bool
-	// functions holds the end bytes of the functions that the walk is in.
-	functions []uint32
+	// scopes holds the functions and the blocks that the walk is in, and
+	// functions counts the functions among them.
+	scopes    []scope
+	functions int
 
 	resolved   map[string][]Value
 	dependents map[string]map[string]bool
@@ -244,9 +246,14 @@ func Analyze(ctx context.Context, tree core.ParseTree, opts Options) (*Analysis,
 		return nil, err
 	}
 	bound := make([]bool, len(a.assignments))
-	for round := 0; round < maxRounds; round++ {
+	for round := 0; ; round++ {
 		added := a.bindGlobalMembers(bound)
 		if len(added) == 0 {
+			break
+		}
+		if round == maxRounds {
+			// A longer chain of aliases of the global object can bind more.
+			a.truncated = true
 			break
 		}
 		if err := a.solve(ctx, added); err != nil {
@@ -260,31 +267,62 @@ func Analyze(ctx context.Context, tree core.ParseTree, opts Options) (*Analysis,
 	return a, nil
 }
 
-// functionTypes are the nodes that open a function scope.
+// scope is a function or a block that the walk is in.
+type scope struct {
+	end      uint32
+	function bool
+}
+
+// functionTypes are the nodes that open a function scope. var declares a
+// name for the whole function.
 var functionTypes = map[string]bool{
 	"function_declaration": true, "function_expression": true, "function": true, "arrow_function": true,
 	"method_definition": true, "generator_function_declaration": true, "generator_function": true,
 }
 
-func (a *Analysis) visit(n *sitter.Node) {
-	// The walk visits a parent before its children, so the functions that
-	// end before n are behind it.
-	for len(a.functions) > 0 && n.StartByte() >= a.functions[len(a.functions)-1] {
-		a.functions = a.functions[:len(a.functions)-1]
-	}
-	if functionTypes[n.Type()] {
-		a.functions = append(a.functions, n.EndByte())
-	}
+// blockTypes are the nodes that open a block scope. let and const declare a
+// name for the block only.
+var blockTypes = map[string]bool{
+	"statement_block": true, "class_body": true, "switch_body": true, "for_statement": true,
+	"for_in_statement": true, "catch_clause": true,
+}
 
+// enter keeps the scopes of the walk. The walk visits a parent before its
+// children, so the scopes that end before n are behind it.
+func (a *Analysis) enter(n *sitter.Node) {
+	for len(a.scopes) > 0 && n.StartByte() >= a.scopes[len(a.scopes)-1].end {
+		if a.scopes[len(a.scopes)-1].function {
+			a.functions--
+		}
+		a.scopes = a.scopes[:len(a.scopes)-1]
+	}
+	switch t := n.Type(); {
+	case functionTypes[t]:
+		a.scopes = append(a.scopes, scope{end: n.EndByte(), function: true})
+		a.functions++
+	case blockTypes[t]:
+		a.scopes = append(a.scopes, scope{end: n.EndByte()})
+	}
+}
+
+func (a *Analysis) visit(n *sitter.Node) {
+	a.enter(n)
 	switch n.Type() {
 	case "import_statement":
 		a.bindImport(n)
-	case "variable_declarator":
-		pattern := n.ChildByFieldName("name")
-		if len(a.functions) == 0 {
-			a.declareTopLevel(pattern)
+	case "lexical_declaration", "variable_declaration":
+		// let and const at the top level are outside each block, and var is
+		// outside each function.
+		top := len(a.scopes) == 0 || (n.Type() == "variable_declaration" && a.functions == 0)
+		if top {
+			for _, d := range ts.NamedChildren(n) {
+				if d.Type() == "variable_declarator" {
+					a.declareTopLevel(d.ChildByFieldName("name"))
+				}
+			}
 		}
-		a.bindPattern(n, pattern, n.ChildByFieldName("value"))
+	case "variable_declarator":
+		a.bindPattern(n, n.ChildByFieldName("name"), n.ChildByFieldName("value"))
 	case "assignment_pattern":
 		// A default parameter, as r in (r = require) => r(x).
 		if left := n.ChildByFieldName("left"); left != nil && left.Type() == "identifier" {
@@ -444,6 +482,8 @@ func (a *Analysis) bindPattern(n, pattern, value *sitter.Node) {
 			}
 			key = a.Name(left)
 			name = key
+			// The default is a value too, as eval in { run = eval } = cfg.
+			a.bind(name, n, p.ChildByFieldName("right"), "")
 		case "pair_pattern":
 			k, v := p.ChildByFieldName("key"), p.ChildByFieldName("value")
 			if v != nil && v.Type() == "assignment_pattern" {
@@ -552,8 +592,9 @@ func (a *Analysis) bindGlobalMembers(bound []bool) []string {
 	return added
 }
 
-// Truncated reports an analysis that stopped at the node limit or at the
-// work budget of the names. The values of some names can then be missing.
+// Truncated reports an analysis that stopped at the node limit, at the work
+// budget of the names, or at the round limit of the aliases of the global
+// object. The values of some names can then be missing.
 func (a *Analysis) Truncated() bool { return a.truncated }
 
 // Calls returns the calls and the new expressions in source order, an outer

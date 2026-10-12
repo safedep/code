@@ -110,7 +110,7 @@ func hexRune(s string, i, n int) (rune, bool) {
 		return 0, false
 	}
 	v, err := strconv.ParseUint(s[i:i+n], 16, 32)
-	if err != nil || !utf8.ValidRune(rune(v)) {
+	if err != nil || v > utf8.MaxRune || !utf8.ValidRune(rune(v)) {
 		return 0, false
 	}
 	return rune(v), true

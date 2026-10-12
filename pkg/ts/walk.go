@@ -54,6 +54,9 @@ func Walk(ctx context.Context, root *sitter.Node, opts WalkOptions, visit Visit)
 		limit = DefaultMaxNodes
 	}
 
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	c := sitter.NewTreeCursor(root)
 	defer c.Close()
 

@@ -80,12 +80,13 @@ A `Value` is a global name (`require`, `eval`), a module (`child_process`), or a
 
 The analysis does not track scopes. A name stands for each value that the file binds to it anywhere.
 A name also stands for the global of that name, unless the file declares it at its top level. A
-declaration in a function hides the global only in that function. A member of the global object always
+declaration in a function, or a `let` or `const` in a block, hides the global only there. A member of the global object always
 stands for the global, so `globalThis.eval` is `eval` also in a file that declares a local `eval`.
 
 After the walk, the analysis solves the names to a fixed point. A result does not depend on the order
-of the calls of a detection. A set of values holds at most 16 values. At the node limit, or at the
-work budget of the fixed point, `Analyze` returns what it has and `Truncated` reports it. A detection
+of the calls of a detection. A set of values holds at most 16 values. At the node limit, at the
+work budget of the fixed point, or after four rounds of aliases of the global object, `Analyze`
+returns what it has and `Truncated` reports it. A detection
 that must not miss a call can also check the callee name in `Call.Name`.
 
 See the example in `lang/ecmascript/example_test.go`.
