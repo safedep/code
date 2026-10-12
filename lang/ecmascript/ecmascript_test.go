@@ -151,6 +151,20 @@ func TestResolveGlobals(t *testing.T) {
 	assert.Nil(t, a.Resolve(strings.Repeat("a", 1000)))
 }
 
+func TestValueLimitMarksTruncated(t *testing.T) {
+	var b strings.Builder
+	b.WriteString("var cp;")
+	for i := 0; i < 16; i++ {
+		b.WriteString("cp = require('m" + strconv.Itoa(i) + "');")
+	}
+	b.WriteString("var cp = require('child_process'); cp.exec(c)")
+	a := js(t, b.String())
+	assert.Len(t, a.Resolve("cp"), 16)
+	assert.True(t, a.Truncated())
+
+	assert.False(t, js(t, "var cp = require('child_process'); cp.exec(c)").Truncated())
+}
+
 func TestGlobalAliasRounds(t *testing.T) {
 	short := js(t, "global.g1 = globalThis; g1.g2 = globalThis; g2.r = eval")
 	assert.True(t, has(short.Resolve("r"), evalV))

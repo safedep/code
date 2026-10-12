@@ -545,7 +545,7 @@ func (a *Analysis) solve(ctx context.Context, names []string) error {
 					return err
 				}
 			}
-			values = appendValues(values, a.sourceValues(s, read)...)
+			values = a.appendValues(values, a.sourceValues(s, read)...)
 		}
 		if len(values) == before {
 			continue
@@ -594,7 +594,9 @@ func (a *Analysis) bindGlobalMembers(bound []bool) []string {
 
 // Truncated reports an analysis that stopped at the node limit, at the work
 // budget of the names, or at the round limit of the aliases of the global
-// object. The values of some names can then be missing.
+// object, or a name or an expression with more values than the value limit.
+// The values of some names can then be missing. Eval can also drop values,
+// so read Truncated after the calls of Eval.
 func (a *Analysis) Truncated() bool { return a.truncated }
 
 // Calls returns the calls and the new expressions in source order, an outer
@@ -629,7 +631,7 @@ func (a *Analysis) global(name string, read func(string)) []Value {
 	if name == "" || len(name) > maxName {
 		return nil
 	}
-	return appendValues([]Value{{Global: name}}, a.read(name, read)...)
+	return a.appendValues([]Value{{Global: name}}, a.read(name, read)...)
 }
 
 func (a *Analysis) read(name string, read func(string)) []Value {
@@ -720,7 +722,7 @@ func (a *Analysis) either(x, y *sitter.Node, read func(string), depth int) []Val
 	if depth >= maxBranch {
 		return nil
 	}
-	return appendValues(a.value(x, read, depth+1), a.value(y, read, depth+1)...)
+	return a.appendValues(a.value(x, read, depth+1), a.value(y, read, depth+1)...)
 }
 
 // callValues returns the values of a call: the module of require('m') or of
@@ -748,10 +750,10 @@ func (a *Analysis) callValues(n *sitter.Node, inner []Value) []Value {
 		switch {
 		case v.IsGlobal("require"), v == moduleRequire:
 			if m, ok := module(); ok {
-				out = appendValues(out, Value{Module: m})
+				out = a.appendValues(out, Value{Module: m})
 			}
 		case v.IsModuleMember("createRequire", "module", "node:module"):
-			out = appendValues(out, Value{Global: "require"})
+			out = a.appendValues(out, Value{Global: "require"})
 		}
 	}
 	return out
@@ -775,33 +777,38 @@ func (a *Analysis) member(values []Value, key string, read func(string)) []Value
 	for _, v := range values {
 		switch {
 		case functionMethods[key]:
-			out = appendValues(out, v)
+			out = a.appendValues(out, v)
 		case v.Module != "" && v.Member == "" && key == "default":
-			out = appendValues(out, v)
+			out = a.appendValues(out, v)
 		case v.Module != "" && v.Member == "":
-			out = appendValues(out, Value{Module: v.Module, Member: key})
+			out = a.appendValues(out, Value{Module: v.Module, Member: key})
 		case v.Member != "" || v.Module != "":
 		case globalObjects[v.Global]:
-			out = appendValues(out, a.global(key, read)...)
+			out = a.appendValues(out, a.global(key, read)...)
 		case v.Global == "process" && key == "mainModule", v.Global == "require" && key == "main":
 			// process.mainModule.require and require.main.require are
 			// module.require.
-			out = appendValues(out, Value{Global: "module"})
+			out = a.appendValues(out, Value{Global: "module"})
 		case v.Global != "":
-			out = appendValues(out, Value{Global: v.Global, Member: key})
+			out = a.appendValues(out, Value{Global: v.Global, Member: key})
 		}
 	}
 	return out
 }
 
-func appendValues(out []Value, values ...Value) []Value {
+// appendValues adds each value that out does not hold. At the value limit
+// it drops the rest and marks the analysis as truncated, so a detection
+// knows that a name can stand for more than it reports.
+func (a *Analysis) appendValues(out []Value, values ...Value) []Value {
 	for _, v := range values {
+		if slices.Contains(out, v) {
+			continue
+		}
 		if len(out) >= maxValues {
+			a.truncated = true
 			return out
 		}
-		if !slices.Contains(out, v) {
-			out = append(out, v)
-		}
+		out = append(out, v)
 	}
 	return out
 }
