@@ -392,25 +392,25 @@ func (p *projection) addClasses(ctx context.Context) error {
 		case node == nil:
 			p.ix.Classes = append(p.ix.Classes, fidx.Class{Key: key, Methods: methods[key]})
 		default:
-			p.ix.Classes = append(p.ix.Classes, fidx.Class{Key: key, Bases: bases[node.StartByte()], Methods: methods[key], Fields: p.fields(node)})
+			p.ix.Classes = append(p.ix.Classes, fidx.Class{Key: key, Bases: bases[spanOf(node)], Methods: methods[key], Fields: p.fields(node)})
 		}
 	}
 	return nil
 }
 
-// classBases returns the bases of each class by the start byte of the class
-// node.
-func (p *projection) classBases(ctx context.Context) (map[uint32][]string, error) {
-	bases := map[uint32][]string{}
+// classBases returns the bases of each class by the span of the class node.
+// A start byte does not tell a class from the program that starts with it.
+func (p *projection) classBases(ctx context.Context) (map[span][]string, error) {
+	bases := map[span][]string{}
 	resolvers, ok := p.language.Resolvers().(core.ObjectOrientedLanguageResolvers)
 	if !ok {
 		for _, node := range p.syntax {
 			switch {
 			case node == nil:
 			case node.Type() == "class_declaration" || node.Type() == "class":
-				bases[node.StartByte()] = p.heritage(node)
+				bases[spanOf(node)] = p.heritage(node)
 			case p.isGo():
-				bases[node.StartByte()] = p.goBases(node)
+				bases[spanOf(node)] = p.goBases(node)
 			}
 		}
 		return bases, nil
@@ -418,7 +418,7 @@ func (p *projection) classBases(ctx context.Context) (map[uint32][]string, error
 	if p.isJava() {
 		for _, node := range p.syntax {
 			if node != nil {
-				bases[node.StartByte()] = p.javaBases(node)
+				bases[spanOf(node)] = p.javaBases(node)
 			}
 		}
 		return bases, nil
@@ -432,7 +432,7 @@ func (p *projection) classBases(ctx context.Context) (map[uint32][]string, error
 	// takes its bases from its heritage.
 	for _, node := range p.syntax {
 		if node != nil && node.Type() == "class" {
-			bases[node.StartByte()] = p.heritage(node)
+			bases[spanOf(node)] = p.heritage(node)
 		}
 	}
 	for _, class := range classes {
@@ -440,7 +440,7 @@ func (p *projection) classBases(ctx context.Context) (map[uint32][]string, error
 		if name == nil || name.Parent() == nil || !class.HasInheritance() {
 			continue
 		}
-		bases[name.Parent().StartByte()] = class.BaseClasses()
+		bases[spanOf(name.Parent())] = class.BaseClasses()
 	}
 	return bases, nil
 }
