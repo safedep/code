@@ -24,6 +24,7 @@ func TestLanguageProfiles(t *testing.T) {
 		{core.LanguageCodeRust, "self", false},
 		{core.LanguageCodePHP, "$this", false},
 		{core.LanguageCodeRuby, "self", false},
+		{core.LanguageCodeKotlin, "this", true},
 	}
 
 	var codes []core.LanguageCode
@@ -62,8 +63,9 @@ func TestOnlyTypeScriptFallsBackToOtherSignatures(t *testing.T) {
 }
 
 func TestProfileOfUnknownLanguageHasNoProcessors(t *testing.T) {
-	profile := profileOf(core.LanguageCodeKotlin)
-	assert.Equal(t, core.LanguageCodeKotlin, profile.code)
+	unknown := core.LanguageCode("cobol")
+	profile := profileOf(unknown)
+	assert.Equal(t, unknown, profile.code)
 	assert.Empty(t, profile.processors)
 	assert.Empty(t, profile.builtins)
 }

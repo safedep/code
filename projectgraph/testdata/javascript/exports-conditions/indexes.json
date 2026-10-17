@@ -1,6 +1,6 @@
 [
   {
-    "version": "7", "path": "app/main.mjs", "language": "javascript",
+    "version": "8", "path": "app/main.mjs", "language": "javascript",
     "imports": [
       {"line": 1, "module": "@acme/lib", "item": "x", "alias": "x", "kind": "static", "namespace": "@acme//lib//x"},
       {"line": 2, "module": "@acme/lib/feature/y", "item": "y", "alias": "y", "kind": "static", "namespace": "@acme//lib//feature//y//y"}
@@ -12,7 +12,7 @@
     ]
   },
   {
-    "version": "7", "path": "lib/esm/index.mjs", "language": "javascript",
+    "version": "8", "path": "lib/esm/index.mjs", "language": "javascript",
     "exports": [{"name": "x", "target": "lib/esm/index.mjs//x", "line": 1}],
     "definitions": [
       {"key": "lib/esm/index.mjs", "kind": "module", "name": "index", "start_line": 1, "end_line": 1, "exported": true},
@@ -20,7 +20,7 @@
     ]
   },
   {
-    "version": "7", "path": "lib/cjs/index.cjs", "language": "javascript",
+    "version": "8", "path": "lib/cjs/index.cjs", "language": "javascript",
     "exports": [{"name": "x", "target": "lib/cjs/index.cjs//x", "line": 1}],
     "definitions": [
       {"key": "lib/cjs/index.cjs", "kind": "module", "name": "index", "start_line": 1, "end_line": 1, "exported": true},
@@ -28,7 +28,7 @@
     ]
   },
   {
-    "version": "7", "path": "lib/src/feature/y.js", "language": "javascript",
+    "version": "8", "path": "lib/src/feature/y.js", "language": "javascript",
     "exports": [{"name": "y", "target": "lib/src/feature/y.js//y", "line": 1}],
     "definitions": [
       {"key": "lib/src/feature/y.js", "kind": "module", "name": "y", "start_line": 1, "end_line": 1, "exported": true},

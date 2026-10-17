@@ -58,6 +58,7 @@ step.
 | TypeScript | step 33 | none | n/a | n/a | n/a | 0.094 | 2.31 s | 0.31 s | 0.27 s | 20 ms | 72 / 33 / 38 / 4 MiB |
 | Go | step 33 | govulncheck | n/a | 1.000 (9/9) stacks | n/a | 0.082 | 1.38 s | 0.38 s | 0.21 s | 22 ms | 102 / 43 / 36 / 4 MiB |
 | Java | step 33 | none | n/a | n/a | n/a | 0.148 | 1.01 s | 0.39 s | 0.28 s | 25 ms | 76 / 37 / 37 / 5 MiB |
+| Kotlin | step 35 | none | n/a | n/a | n/a | 0.283 | 1.27 s | 0.46 s | 0.48 s | 32 ms | 94 / 45 / 45 / 8 MiB |
 
 Python is now at 0.940, just under the precision gate of the design (0.95
 for `high` and `medium` edges). After step 27 it is 0.954, and its recall is
@@ -84,6 +85,18 @@ unresolved sites are the records of the calls on a loop variable of an
 interface type, as `item.onEvent(data)`, because a class of a dependency
 can implement the interface. The others are calls on the value of a call,
 as `invoke` in `getClass().getMethod(...).invoke(...)`.
+
+The Kotlin row comes from step 35, with 4 workers. No public set with a
+license ships Kotlin call graphs, so Kotlin has no precision or recall. The
+synthetic Kotlin project of 1,000 files has the shape of the Java project,
+with the static members in a companion object, the listener calls in a
+lambda and an extension function per module. It has 32,953 edges and 9,341
+unresolved sites, and the reach query finds 200 of 200 targets. The
+unresolved rate is higher than the rate of Java, because a call on the
+value of a call, as `toString()` in `result.toString().tag00()`, and a call
+on a list of the standard library, as `items.forEach`, are records. The
+link step is 0.2 s slower per 1,000 files than Java, because each call
+with a receiver looks for an extension function of its name.
 
 The step 27 rows come from one more run of the benchmark at 1,000 files.
 The declared types of TypeScript narrow the calls on a typed field, as

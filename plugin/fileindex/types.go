@@ -68,11 +68,13 @@ func (p *projection) addInterfaces() {
 // interfaceBases returns the interfaces that an interface extends or, in
 // Go, embeds.
 func (p *projection) interfaceBases(node *sitter.Node) []string {
-	switch {
+	switch rule := p.rules().bases; {
 	case p.isGo():
 		return p.goBases(node)
 	case p.isJava():
 		return p.javaBases(node)
+	case rule != nil:
+		return rule(p, node)
 	}
 	var bases []string
 	for _, child := range ts.NamedChildren(node) {
@@ -272,11 +274,13 @@ func (p *projection) typedParam(param *sitter.Node) (fidx.Typed, bool) {
 // parameter properties of the constructor. A Go struct has its named
 // fields.
 func (p *projection) fields(class *sitter.Node) []fidx.Typed {
-	switch {
+	switch rule := p.rules().fields; {
 	case p.isGo():
 		return p.goFields(class)
 	case p.isJava():
 		return p.javaFields(class)
+	case rule != nil:
+		return rule(p, class)
 	}
 	body := class.ChildByFieldName("body")
 	if body == nil || p.ix.Language != core.LanguageCodeTypescript {

@@ -98,7 +98,7 @@
     "main.py": "indexed"
   },
   "stats": {
-    "version": "7",
+    "version": "8",
     "files": 2,
     "nodes": 4,
     "edges": 3,

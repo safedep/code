@@ -44,6 +44,7 @@ func newCallGraph(fileName string, language core.LanguageCode) *CallGraph {
 		profile:           profileOf(language),
 		Nodes:             make(map[string]*CallGraphNode),
 		classConstructors: make(map[string]bool),
+		results:           make(map[string]bool),
 	}
 	cg.assignmentGraph = *newAssignmentGraph(&cg.truncations, cg.profile.literals)
 
@@ -200,7 +201,7 @@ func (cg *CallGraph) calleeSite(expression *sitter.Node) ast.NodePosition {
 	if !ok || shape.index {
 		return site
 	}
-	if name := fieldChild(expression, shape.name); name != nil {
+	if name := shape.name.of(expression); name != nil {
 		end := ast.GetNodePosition(name)
 		site.EndByte, site.EndLine, site.EndColumn = end.EndByte, end.EndLine, end.EndColumn
 	}

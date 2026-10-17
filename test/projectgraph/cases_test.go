@@ -102,7 +102,7 @@ type uncertainty struct {
 	Site string `yaml:"site,omitempty"`
 }
 
-var languageCodes = []core.LanguageCode{core.LanguageCodePython, core.LanguageCodeJavascript, core.LanguageCodeTypescript, core.LanguageCodeGo, core.LanguageCodeJava}
+var languageCodes = []core.LanguageCode{core.LanguageCodePython, core.LanguageCodeJavascript, core.LanguageCodeTypescript, core.LanguageCodeGo, core.LanguageCodeJava, core.LanguageCodeKotlin}
 
 func TestCases(t *testing.T) {
 	dirs, err := filepath.Glob(filepath.Join("cases", "*", "*"))

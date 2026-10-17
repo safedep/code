@@ -46,6 +46,12 @@ func javaLanguage(t *testing.T) core.Language {
 	return language
 }
 
+func kotlinLanguage(t *testing.T) core.Language {
+	language, err := lang.NewKotlinLanguage()
+	require.NoError(t, err)
+	return language
+}
+
 // buildFromSource builds the call graph of source. The tree lives until the
 // end of the test, so the test can read the nodes of the graph.
 func buildFromSource(t *testing.T, language core.Language, name, source string) *CallGraph {
@@ -291,6 +297,18 @@ func TestUnresolvedCallSites(t *testing.T) {
 				{"fns[0]", "", "", UnresolvedComputedName},
 				{"f()", "", "", UnresolvedComputedName},
 				{"handlers[k].Serve", "handlers[k]", "Serve", UnresolvedUnknownReceiver},
+			},
+		},
+		{
+			name:     "kotlin unknown receivers, call results and computed names",
+			language: kotlinLanguage(t),
+			file:     "recv.kt",
+			source:   "fun run(c: Client) {\n    \"x\".shout()\n    Runtime.getRuntime().exec(\"ls\")\n    val log = Logger.getLogger(\"a\")\n    log.info(\"b\")\n    handlers[0](1)\n    with(c) { go() }\n    Parser().parse()\n}\n",
+			expected: []site{
+				{"\"x\".shout", "\"x\"", "shout", UnresolvedUnknownReceiver},
+				{"Runtime.getRuntime().exec", "Runtime.getRuntime()", "exec", UnresolvedUnknownReceiver},
+				{"log.info", "log", "info", UnresolvedUnknownReceiver},
+				{"handlers[0]", "", "", UnresolvedComputedName},
 			},
 		},
 	}
@@ -683,5 +701,36 @@ func TestPythonCallGivesNoValue(t *testing.T) {
 			}
 			assert.NotContains(t, targets, tc.target)
 		})
+	}
+}
+
+func TestKotlinInstanceAndClassCalls(t *testing.T) {
+	cg := buildFromSource(t, kotlinLanguage(t), "a.kt", strings.Join([]string{
+		"class A : Base(1) {",
+		"    fun run() { this.helper(); helper(); super.run(); Parser().parse() }",
+		"    fun helper() {}",
+		"    companion object { val log = Log.get(); fun make() = A() }",
+		"}",
+	}, "\n")+"\n")
+
+	assert.Equal(t, []string{"a.kt//A//helper", "a.kt//A//helper", "super//run", "Parser", "Parser//parse"}, calleesOf(cg, "a.kt//A//run"))
+	assert.Equal(t, []string{"Base"}, calleesOf(cg, "a.kt//A"), "the class calls the constructor of its base")
+	assert.Equal(t, []string{"Log//get"}, calleesOf(cg, "a.kt//A//<clinit>"), "the companion runs its initializer when the class loads")
+	assert.Contains(t, cg.Nodes, "a.kt//A//make", "a function of the companion is a member of the class")
+}
+
+func TestStringInterpolationsRun(t *testing.T) {
+	cases := []struct {
+		language core.Language
+		file     string
+		source   string
+		caller   string
+	}{
+		{pythonLanguage(t), "a.py", "def f():\n    return f\"{danger()}\"\n", "a.py//f"},
+		{kotlinLanguage(t), "a.kt", "fun f() = \"x ${danger()}\"\n", "a.kt//f"},
+	}
+	for _, tc := range cases {
+		cg := buildFromSource(t, tc.language, tc.file, tc.source)
+		assert.Contains(t, calleesOf(cg, tc.caller), "danger", tc.file)
 	}
 }

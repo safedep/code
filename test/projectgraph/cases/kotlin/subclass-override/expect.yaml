@@ -1,0 +1,48 @@
+source: safedep:hand
+description: Step.run calls parse with no receiver, so the call runs on this. parse is abstract in Step, so it is no definition, the site keeps a record, and cha edges go to the parse of each subclass, YamlStep and ZipStep, which extends YamlStep. pick declares the result type Step, so step.run() narrows to Step.
+roots:
+  - key: src/com/shop/App.kt//main
+    kind: main
+    rule: java.main
+edges:
+  - from: src/com/shop/App.kt//main
+    to: src/com/shop/Step.kt//Step//run
+    kind: member
+    confidence: high
+    site: src/com/shop/App.kt:5
+  - from: src/com/shop/Step.kt//Step//run
+    to: src/com/shop/Steps.kt//YamlStep//parse
+    kind: cha
+    confidence: medium
+    site: src/com/shop/Step.kt:5
+  - from: src/com/shop/Step.kt//Step//run
+    to: src/com/shop/Steps.kt//ZipStep//parse
+    kind: cha
+    confidence: medium
+    site: src/com/shop/Step.kt:5
+unresolved:
+  - caller: src/com/shop/Step.kt//Step//run
+    site: src/com/shop/Step.kt:5
+    reason: no-definition
+    method: parse
+results:
+  - target: java//nio//file//Files//readAllBytes
+    status: found
+    path:
+      - key: src/com/shop/App.kt//main
+      - key: src/com/shop/Step.kt//Step//run
+        site: src/com/shop/App.kt:5
+        kind: member
+        confidence: high
+      - key: src/com/shop/Steps.kt//ZipStep//parse
+        site: src/com/shop/Step.kt:5
+        kind: cha
+        confidence: medium
+      - key: java//nio//file//Files//readAllBytes
+        site: src/com/shop/Steps.kt:13
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/com/shop/Steps.kt//ZipStep//parse
+        site: src/com/shop/Steps.kt:13
+        reached: true

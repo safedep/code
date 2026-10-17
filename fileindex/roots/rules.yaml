@@ -107,7 +107,7 @@ rules:
   - id: java.spring.component
     language: java
     kind: framework
-    match: { annotation: ["@Component", "@Service", "@Repository", "@Configuration"] }
+    match: { annotation: ["@Component", "@Service", "@Repository", "@Configuration", "@SpringBootApplication"] }
   - id: test.files
     language: any
     kind: test

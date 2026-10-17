@@ -164,10 +164,16 @@ func skippedProcessor(node *sitter.Node, treeData []byte, currentNamespace strin
 }
 
 // literalValueProcessor gives the literal as its value. A literal belongs to
-// no scope, so its namespace is its text.
+// no scope, so its namespace is its text. The interpolations of a string
+// literal run, as danger() in "${danger()}".
 func literalValueProcessor(literalNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
 	if literalNode == nil {
 		return newProcessorResult()
+	}
+	for i := 0; i < int(literalNode.NamedChildCount()); i++ {
+		if child := literalNode.NamedChild(i); callGraph.profile.strings.interpolations[child.Type()] {
+			processChildren(child, treeData, currentNamespace, callGraph, metadata)
+		}
 	}
 
 	result := newProcessorResult()

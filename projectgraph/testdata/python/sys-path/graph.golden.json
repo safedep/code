@@ -82,7 +82,7 @@
     "lib/shared.py": "indexed"
   },
   "stats": {
-    "version": "7",
+    "version": "8",
     "files": 2,
     "nodes": 3,
     "edges": 2,

@@ -109,6 +109,7 @@ func init() {
 		{"org/h2/tools/Server", []string{"createTcpServer", "createWebServer", "createPgServer", "start", "stop", "shutdownTcpServer", "openBrowser", "startWebServer", "main", "runTool"}},
 		{"okhttp3/HttpUrl", []string{"parse", "get", "defaultPort", "newBuilder", "resolve", "redact", "topPrivateDomain", "uri", "url", "queryParameter"}},
 	}
+	synthExternals[core.LanguageCodeKotlin] = synthExternals[core.LanguageCodeJava]
 	synthExternals[core.LanguageCodeGo] = []externalPackage{
 		{"github.com/spf13/cobra", []string{"OnInitialize", "MarkFlagRequired", "ExactArgs", "MinimumNArgs", "NoArgs", "ArbitraryArgs", "CheckErr", "AddTemplateFunc", "Eq", "Gt"}},
 		{"github.com/spf13/viper", []string{"Get", "GetString", "GetInt", "GetBool", "Set", "SetDefault", "ReadInConfig", "AutomaticEnv", "BindEnv", "Unmarshal"}},
@@ -183,6 +184,7 @@ var entryFiles = map[core.LanguageCode]int{
 	core.LanguageCodeTypescript: 2,
 	core.LanguageCodeGo:         1,
 	core.LanguageCodeJava:       1,
+	core.LanguageCodeKotlin:     1,
 }
 
 // generate makes the shape of a project with files source files: the
@@ -280,6 +282,8 @@ func (p *synthProject) write(dir string) (int, error) {
 		p.renderGo(files)
 	case core.LanguageCodeJava:
 		p.renderJava(files)
+	case core.LanguageCodeKotlin:
+		p.renderKotlin(files)
 	default:
 		return 0, fmt.Errorf("no template for %s", p.language)
 	}
@@ -292,7 +296,7 @@ func (p *synthProject) write(dir string) (int, error) {
 		if err := os.WriteFile(file, []byte(text), 0o644); err != nil {
 			return 0, err
 		}
-		if ext := filepath.Ext(name); ext == ".py" || ext == ".js" || ext == ".ts" || ext == ".go" || ext == ".java" {
+		if ext := filepath.Ext(name); ext == ".py" || ext == ".js" || ext == ".ts" || ext == ".go" || ext == ".java" || ext == ".kt" {
 			sources++
 		}
 	}
@@ -1237,6 +1241,152 @@ func (p *synthProject) javaModule(m *synthModule, ext []externalPackage) string 
 	l.add(0, "")
 	l.add(0, "interface Listener%02d {", m.idx)
 	l.add(1, "void onEvent(Object v);")
+	l.add(0, "}")
+	return l.String()
+}
+
+// kotlinRoot holds the sources of the generated Kotlin project.
+const kotlinRoot = "src/main/kotlin/bench/"
+
+// renderKotlin writes the modules as Java does, with the static members in
+// a companion object, the listener calls in a lambda and an extension
+// function per module.
+func (p *synthProject) renderKotlin(files map[string]string) {
+	ext := synthExternals[core.LanguageCodeKotlin]
+	for _, pkg := range p.packages {
+		for _, m := range pkg {
+			files[fmt.Sprintf("%s%s/%s.kt", kotlinRoot, p.pkgName(m.pkg), javaClassName(m))] = p.kotlinModule(m, ext)
+		}
+		first, last := pkg[0], pkg[len(pkg)-1]
+		files[fmt.Sprintf("%s%s/Package.kt", kotlinRoot, p.pkgName(first.pkg))] = fmt.Sprintf(
+			"package %s\n\nobject Package {\n    fun run(argv: Array<String>): Any? = %s.run%02d(argv)\n}\n",
+			p.javaPackage(first.pkg), javaClassName(first), first.idx)
+
+		var test lines
+		test.add(0, "package %s", p.javaPackage(last.pkg))
+		test.add(0, "")
+		test.add(0, "import org.junit.jupiter.api.Test")
+		test.add(0, "")
+		test.add(0, "class %sTest {", javaClassName(last))
+		test.add(1, "@Test")
+		test.add(1, "fun runs() {")
+		test.add(2, "%s.run%02d(arrayOf(\"input.yaml\"))", javaClassName(last), last.idx)
+		test.add(2, "%s.%s(1)", javaClassName(last), javaHelper(last, 0))
+		test.add(1, "}")
+		test.add(0, "}")
+		files[fmt.Sprintf("src/test/kotlin/bench/%s/%sTest.kt", p.pkgName(last.pkg), javaClassName(last))] = test.String()
+	}
+
+	var main lines
+	main.add(0, "package bench")
+	main.add(0, "")
+	main.add(0, "fun main(args: Array<String>) {")
+	for _, pkg := range p.packages {
+		main.add(1, "%s.Package.run(args)", p.javaPackage(pkg[0].pkg))
+	}
+	main.add(0, "}")
+	files[kotlinRoot+"App.kt"] = main.String()
+}
+
+func (p *synthProject) kotlinModule(m *synthModule, ext []externalPackage) string {
+	var l lines
+	l.add(0, "package %s", p.javaPackage(m.pkg))
+	l.add(0, "")
+	imported := map[string]string{}
+	for _, e := range m.externals {
+		pkg := ext[e.pkg]
+		if _, ok := imported[pkg.name]; ok {
+			continue
+		}
+		imported[pkg.name] = pkg.name[strings.LastIndex(pkg.name, "/")+1:]
+		l.add(0, "import %s", strings.ReplaceAll(pkg.name, "/", "."))
+	}
+	for _, d := range m.deps {
+		if dep := p.modules[d]; dep.pkg != m.pkg {
+			l.add(0, "import %s.%s", p.javaPackage(dep.pkg), javaClassName(dep))
+		}
+	}
+	l.add(0, "")
+	call := func(e externalCall) string {
+		return imported[ext[e.pkg].name] + "." + ext[e.pkg].funcs[e.fn]
+	}
+
+	class := javaClassName(m)
+	l.add(0, "class %s(private val config: Any?) {", class)
+	if len(m.deps) > 0 {
+		l.add(1, "private val store: %s = %s(config)", javaClassName(p.modules[m.deps[0]]), javaClassName(p.modules[m.deps[0]]))
+	}
+	l.add(1, "private val items = mutableListOf<Listener%02d>()", m.idx)
+	for i, w := range m.methods {
+		l.add(0, "")
+		if i == len(m.methods)-1 {
+			l.add(1, "fun %s(): Int = items.size", camel(w))
+			continue
+		}
+		l.add(1, "fun %s(value: Any?): Any? {", camel(w))
+		l.add(2, "var data = %s(value)", javaHelper(m, i%len(m.helpers)))
+		if i == 0 {
+			l.add(2, "data = %s(data)", call(m.externals[0]))
+		}
+		if i == 1 && len(m.deps) > 0 {
+			l.add(2, "data = store.%s(data)", camel(p.modules[m.deps[0]].methods[0]))
+		}
+		if i == 1 && m.dynamic == dynamicAttribute {
+			l.add(2, "data = javaClass.getMethod(config.toString()).invoke(this, data)")
+		}
+		if i+1 < len(m.methods)-1 {
+			l.add(2, "data = this.%s(data)", camel(m.methods[i+1]))
+		}
+		l.add(2, "items.forEach { it.onEvent(data) }")
+		l.add(2, "return data")
+		l.add(1, "}")
+	}
+	l.add(0, "")
+	l.add(1, "companion object {")
+	for i := range m.helpers {
+		l.add(2, "fun %s(value: Any?): Any? {", javaHelper(m, i))
+		l.add(3, "requireNotNull(value) { \"%s needs a value\" }", javaHelper(m, i))
+		l.add(3, "var result: Any? = value")
+		switch {
+		case i+1 < len(m.helpers):
+			l.add(3, "result = %s(result)", javaHelper(m, i+1))
+		case m.sibling >= 0:
+			sib := p.modules[m.sibling]
+			l.add(3, "result = %s.%s(result)", javaClassName(sib), javaHelper(sib, 0))
+		}
+		if i < len(m.externals) && i > 0 {
+			l.add(3, "result = %s(result)", call(m.externals[i]))
+		}
+		if i < len(m.deps) {
+			dep := p.modules[m.deps[i]]
+			l.add(3, "result = %s.%s(result)", javaClassName(dep), javaHelper(dep, 0))
+		}
+		l.add(3, "return result.toString().tag%02d()", m.idx)
+		l.add(2, "}")
+		l.add(0, "")
+	}
+	l.add(2, "fun run%02d(argv: Array<String>): Any? {", m.idx)
+	l.add(3, "val service = %s(\"%s\")", class, p.modName(m))
+	if m.sibling >= 0 {
+		sib := p.modules[m.sibling]
+		l.add(3, "%s(null).%s(argv)", javaClassName(sib), camel(sib.methods[0]))
+	}
+	for _, d := range m.deps {
+		dep := p.modules[d]
+		l.add(3, "%s.run%02d(argv)", javaClassName(dep), dep.idx)
+	}
+	if m.dynamic == dynamicImport {
+		l.add(3, "Class.forName(\"bench.plugins.\" + argv[0]).getMethod(\"run\").invoke(null)")
+	}
+	l.add(3, "return service.%s(argv)", camel(m.methods[0]))
+	l.add(2, "}")
+	l.add(1, "}")
+	l.add(0, "}")
+	l.add(0, "")
+	l.add(0, "fun String.tag%02d(): String = this + \"%s\"", m.idx, p.modName(m))
+	l.add(0, "")
+	l.add(0, "interface Listener%02d {", m.idx)
+	l.add(1, "fun onEvent(v: Any?)")
 	l.add(0, "}")
 	return l.String()
 }

@@ -1,6 +1,6 @@
 [
   {
-    "version": "7", "path": "lib/api.py", "language": "python",
+    "version": "8", "path": "lib/api.py", "language": "python",
     "definitions": [
       {"key": "lib/api.py", "kind": "module", "name": "api", "start_line": 1, "end_line": 4, "exported": true},
       {"key": "lib/api.py//public", "kind": "function", "name": "public", "start_line": 1, "end_line": 2, "exported": true},
@@ -8,7 +8,7 @@
     ]
   },
   {
-    "version": "7", "path": "lib/test_api.py", "language": "python", "test": true,
+    "version": "8", "path": "lib/test_api.py", "language": "python", "test": true,
     "definitions": [
       {"key": "lib/test_api.py", "kind": "module", "name": "test_api", "start_line": 1, "end_line": 2, "exported": true},
       {"key": "lib/test_api.py//test_public", "kind": "function", "name": "test_public", "start_line": 1, "end_line": 2, "exported": true}

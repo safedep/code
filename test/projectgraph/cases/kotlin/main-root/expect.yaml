@@ -1,0 +1,41 @@
+source: safedep:hand
+description: The top-level main of Tool.kt is static, so it is a root. Report has a method main that is not static, so it is no root and no root reaches URL.readText. exec runs on the value of getRuntime(), which the graph does not know, so the site is a record and the reach of Runtime.exec is uncertain.
+roots:
+  - key: src/com/shop/Tool.kt//main
+    kind: main
+    rule: java.main
+edges:
+  - from: src/com/shop/Tool.kt//main
+    to: System//exit
+    kind: direct
+    confidence: high
+    site: src/com/shop/Tool.kt:5
+unresolved:
+  - caller: src/com/shop/Tool.kt//main
+    site: src/com/shop/Tool.kt:4
+    reason: unknown-receiver
+    method: exec
+results:
+  - target: System//exit
+    status: found
+    path:
+      - key: src/com/shop/Tool.kt//main
+      - key: System//exit
+        site: src/com/shop/Tool.kt:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/com/shop/Tool.kt//main
+        site: src/com/shop/Tool.kt:5
+        reached: true
+  - target: Runtime//exec
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: src/com/shop/Tool.kt:4
+  - target: java//net//URL//readText
+    status: not-found
+    call_sites:
+      - caller: src/com/shop/Report.kt//Report//main
+        site: src/com/shop/Report.kt:7
+        reached: false

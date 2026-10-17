@@ -70,7 +70,7 @@
     "main.py": "indexed"
   },
   "stats": {
-    "version": "7",
+    "version": "8",
     "files": 1,
     "nodes": 3,
     "edges": 2,

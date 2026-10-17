@@ -39,8 +39,8 @@ var pythonProfile = languageProfile{
 	},
 	transparent: map[string]childPosition{"parenthesized_expression": firstChild},
 	members: map[string]memberShape{
-		"attribute": {object: "object", name: "attribute"},
-		"subscript": {object: "value", name: "subscript", index: true},
+		"attribute": {object: named("object"), name: named("attribute")},
+		"subscript": {object: named("value"), name: named("subscript"), index: true},
 	},
 	memberAssignees: map[string]bool{"attribute": true},
 	strings: stringShape{

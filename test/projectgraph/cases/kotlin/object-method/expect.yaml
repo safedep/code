@@ -1,0 +1,59 @@
+source: safedep:hand
+description: main calls register on the object Registry and create on the companion object of Service, whose members are members of the class. register runs on the instance of the object, so its initializer runs and calls Logger.getLogger. log holds the value of a call, so log.info is a record and the reach of Logger.info is uncertain. unused has no caller.
+roots:
+  - key: src/com/shop/App.kt//main
+    kind: main
+    rule: java.main
+edges:
+  - from: src/com/shop/App.kt//main
+    to: src/com/shop/Registry.kt//Registry//register
+    kind: member
+    confidence: high
+    site: src/com/shop/App.kt:4
+  - from: src/com/shop/App.kt//main
+    to: src/com/shop/Registry.kt//Service//create
+    kind: member
+    confidence: high
+    site: src/com/shop/App.kt:5
+  - from: src/com/shop/Registry.kt//Registry//register
+    to: src/com/shop/Registry.kt//Registry
+    kind: direct
+    confidence: high
+    site: src/com/shop/Registry.kt:8
+unresolved:
+  - caller: src/com/shop/Registry.kt//Registry//register
+    site: src/com/shop/Registry.kt:9
+    reason: unknown-receiver
+    method: info
+results:
+  - target: java//util//logging//Logger//getLogger
+    status: found
+    path:
+      - key: src/com/shop/App.kt//main
+      - key: src/com/shop/Registry.kt//Registry//register
+        site: src/com/shop/App.kt:4
+        kind: member
+        confidence: high
+      - key: src/com/shop/Registry.kt//Registry
+        site: src/com/shop/Registry.kt:8
+        kind: direct
+        confidence: high
+      - key: java//util//logging//Logger//getLogger
+        site: src/com/shop/Registry.kt:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/com/shop/Registry.kt//Registry
+        site: src/com/shop/Registry.kt:6
+        reached: true
+  - target: java//util//logging//Logger//info
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: src/com/shop/Registry.kt:9
+  - target: System//exit
+    status: not-found
+    call_sites:
+      - caller: src/com/shop/Registry.kt//Service//unused
+        site: src/com/shop/Registry.kt:17
+        reached: false

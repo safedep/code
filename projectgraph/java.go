@@ -65,19 +65,28 @@ func (b *builder) javaScopeFallback(sc *scope, first string, rest []string, targ
 	return out
 }
 
-// addJavaUnits groups the Java files by their package clause. A Java
-// package is the class table of its classes: an import names a class by
-// its package and its name, and a class names the classes of its package
-// with no import.
+// addJavaUnits groups the Java and the Kotlin files by their package
+// clause. A package is the class table of its classes: an import names a
+// class by its package and its name, and a class names the classes of its
+// package with no import.
 func (b *builder) addJavaUnits() {
 	files := map[string][]string{}
 	for _, p := range b.paths {
-		if ix := b.byPath[p]; ix != nil && ix.Language == langcode.Java {
+		if ix := b.byPath[p]; ix != nil && (ix.Language == langcode.Java || ix.Language == langcode.Kotlin) {
 			files[ix.Package] = append(files[ix.Package], p)
 		}
 	}
 	for _, pkg := range slices.Sorted(maps.Keys(files)) {
-		b.javaPackages[pkg] = b.addUnit("java:"+pkg, files[pkg])
+		u := b.addUnit("java:"+pkg, files[pkg])
+		b.javaPackages[pkg] = u
+		// Java code names the top-level functions of a Kotlin file
+		// through the class of the file, as UtilsKt.helper().
+		for _, p := range files[pkg] {
+			if b.byPath[p].Language == langcode.Kotlin {
+				facade := kotlinFacade(p)
+				u.names[facade] = append(u.names[facade], p)
+			}
+		}
 	}
 }
 
@@ -94,6 +103,11 @@ func (b *builder) resolveJava(name string) (string, bool) {
 		}
 		if i == len(parts) {
 			return u.key, true
+		}
+		// A top-level property of Kotlin has no value that a walk can
+		// read, but an import names it.
+		if keys := u.names[parts[i]]; i == len(parts)-1 && len(keys) > 0 {
+			return keys[0], true
 		}
 		if r := b.walk(u.key, parts[i:]); r.fail == nil {
 			return r.key, true

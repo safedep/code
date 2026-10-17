@@ -1,0 +1,41 @@
+source: safedep:hand
+description: main calls the class Loader of another file of the package with no import, and load on the instance. Loader.dump has no caller, so no root reaches Yaml.dump.
+roots:
+  - key: src/main/kotlin/com/shop/App.kt//main
+    kind: main
+    rule: java.main
+edges:
+  - from: src/main/kotlin/com/shop/App.kt//main
+    to: src/main/kotlin/com/shop/Loader.kt//Loader
+    kind: direct
+    confidence: high
+    site: src/main/kotlin/com/shop/App.kt:4
+  - from: src/main/kotlin/com/shop/App.kt//main
+    to: src/main/kotlin/com/shop/Loader.kt//Loader//load
+    kind: member
+    confidence: high
+    site: src/main/kotlin/com/shop/App.kt:5
+unresolved: []
+results:
+  - target: org//yaml//snakeyaml//Yaml//load
+    status: found
+    path:
+      - key: src/main/kotlin/com/shop/App.kt//main
+      - key: src/main/kotlin/com/shop/Loader.kt//Loader//load
+        site: src/main/kotlin/com/shop/App.kt:5
+        kind: member
+        confidence: high
+      - key: org//yaml//snakeyaml//Yaml//load
+        site: src/main/kotlin/com/shop/Loader.kt:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main/kotlin/com/shop/Loader.kt//Loader//load
+        site: src/main/kotlin/com/shop/Loader.kt:6
+        reached: true
+  - target: org//yaml//snakeyaml//Yaml//dump
+    status: not-found
+    call_sites:
+      - caller: src/main/kotlin/com/shop/Loader.kt//Loader//dump
+        site: src/main/kotlin/com/shop/Loader.kt:8
+        reached: false

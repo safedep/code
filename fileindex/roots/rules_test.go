@@ -126,5 +126,7 @@ func TestMerge(t *testing.T) {
 func TestApplies(t *testing.T) {
 	assert.True(t, Rule{Language: "javascript"}.Applies(langcode.Typescript))
 	assert.True(t, Rule{Language: AnyLanguage}.Applies(langcode.Go))
+	assert.True(t, Rule{Language: "java"}.Applies(langcode.Kotlin))
+	assert.False(t, Rule{Language: "kotlin"}.Applies(langcode.Java))
 	assert.False(t, Rule{Language: "python"}.Applies(langcode.Javascript))
 }

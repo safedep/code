@@ -127,10 +127,10 @@ func (p *languageProfile) calleeParts(callee *sitter.Node, treeData []byte) (str
 	}
 
 	var receiver, method string
-	if object := fieldChild(callee, shape.object); object != nil {
+	if object := shape.object.of(callee); object != nil {
 		receiver = object.Content(treeData)
 	}
-	if name := fieldChild(callee, shape.name); name != nil {
+	if name := shape.name.of(callee); name != nil {
 		if shape.index {
 			method, _ = p.memberName(name, treeData)
 		} else {

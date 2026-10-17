@@ -61,7 +61,7 @@ func TestValidateSignatures(t *testing.T) {
 		},
 		{
 			signature:     callSignature("kotlin.language", core.LanguageCodeKotlin, MatchAny, "okhttp3.OkHttpClient"),
-			expectedError: true,
+			expectedError: false,
 		},
 		{
 			signature:     callSignature("csharp.invalid.match", core.LanguageCodeCSharp, "invalid_match_type", "OpenAI.*"),

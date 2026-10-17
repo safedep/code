@@ -49,12 +49,12 @@ var manifestFields = map[string][]string{
 }
 
 // Rule marks the roots of one kind. Language is a langcode or AnyLanguage.
-// A javascript rule also matches typescript files. Requires names the
-// packages of the framework of the rule, as next. A javascript rule then
-// applies only when a package.json of the project depends on one of them,
-// and a python rule when a pyproject.toml, a setup.py, a Pipfile or a
-// requirements file does. A project whose manifests declare no dependency
-// gives no evidence, so the rule applies.
+// A javascript rule also matches typescript files, and a java rule kotlin
+// files. Requires names the packages of the framework of the rule, as
+// next. A javascript rule then applies only when a package.json of the
+// project depends on one of them, and a python rule when a pyproject.toml,
+// a setup.py, a Pipfile or a requirements file does. A project whose
+// manifests declare no dependency gives no evidence, so the rule applies.
 type Rule struct {
 	ID       string   `yaml:"id"`
 	Language string   `yaml:"language"`
@@ -358,6 +358,8 @@ func (r Rule) Applies(lang langcode.Code) bool {
 		return true
 	case langcode.Javascript:
 		return lang == langcode.Typescript
+	case langcode.Java:
+		return lang == langcode.Kotlin
 	}
 	return false
 }

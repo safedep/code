@@ -106,12 +106,12 @@ const (
 	lastChild
 )
 
-// memberShape names the fields of a member access, as client.chat in
+// memberShape names the parts of a member access, as client.chat in
 // client.chat().create. An index shape holds the name as a string index, as
 // obj['x'].
 type memberShape struct {
-	object string
-	name   string
+	object childRef
+	name   childRef
 	index  bool
 }
 
@@ -135,6 +135,7 @@ var languageProfiles = []*languageProfile{
 	&rustProfile,
 	&phpProfile,
 	&rubyProfile,
+	&kotlinProfile,
 }
 
 var profilesByCode = indexProfiles(languageProfiles)

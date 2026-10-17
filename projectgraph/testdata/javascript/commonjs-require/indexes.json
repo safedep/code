@@ -1,6 +1,6 @@
 [
   {
-    "version": "7", "path": "main.js", "language": "javascript",
+    "version": "8", "path": "main.js", "language": "javascript",
     "imports": [
       {"line": 1, "module": "./lib", "alias": "utils", "kind": "static", "namespace": ".//lib"},
       {"line": 2, "module": "./helper", "item": "helper", "alias": "helper", "kind": "static", "namespace": ".//helper//helper"}
@@ -12,7 +12,7 @@
     ]
   },
   {
-    "version": "7", "path": "lib/index.js", "language": "javascript",
+    "version": "8", "path": "lib/index.js", "language": "javascript",
     "exports": [{"name": "run", "target": "lib/index.js//run", "line": 3}],
     "definitions": [
       {"key": "lib/index.js", "kind": "module", "name": "index", "start_line": 1, "end_line": 3, "exported": true},
@@ -20,7 +20,7 @@
     ]
   },
   {
-    "version": "7", "path": "helper.js", "language": "javascript",
+    "version": "8", "path": "helper.js", "language": "javascript",
     "exports": [{"name": "helper", "target": "helper.js//helper", "line": 3}],
     "definitions": [
       {"key": "helper.js", "kind": "module", "name": "helper", "start_line": 1, "end_line": 3, "exported": true},

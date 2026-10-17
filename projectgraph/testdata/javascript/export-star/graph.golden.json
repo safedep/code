@@ -276,7 +276,7 @@
     "main.js": "indexed"
   },
   "stats": {
-    "version": "7",
+    "version": "8",
     "files": 5,
     "nodes": 11,
     "edges": 10,

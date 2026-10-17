@@ -52,8 +52,8 @@ func ecmascriptProfile(code, signatureFallback core.LanguageCode) languageProfil
 			"satisfies_expression":     firstChild,
 		},
 		members: map[string]memberShape{
-			"member_expression":    {object: "object", name: "property"},
-			"subscript_expression": {object: "object", name: "index", index: true},
+			"member_expression":    {object: named("object"), name: named("property")},
+			"subscript_expression": {object: named("object"), name: named("index"), index: true},
 		},
 		strings: stringShape{
 			literals:       map[string]bool{"string": true, "template_string": true},

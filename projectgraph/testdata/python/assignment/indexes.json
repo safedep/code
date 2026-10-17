@@ -1,6 +1,6 @@
 [
   {
-    "version": "7", "path": "main.py", "language": "python",
+    "version": "8", "path": "main.py", "language": "python",
     "imports": [{"line": 1, "module": "yaml", "alias": "yaml", "kind": "static", "namespace": "yaml"}],
     "definitions": [
       {"key": "main.py", "kind": "module", "name": "main", "start_line": 1, "end_line": 7, "exported": true},

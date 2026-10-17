@@ -138,7 +138,7 @@
     "src/main.ts": "indexed"
   },
   "stats": {
-    "version": "7",
+    "version": "8",
     "files": 3,
     "nodes": 5,
     "edges": 4,

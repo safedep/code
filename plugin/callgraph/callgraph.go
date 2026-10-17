@@ -120,6 +120,9 @@ type CallGraph struct {
 	profile           *languageProfile
 	assignmentGraph   assignmentGraph
 	classConstructors map[string]bool
+	// results holds the values of the calls of a shaped language that are
+	// no instance of a type, so a call on one has an unknown receiver.
+	results map[string]bool
 
 	// order holds the nodes in the order of the build, so DFS gives one
 	// result for one file.

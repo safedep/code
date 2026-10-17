@@ -113,7 +113,7 @@ type profile struct {
 
 // profiles are the languages of the link step, in a fixed order. The units
 // of the languages are built in this order.
-var profiles = []*profile{&pythonProfile, &javascriptProfile, &typescriptProfile, &goProfile, &javaProfile}
+var profiles = []*profile{&pythonProfile, &javascriptProfile, &typescriptProfile, &goProfile, &javaProfile, &kotlinProfile}
 
 // profilesByCode is filled in init. The functions of a profile call
 // profileOf, so a variable initializer would make an initialization cycle.

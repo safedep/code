@@ -71,10 +71,13 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 		for _, r := range b.resolveTargets(sc, caller, targets) {
 			// A Java call of a name that nothing binds runs on this, as
 			// a method that a base of a dependency or an override in a
-			// subclass gives.
+			// subclass gives. A builtin function, as println of Kotlin,
+			// runs unless the class has a method of the name.
 			if r.unbound && sc.profile.thisCalls && call.Kind == fileindex.CallCall && call.Receiver == "" && isIdentifier(r.key) {
 				if class, ok := b.enclosingClass(caller); ok {
-					r = b.walkTyped(class, []string{r.key})
+					if typed := b.walkTyped(class, []string{r.key}); typed.fail == nil || !langcode.IsBuiltin(ix.Language, r.key) {
+						r = typed
+					}
 				}
 			}
 			b.linkCHA(call, r, from, site)

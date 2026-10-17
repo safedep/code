@@ -40,7 +40,7 @@ var goProfile = languageProfile{
 	},
 	transparent: map[string]childPosition{"parenthesized_expression": firstChild},
 	members: map[string]memberShape{
-		"selector_expression": {object: "operand", name: "field"},
+		"selector_expression": {object: named("operand"), name: named("field")},
 	},
 	argumentList:     "argument_list",
 	functionLiterals: map[string]bool{"func_literal": true},

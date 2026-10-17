@@ -1,0 +1,40 @@
+source: safedep:hand
+description: The Java main makes an instance of the Kotlin class Greeter and calls greet, and calls the top-level Kotlin function clean through TextKt, the class that Java sees for text.kt.
+roots:
+  - key: src/com/shop/Main.java//Main//main
+    kind: main
+    rule: java.main
+edges:
+  - from: src/com/shop/Main.java//Main//main
+    to: src/com/shop/Greeter.kt//Greeter
+    kind: direct
+    confidence: high
+    site: src/com/shop/Main.java:5
+  - from: src/com/shop/Main.java//Main//main
+    to: src/com/shop/Greeter.kt//Greeter//greet
+    kind: member
+    confidence: high
+    site: src/com/shop/Main.java:5
+  - from: src/com/shop/Main.java//Main//main
+    to: src/com/shop/text.kt//clean
+    kind: direct
+    confidence: high
+    site: src/com/shop/Main.java:6
+unresolved: []
+results:
+  - target: java//text//Normalizer//normalize
+    status: found
+    path:
+      - key: src/com/shop/Main.java//Main//main
+      - key: src/com/shop/text.kt//clean
+        site: src/com/shop/Main.java:6
+        kind: direct
+        confidence: high
+      - key: java//text//Normalizer//normalize
+        site: src/com/shop/text.kt:3
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/com/shop/text.kt//clean
+        site: src/com/shop/text.kt:3
+        reached: true

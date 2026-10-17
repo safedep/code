@@ -59,7 +59,7 @@ var javaProfile = languageProfile{
 		"constructor_declaration": true,
 	},
 	members: map[string]memberShape{
-		"method_invocation": {object: "object", name: "name"},
+		"method_invocation": {object: named("object"), name: named("name")},
 	},
 	argumentList: "argument_list",
 }

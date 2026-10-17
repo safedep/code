@@ -1,0 +1,56 @@
+source: safedep:hand
+description: Adversarial case. main binds a local danger to a lambda, so its call does not run the top-level function danger, and it is a record with name edges. View has a member render, which wins over the extension render, so no edge goes to the extension. Shadow.run passes a local exec, which is not a call of the method exec. Each false path is low or absent.
+roots:
+  - key: src/com/shop/App.kt//main
+    kind: main
+    rule: java.main
+edges:
+  - from: src/com/shop/App.kt//main
+    to: src/com/shop/App.kt//danger
+    kind: name
+    confidence: low
+    site: src/com/shop/App.kt:11
+  - from: src/com/shop/App.kt//main
+    to: src/com/shop/App.kt//View//render
+    kind: member
+    confidence: high
+    site: src/com/shop/App.kt:14
+no_edges:
+  - from: src/com/shop/App.kt//main
+    to: src/com/shop/App.kt//render
+  - from: src/com/shop/App.kt//Shadow//run
+    to: src/com/shop/App.kt//Shadow//exec
+unresolved:
+  - caller: src/com/shop/App.kt//main
+    site: src/com/shop/App.kt:11
+    reason: unknown-receiver
+    method: danger
+results:
+  - target: java//lang//ProcessBuilder//start
+    status: found
+    path:
+      - key: src/com/shop/App.kt//main
+      - key: src/com/shop/App.kt//danger
+        site: src/com/shop/App.kt:11
+        kind: name
+        confidence: low
+      - key: java//lang//ProcessBuilder//start
+        site: src/com/shop/App.kt:18
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/com/shop/App.kt//danger
+        site: src/com/shop/App.kt:18
+        reached: true
+  - target: java//nio//file//Files//delete
+    status: not-found
+    call_sites:
+      - caller: src/com/shop/App.kt//render
+        site: src/com/shop/App.kt:20
+        reached: false
+  - target: java//lang//System//exit
+    status: not-found
+    call_sites:
+      - caller: src/com/shop/App.kt//Shadow//exec
+        site: src/com/shop/App.kt:28
+        reached: false

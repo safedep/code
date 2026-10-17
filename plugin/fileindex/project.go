@@ -26,6 +26,8 @@ var definitionKinds = map[string]fidx.DefKind{
 	"class_declaration":               fidx.DefClass,
 	"enum_declaration":                fidx.DefClass,
 	"interface_declaration":           fidx.DefInterface,
+	"object_declaration":              fidx.DefClass,
+	"secondary_constructor":           fidx.DefConstructor,
 	"abstract_class_declaration":      fidx.DefClass,
 	"class_definition":                fidx.DefClass,
 	"class":                           fidx.DefClass,
@@ -48,6 +50,9 @@ var definitionKinds = map[string]fidx.DefKind{
 	"compact_constructor_declaration": fidx.DefConstructor,
 	// A Java enum constant is a definition only when it has a class body.
 	"enum_constant": fidx.DefClass,
+	// The node of a Kotlin companion object holds the static initializer
+	// of its class.
+	"companion_object": fidx.DefMethod,
 }
 
 // constructorNames name the method that makes an instance of a class.
@@ -123,11 +128,13 @@ func project(ctx context.Context, tree core.ParseTree) (*fidx.Index, error) {
 		members:  map[[2]uint32]bool{},
 	}
 
-	switch {
+	switch packageOf := p.rules().packageOf; {
 	case p.isGo():
 		p.ix.Package = p.goPackage()
 	case p.isJava():
 		p.ix.Package = p.javaPackage()
+	case packageOf != nil:
+		p.ix.Package = packageOf(p)
 	}
 	p.addImports()
 	p.addDefinitions()
@@ -135,6 +142,7 @@ func project(ctx context.Context, tree core.ParseTree) (*fidx.Index, error) {
 	p.addTruncations()
 	p.addGoSignatures()
 	p.addJavaSignatures()
+	p.addSignatures()
 	p.addJavaInits()
 	p.walkTree(ctx)
 	p.addDeclaredTypes()
@@ -238,6 +246,10 @@ func (p *projection) addDefinitions() {
 			continue
 		}
 
+		treeNode := p.nodeAt(node.Position, node.Kind)
+		if kindOf := p.rules().kindOf; kindOf != nil {
+			kind = kindOf(p, treeNode, kind)
+		}
 		p.defs[key] = &fidx.Definition{
 			Key:       key,
 			Kind:      kind,
@@ -245,10 +257,13 @@ func (p *projection) addDefinitions() {
 			StartLine: int(node.Position.StartLine),
 			EndLine:   int(node.Position.EndLine),
 		}
-		p.addSyntax(key, p.nodeAt(node.Position, node.Kind))
+		p.addSyntax(key, treeNode)
 	}
 	p.addInterfaces()
 	p.addGoTypes()
+	if definitions := p.rules().definitions; definitions != nil {
+		definitions(p)
+	}
 
 	for _, def := range p.defs {
 		p.fillDefinition(def)
@@ -330,11 +345,16 @@ func (p *projection) fillDefinition(def *fidx.Definition) {
 			def.Kind = fidx.DefConstructor
 		}
 	}
-	if p.isJava() {
+	switch decorators := p.rules().decorators; {
+	case p.isJava():
 		def.Decorators = p.javaAnnotations(p.syntax[def.Key])
-		return
+	case decorators != nil:
+		if node := p.syntax[def.Key]; node != nil {
+			def.Decorators = decorators(p, node)
+		}
+	default:
+		def.Decorators = p.decorators(p.syntax[def.Key])
 	}
-	def.Decorators = p.decorators(p.syntax[def.Key])
 }
 
 // decorators returns the decorators of a definition as written, with no
@@ -406,6 +426,14 @@ func (p *projection) addClasses(ctx context.Context) error {
 // A start byte does not tell a class from the program that starts with it.
 func (p *projection) classBases(ctx context.Context) (map[span][]string, error) {
 	bases := map[span][]string{}
+	if rule := p.rules().bases; rule != nil {
+		for _, node := range p.syntax {
+			if node != nil {
+				bases[spanOf(node)] = rule(p, node)
+			}
+		}
+		return bases, nil
+	}
 	resolvers, ok := p.language.Resolvers().(core.ObjectOrientedLanguageResolvers)
 	if !ok {
 		for _, node := range p.syntax {
@@ -659,7 +687,7 @@ func (p *projection) rebind(caller, name string) []string {
 		return nil
 	}
 	for scope := caller; ; {
-		if def, ok := p.defs[scope]; ok && (def.Kind != fidx.DefClass || scope == caller || p.isJava()) {
+		if def, ok := p.defs[scope]; ok && (def.Kind != fidx.DefClass || scope == caller || p.memberScopes()) {
 			if _, bound := p.defs[fidx.Join(scope, name)]; bound {
 				return []string{fidx.Join(scope, name)}
 			}
