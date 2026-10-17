@@ -3,7 +3,9 @@ package summary
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
@@ -103,4 +105,25 @@ func TestSummarizeTakesOneUnit(t *testing.T) {
 			assert.ErrorContains(t, err, tt.err)
 		})
 	}
+}
+
+func TestSummarizeManySymbolsIsFast(t *testing.T) {
+	const n = 3000
+	p := unit + "//index.js"
+	ix := &fileindex.Index{
+		Version: fileindex.Version, Path: p, Language: langcode.Javascript, Unit: unit,
+		Imports:     []fileindex.Import{{Line: 1, Module: "fs", Alias: "fs", Kind: fileindex.ImportStatic, Namespace: "fs"}},
+		Definitions: []fileindex.Definition{{Key: p, Kind: fileindex.DefModule, Name: "index", StartLine: 1, EndLine: n + 2}},
+	}
+	for i := range n {
+		name := fmt.Sprintf("f%d", i)
+		ix.Exports = append(ix.Exports, fileindex.Export{Name: name, Target: fileindex.Join(p, name), Line: i + 2})
+		ix.Definitions = append(ix.Definitions, fileindex.Definition{Key: fileindex.Join(p, name), Kind: fileindex.DefFunction, Name: name, StartLine: i + 2, EndLine: i + 2, Exported: true})
+		ix.Calls = append(ix.Calls, fileindex.Call{Caller: fileindex.Join(p, name), Line: i + 2, Column: 3, Callee: "fs.rmSync", Targets: []string{"fs//rmSync"}, Kind: fileindex.CallCall})
+	}
+	start := time.Now()
+	s, err := Summarize(context.Background(), []*fileindex.Index{ix}, projectgraph.Options{})
+	require.NoError(t, err)
+	assert.Less(t, time.Since(start), 20*time.Second)
+	assert.GreaterOrEqual(t, len(s.Symbols), n)
 }

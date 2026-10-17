@@ -452,6 +452,30 @@ graph does not. A site with more than 20 field candidates in the whole
 project is ambiguous, and with fewer files it has field edges. So the test
 does not compare the found targets with the whole graph.
 
+## Summary step
+
+One run on 2026-10-17, after the final review, of the `summary` step at
+1,000 files with 4 workers. The step reads the generated project as one
+unit of dependency code and summarizes every exported symbol. The index of
+the graph is built once per summary since the review fix. Before the fix
+a summary of 3,000 symbols of one file took 26 s in the unit test of
+`projectgraph/summary`, and it takes 0.47 s after.
+
+| Language | Symbols | Reaches | Time | Peak heap |
+| --- | --- | --- | --- | --- |
+| Python | 16,730 | 2,193,241 | 197.5 s | 12,271 MiB |
+| JavaScript | 9,474 | 1,487,550 | 104.7 s | 8,932 MiB |
+| TypeScript | 9,503 | 1,460,529 | 45.1 s | 5,131 MiB |
+| Go | 11,137 | 1,460,695 | 45.3 s | 5,353 MiB |
+
+The generated project calls two or three external packages from every
+module and imports one to three other modules, so most symbols reach most
+of the 200 external functions. The step searches the graph once per symbol
+and keeps a path per reached symbol, so its time and its heap grow with
+the symbols times what they reach. A real package reaches less per symbol.
+The numbers are above any budget, and the lead decides whether the summary
+keeps a path per reach or a reach set per strongly connected component.
+
 ## Benchmark
 
 ### The generated projects

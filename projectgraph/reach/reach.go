@@ -209,12 +209,29 @@ type Reached struct {
 
 // Explore searches the graph from the nodes of the keys in place of its
 // roots, as from the exported symbols of a package. MaxDepth 0 selects 64
-// hops.
+// hops. A caller with many searches of one graph makes an Explorer once.
 func Explore(ctx context.Context, g *projectgraph.Graph, from []string, maxDepth int) (*Exploration, error) {
+	return NewExplorer(g).Explore(ctx, from, maxDepth)
+}
+
+// Explorer searches one graph from any nodes. It builds the index of the
+// graph once, so a summary of a package with many symbols pays the index
+// once and not once per symbol.
+type Explorer struct {
+	ix *index
+}
+
+// NewExplorer indexes the graph for the searches of an Explorer.
+func NewExplorer(g *projectgraph.Graph) *Explorer {
+	return &Explorer{ix: newIndex(g)}
+}
+
+// Explore searches from the nodes of the keys, as Explore does.
+func (x *Explorer) Explore(ctx context.Context, from []string, maxDepth int) (*Exploration, error) {
 	if maxDepth < 0 {
 		return nil, fmt.Errorf("max depth %d is negative", maxDepth)
 	}
-	ix := newIndex(g)
+	ix := x.ix
 	sources := make([]int, 0, len(from))
 	for _, key := range from {
 		id, ok := ix.id[key]

@@ -92,8 +92,9 @@ func Summarize(ctx context.Context, indexes []*fileindex.Index, opts projectgrap
 			s.Incomplete = append(s.Incomplete, p)
 		}
 	}
+	explorer := reach.NewExplorer(g)
 	for _, key := range slices.Sorted(maps.Keys(definitions)) {
-		e, err := reach.Explore(ctx, g, []string{key}, 0)
+		e, err := explorer.Explore(ctx, []string{key}, 0)
 		if err != nil {
 			return nil, err
 		}

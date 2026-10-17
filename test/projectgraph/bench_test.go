@@ -5,6 +5,7 @@ package projectgraph
 import (
 	"context"
 	"encoding/json"
+	iofs "io/fs"
 	"os"
 	"runtime"
 	"slices"
@@ -23,6 +24,7 @@ import (
 	"github.com/safedep/code/projectgraph/reach"
 	"github.com/safedep/code/projectgraph/store"
 	"github.com/safedep/code/projectgraph/store/localdbstore"
+	"github.com/safedep/code/projectgraph/summary"
 	"github.com/safedep/dry/localdb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -161,6 +163,39 @@ func benchProject(b *testing.B, code core.LanguageCode, files int) {
 		b.ReportMetric(float64(len(targets)), "targets")
 		b.ReportMetric(float64(found), "found")
 	})
+	unit, ok := benchUnits[code]
+	if !ok {
+		return
+	}
+	b.Run("summary", func(b *testing.B) {
+		// The summary reads the project as one unit of dependency code.
+		unitFS, err := codefs.NewLocalFileSystem(codefs.LocalFileSystemConfig{ImportDirectories: []string{root}, ImportUnits: map[string]string{root: unit}})
+		require.NoError(b, err)
+		dependency, err := (&fileindex.Indexer{}).Run(ctx, unitFS, fileindex.Options{Languages: languages, Workers: workers, Imports: true})
+		require.NoError(b, err)
+		require.Len(b, dependency.Indexes, written)
+		var s *summary.Summary
+		measure(b, written, func() any {
+			s, err = summary.Summarize(ctx, dependency.Indexes, projectgraph.Options{Files: dependency.Dependencies, Units: map[string]iofs.FS{unit: os.DirFS(root)}})
+			require.NoError(b, err)
+			return s
+		})
+		reaches := 0
+		for _, sym := range s.Symbols {
+			reaches += len(sym.Reaches)
+		}
+		b.ReportMetric(float64(len(s.Symbols)), "symbols")
+		b.ReportMetric(float64(reaches), "reaches")
+	})
+}
+
+// benchUnits name the generated project of each language that the link
+// step links as dependency code, as the unit of its summary.
+var benchUnits = map[core.LanguageCode]string{
+	core.LanguageCodePython:     "pypi:bench@1.0.0",
+	core.LanguageCodeJavascript: "npm:bench-app@1.0.0",
+	core.LanguageCodeTypescript: "npm:bench-app@1.0.0",
+	core.LanguageCodeGo:         "go:" + goModulePath + "@v1.0.0",
 }
 
 // jsonKiB is the size of the JSON form of the indexes, as the store keeps

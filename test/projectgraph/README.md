@@ -135,6 +135,7 @@ summary.
 | `index-warm` | The index step with a store that holds every index. No file is parsed |
 | `link` | `projectgraph.Build` on the indexes |
 | `reach` | `reach.Reach` with the 200 targets |
+| `summary` | `summary.Summarize` of the project read as one unit of dependency code, for the languages whose dependency code the link step links. It reports the `symbols` of the unit and the `reaches` of all of them |
 
 Each step reports these metrics next to `ns/op`.
 
