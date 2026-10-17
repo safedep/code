@@ -3,13 +3,15 @@ package parser
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/safedep/code/core"
 )
 
 type walkingParser struct {
-	parser *parserWrapper
-	walker core.SourceWalker
+	languages []core.Language
+	opts      []Option
+	walker    core.SourceWalker
 }
 
 var _ core.TreeWalker = (*walkingParser)(nil)
@@ -17,19 +19,28 @@ var _ core.TreeWalker = (*walkingParser)(nil)
 // NewWalkingParser creates a tree walker that parses each file of the source
 // walker. The options apply to the parser, as in NewParser.
 func NewWalkingParser(walker core.SourceWalker, languages []core.Language, opts ...Option) (*walkingParser, error) {
-	parser, err := NewParser(languages, opts...)
-	if err != nil {
+	if _, err := languagesByExtension(languages); err != nil {
 		return nil, fmt.Errorf("failed to create parser: %w", err)
 	}
 
 	return &walkingParser{
-		parser: parser,
-		walker: walker,
+		languages: slices.Clone(languages),
+		opts:      slices.Clone(opts),
+		walker:    walker,
 	}, nil
 }
 
+// Walk parses with a parser of its own and closes the parser when the walk
+// ends. A sitter parser is not safe for concurrent use, so two walks do not
+// share one.
 func (p *walkingParser) Walk(ctx context.Context, fs core.ImportAwareFileSystem, visitor core.TreeVisitor) error {
-	return p.walker.Walk(ctx, fs, &sourceVisitor{parser: p.parser, visitor: visitor})
+	parser, err := NewParser(p.languages, p.opts...)
+	if err != nil {
+		return fmt.Errorf("failed to create parser: %w", err)
+	}
+	defer parser.Close()
+
+	return p.walker.Walk(ctx, fs, &sourceVisitor{parser: parser, visitor: visitor})
 }
 
 type sourceVisitor struct {

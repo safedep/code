@@ -47,6 +47,7 @@ func TestParseClosesTheFile(t *testing.T) {
 	require.NoError(t, err)
 	p, err := NewParser([]core.Language{python})
 	require.NoError(t, err)
+	t.Cleanup(p.Close)
 
 	f := &trackedFile{name: "app.py", content: "import os\n"}
 	tree, err := p.Parse(context.Background(), f)
@@ -86,6 +87,7 @@ func TestParseLimit(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			p, err := NewParser([]core.Language{python}, tc.opts...)
 			require.NoError(t, err)
+			t.Cleanup(p.Close)
 
 			f := &trackedFile{name: "app.py", content: source}
 			tree, err := p.Parse(context.Background(), f)
@@ -106,6 +108,7 @@ func TestParseRejectsAFileWithNoLanguage(t *testing.T) {
 	require.NoError(t, err)
 	p, err := NewParser([]core.Language{python})
 	require.NoError(t, err)
+	t.Cleanup(p.Close)
 
 	f := &trackedFile{name: "app.js", content: "a()"}
 	_, err = p.Parse(context.Background(), f)
@@ -141,6 +144,7 @@ func TestParsePicksTheGrammarOfTheExtension(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			p, err := NewParser([]core.Language{tc.language})
 			require.NoError(t, err)
+			t.Cleanup(p.Close)
 
 			tree, err := p.Parse(context.Background(), &trackedFile{name: tc.file, content: tc.content})
 			require.NoError(t, err)
@@ -158,6 +162,7 @@ func TestTreeReportsTheLanguageThatParsedIt(t *testing.T) {
 	_, withoutJSX := typescriptLanguages(t)
 	p, err := NewParser([]core.Language{withoutJSX})
 	require.NoError(t, err)
+	t.Cleanup(p.Close)
 
 	tree, err := p.Parse(context.Background(), &trackedFile{name: "a.ts", content: "let a = 1;"})
 	require.NoError(t, err)
@@ -271,4 +276,40 @@ func TestWalkingParserReportsTheStageOfAFailure(t *testing.T) {
 	require.NoError(t, err)
 	err = stopping.Walk(t.Context(), nil, &errorRecorder{hasError: map[string]bool{}})
 	assert.ErrorContains(t, err, "failed to read file locked.py", "a visitor without VisitFileError stops the walk")
+}
+
+func TestCloseKeepsTheTreesOfTheParser(t *testing.T) {
+	withJSX, _ := typescriptLanguages(t)
+	p, err := NewParser([]core.Language{withJSX})
+	require.NoError(t, err)
+
+	tree, err := p.Parse(t.Context(), &trackedFile{name: "app.ts", content: "run()\n"})
+	require.NoError(t, err)
+	defer tree.Close()
+
+	assert.NotPanics(t, func() {
+		p.Close()
+		p.Close()
+	})
+	assert.Equal(t, "program", tree.Tree().RootNode().Type())
+}
+
+func TestWalkingParserWalksMoreThanOnce(t *testing.T) {
+	python, err := lang.NewPythonLanguage()
+	require.NoError(t, err)
+	files := filesWalker{&trackedFile{name: "good.py", content: "import os\n"}}
+
+	walker, err := NewWalkingParser(files, []core.Language{python})
+	require.NoError(t, err)
+	for range 2 {
+		visitor := &errorRecorder{hasError: map[string]bool{}}
+		require.NoError(t, walker.Walk(t.Context(), nil, visitor))
+		assert.Equal(t, map[string]bool{"good.py": false}, visitor.hasError)
+	}
+}
+
+func TestNewWalkingParserChecksTheLanguages(t *testing.T) {
+	withJSX, withoutJSX := typescriptLanguages(t)
+	_, err := NewWalkingParser(filesWalker{}, []core.Language{withJSX, withoutJSX})
+	assert.ErrorContains(t, err, "two languages parse the extension")
 }

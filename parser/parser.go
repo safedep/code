@@ -35,11 +35,38 @@ var _ core.ParseTree = (*parseTree)(nil)
 
 // NewParser creates a parser for the given languages. It picks the language
 // of a file by the file extension. A language that implements
-// core.GrammarSelector picks the language of each of its extensions.
+// core.GrammarSelector picks the language of each of its extensions. The
+// caller closes the parser.
 func NewParser(languages []core.Language, opts ...Option) (*parserWrapper, error) {
 	cfg := newConfig(opts)
-	byExtension := make(map[string]*grammar)
+	fileLanguages, err := languagesByExtension(languages)
+	if err != nil {
+		return nil, err
+	}
+
+	byExtension := make(map[string]*grammar, len(fileLanguages))
 	byLanguage := make(map[core.Language]*grammar)
+	for ext, language := range fileLanguages {
+		g, ok := byLanguage[language]
+		if !ok {
+			parser := sitter.NewParser()
+			parser.SetLanguage(language.Language())
+			g = &grammar{language: language, parser: parser}
+			byLanguage[language] = g
+		}
+		byExtension[ext] = g
+	}
+
+	return &parserWrapper{
+		byExtension: byExtension,
+		maxBytes:    cfg.maxBytes,
+	}, nil
+}
+
+// languagesByExtension returns the language that parses each extension. It
+// fails when two languages claim one extension.
+func languagesByExtension(languages []core.Language) (map[string]core.Language, error) {
+	byExtension := make(map[string]core.Language)
 	for _, language := range languages {
 		for _, ext := range language.Meta().SourceFileExtensions {
 			if _, taken := byExtension[ext]; taken {
@@ -50,22 +77,18 @@ func NewParser(languages []core.Language, opts ...Option) (*parserWrapper, error
 			if selector, ok := language.(core.GrammarSelector); ok {
 				fileLanguage = selector.LanguageForExtension(ext)
 			}
-
-			g, ok := byLanguage[fileLanguage]
-			if !ok {
-				parser := sitter.NewParser()
-				parser.SetLanguage(fileLanguage.Language())
-				g = &grammar{language: fileLanguage, parser: parser}
-				byLanguage[fileLanguage] = g
-			}
-			byExtension[ext] = g
+			byExtension[ext] = fileLanguage
 		}
 	}
+	return byExtension, nil
+}
 
-	return &parserWrapper{
-		byExtension: byExtension,
-		maxBytes:    cfg.maxBytes,
-	}, nil
+// Close frees the sitter parsers. The trees that the parser made stay
+// valid. The parser must not parse after Close.
+func (p *parserWrapper) Close() {
+	for _, g := range p.byExtension {
+		g.parser.Close()
+	}
 }
 
 // Parse parses the file with the language of its extension. It returns an
