@@ -452,57 +452,45 @@ func (p *projection) addClasses(ctx context.Context) error {
 
 // classBases returns the bases of each class by the span of the class node.
 // A start byte does not tell a class from the program that starts with it.
-func (p *projection) classBases(ctx context.Context) (map[span][]string, error) {
+// The bases come from the class node, as the decorators do. A query of the
+// class resolver over the whole tree costs the cube of the decorators of a
+// definition.
+func (p *projection) classBases(_ context.Context) (map[span][]string, error) {
 	bases := map[span][]string{}
-	if rule := p.rules().bases; rule != nil {
-		for _, node := range p.syntax {
-			if node != nil {
-				bases[spanOf(node)] = rule(p, node)
-			}
-		}
-		return bases, nil
-	}
-	resolvers, ok := p.language.Resolvers().(core.ObjectOrientedLanguageResolvers)
-	if !ok {
-		for _, node := range p.syntax {
-			switch {
-			case node == nil:
-			case node.Type() == "class_declaration" || node.Type() == "class":
-				bases[spanOf(node)] = p.heritage(node)
-			case p.isGo():
-				bases[spanOf(node)] = p.goBases(node)
-			}
-		}
-		return bases, nil
-	}
-	if p.isJava() {
-		for _, node := range p.syntax {
-			if node != nil {
-				bases[spanOf(node)] = p.javaBases(node)
-			}
-		}
-		return bases, nil
-	}
-
-	classes, err := resolvers.ResolveClasses(ctx, p.tree)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve classes: %w", err)
-	}
-	// The class resolver reads class declarations, so a class expression
-	// takes its bases from its heritage.
+	rule := p.rules().bases
 	for _, node := range p.syntax {
-		if node != nil && node.Type() == "class" {
+		if node == nil {
+			continue
+		}
+		switch {
+		case rule != nil:
+			bases[spanOf(node)] = rule(p, node)
+		case p.isJava():
+			bases[spanOf(node)] = p.javaBases(node)
+		case p.isGo():
+			bases[spanOf(node)] = p.goBases(node)
+		case node.Type() == "class_definition":
+			bases[spanOf(node)] = p.pythonBases(node)
+		case node.Type() == "class_declaration" || node.Type() == "class":
 			bases[spanOf(node)] = p.heritage(node)
 		}
 	}
-	for _, class := range classes {
-		name := class.GetClassNameNode()
-		if name == nil || name.Parent() == nil || !class.HasInheritance() {
-			continue
-		}
-		bases[spanOf(name.Parent())] = class.BaseClasses()
-	}
 	return bases, nil
+}
+
+// pythonBases returns the bases of a Python class as written, as Base and
+// mod.Base in class A(Base, mod.Base, metaclass=M). A keyword argument, as
+// the metaclass, is no base.
+func (p *projection) pythonBases(class *sitter.Node) []string {
+	var bases []string
+	if list := class.ChildByFieldName("superclasses"); list != nil {
+		for _, base := range ts.NamedChildren(list) {
+			if base.Type() != "keyword_argument" {
+				bases = append(bases, p.text(base))
+			}
+		}
+	}
+	return bases
 }
 
 // heritage returns the bases that the class_heritage of a class names, as

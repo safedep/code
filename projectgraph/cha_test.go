@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
@@ -421,4 +422,31 @@ func TestBuildJavaCallOnThisOfADependencyBase(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, edgeStrings(g), "P.java//P//run -> Thread//interrupt member java.declared-type", "a call with no receiver runs on this")
 	assert.NotContains(t, edgeStrings(g), "P.java//P//run -> Thread//ProcessBuilder member java.declared-type", "a new names a class, not a method of the base")
+}
+
+func TestMROOfALongChainIsFast(t *testing.T) {
+	const n = 6000
+	indexes := make([]*fileindex.Index, 0, n)
+	for i := range n {
+		p := fmt.Sprintf("c%d.py", i)
+		class := fileindex.Join(p, "C")
+		ix := &fileindex.Index{
+			Version:     fileindex.Version,
+			Path:        p,
+			Language:    langcode.Python,
+			Definitions: []fileindex.Definition{{Key: class, Kind: fileindex.DefClass, Name: "C", StartLine: 1, EndLine: 2, Exported: true}},
+			Classes:     []fileindex.Class{{Key: class}},
+		}
+		if i > 0 {
+			base := fmt.Sprintf("c%d", i-1)
+			ix.Imports = []fileindex.Import{{Line: 1, Module: base, Item: "C", Alias: "B", Kind: fileindex.ImportStatic, Namespace: base + "//C"}}
+			ix.Classes[0].Bases = []string{"B"}
+		}
+		indexes = append(indexes, ix)
+	}
+	start := time.Now()
+	g, err := Build(context.Background(), indexes, Options{})
+	require.NoError(t, err)
+	assert.Less(t, time.Since(start), 20*time.Second)
+	assert.Len(t, g.Nodes, n*2)
 }

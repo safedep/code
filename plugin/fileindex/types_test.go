@@ -1,8 +1,12 @@
 package fileindex
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/safedep/code/core"
 	fidx "github.com/safedep/code/fileindex"
@@ -224,4 +228,20 @@ func TestFileIndexExportDefaultValue(t *testing.T) {
 	class := indexSource(t, core.LanguageCodeTypescript, "c.ts", "export default class extends Base { run() {} }\n")
 	assert.Equal(t, []string{"c.ts//default//run"}, classOf(t, class, "c.ts//default").Methods)
 	assert.Equal(t, []fidx.Export{{Name: "default", Target: "c.ts//default", Line: 1}}, class.Exports)
+}
+
+func TestManyDecoratorsIndexFast(t *testing.T) {
+	dir := t.TempDir()
+	var src strings.Builder
+	for i := range 2000 {
+		fmt.Fprintf(&src, "@d%d\n", i)
+	}
+	src.WriteString("class A:\n    pass\n")
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "many.py"), []byte(src.String()), 0o600))
+
+	start := time.Now()
+	ix := indexFiles(t, dir, []string{"many.py"}, core.LanguageCodePython)["many.py"]
+	require.NotNil(t, ix)
+	assert.Less(t, time.Since(start), 10*time.Second)
+	assert.Len(t, ix.Definitions, 2)
 }

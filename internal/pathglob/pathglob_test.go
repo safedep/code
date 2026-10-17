@@ -1,7 +1,9 @@
 package pathglob
 
 import (
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -39,4 +41,13 @@ func TestMatchAny(t *testing.T) {
 func TestValidate(t *testing.T) {
 	assert.NoError(t, Validate("app/**/route.ts"))
 	assert.Error(t, Validate("app/[/x"))
+}
+
+func TestMatchManyDoubleStarsIsFast(t *testing.T) {
+	glob := strings.Repeat("**/", 22) + "z"
+	p := strings.TrimSuffix(strings.Repeat("a/", 40), "/")
+	start := time.Now()
+	assert.False(t, Match(glob, p))
+	assert.True(t, Match(glob, p+"/z"))
+	assert.Less(t, time.Since(start), 5*time.Second)
 }

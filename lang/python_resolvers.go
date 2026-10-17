@@ -128,12 +128,14 @@ const pyClassFieldQuery = `
 						attribute: (identifier) @field_name)) @field_assignment)))
 `
 
+// pyClassDecoratorQuery matches a decorated class once. The decorators
+// come from the children of the match. A pattern with a decorator child
+// matches once per decorator, and tree-sitter takes a time that grows as
+// the cube of the decorators to find them.
 const pyClassDecoratorQuery = `
 	(decorated_definition
-		(decorator
-			(identifier) @decorator_name) @decorator
 		definition: (class_definition
-			name: (identifier) @class_name))
+			name: (identifier) @class_name)) @decorated
 `
 
 const pyInheritanceQuery = `
@@ -362,21 +364,27 @@ func (r *pythonResolvers) extractClassDecorators(ctx context.Context, data *[]by
 	classMap map[string]*ast.ClassDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(pyClassDecoratorQuery, func(m *sitter.QueryMatch) error {
-			if len(m.Captures) < 3 {
+			if len(m.Captures) < 2 {
 				return nil
 			}
 
-			decoratorNode := m.Captures[0].Node
-			decoratorIdentifier := m.Captures[1].Node
-			className := m.Captures[2].Node.Content(*data)
-
-			if classNode, exists := classMap[className]; exists {
+			decorated := m.Captures[0].Node
+			className := m.Captures[1].Node.Content(*data)
+			classNode, exists := classMap[className]
+			if !exists {
+				return nil
+			}
+			for i := 0; i < int(decorated.NamedChildCount()); i++ {
+				decoratorNode := decorated.NamedChild(i)
+				if decoratorNode.Type() != "decorator" || decoratorNode.NamedChildCount() == 0 {
+					continue
+				}
 				classNode.AddDecoratorNode(decoratorNode)
-
-				// Check for abstract decorator - use the identifier node
-				decoratorName := decoratorIdentifier.Content(*data)
-				if decoratorName == "abstractmethod" || decoratorName == "ABC" {
-					classNode.SetIsAbstract(true)
+				if identifier := decoratorNode.NamedChild(0); identifier.Type() == "identifier" {
+					decoratorName := identifier.Content(*data)
+					if decoratorName == "abstractmethod" || decoratorName == "ABC" {
+						classNode.SetIsAbstract(true)
+					}
 				}
 			}
 

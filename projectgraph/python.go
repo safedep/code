@@ -34,37 +34,54 @@ func pythonRelativePath(spec string) string {
 }
 
 // c3 returns the C3 linearization of the first-party bases of a class, or
-// nil when the bases have none.
+// nil when the bases have none. It merges the linearizations of the bases
+// and the list of the bases: the head of a list that is in no tail comes
+// next. A count of each class in the tails tells that in one step, so a
+// chain of n classes links in a time that grows as n squared and not as
+// n cubed. The order stops at the depth cap of depthFirst, so a long chain
+// holds a bounded list per class.
 func (b *builder) c3(class string) []string {
 	bases := b.typeBases(class)
 	lists := make([][]string, 0, len(bases)+1)
 	for _, base := range bases {
-		lists = append(lists, slices.Clone(b.mro(base)))
+		lists = append(lists, b.mro(base))
 	}
-	lists = append(lists, slices.Clone(bases))
-	order := []string{class}
-	for {
-		lists = slices.DeleteFunc(lists, func(l []string) bool { return len(l) == 0 })
-		if len(lists) == 0 {
-			return order
+	lists = append(lists, bases)
+	heads := make([]int, len(lists))
+	tails := map[string]int{}
+	left := 0
+	for _, l := range lists {
+		left += len(l)
+		for i := 1; i < len(l); i++ {
+			tails[l[i]]++
 		}
+	}
+	order := []string{class}
+	seen := map[string]bool{class: true}
+	for left > 0 && len(order) <= b.opts.maxExportHops {
 		head := ""
-		for _, l := range lists {
-			if !slices.ContainsFunc(lists, func(other []string) bool { return slices.Contains(other[1:], l[0]) }) {
-				head = l[0]
+		for i, l := range lists {
+			if heads[i] < len(l) && tails[l[heads[i]]] == 0 {
+				head = l[heads[i]]
 				break
 			}
 		}
-		if head == "" || slices.Contains(order, head) {
+		if head == "" || seen[head] {
 			return nil
 		}
 		order = append(order, head)
+		seen[head] = true
 		for i, l := range lists {
-			if l[0] == head {
-				lists[i] = l[1:]
+			if heads[i] < len(l) && l[heads[i]] == head {
+				heads[i]++
+				left--
+				if heads[i] < len(l) {
+					tails[l[heads[i]]]--
+				}
 			}
 		}
 	}
+	return order
 }
 
 // moduleGetattr returns the function of a module that runs for a name that
