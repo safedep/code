@@ -59,7 +59,7 @@ func Index(path string) *fileindex.Index {
 			{Key: path + "//run", Kind: fileindex.DefFunction, Name: "run", StartLine: 3, EndLine: 5, Exported: true, Flags: []fileindex.Flag{{Kind: fileindex.FlagEval, Line: 4}}},
 		},
 		Classes:    []fileindex.Class{{Key: path + "//C", Bases: []string{"Base"}}},
-		Calls:      []fileindex.Call{{Caller: path + "//run", Line: 4, Column: 5, Callee: "load", Targets: []string{"utils//load"}, Kind: fileindex.CallCall, Args: []fileindex.ArgShape{fileindex.ArgName}}},
+		Calls:      []fileindex.Call{{Caller: path + "//run", Line: 4, Column: 5, Callee: "load", Targets: []string{"utils//load"}, Kind: fileindex.CallCall, Args: []fileindex.Arg{{Shape: fileindex.ArgName, Targets: []string{path + "//text"}}}}},
 		Unresolved: []fileindex.Unresolved{{Caller: path + "//run", Line: 5, Column: 5, Text: "c.send", Receiver: "c", Method: "send", Reason: fileindex.UnresolvedUnknownReceiver}},
 		Flags:      []fileindex.Flag{{Kind: fileindex.FlagReflection, Line: 6}},
 		Truncated:  []fileindex.Truncation{{Kind: fileindex.TruncationDepth, Line: 7}},

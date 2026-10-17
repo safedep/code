@@ -443,6 +443,7 @@ func (p *projection) addCalls() {
 				Receiver: ref.Receiver,
 				Method:   ref.Method,
 				Kind:     kind,
+				Args:     p.arguments(key, ref.Site),
 			})
 		}
 	}

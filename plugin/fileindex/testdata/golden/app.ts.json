@@ -1,5 +1,5 @@
 {
-  "version": "3",
+  "version": "4",
   "path": "app.ts",
   "language": "typescript",
   "content_hash": "d3908948ab8ec7b3adc898e0707ce74bb3a2d6393a724dfbeb67147840397234",
@@ -185,7 +185,15 @@
         ".//helper//helper"
       ],
       "method": "helper",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "member",
+          "targets": [
+            "app.ts//Parser//text"
+          ]
+        }
+      ]
     },
     {
       "caller": "app.ts//Parser//render",
@@ -209,7 +217,15 @@
       ],
       "receiver": "path",
       "method": "join",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        },
+        {
+          "shape": "string"
+        }
+      ]
     },
     {
       "caller": "app.ts//main",
@@ -231,7 +247,12 @@
         "app.ts//Parser"
       ],
       "method": "Parser",
-      "kind": "new"
+      "kind": "new",
+      "args": [
+        {
+          "shape": "string"
+        }
+      ]
     },
     {
       "caller": "app.ts//main",
@@ -254,7 +275,12 @@
         "js-yaml//load"
       ],
       "method": "load",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        }
+      ]
     },
     {
       "caller": "app.ts//main",
@@ -284,7 +310,39 @@
         "fs//promises//readFile"
       ],
       "method": "readFile",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        },
+        {
+          "shape": "name",
+          "targets": [
+            "fs//promises//writeFile"
+          ]
+        },
+        {
+          "shape": "name",
+          "targets": [
+            "fs"
+          ]
+        },
+        {
+          "shape": "name",
+          "targets": [
+            "js-yaml"
+          ]
+        },
+        {
+          "shape": "name",
+          "targets": [
+            "util"
+          ]
+        },
+        {
+          "shape": "name"
+        }
+      ]
     },
     {
       "caller": "app.ts",
@@ -295,7 +353,12 @@
         "app.ts//main"
       ],
       "method": "main",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "literal"
+        }
+      ]
     }
   ],
   "references": [

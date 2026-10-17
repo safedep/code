@@ -19,7 +19,7 @@ import (
 // Version is the version of the index records and of the rules that fill
 // them. Bump it when a field, a kind, an order or a fill rule changes. A
 // store keys an index by Version, so the bump makes every older index miss.
-const Version = "3"
+const Version = "4"
 
 type ImportKind string
 
@@ -203,7 +203,7 @@ type Typed struct {
 // resolutions of the callee: local keys, import namespaces or bare names. A
 // call with no target keeps a bare name in Callee. Receiver is the object of
 // a member call and Method the called name, so the reach query can match an
-// unresolved record of the same method.
+// unresolved record of the same method. Args are in source order.
 type Call struct {
 	Caller   string   `json:"caller"`
 	Line     int      `json:"line"`
@@ -213,9 +213,16 @@ type Call struct {
 	Receiver string   `json:"receiver,omitempty"`
 	Method   string   `json:"method,omitempty"`
 	Kind     CallKind `json:"kind"`
-	// Args is empty until the framework root rules of plan step 28 need
-	// the argument shapes.
-	Args []ArgShape `json:"args,omitempty"`
+	Args     []Arg    `json:"args,omitempty"`
+}
+
+// Arg is one positional argument of a call, as the framework root rules
+// read it. A Python keyword argument has no position, so it is no Arg.
+// Targets are the per-file targets of a name or a member, as the targets of
+// a Call, or the key of a function that the index defines.
+type Arg struct {
+	Shape   ArgShape `json:"shape"`
+	Targets []string `json:"targets,omitempty"`
 }
 
 // Reference is a function, a method, a class or an import that the file

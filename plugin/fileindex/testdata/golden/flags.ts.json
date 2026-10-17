@@ -1,5 +1,5 @@
 {
-  "version": "3",
+  "version": "4",
   "path": "flags.ts",
   "language": "typescript",
   "content_hash": "a84c4ad21735c1c250e33317463237749489ea1f220a93f97e2bea3f07b040c4",
@@ -173,7 +173,12 @@
         "eval"
       ],
       "method": "eval",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        }
+      ]
     },
     {
       "caller": "flags.ts//run",
@@ -184,7 +189,12 @@
         "Function"
       ],
       "method": "Function",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        }
+      ]
     },
     {
       "caller": "flags.ts//run",
@@ -196,7 +206,15 @@
       ],
       "receiver": "Reflect",
       "method": "get",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        },
+        {
+          "shape": "name"
+        }
+      ]
     },
     {
       "caller": "flags.ts//View",
@@ -212,7 +230,12 @@
       "column": 4,
       "callee": "observe",
       "method": "observe",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        }
+      ]
     }
   ],
   "unresolved": [

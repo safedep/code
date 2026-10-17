@@ -1,5 +1,5 @@
 {
-  "version": "3",
+  "version": "4",
   "path": "app.js",
   "language": "javascript",
   "content_hash": "247fdd512217fb5e7ce19cbf3f60b327e145abc15a26ee510e167cbc651b0a54",
@@ -181,7 +181,15 @@
         ".//helper//helper"
       ],
       "method": "helper",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "member",
+          "targets": [
+            "app.js//Parser//text"
+          ]
+        }
+      ]
     },
     {
       "caller": "app.js//Parser//render",
@@ -205,7 +213,15 @@
       ],
       "receiver": "path",
       "method": "join",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        },
+        {
+          "shape": "string"
+        }
+      ]
     },
     {
       "caller": "app.js//main",
@@ -227,7 +243,12 @@
         "app.js//Parser"
       ],
       "method": "Parser",
-      "kind": "new"
+      "kind": "new",
+      "args": [
+        {
+          "shape": "string"
+        }
+      ]
     },
     {
       "caller": "app.js//main",
@@ -250,7 +271,12 @@
         "js-yaml//load"
       ],
       "method": "load",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        }
+      ]
     },
     {
       "caller": "app.js//main",
@@ -280,7 +306,36 @@
         "fs//promises//readFile"
       ],
       "method": "readFile",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        },
+        {
+          "shape": "name",
+          "targets": [
+            "fs//promises//writeFile"
+          ]
+        },
+        {
+          "shape": "name",
+          "targets": [
+            "fs"
+          ]
+        },
+        {
+          "shape": "name",
+          "targets": [
+            "js-yaml"
+          ]
+        },
+        {
+          "shape": "name",
+          "targets": [
+            "util"
+          ]
+        }
+      ]
     },
     {
       "caller": "app.js",

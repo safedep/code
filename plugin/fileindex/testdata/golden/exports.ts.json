@@ -1,5 +1,5 @@
 {
-  "version": "3",
+  "version": "4",
   "path": "exports.ts",
   "language": "typescript",
   "content_hash": "bec31766778cf120994be72531c0cd11feccdd8ac3553d9b91cc06fd07e87747",
@@ -176,7 +176,12 @@
         "exports.ts//run"
       ],
       "method": "run",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "literal"
+        }
+      ]
     }
   ]
 }

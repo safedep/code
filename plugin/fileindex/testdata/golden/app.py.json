@@ -1,5 +1,5 @@
 {
-  "version": "3",
+  "version": "4",
   "path": "app.py",
   "language": "python",
   "content_hash": "a9cdb5fb012d2a29970c07deda9cc8360983015e2360cb9091bca7bfce5c801d",
@@ -172,7 +172,15 @@
         "//utils//helper"
       ],
       "method": "helper",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "member",
+          "targets": [
+            "app.py//Parser//text"
+          ]
+        }
+      ]
     },
     {
       "caller": "app.py//Parser//render",
@@ -196,7 +204,15 @@
       ],
       "receiver": "os.path",
       "method": "join",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        },
+        {
+          "shape": "string"
+        }
+      ]
     },
     {
       "caller": "app.py//main",
@@ -218,7 +234,12 @@
         "app.py//Parser"
       ],
       "method": "Parser",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        }
+      ]
     },
     {
       "caller": "app.py//main",
@@ -241,7 +262,12 @@
         "yaml//load"
       ],
       "method": "load",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        }
+      ]
     },
     {
       "caller": "app.py//main",
@@ -271,7 +297,15 @@
         "getattr"
       ],
       "method": "getattr",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        },
+        {
+          "shape": "name"
+        }
+      ]
     },
     {
       "caller": "app.py//main",
@@ -283,7 +317,21 @@
       ],
       "receiver": "j",
       "method": "dumps",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name",
+          "targets": [
+            "////sibling"
+          ]
+        },
+        {
+          "shape": "name",
+          "targets": [
+            "////pkg//thing"
+          ]
+        }
+      ]
     },
     {
       "caller": "app.py",

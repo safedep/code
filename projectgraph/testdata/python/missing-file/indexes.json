@@ -1,6 +1,6 @@
 [
   {
-    "version": "3", "path": "main.py", "language": "python",
+    "version": "4", "path": "main.py", "language": "python",
     "imports": [{"line": 1, "module": "handlers", "item": "parse", "alias": "parse", "kind": "static", "namespace": "handlers//parse"}],
     "definitions": [{"key": "main.py", "kind": "module", "name": "main", "start_line": 1, "end_line": 2, "exported": true}],
     "calls": [{"caller": "main.py", "line": 2, "column": 1, "callee": "parse", "targets": ["handlers//parse"], "kind": "call"}]

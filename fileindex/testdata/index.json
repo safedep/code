@@ -1,5 +1,5 @@
 {
-  "version": "3",
+  "version": "4",
   "path": "src/app.py",
   "language": "python",
   "content_hash": "a172cedcae47474b615c54d510a5d84a8dea3032e958587430b413538be3f333",
@@ -169,8 +169,15 @@
       "method": "load",
       "kind": "call",
       "args": [
-        "name",
-        "literal"
+        {
+          "shape": "name",
+          "targets": [
+            "src/app.py//text"
+          ]
+        },
+        {
+          "shape": "literal"
+        }
       ]
     },
     {
@@ -183,7 +190,9 @@
       ],
       "kind": "import",
       "args": [
-        "string"
+        {
+          "shape": "string"
+        }
       ]
     },
     {
@@ -206,11 +215,27 @@
       ],
       "kind": "call",
       "args": [
-        "string",
-        "template",
-        "member",
-        "computed",
-        "function"
+        {
+          "shape": "string"
+        },
+        {
+          "shape": "template"
+        },
+        {
+          "shape": "member",
+          "targets": [
+            "yaml//load"
+          ]
+        },
+        {
+          "shape": "computed"
+        },
+        {
+          "shape": "function",
+          "targets": [
+            "src/app.py//helper"
+          ]
+        }
       ]
     }
   ],

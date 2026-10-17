@@ -208,6 +208,13 @@ func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 		ref.Unbound = unbound
 		callGraph.addCall(currentNamespace, nil, ref)
 		log.Debugf("JS call: %s -> %s", currentNamespace, callee)
+		// The file cannot tell a factory of a dependency from a function of
+		// it. The value of the call is the callee, as for new X(), so
+		// app.get() in const app = express() keeps the import, as Python
+		// does for a call of an import.
+		if kind == CallCall && callGraph.imported(callee) {
+			result.addAssignments(callGraph.assignmentGraph.addNode(callee, nil))
+		}
 	}
 
 	return result

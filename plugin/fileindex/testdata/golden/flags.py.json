@@ -1,5 +1,5 @@
 {
-  "version": "3",
+  "version": "4",
   "path": "flags.py",
   "language": "python",
   "content_hash": "0df2980f5ffcb01bdb32d43a098370ee7fec526adc2dc44e1324a6143d653887",
@@ -148,7 +148,12 @@
       ],
       "receiver": "importlib",
       "method": "import_module",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "computed"
+        }
+      ]
     },
     {
       "caller": "flags.py//load",
@@ -160,7 +165,12 @@
       ],
       "receiver": "importlib",
       "method": "import_module",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        }
+      ]
     },
     {
       "caller": "flags.py//load",
@@ -171,7 +181,12 @@
         "__import__"
       ],
       "method": "__import__",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        }
+      ]
     },
     {
       "caller": "flags.py//run",
@@ -182,7 +197,12 @@
         "eval"
       ],
       "method": "eval",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        }
+      ]
     },
     {
       "caller": "flags.py//run",
@@ -193,7 +213,12 @@
         "exec"
       ],
       "method": "exec",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        }
+      ]
     },
     {
       "caller": "flags.py//run",
@@ -204,7 +229,15 @@
         "getattr"
       ],
       "method": "getattr",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        },
+        {
+          "shape": "name"
+        }
+      ]
     },
     {
       "caller": "flags.py//run",
@@ -215,7 +248,15 @@
         "getattr"
       ],
       "method": "getattr",
-      "kind": "call"
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        },
+        {
+          "shape": "string"
+        }
+      ]
     }
   ],
   "unresolved": [
