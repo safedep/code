@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/projectgraph/modules"
 )
 
 // resolveName returns the key that a name of a module stands for. A name
@@ -103,7 +104,7 @@ func (b *builder) followExport(sc *scope, ex fileindex.Export, hops int) (string
 			if ex.Item != "" {
 				names = []string{ex.Item}
 			}
-			key = b.importedExternal(sc.ix, fileindex.JoinNonEmpty(fileindex.Namespace(sc.ix.Language, ex.From), ex.Item), ex.From, names)
+			key = b.importedExternal(sc.ix, fileindex.JoinNonEmpty(fileindex.Namespace(sc.ix.Language, ex.From), ex.Item), ex.From, modules.FormImport, names)
 		case ex.Item == "":
 			key = mod
 		default:
@@ -121,15 +122,19 @@ func (b *builder) followExport(sc *scope, ex fileindex.Export, hops int) (string
 	return b.followBinding(sc, imp, ex.Name, hops)
 }
 
-// followBinding resolves a name that the file imports and gives on.
+// followBinding resolves a name that the file imports and gives on. An
+// import that names more than one module gives on the first.
 func (b *builder) followBinding(sc *scope, imp fileindex.Import, name string, hops int) (string, *failure) {
 	lang := sc.ix.Language
 	module, lead := importedModule(lang, imp)
-	mod, _, ok := b.resolveModule(sc.ix, module)
-	var key string
+	mods := b.resolveModules(sc.ix, module, formOf(imp))
+	var key, mod string
+	if len(mods) > 0 {
+		mod = mods[0].key
+	}
 	switch {
-	case !ok:
-		key = b.importedExternal(sc.ix, boundNamespace(lang, imp), module, lead)
+	case len(mods) == 0:
+		key = b.importedExternal(sc.ix, boundNamespace(lang, imp), module, formOf(imp), lead)
 	case len(lead) > 0:
 		var fail *failure
 		if key, fail = b.resolveName(mod, lead[0], hops+1); fail != nil {

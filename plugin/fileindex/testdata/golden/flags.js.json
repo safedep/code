@@ -15,27 +15,31 @@
       "line": 2,
       "module": "",
       "kind": "dynamic-computed",
-      "namespace": ""
+      "namespace": "",
+      "require": true
     },
     {
       "line": 3,
       "module": "./config",
       "alias": "config",
       "kind": "static",
-      "namespace": ".//config"
+      "namespace": ".//config",
+      "require": true
     },
     {
       "line": 6,
       "module": "./lazy",
       "alias": "lazy",
       "kind": "dynamic-string",
-      "namespace": ".//lazy"
+      "namespace": ".//lazy",
+      "require": true
     },
     {
       "line": 7,
       "module": "./mods/",
       "kind": "dynamic-computed",
-      "namespace": ""
+      "namespace": "",
+      "require": true
     },
     {
       "line": 8,

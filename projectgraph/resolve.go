@@ -7,6 +7,7 @@ import (
 
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
+	"github.com/safedep/code/projectgraph/modules"
 )
 
 type failure struct {
@@ -263,16 +264,20 @@ func (b *builder) resolveTarget(sc *scope, caller, target string) []resolution {
 	if imp, rest, ok := sc.importFor(target); ok {
 		module, lead := importedModule(ix.Language, imp)
 		names := append(lead, rest...)
-		mod, _, found := b.resolveModule(ix, module)
-		if !found {
-			return []resolution{{key: b.importedExternal(ix, target, module, names), kind: EdgeDirect, rule: "external"}}
+		mods := b.resolveModules(ix, module, formOf(imp))
+		if len(mods) == 0 {
+			return []resolution{{key: b.importedExternal(ix, target, module, formOf(imp), names), kind: EdgeDirect, rule: "external"}}
 		}
 		if len(names) == 0 && sc.profile.defaultExport != "" {
 			names = []string{sc.profile.defaultExport}
 		}
-		r := b.walk(mod, names)
-		r.rule = cmp.Or(r.rule, "import")
-		return []resolution{r}
+		var out []resolution
+		for _, m := range mods {
+			r := b.walk(m.key, names)
+			r.rule = cmp.Or(r.rule, "import")
+			out = append(out, r)
+		}
+		return out
 	}
 	if rs := b.resolveScope(sc, caller, target); len(rs) > 0 {
 		return rs
@@ -720,13 +725,13 @@ func (b *builder) resolveScopeName(sc *scope, text string) (string, bool) {
 	case ok:
 		lang := sc.ix.Language
 		module, lead := importedModule(lang, imp)
-		mod, _, found := b.resolveModule(sc.ix, module)
-		if !found {
+		mods := b.resolveModules(sc.ix, module, formOf(imp))
+		if len(mods) == 0 {
 			key := fileindex.Join(boundNamespace(lang, imp), segs[1:]...)
-			b.recordOrigin(sc.ix, key, module, append(lead, segs[1:]...))
+			b.recordOrigin(sc.ix, key, module, formOf(imp), append(lead, segs[1:]...))
 			return key, true
 		}
-		r = b.walk(mod, append(lead, segs[1:]...))
+		r = b.walk(mods[0].key, append(lead, segs[1:]...))
 	case len(scoped) > 0:
 		r = b.walk(scoped[0], segs[1:])
 	case sc.profile.qualified != nil:
@@ -755,13 +760,42 @@ func (b *builder) resolveNameIn(sc *scope, from, text string) (string, bool) {
 }
 
 // resolveModule resolves a module that a file imports in the space of the
-// file: its project, or its unit of dependency code.
+// file: its project, or its unit of dependency code. It takes the import
+// form, so a caller with a require, as a walk from an import binding,
+// calls resolveModules.
 func (b *builder) resolveModule(ix *fileindex.Index, spec string) (string, string, bool) {
 	r := b.spaceOf(ix.Path).resolvers[ix.Language]
 	if spec == "" || r == nil {
 		return "", "", false
 	}
 	return r.Module(ix.Path, spec)
+}
+
+// resolveModules resolves a module that a file imports in the form, in the
+// space of the file. An exports map of a package with no condition of the
+// form gives every module of the map, so a site links each one.
+func (b *builder) resolveModules(ix *fileindex.Index, spec string, form modules.Form) []moduleRef {
+	r := b.spaceOf(ix.Path).resolvers[ix.Language]
+	if spec == "" || r == nil {
+		return nil
+	}
+	fr, ok := r.(modules.FormResolver)
+	if !ok {
+		mod, via, ok := r.Module(ix.Path, spec)
+		if !ok {
+			return nil
+		}
+		return []moduleRef{{key: mod, via: via}}
+	}
+	mods, via, ok := fr.Modules(ix.Path, spec, form)
+	if !ok {
+		return nil
+	}
+	out := make([]moduleRef, 0, len(mods))
+	for _, mod := range mods {
+		out = append(out, moduleRef{key: mod, via: via})
+	}
+	return out
 }
 
 // mayBeFirstParty reports whether a module that resolves to no file can be

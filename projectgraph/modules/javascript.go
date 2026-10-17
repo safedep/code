@@ -63,47 +63,51 @@ func (j *JavaScript) Packages() []*PackageJSON { return j.projects }
 // Problems returns the manifests that the resolver could not read.
 func (j *JavaScript) Problems() []Problem { return j.problems }
 
-// Resolve returns the file that importer names with spec, and how the
-// resolver found it: relative, tsconfig-paths, tsconfig-baseurl,
-// exports-import and the other conditions, exports, main, index or subpath.
-func (j *JavaScript) Resolve(importer, spec string, typescript bool) (string, string, bool) {
+// Resolve returns the files that importer names with spec in the form,
+// and how the resolver found them: relative, tsconfig-paths,
+// tsconfig-baseurl, exports-import and the other conditions, exports, main,
+// index or subpath. One import names one file, unless the exports map of
+// its package has no condition of the form: then every target of the map
+// is a file.
+func (j *JavaScript) Resolve(importer, spec string, typescript bool, form Form) ([]string, string, bool) {
 	if isRelative(spec) {
 		base, ok := Join(Dir(importer), spec)
 		if !ok {
-			return "", "", false
+			return nil, "", false
 		}
 		if file, ok := j.File(base, typescript); ok {
-			return file, "relative", true
+			return []string{file}, "relative", true
 		}
-		return "", "", false
+		return nil, "", false
 	}
 	if spec == "" || strings.HasPrefix(spec, "/") {
-		return "", "", false
+		return nil, "", false
 	}
 	if typescript {
 		if cfg := j.tsconfigFor(importer); cfg != nil {
 			if file, via, ok := j.viaTSConfig(cfg, spec); ok {
-				return file, via, true
+				return []string{file}, via, true
 			}
 		}
 	}
 	name, sub := SplitPackage(spec)
 	if pj := j.packages[name]; pj != nil {
-		return j.Entry(pj, sub, typescript)
+		return j.Entries(pj, sub, typescript, form)
 	}
-	return "", "", false
+	return nil, "", false
 }
 
-// Package returns the file of a subpath of the package at the root of the
-// file set, as "." or "./fp", and how the resolver found it. A root with no
-// package.json gives its index file and its files by path. The root of a
-// unit of dependency code is the directory of the package.
-func (j *JavaScript) Package(sub string, typescript bool) (string, string, bool) {
+// Package returns the files of a subpath of the package at the root of
+// the file set, as "." or "./fp", for the form, and how the resolver found
+// them. A root with no package.json gives its index file and its files by
+// path. The root of a unit of dependency code is the directory of the
+// package.
+func (j *JavaScript) Package(sub string, typescript bool, form Form) ([]string, string, bool) {
 	pj := j.manifests[""]
 	if pj == nil {
 		pj = &PackageJSON{}
 	}
-	return j.Entry(pj, sub, typescript)
+	return j.Entries(pj, sub, typescript, form)
 }
 
 // Subpaths returns the subpaths that the package at the root of the file
@@ -123,17 +127,24 @@ func (j *JavaScript) Subpaths() []string {
 	return sortedKeys(set)
 }
 
-// Entry returns the file of a subpath of a package, as "." or "./utils".
-func (j *JavaScript) Entry(pj *PackageJSON, sub string, typescript bool) (string, string, bool) {
+// Entries returns the files of a subpath of a package, as "." or
+// "./utils", for the form.
+func (j *JavaScript) Entries(pj *PackageJSON, sub string, typescript bool, form Form) ([]string, string, bool) {
 	if len(pj.Exports) > 0 && string(pj.Exports) != "null" {
-		target, cond, ok := exportTarget(pj.Exports, sub)
+		targets, cond, ok := exportTargets(pj.Exports, sub, form)
 		if !ok {
-			return "", "", false
+			return nil, "", false
 		}
-		if file, ok := j.relativeFile(pj.Dir, target, typescript); ok {
-			return file, strings.TrimSuffix("exports-"+cond, "-"), true
+		var files []string
+		for _, target := range targets {
+			if file, ok := j.relativeFile(pj.Dir, target, typescript); ok && !slices.Contains(files, file) {
+				files = append(files, file)
+			}
 		}
-		return "", "", false
+		if len(files) == 0 {
+			return nil, "", false
+		}
+		return files, strings.TrimSuffix("exports-"+cond, "-"), true
 	}
 	entries := []struct{ name, via string }{{sub, "subpath"}}
 	if sub == "." {
@@ -144,10 +155,10 @@ func (j *JavaScript) Entry(pj *PackageJSON, sub string, typescript bool) (string
 			continue
 		}
 		if file, ok := j.relativeFile(pj.Dir, e.name, typescript); ok {
-			return file, e.via, true
+			return []string{file}, e.via, true
 		}
 	}
-	return "", "", false
+	return nil, "", false
 }
 
 func (j *JavaScript) relativeFile(dir, name string, typescript bool) (string, bool) {

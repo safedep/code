@@ -77,7 +77,8 @@
       "item": "helper",
       "alias": "helper",
       "kind": "static",
-      "namespace": ".//helper//helper"
+      "namespace": ".//helper//helper",
+      "require": true
     }
   ],
   "definitions": [

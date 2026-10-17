@@ -104,7 +104,7 @@ func (b *builder) wildcard(sc *scope, name string) []resolution {
 	for _, st := range sc.stars {
 		mod, _, ok := b.resolveModule(sc.ix, st.spec)
 		if !ok {
-			key := b.importedExternal(sc.ix, fileindex.Join(fileindex.Namespace(sc.ix.Language, st.spec), name), st.spec, []string{name})
+			key := b.importedExternal(sc.ix, fileindex.Join(fileindex.Namespace(sc.ix.Language, st.spec), name), st.spec, modules.FormImport, []string{name})
 			external = append(external, resolution{key: key, kind: EdgeWildcard, rule: "wildcard-external"})
 			continue
 		}

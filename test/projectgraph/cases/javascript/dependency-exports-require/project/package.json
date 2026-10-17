@@ -1,0 +1,1 @@
+{ "name": "app", "main": "main.js", "dependencies": { "kit": "1.0.0" } }

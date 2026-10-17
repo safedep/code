@@ -61,7 +61,8 @@
       "module": "util",
       "alias": "util",
       "kind": "static",
-      "namespace": "util"
+      "namespace": "util",
+      "require": true
     },
     {
       "line": 7,
@@ -69,7 +70,8 @@
       "item": "helper",
       "alias": "helper",
       "kind": "static",
-      "namespace": ".//helper//helper"
+      "namespace": ".//helper//helper",
+      "require": true
     }
   ],
   "definitions": [

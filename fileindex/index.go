@@ -150,6 +150,9 @@ type Index struct {
 // Import is one import of the file. Module is the module as written, as
 // ./utils or .foo, and the link step resolves it. Namespace is the per-file
 // "//" form of the import, which loses the leading dots of a relative module.
+// Require marks an import that a CommonJS require makes. The exports map of
+// a package gives such an import its require condition, and an import
+// statement or an import() its import condition.
 type Import struct {
 	Line      int        `json:"line"`
 	Module    string     `json:"module"`
@@ -158,6 +161,7 @@ type Import struct {
 	Wildcard  bool       `json:"wildcard,omitempty"`
 	Kind      ImportKind `json:"kind"`
 	Namespace string     `json:"namespace"`
+	Require   bool       `json:"require,omitempty"`
 }
 
 // Export is one export of the file. Name is "default" for a default export.
@@ -435,6 +439,7 @@ func (ix *Index) Sort() {
 			CompareBool(a.Wildcard, b.Wildcard),
 			cmp.Compare(a.Kind, b.Kind),
 			cmp.Compare(a.Namespace, b.Namespace),
+			CompareBool(a.Require, b.Require),
 		)
 	})
 	slices.SortFunc(ix.Exports, func(a, b Export) int {

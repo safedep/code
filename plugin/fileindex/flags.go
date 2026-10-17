@@ -228,9 +228,10 @@ func (p *projection) dynamicImport(call *sitter.Node, arguments []*sitter.Node, 
 	}
 	module, whole := p.stringPrefix(argument)
 	line := lineOf(call)
+	require := p.ix.Language.IsECMAScript() && p.text(call.ChildByFieldName("function")) == requireFunction
 	if !whole {
 		p.flag(fidx.FlagComputedImport, call)
-		p.ix.Imports = append(p.ix.Imports, fidx.Import{Line: line, Module: module, Kind: fidx.ImportDynamicComputed})
+		p.ix.Imports = append(p.ix.Imports, fidx.Import{Line: line, Module: module, Kind: fidx.ImportDynamicComputed, Require: require})
 		return
 	}
 	if !dynamic {
@@ -238,7 +239,7 @@ func (p *projection) dynamicImport(call *sitter.Node, arguments []*sitter.Node, 
 	}
 	for i := range p.ix.Imports {
 		if imp := &p.ix.Imports[i]; imp.Line == lineOf(argument) && imp.Module == module {
-			imp.Kind = fidx.ImportDynamicString
+			imp.Kind, imp.Require = fidx.ImportDynamicString, require
 			return
 		}
 	}
@@ -247,6 +248,7 @@ func (p *projection) dynamicImport(call *sitter.Node, arguments []*sitter.Node, 
 		Module:    module,
 		Kind:      fidx.ImportDynamicString,
 		Namespace: fidx.Namespace(p.ix.Language, module),
+		Require:   require,
 	})
 }
 

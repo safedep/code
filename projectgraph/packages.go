@@ -68,6 +68,26 @@ func (k spaceResolver) Module(importer, spec string) (string, string, bool) {
 	return k.sp.key(mod), via, true
 }
 
+// Modules resolves in the form when the resolver of the paths reads it.
+func (k spaceResolver) Modules(importer, spec string, form modules.Form) ([]string, string, bool) {
+	fr, ok := k.r.(modules.FormResolver)
+	if !ok {
+		mod, via, ok := k.Module(importer, spec)
+		if !ok {
+			return nil, "", false
+		}
+		return []string{mod}, via, true
+	}
+	mods, via, ok := fr.Modules(k.sp.inner(importer), spec, form)
+	if !ok {
+		return nil, "", false
+	}
+	for i, mod := range mods {
+		mods[i] = k.sp.key(mod)
+	}
+	return mods, via, true
+}
+
 func (k spaceResolver) FirstParty(spec string) bool {
 	return k.r.FirstParty(spec)
 }
@@ -136,33 +156,42 @@ func (b *builder) submodule(module, name string) (string, bool) {
 }
 
 // origin is an import that an external key comes from: the language and the
-// unit of the importer, the module as the import writes it, and the names
-// from the module to the key.
+// unit of the importer, the module as the import writes it, the form of the
+// import and the names from the module to the key.
 type origin struct {
 	lang   langcode.Code
 	unit   string
 	module string
+	form   modules.Form
 	names  []string
 }
 
 func (o origin) equal(other origin) bool {
-	return o.lang == other.lang && o.unit == other.unit && o.module == other.module && slices.Equal(o.names, other.names)
+	return o.lang == other.lang && o.unit == other.unit && o.module == other.module && o.form == other.form && slices.Equal(o.names, other.names)
+}
+
+// formOf returns the form of an import: a require, or else an import.
+func formOf(imp fileindex.Import) modules.Form {
+	if imp.Require {
+		return modules.FormRequire
+	}
+	return modules.FormImport
 }
 
 // importedExternal returns the external node of a key that an import of the
 // file gives, and records the import as its origin.
-func (b *builder) importedExternal(ix *fileindex.Index, key, module string, names []string) string {
-	b.recordOrigin(ix, key, module, names)
+func (b *builder) importedExternal(ix *fileindex.Index, key, module string, form modules.Form, names []string) string {
+	b.recordOrigin(ix, key, module, form, names)
 	return b.external(key)
 }
 
 // recordOrigin records an import as an origin of the key. A graph with no
 // unit of dependency code links no external key, so it records nothing.
-func (b *builder) recordOrigin(ix *fileindex.Index, key, module string, names []string) {
+func (b *builder) recordOrigin(ix *fileindex.Index, key, module string, form modules.Form, names []string) {
 	if len(b.spaces) < 2 {
 		return
 	}
-	o := origin{lang: ix.Language, unit: ix.Unit, module: module, names: slices.Clone(names)}
+	o := origin{lang: ix.Language, unit: ix.Unit, module: module, form: form, names: slices.Clone(names)}
 	if !slices.ContainsFunc(b.origins[key], o.equal) {
 		b.origins[key] = append(b.origins[key], o)
 	}
@@ -191,24 +220,29 @@ type provision struct {
 	via    string
 }
 
+// provisionKey is what the providers of an origin depend on.
+type provisionKey struct {
+	family langcode.Code
+	module string
+	form   modules.Form
+}
+
 // providers returns the modules of the units that give the module of an
 // origin, in the order of the units. A unit gives the module when its
 // package has the name of the import: the npm name for JavaScript, the
 // module path for Go, and the top-level package for Python. The answer
-// depends only on the family and the module, so the builder keeps it.
+// depends only on the family, the module and the form, so the builder
+// keeps it.
 func (b *builder) providers(o origin) []provision {
 	family := languageFamily(o.lang)
-	k := [2]string{string(family), o.module}
+	k := provisionKey{family: family, module: o.module, form: o.form}
 	if out, ok := b.provisions[k]; ok {
 		return out
 	}
 	var out []provision
 	for _, sp := range b.ordered {
-		if sp.unit == "" {
-			continue
-		}
-		if pv, ok := b.provide(sp, family, o.module); ok {
-			out = append(out, pv)
+		if sp.unit != "" {
+			out = append(out, b.provide(sp, family, o.module, o.form)...)
 		}
 	}
 	switch family {
@@ -232,56 +266,64 @@ func (b *builder) providers(o origin) []provision {
 	return out
 }
 
-func (b *builder) provide(sp *space, family langcode.Code, module string) (provision, bool) {
+// provide returns the modules of a unit that give a module of the family,
+// as an import of the form names it. A unit that gives the package and not
+// the module gives one provision with no module.
+func (b *builder) provide(sp *space, family langcode.Code, module string, form modules.Form) []provision {
 	switch family {
 	case langcode.Javascript:
 		name, sub := modules.SplitPackage(module)
 		if sp.pkg.Ecosystem != "npm" || sp.pkg.Name != name || strings.HasPrefix(module, ".") {
-			return provision{}, false
+			return nil
 		}
-		file, via, ok := packageFile(sp, sub)
+		files, via, ok := packageFiles(sp, sub, form)
 		if !ok {
-			return provision{sp: sp}, true
+			return []provision{{sp: sp}}
 		}
-		return provision{sp: sp, module: sp.key(file), via: via}, true
+		var out []provision
+		for _, file := range files {
+			out = append(out, provision{sp: sp, module: sp.key(file), via: via})
+		}
+		return out
 	case langcode.Python:
 		if strings.HasPrefix(module, ".") {
-			return provision{}, false
+			return nil
 		}
 		if _, ok := sp.python.Absolute("", firstDotted(module)); !ok {
-			return provision{}, false
+			return nil
 		}
 		mod, ok := sp.python.Absolute("", module)
 		if !ok {
-			return provision{sp: sp}, true
+			return []provision{{sp: sp}}
 		}
-		return provision{sp: sp, module: sp.key(mod), via: "absolute"}, true
+		return []provision{{sp: sp, module: sp.key(mod), via: "absolute"}}
 	case langcode.Go:
 		rel, ok := strings.CutPrefix(module, sp.pkg.Name)
 		if sp.pkg.Ecosystem != "go" || !ok || rel != "" && !strings.HasPrefix(rel, "/") {
-			return provision{}, false
+			return nil
 		}
 		dir, ok := sp.golang.Resolve(module)
 		if !ok {
 			dir = strings.TrimPrefix(rel, "/")
 		}
 		if u := sp.goPackages[dir]; u != nil {
-			return provision{sp: sp, module: u.key, via: "module"}, true
+			return []provision{{sp: sp, module: u.key, via: "module"}}
 		}
-		return provision{sp: sp}, true
+		return []provision{{sp: sp}}
 	}
-	return provision{}, false
+	return nil
 }
 
-// packageFile returns the file of a subpath of the npm package of a unit.
-// A package runs its JavaScript, so a JavaScript file wins over a
-// TypeScript declaration of the same path, as index.js over index.d.ts. A
-// package with TypeScript sources only gives a TypeScript file.
-func packageFile(sp *space, sub string) (string, string, bool) {
-	if file, via, ok := sp.js.Package(sub, false); ok {
-		return file, via, true
+// packageFiles returns the files of a subpath of the npm package of a unit
+// for an import of the form. A package runs its JavaScript, so a
+// JavaScript file wins over a TypeScript declaration of the same path, as
+// index.js over index.d.ts. A package with TypeScript sources only gives a
+// TypeScript file.
+func packageFiles(sp *space, sub string, form modules.Form) ([]string, string, bool) {
+	if files, via, ok := sp.js.Package(sub, false, form); ok {
+		return files, via, true
 	}
-	return sp.js.Package(sub, true)
+	return sp.js.Package(sub, true, form)
 }
 
 // linkPackages adds a package edge from each external key that an import
@@ -377,16 +419,17 @@ type surfaceSymbol struct {
 }
 
 // surface returns the exported symbols of a unit with the import that names
-// each one: the names that each subpath of an npm package exports, the
-// public names of each public Python module, and the exported names and
-// methods of each Go package that is not internal. A class that a
-// JavaScript or a Python module exports gives its public methods too, as
-// kit//Store//close.
+// each one: the names that each subpath of an npm package exports, for an
+// import and for a require, the public names of each public Python module,
+// and the exported names and methods of each Go package that is not
+// internal. A class that a JavaScript or a Python module exports gives its
+// public methods too, as kit//Store//close.
 func (b *builder) surface(sp *space) []surfaceSymbol {
 	var out []surfaceSymbol
+	form := modules.FormImport
 	add := func(lang langcode.Code, module string, names ...string) {
 		key := fileindex.Join(fileindex.Namespace(lang, module), names...)
-		out = append(out, surfaceSymbol{key: key, origin: origin{lang: lang, unit: sp.unit, module: module, names: names}})
+		out = append(out, surfaceSymbol{key: key, origin: origin{lang: lang, unit: sp.unit, module: module, form: form, names: names}})
 	}
 	// exported adds the name of the module and the methods of the class
 	// that the name holds. The default export of JavaScript is the value
@@ -410,15 +453,23 @@ func (b *builder) surface(sp *space) []surfaceSymbol {
 	}
 	if sp.pkg.Ecosystem == "npm" {
 		for _, sub := range sp.js.Subpaths() {
-			file, _, ok := packageFile(sp, sub)
-			ix := b.byPath[sp.key(file)]
-			if !ok || ix == nil {
-				continue
-			}
-			for _, name := range b.exportNames(ix.Path, map[string]bool{}) {
-				exported(ix, sp.pkg.Name+strings.TrimPrefix(sub, "."), name)
+			for _, form = range []modules.Form{modules.FormImport, modules.FormRequire} {
+				files, _, ok := packageFiles(sp, sub, form)
+				if !ok {
+					continue
+				}
+				for _, file := range files {
+					ix := b.byPath[sp.key(file)]
+					if ix == nil {
+						continue
+					}
+					for _, name := range b.exportNames(ix.Path, map[string]bool{}) {
+						exported(ix, sp.pkg.Name+strings.TrimPrefix(sub, "."), name)
+					}
+				}
 			}
 		}
+		form = modules.FormImport
 	}
 	for _, p := range b.paths {
 		ix := b.byPath[p]

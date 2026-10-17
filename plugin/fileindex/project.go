@@ -177,14 +177,16 @@ func unitOf(name string) string {
 
 func (p *projection) addImports() {
 	for _, imp := range p.cg.Imports {
+		kind, require := p.importForm(imp)
 		p.ix.Imports = append(p.ix.Imports, fidx.Import{
 			Line:      int(imp.Position.StartLine),
 			Module:    imp.Module,
 			Item:      imp.Item,
 			Alias:     imp.Alias,
 			Wildcard:  imp.Wildcard,
-			Kind:      p.importKind(imp),
+			Kind:      kind,
 			Namespace: imp.Namespace,
+			Require:   require,
 		})
 		if imp.Alias != "" {
 			p.bindings[imp.Alias] = true
@@ -192,24 +194,32 @@ func (p *projection) addImports() {
 	}
 }
 
-// importKind tells a static import from a dynamic import that a string
-// names, as await import('x'), and from a TypeScript import type.
-func (p *projection) importKind(imp callgraph.Import) fidx.ImportKind {
+// importForm tells a static import from a dynamic import that a string
+// names, as await import('x'), and from a TypeScript import type. It
+// reports whether a require call makes the import.
+func (p *projection) importForm(imp callgraph.Import) (fidx.ImportKind, bool) {
 	for node := p.descendant(imp.Position); node != nil; node = node.Parent() {
 		switch node.Type() {
 		case "call_expression":
-			if fn := node.ChildByFieldName("function"); fn != nil && fn.Type() == "import" {
-				return fidx.ImportDynamicString
+			switch fn := node.ChildByFieldName("function"); {
+			case fn == nil:
+			case fn.Type() == "import":
+				return fidx.ImportDynamicString, false
+			case p.text(fn) == requireFunction:
+				return fidx.ImportStatic, true
 			}
 		case "import_statement":
 			if typeOnly(node) || imp.Item != "" && p.typeOnlySpecifier(node, imp.Item) {
-				return fidx.ImportTypeOnly
+				return fidx.ImportTypeOnly, false
 			}
-			return fidx.ImportStatic
+			return fidx.ImportStatic, false
 		}
 	}
-	return fidx.ImportStatic
+	return fidx.ImportStatic, false
 }
+
+// requireFunction names the CommonJS function that loads a module.
+const requireFunction = "require"
 
 // typeOnly reports whether a TypeScript import, export or specifier binds
 // only a type, as import type { A } or import { type A }.
@@ -625,7 +635,7 @@ func (p *projection) caller(key string, site ast.NodePosition) string {
 // require. The import record of the call names the module, so the call
 // itself makes no call record.
 func (p *projection) isRequire(ref callgraph.CallReference) bool {
-	return p.ix.Language.IsECMAScript() && ref.Text == "require" && slices.Equal(ref.Targets, []string{"require"})
+	return p.ix.Language.IsECMAScript() && ref.Text == requireFunction && slices.Equal(ref.Targets, []string{requireFunction})
 }
 
 // requireCall matches a receiver that starts with a require of a string, as

@@ -106,10 +106,11 @@ func TestDynamicImportKinds(t *testing.T) {
 		imports []fidx.Import
 	}{
 		{"flags.js", core.LanguageCodeJavascript, []fidx.Import{
-			{Line: 2, Module: "", Kind: fidx.ImportDynamicComputed},
-			{Line: 3, Module: "./config", Alias: "config", Kind: fidx.ImportStatic, Namespace: ".//config"},
-			{Line: 6, Module: "./lazy", Alias: "lazy", Kind: fidx.ImportDynamicString, Namespace: ".//lazy"},
-			{Line: 7, Module: "./mods/", Kind: fidx.ImportDynamicComputed},
+			{Line: 1, Module: "fs", Alias: "fs", Kind: fidx.ImportStatic, Namespace: "fs"},
+			{Line: 2, Module: "", Kind: fidx.ImportDynamicComputed, Require: true},
+			{Line: 3, Module: "./config", Alias: "config", Kind: fidx.ImportStatic, Namespace: ".//config", Require: true},
+			{Line: 6, Module: "./lazy", Alias: "lazy", Kind: fidx.ImportDynamicString, Namespace: ".//lazy", Require: true},
+			{Line: 7, Module: "./mods/", Kind: fidx.ImportDynamicComputed, Require: true},
 			{Line: 8, Module: "./locale/", Kind: fidx.ImportDynamicComputed},
 			{Line: 17, Module: "./later", Kind: fidx.ImportDynamicString, Namespace: ".//later"},
 		}},

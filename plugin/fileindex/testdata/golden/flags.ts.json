@@ -15,14 +15,16 @@
       "line": 2,
       "module": "",
       "kind": "dynamic-computed",
-      "namespace": ""
+      "namespace": "",
+      "require": true
     },
     {
       "line": 5,
       "module": "./lazy",
       "alias": "lazy",
       "kind": "dynamic-string",
-      "namespace": ".//lazy"
+      "namespace": ".//lazy",
+      "require": true
     },
     {
       "line": 6,

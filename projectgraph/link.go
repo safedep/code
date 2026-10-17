@@ -98,8 +98,9 @@ type builder struct {
 	// linked the external keys that linkPackages read.
 	origins map[string][]origin
 	linked  map[string]bool
-	// provisions holds the providers of each module by language family.
-	provisions map[[2]string][]provision
+	// provisions holds the providers of each module by language family and
+	// form.
+	provisions map[provisionKey][]provision
 
 	edges       *edgeSet
 	unresolved  map[UnresolvedSite]bool
@@ -213,7 +214,7 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		unitOf:      map[string]*unit{},
 		spaces:      map[string]*space{},
 		origins:     map[string][]origin{},
-		provisions:  map[[2]string][]provision{},
+		provisions:  map[provisionKey][]provision{},
 		linked:      map[string]bool{},
 		namespaces:  map[langcode.Code]*namespaces{},
 		loads:       map[string]bool{},
@@ -470,7 +471,7 @@ func (b *builder) linkImports(ix *fileindex.Index) {
 		}
 		from := b.runner(sc.enclosing(imp.Line))
 		site := Site{Path: ix.Path, Line: imp.Line}
-		mods, missing := b.importedModules(ix, imp.Module)
+		mods, missing := b.importedModules(ix, imp.Module, formOf(imp))
 		for _, unit := range missing {
 			b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: imp.Module, Reason: fileindex.UnresolvedNoDefinition, Unit: unit})
 		}
@@ -495,7 +496,7 @@ func (b *builder) linkImports(ix *fileindex.Index) {
 		if ex.From == "" {
 			continue
 		}
-		mods, _ := b.importedModules(ix, ex.From)
+		mods, _ := b.importedModules(ix, ex.From, modules.FormImport)
 		for _, m := range mods {
 			if b.isModule(m.key) {
 				site := Site{Path: ix.Path, Line: ex.Line}
@@ -510,21 +511,22 @@ func (b *builder) linkImports(ix *fileindex.Index) {
 type moduleRef struct{ key, via string }
 
 // importedModules returns the modules whose top level an import of the
-// spec runs: the module of the space of the file, or else the module of
-// each unit of dependency code that gives the package. A package edge does
-// not stand for an import, because the external key of a JavaScript module
-// is also the key of its default export, and the import does not call it.
-// missing holds each unit that gives the package and not the module.
-func (b *builder) importedModules(ix *fileindex.Index, spec string) ([]moduleRef, []string) {
-	if mod, via, ok := b.resolveModule(ix, spec); ok {
-		return []moduleRef{{key: mod, via: via}}, nil
+// spec in the form runs: the modules of the space of the file, or else the
+// module of each unit of dependency code that gives the package. A package
+// edge does not stand for an import, because the external key of a
+// JavaScript module is also the key of its default export, and the import
+// does not call it. missing holds each unit that gives the package and not
+// the module.
+func (b *builder) importedModules(ix *fileindex.Index, spec string, form modules.Form) ([]moduleRef, []string) {
+	if mods := b.resolveModules(ix, spec, form); len(mods) > 0 {
+		return mods, nil
 	}
 	if len(b.spaces) < 2 {
 		return nil, nil
 	}
 	var mods []moduleRef
 	var missing []string
-	for _, pv := range b.providers(origin{lang: ix.Language, unit: ix.Unit, module: spec}) {
+	for _, pv := range b.providers(origin{lang: ix.Language, unit: ix.Unit, module: spec, form: form}) {
 		if pv.module == "" {
 			missing = append(missing, pv.sp.unit)
 			continue
@@ -565,8 +567,7 @@ func (b *builder) runsAtLoad(ix *fileindex.Index) bool {
 		slices.ContainsFunc(ix.Unresolved, func(u fileindex.Unresolved) bool { return atTop(u.Caller) }) ||
 		len(b.g.Nodes[ix.Path].Flags) > 0 ||
 		slices.ContainsFunc(ix.Imports, func(imp fileindex.Import) bool {
-			mod, _, ok := b.resolveModule(ix, imp.Module)
-			return ok && len(b.moduleFiles(mod)) > 0
+			return slices.ContainsFunc(b.resolveModules(ix, imp.Module, formOf(imp)), func(m moduleRef) bool { return len(b.moduleFiles(m.key)) > 0 })
 		})
 	b.loads[ix.Path] = runs
 	return runs

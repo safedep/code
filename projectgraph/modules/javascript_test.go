@@ -63,8 +63,45 @@ func TestJavaScriptResolve(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, via, ok := j.Resolve(tt.importer, tt.spec, tt.ts)
+			got, via, ok := j.Resolve(tt.importer, tt.spec, tt.ts, FormImport)
 			assert.Equal(t, tt.want != "", ok)
+			if tt.want == "" {
+				assert.Empty(t, got)
+			} else {
+				assert.Equal(t, []string{tt.want}, got)
+			}
+			assert.Equal(t, tt.via, via)
+		})
+	}
+}
+
+func TestJavaScriptResolveByForm(t *testing.T) {
+	files := NewFiles([]string{"src/main.js", "packages/kit/cjs.js", "packages/kit/esm.js", "packages/kit/web.js", "packages/kit/deno.js", "packages/only/web.js"})
+	root := mapFS(map[string]string{
+		"package.json":               `{"workspaces": ["packages/*"]}`,
+		"packages/kit/package.json":  `{"name": "kit", "exports": {".": {"node": {"require": "./cjs.js", "import": "./esm.js"}, "default": "./esm.js"}, "./other": {"browser": "./web.js", "deno": "./deno.js"}}}`,
+		"packages/only/package.json": `{"name": "only", "exports": {"browser": "./web.js"}}`,
+	})
+	j := NewJavaScript(files, root)
+	require.Empty(t, j.Problems())
+
+	tests := []struct {
+		name string
+		spec string
+		form Form
+		want []string
+		via  string
+	}{
+		{name: "a require takes the require condition", spec: "kit", form: FormRequire, want: []string{"packages/kit/cjs.js"}, via: "exports-node"},
+		{name: "an import takes the import condition", spec: "kit", form: FormImport, want: []string{"packages/kit/esm.js"}, via: "exports-node"},
+		{name: "no form is an import", spec: "kit", want: []string{"packages/kit/esm.js"}, via: "exports-node"},
+		{name: "a map with no condition of the form gives every target but browser", spec: "kit/other", form: FormImport, want: []string{"packages/kit/deno.js"}, via: "exports-any"},
+		{name: "a map of browser only gives no file", spec: "only", form: FormRequire},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, via, ok := j.Resolve("src/main.js", tt.spec, false, tt.form)
+			assert.Equal(t, tt.want != nil, ok)
 			assert.Equal(t, tt.want, got)
 			assert.Equal(t, tt.via, via)
 		})
@@ -81,9 +118,9 @@ func TestJavaScriptPackagesWithNoWorkspaces(t *testing.T) {
 	require.Len(t, j.Packages(), 2)
 	assert.Equal(t, "back", j.Packages()[0].Dir)
 
-	got, _, ok := j.Resolve("front/index.js", "back", false)
+	got, _, ok := j.Resolve("front/index.js", "back", false, FormImport)
 	assert.True(t, ok)
-	assert.Equal(t, "back/index.js", got)
+	assert.Equal(t, []string{"back/index.js"}, got)
 }
 
 func TestJavaScriptProblems(t *testing.T) {
@@ -122,13 +159,17 @@ func TestTSConfigPaths(t *testing.T) {
 		{spec: "@lib/a"},
 	}
 	for _, tt := range tests {
-		got, via, ok := j.Resolve("web/main.ts", tt.spec, true)
+		got, via, ok := j.Resolve("web/main.ts", tt.spec, true, FormImport)
 		assert.Equal(t, tt.want != "", ok, tt.spec)
-		assert.Equal(t, tt.want, got, tt.spec)
+		if tt.want == "" {
+			assert.Empty(t, got, tt.spec)
+		} else {
+			assert.Equal(t, []string{tt.want}, got, tt.spec)
+		}
 		assert.Equal(t, tt.via, via, tt.spec)
 	}
 
-	got, via, ok := j.Resolve("tools/x.ts", "exact", true)
+	got, via, ok := j.Resolve("tools/x.ts", "exact", true, FormImport)
 	assert.False(t, ok, "a file outside web reads no tsconfig: %s %s", got, via)
 }
 
@@ -141,29 +182,31 @@ func TestExportTarget(t *testing.T) {
 	}`
 	tests := []struct {
 		sub  string
-		want string
+		form Form
+		want []string
 		cond string
-		ok   bool
 	}{
-		{sub: ".", want: "./index.cjs", cond: "require", ok: true},
-		{sub: "./feature/x", want: "./esm/x.mjs", cond: "import", ok: true},
-		{sub: "./feature/special", want: "./special.js", ok: true},
-		{sub: "./data/a.json", want: "./json/a.json", ok: true},
+		{sub: ".", form: FormImport, want: []string{"./node.mjs"}, cond: "node"},
+		{sub: ".", form: FormRequire, want: []string{"./index.cjs"}, cond: "require"},
+		{sub: "./feature/x", form: FormImport, want: []string{"./esm/x.mjs"}, cond: "import"},
+		{sub: "./feature/x", form: FormRequire, want: []string{"./esm/x.mjs"}, cond: "any"},
+		{sub: "./feature/special", want: []string{"./special.js"}},
+		{sub: "./data/a.json", want: []string{"./json/a.json"}},
 		{sub: "./other"},
 	}
 	for _, tt := range tests {
-		got, cond, ok := exportTarget(json.RawMessage(exports), tt.sub)
-		assert.Equal(t, tt.ok, ok, tt.sub)
+		got, cond, ok := exportTargets(json.RawMessage(exports), tt.sub, tt.form)
+		assert.Equal(t, tt.want != nil, ok, tt.sub)
 		assert.Equal(t, tt.want, got, tt.sub)
 		assert.Equal(t, tt.cond, cond, tt.sub)
 	}
 
-	got, cond, ok := exportTarget(json.RawMessage(`{"import": "./a.mjs", "default": "./a.js"}`), ".")
+	got, cond, ok := exportTargets(json.RawMessage(`{"import": "./a.mjs", "default": "./a.js"}`), ".", FormRequire)
 	assert.True(t, ok)
-	assert.Equal(t, "./a.mjs", got)
-	assert.Equal(t, "import", cond)
+	assert.Equal(t, []string{"./a.js"}, got)
+	assert.Equal(t, "default", cond)
 
-	_, _, ok = exportTarget(json.RawMessage(`"./a.js"`), "./b")
+	_, _, ok = exportTargets(json.RawMessage(`"./a.js"`), "./b", FormImport)
 	assert.False(t, ok)
 }
 

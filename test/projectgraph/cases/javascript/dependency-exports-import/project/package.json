@@ -1,0 +1,1 @@
+{ "name": "app", "module": "main.mjs", "dependencies": { "kit": "1.0.0" } }

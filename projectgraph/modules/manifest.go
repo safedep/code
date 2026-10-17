@@ -2,11 +2,14 @@ package modules
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"path"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -94,12 +97,13 @@ func (p *PackageJSON) ExportFiles() []string {
 // pattern, sorted. An exports field with no subpath keys, as a string or a
 // map of conditions, exports ".".
 func (p *PackageJSON) exportSubpaths() []string {
-	var m map[string]any
-	if json.Unmarshal(p.Exports, &m) != nil || !hasSubpathKeys(m) {
+	v, err := decodeOrdered(p.Exports)
+	m, ok := v.(*ordered)
+	if err != nil || !ok || !hasSubpathKeys(m) {
 		return []string{"."}
 	}
 	set := map[string]bool{}
-	for k := range m {
+	for _, k := range m.keys {
 		if strings.HasPrefix(k, ".") && !strings.Contains(k, "*") {
 			set[k] = true
 		}
@@ -144,30 +148,119 @@ func parsePNPMWorkspace(data []byte) ([]string, error) {
 	return ws.Packages, nil
 }
 
-// conditions are the package.json export conditions that the link step
-// takes, in order.
-var conditions = []string{"import", "require", "default"}
+// Form is how a file loads a module. The exports map of a package.json
+// gives one target per condition, and the form picks the conditions.
+type Form string
 
-// exportTarget returns the file that the exports field gives for a subpath,
-// as ".", "./utils", and the condition that picked it. A plain string has
-// the condition "".
-func exportTarget(raw json.RawMessage, subpath string) (string, string, bool) {
-	var v any
-	if json.Unmarshal(raw, &v) != nil {
-		return "", "", false
+const (
+	// FormImport is an import statement or an import().
+	FormImport Form = "import"
+	// FormRequire is a CommonJS require.
+	FormRequire Form = "require"
+)
+
+// active reports whether the form takes an export condition: node, the
+// condition of the form, or default. The link step reads no browser build.
+func (f Form) active(condition string) bool {
+	return condition == "node" || condition == "default" || condition == string(cmp.Or(f, FormImport))
+}
+
+// anyCondition marks the targets of an exports map with no condition of
+// the form.
+const anyCondition = "any"
+
+// otherRuntimes are the export conditions that name no code of Node. A
+// map with no condition of the form gives every target but these.
+var otherRuntimes = map[string]bool{"browser": true, "types": true}
+
+// ordered is a JSON object with its keys in source order. Node reads the
+// conditions of an exports map in that order, and the first condition
+// that the form takes wins.
+type ordered struct {
+	keys   []string
+	values map[string]any
+}
+
+// decodeOrdered reads a JSON value as decodeValue does, with each object
+// as an ordered.
+func decodeOrdered(raw json.RawMessage) (any, error) {
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	v, err := decodeValue(dec)
+	if err != nil {
+		return nil, err
 	}
-	m, ok := v.(map[string]any)
+	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
+		return nil, errors.New("more than one JSON value")
+	}
+	return v, nil
+}
+
+func decodeValue(dec *json.Decoder) (any, error) {
+	tok, err := dec.Token()
+	if err != nil {
+		return nil, err
+	}
+	delim, ok := tok.(json.Delim)
+	if !ok {
+		return tok, nil
+	}
+	switch delim {
+	case '{':
+		o := &ordered{values: map[string]any{}}
+		for dec.More() {
+			key, err := dec.Token()
+			if err != nil {
+				return nil, err
+			}
+			v, err := decodeValue(dec)
+			if err != nil {
+				return nil, err
+			}
+			name, _ := key.(string)
+			if _, dup := o.values[name]; !dup {
+				o.keys = append(o.keys, name)
+			}
+			o.values[name] = v
+		}
+		_, err := dec.Token()
+		return o, err
+	case '[':
+		var list []any
+		for dec.More() {
+			v, err := decodeValue(dec)
+			if err != nil {
+				return nil, err
+			}
+			list = append(list, v)
+		}
+		_, err := dec.Token()
+		return list, err
+	}
+	return nil, fmt.Errorf("unexpected %v", delim)
+}
+
+// exportTargets returns the files that the exports field gives for a
+// subpath, as ".", "./utils", and the condition that picked them. A plain
+// string has the condition "". A map with no condition of the form gives
+// every target of the map but browser and types, with the condition any,
+// so an import of a package with other conditions only misses no file.
+func exportTargets(raw json.RawMessage, subpath string, form Form) ([]string, string, bool) {
+	v, err := decodeOrdered(raw)
+	if err != nil {
+		return nil, "", false
+	}
+	m, ok := v.(*ordered)
 	if !ok || !hasSubpathKeys(m) {
 		if subpath != "." {
-			return "", "", false
+			return nil, "", false
 		}
-		return pickCondition(v)
+		return pickTargets(v, form)
 	}
-	if value, ok := m[subpath]; ok {
-		return pickCondition(value)
+	if value, ok := m.values[subpath]; ok {
+		return pickTargets(value, form)
 	}
 	best, bestPrefix, star := "", -1, ""
-	for key := range m {
+	for _, key := range m.keys {
 		prefix, suffix, ok := strings.Cut(key, "*")
 		if !ok || len(subpath) < len(prefix)+len(suffix) ||
 			!strings.HasPrefix(subpath, prefix) || !strings.HasSuffix(subpath, suffix) {
@@ -179,14 +272,17 @@ func exportTarget(raw json.RawMessage, subpath string) (string, string, bool) {
 		best, bestPrefix, star = key, len(prefix), subpath[len(prefix):len(subpath)-len(suffix)]
 	}
 	if best == "" {
-		return "", "", false
+		return nil, "", false
 	}
-	target, cond, ok := pickCondition(m[best])
-	return strings.ReplaceAll(target, "*", star), cond, ok
+	targets, cond, ok := pickTargets(m.values[best], form)
+	for i, target := range targets {
+		targets[i] = strings.ReplaceAll(target, "*", star)
+	}
+	return targets, cond, ok
 }
 
-func hasSubpathKeys(m map[string]any) bool {
-	for k := range m {
+func hasSubpathKeys(m *ordered) bool {
+	for _, k := range m.keys {
 		if strings.HasPrefix(k, ".") {
 			return true
 		}
@@ -194,26 +290,61 @@ func hasSubpathKeys(m map[string]any) bool {
 	return false
 }
 
-func pickCondition(v any) (string, string, bool) {
+// pickTargets returns the targets of the value of a subpath for the form:
+// the target of the first condition that the form takes, as Node reads
+// the map, or else every target of the map but browser and types.
+func pickTargets(v any, form Form) ([]string, string, bool) {
+	if target, cond, ok := pickCondition(v, form); ok {
+		return []string{target}, cond, true
+	}
+	if all := allTargets(v); len(all) > 0 {
+		return all, anyCondition, true
+	}
+	return nil, "", false
+}
+
+func pickCondition(v any, form Form) (string, string, bool) {
 	switch t := v.(type) {
 	case string:
 		return t, "", true
 	case []any:
 		for _, x := range t {
-			if target, cond, ok := pickCondition(x); ok {
+			if target, cond, ok := pickCondition(x, form); ok {
 				return target, cond, true
 			}
 		}
-	case map[string]any:
-		for _, c := range conditions {
-			if x, ok := t[c]; ok {
-				if target, _, ok := pickCondition(x); ok {
-					return target, c, true
-				}
+	case *ordered:
+		for _, c := range t.keys {
+			if !form.active(c) {
+				continue
+			}
+			if target, _, ok := pickCondition(t.values[c], form); ok {
+				return target, c, true
 			}
 		}
 	}
 	return "", "", false
+}
+
+// allTargets returns every target under a value, but the targets of
+// browser and types, in the order of the map.
+func allTargets(v any) []string {
+	var all []string
+	switch t := v.(type) {
+	case string:
+		all = append(all, t)
+	case []any:
+		for _, x := range t {
+			all = append(all, allTargets(x)...)
+		}
+	case *ordered:
+		for _, c := range t.keys {
+			if !otherRuntimes[c] {
+				all = append(all, allTargets(t.values[c])...)
+			}
+		}
+	}
+	return slices.Compact(all)
 }
 
 // tsconfig is the effective configuration of one tsconfig.json after its
