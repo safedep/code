@@ -87,6 +87,28 @@
       "resolver": "python.decorator"
     },
     {
+      "from": "app.py//Point//norm",
+      "to": "app.py//logged//inner",
+      "site": {
+        "path": "app.py",
+        "line": 26
+      },
+      "kind": "reference",
+      "confidence": "low",
+      "resolver": "python.decorator-closure"
+    },
+    {
+      "from": "app.py//helper",
+      "to": "app.py//logged//inner",
+      "site": {
+        "path": "app.py",
+        "line": 13
+      },
+      "kind": "reference",
+      "confidence": "low",
+      "resolver": "python.decorator-closure"
+    },
+    {
       "from": "app.py//logged",
       "to": "functools//wraps",
       "site": {
@@ -175,7 +197,7 @@
     "version": "2",
     "files": 1,
     "nodes": 9,
-    "edges": 3,
+    "edges": 5,
     "unresolved": 1,
     "roots": 6,
     "root_fallback": true

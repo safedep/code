@@ -287,6 +287,8 @@ func TestBuildPython(t *testing.T) {
 				"app.py -> app.py//logged direct python.decorator",
 				"app.py -> dataclasses//dataclass direct python.decorator",
 				"app.py//logged -> functools//wraps direct python.external",
+				"app.py//helper -> app.py//logged//inner reference python.decorator-closure",
+				"app.py//Point//norm -> app.py//logged//inner reference python.decorator-closure",
 			},
 			unresolved: []string{"app.py:8 app.py//logged//inner unknown-receiver fn"},
 			check: func(t *testing.T, g *Graph) {
@@ -943,4 +945,33 @@ func TestBuildSuperCalls(t *testing.T) {
 		assert.Contains(t, edges, e)
 	}
 	assert.Equal(t, []string{"a.js:3 a.js//Lone//load no-definition load"}, unresolvedStrings(g), "a class with no base has no super method")
+}
+
+func TestBuildDecoratorFactoryClosures(t *testing.T) {
+	fn := func(key string, start, end int, decorators ...string) fileindex.Definition {
+		return fileindex.Definition{Key: key, Kind: fileindex.DefFunction, Name: Last(key), StartLine: start, EndLine: end, Decorators: decorators}
+	}
+	ix := &fileindex.Index{
+		Version: fileindex.Version, Path: "a.py", Language: langcode.Python,
+		Imports: []fileindex.Import{{Line: 1, Module: "click", Alias: "click", Kind: fileindex.ImportStatic, Namespace: "click"}},
+		Definitions: []fileindex.Definition{
+			fn("a.py//retry", 3, 9),
+			fn("a.py//retry//decorate", 4, 8),
+			fn("a.py//retry//decorate//wrapper", 5, 7),
+			fn("a.py//job", 12, 13, "@retry", "@click.command"),
+		},
+	}
+	g, err := Build(context.Background(), []*fileindex.Index{ix}, Options{})
+	require.NoError(t, err)
+
+	var closures []string
+	for _, e := range g.Edges {
+		if e.Resolver == "python.decorator-closure" {
+			closures = append(closures, e.From+" -> "+e.To)
+		}
+	}
+	assert.Equal(t, []string{
+		"a.py//job -> a.py//retry//decorate",
+		"a.py//job -> a.py//retry//decorate//wrapper",
+	}, closures, "an external decorator gets no closure edge")
 }

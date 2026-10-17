@@ -368,11 +368,15 @@ func (b *builder) linkConstructors(ix *fileindex.Index) {
 }
 
 // linkDecorators adds an edge from the scope that defines each decorated
-// definition to each decorator that the file scope resolves. The decorator
-// runs when the definition runs, as logged in @logged on a function of the
-// module. A decorator with arguments, as @wraps(fn), is a call that the
-// index holds already, and the index writes both forms with no arguments.
-// So a decorator that the scope calls gets no second edge.
+// definition to each decorator that the file scope resolves, because the
+// decorator runs when the scope defines the definition. The index writes a
+// decorator with no arguments, so @wraps(fn) is also a call of the scope,
+// and it gets no second edge.
+//
+// A first-party decorator can return a nested function, as wrapper in a
+// logged decorator, and a call of the decorated name then runs that
+// function. So each nested function of the decorator gets a reference edge
+// from the decorated definition. An external decorator gets no such edge.
 func (b *builder) linkDecorators(ix *fileindex.Index) {
 	sc := b.scopes[ix.Path]
 	for _, def := range ix.Definitions {
@@ -386,6 +390,9 @@ func (b *builder) linkDecorators(ix *fileindex.Index) {
 			if !ok {
 				continue
 			}
+			for _, nested := range b.nestedFunctions(key) {
+				b.addEdge(Edge{From: def.Key, To: nested, Site: site, Kind: EdgeReference, Resolver: resolverName(ix.Language, "decorator-closure")})
+			}
 			if b.linked[[2]string{from, key}] {
 				continue
 			}
@@ -395,6 +402,21 @@ func (b *builder) linkDecorators(ix *fileindex.Index) {
 			b.addEdge(Edge{From: from, To: key, Site: site, Kind: EdgeDirect, Resolver: resolverName(ix.Language, "decorator")})
 		}
 	}
+}
+
+// nestedFunctions returns the keys of the functions that a first-party
+// function defines, at any depth.
+func (b *builder) nestedFunctions(key string) []string {
+	if b.kindOf(key) != NodeFunction {
+		return nil
+	}
+	var nested []string
+	for _, def := range b.byPath[Unit(key)].Definitions {
+		if def.Kind == fileindex.DefFunction && def.Key != key && HasKeyPrefix(def.Key, key) {
+			nested = append(nested, def.Key)
+		}
+	}
+	return nested
 }
 
 // definer returns the key of the definition whose run runs the definition
