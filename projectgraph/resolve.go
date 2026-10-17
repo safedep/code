@@ -144,6 +144,9 @@ type resolution struct {
 	kind EdgeKind
 	rule string
 	fail *failure
+	// unbound marks a target that no definition and no import of the file
+	// binds, as print or console//log.
+	unbound bool
 }
 
 func (b *builder) linkCalls(ix *fileindex.Index) {
@@ -151,6 +154,12 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 		return
 	}
 	sc := b.scopes[ix.Path]
+	unknown := map[[2]int]bool{}
+	for _, u := range ix.Unresolved {
+		if u.Reason == fileindex.UnresolvedUnknownReceiver {
+			unknown[[2]int{u.Line, u.Column}] = true
+		}
+	}
 	for _, call := range ix.Calls {
 		if call.Kind == fileindex.CallImport {
 			continue
@@ -180,6 +189,15 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 					Reason:   r.fail.reason,
 				})
 				continue
+			}
+			if r.unbound {
+				// The index keeps the receiver as written in the target of
+				// a call on an unknown receiver, as plugin//run. The key
+				// names no module, and the unresolved site holds the call.
+				if unknown[[2]int{call.Line, call.Column}] {
+					continue
+				}
+				b.external(r.key)
 			}
 			switch {
 			case r.kind == EdgeDirect && isAssignment(sc, call, t):
@@ -220,7 +238,7 @@ func (b *builder) resolveTarget(sc *scope, call fileindex.Call, target string) r
 			return r
 		}
 	}
-	return resolution{key: b.external(target), kind: EdgeDirect, rule: "external"}
+	return resolution{key: target, kind: EdgeDirect, rule: "external", unbound: true}
 }
 
 // resolveLocal resolves a key of the file. A key that names no node walks

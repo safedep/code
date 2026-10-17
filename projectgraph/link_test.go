@@ -413,6 +413,21 @@ func TestBuildJavaScript(t *testing.T) {
 			},
 		},
 		{
+			name: "javascript/unknown-receiver",
+			edges: []string{
+				"main.js//handle -> console//log direct javascript.external",
+			},
+			unresolved: []string{
+				"main.js:2 main.js//loadPlugin dynamic-import require",
+				"main.js:3 main.js//loadPlugin unknown-receiver run",
+				"main.js:8 main.js//handle unknown-receiver json",
+			},
+			check: func(t *testing.T, g *Graph) {
+				assert.NotContains(t, g.Nodes, "plugin//run")
+				assert.NotContains(t, g.Nodes, "res//json")
+			},
+		},
+		{
 			name: "javascript/commonjs-require",
 			edges: []string{
 				"main.js -> lib/index.js import javascript.import.relative",
