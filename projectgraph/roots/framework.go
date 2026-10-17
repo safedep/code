@@ -62,7 +62,8 @@ func (f *finder) matchDecoratorCall(r rules.Rule) {
 func (f *finder) matchCall(r rules.Rule) {
 	m := r.Match.Call
 	for _, ix := range f.applying(r) {
-		for _, call := range ix.Calls {
+		for i := range ix.Calls {
+			call := &ix.Calls[i]
 			if call.Kind == fileindex.CallImport || !slices.ContainsFunc(f.callKeys(ix, call), func(k string) bool { return f.callMatches(m, k) }) {
 				continue
 			}
@@ -89,13 +90,19 @@ func (f *finder) matchCall(r rules.Rule) {
 	}
 }
 
-// callKeys returns the keys that a call resolves to.
-func (f *finder) callKeys(ix *fileindex.Index, call fileindex.Call) []string {
+// callKeys returns the keys that a call resolves to. Three call rules read
+// every JavaScript call, so the finder resolves each call once.
+func (f *finder) callKeys(ix *fileindex.Index, call *fileindex.Call) []string {
+	if keys, ok := f.calls[call]; ok {
+		return keys
+	}
 	targets := call.Targets
 	if len(targets) == 0 {
 		targets = []string{call.Callee}
 	}
-	return f.Resolve(ix, call.Caller, targets)
+	keys := f.Resolve(ix, call.Caller, targets)
+	f.calls[call] = keys
+	return keys
 }
 
 // callMatches reports whether a callee key matches the callee and the

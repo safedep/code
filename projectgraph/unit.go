@@ -147,12 +147,18 @@ func (b *builder) resolveJava(name string) (string, bool) {
 }
 
 // javaFirstParty reports whether a qualified name starts with a package of
-// the project.
+// the project. It looks up each dotted prefix of the name, because a scan
+// of the packages at each import grows with the square of the project.
 func (b *builder) javaFirstParty(name string) bool {
-	for pkg := range b.javaPackages {
-		if pkg != "" && (name == pkg || strings.HasPrefix(name, pkg+".")) {
+	for prefix := name; prefix != ""; {
+		if _, ok := b.javaPackages[prefix]; ok {
 			return true
 		}
+		i := strings.LastIndexByte(prefix, '.')
+		if i < 0 {
+			return false
+		}
+		prefix = prefix[:i]
 	}
 	return false
 }

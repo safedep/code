@@ -37,8 +37,13 @@ func (b *builder) linkFields() {
 			kind, byName = EdgeField, fields
 		}
 		family := languageFamily(ix.Language)
+		// The scan stops past the cap, because a common name has a
+		// candidate in most files of a large project.
 		var candidates []string
 		for _, key := range byName[familyName{family: family, name: u.Method}] {
+			if len(candidates) > maxNameCandidates {
+				break
+			}
 			if !b.test[fileindex.Unit(key)] || b.test[u.Site.Path] {
 				candidates = append(candidates, key)
 			}

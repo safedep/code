@@ -24,7 +24,7 @@ var goIgnoredDirs = []string{"vendor", "testdata"}
 type Golang struct {
 	modules  []goModule
 	byPath   map[string]string
-	dirs     []string
+	dirs     map[string]bool
 	problems problems
 }
 
@@ -33,7 +33,10 @@ type goModule struct{ dir, path string }
 // NewGolang reads the go.mod of each directory of the file set, and gives an
 // import path to each directory of dirs that holds Go files.
 func NewGolang(files *Files, root fs.FS, dirs []string) *Golang {
-	g := &Golang{byPath: map[string]string{}, dirs: slices.Clone(dirs)}
+	g := &Golang{byPath: map[string]string{}, dirs: make(map[string]bool, len(dirs))}
+	for _, d := range dirs {
+		g.dirs[d] = d != ""
+	}
 	for _, d := range files.Dirs() {
 		if root == nil {
 			break
@@ -82,9 +85,18 @@ func (g *Golang) FirstParty(spec string) bool {
 	if len(g.modules) > 0 {
 		return slices.ContainsFunc(g.modules, func(m goModule) bool { return underPath(spec, m.path) })
 	}
-	return slices.ContainsFunc(g.dirs, func(d string) bool {
-		return d != "" && (spec == d || strings.HasSuffix(spec, "/"+d))
-	})
+	// Each suffix of the path after a slash is a lookup, because a scan of
+	// the directories at each import grows with the square of the project.
+	for suffix := spec; ; {
+		if g.dirs[suffix] {
+			return true
+		}
+		_, rest, ok := strings.Cut(suffix, "/")
+		if !ok {
+			return false
+		}
+		suffix = rest
+	}
 }
 
 func (g *Golang) importPath(dir string) (string, bool) {

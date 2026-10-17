@@ -65,11 +65,11 @@ type Project struct {
 // Find returns the roots that the rules mark, sorted, and the manifests and
 // files that it could not read.
 func Find(p Project, rs []rules.Rule) ([]Root, []modules.Problem) {
-	f := &finder{Project: p, languages: map[string]langcode.Code{}, seen: map[Root]bool{}, defs: map[string]fileindex.Definition{}}
+	f := &finder{Project: p, languages: map[string]langcode.Code{}, seen: map[Root]bool{}, defs: map[string]*fileindex.Definition{}, calls: map[*fileindex.Call][]string{}}
 	for _, ix := range p.Indexes {
 		f.languages[ix.Path] = ix.Language
-		for _, def := range ix.Definitions {
-			f.defs[def.Key] = def
+		for i := range ix.Definitions {
+			f.defs[ix.Definitions[i].Key] = &ix.Definitions[i]
 		}
 	}
 	for _, r := range rs {
@@ -84,10 +84,12 @@ func Find(p Project, rs []rules.Rule) ([]Root, []modules.Problem) {
 type finder struct {
 	Project
 	languages map[string]langcode.Code
-	defs      map[string]fileindex.Definition
-	roots     []Root
-	seen      map[Root]bool
-	problems  []modules.Problem
+	defs      map[string]*fileindex.Definition
+	// calls holds the keys that each call resolves to.
+	calls    map[*fileindex.Call][]string
+	roots    []Root
+	seen     map[Root]bool
+	problems []modules.Problem
 }
 
 func (f *finder) add(r rules.Rule, key string) {

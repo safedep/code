@@ -1053,3 +1053,18 @@ func TestBuildModuleVariables(t *testing.T) {
 	assert.NotContains(t, edges, "app.py -> app.py//unknown direct python.local")
 	assert.Equal(t, NodeVariable, g.Nodes["app.py//parser"].Kind)
 }
+
+func TestJavaFirstPartyMatchesAPackagePrefix(t *testing.T) {
+	b := &builder{javaPackages: map[string]*unit{"": {}, "com.acme": {}, "com.acme.web": {}}}
+	for name, want := range map[string]bool{
+		"com.acme":            true,
+		"com.acme.Service":    true,
+		"com.acme.web.Routes": true,
+		"com.acmex.Service":   false,
+		"com":                 false,
+		"Service":             false,
+		"":                    false,
+	} {
+		assert.Equal(t, want, b.javaFirstParty(name), name)
+	}
+}

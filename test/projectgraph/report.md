@@ -9,6 +9,11 @@ closures and the budget rule for incomplete files. `README.md` says how to
 run them and what each metric means. The run of 10,000 files is from
 before only.
 
+Steps 32 and 33 add one more run, on 2026-10-17, at 1,000, 10,000 and
+50,000 files per language, with the parallel index step. Its numbers are
+the "step 33" rows and the section "Steps 32 and 33". The earlier rows stay
+as history.
+
 ## Machine
 
 | Item | Value |
@@ -19,9 +24,9 @@ before only.
 | OS | Linux 6.18, amd64 |
 | Go | go1.25.1 linux/amd64 |
 
-The index step is serial today. The parallel executor comes in step 32. So
-every cold number below uses one core of the four, and the user time of a
-run is about its wall time.
+Before step 32 the index step was serial. So every cold number before the
+step 33 rows uses one core of the four, and the user time of a run is
+about its wall time. The step 33 rows use 4 workers.
 
 ## Per language
 
@@ -44,10 +49,20 @@ step.
 | TypeScript | step 27 | none | n/a | n/a | n/a | 0.094 | 7.38 s | 0.33 s | 0.34 s | 27 ms | 68 / 34 / 49 / 4 MiB |
 | Go | step 29 | govulncheck | n/a | 1.000 (9/9) stacks | n/a | 0.082 | 3.78 s | 0.30 s | 0.32 s | 31 ms | 89 / 42 / 52 / 4 MiB |
 | Java | step 30 | none | n/a | n/a | n/a | 0.148 | 2.76 s | 0.33 s | 0.46 s | 34 ms | 61 / 38 / 57 / 5 MiB |
+| Python | step 33 | pycg-micro | 0.954 (145/152) | 0.708 (187/264) | 0.340 (85/250) | 0.159 | 1.57 s | 0.37 s | 0.36 s | 28 ms | 79 / 41 / 41 / 6 MiB |
+| JavaScript | step 33 | swarm-js | 0.821 (156/190) | 0.706 (204/289) | 0.358 (110/307) | 0.263 | 1.77 s | 0.42 s | 0.30 s | 31 ms | 80 / 36 / 38 / 7 MiB |
+| TypeScript | step 33 | none | n/a | n/a | n/a | 0.094 | 2.31 s | 0.31 s | 0.27 s | 20 ms | 72 / 33 / 38 / 4 MiB |
+| Go | step 33 | govulncheck | n/a | 1.000 (9/9) stacks | n/a | 0.082 | 1.38 s | 0.38 s | 0.21 s | 22 ms | 102 / 43 / 36 / 4 MiB |
+| Java | step 33 | none | n/a | n/a | n/a | 0.148 | 1.01 s | 0.39 s | 0.28 s | 25 ms | 76 / 37 / 37 / 5 MiB |
 
 Python is now at 0.940, just under the precision gate of the design (0.95
 for `high` and `medium` edges). After step 27 it is 0.954, and its recall is
 0.708. JavaScript stays at 0.821 and 0.706.
+
+The step 33 rows come from the run of steps 32 and 33. The index cold step
+uses 4 workers, and its memory holds the 4 parsers and the trees in
+flight. The link step does not change its output in step 33, so the
+precision, the recall and the unresolved rates stay.
 
 The Go row comes from step 29. The govulncheck set gives call stacks and
 no call graph, so it has no precision of edges. Its recall is the share of
@@ -78,6 +93,230 @@ false. The link step is 0.07 to 0.11 s slower per 1,000 files. JavaScript is at 
 public sets names the causes. The unresolved rate of the sets went up,
 because a call of a bare name with no binding is now a record and not an
 external edge.
+
+## Steps 32 and 33
+
+One run of `PROJECTGRAPH_BENCH_FILES=1000,10000` with the default workers
+(1 and 4), one run of `PROJECTGRAPH_BENCH_FILES=50000` with
+`PROJECTGRAPH_BENCH_WORKERS=4`, and one run of the `link` step at the three
+sizes after the last fix of the link step. The run at 50,000 files took
+34 min for the five languages and fit in the 6.7 GB of free disk, because
+each language removes its project and its stores. It leaves out the
+serial cold step, which would add about 20 min. The index-cold-store step
+costs about 8 min of the 34, so a run without it fits in 30 min.
+
+### The parallel index step
+
+`fileindex.Options.Workers` sets the workers. Each worker owns a parser.
+The goroutine of `Run` takes the outcomes in path order and runs the extra
+plugins, so the output of 1 and 4 workers is the same byte for byte. Tests
+compare it on the hand-written cases, on a project of two batches, and on
+a synthetic project of 600 files per language.
+
+| Language | 1,000, 1 worker | 1,000, 4 workers | Speed-up | 10,000, 1 worker | 10,000, 4 workers | Speed-up | 50,000, 4 workers |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Python | 4.38 s | 1.57 s | 2.79 | 45.7 s | 16.2 s | 2.81 | 90.4 s (1.81 s per 1,000) |
+| JavaScript | 4.92 s | 1.77 s | 2.78 | 50.4 s | 17.5 s | 2.87 | 94.1 s (1.88 s per 1,000) |
+| TypeScript | 6.99 s | 2.31 s | 3.03 | 74.8 s | 25.0 s | 2.99 | 129.2 s (2.58 s per 1,000) |
+| Go | 3.81 s | 1.38 s | 2.76 | 39.0 s | 14.9 s | 2.62 | 79.1 s (1.58 s per 1,000) |
+| Java | 2.88 s | 1.01 s | 2.85 | 27.4 s | 10.5 s | 2.62 | 56.3 s (1.13 s per 1,000) |
+
+The speed-up is 2.6 to 3.0 on 4 cores, over the gate of 2. It is not 4,
+for these reasons:
+
+- The store, the result and the report have no lock. Only the goroutine of
+  `Run` changes them, so no lock waits.
+- The calls into tree-sitter through cgo take about 46% of the CPU samples
+  of a parallel run, and each call enters and leaves the Go scheduler. The
+  callgraph build and the projection read each node through a cgo call.
+- The GC takes about 10%. With `GOGC=400` the Python step at 1,000 files
+  takes 1.31 s and not 1.46 s, for twice the peak heap.
+- The read of the files and the batches of the store run on one goroutine
+  between the batches.
+
+The per-file cost at 50,000 files is 3 to 12% over the cost at 10,000
+files. The heap of the benchmark holds the indexes and the graph of the
+warm store, about 1 GiB, so each GC marks more.
+
+A parse that the deadline cuts is `missing`, with a parse failure in the
+report. The fix also resets the sitter parser after a cut parse. Before, a
+parser that a deadline cut went on with the old input at its next parse.
+
+### The link step
+
+A CPU profile of the link step at 1,000 and 10,000 Python files
+(`-cpuprofile` on `BenchmarkProjectGraph/python/files=10000/link`) showed
+these costs:
+
+- The field and name candidates of each unresolved site came from a scan
+  of every definition of the method name in the project, then the cap of
+  20 dropped the site as ambiguous. A common name has a definition in most
+  files, so the scan grew with the square of the project. It was 28 times
+  slower at 10 times the files. The scan now stops past the cap.
+- `javaFirstParty` scanned every package of the project at each import,
+  and the Go resolver with no `go.mod` scanned every package directory.
+  Both grew with the square of the project. The Java link step at 50,000
+  files took 42.7 s, and now takes 23.2 s. Both now look up the prefixes
+  or the suffixes of the name.
+- The graph kept each edge three times, as a set of `Edge` values of 128
+  bytes, a map from a slot of 64 bytes to an `Edge`, and a set of caller
+  and callee pairs. The addition and the sort of the edges took about 38%
+  of the step.
+  The edge set now interns the strings of the edges and keys a slot by 24
+  bytes of ids. It makes the `Edge` values once, at the end, sorted by the
+  rank of each string.
+- The three call rules of JavaScript each resolved every call again. The
+  root finder now resolves a call once.
+
+| Language | Link before, 1,000 | after | Link before, 10,000 | after | after, 50,000 | Growth before, 1,000 to 10,000 | after | after, 10,000 to 50,000 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Python | 0.61 s | 0.36 s | 8.50 s | 4.85 s | 34.8 s | 13.9 | 13.5 | 7.2 |
+| JavaScript | 0.55 s | 0.30 s | 8.14 s | 4.31 s | 25.1 s | 14.8 | 14.4 | 5.8 |
+| TypeScript | 0.53 s | 0.27 s | 6.81 s | 3.35 s | 23.9 s | 12.8 | 12.4 | 7.1 |
+| Go | 0.29 s | 0.21 s | 4.58 s | 2.83 s | 20.7 s | 15.8 | 13.5 | 7.3 |
+| Java | 0.41 s | 0.28 s | 6.21 s | 3.53 s | 23.2 s | 15.1 | 12.6 | 6.6 |
+
+"Before" is the commit of step 32 (048565a). The link step is now 1.6 to
+2.0 times faster at 10,000 files. It still grows faster than the files, about 13 times for 10
+times the files and 7 times for 5 times the files. The number of edges
+grows about as the files do. No step of the profile is quadratic now. Each
+part of the step is 12 to 20 times slower at 10 times the files, and the
+probe of the Go map is 24 times slower. A run with `GOGC=off` grows by the
+same factor, so the cause is not the GC. A map of 400,000 or 2,000,000
+keys does not fit in the cache of the CPU, so each lookup reads the main
+memory. The sorts of the edges and the unresolved sites are n log n. A
+further cut needs fewer map lookups per call site, and that is a change of
+the resolution code.
+
+### Memory
+
+| Measure | Before (step 32) | After | Where |
+| --- | --- | --- | --- |
+| Index in memory, Python / JavaScript | 24.2 / 23.1 KiB per file | 14.5 / 13.4 KiB per file | `retained-KiB/file` of index-warm at 10,000 files |
+| Index in memory, TypeScript / Go / Java | | 12.3 / 14.1 / 12.2 KiB per file | the same |
+| Index as JSON | 10.0 to 13.4 KiB per file | the same | `index-KiB/file` |
+| Graph, Python / JavaScript | 200 / 230 bytes per edge | 181 / 213 bytes per edge | `retained-B/edge` at 10,000 files |
+| Graph, TypeScript / Go / Java | 200 / 198 / 196 bytes per edge | 183 / 184 / 180 bytes per edge | the same |
+| Link peak, Python / JavaScript | 1.70 / 2.33 KiB per edge | 1.16 / 1.19 KiB per edge | peak minus base over the edges at 10,000 files |
+| Link peak, TypeScript / Go / Java | 1.97 / 1.46 / 1.29 KiB per edge | 1.14 / 1.10 / 0.99 KiB per edge | the same |
+
+The `retained` metrics are new in step 33. They measure the heap that the
+result of a step holds after two GCs, so they leave out the garbage that
+the peak counts. The report of step 21 named 30 to 40 KiB per index in
+memory and 0.9 KiB per edge. Those were peaks, with garbage.
+
+- An index in memory was twice its JSON size. A JSON decode gives each
+  caller key, target and kind of an index its own string, and an append
+  leaves up to half of a slice free. The indexer now interns the strings of
+  the indexes of a run and fits each record slice to its length. An index
+  in memory is now 0.9 to 1.3 times its JSON size. The rest is the size of
+  the records: a `Call` is 144 bytes and a `Definition` 248 bytes, with a
+  string of 16 bytes for each kind. A smaller record needs a change of the
+  types of `fileindex`. The interning makes the warm step 0.1 to 0.4 s
+  slower at 10,000 files.
+- A graph edge is 128 bytes in `Graph.Edges`, and the node map and the
+  unresolved sites hold the rest. The public `Edge` keeps its fields, so
+  the graph keeps that size.
+- The cold index step still grows with the project, because
+  `Result.Indexes` holds every index for the link step. The result is 12 to
+  15 MiB per 1,000 files. The peak of the step is higher, because the GC
+  lets the heap grow to twice the live heap.
+
+### 10,000 files
+
+The link rows come from the run after the last fix of the link step.
+
+| Language | Step | Time | Base heap | Peak heap | Graph |
+| --- | --- | --- | --- | --- | --- |
+| Python | index-cold, workers 1 | 45.7 s | 213 MiB | 865 MiB |  |
+| Python | index-cold, workers 4 | 16.2 s | 213 MiB | 982 MiB |  |
+| Python | index-cold-store | 18.1 s | 213 MiB | 936 MiB |  |
+| Python | index-warm | 4.05 s | 213 MiB | 578 MiB |  |
+| Python | link | 4.85 s | 213 MiB | 675 MiB | 407,554 edges, 1,115 roots, 65,687 unresolved |
+| Python | reach | 0.45 s | 76 MiB | 128 MiB | 200 of 200 found |
+| JavaScript | index-cold, workers 1 | 50.4 s | 193 MiB | 804 MiB |  |
+| JavaScript | index-cold, workers 4 | 17.5 s | 193 MiB | 964 MiB |  |
+| JavaScript | index-cold-store | 19.8 s | 193 MiB | 859 MiB |  |
+| JavaScript | index-warm | 3.91 s | 193 MiB | 526 MiB |  |
+| JavaScript | link | 4.31 s | 193 MiB | 546 MiB | 302,727 edges, 373 roots, 94,355 unresolved |
+| JavaScript | reach | 0.30 s | 68 MiB | 124 MiB | 200 of 200 found |
+| TypeScript | index-cold, workers 1 | 74.8 s | 176 MiB | 770 MiB |  |
+| TypeScript | index-cold, workers 4 | 25.0 s | 176 MiB | 894 MiB |  |
+| TypeScript | index-cold-store | 26.1 s | 176 MiB | 848 MiB |  |
+| TypeScript | index-warm | 3.37 s | 176 MiB | 474 MiB |  |
+| TypeScript | link | 3.35 s | 176 MiB | 528 MiB | 314,336 edges, 373 roots, 28,450 unresolved |
+| TypeScript | reach | 0.28 s | 61 MiB | 94 MiB | 200 of 200 found |
+| Go | index-cold, workers 1 | 39.0 s | 195 MiB | 882 MiB |  |
+| Go | index-cold, workers 4 | 14.9 s | 195 MiB | 1,156 MiB |  |
+| Go | index-cold-store | 16.7 s | 195 MiB | 1,035 MiB |  |
+| Go | index-warm | 4.32 s | 195 MiB | 530 MiB |  |
+| Go | link | 2.83 s | 195 MiB | 540 MiB | 320,487 edges, 744 roots, 28,522 unresolved |
+| Go | reach | 0.31 s | 62 MiB | 98 MiB | 200 of 200 found |
+| Java | index-cold, workers 1 | 27.4 s | 184 MiB | 751 MiB |  |
+| Java | index-cold, workers 4 | 10.5 s | 184 MiB | 916 MiB |  |
+| Java | index-cold-store | 12.1 s | 184 MiB | 845 MiB |  |
+| Java | index-warm | 4.13 s | 184 MiB | 522 MiB |  |
+| Java | link | 3.53 s | 184 MiB | 546 MiB | 375,828 edges, 743 roots, 47,497 unresolved |
+| Java | reach | 0.37 s | 76 MiB | 117 MiB | 200 of 200 found |
+
+### 50,000 files
+
+`PROJECTGRAPH_BENCH_WORKERS=4`. The link row comes from the run after the
+last fix of the link step.
+
+| Language | Step | Time | Base heap | Peak heap | Graph |
+| --- | --- | --- | --- | --- | --- |
+| Python | index-cold, 4 workers | 90.4 s | 1,051 MiB | 4,788 MiB | |
+| Python | index-cold-store | 98.3 s | 1,051 MiB | 4,585 MiB | |
+| Python | index-warm | 20.9 s | 1,051 MiB | 2,805 MiB | |
+| Python | link | 34.8 s | 1,051 MiB | 3,210 MiB | 2,037,238 edges, 5,558 roots, 328,832 unresolved |
+| Python | reach | 2.57 s | 370 MiB | 615 MiB | 200 of 200 found |
+| JavaScript | index-cold, 4 workers | 94.1 s | 954 MiB | 4,856 MiB | |
+| JavaScript | index-cold-store | 105.7 s | 954 MiB | 4,478 MiB | |
+| JavaScript | index-warm | 20.3 s | 954 MiB | 2,653 MiB | |
+| JavaScript | link | 25.1 s | 953 MiB | 2,966 MiB | 1,514,084 edges, 1,854 roots, 471,968 unresolved |
+| JavaScript | reach | 2.58 s | 329 MiB | 606 MiB | 200 of 200 found |
+| TypeScript | index-cold, 4 workers | 129.2 s | 868 MiB | 4,573 MiB | |
+| TypeScript | index-cold-store | 140.4 s | 868 MiB | 4,206 MiB | |
+| TypeScript | index-warm | 18.5 s | 868 MiB | 2,366 MiB | |
+| TypeScript | link | 23.9 s | 868 MiB | 2,779 MiB | 1,571,302 edges, 1,854 roots, 142,381 unresolved |
+| TypeScript | reach | 2.49 s | 295 MiB | 460 MiB | 200 of 200 found |
+| Go | index-cold, 4 workers | 79.1 s | 960 MiB | 5,559 MiB | |
+| Go | index-cold-store | 91.8 s | 960 MiB | 5,210 MiB | |
+| Go | index-warm | 20.3 s | 960 MiB | 2,650 MiB | |
+| Go | link | 20.7 s | 960 MiB | 2,661 MiB | 1,604,044 edges, 3,706 roots, 142,585 unresolved |
+| Go | reach | 2.31 s | 301 MiB | 473 MiB | 200 of 200 found |
+| Java | index-cold, 4 workers | 56.3 s | 908 MiB | 4,930 MiB | |
+| Java | index-cold-store | 67.6 s | 908 MiB | 4,378 MiB | |
+| Java | index-warm | 21.1 s | 908 MiB | 2,674 MiB | |
+| Java | link | 23.2 s | 908 MiB | 2,739 MiB | 1,880,322 edges, 3,705 roots, 237,682 unresolved |
+| Java | reach | 3.28 s | 366 MiB | 569 MiB | 200 of 200 found |
+
+The base heap of the benchmark holds the warm indexes and a graph, about
+1 GiB. The cold peak of 4 to 5.5 GiB is that base, the new indexes, and
+the garbage that the GC lets grow to twice the live heap. A caller that
+holds only one result needs about half of it.
+
+### Degradation at half of the cold time
+
+`TestDegradesAtHalfTheColdTime` indexes 1,000 files per language with 4
+workers, then indexes them again with a deadline of half of that time. It
+links the partial result and asks the reach query for the 200 targets.
+
+| Language | Cold time | Indexed at half | Missing at half |
+| --- | --- | --- | --- |
+| Python | 1.47 s | 465 | 535 |
+| JavaScript | 1.89 s | 555 | 445 |
+| TypeScript | 2.82 s | 613 | 387 |
+| Go | 1.49 s | 453 | 547 |
+| Java | 1.06 s | 518 | 482 |
+
+Every file is `indexed` or `missing`, and no file fails. Each target that
+the partial graph does not find is `uncertain` with a `budget` cause, and
+no target is `not-found`. A partial graph can find a path that the whole
+graph does not. A site with more than 20 field candidates in the whole
+project is ambiguous, and with fewer files it has field edges. So the test
+does not compare the found targets with the whole graph.
 
 ## Benchmark
 
@@ -175,8 +414,35 @@ run has a noise of about 8%. The store costs less than that.
 ### Against the budget table
 
 The budget table of the architecture asset, section 7, gives targets on 4
-cores. The measured index step uses one core. The table holds the numbers
-from before. After, the link step of 1,000 files is 0.23 to 0.33 s, at the
+cores. Step 33 measures every step on 4 workers at the three sizes. Each
+cell is the lowest and the highest number of the five languages.
+
+| Step | Target, 1,000 | Measured, 1,000 | Target, 10,000 | Measured, 10,000 | Target, 50,000 | Measured, 50,000 | Inside the target |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Index, cold | 3 s | 1.0 to 2.3 s | 25 s | 10.5 to 25.0 s | 120 s | 56 to 129 s | Yes, but TypeScript at 50,000 |
+| Index, warm | 0.2 s | 0.31 to 0.42 s | 1.5 s | 3.4 to 4.3 s | 8 s | 18.5 to 21.1 s | No |
+| Link | 0.3 s | 0.21 to 0.36 s | 2 s | 2.8 to 4.9 s | 12 s | 20.7 to 34.8 s | At 1,000 only, but Python |
+| Reach, 200 targets | 50 ms | 20 to 31 ms | 0.5 s | 0.28 to 0.45 s | 3 s | 2.3 to 3.3 s | Yes, but Java at 50,000 |
+| Memory, index cold | 50 MiB per worker, 4 workers | 72 to 102 MiB | | 718 to 961 MiB | | 3.6 to 4.5 GiB, over a base of 1 GiB | At 1,000 only |
+| Memory, index records | about 4 KiB per file | 12.2 to 14.5 KiB per file in memory, 10.0 to 13.4 KiB as JSON | | the same | | the same | No |
+| Memory, link | about 1 KiB per 10 edges, under 1 GiB at 50,000 | 165 to 186 bytes per edge held, 0.9 to 1.2 KiB per edge at the peak | | 180 to 213 bytes held, 1.0 to 1.2 KiB peak | | 176 to 208 bytes held (270 to 345 MiB), 1.0 to 1.4 KiB peak (1.7 to 2.1 GiB) | The graph, yes. The peak, no |
+
+What the numbers of step 33 say:
+
+- The cold index step is inside its target at 1,000 and 10,000 files. At
+  50,000 files TypeScript takes 129 s for a target of 120 s.
+- The warm step decodes about 11 KiB of JSON per file on one goroutine,
+  at about 0.4 s per 1,000 files. A decode on the workers would cut it.
+- The link step costs about 0.2 to 0.7 s per 1,000 files, and the cost per
+  file grows with the project. The section on the link step names the
+  cause.
+- The graph that the link step returns is under 1 GiB at 50,000 files.
+  The peak of the step is 6 to 7 times the graph.
+- The cold index memory grows with the project, because the result holds
+  every index.
+
+Before step 32, the measured index step used one core. This table holds
+the numbers from before. After, the link step of 1,000 files is 0.23 to 0.33 s, at the
 target of 0.3 s, and the other steps at 1,000 files keep their place
 against the targets.
 
@@ -190,7 +456,7 @@ against the targets.
 | Memory, index records | about 4 KiB per file | 8.9 to 10.9 KiB per file as JSON, 30 to 40 KiB per file in memory | | | No |
 | Memory, link | about 1 KiB per 10 edges | about 9 KiB per 10 edges (370 MiB for 407,311 Python edges) | | 296 to 370 MiB | No |
 
-What the numbers say:
+What the numbers said before step 32:
 
 - The cold index step costs 4.2 to 7.0 s per 1,000 files on one core. With
   a linear speed-up on 4 workers it is inside the target. The parallel

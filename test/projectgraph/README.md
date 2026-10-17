@@ -104,14 +104,20 @@ attribute, a computed import or `eval`. The 200 functions of the 20 external
 packages of a language are the reach targets.
 
 `PROJECTGRAPH_BENCH_FILES` sets the project sizes, as `1000,10000`. The
-default is `1000`. The scheduled job `.github/workflows/projectgraph-bench.yml`
-runs every Monday at 1,000 files and on manual dispatch with any size. It
-writes the numbers to the job summary.
+default is `1000`. `PROJECTGRAPH_BENCH_WORKERS` lists the workers of the
+cold index step, as `1,4`, the default. The other index steps use the last
+one. A run at 50,000 files sets `4` and leaves out the serial step. A run of
+one step selects it by name, as
+`-bench 'BenchmarkProjectGraph/python/files=10000/link$'`. The scheduled job
+`.github/workflows/projectgraph-bench.yml` runs every Monday at 1,000 files
+and on manual dispatch with any size. It writes the numbers to the job
+summary.
 
 | Step | What it measures |
 | --- | --- |
-| `index-cold` | The index step with no store. Every file is parsed |
-| `index-cold-store` | The index step with an empty `localdbstore`. Every file is parsed and stored |
+| `index-cold/workers=1` | The index step with no store and one worker. Every file is parsed |
+| `index-cold/workers=N` | The same with N workers. The speed-up is the time of `workers=1` over this time |
+| `index-cold-store` | The index step with an empty `localdbstore` and the parallel workers. Every file is parsed and stored |
 | `index-warm` | The index step with a store that holds every index. No file is parsed |
 | `link` | `projectgraph.Build` on the indexes |
 | `reach` | `reach.Reach` with the 200 targets |
@@ -124,11 +130,18 @@ Each step reports these metrics next to `ns/op`.
 | `base-heap-MiB` | The heap before the step, after a GC. It holds the indexes and the graph that the step reads |
 | `peak-heap-MiB` | The highest heap that a sample every 5 ms saw during the step |
 | `index-KiB/file` | The JSON size of one index, as the store keeps it |
+| `retained-KiB/file` | The heap that the result of the index step holds after a GC, per file |
+| `retained-B/edge` | The heap that the graph holds after a GC, per edge |
 | `edges`, `roots`, `unresolved` | The size of the graph. `unresolved` counts the distinct unresolved call sites |
 | `unresolved-rate` | The unresolved call sites over all call sites of the indexes |
 | `targets`, `found` | The reach targets and the targets with a path |
 
 The memory that a step uses is `peak-heap-MiB` minus `base-heap-MiB`.
+
+`TestDegradesAtHalfTheColdTime` and `TestSynthGivesOneOutputForAnyNumberOfWorkers`
+run with the tag and no `-bench`. The first gives the index step half of
+its cold time and checks the `missing` files and the `budget` causes. The
+second compares the output of one worker and four workers byte for byte.
 
 ## Read the report
 

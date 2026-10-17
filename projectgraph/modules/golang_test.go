@@ -56,11 +56,14 @@ func TestGolangResolve(t *testing.T) {
 }
 
 func TestGolangWithNoModule(t *testing.T) {
-	g := NewGolang(NewFiles([]string{"pkg/util/u.go"}), fstest.MapFS{}, []string{"pkg/util"})
+	g := NewGolang(NewFiles([]string{"main.go", "pkg/util/u.go"}), fstest.MapFS{}, []string{"", "pkg/util"})
 
 	_, ok := g.Resolve("github.com/me/proj/pkg/util")
 	assert.False(t, ok, "no go.mod gives no import path")
 	assert.True(t, g.FirstParty("github.com/me/proj/pkg/util"), "the path ends with a package directory")
 	assert.False(t, g.FirstParty("github.com/me/proj/pkg/utility"))
+	assert.True(t, g.FirstParty("pkg/util"))
+	assert.False(t, g.FirstParty("util"), "a path ends with the whole directory")
+	assert.False(t, g.FirstParty("fmt"), "the root directory names no import path")
 	assert.Empty(t, g.Problems())
 }

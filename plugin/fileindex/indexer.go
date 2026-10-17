@@ -82,6 +82,7 @@ type run struct {
 	opts   Options
 	result *Result
 	pool   *pool
+	strs   interner
 }
 
 // Run indexes the app files of fsys. It reads each file once and asks the
@@ -109,6 +110,7 @@ func (*Indexer) Run(ctx context.Context, fsys core.ImportAwareFileSystem, opts O
 	r := &run{
 		opts:   opts,
 		result: &Result{Files: make(map[string]fidx.FileStatus, len(files)), Report: &plugin.Report{}},
+		strs:   interner{},
 	}
 	if r.pool, err = newPool(ctx, opts.Languages, r.maxBytes(), cmp.Or(opts.Workers, runtime.GOMAXPROCS(0))); err != nil {
 		return nil, err
@@ -306,6 +308,7 @@ func (r *run) collect(ctx context.Context, p pending, o outcome) *fidx.Index {
 }
 
 func (r *run) done(file core.File, ix *fidx.Index, status fidx.FileStatus) {
+	r.strs.index(ix)
 	r.result.Files[file.Name()] = status
 	r.result.Indexes = append(r.result.Indexes, ix)
 }

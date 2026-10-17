@@ -74,8 +74,7 @@ type builder struct {
 	test   map[string]bool
 	rules  []roots.Rule
 
-	edges       map[Edge]bool
-	linked      map[[2]string]bool
+	edges       *edgeSet
 	unresolved  map[UnresolvedSite]bool
 	truncations map[Truncation]bool
 	problems    []modules.Problem
@@ -103,17 +102,10 @@ type builder struct {
 	// narrowed holds the call sites whose receiver a class narrowed. Such a
 	// site gets no field or name edge, and the link step owns its record.
 	narrowed map[Site]bool
-	// slots holds the edge of each caller, callee and site.
-	slots map[edgeSlot]Edge
 	// goMethods holds the Go methods of the project by name.
 	goMethods map[string][]string
 	// loads holds whether the module top level of each file runs code.
 	loads map[string]bool
-}
-
-type edgeSlot struct {
-	from, to string
-	site     Site
 }
 
 type classRecord struct {
@@ -135,23 +127,27 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		}
 	}
 
+	defs, sites := len(indexes), 0
+	for _, ix := range indexes {
+		defs += len(ix.Definitions)
+		sites += len(ix.Imports) + len(ix.Calls) + len(ix.References)
+	}
 	b := &builder{
 		opts: opts,
 		g: &Graph{
-			Nodes: map[string]*Node{},
-			Files: map[string]fileindex.FileStatus{},
+			Nodes: make(map[string]*Node, defs),
+			Files: make(map[string]fileindex.FileStatus, len(indexes)),
 		},
 		byPath:       make(map[string]*fileindex.Index, len(indexes)),
 		scopes:       make(map[string]*scope, len(indexes)),
-		edges:        map[Edge]bool{},
-		linked:       map[[2]string]bool{},
+		edges:        newEdgeSet(sites),
 		unresolved:   map[UnresolvedSite]bool{},
 		truncations:  map[Truncation]bool{},
 		names:        map[nameKey]resolution{},
 		visiting:     map[nameKey]bool{},
 		bindings:     map[string]string{},
 		classes:      map[string]classRecord{},
-		defs:         map[string]*fileindex.Definition{},
+		defs:         make(map[string]*fileindex.Definition, defs),
 		reading:      map[string]bool{},
 		units:        map[string]*unit{},
 		unitOf:       map[string]*unit{},
@@ -160,7 +156,6 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		loads:        map[string]bool{},
 		mros:         map[string][]string{},
 		narrowed:     map[Site]bool{},
-		slots:        map[edgeSlot]Edge{},
 		test:         map[string]bool{},
 		rules:        roots.Merge(roots.Default(), opts.Rules),
 	}
@@ -342,21 +337,16 @@ func (b *builder) external(key string) string {
 // at the site with a confidence at least as high. A higher one replaces it,
 // so a path through the site shows the best kind.
 func (b *builder) addEdge(e Edge) {
-	e.Confidence = e.Kind.Confidence()
-	slot := edgeSlot{from: e.From, to: e.To, site: e.Site}
-	old, ok := b.slots[slot]
+	slot := b.edges.slot(e)
+	old, ok := b.edges.kind(slot)
 	switch {
-	case ok && old.Confidence.Rank() >= e.Confidence.Rank():
+	case ok && old.Confidence().Rank() >= e.Kind.Confidence().Rank():
 		return
-	case ok:
-		delete(b.edges, old)
-	case len(b.edges) >= b.opts.maxEdges:
+	case !ok && b.edges.len() >= b.opts.maxEdges:
 		b.truncations[Truncation{Kind: TruncationEdges}] = true
 		return
 	}
-	b.slots[slot] = e
-	b.edges[e] = true
-	b.linked[[2]string{e.From, e.To}] = true
+	b.edges.put(slot, e)
 }
 
 func (b *builder) addUnresolved(u UnresolvedSite) {
@@ -542,7 +532,7 @@ func (b *builder) linkDecorators(ix *fileindex.Index) {
 			for _, nested := range b.nestedFunctions(key) {
 				b.addEdge(Edge{From: def.Key, To: nested, Site: site, Kind: EdgeReference, Resolver: resolverName(ix.Language, "decorator-closure")})
 			}
-			if b.linked[[2]string{from, key}] {
+			if b.edges.joins(from, key) {
 				continue
 			}
 			if b.g.Nodes[key] == nil {
@@ -637,7 +627,7 @@ func (b *builder) importPrefix(ix *fileindex.Index, line int) string {
 
 func (b *builder) finish() *Graph {
 	g := b.g
-	g.Edges = sortedKeys(b.edges, compareEdges)
+	g.Edges = b.edges.sorted()
 	g.Unresolved = sortedKeys(b.unresolved, compareUnresolved)
 	g.Truncated = sortedKeys(b.truncations, compareTruncations)
 	slices.SortFunc(g.Roots, func(a, b Root) int {
@@ -670,16 +660,6 @@ func sortedKeys[T comparable](set map[T]bool, compare func(a, b T) int) []T {
 
 func compareSites(a, b Site) int {
 	return cmp.Or(cmp.Compare(a.Path, b.Path), cmp.Compare(a.Line, b.Line), cmp.Compare(a.Column, b.Column))
-}
-
-func compareEdges(a, b Edge) int {
-	return cmp.Or(
-		cmp.Compare(a.From, b.From),
-		compareSites(a.Site, b.Site),
-		cmp.Compare(a.To, b.To),
-		cmp.Compare(a.Kind, b.Kind),
-		cmp.Compare(a.Resolver, b.Resolver),
-	)
 }
 
 func compareUnresolved(a, b UnresolvedSite) int {

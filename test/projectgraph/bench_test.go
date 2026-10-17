@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"os"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,6 +24,7 @@ import (
 	"github.com/safedep/code/projectgraph/store"
 	"github.com/safedep/code/projectgraph/store/localdbstore"
 	"github.com/safedep/dry/localdb"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,8 +32,9 @@ const (
 	// benchFilesEnv lists the project sizes of the benchmark, as 1000,10000.
 	benchFilesEnv = "PROJECTGRAPH_BENCH_FILES"
 
-	// benchWorkersEnv is the number of workers of the parallel index
-	// steps. The default is 4, the cores of the machine of the report.
+	// benchWorkersEnv lists the numbers of workers of the cold index step,
+	// as 1,4. The other index steps use the last one. The default is 1,4,
+	// for the 4 cores of the machine of the report.
 	benchWorkersEnv = "PROJECTGRAPH_BENCH_WORKERS"
 )
 
@@ -41,16 +44,10 @@ func benchSizes(b *testing.B) []int {
 	return envInts(b, benchFilesEnv, 1000)
 }
 
-func benchWorkers(b *testing.B) int {
-	workers := envInts(b, benchWorkersEnv, 4)
-	require.Len(b, workers, 1, benchWorkersEnv)
-	return workers[0]
-}
-
-func envInts(b *testing.B, name string, fallback int) []int {
+func envInts(b *testing.B, name string, fallback ...int) []int {
 	value := os.Getenv(name)
 	if value == "" {
-		return []int{fallback}
+		return fallback
 	}
 	var values []int
 	for _, field := range strings.Split(value, ",") {
@@ -62,12 +59,12 @@ func envInts(b *testing.B, name string, fallback int) []int {
 }
 
 // BenchmarkProjectGraph measures each step on a generated project per
-// language and size. index-cold parses every file with no store, once with
-// one worker and once with the workers of PROJECTGRAPH_BENCH_WORKERS.
-// index-cold-store parses every file and puts each index in an empty store.
-// index-warm finds every index in the store. link and reach run on the
-// indexes of the warm store. Each step reports the peak heap of its run.
-// The steps other than index-cold use the parallel workers.
+// language and size. index-cold parses every file with no store, once for
+// each number of workers of PROJECTGRAPH_BENCH_WORKERS. index-cold-store
+// parses every file and puts each index in an empty store. index-warm finds
+// every index in the store. link and reach run on the indexes of the warm
+// store. Each step reports the peak heap of its run. The index steps other
+// than index-cold use the last number of workers.
 func BenchmarkProjectGraph(b *testing.B) {
 	for _, code := range languageCodes {
 		for _, files := range benchSizes(b) {
@@ -90,7 +87,8 @@ func benchProject(b *testing.B, code core.LanguageCode, files int) {
 	fsys, err := codefs.NewLocalFileSystem(codefs.LocalFileSystemConfig{AppDirectories: []string{root}})
 	require.NoError(b, err)
 
-	workers := benchWorkers(b)
+	coldWorkers := envInts(b, benchWorkersEnv, 1, 4)
+	workers := coldWorkers[len(coldWorkers)-1]
 	index := func(s store.Store, workers int) *fileindex.Result {
 		indexed, err := (&fileindex.Indexer{}).Run(ctx, fsys, fileindex.Options{Languages: languages, Store: s, Workers: workers})
 		require.NoError(b, err)
@@ -120,23 +118,27 @@ func benchProject(b *testing.B, code core.LanguageCode, files int) {
 	g := link()
 	targets := reachTargets(code)
 
-	for _, n := range []int{1, workers} {
+	for _, n := range coldWorkers {
 		b.Run("index-cold/workers="+strconv.Itoa(n), func(b *testing.B) {
-			measure(b, written, func() { index(nil, n) })
+			retained := measure(b, written, func() any { return index(nil, n) })
+			b.ReportMetric(float64(retained)/(1<<10)/float64(written), "retained-KiB/file")
 		})
 	}
 	b.Run("index-cold-store", func(b *testing.B) {
-		measure(b, written, func() { index(newStore(b.TempDir()), workers) })
+		measure(b, written, func() any { return index(newStore(b.TempDir()), workers) })
 	})
 	b.Run("index-warm", func(b *testing.B) {
-		measure(b, written, func() {
+		retained := measure(b, written, func() any {
 			r := index(warm, workers)
 			require.Equal(b, written, count(r.Files, fidx.FileCached))
+			return r
 		})
+		b.ReportMetric(float64(retained)/(1<<10)/float64(written), "retained-KiB/file")
 		b.ReportMetric(jsonKiB(b, indexed.Indexes)/float64(written), "index-KiB/file")
 	})
 	b.Run("link", func(b *testing.B) {
-		measure(b, written, func() { link() })
+		retained := measure(b, written, func() any { return link() })
+		b.ReportMetric(float64(retained)/float64(len(g.Edges)), "retained-B/edge")
 		b.ReportMetric(float64(len(g.Edges)), "edges")
 		sites, unresolved := callSites(g, indexed.Indexes)
 		b.ReportMetric(float64(unresolved), "unresolved")
@@ -145,9 +147,10 @@ func benchProject(b *testing.B, code core.LanguageCode, files int) {
 	})
 	b.Run("reach", func(b *testing.B) {
 		var results []reach.Result
-		measure(b, written, func() {
+		measure(b, written, func() any {
 			results, err = reach.Reach(ctx, g, reach.Query{Targets: targets})
 			require.NoError(b, err)
+			return results
 		})
 		found := 0
 		for _, r := range results {
@@ -184,24 +187,41 @@ func count(files map[string]fidx.FileStatus, status fidx.FileStatus) int {
 
 // measure runs op b.N times and reports the time per 1,000 files, the heap
 // before the run and the peak heap. The base holds the indexes and the graph
-// that the link and the reach step read. A goroutine samples runtime.MemStats, because MemStats keeps
-// no peak of HeapAlloc. The sample stops the world for a few microseconds,
-// so it runs every 5 ms only.
-func measure(b *testing.B, files int, op func()) {
+// that the link and the reach step read. A goroutine samples
+// runtime.MemStats, because MemStats keeps no peak of HeapAlloc. The sample
+// stops the world for a few microseconds, so it runs every 5 ms only.
+//
+// measure returns the heap that the result of the last op holds after a
+// collection, over the base.
+func measure(b *testing.B, files int, op func() any) int64 {
 	runtime.GC()
 	var base runtime.MemStats
 	runtime.ReadMemStats(&base)
 	peak := newPeakHeap()
 	b.ResetTimer()
 	start := time.Now()
-	for range b.N {
-		op()
+	var last any
+	for i := range b.N {
+		if i < b.N-1 {
+			op()
+			continue
+		}
+		last = op()
 	}
 	elapsed := time.Since(start)
 	b.StopTimer()
 	b.ReportMetric(elapsed.Seconds()/float64(b.N)/float64(files)*1000, "s/1k-files")
 	b.ReportMetric(float64(peak.stop())/(1<<20), "peak-heap-MiB")
 	b.ReportMetric(float64(base.HeapAlloc)/(1<<20), "base-heap-MiB")
+
+	// The second collection frees the objects that a finalizer of the
+	// first one released, as the trees of a parse.
+	runtime.GC()
+	runtime.GC()
+	var after runtime.MemStats
+	runtime.ReadMemStats(&after)
+	runtime.KeepAlive(last)
+	return int64(after.HeapAlloc) - int64(base.HeapAlloc)
 }
 
 type peakHeap struct {
@@ -240,4 +260,64 @@ func (p *peakHeap) stop() uint64 {
 	p.wg.Wait()
 	p.sample()
 	return p.max
+}
+
+// TestDegradesAtHalfTheColdTime gives the index step half the time of a cold
+// run. The files that the deadline cuts are missing, the link step takes
+// the partial result, and the reach query reports each target that it does
+// not find as uncertain with a budget cause, never as not found.
+//
+// A partial graph can find a path that the whole graph does not. A site
+// with more than 20 field candidates in the whole project is ambiguous,
+// and with fewer files it has field edges.
+func TestDegradesAtHalfTheColdTime(t *testing.T) {
+	for _, code := range languageCodes {
+		t.Run(string(code), func(t *testing.T) {
+			language, err := lang.GetLanguage(string(code))
+			require.NoError(t, err)
+			root := t.TempDir()
+			written, err := generate(code, 1000).write(root)
+			require.NoError(t, err)
+			fsys, err := codefs.NewLocalFileSystem(codefs.LocalFileSystemConfig{AppDirectories: []string{root}})
+			require.NoError(t, err)
+			opts := fileindex.Options{Languages: []core.Language{language}, Workers: 4}
+			targets := reachTargets(code)
+
+			search := func(indexed *fileindex.Result) []reach.Result {
+				g, err := projectgraph.Build(context.Background(), indexed.Indexes, projectgraph.Options{
+					Root:      os.DirFS(root),
+					Files:     indexed.Files,
+					TestPaths: benchTestPaths,
+				})
+				require.NoError(t, err)
+				results, err := reach.Reach(context.Background(), g, reach.Query{Targets: targets})
+				require.NoError(t, err)
+				return results
+			}
+
+			start := time.Now()
+			_, err = (&fileindex.Indexer{}).Run(context.Background(), fsys, opts)
+			require.NoError(t, err)
+			cold := time.Since(start)
+
+			ctx, cancel := context.WithTimeout(context.Background(), cold/2)
+			defer cancel()
+			partial, err := (&fileindex.Indexer{}).Run(ctx, fsys, opts)
+			require.ErrorIs(t, err, context.DeadlineExceeded)
+			indexed, missing := count(partial.Files, fidx.FileIndexed), count(partial.Files, fidx.FileMissing)
+			t.Logf("cold %v: %d indexed, %d missing at %v", cold, indexed, missing, cold/2)
+			assert.Positive(t, indexed)
+			assert.Positive(t, missing)
+			assert.Equal(t, written, indexed+missing)
+			assert.Len(t, partial.Indexes, indexed)
+
+			for _, r := range search(partial) {
+				if r.Status == reach.Found {
+					continue
+				}
+				assert.Equal(t, reach.Uncertain, r.Status, r.Target)
+				assert.True(t, slices.ContainsFunc(r.Uncertainties, func(u reach.Uncertainty) bool { return u.Kind == reach.Budget }), "budget cause for %s", r.Target)
+			}
+		})
+	}
 }
