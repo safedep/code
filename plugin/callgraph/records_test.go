@@ -44,7 +44,6 @@ func goLanguage(t *testing.T) core.Language {
 // end of the test, so the test can read the nodes of the graph.
 func buildFromSource(t *testing.T, language core.Language, name, source string) *CallGraph {
 	t.Helper()
-	loadBuiltinOnce.Do(initBuiltins)
 
 	tree, err := parser.ParseBytes(t.Context(), language, []byte(source), parser.WithFileName(name))
 	require.NoError(t, err)
@@ -389,5 +388,46 @@ func TestArrowFunctionWithAnExpressionBody(t *testing.T) {
 				assert.Contains(t, calleesOf(cg, l.file+tc.caller), callee)
 			})
 		}
+	}
+}
+
+func TestRuntimeGlobalsAreKnownReceivers(t *testing.T) {
+	source := `process.exit(0);
+window.alert(1);
+document.querySelector("a");
+navigator.sendBeacon(u);
+global.gc();
+globalThis.queueMicrotask(f);
+Buffer.from("x");
+module.require("x");
+exports.run();
+crypto.randomUUID();
+new URL(u);
+fetch(u);
+new Error("e");
+new TypeError("e");
+new AbortController();
+new TextEncoder();
+new TextDecoder();
+require("os");
+`
+	languages := []struct {
+		language core.Language
+		file     string
+	}{
+		{javascriptLanguage(t), "a.js"},
+		{typescriptLanguage(t), "a.ts"},
+	}
+
+	for _, l := range languages {
+		t.Run(l.file, func(t *testing.T) {
+			cg := buildFromSource(t, l.language, l.file, source)
+
+			assert.Empty(t, cg.Unresolved())
+			assert.Subset(t, calleesOf(cg, l.file), []string{"process//exit", "Buffer//from", "crypto//randomUUID", "URL", "fetch", "Error", "require"})
+			for _, ref := range cg.Nodes[l.file].CallsTo {
+				assert.False(t, ref.Unbound, ref.CalleeNamespace)
+			}
+		})
 	}
 }

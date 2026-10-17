@@ -1681,7 +1681,7 @@ func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 	case "identifier":
 		callee, bound := resolveJSIdentifier(functionNode.Content(treeData), currentNamespace, callGraph)
 		callees, unbound = []string{callee}, !bound
-		if !bound && functionNode.Content(treeData) == "require" && !staticString(firstArgument(argumentsNode)) {
+		if functionNode.Content(treeData) == "require" && !staticString(firstArgument(argumentsNode)) {
 			callGraph.addUnresolved(currentNamespace, callNode, treeData, UnresolvedDynamicImport)
 		}
 	case "import":

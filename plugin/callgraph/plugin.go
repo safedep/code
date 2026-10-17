@@ -3,7 +3,6 @@ package callgraph
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/dry/log"
@@ -20,12 +19,7 @@ type callgraphPlugin struct {
 // Verify contract
 var _ core.TreePlugin = (*callgraphPlugin)(nil)
 
-var loadBuiltinOnce sync.Once
-
 func NewCallGraphPlugin(callgraphCallback CallgraphCallback) *callgraphPlugin {
-	// Load builtin keywords
-	loadBuiltinOnce.Do(initBuiltins)
-
 	return &callgraphPlugin{
 		callgraphCallback: callgraphCallback,
 	}

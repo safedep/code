@@ -658,9 +658,9 @@ var testcases = []callgraphTestcase{
 		},
 		ExpectedCallGraph: map[string][]expectedCallgraphRefs{
 			"testJavascript.js": {
-				{"testJavascript.js//require", [][]string{{"'fs'"}}},
-				{"testJavascript.js//require", [][]string{{"'fs/promises'"}}},
-				{"testJavascript.js//require", [][]string{{"'sqlite3'"}}},
+				{"require", [][]string{{"'fs'"}}},
+				{"require", [][]string{{"'fs/promises'"}}},
+				{"require", [][]string{{"'sqlite3'"}}},
 				{"testJavascript.js//TestClass", [][]string{{"\"test\""}, {"42"}}},
 				{"testJavascript.js//TestClass//helperMethod", [][]string{}},
 				{"testJavascript.js//TestClass//deepMethod", [][]string{}},
