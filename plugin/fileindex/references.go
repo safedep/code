@@ -3,7 +3,6 @@ package fileindex
 import (
 	"context"
 	"slices"
-	"strings"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
@@ -148,8 +147,9 @@ func (p *projection) addReferences(ctx context.Context) {
 	p.truncateWalk(err)
 }
 
-// reference returns the reference of a value: a name or a member chain whose
-// first name a definition, an import or the instance of a class binds.
+// reference returns the reference of a value. The value is a name or a
+// member chain, and a definition, an import or the instance of a class
+// binds its first name.
 func (p *projection) reference(syntax referenceSyntax, caller string, value *sitter.Node) (fidx.Reference, bool) {
 	if value == nil || p.inExport(value) && syntax.identifiers[value.Type()] {
 		return fidx.Reference{}, false
@@ -179,7 +179,7 @@ func (p *projection) reference(syntax referenceSyntax, caller string, value *sit
 		Line:    int(site.StartLine),
 		Column:  int(site.StartColumn),
 		Text:    p.text(value),
-		Targets: p.targets([]string{strings.Join(append([]string{unit}, names...), separator)}),
+		Targets: p.targets([]string{fidx.Join(unit, names...)}),
 	}, true
 }
 
@@ -188,7 +188,7 @@ func (p *projection) reference(syntax referenceSyntax, caller string, value *sit
 // this. A local variable or a parameter has no target.
 func (p *projection) valueOf(syntax referenceSyntax, caller, name string) (string, bool) {
 	if syntax.instances[name] {
-		for scope := caller; scope != p.cg.FileName; scope = scope[:strings.LastIndex(scope, separator)] {
+		for scope := caller; scope != p.cg.FileName; scope = fidx.Parent(scope) {
 			if def := p.defs[scope]; def != nil && def.Parent != "" {
 				return def.Parent, true
 			}

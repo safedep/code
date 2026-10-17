@@ -36,7 +36,7 @@ func graphOf(t *testing.T, spec string) *projectgraph.Graph {
 			return n
 		}
 		n := &projectgraph.Node{Key: key, Kind: projectgraph.NodeExternal}
-		if unit := projectgraph.Unit(key); strings.HasSuffix(unit, ".py") || strings.HasSuffix(unit, ".js") {
+		if unit := fileindex.Unit(key); strings.HasSuffix(unit, ".py") || strings.HasSuffix(unit, ".js") {
 			n.Kind, n.Path, n.Line = projectgraph.NodeFunction, unit, 1
 			if _, ok := g.Files[unit]; !ok {
 				g.Files[unit] = fileindex.FileIndexed
@@ -368,12 +368,12 @@ func largeGraph(n int) (*projectgraph.Graph, []string) {
 	key := func(i int) string { return fmt.Sprintf("src/m%d.py//f%d", i/100, i) }
 	for i := range n {
 		k := key(i)
-		g.Nodes[k] = &projectgraph.Node{Key: k, Kind: projectgraph.NodeFunction, Path: projectgraph.Unit(k)}
-		g.Files[projectgraph.Unit(k)] = fileindex.FileIndexed
+		g.Nodes[k] = &projectgraph.Node{Key: k, Kind: projectgraph.NodeFunction, Path: fileindex.Unit(k)}
+		g.Files[fileindex.Unit(k)] = fileindex.FileIndexed
 	}
 	edge := func(from, to string, line int) {
 		g.Edges = append(g.Edges, projectgraph.Edge{
-			From: from, To: to, Site: projectgraph.Site{Path: projectgraph.Unit(from), Line: line},
+			From: from, To: to, Site: projectgraph.Site{Path: fileindex.Unit(from), Line: line},
 			Kind: projectgraph.EdgeDirect, Confidence: projectgraph.ConfidenceHigh,
 		})
 	}

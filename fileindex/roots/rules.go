@@ -56,8 +56,9 @@ type Rule struct {
 	Match    Match  `yaml:"match"`
 }
 
-// Match holds one match key. Decorator, Annotation, Call and Export parse and
-// match nothing until the framework rules ship.
+// Match holds one match key. Decorator, Annotation, Call and Export parse,
+// and they match nothing until the framework root rules of plan step 28
+// ship.
 type Match struct {
 	Definition   *DefinitionMatch `yaml:"definition,omitempty"`
 	Decorator    []string         `yaml:"decorator,omitempty"`
@@ -71,7 +72,8 @@ type Match struct {
 }
 
 // DefinitionMatch matches a definition by name and by the name of its
-// class. Static and InPackage match nothing until the index records them.
+// class. Static and InPackage match nothing until the index records them in
+// plan step 28.
 type DefinitionMatch struct {
 	Name      string `yaml:"name"`
 	Parent    string `yaml:"parent,omitempty"`

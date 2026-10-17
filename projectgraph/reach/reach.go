@@ -22,7 +22,7 @@ const (
 	// answer.
 	maxPerKind = 3
 	// wildcard ends a target that matches every external key under it.
-	wildcard = projectgraph.Separator + "*"
+	wildcard = fileindex.Separator + "*"
 )
 
 type Status string
@@ -212,7 +212,7 @@ func newIndex(g *projectgraph.Graph) *index {
 // match returns the external nodes of a target, by id.
 func (ix *index) match(target string) []int {
 	prefix, ok := strings.CutSuffix(target, "*")
-	if ok && strings.HasSuffix(prefix, projectgraph.Separator) {
+	if ok && strings.HasSuffix(prefix, fileindex.Separator) {
 		var ids []int
 		for _, id := range ix.externals {
 			if strings.HasPrefix(ix.keys[id], prefix) {
@@ -457,7 +457,7 @@ func (f *found) forTarget(target string) ([]Uncertainty, []Uncertainty, int) {
 			all = append(all, f.byMethod[m]...)
 		}
 	} else {
-		all = append(all, f.byMethod[projectgraph.Last(target)]...)
+		all = append(all, f.byMethod[fileindex.Last(target)]...)
 	}
 
 	var setAside []Uncertainty

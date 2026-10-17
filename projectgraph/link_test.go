@@ -695,7 +695,7 @@ func TestBuildImportShapes(t *testing.T) {
 		return &fileindex.Index{Version: fileindex.Version, Path: path, Language: langcode.Python, Imports: imports, Calls: calls}
 	}
 	def := func(ix *fileindex.Index, key string) *fileindex.Index {
-		ix.Definitions = append(ix.Definitions, fileindex.Definition{Key: key, Kind: fileindex.DefFunction, Name: Last(key), StartLine: 1, EndLine: 2, Exported: true})
+		ix.Definitions = append(ix.Definitions, fileindex.Definition{Key: key, Kind: fileindex.DefFunction, Name: fileindex.Last(key), StartLine: 1, EndLine: 2, Exported: true})
 		return ix
 	}
 	call := func(caller, callee string, target string) fileindex.Call {
@@ -785,7 +785,7 @@ func TestBuildImportShapes(t *testing.T) {
 
 func TestBuildNameEdges(t *testing.T) {
 	fn := func(key string) fileindex.Definition {
-		return fileindex.Definition{Key: key, Kind: fileindex.DefFunction, Name: Last(key), StartLine: 1, EndLine: 1}
+		return fileindex.Definition{Key: key, Kind: fileindex.DefFunction, Name: fileindex.Last(key), StartLine: 1, EndLine: 1}
 	}
 	caller := &fileindex.Index{
 		Version: fileindex.Version, Path: "main.py", Language: langcode.Python,
@@ -871,7 +871,7 @@ func TestBuildReferenceEdges(t *testing.T) {
 
 func TestBuildSuperCalls(t *testing.T) {
 	class := func(path, name string, bases []string, methods ...string) ([]fileindex.Definition, fileindex.Class) {
-		key := path + Separator + name
+		key := path + fileindex.Separator + name
 		defs := []fileindex.Definition{{Key: key, Kind: fileindex.DefClass, Name: name, StartLine: 1, EndLine: 9}}
 		c := fileindex.Class{Key: key, Bases: bases}
 		for _, m := range methods {
@@ -879,8 +879,8 @@ func TestBuildSuperCalls(t *testing.T) {
 			if m == "constructor" || m == "__init__" {
 				kind = fileindex.DefConstructor
 			}
-			defs = append(defs, fileindex.Definition{Key: Join(key, m), Kind: kind, Name: m, StartLine: 2, EndLine: 3, Parent: key})
-			c.Methods = append(c.Methods, Join(key, m))
+			defs = append(defs, fileindex.Definition{Key: fileindex.Join(key, m), Kind: kind, Name: m, StartLine: 2, EndLine: 3, Parent: key})
+			c.Methods = append(c.Methods, fileindex.Join(key, m))
 		}
 		return defs, c
 	}
@@ -894,7 +894,7 @@ func TestBuildSuperCalls(t *testing.T) {
 		return ix
 	}
 	call := func(caller, target string) fileindex.Call {
-		return fileindex.Call{Caller: caller, Line: 3, Column: 9, Callee: target, Targets: []string{target}, Method: Last(target), Kind: fileindex.CallCall}
+		return fileindex.Call{Caller: caller, Line: 3, Column: 9, Callee: target, Targets: []string{target}, Method: fileindex.Last(target), Kind: fileindex.CallCall}
 	}
 
 	py := index("a.py", langcode.Python,
@@ -949,7 +949,7 @@ func TestBuildSuperCalls(t *testing.T) {
 
 func TestBuildDecoratorFactoryClosures(t *testing.T) {
 	fn := func(key string, start, end int, decorators ...string) fileindex.Definition {
-		return fileindex.Definition{Key: key, Kind: fileindex.DefFunction, Name: Last(key), StartLine: start, EndLine: end, Decorators: decorators}
+		return fileindex.Definition{Key: key, Kind: fileindex.DefFunction, Name: fileindex.Last(key), StartLine: start, EndLine: end, Decorators: decorators}
 	}
 	ix := &fileindex.Index{
 		Version: fileindex.Version, Path: "a.py", Language: langcode.Python,
@@ -978,7 +978,7 @@ func TestBuildDecoratorFactoryClosures(t *testing.T) {
 
 func TestBuildModuleVariables(t *testing.T) {
 	variable := func(key string, values ...string) fileindex.Definition {
-		return fileindex.Definition{Key: key, Kind: fileindex.DefVariable, Name: Last(key), StartLine: 9, EndLine: 9, Exported: true, Values: values}
+		return fileindex.Definition{Key: key, Kind: fileindex.DefVariable, Name: fileindex.Last(key), StartLine: 9, EndLine: 9, Exported: true, Values: values}
 	}
 	app := &fileindex.Index{
 		Version: fileindex.Version, Path: "app.py", Language: langcode.Python,

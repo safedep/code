@@ -1,8 +1,12 @@
-package projectgraph
+package fileindex
 
-import "strings"
+import (
+	"strings"
 
-// Separator joins the segments of a symbol key, as fileindex keys do.
+	"github.com/safedep/code/langcode"
+)
+
+// Separator joins the segments of a symbol key, as plugin/callgraph does.
 const Separator = "//"
 
 // Join returns the key of the segments under the unit.
@@ -37,7 +41,27 @@ func Last(key string) string {
 	return key
 }
 
+// Parent returns the key with no last segment, or the key itself when it
+// has no segment.
+func Parent(key string) string {
+	if i := strings.LastIndex(key, Separator); i >= 0 {
+		return key[:i]
+	}
+	return key
+}
+
 // HasKeyPrefix reports whether key is prefix or a key under prefix.
 func HasKeyPrefix(key, prefix string) bool {
 	return key == prefix || strings.HasPrefix(key, prefix+Separator)
+}
+
+// Namespace returns the key form of a module as the source writes it, as
+// yaml//loader for yaml.loader in Python or fs//promises for fs/promises in
+// JavaScript. It keeps the leading dots of a relative module.
+func Namespace(lang langcode.Code, module string) string {
+	sep := "/"
+	if lang == langcode.Python {
+		sep = "."
+	}
+	return strings.ReplaceAll(module, sep, Separator)
 }

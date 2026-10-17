@@ -21,9 +21,6 @@ import (
 	"github.com/safedep/code/projectgraph/modules"
 )
 
-// keySeparator joins the segments of a symbol key, as fileindex keys do.
-const keySeparator = "//"
-
 // Root is a key that a rule marks.
 type Root struct {
 	Key  string
@@ -128,7 +125,7 @@ func (f *finder) matchDefinition(r rules.Rule) {
 	}
 	for _, ix := range f.applying(r) {
 		for _, def := range ix.Definitions {
-			if def.Name == m.Name && (m.Parent == "" || lastSegment(def.Parent) == m.Parent) {
+			if def.Name == m.Name && (m.Parent == "" || fileindex.Last(def.Parent) == m.Parent) {
 				f.add(r, def.Key)
 			}
 		}
@@ -259,7 +256,7 @@ func (f *finder) addPythonEntry(r rules.Rule, dir, entry string) {
 		return
 	}
 	if attr != "" {
-		if key := file + keySeparator + strings.ReplaceAll(attr, ".", keySeparator); f.Defined(key) {
+		if key := fileindex.Join(file, strings.Split(attr, ".")...); f.Defined(key) {
 			f.add(r, key)
 			return
 		}
@@ -431,11 +428,4 @@ func unquote(s string) string {
 // project.entry-points."flake8.extension".
 func unquoteDotted(s string) string {
 	return strings.NewReplacer(`"`, "", `'`, "").Replace(s)
-}
-
-func lastSegment(key string) string {
-	if i := strings.LastIndex(key, keySeparator); i >= 0 {
-		return key[i+len(keySeparator):]
-	}
-	return key
 }

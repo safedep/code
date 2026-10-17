@@ -204,6 +204,6 @@ func (g *Graph) IsExternal(key string) bool {
 	if n, ok := g.Nodes[key]; ok {
 		return n.Kind == NodeExternal
 	}
-	_, ok := g.Files[Unit(key)]
+	_, ok := g.Files[fileindex.Unit(key)]
 	return !ok
 }

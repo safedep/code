@@ -14,7 +14,7 @@ import (
 // JavaScript or TypeScript file are its export statements and its CommonJS
 // assignments. The exports of a Python file are the names of its __all__.
 func (p *projection) addExports() {
-	if !isECMAScript(p.ix.Language) && p.ix.Language != core.LanguageCodePython {
+	if !p.ix.Language.IsECMAScript() && p.ix.Language != core.LanguageCodePython {
 		return
 	}
 	for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
@@ -28,10 +28,6 @@ func (p *projection) addExports() {
 	}
 }
 
-func isECMAScript(code core.LanguageCode) bool {
-	return code == core.LanguageCodeJavascript || code == core.LanguageCodeTypescript
-}
-
 // exported reports that the rule of the language makes the definition
 // visible outside the file. A JavaScript or TypeScript definition is
 // exported when an export names it. A Go name is exported when it starts
@@ -43,7 +39,7 @@ func (p *projection) exported(def *fidx.Definition) bool {
 		return true
 	case def.Parent != "":
 		return p.exported(p.defs[def.Parent])
-	case isECMAScript(p.ix.Language):
+	case p.ix.Language.IsECMAScript():
 		return p.exports[def.Key]
 	case p.ix.Language == core.LanguageCodeGo:
 		r, _ := utf8.DecodeRuneInString(def.Name)
@@ -54,7 +50,7 @@ func (p *projection) exported(def *fidx.Definition) bool {
 }
 
 func (p *projection) local(name string) string {
-	return p.cg.FileName + separator + name
+	return fidx.Join(p.cg.FileName, name)
 }
 
 // export adds the export of a local name as name. A name that an import

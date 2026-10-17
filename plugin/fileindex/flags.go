@@ -195,18 +195,8 @@ func (p *projection) dynamicImport(call *sitter.Node, arguments []*sitter.Node, 
 		Line:      line,
 		Module:    module,
 		Kind:      fidx.ImportDynamicString,
-		Namespace: p.namespaceOf(module),
+		Namespace: fidx.Namespace(p.ix.Language, module),
 	})
-}
-
-// namespaceOf returns the "//" form of a module name, as the call graph
-// gives it.
-func (p *projection) namespaceOf(module string) string {
-	separator := "/"
-	if p.ix.Language == core.LanguageCodePython {
-		separator = "."
-	}
-	return strings.ReplaceAll(module, separator, "//")
 }
 
 // topLevel reports that a call is a statement of the program or the value

@@ -16,8 +16,6 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-const separator = "//"
-
 // maxInstanceHops bounds the walk from an instance key, as Parser//this//m,
 // through its synthetic edges to the method.
 const maxInstanceHops = 4
@@ -210,7 +208,7 @@ func (p *projection) addDefinitions() {
 		switch {
 		case key == file:
 			kind = fidx.DefModule
-		case !ok || !strings.HasPrefix(key, file+separator):
+		case !ok || !strings.HasPrefix(key, file+fidx.Separator):
 			continue
 		}
 
@@ -284,7 +282,7 @@ func definitionName(key, file string) string {
 		base := path.Base(file)
 		return strings.TrimSuffix(base, path.Ext(base))
 	}
-	return key[strings.LastIndex(key, separator)+len(separator):]
+	return fidx.Last(key)
 }
 
 // fillDefinition sets the parent class, the method kind and the decorators.
@@ -292,7 +290,7 @@ func (p *projection) fillDefinition(def *fidx.Definition) {
 	if def.Kind == fidx.DefModule {
 		return
 	}
-	scope := def.Key[:strings.LastIndex(def.Key, separator)]
+	scope := fidx.Parent(def.Key)
 	if parent, ok := p.defs[scope]; ok && parent.Kind == fidx.DefClass {
 		def.Parent = scope
 		if def.Kind == fidx.DefFunction {
@@ -441,14 +439,14 @@ func (p *projection) addCalls() {
 	}
 }
 
-// caller returns the definition whose run runs the call site that the
+// caller returns the definition that runs the call site that the
 // definition key holds. A JavaScript static field or static block runs when
 // the class is defined, so its calls belong to the scope that defines the
 // class. A function value in a static field runs only when a call runs it.
 // A flag in a static block stays on the class.
 func (p *projection) caller(key string, site ast.NodePosition) string {
 	def, ok := p.defs[key]
-	if !ok || def.Kind != fidx.DefClass || !isECMAScript(p.ix.Language) {
+	if !ok || def.Kind != fidx.DefClass || !p.ix.Language.IsECMAScript() {
 		return key
 	}
 	for node := p.descendant(site); node != nil && node.Type() != "class_body"; node = node.Parent() {
@@ -456,10 +454,10 @@ func (p *projection) caller(key string, site ast.NodePosition) string {
 		case "arrow_function", "function_expression", "function", "generator_function":
 			return key
 		case "class_static_block":
-			return key[:strings.LastIndex(key, separator)]
+			return fidx.Parent(key)
 		case "field_definition", "public_field_definition":
 			if hasKeyword(node, "static") {
-				return key[:strings.LastIndex(key, separator)]
+				return fidx.Parent(key)
 			}
 		}
 	}
@@ -470,7 +468,7 @@ func (p *projection) caller(key string, site ast.NodePosition) string {
 // require. The import record of the call names the module, so the call
 // itself makes no call record.
 func (p *projection) isRequire(ref callgraph.CallReference) bool {
-	return isECMAScript(p.ix.Language) && ref.Text == "require" && slices.Equal(ref.Targets, []string{"require"})
+	return p.ix.Language.IsECMAScript() && ref.Text == "require" && slices.Equal(ref.Targets, []string{"require"})
 }
 
 // requireCall matches a receiver that starts with a require of a string, as
@@ -481,7 +479,7 @@ var requireCall = regexp.MustCompile("^require\\(\\s*['\"`]([^'\"`]+)['\"`]\\s*\
 // module, as js-yaml//load for require('js-yaml').load. The call graph keys
 // the member under require.
 func (p *projection) throughRequire(receiver string, targets []string) []string {
-	if !isECMAScript(p.ix.Language) {
+	if !p.ix.Language.IsECMAScript() {
 		return targets
 	}
 	m := requireCall.FindStringSubmatch(receiver)
@@ -490,8 +488,8 @@ func (p *projection) throughRequire(receiver string, targets []string) []string 
 	}
 	out := make([]string, 0, len(targets))
 	for _, t := range targets {
-		if rest, ok := strings.CutPrefix(t, "require"+separator); ok {
-			t = p.namespaceOf(m[1]) + separator + rest
+		if rest, ok := strings.CutPrefix(t, "require"+fidx.Separator); ok {
+			t = fidx.Join(fidx.Namespace(p.ix.Language, m[1]), rest)
 		}
 		out = append(out, t)
 	}
@@ -545,19 +543,19 @@ func (p *projection) throughInstance(target string, hops int) []string {
 // a class scope, as the languages do. A name with no definition has no
 // target.
 func (p *projection) rebind(caller, name string) []string {
-	if name == "" || !strings.HasPrefix(caller+separator, p.cg.FileName+separator) {
+	if name == "" || !fidx.HasKeyPrefix(caller, p.cg.FileName) {
 		return nil
 	}
 	for scope := caller; ; {
 		if def, ok := p.defs[scope]; ok && (def.Kind != fidx.DefClass || scope == caller) {
-			if _, bound := p.defs[scope+separator+name]; bound {
-				return []string{scope + separator + name}
+			if _, bound := p.defs[fidx.Join(scope, name)]; bound {
+				return []string{fidx.Join(scope, name)}
 			}
 		}
 		if scope == p.cg.FileName {
 			return nil
 		}
-		scope = scope[:strings.LastIndex(scope, separator)]
+		scope = fidx.Parent(scope)
 	}
 }
 

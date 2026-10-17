@@ -276,7 +276,7 @@ func follow(key string, hops map[string][]string, seen map[string]bool) []string
 // calleeName names an external key that no file imports as a builtin, as
 // <builtin>.len or <builtin>.console.log.
 func calleeName(g *projectgraph.Graph, imported map[string]bool, key string) string {
-	if g.IsExternal(key) && !imported[projectgraph.Unit(key)] {
+	if g.IsExternal(key) && !imported[fidx.Unit(key)] {
 		return "<builtin>." + callgraphName(key)
 	}
 	return callgraphName(key)
@@ -286,7 +286,7 @@ func importedUnits(indexes []*fidx.Index) map[string]bool {
 	units := map[string]bool{}
 	for _, ix := range indexes {
 		for _, imp := range ix.Imports {
-			units[projectgraph.Unit(imp.Namespace)] = true
+			units[fidx.Unit(imp.Namespace)] = true
 		}
 	}
 	return units
@@ -299,8 +299,8 @@ var packageFiles = map[string]string{".py": "__init__", ".js": "index", ".mjs": 
 // dots and no extension, a package file as its directory, then the
 // segments.
 func callgraphName(key string) string {
-	unit := projectgraph.Unit(key)
-	segments := projectgraph.Segments(key)
+	unit := fidx.Unit(key)
+	segments := fidx.Segments(key)
 	ext := path.Ext(unit)
 	if pkg, ok := packageFiles[ext]; ok {
 		unit = strings.TrimSuffix(unit, ext)

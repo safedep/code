@@ -22,3 +22,8 @@ const (
 func All() []Code {
 	return []Code{Python, Javascript, Java, Go, Typescript, CSharp, Rust, PHP, Ruby, Kotlin}
 }
+
+// IsECMAScript reports whether the language is JavaScript or TypeScript.
+func (c Code) IsECMAScript() bool {
+	return c == Javascript || c == Typescript
+}

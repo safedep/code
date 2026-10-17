@@ -28,7 +28,7 @@ func (b *builder) linkNames() {
 		family := languageFamily(ix.Language)
 		var candidates []string
 		for _, key := range byName[familyName{family: family, name: u.Method}] {
-			if !b.test[Unit(key)] || b.test[u.Site.Path] {
+			if !b.test[fileindex.Unit(key)] || b.test[u.Site.Path] {
 				candidates = append(candidates, key)
 			}
 		}

@@ -21,9 +21,6 @@ import (
 // store keys an index by Version, so the bump makes every older index miss.
 const Version = "2"
 
-// separator joins the segments of a symbol key, as plugin/callgraph does.
-const separator = "//"
-
 type ImportKind string
 
 const (
@@ -190,15 +187,17 @@ type Class struct {
 // a member call and Method the called name, so the reach query can match an
 // unresolved record of the same method.
 type Call struct {
-	Caller   string     `json:"caller"`
-	Line     int        `json:"line"`
-	Column   int        `json:"column"`
-	Callee   string     `json:"callee"`
-	Targets  []string   `json:"targets,omitempty"`
-	Receiver string     `json:"receiver,omitempty"`
-	Method   string     `json:"method,omitempty"`
-	Kind     CallKind   `json:"kind"`
-	Args     []ArgShape `json:"args,omitempty"`
+	Caller   string   `json:"caller"`
+	Line     int      `json:"line"`
+	Column   int      `json:"column"`
+	Callee   string   `json:"callee"`
+	Targets  []string `json:"targets,omitempty"`
+	Receiver string   `json:"receiver,omitempty"`
+	Method   string   `json:"method,omitempty"`
+	Kind     CallKind `json:"kind"`
+	// Args is empty until the framework root rules of plan step 28 need
+	// the argument shapes.
+	Args []ArgShape `json:"args,omitempty"`
 }
 
 // Reference is a function, a method, a class or an import that the file
@@ -303,10 +302,10 @@ func (ix *Index) Key() Key {
 	return k
 }
 
-// ExternalCalls returns the calls that leave the file: a call with a target
-// under an import namespace, or with a bare name that no definition of the
-// file binds. A call with no target counts its callee. The calls keep the
-// order of Calls.
+// ExternalCalls returns the calls that leave the file. Such a call has a
+// target under an import namespace, or a bare name that no definition of
+// the file binds. A call with no target counts its callee. The calls keep
+// the order of Calls. vet reads them in plan step 24.
 func (ix *Index) ExternalCalls() []Call {
 	namespaces := make([]string, 0, len(ix.Imports))
 	for _, imp := range ix.Imports {
@@ -321,11 +320,11 @@ func (ix *Index) ExternalCalls() []Call {
 	}
 
 	external := func(target string) bool {
-		if !strings.Contains(target, separator) {
+		if !strings.Contains(target, Separator) {
 			return !defined[target]
 		}
 		return slices.ContainsFunc(namespaces, func(ns string) bool {
-			return target == ns || strings.HasPrefix(target, ns+separator)
+			return target == ns || strings.HasPrefix(target, ns+Separator)
 		})
 	}
 
@@ -348,7 +347,7 @@ func (ix *Index) DynamicSites() []Flag {
 	for _, def := range ix.Definitions {
 		flags = append(flags, def.Flags...)
 	}
-	slices.SortFunc(flags, compareFlags)
+	slices.SortFunc(flags, CompareFlags)
 	return slices.Compact(flags)
 }
 
@@ -376,7 +375,7 @@ func (ix *Index) Sort() {
 		)
 	})
 	for i := range ix.Definitions {
-		slices.SortFunc(ix.Definitions[i].Flags, compareFlags)
+		slices.SortFunc(ix.Definitions[i].Flags, CompareFlags)
 	}
 	slices.SortFunc(ix.Definitions, func(a, b Definition) int {
 		return cmp.Or(
@@ -426,7 +425,7 @@ func (ix *Index) Sort() {
 			cmp.Compare(a.Reason, b.Reason),
 		)
 	})
-	slices.SortFunc(ix.Flags, compareFlags)
+	slices.SortFunc(ix.Flags, CompareFlags)
 	slices.SortFunc(ix.Truncated, func(a, b Truncation) int {
 		return cmp.Or(
 			cmp.Compare(a.Kind, b.Kind),
@@ -436,7 +435,8 @@ func (ix *Index) Sort() {
 	})
 }
 
-func compareFlags(a, b Flag) int {
+// CompareFlags orders flags by line, then by kind.
+func CompareFlags(a, b Flag) int {
 	return cmp.Or(cmp.Compare(a.Line, b.Line), cmp.Compare(a.Kind, b.Kind))
 }
 

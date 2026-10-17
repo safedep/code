@@ -79,7 +79,7 @@ func (sc *scope) importFor(target string) (fileindex.Import, []string, bool) {
 	found := false
 	for _, imp := range sc.imports {
 		ns := imp.Namespace
-		if ns == "" || !HasKeyPrefix(target, ns) || found && len(ns) <= len(best.Namespace) {
+		if ns == "" || !fileindex.HasKeyPrefix(target, ns) || found && len(ns) <= len(best.Namespace) {
 			continue
 		}
 		best, found = imp, true
@@ -89,7 +89,7 @@ func (sc *scope) importFor(target string) (fileindex.Import, []string, bool) {
 	}
 	var rest []string
 	if len(target) > len(best.Namespace) {
-		rest = strings.Split(target[len(best.Namespace)+len(Separator):], Separator)
+		rest = strings.Split(target[len(best.Namespace)+len(fileindex.Separator):], fileindex.Separator)
 	}
 	return best, rest, true
 }
@@ -197,22 +197,22 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 				continue
 			}
 			if r.unbound {
-				// The index keeps the receiver as written in the target of
-				// a call on an unknown receiver, as plugin//run. The key
-				// names no module, and the unresolved site holds the call.
+				// A call on an unknown receiver, as plugin.run(), has the
+				// fallback target plugin//run, which names no module. The
+				// record of the index holds the call, so it makes no edge.
 				if unknown[[2]int{call.Line, call.Column}] {
 					continue
 				}
 				// A name that no builtin binds is a parameter or a local
 				// variable, as cb in def run(cb): cb(x). Its value is not
 				// known, so the call is a record and not an external.
-				if !langcode.IsBuiltin(ix.Language, Unit(r.key)) {
+				if !langcode.IsBuiltin(ix.Language, fileindex.Unit(r.key)) {
 					b.addUnresolved(UnresolvedSite{
 						Caller:   from,
 						Site:     site,
 						Text:     call.Callee,
 						Receiver: call.Receiver,
-						Method:   cmp.Or(call.Method, Last(r.key)),
+						Method:   cmp.Or(call.Method, fileindex.Last(r.key)),
 						Reason:   fileindex.UnresolvedUnknownReceiver,
 					})
 					continue
@@ -269,13 +269,13 @@ func (b *builder) resolveTargets(sc *scope, caller string, targets []string) []r
 // result is a list.
 func (b *builder) resolveTarget(sc *scope, caller, target string) []resolution {
 	ix := sc.ix
-	if target == superKeyword && isECMAScript(ix.Language) {
+	if target == superKeyword && ix.Language.IsECMAScript() {
 		return []resolution{b.resolveSuper(caller, nil)}
 	}
-	if rest, ok := strings.CutPrefix(target, superKeyword+Separator); ok {
-		return []resolution{b.resolveSuper(caller, strings.Split(rest, Separator))}
+	if rest, ok := strings.CutPrefix(target, superKeyword+fileindex.Separator); ok {
+		return []resolution{b.resolveSuper(caller, strings.Split(rest, fileindex.Separator))}
 	}
-	if HasKeyPrefix(target, ix.Path) {
+	if fileindex.HasKeyPrefix(target, ix.Path) {
 		return []resolution{b.resolveLocal(target)}
 	}
 	if imp, rest, ok := sc.importFor(target); ok {
@@ -285,14 +285,14 @@ func (b *builder) resolveTarget(sc *scope, caller, target string) []resolution {
 			return []resolution{{key: b.external(target), kind: EdgeDirect, rule: "external"}}
 		}
 		names := append(lead, rest...)
-		if len(names) == 0 && isECMAScript(ix.Language) {
+		if len(names) == 0 && ix.Language.IsECMAScript() {
 			names = []string{"default"}
 		}
 		r := b.walk(mod, names)
 		r.rule = cmp.Or(r.rule, "import")
 		return []resolution{r}
 	}
-	if !strings.Contains(target, Separator) {
+	if !strings.Contains(target, fileindex.Separator) {
 		if rs := b.wildcard(sc, target); len(rs) > 0 {
 			return rs
 		}
@@ -329,7 +329,7 @@ func (b *builder) resolveSuper(caller string, names []string) resolution {
 		}
 		switch {
 		case b.kindOf(base) != NodeClass:
-			return resolution{key: b.external(Join(base, names...)), kind: EdgeDirect, rule: "super"}
+			return resolution{key: b.external(fileindex.Join(base, names...)), kind: EdgeDirect, rule: "super"}
 		case len(names) == 0:
 			return resolution{key: base, kind: EdgeDirect, rule: "super"}
 		}
@@ -343,15 +343,15 @@ func (b *builder) resolveSuper(caller string, names []string) resolution {
 		}
 	}
 	if missing || lang != langcode.Python {
-		return resolution{fail: noDefinition(cmp.Or(strings.Join(names, Separator), superKeyword))}
+		return resolution{fail: noDefinition(cmp.Or(strings.Join(names, fileindex.Separator), superKeyword))}
 	}
-	return resolution{key: b.external(Join("object", names...)), kind: EdgeDirect, rule: "super"}
+	return resolution{key: b.external(fileindex.Join("object", names...)), kind: EdgeDirect, rule: "super"}
 }
 
 // enclosingClass returns the innermost class that holds the key.
 func (b *builder) enclosingClass(key string) (string, bool) {
-	for segs := Segments(key); len(segs) > 0; segs = segs[:len(segs)-1] {
-		if k := Join(Unit(key), segs...); b.kindOf(k) == NodeClass {
+	for segs := fileindex.Segments(key); len(segs) > 0; segs = segs[:len(segs)-1] {
+		if k := fileindex.Join(fileindex.Unit(key), segs...); b.kindOf(k) == NodeClass {
 			return k, true
 		}
 	}
@@ -364,9 +364,9 @@ func (b *builder) resolveLocal(target string) resolution {
 	if b.g.Nodes[target] != nil {
 		return resolution{key: target, kind: EdgeDirect, rule: "local"}
 	}
-	unit, segs := Unit(target), Segments(target)
+	unit, segs := fileindex.Unit(target), fileindex.Segments(target)
 	for i := len(segs) - 1; i > 0; i-- {
-		if prefix := Join(unit, segs[:i]...); b.g.Nodes[prefix] != nil {
+		if prefix := fileindex.Join(unit, segs[:i]...); b.g.Nodes[prefix] != nil {
 			r := b.walk(prefix, segs[i:])
 			r.rule = cmp.Or(r.rule, "local")
 			return r
@@ -412,7 +412,7 @@ func (b *builder) walk(key string, names []string) resolution {
 			r.key, r.kind, r.rule = key, EdgeMember, "member"
 			i++
 		case kind == NodeExternal:
-			r.key = b.external(Join(r.key, names[i:]...))
+			r.key = b.external(fileindex.Join(r.key, names[i:]...))
 			r.rule = cmp.Or(r.rule, "external")
 			return r
 		case kind == NodeFunction || kind == NodeMethod || kind == NodeConstructor:
@@ -426,12 +426,12 @@ func (b *builder) walk(key string, names []string) resolution {
 		}
 	}
 	if isNamespacePackage(r.key) {
-		r.fail = noDefinition(Last(strings.TrimSuffix(r.key, "/")))
+		r.fail = noDefinition(fileindex.Last(strings.TrimSuffix(r.key, "/")))
 	}
 	if b.kindOf(r.key) == NodeVariable {
 		value, ok := b.variableValue(r.key)
 		if !ok {
-			r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: Last(r.key)}
+			r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: fileindex.Last(r.key)}
 			return r
 		}
 		r.key = value
@@ -449,10 +449,10 @@ func (b *builder) variableValue(key string) (string, bool) {
 	b.reading[key] = true
 	defer delete(b.reading, key)
 
-	sc := b.scopes[Unit(key)]
+	sc := b.scopes[fileindex.Unit(key)]
 	value := ""
-	for _, r := range b.resolveTargets(sc, Unit(key), b.variables[key]) {
-		if r.fail != nil || r.unbound && !langcode.IsBuiltin(sc.ix.Language, Unit(r.key)) {
+	for _, r := range b.resolveTargets(sc, fileindex.Unit(key), b.variables[key]) {
+		if r.fail != nil || r.unbound && !langcode.IsBuiltin(sc.ix.Language, fileindex.Unit(r.key)) {
 			return "", false
 		}
 		k := b.deref(r.key)
@@ -477,7 +477,7 @@ func (b *builder) resolveName(module, name string, hops int) (string, *failure) 
 	}
 	if hops > b.opts.maxExportHops {
 		path := strings.TrimSuffix(module, "/")
-		b.truncations[Truncation{Kind: TruncationExportHops, Key: Join(path, name), Site: Site{Path: path}}] = true
+		b.truncations[Truncation{Kind: TruncationExportHops, Key: fileindex.Join(path, name), Site: Site{Path: path}}] = true
 		return "", &failure{reason: fileindex.UnresolvedLimit, name: name, cut: true}
 	}
 	b.visiting[k] = true
@@ -500,7 +500,7 @@ func (b *builder) lookupName(module, name string, hops int) (string, *failure) {
 	if sc == nil {
 		return module, nil
 	}
-	if n := b.g.Nodes[Join(module, name)]; n != nil && n.Kind != NodeExport {
+	if n := b.g.Nodes[fileindex.Join(module, name)]; n != nil && n.Kind != NodeExport {
 		return n.Key, nil
 	}
 
@@ -556,7 +556,7 @@ func (b *builder) followExport(sc *scope, ex fileindex.Export, hops int) (string
 		var key string
 		switch {
 		case !ok:
-			key = b.external(joinNonEmpty(namespaceOf(sc.ix.Language, ex.From), ex.Item))
+			key = b.external(joinNonEmpty(fileindex.Namespace(sc.ix.Language, ex.From), ex.Item))
 		case ex.Item == "":
 			key = mod
 		default:
@@ -588,7 +588,7 @@ func (b *builder) followBinding(sc *scope, imp fileindex.Import, name string, ho
 		if key, fail = b.resolveName(mod, lead[0], hops+1); fail != nil {
 			return "", fail
 		}
-	case isECMAScript(lang):
+	case lang.IsECMAScript():
 		key = mod
 		if def, fail := b.resolveName(mod, "default", hops+1); fail == nil {
 			key = def
@@ -636,7 +636,7 @@ func (b *builder) wildcard(sc *scope, name string) []resolution {
 	for _, st := range sc.stars {
 		mod, _, ok := b.resolveModule(sc.ix, st.spec)
 		if !ok {
-			key := b.external(Join(namespaceOf(sc.ix.Language, st.spec), name))
+			key := b.external(fileindex.Join(fileindex.Namespace(sc.ix.Language, st.spec), name))
 			external = append(external, resolution{key: key, kind: EdgeWildcard, rule: "wildcard-external"})
 			continue
 		}
@@ -654,7 +654,7 @@ func (b *builder) bind(sc *scope, name string, line int, target, rule string) st
 	if isNamespacePackage(target) {
 		return target
 	}
-	key := Join(sc.ix.Path, name)
+	key := fileindex.Join(sc.ix.Path, name)
 	b.addNode(&Node{Key: key, Kind: NodeExport, Path: sc.ix.Path, Line: line, Exported: true, Test: b.test[sc.ix.Path]})
 	b.bindings[key] = target
 	b.addEdge(Edge{
@@ -670,7 +670,7 @@ func (b *builder) bind(sc *scope, name string, line int, target, rule string) st
 // method returns the method of a class or of its bases. A method that no
 // first-party class defines falls to the first external base.
 func (b *builder) method(class, name string, depth int, seen map[string]bool) (string, *failure) {
-	if n := b.g.Nodes[Join(class, name)]; n != nil {
+	if n := b.g.Nodes[fileindex.Join(class, name)]; n != nil {
 		return n.Key, nil
 	}
 	if seen[class] || depth > b.opts.maxExportHops {
@@ -689,7 +689,7 @@ func (b *builder) method(class, name string, depth int, seen map[string]bool) (s
 				return key, nil
 			}
 		case external == "" && b.g.IsExternal(base):
-			external = Join(base, name)
+			external = fileindex.Join(base, name)
 		}
 	}
 	if external != "" {
@@ -716,14 +716,14 @@ func (b *builder) bases(rec classRecord) []string {
 func (b *builder) resolveScopeName(sc *scope, text string) (string, bool) {
 	segs := strings.Split(text, ".")
 	var r resolution
-	if local := Join(sc.ix.Path, segs[0]); b.g.Nodes[local] != nil {
+	if local := fileindex.Join(sc.ix.Path, segs[0]); b.g.Nodes[local] != nil {
 		r = b.walk(local, segs[1:])
 	} else if imp, ok := sc.bindings[segs[0]]; ok {
 		lang := sc.ix.Language
 		module, lead := importedModule(lang, imp)
 		mod, _, found := b.resolveModule(sc.ix, module)
 		if !found {
-			return Join(boundNamespace(lang, imp), segs[1:]...), true
+			return fileindex.Join(boundNamespace(lang, imp), segs[1:]...), true
 		}
 		r = b.walk(mod, append(lead, segs[1:]...))
 	} else {
@@ -766,7 +766,7 @@ func (b *builder) resolveModule(ix *fileindex.Index, spec string) (string, strin
 // directory of the project, or any module of a language with no resolver.
 func (b *builder) mayBeFirstParty(lang langcode.Code, spec string) bool {
 	switch {
-	case lang != langcode.Python && !isECMAScript(lang):
+	case lang != langcode.Python && !lang.IsECMAScript():
 		return true
 	case strings.HasPrefix(spec, "."):
 		return true
@@ -806,7 +806,7 @@ func (b *builder) bindsName(module, name string) bool {
 		return false
 	}
 	_, bound := sc.bindings[name]
-	return bound || b.g.Nodes[Join(module, name)] != nil
+	return bound || b.g.Nodes[fileindex.Join(module, name)] != nil
 }
 
 // isAssignment reports whether a call reached its target through an alias
@@ -814,7 +814,7 @@ func (b *builder) bindsName(module, name string) bool {
 // the written name is not an import binding.
 func isAssignment(sc *scope, call fileindex.Call, target string) bool {
 	written := cmp.Or(call.Method, lastDotted(call.Callee))
-	if written == "" || Last(target) == written {
+	if written == "" || fileindex.Last(target) == written {
 		return false
 	}
 	_, bound := sc.bindings[firstDotted(call.Callee)]
@@ -824,7 +824,7 @@ func isAssignment(sc *scope, call fileindex.Call, target string) bool {
 // boundNamespace returns the external key of the name that an import binds.
 func boundNamespace(lang langcode.Code, imp fileindex.Import) string {
 	if bindsRoot(lang, imp) {
-		return namespaceOf(lang, firstDotted(imp.Module))
+		return fileindex.Namespace(lang, firstDotted(imp.Module))
 	}
 	return imp.Namespace
 }
@@ -836,10 +836,6 @@ func isDeclarationFile(p string) bool {
 
 func isNamespacePackage(key string) bool {
 	return strings.HasSuffix(key, "/")
-}
-
-func isECMAScript(lang langcode.Code) bool {
-	return lang == langcode.Javascript || lang == langcode.Typescript
 }
 
 func isIdentifier(s string) bool {
@@ -867,5 +863,5 @@ func joinNonEmpty(unit, segment string) string {
 	if segment == "" {
 		return unit
 	}
-	return Join(unit, segment)
+	return fileindex.Join(unit, segment)
 }

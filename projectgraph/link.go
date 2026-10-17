@@ -248,10 +248,10 @@ func (b *builder) addDefinitions(ix *fileindex.Index) {
 	}
 	for _, def := range ix.Definitions {
 		n := b.g.Nodes[def.Key]
-		slices.SortFunc(n.Flags, compareFlags)
+		slices.SortFunc(n.Flags, fileindex.CompareFlags)
 		n.Flags = slices.Compact(n.Flags)
 	}
-	slices.SortFunc(module.Flags, compareFlags)
+	slices.SortFunc(module.Flags, fileindex.CompareFlags)
 	module.Flags = slices.Compact(module.Flags)
 
 	for _, c := range ix.Classes {
@@ -259,14 +259,14 @@ func (b *builder) addDefinitions(ix *fileindex.Index) {
 	}
 }
 
-// runner returns the key of the definition whose run runs the code that the
-// key holds. A Python class body runs when the scope that defines the class
-// runs, so the calls and flags of the body belong to that scope. A call of
-// the class runs only the constructor.
+// runner returns the key of the definition that runs the code of the key.
+// A Python class body runs when the scope that defines the class runs, so
+// the calls and flags of the body belong to that scope. A call of the class
+// runs only the constructor.
 func (b *builder) runner(key string) string {
-	for b.kindOf(key) == NodeClass && b.byPath[Unit(key)].Language == langcode.Python {
-		segs := Segments(key)
-		key = Join(Unit(key), segs[:len(segs)-1]...)
+	for b.kindOf(key) == NodeClass && b.byPath[fileindex.Unit(key)].Language == langcode.Python {
+		segs := fileindex.Segments(key)
+		key = fileindex.Join(fileindex.Unit(key), segs[:len(segs)-1]...)
 	}
 	return key
 }
@@ -422,23 +422,23 @@ func (b *builder) nestedFunctions(key string) []string {
 		return nil
 	}
 	var nested []string
-	for _, def := range b.byPath[Unit(key)].Definitions {
-		if def.Kind == fileindex.DefFunction && def.Key != key && HasKeyPrefix(def.Key, key) {
+	for _, def := range b.byPath[fileindex.Unit(key)].Definitions {
+		if def.Kind == fileindex.DefFunction && def.Key != key && fileindex.HasKeyPrefix(def.Key, key) {
 			nested = append(nested, def.Key)
 		}
 	}
 	return nested
 }
 
-// definer returns the key of the definition whose run runs the definition
-// of the key. A class body runs with the scope that defines the class.
+// definer returns the key of the definition that runs the definition of
+// the key. A class body runs with the scope that defines the class.
 func (b *builder) definer(key string) string {
 	for {
-		segs := Segments(key)
+		segs := fileindex.Segments(key)
 		if len(segs) == 0 {
 			return key
 		}
-		key = Join(Unit(key), segs[:len(segs)-1]...)
+		key = fileindex.Join(fileindex.Unit(key), segs[:len(segs)-1]...)
 		if b.kindOf(key) != NodeClass {
 			return b.runner(key)
 		}
@@ -474,7 +474,7 @@ func (b *builder) copyUnresolved(ix *fileindex.Index) {
 	for _, u := range ix.Unresolved {
 		// The link step resolves a call on super through the bases of the
 		// class, and it records a call that it cannot resolve.
-		if u.Receiver == superKeyword && isECMAScript(ix.Language) {
+		if u.Receiver == superKeyword && ix.Language.IsECMAScript() {
 			continue
 		}
 		site := UnresolvedSite{
@@ -515,7 +515,7 @@ func (b *builder) importPrefix(ix *fileindex.Index, line int) string {
 			}
 			return p
 		}
-		return namespaceOf(ix.Language, spec)
+		return fileindex.Namespace(ix.Language, spec)
 	}
 	return ""
 }
@@ -583,20 +583,6 @@ func compareTruncations(a, b Truncation) int {
 	return cmp.Or(cmp.Compare(a.Kind, b.Kind), cmp.Compare(a.Key, b.Key), compareSites(a.Site, b.Site))
 }
 
-func compareFlags(a, b fileindex.Flag) int {
-	return cmp.Or(cmp.Compare(a.Line, b.Line), cmp.Compare(a.Kind, b.Kind))
-}
-
 func resolverName(lang langcode.Code, parts ...string) string {
 	return strings.Join(append([]string{string(lang)}, parts...), ".")
-}
-
-// namespaceOf returns the per-file "//" form of a module as written, as
-// plugin/callgraph builds it.
-func namespaceOf(lang langcode.Code, module string) string {
-	sep := "/"
-	if lang == langcode.Python {
-		sep = "."
-	}
-	return strings.ReplaceAll(module, sep, Separator)
 }
