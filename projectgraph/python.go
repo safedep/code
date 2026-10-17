@@ -17,6 +17,7 @@ var pythonProfile = profile{
 	relativePath:       pythonRelativePath,
 	instance:           []string{"self", "cls"},
 	objectBase:         "object",
+	literals:           map[string]bool{"None": true, "True": true, "False": true, "Ellipsis": true, "NotImplemented": true},
 	moduleGetattr:      "__getattr__",
 	classBodyInDefiner: true,
 	c3:                 true,

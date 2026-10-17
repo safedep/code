@@ -19,6 +19,7 @@ func ecmascriptProfile(code langcode.Code, typescript bool) profile {
 		dependencyCode:  true,
 		instance:        []string{"this"},
 		superCalls:      true,
+		literals:        map[string]bool{"undefined": true, "null": true, "true": true, "false": true, "NaN": true, "Infinity": true},
 		defaultExport:   "default",
 		openBases:       true,
 		structuralTypes: true,

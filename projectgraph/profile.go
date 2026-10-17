@@ -60,6 +60,10 @@ type profile struct {
 	// objectBase is the builtin base of a class with no base, as object in
 	// Python. A call on super of such a class runs its method.
 	objectBase string
+	// literals name the values of the language that no call can run, as
+	// None of Python or undefined of JavaScript. A value of a name that
+	// holds one is not known at a call of the name.
+	literals map[string]bool
 	// moduleGetattr names the function of a module that runs for a name
 	// that the module does not define, as __getattr__ of Python. The index
 	// flags a module that defines it.

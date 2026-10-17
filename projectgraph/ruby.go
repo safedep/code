@@ -17,6 +17,7 @@ import (
 var rubyProfile = profile{
 	code:               langcode.Ruby,
 	family:             langcode.Ruby,
+	literals:           map[string]bool{"nil": true, "true": true, "false": true},
 	resolver:           func(b *builder, _ *space) modules.Resolver { return rubyResolver{b} },
 	units:              func(b *builder) { b.addLanguageUnit(langcode.Ruby) },
 	aliases:            (*builder).joinReopenedClasses,

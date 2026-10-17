@@ -2,6 +2,7 @@ package projectgraph
 
 import (
 	"cmp"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -73,7 +74,19 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 		}
 		from := b.runner(caller)
 		site := Site{Path: ix.Path, Line: call.Line, Column: call.Column}
-		for _, r := range b.resolveTargets(sc, caller, targets) {
+		resolutions := b.resolveTargets(sc, caller, targets)
+		// A literal, as None, is no function. A name that holds only a
+		// literal has a value that the index does not know at the call,
+		// as a field that another method sets.
+		literals := slices.DeleteFunc(slices.Clone(resolutions), func(r resolution) bool { return !r.unbound || !sc.profile.literals[r.key] })
+		if len(literals) == len(resolutions) && len(literals) > 0 {
+			b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: call.Callee, Receiver: call.Receiver, Method: cmp.Or(call.Method, lastWritten(call.Callee)), Reason: fileindex.UnresolvedUnknownReceiver})
+			continue
+		}
+		for _, r := range resolutions {
+			if r.unbound && sc.profile.literals[r.key] {
+				continue
+			}
 			// A Java call of a name that nothing binds runs on this, as
 			// a method that a base of a dependency or an override in a
 			// subclass gives. A builtin function, as println of Kotlin,
