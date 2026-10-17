@@ -102,7 +102,7 @@ func TestFileIndexGolden(t *testing.T) {
 // needs a new Version, and both constants change with it.
 const (
 	goldenVersion = "2"
-	goldenHash    = "c7f37fbabed5a54ec101d383339df62e0f3768e587b05795cbab44583db34344"
+	goldenHash    = "053994e26b00bcfc985678ab8460daf6d8eaf949bafa3fd562af551081950049"
 )
 
 func TestFileIndexGoldenHashFollowsVersion(t *testing.T) {
@@ -315,4 +315,49 @@ func TestFileIndexRequireCalls(t *testing.T) {
 	assert.Equal(t, []string{"js-yaml//load"}, targets["require('js-yaml').load"])
 	assert.Equal(t, []string{".//parse//parse//strict"}, targets["require(\"./parse\").parse.strict"])
 	assert.Equal(t, []string{"fs//readFileSync"}, targets["fs.readFileSync"])
+}
+
+func TestFileIndexModuleVariables(t *testing.T) {
+	tests := []struct {
+		name   string
+		code   core.LanguageCode
+		file   string
+		source string
+		want   map[string][]string
+	}{
+		{
+			name:   "python",
+			code:   core.LanguageCodePython,
+			file:   "app.py",
+			source: "import yaml\nfrom flask import Flask\n\nclass Parser:\n    pass\n\nparser = Parser()\napp = Flask(__name__)\nLOAD = yaml.load\nN = 3\n\ndef f():\n    local = 1\n",
+			want: map[string][]string{
+				"app.py//parser": {"app.py//Parser"},
+				"app.py//app":    {"flask//Flask"},
+				"app.py//LOAD":   {"yaml//load"},
+				"app.py//N":      nil,
+			},
+		},
+		{
+			name:   "javascript",
+			code:   core.LanguageCodeJavascript,
+			file:   "app.js",
+			source: "const yaml = require('js-yaml');\nclass Parser {}\nconst parser = new Parser();\nexport let load = yaml.load;\nconst handler = () => 1;\n",
+			want: map[string][]string{
+				"app.js//parser": {"app.js//Parser"},
+				"app.js//load":   {"js-yaml//load"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ix := indexSource(t, tt.code, tt.file, tt.source)
+			got := map[string][]string{}
+			for _, def := range ix.Definitions {
+				if def.Kind == fidx.DefVariable {
+					got[def.Key] = def.Values
+				}
+			}
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }

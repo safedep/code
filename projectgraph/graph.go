@@ -24,6 +24,9 @@ const (
 	NodeMethod      NodeKind = "method"
 	NodeConstructor NodeKind = "constructor"
 	NodeClass       NodeKind = "class"
+	// NodeVariable is a name that the top level of a module assigns. A walk
+	// through it goes on to the value that it holds.
+	NodeVariable NodeKind = "variable"
 	// NodeExport is a name that a file imports and gives on to its own
 	// importers, as a barrel file or an __init__.py does. The node keeps the
 	// barrel on a path.

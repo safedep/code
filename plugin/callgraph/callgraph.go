@@ -137,6 +137,21 @@ type CallGraph struct {
 	ctxErr  error
 }
 
+// Values returns the namespaces that the assignment graph resolves a name
+// to, sorted, with no literal, as flask//Flask for app after
+// app = Flask(__name__). A name with no assignment has no value.
+func (cg *CallGraph) Values(namespace string) []string {
+	ag := &cg.assignmentGraph
+	var values []string
+	for _, node := range ag.resolve(namespace) {
+		if node.Namespace != namespace && !ag.literals[node.kind] {
+			values = append(values, node.Namespace)
+		}
+	}
+	slices.Sort(values)
+	return slices.Compact(values)
+}
+
 // Dump writes the assignment graph and the call graph to w, in the order of
 // the keys. It leaves out the builtins that have no edge.
 func (cg *CallGraph) Dump(w io.Writer) error {

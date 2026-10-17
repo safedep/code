@@ -227,6 +227,54 @@ func (p *projection) addDefinitions() {
 	for _, def := range p.defs {
 		p.fillDefinition(def)
 	}
+	p.addVariables()
+}
+
+// addVariables adds each name that the top level of the module assigns and
+// that no other definition holds, with the values of the name. A variable
+// has no tree node in syntax, so a flag in its value lands on the module.
+func (p *projection) addVariables() {
+	for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
+		for _, name := range p.assignedNames(statement) {
+			key := p.local(p.text(name))
+			if _, defined := p.defs[key]; defined || p.bindings[p.text(name)] {
+				continue
+			}
+			p.defs[key] = &fidx.Definition{
+				Key:       key,
+				Kind:      fidx.DefVariable,
+				Name:      p.text(name),
+				StartLine: lineOf(statement),
+				EndLine:   int(statement.EndPoint().Row) + 1,
+				Values:    p.targets(p.cg.Values(key)),
+			}
+		}
+	}
+}
+
+// assignedNames returns the name nodes that a top-level statement assigns,
+// as x in x = f() or const x = f().
+func (p *projection) assignedNames(statement *sitter.Node) []*sitter.Node {
+	if statement.Type() == "export_statement" {
+		if statement = statement.ChildByFieldName("declaration"); statement == nil {
+			return nil
+		}
+	}
+	var names []*sitter.Node
+	switch statement.Type() {
+	case "expression_statement":
+		if p.ix.Language != core.LanguageCodePython || statement.NamedChildCount() == 0 {
+			return nil
+		}
+		if assignment := statement.NamedChild(0); assignment.Type() == "assignment" {
+			names = append(names, assignment.ChildByFieldName("left"))
+		}
+	case "lexical_declaration", "variable_declaration":
+		for _, declarator := range ts.NamedChildren(statement) {
+			names = append(names, declarator.ChildByFieldName("name"))
+		}
+	}
+	return slices.DeleteFunc(names, func(n *sitter.Node) bool { return n == nil || n.Type() != "identifier" })
 }
 
 // definitionName returns the last segment of a key. The module is the base

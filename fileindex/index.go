@@ -43,6 +43,9 @@ const (
 	DefMethod      DefKind = "method"
 	DefClass       DefKind = "class"
 	DefConstructor DefKind = "constructor"
+	// DefVariable is a name that the top level of a module assigns, as
+	// parser in parser = Parser(). Another file can import it.
+	DefVariable DefKind = "variable"
 )
 
 type CallKind string
@@ -153,9 +156,10 @@ type Export struct {
 	Line   int    `json:"line"`
 }
 
-// Definition is one module, function, method, class or constructor. Key is
-// its symbol key, as src/a.py//Parser//parse. Parent is the class key of a
-// method. Decorators are as written, in source order.
+// Definition is one module, function, method, class, constructor or module
+// variable. Key is its symbol key, as src/a.py//Parser//parse. Parent is the
+// class key of a method. Decorators are as written, in source order. Values
+// are the per-file targets that a variable holds, as the targets of a Call.
 type Definition struct {
 	Key        string   `json:"key"`
 	Kind       DefKind  `json:"kind"`
@@ -165,6 +169,7 @@ type Definition struct {
 	Exported   bool     `json:"exported"`
 	Parent     string   `json:"parent,omitempty"`
 	Decorators []string `json:"decorators,omitempty"`
+	Values     []string `json:"values,omitempty"`
 	Flags      []Flag   `json:"flags,omitempty"`
 }
 

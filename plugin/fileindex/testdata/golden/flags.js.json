@@ -70,6 +70,14 @@
       ]
     },
     {
+      "key": "flags.js//plugins",
+      "kind": "variable",
+      "name": "plugins",
+      "start_line": 2,
+      "end_line": 2,
+      "exported": false
+    },
+    {
       "key": "flags.js//load",
       "kind": "function",
       "name": "load",

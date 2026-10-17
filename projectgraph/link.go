@@ -80,10 +80,14 @@ type builder struct {
 	truncations map[Truncation]bool
 	problems    []modules.Problem
 
-	names    map[nameKey]resolution
-	visiting map[nameKey]bool
-	bindings map[string]string
-	classes  map[string]classRecord
+	names     map[nameKey]resolution
+	visiting  map[nameKey]bool
+	bindings  map[string]string
+	classes   map[string]classRecord
+	variables map[string][]string
+	// reading holds the variables whose value a walk reads now, so a cycle
+	// of variables across files stops.
+	reading map[string]bool
 }
 
 type classRecord struct {
@@ -121,6 +125,8 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		visiting:    map[nameKey]bool{},
 		bindings:    map[string]string{},
 		classes:     map[string]classRecord{},
+		variables:   map[string][]string{},
+		reading:     map[string]bool{},
 		test:        map[string]bool{},
 		rules:       roots.Merge(roots.Default(), opts.Rules),
 	}
@@ -216,6 +222,9 @@ func (b *builder) addDefinitions(ix *fileindex.Index) {
 	b.addNode(module)
 
 	for _, def := range ix.Definitions {
+		if def.Kind == fileindex.DefVariable {
+			b.variables[def.Key] = def.Values
+		}
 		if def.Key == ix.Path {
 			module.Line = cmp.Or(def.StartLine, 1)
 			module.Flags = append(module.Flags, def.Flags...)
@@ -272,6 +281,8 @@ func nodeKind(k fileindex.DefKind) NodeKind {
 		return NodeConstructor
 	case fileindex.DefClass:
 		return NodeClass
+	case fileindex.DefVariable:
+		return NodeVariable
 	default:
 		return NodeModule
 	}

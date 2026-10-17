@@ -396,6 +396,13 @@ func (b *builder) walk(key string, names []string) resolution {
 			i++
 		case kind == NodeExport:
 			r.key = b.bindings[r.key]
+		case kind == NodeVariable:
+			value, ok := b.variableValue(r.key)
+			if !ok {
+				r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+				return r
+			}
+			r.key = value
 		case kind == NodeClass:
 			key, fail := b.method(r.key, name, 0, map[string]bool{})
 			if fail != nil {
@@ -421,7 +428,40 @@ func (b *builder) walk(key string, names []string) resolution {
 	if isNamespacePackage(r.key) {
 		r.fail = noDefinition(Last(strings.TrimSuffix(r.key, "/")))
 	}
+	if b.kindOf(r.key) == NodeVariable {
+		value, ok := b.variableValue(r.key)
+		if !ok {
+			r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: Last(r.key)}
+			return r
+		}
+		r.key = value
+	}
 	return r
+}
+
+// variableValue returns the one key that a module variable holds. A
+// variable with no value, or with more than one, has no known value. A
+// variable that holds a variable of another file walks on to that value.
+func (b *builder) variableValue(key string) (string, bool) {
+	if b.reading[key] {
+		return "", false
+	}
+	b.reading[key] = true
+	defer delete(b.reading, key)
+
+	sc := b.scopes[Unit(key)]
+	value := ""
+	for _, r := range b.resolveTargets(sc, Unit(key), b.variables[key]) {
+		if r.fail != nil || r.unbound && !langcode.IsBuiltin(sc.ix.Language, Unit(r.key)) {
+			return "", false
+		}
+		k := b.deref(r.key)
+		if value != "" && k != value {
+			return "", false
+		}
+		value = k
+	}
+	return value, value != ""
 }
 
 // resolveName returns the key that a name of a module stands for. A name

@@ -47,7 +47,7 @@ func (b *builder) markRoots() {
 		}
 		b.addRoot(ix.Path, RootLibrarySurface, string(RootLibrarySurface))
 		for _, def := range ix.Definitions {
-			if def.Exported && def.Key != ix.Path {
+			if def.Exported && def.Key != ix.Path && def.Kind != fileindex.DefVariable {
 				b.addRoot(def.Key, RootLibrarySurface, string(RootLibrarySurface))
 			}
 		}

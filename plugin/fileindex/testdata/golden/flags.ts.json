@@ -51,6 +51,14 @@
       ]
     },
     {
+      "key": "flags.ts//plugins",
+      "kind": "variable",
+      "name": "plugins",
+      "start_line": 2,
+      "end_line": 2,
+      "exported": false
+    },
+    {
       "key": "flags.ts//load",
       "kind": "function",
       "name": "load",

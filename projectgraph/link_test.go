@@ -975,3 +975,41 @@ func TestBuildDecoratorFactoryClosures(t *testing.T) {
 		"a.py//job -> a.py//retry//decorate//wrapper",
 	}, closures, "an external decorator gets no closure edge")
 }
+
+func TestBuildModuleVariables(t *testing.T) {
+	variable := func(key string, values ...string) fileindex.Definition {
+		return fileindex.Definition{Key: key, Kind: fileindex.DefVariable, Name: Last(key), StartLine: 9, EndLine: 9, Exported: true, Values: values}
+	}
+	app := &fileindex.Index{
+		Version: fileindex.Version, Path: "app.py", Language: langcode.Python,
+		Imports: []fileindex.Import{{Line: 1, Module: "flask", Item: "Flask", Alias: "Flask", Kind: fileindex.ImportStatic, Namespace: "flask//Flask"}},
+		Definitions: []fileindex.Definition{
+			{Key: "app.py//Parser", Kind: fileindex.DefClass, Name: "Parser", StartLine: 3, EndLine: 5, Exported: true},
+			{Key: "app.py//Parser//parse", Kind: fileindex.DefMethod, Name: "parse", StartLine: 4, EndLine: 5, Exported: true, Parent: "app.py//Parser"},
+			variable("app.py//parser", "app.py//Parser"),
+			variable("app.py//app", "flask//Flask"),
+			variable("app.py//either", "app.py//Parser", "flask//Flask"),
+		},
+		Classes: []fileindex.Class{{Key: "app.py//Parser", Methods: []string{"app.py//Parser//parse"}}},
+	}
+	call := func(line int, callee, target, method string) fileindex.Call {
+		return fileindex.Call{Caller: "main.py", Line: line, Column: 1, Callee: callee, Targets: []string{target}, Receiver: firstDotted(callee), Method: method, Kind: fileindex.CallCall}
+	}
+	main := &fileindex.Index{
+		Version: fileindex.Version, Path: "main.py", Language: langcode.Python,
+		Imports: []fileindex.Import{{Line: 1, Module: "app", Alias: "app", Kind: fileindex.ImportStatic, Namespace: "app"}},
+		Calls: []fileindex.Call{
+			call(2, "app.parser.parse", "app//parser//parse", "parse"),
+			call(3, "app.app.run", "app//app//run", "run"),
+			call(4, "app.either.get", "app//either//get", "get"),
+		},
+	}
+	g, err := Build(context.Background(), []*fileindex.Index{app, main}, Options{})
+	require.NoError(t, err)
+
+	edges := edgeStrings(g)
+	assert.Contains(t, edges, "main.py -> app.py//Parser//parse member python.member")
+	assert.Contains(t, edges, "main.py -> flask//Flask//run direct python.external")
+	assert.Equal(t, []string{"main.py:4 main.py unknown-receiver get"}, unresolvedStrings(g), "a variable with two values has no known value")
+	assert.Equal(t, NodeVariable, g.Nodes["app.py//parser"].Kind)
+}
