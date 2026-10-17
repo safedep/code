@@ -1927,16 +1927,24 @@ func arrowFunctionProcessor(arrowNode *sitter.Node, treeData []byte, currentName
 		callGraph.assignmentGraph.addNode(arrowFunctionNamespace, arrowNode)
 	}
 
-	// Process arrow function body
-	bodyNode := arrowNode.ChildByFieldName("body")
-	if bodyNode != nil {
-		metadata.insideFunction = true
-		result := processChildren(bodyNode, treeData, arrowFunctionNamespace, callGraph, metadata)
-		metadata.insideFunction = false
-		results.addResults(result)
+	results.addResults(processFunctionBody(arrowNode, treeData, arrowFunctionNamespace, callGraph, metadata))
+	return results
+}
+
+// processFunctionBody processes the body of a JavaScript function in
+// namespace. The body of an arrow function can be one expression, as in
+// (k) => parseInt(k), and the expression is then a call of its own.
+func processFunctionBody(function *sitter.Node, treeData []byte, namespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	body := function.ChildByFieldName("body")
+	if body == nil {
+		return newProcessorResult()
 	}
 
-	return results
+	metadata.insideFunction = true
+	if body.Type() == "statement_block" {
+		return processChildren(body, treeData, namespace, callGraph, metadata)
+	}
+	return processNode(body, treeData, namespace, callGraph, metadata)
 }
 
 // methodDefinitionProcessor handles JavaScript method_definition nodes in classes

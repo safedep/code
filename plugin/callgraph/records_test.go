@@ -26,6 +26,14 @@ func javascriptLanguage(t *testing.T) core.Language {
 	return language
 }
 
+// typescriptLanguage returns the grammar that the parser picks for a .ts
+// file.
+func typescriptLanguage(t *testing.T) core.Language {
+	language, err := lang.NewTypescriptWithoutJSXLanguage()
+	require.NoError(t, err)
+	return language
+}
+
 func goLanguage(t *testing.T) core.Language {
 	language, err := lang.NewGoLanguage()
 	require.NoError(t, err)
@@ -345,5 +353,41 @@ func TestDeterministicDFS(t *testing.T) {
 				assert.Equal(t, first, order())
 			}
 		})
+	}
+}
+
+func TestArrowFunctionWithAnExpressionBody(t *testing.T) {
+	cases := []struct {
+		name   string
+		source string
+		caller string
+		callee string
+	}{
+		{"argument", "x((k) => parseInt(k));\n", "", "parseInt"},
+		{"callback of a member call", "p.then((n) => console.log(n));\n", "", "console//log"},
+		{"callback of a builtin", "setTimeout(() => process.exit(0));\n", "", "process//exit"},
+		{"declared", "function foo() {}\nconst f = () => foo();\n", "//f", "//foo"},
+	}
+
+	languages := []struct {
+		language core.Language
+		file     string
+	}{
+		{javascriptLanguage(t), "a.js"},
+		{typescriptLanguage(t), "a.ts"},
+	}
+
+	for _, l := range languages {
+		for _, tc := range cases {
+			t.Run(l.file+" "+tc.name, func(t *testing.T) {
+				cg := buildFromSource(t, l.language, l.file, tc.source)
+
+				callee := tc.callee
+				if strings.HasPrefix(callee, namespaceSeparator) {
+					callee = l.file + callee
+				}
+				assert.Contains(t, calleesOf(cg, l.file+tc.caller), callee)
+			})
+		}
 	}
 }
