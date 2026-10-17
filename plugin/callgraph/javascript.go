@@ -22,6 +22,7 @@ func ecmascriptProfile(code core.LanguageCode) languageProfile {
 		separators:        []string{"/"},
 		instanceKeyword:   "this",
 		constructorMethod: "constructor",
+		defaultExport:     "default",
 		builtins:          ecmascriptBuiltins,
 		processors:        ecmascriptProcessors,
 		reachable: map[string]bool{

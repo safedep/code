@@ -43,6 +43,10 @@ type languageProfile struct {
 	// os.path in Python. The full module is a node too.
 	importBindsRoot bool
 
+	// defaultExport is the item that names the module itself, as default
+	// in import { default as y } from 'x'.
+	defaultExport string
+
 	// trimModule removes the part of an imported module name that names no
 	// namespace. It can be nil.
 	trimModule func(string) string

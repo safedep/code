@@ -61,7 +61,7 @@ func parseImports(imports []*ast.ImportNode, profile *languageProfile) ([]parsed
 		}
 
 		finalisedNamespace := moduleNamespace
-		if item := imp.ModuleItem(); item != "" {
+		if item := imp.ModuleItem(); item != "" && item != profile.defaultExport {
 			finalisedNamespace = moduleNamespace + namespaceSeparator + profile.moduleNamespace(item)
 		}
 
