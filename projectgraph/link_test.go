@@ -199,9 +199,9 @@ func TestBuildPython(t *testing.T) {
 			edges: []string{
 				"main.py -> pkg/__init__.py//f direct python.import",
 				"pkg/__init__.py//f -> pkg/a.py//f export python.reexport",
-				"main.py -> pkg/a.py//g name python.name",
+				"main.py -> pkg/__init__.py//g direct python.import",
+				"pkg/__init__.py//g -> pkg/a.py//g export python.reexport",
 			},
-			unresolved: []string{"main.py:3 main.py no-definition g"},
 		},
 		{
 			name: "python/member-call",

@@ -1,0 +1,48 @@
+source: safedep:hand
+description: >-
+  pkg/__init__.py imports Loader from loader.py and lists only dump in __all__. __all__ governs only
+  from pkg import *, so from pkg import Loader in main still gets Loader. The name is an export node of
+  __init__.py, and the call of load on the instance reaches yaml.load.
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: main.py
+    to: pkg/__init__.py//Loader
+    kind: direct
+    confidence: high
+    site: main.py:5
+  - from: pkg/__init__.py//Loader
+    to: pkg/loader.py//Loader
+    kind: export
+    confidence: high
+    site: pkg/__init__.py:1
+  - from: main.py
+    to: pkg/loader.py//Loader//load
+    kind: member
+    confidence: high
+    site: main.py:5
+  - from: pkg/loader.py//Loader//load
+    to: yaml//load
+    kind: direct
+    confidence: high
+    site: pkg/loader.py:6
+unresolved: []
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: pkg/loader.py//Loader//load
+        site: main.py:5
+        kind: member
+        confidence: high
+      - key: yaml//load
+        site: pkg/loader.py:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: pkg/loader.py//Loader//load
+        site: pkg/loader.py:6
+        reached: true

@@ -21,6 +21,13 @@
       "line": 1,
       "exported": true
     },
+    "pkg/__init__.py//g": {
+      "key": "pkg/__init__.py//g",
+      "kind": "export",
+      "path": "pkg/__init__.py",
+      "line": 1,
+      "exported": true
+    },
     "pkg/a.py": {
       "key": "pkg/a.py",
       "kind": "module",
@@ -69,15 +76,15 @@
     },
     {
       "from": "main.py",
-      "to": "pkg/a.py//g",
+      "to": "pkg/__init__.py//g",
       "site": {
         "path": "main.py",
         "line": 3,
         "column": 1
       },
-      "kind": "name",
-      "confidence": "low",
-      "resolver": "python.name"
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.import"
     },
     {
       "from": "pkg/__init__.py",
@@ -100,21 +107,20 @@
       "kind": "export",
       "confidence": "high",
       "resolver": "python.reexport"
-    }
-  ],
-  "unresolved": [
+    },
     {
-      "caller": "main.py",
+      "from": "pkg/__init__.py//g",
+      "to": "pkg/a.py//g",
       "site": {
-        "path": "main.py",
-        "line": 3,
-        "column": 1
+        "path": "pkg/__init__.py",
+        "line": 1
       },
-      "text": "g",
-      "method": "g",
-      "reason": "no-definition"
+      "kind": "export",
+      "confidence": "high",
+      "resolver": "python.reexport"
     }
   ],
+  "unresolved": [],
   "roots": [
     {
       "key": "main.py",
@@ -170,9 +176,9 @@
   "stats": {
     "version": "10",
     "files": 3,
-    "nodes": 6,
-    "edges": 5,
-    "unresolved": 1,
+    "nodes": 7,
+    "edges": 6,
+    "unresolved": 0,
     "roots": 5,
     "root_fallback": true
   }

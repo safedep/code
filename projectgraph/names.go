@@ -64,8 +64,10 @@ func (b *builder) lookupName(module, name string, hops int) (string, *failure) {
 			return key, nil
 		}
 	}
+	// A Python __all__ governs only from m import *, so a name that the
+	// module imports stays a name of the module.
 	moduleNames := sc.profile.moduleNames
-	if imp, ok := sc.bindings[name]; ok && moduleNames && !sc.hasExports {
+	if imp, ok := sc.bindings[name]; ok && moduleNames {
 		if key, fail := b.followBinding(sc, imp, name, hops); try(key, fail) {
 			return key, nil
 		}
