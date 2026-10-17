@@ -689,18 +689,36 @@ func (b *builder) walk(key string, names []string) resolution {
 				continue
 			}
 			r.class = r.key
-			key, fail := b.method(r.key, name)
-			if fail != nil {
-				if field, ok := b.fieldType(r.key, name); ok && i+1 < len(names) {
+			// A dependency base can give the method that a call names
+			// last. A name before it is an attribute of the instance,
+			// whose value the walk does not know, so the field and name
+			// edges of the call apply.
+			last := i+1 == len(names)
+			key, ok := b.ownMethod(r.key, name)
+			switch {
+			case ok:
+				r.key, r.kind, r.rule = key, EdgeMember, "member"
+				i++
+				continue
+			case !last:
+				if field, ok := b.fieldType(r.key, name); ok {
 					r.key, r.class, r.virtual, r.declared = field, "", true, true
 					i++
 					continue
 				}
-				r.fail = fail
+			}
+			base, external := b.externalBase(r.key)
+			switch {
+			case external && last:
+				r.key, r.kind, r.rule = b.external(fileindex.Join(base, name)), EdgeMember, "member"
+				i++
+			case external:
+				r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+				return r
+			default:
+				r.fail = noDefinition(name)
 				return r
 			}
-			r.key, r.kind, r.rule = key, EdgeMember, "member"
-			i++
 		case kind == NodeExternal || kind == "" && b.g.IsExternal(r.key):
 			r.key = b.external(fileindex.Join(r.key, names[i:]...))
 			r.rule = cmp.Or(r.rule, "external")

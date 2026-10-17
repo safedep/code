@@ -268,3 +268,25 @@ func TestBuildGoInterfaceMethodSets(t *testing.T) {
 		"a.go//start -> a.go//Remote//Run cha go.cha",
 	}, edgesOfKind(g, EdgeCHA), "a type implements Runner when its methods, its embedded types or a dependency hold Run and Stop by arity")
 }
+
+func TestBuildExternalBaseGivesOnlyTheLastName(t *testing.T) {
+	ix := &fileindex.Index{
+		Version: fileindex.Version, Path: "w.py", Language: langcode.Python,
+		Imports: []fileindex.Import{{Line: 1, Module: "threading", Alias: "threading", Kind: fileindex.ImportStatic, Namespace: "threading"}},
+		Definitions: []fileindex.Definition{
+			def(fileindex.DefClass, "w.py//W", 3), def(fileindex.DefMethod, "w.py//W//go", 4),
+			def(fileindex.DefClass, "w.py//P", 8), def(fileindex.DefMethod, "w.py//P//parse", 9),
+		},
+		Classes: []fileindex.Class{{Key: "w.py//W", Bases: []string{"threading.Thread"}, Methods: []string{"w.py//W//go"}}, {Key: "w.py//P", Methods: []string{"w.py//P//parse"}}},
+		Calls: []fileindex.Call{
+			{Caller: "w.py//W//go", Line: 5, Column: 9, Callee: "self.start", Targets: []string{"w.py//W//self//start"}, Receiver: "self", Method: "start", Kind: fileindex.CallCall},
+			{Caller: "w.py//W//go", Line: 6, Column: 9, Callee: "self.parser.parse", Targets: []string{"w.py//W//self//parser//parse"}, Receiver: "self.parser", Method: "parse", Kind: fileindex.CallCall},
+		},
+	}
+	g, err := Build(context.Background(), []*fileindex.Index{ix}, Options{})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"w.py//W//go -> threading//Thread//start member python.member"}, edgesOfKind(g, EdgeMember))
+	assert.Equal(t, []string{"w.py//W//go -> w.py//P//parse name python.name"}, edgesOfKind(g, EdgeName))
+	assert.Equal(t, []string{"w.py:6 w.py//W//go unknown-receiver parse"}, unresolvedStrings(g),
+		"an attribute of an instance of a class with a dependency base has no known value")
+}

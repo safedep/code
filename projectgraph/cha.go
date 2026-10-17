@@ -102,29 +102,46 @@ func (b *builder) depthFirst(class string, depth int, seen map[string]bool) []st
 
 // method returns the method of a class or of its bases in the order of the
 // MRO. A method that no first-party class defines falls to the first
-// external base.
+// external base, because a dependency can give it.
 func (b *builder) method(class, name string) (string, *failure) {
-	order := b.mro(class)
-	for _, c := range order {
+	if key, ok := b.ownMethod(class, name); ok {
+		return key, nil
+	}
+	if base, ok := b.externalBase(class); ok {
+		return b.external(fileindex.Join(base, name)), nil
+	}
+	return "", noDefinition(name)
+}
+
+// ownMethod returns the member of the name that a first-party class of the
+// MRO of the class defines.
+func (b *builder) ownMethod(class, name string) (string, bool) {
+	for _, c := range b.mro(class) {
 		if n := b.g.Nodes[fileindex.Join(c, name)]; n != nil {
-			return n.Key, nil
+			return n.Key, true
 		}
 		if key, ok := b.member(c, name); ok {
-			return key, nil
+			return key, true
 		}
 	}
-	for _, c := range order {
+	return "", false
+}
+
+// externalBase returns the first external base of a class of the MRO of
+// the class.
+func (b *builder) externalBase(class string) (string, bool) {
+	for _, c := range b.mro(class) {
 		rec, ok := b.classes[c]
 		if !ok {
 			continue
 		}
 		for _, base := range b.bases(rec) {
 			if !b.isType(base) && b.g.IsExternal(base) {
-				return b.external(fileindex.Join(base, name)), nil
+				return base, true
 			}
 		}
 	}
-	return "", noDefinition(name)
+	return "", false
 }
 
 // constructor returns the constructor that runs when a call makes an
