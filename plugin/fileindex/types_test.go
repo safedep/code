@@ -148,3 +148,32 @@ func TestFileIndexArgumentFunctions(t *testing.T) {
 	assert.False(t, def.Exported)
 	assert.Equal(t, []fidx.Arg{{Shape: fidx.ArgString}, {Shape: fidx.ArgFunction, Targets: []string{"a.js//<anonymous:2>"}}}, argsOf(ix, "app.get"))
 }
+
+func TestFileIndexModuleExportsValue(t *testing.T) {
+	fn := indexSource(t, core.LanguageCodeJavascript, "f.js", "module.exports = function (t) { yaml.a(t); };\n")
+	assert.Equal(t, fidx.DefFunction, definitionOf(t, fn, "f.js//default").Kind)
+	assert.True(t, definitionOf(t, fn, "f.js//default").Exported)
+	assert.Equal(t, []fidx.Export{{Name: "default", Target: "f.js//default", Line: 1}}, fn.Exports)
+	assert.Equal(t, "f.js//default", fn.Calls[0].Caller)
+
+	class := indexSource(t, core.LanguageCodeJavascript, "c.js", "module.exports = class extends Base { m() { yaml.b(); } };\n")
+	assert.Equal(t, fidx.DefClass, definitionOf(t, class, "c.js//default").Kind)
+	assert.Equal(t, []fidx.Export{{Name: "default", Target: "c.js//default", Line: 1}}, class.Exports)
+	assert.Equal(t, fidx.Class{Key: "c.js//default", Bases: []string{"Base"}, Methods: []string{"c.js//default//m"}}, classOf(t, class, "c.js//default"))
+}
+
+func TestFileIndexClassExpressions(t *testing.T) {
+	source := strings.Join([]string{
+		"const Loading = (B) => class extends B { load() {} };",
+		"const Named = class extends Base { run() {} };",
+		"exports.Kept = class { keep() {} };",
+	}, "\n") + "\n"
+	for _, code := range []core.LanguageCode{core.LanguageCodeJavascript, core.LanguageCodeTypescript} {
+		ix := indexSource(t, code, "a.js", source)
+		assert.Equal(t, []string{"B"}, classOf(t, ix, "a.js//Loading//<anonymous:1>").Bases, code)
+		assert.Equal(t, []string{"a.js//Loading//<anonymous:1>//load"}, classOf(t, ix, "a.js//Loading//<anonymous:1>").Methods, code)
+		assert.Equal(t, []string{"Base"}, classOf(t, ix, "a.js//Named").Bases, code)
+		assert.Equal(t, fidx.DefClass, definitionOf(t, ix, "a.js//Named").Kind, code)
+		assert.True(t, definitionOf(t, ix, "a.js//Kept").Exported, code)
+	}
+}

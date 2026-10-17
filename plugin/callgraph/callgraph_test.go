@@ -603,3 +603,27 @@ func TestJavaCallsTheLinkStepResolves(t *testing.T) {
 	}
 	assert.Equal(t, []string{"exec"}, methods, "a call on the value of a call is a record")
 }
+
+func TestClassExpressionIsAClass(t *testing.T) {
+	source := strings.Join([]string{
+		"module.exports = class { a() {} };",
+		"exports.E = class { b() {} };",
+		"const Named = class { c() {} };",
+		"class Holder { static Inner = class { d() {} }; }",
+		"const mix = (B) => class extends B { e() {} };",
+		"new Named().c();",
+	}, "\n") + "\n"
+	cg := buildAndClose(t, javascriptLanguage(t), "a.js", source)
+	for _, key := range []string{"a.js//default", "a.js//E", "a.js//Named", "a.js//Holder//Inner", "a.js//mix//<anonymous:5>"} {
+		require.Contains(t, cg.Nodes, key)
+		assert.Equal(t, "class", cg.Nodes[key].Kind, key)
+	}
+	for _, key := range []string{"a.js//default//a", "a.js//E//b", "a.js//Named//c", "a.js//Holder//Inner//d", "a.js//mix//<anonymous:5>//e"} {
+		assert.Contains(t, cg.Nodes, key)
+	}
+	var targets []string
+	for _, call := range cg.RootNode.CallsTo {
+		targets = append(targets, call.Targets...)
+	}
+	assert.Contains(t, targets, "a.js//Named//c")
+}

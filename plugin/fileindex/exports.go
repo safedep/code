@@ -196,19 +196,28 @@ func (p *projection) addExportAssignment(statement, assignment *sitter.Node) {
 		switch {
 		case right.Type() == "identifier":
 			p.export(name, p.text(right), line)
-		case functionValues[right.Type()]:
+		case functionValues[right.Type()] || right.Type() == "class":
 			p.export(name, name, line)
 		}
 	}
 }
 
+// defaultExport is the name of the default export of a module.
+const defaultExport = "default"
+
 // addModuleExports adds the exports of module.exports = value. A name is the
-// default export. An object exports each name of it. A function that a
-// property holds is the definition of the property name.
+// default export. A function or a class is the definition default, which
+// is the default export. An object exports each name of it. A function
+// that a property holds is the definition of the property name.
 func (p *projection) addModuleExports(value *sitter.Node, line int) {
+	switch {
+	case functionValues[value.Type()] || value.Type() == "class":
+		p.export(defaultExport, defaultExport, line)
+		return
+	}
 	switch value.Type() {
 	case "identifier":
-		p.export("default", p.text(value), line)
+		p.export(defaultExport, p.text(value), line)
 	case "object":
 		for _, property := range ts.NamedChildren(value) {
 			switch property.Type() {

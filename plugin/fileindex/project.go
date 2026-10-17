@@ -404,7 +404,7 @@ func (p *projection) classBases(ctx context.Context) (map[uint32][]string, error
 		for _, node := range p.syntax {
 			switch {
 			case node == nil:
-			case node.Type() == "class_declaration":
+			case node.Type() == "class_declaration" || node.Type() == "class":
 				bases[node.StartByte()] = p.heritage(node)
 			case p.isGo():
 				bases[node.StartByte()] = p.goBases(node)
@@ -425,6 +425,13 @@ func (p *projection) classBases(ctx context.Context) (map[uint32][]string, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve classes: %w", err)
 	}
+	// The class resolver reads class declarations, so a class expression
+	// takes its bases from its heritage.
+	for _, node := range p.syntax {
+		if node != nil && node.Type() == "class" {
+			bases[node.StartByte()] = p.heritage(node)
+		}
+	}
 	for _, class := range classes {
 		name := class.GetClassNameNode()
 		if name == nil || name.Parent() == nil || !class.HasInheritance() {
@@ -439,13 +446,23 @@ func (p *projection) classBases(ctx context.Context) (map[uint32][]string, error
 // Base in class A extends Base.
 func (p *projection) heritage(class *sitter.Node) []string {
 	var bases []string
-	for i := 0; i < int(class.NamedChildCount()); i++ {
-		child := class.NamedChild(i)
+	for _, child := range ts.NamedChildren(class) {
 		if child.Type() != "class_heritage" {
 			continue
 		}
-		for j := 0; j < int(child.NamedChildCount()); j++ {
-			bases = append(bases, child.NamedChild(j).Content(p.source))
+		for _, base := range ts.NamedChildren(child) {
+			// TypeScript wraps the bases in an extends clause and an
+			// implements clause.
+			switch base.Type() {
+			case "extends_clause", "implements_clause":
+				for _, name := range ts.NamedChildren(base) {
+					if name.Type() != "type_arguments" {
+						bases = append(bases, p.text(name))
+					}
+				}
+			default:
+				bases = append(bases, p.text(base))
+			}
 		}
 	}
 	return bases

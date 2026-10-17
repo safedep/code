@@ -1,0 +1,4 @@
+{
+  "name": "module-exports-function",
+  "bin": { "app": "main.js" }
+}

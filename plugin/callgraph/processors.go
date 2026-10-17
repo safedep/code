@@ -189,7 +189,12 @@ func classDefinitionProcessor(classDefNode *sitter.Node, treeData []byte, curren
 		return newProcessorResult()
 	}
 
-	classNamespace := currentNamespace + namespaceSeparator + classNameNode.Content(treeData)
+	defineClass(classDefNode, treeData, currentNamespace+namespaceSeparator+classNameNode.Content(treeData), callGraph, metadata)
+	return newProcessorResult()
+}
+
+// defineClass adds a class in its namespace and processes its body there.
+func defineClass(classDefNode *sitter.Node, treeData []byte, classNamespace string, callGraph *CallGraph, metadata processorMetadata) {
 	callGraph.addNode(classNamespace, classDefNode)
 	callGraph.assignmentGraph.addNode(classNamespace, classDefNode)
 	callGraph.classConstructors[classNamespace] = true
@@ -201,14 +206,12 @@ func classDefinitionProcessor(classDefNode *sitter.Node, treeData []byte, curren
 	classBody := classDefNode.ChildByFieldName("body")
 	if classBody == nil {
 		log.Debugf("Class definition without body - %s", classDefNode.Content(treeData))
-		return newProcessorResult()
+		return
 	}
 
 	metadata.insideClass = true
 	processChildren(classBody, treeData, classNamespace, callGraph, metadata)
-
-	log.Debugf("Register class definition for %s - %s", classNameNode.Content(treeData), classNamespace)
-	return newProcessorResult()
+	log.Debugf("Register class definition %s", classNamespace)
 }
 
 // functionDefinitionProcessor processes a function or a method in its own

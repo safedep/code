@@ -127,7 +127,12 @@ func (p *projection) bodyVisitor() visitor {
 			if left == nil || left.Type() != "member_expression" {
 				return
 			}
-			name, value = left.ChildByFieldName("property"), node.ChildByFieldName("right")
+			value = node.ChildByFieldName("right")
+			if p.text(left) == "module.exports" {
+				p.addModuleExportsFunction(value)
+				return
+			}
+			name = left.ChildByFieldName("property")
 			holder = p.objectNames(left.ChildByFieldName("object"), 0)
 		default:
 			return
@@ -145,6 +150,16 @@ func (p *projection) bodyVisitor() visitor {
 			p.addBody(key, fidx.DefMethod, value)
 		}
 	}
+}
+
+// addModuleExportsFunction adds the function of module.exports = function
+// () {} as the default export of the module.
+func (p *projection) addModuleExportsFunction(value *sitter.Node) {
+	key := p.local(defaultExport)
+	if value == nil || !functionValues[value.Type()] || p.defined(value) || p.defs[key] != nil {
+		return
+	}
+	p.addBody(key, fidx.DefFunction, value)
 }
 
 // addArgumentFunction adds a function literal that a call takes as an

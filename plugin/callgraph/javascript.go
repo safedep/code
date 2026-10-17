@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/safedep/code/core"
+	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
 	"github.com/safedep/dry/log"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -90,6 +91,7 @@ var ecmascriptProcessors = map[string]nodeProcessor{
 	"arrow_function":             arrowFunctionProcessor,
 	"assignment_expression":      assignmentProcessor,
 	"call_expression":            jsCallExpressionProcessor,
+	"class":                      classExpressionProcessor,
 	"class_declaration":          classDefinitionProcessor,
 	"function_declaration":       functionDefinitionProcessor,
 	"lexical_declaration":        lexicalDeclarationProcessor,
@@ -454,6 +456,69 @@ func arrowFunctionProcessor(arrowNode *sitter.Node, treeData []byte, currentName
 
 	results.addResults(processFunctionBody(arrowNode, treeData, arrowFunctionNamespace, callGraph, metadata))
 	return results
+}
+
+// classExpressionProcessor processes a class expression, as the class in
+// module.exports = class {} or in (B) => class extends B {}, as a class in
+// its own namespace. Its name is the name that the file binds to it: the
+// name of the declarator or of the class field, default for the whole
+// module.exports, or the name of an export. A class that no such name holds gets an anonymous name. The
+// value of the expression is the class, and a declarator of the same name
+// needs no value.
+func classExpressionProcessor(classNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	result := newProcessorResult()
+	if classNode == nil {
+		return result
+	}
+	name, declared := classExpressionName(classNode, treeData)
+	if name == "" {
+		line := int(classNode.StartPoint().Row) + 1
+		for n := 1; name == "" || callGraph.Nodes[currentNamespace+namespaceSeparator+name] != nil; n++ {
+			name = fileindex.Anonymous(line, n)
+		}
+	}
+	namespace := currentNamespace + namespaceSeparator + name
+	defineClass(classNode, treeData, namespace, callGraph, metadata)
+	if !declared {
+		result.addAssignments(callGraph.assignmentGraph.Assignments[namespace])
+	}
+	return result
+}
+
+// classExpressionName returns the name that the parent of a class
+// expression binds to it, and whether a declarator binds it.
+func classExpressionName(classNode *sitter.Node, treeData []byte) (string, bool) {
+	parent := classNode.Parent()
+	if parent == nil {
+		return "", false
+	}
+	switch parent.Type() {
+	case "variable_declarator":
+		if name := parent.ChildByFieldName("name"); name != nil && name.Type() == "identifier" {
+			return name.Content(treeData), true
+		}
+	case "public_field_definition", "field_definition":
+		name := parent.ChildByFieldName("name")
+		if name == nil {
+			name = parent.ChildByFieldName("property")
+		}
+		if name != nil && name.Type() == "property_identifier" {
+			return name.Content(treeData), false
+		}
+	case "assignment_expression":
+		left := parent.ChildByFieldName("left")
+		if left == nil || left.Type() != "member_expression" {
+			break
+		}
+		if left.Content(treeData) == "module.exports" {
+			return "default", false
+		}
+		object, property := left.ChildByFieldName("object"), left.ChildByFieldName("property")
+		if object != nil && property != nil && (object.Content(treeData) == "exports" || object.Content(treeData) == "module.exports") {
+			return property.Content(treeData), false
+		}
+	}
+	return "", false
 }
 
 // jsNewExpressionProcessor adds the edge of an object creation to the
