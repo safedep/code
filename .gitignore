@@ -8,6 +8,8 @@
 *.so
 *.dylib
 bin/
+# The end-to-end cases hold projects with a bin directory of source files.
+!test/projectgraph/cases/**/bin/
 
 # Test binary, built with `go test -c`
 *.test
