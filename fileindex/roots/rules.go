@@ -95,15 +95,20 @@ type DefinitionMatch struct {
 // app in app = express(), and a key under one of them matches too. Arg
 // picks the argument whose definition is the root. It counts from 0, and -1
 // is the last argument. Shape lists the shapes that the argument may have.
-// A call with no Arg is a decorator, and the root is the definition that it
-// decorates.
+// Root receiver makes the first-party class or object of the receiver the
+// root, as MyView in MyView.as_view(). A call with no Arg and no Root is a
+// decorator, and the root is the definition that it decorates.
 type CallMatch struct {
 	Callee       []string `yaml:"callee,omitempty"`
 	CalleeSuffix []string `yaml:"callee_suffix,omitempty"`
 	ReceiverFrom []string `yaml:"receiver_from,omitempty"`
 	Arg          *int     `yaml:"arg,omitempty"`
 	Shape        Shapes   `yaml:"shape,omitempty"`
+	Root         string   `yaml:"root,omitempty"`
 }
+
+// RootReceiver is the Root of a call rule that marks the receiver.
+const RootReceiver = "receiver"
 
 // Shapes is one argument shape or a list of them.
 type Shapes []fileindex.ArgShape
@@ -286,6 +291,12 @@ func (c *CallMatch) validate() error {
 	}
 	if c.Arg == nil && len(c.Shape) > 0 {
 		return errors.New("call: a shape needs an arg")
+	}
+	switch {
+	case c.Root != "" && c.Root != RootReceiver:
+		return fmt.Errorf("call: unknown root %q", c.Root)
+	case c.Root != "" && c.Arg != nil:
+		return errors.New("call: a root receiver takes no arg")
 	}
 	for _, shape := range c.Shape {
 		switch shape {

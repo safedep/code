@@ -18,7 +18,7 @@ func TestDefaultRules(t *testing.T) {
 	assert.Equal(t, []string{
 		"go.main", "java.main", "python.main-guard", "python.main-guard-single-quote", "node.package-json",
 		"python.project-scripts", "python.setup-py", "procfile", "dockerfile",
-		"python.flask.route", "python.fastapi.route", "python.django.urls", "python.click.command",
+		"python.flask.route", "python.fastapi.route", "python.django.urls", "python.django.view", "python.click.command",
 		"python.click.subcommand", "python.typer.command", "node.express.route", "node.koa.route",
 		"node.commander.action", "node.next.route", "node.serverless.handler", "java.spring.web", "java.spring.component", "test.files",
 	}, ids)
@@ -95,6 +95,8 @@ func TestParseErrorsNameTheRule(t *testing.T) {
 		{name: "a call with no callee", yaml: "{id: x.y, language: any, kind: framework, match: {call: {arg: 1}}}", want: `call: no callee`},
 		{name: "a definition with no name", yaml: "{id: x.y, language: any, kind: main, match: {definition: {parent: A}}}", want: `definition: no name`},
 		{name: "no id", yaml: "{language: any, kind: main, match: {test_file: true}}", want: `root rule #1: no id`},
+		{name: "an unknown root", yaml: "{id: x.y, language: python, kind: framework, match: {call: {callee: [a], root: caller}}}", want: `call: unknown root "caller"`},
+		{name: "a root receiver with an arg", yaml: "{id: x.y, language: python, kind: framework, match: {call: {callee: [a], arg: 0, root: receiver}}}", want: `call: a root receiver takes no arg`},
 		{name: "requires with no manifest", yaml: "{id: x.y, language: go, kind: main, requires: [gin], match: {test_file: true}}", want: `requires: the language "go" has no manifest of dependencies`},
 		{name: "requires an empty name", yaml: "{id: x.y, language: python, kind: main, requires: [''], match: {test_file: true}}", want: `requires: an empty package name`},
 	}

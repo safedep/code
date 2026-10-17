@@ -94,6 +94,29 @@ func (f *finder) matchCall(r rules.Rule) {
 	}
 }
 
+// matchReceiver marks the first-party receiver of each matching call, as
+// the class MyView of MyView.as_view(). The framework makes an instance of
+// the class and calls its methods, which the override edges of the link
+// step reach.
+func (f *finder) matchReceiver(r rules.Rule) {
+	for _, ix := range f.applying(r) {
+		for i := range ix.Calls {
+			call := &ix.Calls[i]
+			if call.Kind == fileindex.CallImport || !slices.ContainsFunc(f.callKeys(ix, call), func(k string) bool { return f.callMatches(r.Match.Call, k) }) {
+				continue
+			}
+			receivers := make([]string, 0, len(call.Targets))
+			for _, t := range call.Targets {
+				receivers = append(receivers, fileindex.Parent(t))
+			}
+			site := Site{Path: ix.Path, Line: call.Line, Column: call.Column}
+			for _, key := range f.Resolve(ix, call.Caller, receivers) {
+				f.addAt(r, key, site)
+			}
+		}
+	}
+}
+
 // callKeys returns the keys that a call resolves to. Three call rules read
 // every JavaScript call, so the finder resolves each call once.
 func (f *finder) callKeys(ix *fileindex.Index, call *fileindex.Call) []string {

@@ -139,6 +139,8 @@ func (f *finder) match(r rules.Rule) {
 		f.matchPath(r)
 	case len(m.Decorator) > 0 || len(m.Annotation) > 0:
 		f.matchDecorator(r)
+	case m.Call != nil && m.Call.Root == rules.RootReceiver:
+		f.matchReceiver(r)
 	case m.Call != nil && m.Call.Arg == nil:
 		f.matchDecoratorCall(r)
 	case m.Call != nil:

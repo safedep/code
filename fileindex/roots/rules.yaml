@@ -56,6 +56,11 @@ rules:
     kind: framework
     requires: [django]
     match: { call: { callee: ["django//urls//path", "django//urls//re_path", "django//conf//urls//url"], arg: 1, shape: [name, member] } }
+  - id: python.django.view
+    language: python
+    kind: framework
+    requires: [django]
+    match: { call: { callee_suffix: ["//as_view"], receiver_from: ["django"], root: receiver } }
   - id: python.click.command
     language: python
     kind: framework

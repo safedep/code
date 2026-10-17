@@ -89,3 +89,29 @@ func TestBuildJavaClassInit(t *testing.T) {
 		"A.java//A//run -> A.java//A//<clinit> direct java.class-init",
 	}, edgesOfKind(g, EdgeDirect), "a static call reaches the static initializer and not the constructor")
 }
+
+func TestBuildReceiverRoots(t *testing.T) {
+	views := &fileindex.Index{
+		Version: fileindex.Version, Path: "views.py", Language: langcode.Python,
+		Imports:     []fileindex.Import{{Line: 1, Module: "django.views", Item: "View", Alias: "View", Kind: fileindex.ImportStatic, Namespace: "django//views//View"}},
+		Definitions: []fileindex.Definition{def(fileindex.DefClass, "views.py//Report", 3), def(fileindex.DefMethod, "views.py//Report//get", 4), def(fileindex.DefClass, "views.py//Plain", 6)},
+		Classes:     []fileindex.Class{{Key: "views.py//Report", Bases: []string{"View"}, Methods: []string{"views.py//Report//get"}}, {Key: "views.py//Plain"}},
+	}
+	urls := &fileindex.Index{
+		Version: fileindex.Version, Path: "urls.py", Language: langcode.Python,
+		Imports: []fileindex.Import{{Line: 1, Module: "views", Alias: "views", Kind: fileindex.ImportStatic, Namespace: "views"}},
+		Calls: []fileindex.Call{
+			{Caller: "urls.py", Line: 3, Column: 10, Callee: "views.Report.as_view", Targets: []string{"views//Report//as_view"}, Receiver: "views.Report", Method: "as_view", Kind: fileindex.CallCall},
+			{Caller: "urls.py", Line: 4, Column: 10, Callee: "views.Plain.as_view", Targets: []string{"views//Plain//as_view"}, Receiver: "views.Plain", Method: "as_view", Kind: fileindex.CallCall},
+		},
+	}
+	g, err := Build(context.Background(), []*fileindex.Index{views, urls}, Options{})
+	require.NoError(t, err)
+	var got []string
+	for _, r := range g.Roots {
+		if r.Kind == roots.Framework {
+			got = append(got, r.Key+" "+r.Rule+" "+site(r.Site))
+		}
+	}
+	assert.Equal(t, []string{"views.py//Report python.django.view urls.py:3"}, got, "the as_view of a class with no Django base is no Django view")
+}

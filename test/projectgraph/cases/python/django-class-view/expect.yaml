@@ -1,0 +1,61 @@
+source: safedep:hand
+description: shop/urls.py routes a path to views.ReportView.as_view(). Django makes an instance of ReportView and calls the method of the HTTP verb. The rule python.django.view marks the receiver class of as_view as a root, and the override edges of the class reach get and post. UnusedView has no route.
+roots:
+  - key: manage.py
+    kind: main
+    rule: python.main-guard
+  - key: shop/views.py//ReportView
+    kind: framework
+    rule: python.django.view
+    site: shop/urls.py:6
+edges:
+  - from: shop/views.py//ReportView
+    to: shop/views.py//ReportView//get
+    kind: reference
+    confidence: low
+    site: shop/views.py:8
+  - from: shop/views.py//ReportView
+    to: shop/views.py//ReportView//post
+    kind: reference
+    confidence: low
+    site: shop/views.py:11
+unresolved: []
+results:
+  - target: yaml//safe_load
+    status: found
+    path:
+      - key: shop/views.py//ReportView
+      - key: shop/views.py//ReportView//get
+        site: shop/views.py:8
+        kind: reference
+        confidence: low
+      - key: yaml//safe_load
+        site: shop/views.py:9
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: shop/views.py//ReportView//get
+        site: shop/views.py:9
+        reached: true
+  - target: subprocess//run
+    status: found
+    path:
+      - key: shop/views.py//ReportView
+      - key: shop/views.py//ReportView//post
+        site: shop/views.py:11
+        kind: reference
+        confidence: low
+      - key: subprocess//run
+        site: shop/views.py:12
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: shop/views.py//ReportView//post
+        site: shop/views.py:12
+        reached: true
+  - target: yaml//full_load
+    status: not-found
+    call_sites:
+      - caller: shop/views.py//UnusedView//get
+        site: shop/views.py:17
+        reached: false
