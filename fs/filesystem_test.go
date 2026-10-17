@@ -387,3 +387,26 @@ func TestImportUnits(t *testing.T) {
 		})
 	}
 }
+
+func TestLocalFileSystemSkipsLinksOutOfTheRoot(t *testing.T) {
+	dir, outside := t.TempDir(), t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "app.js"), []byte("run()"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(outside, "secret.js"), []byte("leak()"), 0o600))
+	require.NoError(t, os.Mkdir(filepath.Join(outside, "pkg"), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(outside, "pkg", "index.js"), []byte("leak()"), 0o600))
+	links := map[string]string{"inside.js": "app.js", "leak.js": filepath.Join(outside, "secret.js"), "pkg": filepath.Join(outside, "pkg")}
+	for name, target := range links {
+		if err := os.Symlink(target, filepath.Join(dir, name)); err != nil {
+			t.Skipf("symbolic links are not available: %v", err)
+		}
+	}
+
+	fs, err := NewLocalFileSystem(LocalFileSystemConfig{AppDirectories: []string{dir}})
+	require.NoError(t, err)
+	var files []string
+	require.NoError(t, fs.EnumerateApp(context.Background(), func(f core.File) error {
+		files = append(files, f.Name())
+		return nil
+	}))
+	assert.ElementsMatch(t, []string{"app.js", "inside.js"}, files)
+}

@@ -254,6 +254,10 @@ func (fs *localFileSystem) enumerateDir(ctx context.Context,
 		})
 	}
 	clean := filepath.Clean(root)
+	real, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return fmt.Errorf("error walking %s: %w", root, err)
+	}
 	return fs.walkDir(root, func(path string, info os.DirEntry, err error) error {
 		select {
 		case <-ctx.Done():
@@ -275,7 +279,7 @@ func (fs *localFileSystem) enumerateDir(ctx context.Context,
 			}
 			return nil
 		}
-		if !isRegularFile(path, info) {
+		if !isRegularFile(real, path, info) {
 			return nil
 		}
 
@@ -310,23 +314,35 @@ func skipUnreadable(root, path string, entry os.DirEntry, err error) error {
 	return nil
 }
 
-// isRegularFile reports a regular file, or a symbolic link to one. A
-// dangling link, as to a build output that is not there, is not a file.
-// A link that cannot be read for another reason, such as a permission or a
-// loop, is not a file either, but it gets a warning. One bad link must not
-// stop the walk of a whole project.
-func isRegularFile(path string, entry os.DirEntry) bool {
+// isRegularFile reports a regular file, or a symbolic link to one under
+// the root. A dangling link, as to a build output that is not there, is
+// not a file. A link that cannot be read for another reason, such as a
+// permission or a loop, is not a file either, but it gets a warning. One
+// bad link must not stop the walk of a whole project. A link to a file
+// outside the root is not a file of the root, so the walk does not read
+// what the root does not hold. The root is its real path, as the links
+// resolve to real paths.
+func isRegularFile(root, path string, entry os.DirEntry) bool {
 	if entry.Type()&os.ModeSymlink == 0 {
 		return entry.Type().IsRegular()
 	}
-	target, err := os.Stat(path)
+	target, err := filepath.EvalSymlinks(path)
 	if err != nil {
 		if !errors.Is(err, iofs.ErrNotExist) {
 			log.Warnf("skipped the link %s: %v", path, err)
 		}
 		return false
 	}
-	return target.Mode().IsRegular()
+	if !within(root, target) {
+		log.Debugf("skipped the link %s: %s is outside %s", path, target, root)
+		return false
+	}
+	info, err := os.Stat(target)
+	if err != nil {
+		log.Warnf("skipped the link %s: %v", path, err)
+		return false
+	}
+	return info.Mode().IsRegular()
 }
 
 func matchAny(patterns []*regexp.Regexp, path string) bool {
