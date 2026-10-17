@@ -1,0 +1,489 @@
+// Package reach answers which targets a project graph reaches from its
+// roots. One breadth-first search serves every target of a query.
+package reach
+
+import (
+	"cmp"
+	"context"
+	"errors"
+	"fmt"
+	"slices"
+	"strings"
+
+	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/projectgraph"
+)
+
+const (
+	defaultMaxDepth = 64
+	// maxPerKind caps the uncertainties of one kind on a result. The first
+	// ones are the nearest to a root, and they are enough to explain the
+	// answer.
+	maxPerKind = 3
+	// wildcard ends a target that matches every external key under it.
+	wildcard = projectgraph.Separator + "*"
+)
+
+type Status string
+
+const (
+	Found    Status = "found"
+	NotFound Status = "not-found"
+	// Uncertain is a target with no path and an uncertainty that the root
+	// fallback alone does not explain.
+	Uncertain Status = "uncertain"
+)
+
+type UncertaintyKind string
+
+const (
+	UnresolvedCall UncertaintyKind = "unresolved-call"
+	DynamicFlag    UncertaintyKind = "dynamic-flag"
+	// Budget is a truncated or missing file, a limit of the link step, or a
+	// search that the depth cap or the deadline stopped.
+	Budget       UncertaintyKind = "budget"
+	RootFallback UncertaintyKind = "root-fallback"
+)
+
+// Query asks for the targets, as external keys like yaml//load. A target
+// that ends in //* matches every external key under it. MaxDepth 0 selects
+// 64 hops.
+type Query struct {
+	Targets      []string
+	IncludeTests bool
+	MaxDepth     int
+}
+
+// Hop is one step of a path. The first hop is the root and has no site.
+type Hop struct {
+	Key        string                  `json:"key"`
+	Site       projectgraph.Site       `json:"site"`
+	EdgeKind   projectgraph.EdgeKind   `json:"edge_kind,omitempty"`
+	Confidence projectgraph.Confidence `json:"confidence,omitempty"`
+}
+
+// CallSite is a call of the target. Reached tells whether the search reached
+// the caller.
+type CallSite struct {
+	Caller  string            `json:"caller"`
+	Site    projectgraph.Site `json:"site"`
+	Reached bool              `json:"reached"`
+}
+
+// Uncertainty is a reason why no path is not a proof. Key is the node that
+// the search reached and that holds the reason.
+type Uncertainty struct {
+	Kind UncertaintyKind   `json:"kind"`
+	Key  string            `json:"key,omitempty"`
+	Site projectgraph.Site `json:"site"`
+	Text string            `json:"text"`
+}
+
+// Searched is what the search did. Uncertainties counts every uncertainty
+// of the result before the cap per kind.
+type Searched struct {
+	Roots         []projectgraph.Root `json:"roots"`
+	Nodes         int                 `json:"nodes"`
+	Edges         int                 `json:"edges"`
+	Uncertainties int                 `json:"uncertainties"`
+	DepthCut      bool                `json:"depth_cut,omitempty"`
+	Stopped       bool                `json:"stopped,omitempty"`
+}
+
+// Result is the answer for one target. Path is the shortest path from a
+// root, with the highest lowest confidence among the paths of that length.
+// TestPath is a path from a test root, for a target that only a test
+// reaches. SetAside lists the sites that a rule proved cannot reach the
+// target, with the rule.
+type Result struct {
+	Target        string        `json:"target"`
+	Status        Status        `json:"status"`
+	Path          []Hop         `json:"path,omitempty"`
+	TestPath      []Hop         `json:"test_path,omitempty"`
+	CallSites     []CallSite    `json:"call_sites"`
+	Uncertainties []Uncertainty `json:"uncertainties,omitempty"`
+	SetAside      []Uncertainty `json:"set_aside,omitempty"`
+	Searched      Searched      `json:"searched"`
+}
+
+// Reach returns one result per target, in the order of the query.
+func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error) {
+	if q.MaxDepth < 0 {
+		return nil, fmt.Errorf("max depth %d is negative", q.MaxDepth)
+	}
+	if slices.Contains(q.Targets, "") {
+		return nil, errors.New("an empty target")
+	}
+	ix := newIndex(g)
+	depth := cmp.Or(q.MaxDepth, defaultMaxDepth)
+
+	targets := make([][]int, len(q.Targets))
+	for i, t := range q.Targets {
+		targets[i] = ix.match(t)
+	}
+
+	var rootSet, testRoots []projectgraph.Root
+	for _, r := range g.Roots {
+		if r.Kind == projectgraph.RootTest && !q.IncludeTests {
+			testRoots = append(testRoots, r)
+		} else {
+			rootSet = append(rootSet, r)
+		}
+	}
+	s := ix.search(ctx, ix.ids(rootSet), depth, targets)
+	unc := ix.uncertainties(s, depth)
+
+	var tests *search
+	results := make([]Result, len(q.Targets))
+	for i, t := range q.Targets {
+		r := Result{
+			Target:    t,
+			CallSites: ix.callSites(targets[i], s),
+			Searched:  Searched{Roots: rootSet, Nodes: len(s.order), Edges: s.edges, DepthCut: s.depthCut, Stopped: s.stopped},
+		}
+		if node, ok := s.nearest(targets[i]); ok {
+			r.Status, r.Path = Found, ix.path(s, node)
+		} else {
+			r.Status = NotFound
+			r.Uncertainties, r.SetAside, r.Searched.Uncertainties = unc.forTarget(t)
+			if len(r.Uncertainties) > 0 {
+				r.Status = Uncertain
+			}
+			if len(testRoots) > 0 {
+				if tests == nil {
+					tests = ix.search(ctx, ix.ids(g.Roots), depth, targets)
+				}
+				if node, ok := tests.nearest(targets[i]); ok {
+					r.TestPath = ix.path(tests, node)
+				}
+			}
+		}
+		if g.Stats.RootFallback {
+			r.Uncertainties = append(r.Uncertainties, Uncertainty{Kind: RootFallback, Text: "roots: every exported symbol"})
+			r.Searched.Uncertainties++
+		}
+		results[i] = r
+	}
+	return results, nil
+}
+
+// index is the graph with integer node ids, in key order, and the edges out
+// of each node.
+type index struct {
+	g         *projectgraph.Graph
+	keys      []string
+	id        map[string]int
+	out       [][]int32
+	in        [][]int32
+	externals []int
+}
+
+func newIndex(g *projectgraph.Graph) *index {
+	keys := make([]string, 0, len(g.Nodes))
+	for k := range g.Nodes {
+		keys = append(keys, k)
+	}
+	for _, e := range g.Edges {
+		for _, k := range []string{e.From, e.To} {
+			if _, ok := g.Nodes[k]; !ok {
+				keys = append(keys, k)
+			}
+		}
+	}
+	slices.Sort(keys)
+	keys = slices.Compact(keys)
+
+	ix := &index{g: g, keys: keys, id: make(map[string]int, len(keys)), out: make([][]int32, len(keys)), in: make([][]int32, len(keys))}
+	for i, k := range keys {
+		ix.id[k] = i
+		if n := g.Nodes[k]; n != nil && n.Kind == projectgraph.NodeExternal {
+			ix.externals = append(ix.externals, i)
+		}
+	}
+	for i, e := range g.Edges {
+		from, to := ix.id[e.From], ix.id[e.To]
+		ix.out[from] = append(ix.out[from], int32(i))
+		ix.in[to] = append(ix.in[to], int32(i))
+	}
+	return ix
+}
+
+// match returns the external nodes of a target, by id.
+func (ix *index) match(target string) []int {
+	prefix, ok := strings.CutSuffix(target, "*")
+	if ok && strings.HasSuffix(prefix, projectgraph.Separator) {
+		var ids []int
+		for _, id := range ix.externals {
+			if strings.HasPrefix(ix.keys[id], prefix) {
+				ids = append(ids, id)
+			}
+		}
+		return ids
+	}
+	if n := ix.g.Nodes[target]; n != nil && n.Kind == projectgraph.NodeExternal {
+		return []int{ix.id[target]}
+	}
+	return nil
+}
+
+func (ix *index) ids(roots []projectgraph.Root) []int {
+	ids := make([]int, 0, len(roots))
+	for _, r := range roots {
+		if id, ok := ix.id[r.Key]; ok {
+			ids = append(ids, id)
+		}
+	}
+	slices.Sort(ids)
+	return slices.Compact(ids)
+}
+
+// search is the state of one breadth-first search. best is the highest
+// lowest confidence rank of a shortest path to each node, and parent is the
+// edge into the node on that path, or -1 at a root.
+type search struct {
+	dist     []int32
+	best     []int8
+	parent   []int32
+	order    []int
+	edges    int
+	depthCut bool
+	stopped  bool
+}
+
+func (ix *index) search(ctx context.Context, sources []int, maxDepth int, targets [][]int) *search {
+	n := len(ix.keys)
+	s := &search{dist: make([]int32, n), best: make([]int8, n), parent: make([]int32, n)}
+	for i := range s.dist {
+		s.dist[i], s.parent[i] = -1, -1
+	}
+	frontier := make([]int, 0, len(sources))
+	for _, id := range sources {
+		s.dist[id], s.best[id] = 0, int8(projectgraph.ConfidenceHigh.Rank())
+		frontier = append(frontier, id)
+	}
+	s.order = append(s.order, frontier...)
+
+	for depth := 0; len(frontier) > 0; depth++ {
+		if ctx.Err() != nil {
+			s.stopped = true
+			return s
+		}
+		if s.allFound(targets) {
+			return s
+		}
+		if depth == maxDepth {
+			s.depthCut = slices.ContainsFunc(frontier, func(u int) bool {
+				return slices.ContainsFunc(ix.out[u], func(e int32) bool { return s.dist[ix.id[ix.g.Edges[e].To]] < 0 })
+			})
+			return s
+		}
+		var next []int
+		for _, u := range frontier {
+			for _, e := range ix.out[u] {
+				s.edges++
+				edge := &ix.g.Edges[e]
+				v := ix.id[edge.To]
+				rank := min(s.best[u], int8(edge.Confidence.Rank()))
+				switch {
+				case s.dist[v] < 0:
+					s.dist[v], s.best[v], s.parent[v] = int32(depth+1), rank, e
+					next = append(next, v)
+				case s.dist[v] == int32(depth+1) && rank > s.best[v]:
+					s.best[v], s.parent[v] = rank, e
+				}
+			}
+		}
+		s.order = append(s.order, next...)
+		frontier = next
+	}
+	return s
+}
+
+func (s *search) allFound(targets [][]int) bool {
+	for _, ids := range targets {
+		if !slices.ContainsFunc(ids, func(id int) bool { return s.dist[id] >= 0 }) {
+			return false
+		}
+	}
+	return true
+}
+
+// nearest returns the reached node of a target with the shortest path, then
+// the highest confidence, then the first key.
+func (s *search) nearest(ids []int) (int, bool) {
+	best, found := 0, false
+	for _, id := range ids {
+		if s.dist[id] < 0 {
+			continue
+		}
+		if !found || s.dist[id] < s.dist[best] || s.dist[id] == s.dist[best] && s.best[id] > s.best[best] {
+			best, found = id, true
+		}
+	}
+	return best, found
+}
+
+func (ix *index) path(s *search, node int) []Hop {
+	var hops []Hop
+	for s.parent[node] >= 0 {
+		e := ix.g.Edges[s.parent[node]]
+		hops = append(hops, Hop{Key: e.To, Site: e.Site, EdgeKind: e.Kind, Confidence: e.Confidence})
+		node = ix.id[e.From]
+	}
+	hops = append(hops, Hop{Key: ix.keys[node]})
+	slices.Reverse(hops)
+	return hops
+}
+
+func (ix *index) callSites(ids []int, s *search) []CallSite {
+	sites := []CallSite{}
+	for _, id := range ids {
+		for _, i := range ix.in[id] {
+			e := &ix.g.Edges[i]
+			sites = append(sites, CallSite{Caller: e.From, Site: e.Site, Reached: s.dist[ix.id[e.From]] >= 0})
+		}
+	}
+	slices.SortFunc(sites, func(a, b CallSite) int {
+		return cmp.Or(
+			cmp.Compare(a.Site.Path, b.Site.Path), cmp.Compare(a.Site.Line, b.Site.Line),
+			cmp.Compare(a.Site.Column, b.Site.Column), cmp.Compare(a.Caller, b.Caller),
+		)
+	})
+	return slices.CompactFunc(sites, func(a, b CallSite) bool { return a == b })
+}
+
+// prefixed is an uncertainty that a computed import makes, and the key
+// prefix that its static string gives.
+type prefixed struct {
+	u      Uncertainty
+	prefix string
+}
+
+// found collects the uncertainties of the nodes that a search reached, in
+// the order of the search. A record with a method name concerns only the
+// targets with that last segment.
+type found struct {
+	global   []Uncertainty
+	byMethod map[string][]Uncertainty
+	methods  []string
+	prefixed []prefixed
+}
+
+func (ix *index) uncertainties(s *search, maxDepth int) *found {
+	g := ix.g
+	f := &found{byMethod: map[string][]Uncertainty{}}
+
+	unresolved := map[string][]projectgraph.UnresolvedSite{}
+	prefixes := map[projectgraph.Site]string{}
+	for _, u := range g.Unresolved {
+		unresolved[u.Caller] = append(unresolved[u.Caller], u)
+		if u.ImportPrefix != "" {
+			prefixes[projectgraph.Site{Path: u.Site.Path, Line: u.Site.Line}] = u.ImportPrefix
+		}
+	}
+	truncated := map[string][]projectgraph.Truncation{}
+	for _, t := range g.Truncated {
+		if t.Key == "" {
+			f.global = append(f.global, Uncertainty{Kind: Budget, Site: t.Site, Text: "the link step hit its " + string(t.Kind) + " limit"})
+		} else {
+			truncated[t.Key] = append(truncated[t.Key], t)
+		}
+	}
+
+	files := map[string]bool{}
+	for _, id := range s.order {
+		key := ix.keys[id]
+		n := g.Nodes[key]
+		if n == nil || n.Kind == projectgraph.NodeExternal {
+			continue
+		}
+		if status := g.Files[n.Path]; !files[n.Path] && (status == projectgraph.FileMissing || status == projectgraph.FileTruncated) {
+			files[n.Path] = true
+			f.global = append(f.global, Uncertainty{Kind: Budget, Key: key, Site: projectgraph.Site{Path: n.Path}, Text: "the file is " + string(status)})
+		}
+		for _, t := range truncated[key] {
+			site := t.Site
+			site.Path = cmp.Or(site.Path, n.Path)
+			f.global = append(f.global, Uncertainty{Kind: Budget, Key: key, Site: site, Text: "the link step hit its " + string(t.Kind) + " limit"})
+		}
+		for _, fl := range n.Flags {
+			site := projectgraph.Site{Path: n.Path, Line: fl.Line}
+			u := Uncertainty{Kind: DynamicFlag, Key: key, Site: site, Text: string(fl.Kind)}
+			switch {
+			case fl.Kind == fileindex.FlagParseError:
+				u.Kind = Budget
+				f.global = append(f.global, u)
+			case fl.Kind == fileindex.FlagComputedImport && prefixes[site] != "":
+				f.prefixed = append(f.prefixed, prefixed{u: u, prefix: prefixes[site]})
+			default:
+				f.global = append(f.global, u)
+			}
+		}
+		for _, r := range unresolved[key] {
+			u := Uncertainty{Kind: UnresolvedCall, Key: key, Site: r.Site, Text: fmt.Sprintf("%s (%s)", r.Text, r.Reason)}
+			switch {
+			case r.ImportPrefix != "":
+				f.prefixed = append(f.prefixed, prefixed{u: u, prefix: r.ImportPrefix})
+			case r.Method != "":
+				if _, ok := f.byMethod[r.Method]; !ok {
+					f.methods = append(f.methods, r.Method)
+				}
+				f.byMethod[r.Method] = append(f.byMethod[r.Method], u)
+			default:
+				f.global = append(f.global, u)
+			}
+		}
+	}
+	if s.depthCut {
+		f.global = append(f.global, Uncertainty{Kind: Budget, Text: fmt.Sprintf("the search stopped at depth %d", maxDepth)})
+	}
+	if s.stopped {
+		f.global = append(f.global, Uncertainty{Kind: Budget, Text: "the search stopped at the deadline"})
+	}
+	return f
+}
+
+// forTarget returns the uncertainties of a target, at most maxPerKind of
+// each kind, the sites that a computed import prefix sets aside, and the
+// count before the cap.
+func (f *found) forTarget(target string) ([]Uncertainty, []Uncertainty, int) {
+	all := slices.Clone(f.global)
+	prefix, isWildcard := strings.CutSuffix(target, wildcard)
+	if isWildcard {
+		for _, m := range f.methods {
+			all = append(all, f.byMethod[m]...)
+		}
+	} else {
+		all = append(all, f.byMethod[projectgraph.Last(target)]...)
+	}
+
+	var setAside []Uncertainty
+	for _, p := range f.prefixed {
+		if mayName(p.prefix, target, prefix, isWildcard) {
+			all = append(all, p.u)
+			continue
+		}
+		u := p.u
+		u.Text = fmt.Sprintf("%s: the import prefix %q names another module", u.Text, p.prefix)
+		setAside = append(setAside, u)
+	}
+
+	count := map[UncertaintyKind]int{}
+	var capped []Uncertainty
+	for _, u := range all {
+		if count[u.Kind] < maxPerKind {
+			capped = append(capped, u)
+		}
+		count[u.Kind]++
+	}
+	return capped, setAside, len(all)
+}
+
+// mayName reports whether a computed import with a static prefix can load
+// the module of a target.
+func mayName(importPrefix, target, targetPrefix string, isWildcard bool) bool {
+	if strings.HasPrefix(target, importPrefix) {
+		return true
+	}
+	return isWildcard && strings.HasPrefix(importPrefix, targetPrefix)
+}
