@@ -26,9 +26,12 @@ type wildcardImport struct {
 	NamespaceTreeNode *sitter.Node
 }
 
-// Parses the imports from AST and returns map of identified imports and a list of wildcard imports.
-func parseImports(imports []*ast.ImportNode, lang core.Language) (map[string]parsedImport, []wildcardImport) {
-	importedIdentifierNamespaces := make(map[string]parsedImport)
+// parseImports returns the imported identifiers and the wildcard imports, in
+// source order. A later import of an identifier replaces the earlier one, at
+// the place of the earlier one.
+func parseImports(imports []*ast.ImportNode, lang core.Language) ([]parsedImport, []wildcardImport) {
+	importedIdentifiers := []parsedImport{}
+	importedIndex := make(map[string]int)
 	wildcardImports := []wildcardImport{}
 
 	for _, imp := range imports {
@@ -72,15 +75,21 @@ func parseImports(imports []*ast.ImportNode, lang core.Language) (map[string]par
 			identifierKey = helpers.GoPackageName(imp.ModuleName())
 		}
 
-		importedIdentifierNamespaces[identifierKey] = parsedImport{
+		parsed := parsedImport{
 			Identifier:         identifierKey,
 			IdentifierTreeNode: identifierTreeNode,
 			Namespace:          finalisedNamespace,
 			NamespaceTreeNode:  imp.GetModuleNameNode().Parent(), // The parent node is the entire module import node
 		}
+		if i, exists := importedIndex[identifierKey]; exists {
+			importedIdentifiers[i] = parsed
+			continue
+		}
+		importedIndex[identifierKey] = len(importedIdentifiers)
+		importedIdentifiers = append(importedIdentifiers, parsed)
 	}
 
-	return importedIdentifierNamespaces, wildcardImports
+	return importedIdentifiers, wildcardImports
 }
 
 // For submodule imports, we need to replace separator with our namespaceSeparator for consistency

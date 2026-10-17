@@ -1,7 +1,5 @@
 package callgraph
 
-import "github.com/safedep/code/core"
-
 var instanceKeywordMapping = map[string]string{
 	"python":      "self",
 	"javascript":  "this",
@@ -21,12 +19,4 @@ var instanceKeywordMapping = map[string]string{
 	"lua":         "self",
 	"perl":        "self",
 	"r":           "this",
-}
-
-func resolveInstanceKeyword(language core.Language) (string, bool) {
-	langCode := language.Meta().Code
-	if keyword, exists := instanceKeywordMapping[string(langCode)]; exists {
-		return keyword, true
-	}
-	return "", false
 }

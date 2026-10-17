@@ -108,21 +108,19 @@ func NewSignatureMatcher(targetSignatures []*callgraphv1.Signature) (*SignatureM
 func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResult, error) {
 	language, err := cg.Tree.Language()
 	if err != nil {
-		log.Errorf("failed to get language from parse tree: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to get language from parse tree: %w", err)
 	}
 
 	languageCode := language.Meta().Code
 
 	matcherResults := []SignatureMatchResult{}
 
-	// Early termination if callgraph is too large or was truncated
-	if cg.limitExceeded {
-		log.Warnf("CallGraph for %s was truncated due to size limits, signature matching may be incomplete", cg.FileName)
-	}
-
 	functionCallTrie := trie.NewTrie[[]DfsResultItem]()
 	functionCallResultItems := cg.DFS()
+
+	if cg.LimitExceeded() {
+		log.Warnf("CallGraph for %s was truncated by %v, signature matching may be incomplete", cg.FileName, cg.Truncations())
+	}
 
 	// Warn if DFS results are very large
 	if len(functionCallResultItems) > 50000 {

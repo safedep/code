@@ -28,59 +28,56 @@ func (an *assignmentNode) IsLiteralValue() bool {
 }
 
 type assignmentGraph struct {
-	Assignments   map[string]*assignmentNode     // Map of identifier to possible namespaces or other identifiers
-	nodeCount     int                            // Track number of assignment nodes
-	limitExceeded bool                           // Flag when limit is exceeded
-	resolveCache  map[string][]*assignmentNode   // Cache for resolve() results
+	Assignments  map[string]*assignmentNode   // Map of identifier to possible namespaces or other identifiers
+	resolveCache map[string][]*assignmentNode // Cache for resolve() results
+
+	// truncations gets the record of the node limit. It can be nil.
+	truncations *truncations
 }
 
-func newAssignmentGraph() *assignmentGraph {
+func newAssignmentGraph(truncations *truncations) *assignmentGraph {
 	return &assignmentGraph{
-		Assignments:   make(map[string]*assignmentNode),
-		nodeCount:     0,
-		limitExceeded: false,
-		resolveCache:  make(map[string][]*assignmentNode),
+		Assignments:  make(map[string]*assignmentNode),
+		resolveCache: make(map[string][]*assignmentNode),
+		truncations:  truncations,
 	}
 }
 
+// addNode adds a node for identifier, or returns the node that exists. Past
+// maxAssignmentGraphNodes it adds no node and returns nil.
 func (ag *assignmentGraph) addNode(identifier string, treeNode *sitter.Node) *assignmentNode {
-	existingAssignmentNode, exists := ag.Assignments[identifier]
-
-	if !exists {
-		// Check limit before adding new node
-		if ag.nodeCount >= maxAssignmentGraphNodes && !ag.limitExceeded {
-			// Log warning once when limit is first exceeded
-			// We still add the node to prevent nil errors but mark as exceeded
-			ag.limitExceeded = true
+	if node, exists := ag.Assignments[identifier]; exists {
+		if node.TreeNode == nil {
+			node.TreeNode = treeNode
 		}
-
-		ag.Assignments[identifier] = newAssignmentGraphNode(identifier, treeNode)
-		ag.nodeCount++
-	} else if treeNode != nil && existingAssignmentNode.TreeNode == nil {
-		// If the existing node has no tree node, we can set it now
-		ag.Assignments[identifier].TreeNode = treeNode
+		return node
 	}
 
-	return ag.Assignments[identifier]
+	if len(ag.Assignments) >= maxAssignmentGraphNodes {
+		ag.truncations.add(TruncationAssignmentNodes, identifier, treeNode)
+		return nil
+	}
+
+	node := newAssignmentGraphNode(identifier, treeNode)
+	ag.Assignments[identifier] = node
+	return node
 }
 
 // Add an assignment
 func (ag *assignmentGraph) addAssignment(identifier string, identifierTreeNode *sitter.Node, target string, targetTreeNode *sitter.Node) {
-	if _, exists := ag.Assignments[identifier]; !exists {
-		ag.Assignments[identifier] = newAssignmentGraphNode(identifier, identifierTreeNode)
-		ag.nodeCount++
+	assignee := ag.addNode(identifier, identifierTreeNode)
+	assigned := ag.addNode(target, targetTreeNode)
+	if assignee == nil || assigned == nil {
+		return
 	}
-	if _, exists := ag.Assignments[target]; !exists {
-		ag.Assignments[target] = newAssignmentGraphNode(target, targetTreeNode)
-		ag.nodeCount++
-	}
-	if !slices.Contains(ag.Assignments[identifier].AssignedTo, target) {
-		ag.Assignments[identifier].AssignedTo = append(ag.Assignments[identifier].AssignedTo, target)
+
+	if !slices.Contains(assignee.AssignedTo, target) {
+		assignee.AssignedTo = append(assignee.AssignedTo, target)
 		// Invalidate cache for this identifier since assignment changed
 		delete(ag.resolveCache, identifier)
 	}
-	if !slices.Contains(ag.Assignments[target].AssignedBy, identifier) {
-		ag.Assignments[target].AssignedBy = append(ag.Assignments[target].AssignedBy, identifier)
+	if !slices.Contains(assigned.AssignedBy, identifier) {
+		assigned.AssignedBy = append(assigned.AssignedBy, identifier)
 	}
 }
 

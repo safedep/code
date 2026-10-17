@@ -26,7 +26,7 @@ func (c *expiringContext) Err() error {
 	return context.DeadlineExceeded
 }
 
-func TestDeadlineStopsBuildCallGraph(t *testing.T) {
+func TestLimitDeadlineStopsBuildCallGraph(t *testing.T) {
 	const calls = 100_000
 	python, err := lang.NewPythonLanguage()
 	require.NoError(t, err)
@@ -36,13 +36,14 @@ func TestDeadlineStopsBuildCallGraph(t *testing.T) {
 
 	full, err := buildCallGraph(t.Context(), tree, python, "calls.py")
 	require.NoError(t, err)
-	assert.False(t, full.LimitExceeded())
+	assert.Empty(t, full.Truncations())
 	assert.Len(t, full.RootNode.CallsTo, calls)
 
 	// The import queries read Err twice before the walk of the tree.
 	cg, err := buildCallGraph(&expiringContext{Context: t.Context(), live: 2}, tree, python, "calls.py")
 	require.NoError(t, err)
 	assert.True(t, cg.LimitExceeded())
+	assert.Equal(t, []Truncation{{Kind: TruncationDeadline, Namespace: "calls.py"}}, cg.Truncations())
 	assert.NotEmpty(t, cg.RootNode.CallsTo)
 	assert.Less(t, len(cg.RootNode.CallsTo), calls/10)
 }

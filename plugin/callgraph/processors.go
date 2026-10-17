@@ -3,6 +3,7 @@ package callgraph
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/safedep/code/core"
@@ -50,6 +51,16 @@ func (pr *processorResult) ToString() string {
 		result += fmt.Sprintf("\t%s\n", assignment.Namespace)
 	}
 	return result
+}
+
+// addAssignments adds the nodes that exist. The assignment graph returns nil
+// past its node limit.
+func (pr *processorResult) addAssignments(nodes ...*assignmentNode) {
+	for _, node := range nodes {
+		if node != nil {
+			pr.ImmediateAssignments = append(pr.ImmediateAssignments, node)
+		}
+	}
 }
 
 // addResults adds the results of the provided processorResults to the current (callee) processorResult
@@ -213,11 +224,7 @@ func expressionStatementProcessorWrapper(node *sitter.Node, treeData []byte, cur
 
 			// Register any immediate calls from module level
 			for _, callRef := range childResult.ImmediateCallRefs {
-				callGraph.addEdge(
-					currentNamespace, nil, callRef.CallerIdentifier,
-					callRef.CalleeNamespace, callRef.CalleeTreeNode,
-					callRef.Arguments,
-				)
+				callGraph.addCall(currentNamespace, nil, callRef)
 			}
 		}
 	} else {
@@ -253,11 +260,7 @@ func literalValueProcessor(literalNode *sitter.Node, treeData []byte, currentNam
 	result := newProcessorResult()
 
 	// Register literal values without namespace qualifier
-	literalAssignmentNode := callGraph.assignmentGraph.addNode(
-		literalNode.Content(treeData),
-		literalNode,
-	)
-	result.ImmediateAssignments = append(result.ImmediateAssignments, literalAssignmentNode)
+	result.addAssignments(callGraph.assignmentGraph.addNode(literalNode.Content(treeData), literalNode))
 
 	return result
 }
@@ -269,7 +272,7 @@ func classDefinitionProcessor(classDefNode *sitter.Node, treeData []byte, curren
 
 	classNameNode := classDefNode.ChildByFieldName("name")
 	if classNameNode == nil {
-		log.Errorf("Class definition without name - %s", classDefNode.Content(treeData))
+		log.Debugf("Class definition without name - %s", classDefNode.Content(treeData))
 		return newProcessorResult()
 	}
 
@@ -289,7 +292,7 @@ func classDefinitionProcessor(classDefNode *sitter.Node, treeData []byte, curren
 
 	classBody := classDefNode.ChildByFieldName("body")
 	if classBody == nil {
-		log.Errorf("Class definition without body - %s", classDefNode.Content(treeData))
+		log.Debugf("Class definition without body - %s", classDefNode.Content(treeData))
 		return newProcessorResult()
 	}
 
@@ -309,13 +312,7 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 
 	functionNameNode := functionDefNode.ChildByFieldName("name")
 	if functionNameNode == nil {
-		log.Errorf("Function definition without name - %s", functionDefNode.Content(treeData))
-		return newProcessorResult()
-	}
-
-	treeLanguage, err := callGraph.Tree.Language()
-	if err != nil {
-		log.Errorf("Error resolving tree language - %v", err)
+		log.Debugf("Function definition without name - %s", functionDefNode.Content(treeData))
 		return newProcessorResult()
 	}
 
@@ -324,7 +321,7 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 	functionNamespace := currentNamespace + namespaceSeparator + funcName
 
 	// Java - Register direct call from root namespace to main function
-	if treeLanguage.Meta().Code == core.LanguageCodeJava && funcName == "main" {
+	if callGraph.languageCode == core.LanguageCodeJava && funcName == "main" {
 		rootNamespace := resolveRootNamespaceQualifier(currentNamespace)
 		callGraph.addEdge(
 			rootNamespace, nil, nil,
@@ -352,7 +349,7 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 			}
 
 			// Python - Register direct call from current namespace to class constructor
-			if treeLanguage.Meta().Code == core.LanguageCodePython && funcName == "__init__" {
+			if callGraph.languageCode == core.LanguageCodePython && funcName == "__init__" {
 				callGraph.addEdge(
 					currentNamespace, nil, nil,
 					functionNamespace, functionDefNode,
@@ -397,13 +394,13 @@ func assignmentProcessor(node *sitter.Node, treeData []byte, currentNamespace st
 
 	leftNode := node.ChildByFieldName("left")
 	if leftNode == nil {
-		log.Errorf("Assignment without left node - %s", node.Content(treeData))
+		log.Debugf("Assignment without left node - %s", node.Content(treeData))
 		return newProcessorResult()
 	}
 
 	rightNode := node.ChildByFieldName("right")
 	if rightNode == nil {
-		log.Errorf("Assignment without right node - %s", node.Content(treeData))
+		log.Debugf("Assignment without right node - %s", node.Content(treeData))
 		return newProcessorResult()
 	}
 
@@ -420,12 +417,11 @@ func assignmentProcessor(node *sitter.Node, treeData []byte, currentNamespace st
 
 	// Create new fallback assignment node for leftNode if not found
 	if len(assigneeNodes) == 0 {
-		assigneeNodes = []*assignmentNode{
-			callGraph.assignmentGraph.addNode(
-				currentNamespace+namespaceSeparator+leftNode.Content(treeData),
-				leftNode,
-			),
+		fallback := callGraph.assignmentGraph.addNode(currentNamespace+namespaceSeparator+leftNode.Content(treeData), leftNode)
+		if fallback == nil {
+			return newProcessorResult()
 		}
+		assigneeNodes = []*assignmentNode{fallback}
 	}
 
 	result := processNode(rightNode, treeData, currentNamespace, callGraph, metadata)
@@ -433,7 +429,7 @@ func assignmentProcessor(node *sitter.Node, treeData []byte, currentNamespace st
 	// Assign/Call edge from all resolutions of left part => all resolutions of right part
 	for _, assigneeNode := range assigneeNodes {
 		for _, immediateCall := range result.ImmediateCallRefs {
-			callGraph.addEdge(assigneeNode.Namespace, assigneeNode.TreeNode, immediateCall.CallerIdentifier, immediateCall.CalleeNamespace, immediateCall.CalleeTreeNode, immediateCall.Arguments)
+			callGraph.addCall(assigneeNode.Namespace, assigneeNode.TreeNode, immediateCall)
 		}
 
 		for _, immediateAssignment := range result.ImmediateAssignments {
@@ -488,7 +484,7 @@ func attributeProcessor(attributeNode *sitter.Node, treeData []byte, currentName
 
 	targetObject, objectResolved := searchSymbolInScopeChain(objectSymbol, currentNamespace, callGraph)
 	if !objectResolved {
-		log.Errorf("Object not found in namespace for attribute - %s (Obj - %s, Attr - %s)", attributeNode.Content(treeData), objectSymbol, attributeQualifierNamespace)
+		log.Debugf("Object not found in namespace for attribute - %s (Obj - %s, Attr - %s)", attributeNode.Content(treeData), objectSymbol, attributeQualifierNamespace)
 		return newProcessorResult()
 	}
 
@@ -501,11 +497,7 @@ func attributeProcessor(attributeNode *sitter.Node, treeData []byte, currentName
 	result := newProcessorResult()
 	for _, resolvedObject := range resolvedObjects {
 		finalAttributeNamespace := resolvedObject.Namespace + namespaceSeparator + attributeQualifierNamespace
-		finalAttributeNode := callGraph.assignmentGraph.addNode(
-			finalAttributeNamespace,
-			attributeNode,
-		)
-		result.ImmediateAssignments = append(result.ImmediateAssignments, finalAttributeNode)
+		result.addAssignments(callGraph.assignmentGraph.addNode(finalAttributeNamespace, attributeNode))
 	}
 
 	return result
@@ -518,12 +510,12 @@ func binaryOperatorProcessor(node *sitter.Node, treeData []byte, currentNamespac
 
 	leftNode := node.ChildByFieldName("left")
 	if leftNode == nil {
-		log.Errorf("Binary operator without left node - %s", node.Content(treeData))
+		log.Debugf("Binary operator without left node - %s", node.Content(treeData))
 		return newProcessorResult()
 	}
 	rightNode := node.ChildByFieldName("right")
 	if rightNode == nil {
-		log.Errorf("Binary operator without right node - %s", node.Content(treeData))
+		log.Debugf("Binary operator without right node - %s", node.Content(treeData))
 		return newProcessorResult()
 	}
 
@@ -551,12 +543,7 @@ func identifierProcessor(identifierNode *sitter.Node, treeData []byte, currentNa
 	}
 
 	// If not found by search, we can assume it is a new identifier
-	identifierAssignmentNode = callGraph.assignmentGraph.addNode(
-		currentNamespace+namespaceSeparator+identifierNode.Content(treeData),
-		identifierNode,
-	)
-
-	result.ImmediateAssignments = append(result.ImmediateAssignments, identifierAssignmentNode)
+	result.addAssignments(callGraph.assignmentGraph.addNode(currentNamespace+namespaceSeparator+identifierNode.Content(treeData), identifierNode))
 
 	return result
 }
@@ -586,7 +573,7 @@ func resolveCallArguments(argumentsListNode *sitter.Node, treeData []byte, curre
 	}
 
 	if argumentsListNode.Type() != "argument_list" && argumentsListNode.Type() != "arguments" {
-		log.Errorf("Expected argument_list or arguments node, got %s for %s", argumentsListNode.Type(), argumentsListNode.Content(treeData))
+		log.Debugf("Expected argument_list or arguments node, got %s for %s", argumentsListNode.Type(), argumentsListNode.Content(treeData))
 		return []CallArgument{}
 	}
 
@@ -604,11 +591,7 @@ func resolveCallArguments(argumentsListNode *sitter.Node, treeData []byte, curre
 		// eg. if we're processing args for "foo(a, b, bar(x))" in main function
 		// this will register call from "main" to "bar"
 		for _, callRef := range childProcessorResult.ImmediateCallRefs {
-			callGraph.addEdge(
-				currentNamespace, nil, callRef.CallerIdentifier,
-				callRef.CalleeNamespace, callRef.CalleeTreeNode,
-				callRef.Arguments,
-			)
+			callGraph.addCall(currentNamespace, nil, callRef)
 		}
 
 		resolvedTerminalAssignmentNodes := []*assignmentNode{}
@@ -646,21 +629,41 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 		callArguments = resolveCallArguments(argumentsNode, treeData, currentNamespace, callGraph, metadata)
 	}
 
+	addEdge := func(callee string, calleeTreeNode *sitter.Node) {
+		callGraph.addEdge(currentNamespace, nil, functionCallNode, callee, calleeTreeNode, callArguments)
+		if callGraph.isPythonDynamicImport(callee) && !staticString(firstArgument(argumentsNode)) {
+			callGraph.addUnresolved(currentNamespace, functionCallNode.Parent(), treeData, UnresolvedDynamicImport)
+		}
+	}
+
 	functionAssignmentNode, functionResolvedBySearch := searchSymbolInScopeChain(functionName, currentNamespace, callGraph)
 	if functionResolvedBySearch {
 		log.Debugf("Call %s searched (direct) & resolved to %s\n", functionName, functionAssignmentNode.Namespace)
-		callGraph.addEdge(
-			currentNamespace, nil, functionCallNode,
-			functionAssignmentNode.Namespace, functionAssignmentNode.TreeNode,
-			callArguments,
-		) // Assumption - current namespace exists in the graph
+		addEdge(functionAssignmentNode.Namespace, functionAssignmentNode.TreeNode)
 		markClassAssignment(functionAssignmentNode)
 		return result
 	}
 
-	// @TODO - Handle class qualified builtins eg. console.log, console.warn etc
-	// @TODO - Handle function calls with multiple qualifiers eg. abc.xyz.attr()
-	// Resolve qualified function calls, eg. xyz.attr()
+	switch functionCallNode.Type() {
+	case "identifier":
+		callGraph.addCall(currentNamespace, nil, CallReference{
+			CalleeNamespace:  functionName,
+			CallerIdentifier: functionCallNode,
+			Arguments:        callArguments,
+			Unbound:          true,
+		})
+		return result
+	case "subscript":
+		callGraph.addUnresolved(currentNamespace, functionCallNode, treeData, UnresolvedComputedName)
+		return result
+	case "call":
+		// The inner call is a call of its own, as getattr in getattr(o, n)()
+		processNode(functionCallNode, treeData, currentNamespace, callGraph, metadata)
+		if inner := functionCallNode.ChildByFieldName("function"); inner != nil && inner.Content(treeData) == "getattr" {
+			callGraph.addUnresolved(currentNamespace, functionCallNode, treeData, UnresolvedComputedName)
+		}
+		return result
+	}
 
 	// Process attributes
 	functionObjectNode := functionCallNode.ChildByFieldName("object")
@@ -669,14 +672,11 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 	// A chained call, as in PasswordHasher().hash() or
 	// OpenAI().chat.completions.create(), calls the inner function too, and
 	// the inner function is the base of the name
-	if root := chainRoot(functionObjectNode, "attribute", "object"); functionAttributeNode != nil && root != nil && root.Type() == "call" {
+	root := chainRoot(functionObjectNode, "attribute", "object")
+	if functionAttributeNode != nil && root != nil && root.Type() == "call" {
 		processNode(root, treeData, currentNamespace, callGraph, metadata)
 		if callee, ok := pythonCalleeOf(functionCallNode, treeData, currentNamespace, callGraph, metadata, 0); ok {
-			callGraph.addEdge(
-				currentNamespace, nil, functionCallNode,
-				callee, nil,
-				callArguments,
-			)
+			addEdge(callee, nil)
 		}
 		return result
 	}
@@ -686,7 +686,9 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 
 		objectSymbol, attributeQualifierNamespace, err := dissectAttributeQualifier(functionObjectNode, treeData, currentNamespace, callGraph, metadata)
 		if err != nil {
-			// log.Debugf("Error resolving function attribute - %v", err)
+			if root != nil && root.Type() == "subscript" {
+				callGraph.addUnresolved(currentNamespace, functionCallNode, treeData, UnresolvedComputedName)
+			}
 			return newProcessorResult()
 		}
 
@@ -696,47 +698,53 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 		}
 
 		objectAssignmentNode, functionResolvedByObjectQualifiedSearch := searchSymbolInScopeChain(objectSymbol, currentNamespace, callGraph)
-
-		if functionResolvedByObjectQualifiedSearch {
-			resolvedObjectNodes := callGraph.assignmentGraph.resolve(objectAssignmentNode.Namespace)
-			for _, resolvedObjectNode := range resolvedObjectNodes {
-				functionNamespace := resolvedObjectNode.Namespace + namespaceSeparator + finalAttributeNamespace
-
-				// log.Debugf("Call %s searched (attr qualified) & resolved to %s\n", functionName, functionNamespace)
-				callGraph.addEdge(
-					currentNamespace, nil, functionCallNode,
-					functionNamespace, nil, // actual function definition node can't be resolved here
-					callArguments,
-				) // @TODO - Assumed current namespace & functionNamespace to be pre-existing
-
-				markClassAssignment(callGraph.assignmentGraph.Assignments[functionNamespace])
-			}
-
+		if !functionResolvedByObjectQualifiedSearch {
+			callGraph.addUnresolved(currentNamespace, functionCallNode, treeData, UnresolvedUnknownReceiver)
 			return result
+		}
+
+		for _, resolvedObjectNode := range callGraph.receiverTargets(objectAssignmentNode.Namespace, currentNamespace, functionCallNode) {
+			functionNamespace := resolvedObjectNode.Namespace + namespaceSeparator + finalAttributeNamespace
+
+			// The definition of the function is out of reach here
+			addEdge(functionNamespace, nil)
+
+			markClassAssignment(callGraph.assignmentGraph.Assignments[functionNamespace])
 		}
 	}
 
-	// @TODO - Rethink on this
-	// if not found, possibility of hoisting (declared later)
+	return result
+}
 
-	// @TODO - In order to handle function assignment to a variable, modify below code to search assignment graph also for scoped namespaces
+// pythonDynamicImports are the functions that import a module by a name
+// that the call computes.
+var pythonDynamicImports = map[string]bool{
+	"importlib//import_module": true,
+	"__import__":               true,
+}
 
-	// @TODO - Handle argument assignment
-	// eg. for def add(a, b)
-	// if used as, add(x,y), we must assign add//a => x, add//b => y
-	// argumentNode := node.ChildByFieldName("arguments")
-
-	// Builtin assignment already available
-	// @TODO - Handle class qualified builtins eg. console.log, console.warn etc
-
-	// log.Debug("Couldn't process function call - %s", functionName)
-	return newProcessorResult()
+// isPythonDynamicImport reports that namespace, or a value of it, is a
+// function that imports a module by name.
+func (cg *CallGraph) isPythonDynamicImport(namespace string) bool {
+	if cg.languageCode != core.LanguageCodePython {
+		return false
+	}
+	if pythonDynamicImports[namespace] {
+		return true
+	}
+	return slices.ContainsFunc(cg.assignmentGraph.resolve(namespace), func(target *assignmentNode) bool {
+		return pythonDynamicImports[target.Namespace]
+	})
 }
 
 // pythonCalleeOf returns the namespace of the function of a Python call,
 // through the scope chain and the assignment graph. It adds no edge.
 func pythonCalleeOf(function *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata, depth int) (string, bool) {
-	if function == nil || depth > maxAttributeDepth {
+	if function == nil {
+		return "", false
+	}
+	if depth > maxAttributeDepth {
+		callGraph.depthLimit(TruncationAttributeDepth, currentNamespace, function, treeData)
 		return "", false
 	}
 
@@ -833,10 +841,9 @@ func dissectAttributeQualifierWithDepth(node *sitter.Node, treeData []byte, curr
 		return "", "", fmt.Errorf("fnAttributeResolver - node is nil")
 	}
 
-	// Prevent excessive recursion in deeply nested attributes
 	if depth > maxAttributeDepth {
-		log.Warnf("Maximum attribute depth (%d) exceeded for %s, truncating", maxAttributeDepth, node.Content(treeData))
-		return node.Content(treeData), "", nil
+		callGraph.depthLimit(TruncationAttributeDepth, currentNamespace, node, treeData)
+		return "", "", fmt.Errorf("attribute deeper than %d levels", maxAttributeDepth)
 	}
 
 	if node.Type() == "identifier" {
@@ -881,7 +888,7 @@ func scopedIdentifierProcessor(scopedIdentifierNode *sitter.Node, treeData []byt
 
 	targetObjectIdentifier, objectQualifierNamespace, err := disectScopedIdentifierQualifier(scopedIdentifierNode, treeData, currentNamespace, callGraph)
 	if err != nil {
-		log.Errorf("error resolving scoped identifier %s - %v", scopedIdentifierNode.Content(treeData), err)
+		log.Debugf("error resolving scoped identifier %s - %v", scopedIdentifierNode.Content(treeData), err)
 	}
 
 	targetObject, objectResolved := searchSymbolInScopeChain(targetObjectIdentifier, currentNamespace, callGraph)
@@ -891,11 +898,7 @@ func scopedIdentifierProcessor(scopedIdentifierNode *sitter.Node, treeData []byt
 		result := newProcessorResult()
 		for _, resolvedObject := range resolvedObjects {
 			finalIdentifierNamespace := resolvedObject.Namespace + namespaceSeparator + objectQualifierNamespace
-			finalAttributeNode := callGraph.assignmentGraph.addNode(
-				finalIdentifierNamespace,
-				scopedIdentifierNode,
-			)
-			result.ImmediateAssignments = append(result.ImmediateAssignments, finalAttributeNode)
+			result.addAssignments(callGraph.assignmentGraph.addNode(finalIdentifierNamespace, scopedIdentifierNode))
 		}
 		return result
 	}
@@ -903,14 +906,10 @@ func scopedIdentifierProcessor(scopedIdentifierNode *sitter.Node, treeData []byt
 	// Consider this as fully qualified usage of a type without importing it
 	// eg. directly using - "java.awt.event.MouseEvent"
 	importNamespace := targetObjectIdentifier + namespaceSeparator + objectQualifierNamespace
-	callGraph.assignmentGraph.addNode(
-		importNamespace,
-		scopedIdentifierNode,
-	)
 	log.Debugf("Scoped identifier %s - fallback to fully qualified import - %s", scopedIdentifierNode.Content(treeData), importNamespace)
 
 	result := newProcessorResult()
-	result.ImmediateAssignments = append(result.ImmediateAssignments, callGraph.assignmentGraph.Assignments[importNamespace])
+	result.addAssignments(callGraph.assignmentGraph.addNode(importNamespace, scopedIdentifierNode))
 
 	return result
 }
@@ -1086,7 +1085,7 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 
 	methodNameNode := methodInvocationNode.ChildByFieldName("name")
 	if methodNameNode == nil {
-		log.Errorf("Method invocation without name - %s", methodInvocationNode.Content(treeData))
+		log.Debugf("Method invocation without name - %s", methodInvocationNode.Content(treeData))
 		return newProcessorResult()
 	}
 
@@ -1248,12 +1247,7 @@ func resolveQualifierObjectFieldaccess(invokedObjNode *sitter.Node, treeData []b
 // Wrapper functions to check language before processing language-specific nodes
 
 func callExpressionProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	treeLanguage, err := callGraph.Tree.Language()
-	if err != nil {
-		return newProcessorResult()
-	}
-
-	switch treeLanguage.Meta().Code {
+	switch callGraph.languageCode {
 	case core.LanguageCodeGo:
 		return goCallExpressionProcessor(node, treeData, currentNamespace, callGraph, metadata)
 	case core.LanguageCodeJavascript, core.LanguageCodeTypescript:
@@ -1264,12 +1258,7 @@ func callExpressionProcessorWrapper(node *sitter.Node, treeData []byte, currentN
 }
 
 func functionDeclarationProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	treeLanguage, err := callGraph.Tree.Language()
-	if err != nil {
-		return newProcessorResult()
-	}
-
-	switch treeLanguage.Meta().Code {
+	switch callGraph.languageCode {
 	case core.LanguageCodeGo:
 		return goFunctionDeclarationProcessor(node, treeData, currentNamespace, callGraph, metadata)
 	case core.LanguageCodeJavascript, core.LanguageCodeTypescript:
@@ -1281,12 +1270,7 @@ func functionDeclarationProcessorWrapper(node *sitter.Node, treeData []byte, cur
 }
 
 func goMethodDeclarationProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	treeLanguage, err := callGraph.Tree.Language()
-	if err != nil {
-		return newProcessorResult()
-	}
-
-	if treeLanguage.Meta().Code == core.LanguageCodeGo {
+	if callGraph.languageCode == core.LanguageCodeGo {
 		return goMethodDeclarationProcessor(node, treeData, currentNamespace, callGraph, metadata)
 	}
 
@@ -1325,36 +1309,30 @@ func goCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 		processNode(root, treeData, currentNamespace, callGraph, metadata)
 	}
 
-	// Resolve function name based on node type
-	var qualifiedName string
-	var resolved bool
+	var callees []string
+	unbound := false
 
 	switch functionNode.Type() {
 	case "selector_expression":
 		// Package-qualified or method call: pkg.Func or obj.Method
-		qualifiedName, resolved = resolveGoSelectorExpression(functionNode, treeData, currentNamespace, callGraph)
+		callees = resolveGoSelectorExpression(functionNode, treeData, currentNamespace, callGraph)
 	case "identifier":
-		// Simple function call: func()
-		funcName := functionNode.Content(treeData)
-		qualifiedName, resolved = resolveGoIdentifier(funcName, currentNamespace, callGraph)
+		callee, bound := resolveGoIdentifier(functionNode.Content(treeData), currentNamespace, callGraph)
+		callees, unbound = []string{callee}, !bound
 	default:
 		// Other types (e.g., function literals, etc.) - try as identifier
-		qualifiedName = functionNode.Content(treeData)
-		resolved = true
+		callees = []string{functionNode.Content(treeData)}
 	}
 
-	if !resolved {
-		return result
+	for _, callee := range callees {
+		callGraph.addCall(currentNamespace, nil, CallReference{
+			CalleeNamespace:  callee,
+			CallerIdentifier: functionNode,
+			Arguments:        callArguments,
+			Unbound:          unbound,
+		})
+		log.Debugf("Go call: %s -> %s", currentNamespace, callee)
 	}
-
-	// Add edge to call graph
-	callGraph.addEdge(
-		currentNamespace, nil, functionNode,
-		qualifiedName, nil,
-		callArguments,
-	)
-
-	log.Debugf("Go call: %s -> %s", currentNamespace, qualifiedName)
 
 	return result
 }
@@ -1366,7 +1344,7 @@ func resolveGoCallArguments(argumentsNode *sitter.Node, treeData []byte, current
 	}
 
 	if argumentsNode.Type() != "argument_list" {
-		log.Errorf("Expected argument_list node, got %s for %s", argumentsNode.Type(), argumentsNode.Content(treeData))
+		log.Debugf("Expected argument_list node, got %s for %s", argumentsNode.Type(), argumentsNode.Content(treeData))
 		return []CallArgument{}
 	}
 
@@ -1382,11 +1360,7 @@ func resolveGoCallArguments(argumentsNode *sitter.Node, treeData []byte, current
 
 		// Register ImmediateCallRefs from arguments
 		for _, callRef := range childProcessorResult.ImmediateCallRefs {
-			callGraph.addEdge(
-				currentNamespace, nil, callRef.CallerIdentifier,
-				callRef.CalleeNamespace, callRef.CalleeTreeNode,
-				callRef.Arguments,
-			)
+			callGraph.addCall(currentNamespace, nil, callRef)
 		}
 
 		resolvedTerminalAssignmentNodes := []*assignmentNode{}
@@ -1403,11 +1377,12 @@ func resolveGoCallArguments(argumentsNode *sitter.Node, treeData []byte, current
 	return result
 }
 
-// resolveGoSelectorExpression resolves Go selector expressions like pkg.Func or obj.Method
-// Returns the qualified name and whether it was resolved
-func resolveGoSelectorExpression(selectorNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph) (string, bool) {
+// resolveGoSelectorExpression resolves Go selector expressions like pkg.Func
+// or obj.Method. A variable with more than one value gives one name for
+// each value.
+func resolveGoSelectorExpression(selectorNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph) []string {
 	if selectorNode == nil || selectorNode.Type() != "selector_expression" {
-		return "", false
+		return nil
 	}
 
 	// Get operand (left side) and field (right side)
@@ -1415,7 +1390,7 @@ func resolveGoSelectorExpression(selectorNode *sitter.Node, treeData []byte, cur
 	fieldNode := selectorNode.ChildByFieldName("field")
 
 	if operandNode == nil || fieldNode == nil {
-		return "", false
+		return nil
 	}
 
 	operandName := operandNode.Content(treeData)
@@ -1425,73 +1400,53 @@ func resolveGoSelectorExpression(selectorNode *sitter.Node, treeData []byte, cur
 	// ecdh.X25519().GenerateKey or client.Chat.Completions.New
 	switch operandNode.Type() {
 	case "call_expression":
-		if base, ok := goCalleeOf(operandNode, treeData, currentNamespace, callGraph); ok {
-			return base + namespaceSeparator + fieldName, true
+		if bases := goCalleeOf(operandNode, treeData, currentNamespace, callGraph); len(bases) > 0 {
+			return qualify(bases, fieldName)
 		}
 	case "selector_expression":
-		if base, ok := resolveGoSelectorExpression(operandNode, treeData, currentNamespace, callGraph); ok {
-			return base + namespaceSeparator + fieldName, true
+		if bases := resolveGoSelectorExpression(operandNode, treeData, currentNamespace, callGraph); len(bases) > 0 {
+			return qualify(bases, fieldName)
 		}
 	}
 
-	// Check if operand is a package import
-	// Look up in assignment graph for imported packages
-	operandAssignment, operandResolved := searchSymbolInScopeChain(operandName, currentNamespace, callGraph)
-
-	if operandResolved {
-		// Could be an imported package or a variable
-		resolvedObjects := callGraph.assignmentGraph.resolve(operandAssignment.Namespace)
-
-		// If it resolves to a single namespace without further qualification, it's likely a package
-		// Build qualified name from resolved object (use first object if multiple)
-		if len(resolvedObjects) > 0 {
-			// For packages, the namespace is the package name, field is the function
-			qualifiedName := resolvedObjects[0].Namespace + namespaceSeparator + fieldName
-			log.Debugf("Resolved Go selector (assigned): %s.%s -> %s", operandName, fieldName, qualifiedName)
-			return qualifiedName, true
+	// An imported package or a variable
+	if operandAssignment, operandResolved := searchSymbolInScopeChain(operandName, currentNamespace, callGraph); operandResolved {
+		if targets := callGraph.receiverTargets(operandAssignment.Namespace, currentNamespace, selectorNode); len(targets) > 0 {
+			return qualify(namespacesOf(targets), fieldName)
 		}
 	}
 
-	// Fallback: construct qualified name directly
-	// This handles cases where the package is not explicitly in scope chain
-	// e.g., standard library packages
-	qualifiedName := operandName + namespaceSeparator + fieldName
-	log.Debugf("Resolved Go selector (direct): %s.%s -> %s", operandName, fieldName, qualifiedName)
-
-	return qualifiedName, true
+	// The scope chain does not know the operand, as a parameter or a local
+	// variable. The name keeps the operand as written.
+	callGraph.addUnresolved(currentNamespace, selectorNode, treeData, UnresolvedUnknownReceiver)
+	return []string{operandName + namespaceSeparator + fieldName}
 }
 
-// goCalleeOf returns the namespace of the function of a Go call. It adds no
+// goCalleeOf returns the namespaces of the function of a Go call. It adds no
 // edge.
-func goCalleeOf(callNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph) (string, bool) {
+func goCalleeOf(callNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph) []string {
 	function := callNode.ChildByFieldName("function")
 	if function == nil {
-		return "", false
+		return nil
 	}
 	switch function.Type() {
 	case "selector_expression":
 		return resolveGoSelectorExpression(function, treeData, currentNamespace, callGraph)
 	case "identifier":
-		return resolveGoIdentifier(function.Content(treeData), currentNamespace, callGraph)
+		callee, _ := resolveGoIdentifier(function.Content(treeData), currentNamespace, callGraph)
+		return []string{callee}
 	}
-	return "", false
+	return nil
 }
 
-// resolveGoIdentifier resolves unqualified Go identifiers
-// Returns the qualified name and whether it was resolved
+// resolveGoIdentifier resolves an unqualified Go identifier. It reports
+// false for a name that the scope chain does not bind, and returns the name
+// in the current namespace.
 func resolveGoIdentifier(identifier string, currentNamespace string, callGraph *CallGraph) (string, bool) {
-	// Try to find in scope chain
-	assignmentNode, found := searchSymbolInScopeChain(identifier, currentNamespace, callGraph)
-
-	if found {
+	if assignmentNode, found := searchSymbolInScopeChain(identifier, currentNamespace, callGraph); found {
 		return assignmentNode.Namespace, true
 	}
-
-	// If not found in scope chain, it might be a builtin or unqualified call
-	// Construct namespace-qualified name
-	qualifiedName := currentNamespace + namespaceSeparator + identifier
-
-	return qualifiedName, true
+	return currentNamespace + namespaceSeparator + identifier, false
 }
 
 // goFunctionDeclarationProcessor handles Go function and method declarations
@@ -1502,7 +1457,7 @@ func goFunctionDeclarationProcessor(funcDefNode *sitter.Node, treeData []byte, c
 
 	functionNameNode := funcDefNode.ChildByFieldName("name")
 	if functionNameNode == nil {
-		log.Errorf("Go function declaration without name - %s", funcDefNode.Content(treeData))
+		log.Debugf("Go function declaration without name - %s", funcDefNode.Content(treeData))
 		return newProcessorResult()
 	}
 
@@ -1546,7 +1501,7 @@ func goMethodDeclarationProcessor(methodDefNode *sitter.Node, treeData []byte, c
 
 	methodNameNode := methodDefNode.ChildByFieldName("name")
 	if methodNameNode == nil {
-		log.Errorf("Go method declaration without name - %s", methodDefNode.Content(treeData))
+		log.Debugf("Go method declaration without name - %s", methodDefNode.Content(treeData))
 		return newProcessorResult()
 	}
 
@@ -1656,7 +1611,7 @@ func jsFunctionDeclarationProcessor(funcDefNode *sitter.Node, treeData []byte, c
 
 	functionNameNode := funcDefNode.ChildByFieldName("name")
 	if functionNameNode == nil {
-		log.Errorf("JS function declaration without name - %s", funcDefNode.Content(treeData))
+		log.Debugf("JS function declaration without name - %s", funcDefNode.Content(treeData))
 		return newProcessorResult()
 	}
 
@@ -1716,38 +1671,41 @@ func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 		}
 	}
 
-	// Resolve function name based on node type
-	var qualifiedName string
-	var resolved bool
+	var callees []string
+	unbound := false
 
 	switch functionNode.Type() {
 	case "member_expression":
 		// Method call: obj.method() or pkg.func()
-		qualifiedName, resolved = resolveJSMemberExpression(functionNode, treeData, currentNamespace, callGraph)
+		callees = resolveJSMemberExpression(functionNode, treeData, currentNamespace, callGraph)
 	case "identifier":
-		// Simple function call: func()
-		funcName := functionNode.Content(treeData)
-		qualifiedName, resolved = resolveJSIdentifier(funcName, currentNamespace, callGraph)
+		callee, bound := resolveJSIdentifier(functionNode.Content(treeData), currentNamespace, callGraph)
+		callees, unbound = []string{callee}, !bound
+		if !bound && functionNode.Content(treeData) == "require" && !staticString(firstArgument(argumentsNode)) {
+			callGraph.addUnresolved(currentNamespace, callNode, treeData, UnresolvedDynamicImport)
+		}
 	case "import":
-		qualifiedName, resolved = jsDynamicImport(argumentsNode, treeData)
+		if module, ok := jsDynamicImport(argumentsNode, treeData); ok {
+			callees = []string{module}
+		} else {
+			callGraph.addUnresolved(currentNamespace, callNode, treeData, UnresolvedDynamicImport)
+		}
+	case "subscript_expression":
+		callGraph.addUnresolved(currentNamespace, functionNode, treeData, UnresolvedComputedName)
 	default:
 		// Other types (e.g., function expressions) - try as identifier
-		qualifiedName = functionNode.Content(treeData)
-		resolved = true
+		callees = []string{functionNode.Content(treeData)}
 	}
 
-	if !resolved {
-		return result
+	for _, callee := range callees {
+		callGraph.addCall(currentNamespace, nil, CallReference{
+			CalleeNamespace:  callee,
+			CallerIdentifier: functionNode,
+			Arguments:        callArguments,
+			Unbound:          unbound,
+		})
+		log.Debugf("JS call: %s -> %s", currentNamespace, callee)
 	}
-
-	// Add edge to call graph
-	callGraph.addEdge(
-		currentNamespace, nil, functionNode,
-		qualifiedName, nil,
-		callArguments,
-	)
-
-	log.Debugf("JS call: %s -> %s", currentNamespace, qualifiedName)
 
 	return result
 }
@@ -1757,11 +1715,8 @@ func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 // The import loads the module, but the names it binds are often out of
 // reach, as in import("x").then(({ pipeline }) => pipeline()).
 func jsDynamicImport(argumentsNode *sitter.Node, treeData []byte) (string, bool) {
-	if argumentsNode == nil || argumentsNode.NamedChildCount() == 0 {
-		return "", false
-	}
-	module := argumentsNode.NamedChild(0)
-	if module.Type() != "string" {
+	module := firstArgument(argumentsNode)
+	if !staticString(module) {
 		return "", false
 	}
 	name := strings.Trim(module.Content(treeData), "'\"`")
@@ -1771,23 +1726,22 @@ func jsDynamicImport(argumentsNode *sitter.Node, treeData []byte) (string, bool)
 	return strings.Join(splitQualifiedName(name, core.LanguageCodeJavascript), namespaceSeparator) + namespaceSeparator + "*", true
 }
 
-// resolveJSMemberExpression resolves JavaScript member expressions like obj.method or pkg.func
-// Returns the qualified name and whether it was resolved
-func resolveJSMemberExpression(memberNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph) (string, bool) {
+// resolveJSMemberExpression resolves JavaScript member expressions like
+// obj.method or pkg.func. A variable with more than one value gives one name
+// for each value. It returns nil for a member that it cannot resolve, and
+// records why.
+func resolveJSMemberExpression(memberNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph) []string {
 	return resolveJSMemberExpressionWithDepth(memberNode, treeData, currentNamespace, callGraph, 0)
 }
 
-// resolveJSMemberExpressionWithDepth is the internal implementation with depth tracking
-func resolveJSMemberExpressionWithDepth(memberNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, depth int) (string, bool) {
+func resolveJSMemberExpressionWithDepth(memberNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, depth int) []string {
 	if memberNode == nil || memberNode.Type() != "member_expression" {
-		return "", false
+		return nil
 	}
 
-	// Prevent excessive recursion in deeply nested member expressions
 	if depth > maxMemberExpressionDepth {
-		log.Warnf("Maximum member expression depth (%d) exceeded for %s, using direct resolution", maxMemberExpressionDepth, memberNode.Content(treeData))
-		// Fallback: use the entire expression as-is
-		return memberNode.Content(treeData), true
+		callGraph.depthLimit(TruncationMemberDepth, currentNamespace, memberNode, treeData)
+		return nil
 	}
 
 	// Get object (left side) and property (right side)
@@ -1795,51 +1749,34 @@ func resolveJSMemberExpressionWithDepth(memberNode *sitter.Node, treeData []byte
 	propertyNode := memberNode.ChildByFieldName("property")
 
 	if objectNode == nil || propertyNode == nil {
-		return "", false
+		return nil
 	}
+
+	propertyName := propertyNode.Content(treeData)
 
 	// The value of a call or of an object creation is the base of the
 	// member, as in crypto.createHash('md5').digest or new OpenAI().chat
 	if jsChainable[objectNode.Type()] {
-		if base, ok := jsValueOf(objectNode, treeData, currentNamespace, callGraph, depth+1); ok {
-			return base + namespaceSeparator + propertyNode.Content(treeData), true
-		}
+		return qualify(jsValueOf(objectNode, treeData, currentNamespace, callGraph, depth+1), propertyName)
 	}
 
-	// Handle nested member expressions recursively with depth tracking
 	if objectNode.Type() == "member_expression" {
-		nestedQualified, resolved := resolveJSMemberExpressionWithDepth(objectNode, treeData, currentNamespace, callGraph, depth+1)
-		if resolved {
-			propertyName := propertyNode.Content(treeData)
-			qualifiedName := nestedQualified + namespaceSeparator + propertyName
-			log.Debugf("Resolved nested JS member (depth %d): %s", depth, qualifiedName)
-			return qualifiedName, true
-		}
+		return qualify(resolveJSMemberExpressionWithDepth(objectNode, treeData, currentNamespace, callGraph, depth+1), propertyName)
 	}
 
 	objectName := objectNode.Content(treeData)
-	propertyName := propertyNode.Content(treeData)
 
-	// Check if object is an imported module or variable
-	objectAssignment, objectResolved := searchSymbolInScopeChain(objectName, currentNamespace, callGraph)
-
-	if objectResolved {
-		// Could be an imported module or a variable
-		resolvedObjects := callGraph.assignmentGraph.resolve(objectAssignment.Namespace)
-
-		// Build qualified name from resolved object
-		if len(resolvedObjects) > 0 {
-			qualifiedName := resolvedObjects[0].Namespace + namespaceSeparator + propertyName
-			log.Debugf("Resolved JS member (assigned): %s.%s -> %s", objectName, propertyName, qualifiedName)
-			return qualifiedName, true
+	// An imported module or a variable
+	if objectAssignment, objectResolved := searchSymbolInScopeChain(objectName, currentNamespace, callGraph); objectResolved {
+		if targets := callGraph.receiverTargets(objectAssignment.Namespace, currentNamespace, memberNode); len(targets) > 0 {
+			return qualify(namespacesOf(targets), propertyName)
 		}
 	}
 
-	// Fallback: construct qualified name directly
-	qualifiedName := objectName + namespaceSeparator + propertyName
-	log.Debugf("Resolved JS member (direct): %s.%s -> %s", objectName, propertyName, qualifiedName)
-
-	return qualifiedName, true
+	// The scope chain does not know the object, as a parameter or a global
+	// of the runtime. The name keeps the object as written.
+	callGraph.addUnresolved(currentNamespace, memberNode, treeData, UnresolvedUnknownReceiver)
+	return []string{objectName + namespaceSeparator + propertyName}
 }
 
 // chainRoot follows the object field of a chain of member nodes to the
@@ -1860,11 +1797,13 @@ var jsChainable = map[string]bool{
 	"await_expression": true,
 }
 
-// jsValueOf returns the namespace of the value of a call, an object creation
-// or an await: the called function or the created class. It adds no edge.
-func jsValueOf(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, depth int) (string, bool) {
+// jsValueOf returns the namespaces of the value of a call, an object
+// creation or an await: the called function or the created class. It adds no
+// edge. It returns nil for a value that it cannot resolve, and records why.
+func jsValueOf(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, depth int) []string {
 	if depth > maxMemberExpressionDepth {
-		return "", false
+		callGraph.depthLimit(TruncationMemberDepth, currentNamespace, node, treeData)
+		return nil
 	}
 
 	var target *sitter.Node
@@ -1878,39 +1817,34 @@ func jsValueOf(node *sitter.Node, treeData []byte, currentNamespace string, call
 			return jsValueOf(node.NamedChild(0), treeData, currentNamespace, callGraph, depth+1)
 		}
 	}
-	if target == nil {
-		return "", false
-	}
 
-	switch target.Type() {
-	case "member_expression":
+	switch {
+	case target == nil:
+	case target.Type() == "member_expression":
 		return resolveJSMemberExpressionWithDepth(target, treeData, currentNamespace, callGraph, depth+1)
-	case "identifier":
+	case target.Type() == "identifier":
 		// An imported name resolves to its module, as OpenAI to openai
 		if assignment, found := searchSymbolInScopeChain(target.Content(treeData), currentNamespace, callGraph); found {
-			if targets := callGraph.assignmentGraph.resolve(assignment.Namespace); len(targets) > 0 {
-				return targets[0].Namespace, true
+			if targets := callGraph.receiverTargets(assignment.Namespace, currentNamespace, target); len(targets) > 0 {
+				return namespacesOf(targets)
 			}
 		}
-		return resolveJSIdentifier(target.Content(treeData), currentNamespace, callGraph)
+		callee, _ := resolveJSIdentifier(target.Content(treeData), currentNamespace, callGraph)
+		return []string{callee}
 	}
-	return "", false
+
+	callGraph.addUnresolved(currentNamespace, node, treeData, UnresolvedUnknownReceiver)
+	return nil
 }
 
-// resolveJSIdentifier resolves unqualified JavaScript identifiers
-// Returns the qualified name and whether it was resolved
+// resolveJSIdentifier resolves an unqualified JavaScript identifier. It
+// reports false for a name that the scope chain does not bind, and returns
+// the name in the current namespace.
 func resolveJSIdentifier(identifier string, currentNamespace string, callGraph *CallGraph) (string, bool) {
-	// Try to find in scope chain
-	assignmentNode, found := searchSymbolInScopeChain(identifier, currentNamespace, callGraph)
-
-	if found {
+	if assignmentNode, found := searchSymbolInScopeChain(identifier, currentNamespace, callGraph); found {
 		return assignmentNode.Namespace, true
 	}
-
-	// If not found in scope chain, construct namespace-qualified name
-	qualifiedName := currentNamespace + namespaceSeparator + identifier
-
-	return qualifiedName, true
+	return currentNamespace + namespaceSeparator + identifier, false
 }
 
 // memberExpressionProcessor handles JavaScript member_expression nodes
@@ -1932,27 +1866,14 @@ func memberExpressionProcessor(memberNode *sitter.Node, treeData []byte, current
 
 	targetObject, objectResolved := searchSymbolInScopeChain(objectSymbol, currentNamespace, callGraph)
 	if !objectResolved {
-		log.Errorf("Object not found in namespace for member expression - %s.%s", objectSymbol, propertyName)
+		log.Debugf("Object not found in namespace for member expression - %s.%s", objectSymbol, propertyName)
 		return newProcessorResult()
 	}
 
-	resolvedObjects := callGraph.assignmentGraph.resolve(targetObject.Namespace)
-
-	// Limit polymorphic expansion to prevent combinatorial explosion
-	if len(resolvedObjects) > maxPolymorphicResolutions {
-		log.Warnf("Member expression %s.%s resolved to %d objects (limit: %d), truncating to prevent explosion",
-			objectSymbol, propertyName, len(resolvedObjects), maxPolymorphicResolutions)
-		resolvedObjects = resolvedObjects[:maxPolymorphicResolutions]
-	}
-
 	result := newProcessorResult()
-	for _, resolvedObject := range resolvedObjects {
+	for _, resolvedObject := range callGraph.receiverTargets(targetObject.Namespace, currentNamespace, memberNode) {
 		finalMemberNamespace := resolvedObject.Namespace + namespaceSeparator + propertyName
-		finalMemberNode := callGraph.assignmentGraph.addNode(
-			finalMemberNamespace,
-			memberNode,
-		)
-		result.ImmediateAssignments = append(result.ImmediateAssignments, finalMemberNode)
+		result.addAssignments(callGraph.assignmentGraph.addNode(finalMemberNamespace, memberNode))
 	}
 
 	return result
@@ -2027,7 +1948,7 @@ func methodDefinitionProcessor(methodDefNode *sitter.Node, treeData []byte, curr
 
 	methodNameNode := methodDefNode.ChildByFieldName("name")
 	if methodNameNode == nil {
-		log.Errorf("Method definition without name - %s", methodDefNode.Content(treeData))
+		log.Debugf("Method definition without name - %s", methodDefNode.Content(treeData))
 		return newProcessorResult()
 	}
 
@@ -2103,41 +2024,36 @@ func jsNewExpressionProcessor(newNode *sitter.Node, treeData []byte, currentName
 		callArguments = resolveCallArguments(argumentsNode, treeData, currentNamespace, callGraph, metadata)
 	}
 
-	// Resolve constructor name based on node type (similar to jsCallExpressionProcessor)
-	var constructorNamespace string
-	var resolved bool
+	var constructors []string
+	unbound := false
 
 	switch constructorNode.Type() {
 	case "member_expression":
 		// Constructor like: new sqlite3.Database() or new pkg.ClassName()
-		constructorNamespace, resolved = resolveJSMemberExpression(constructorNode, treeData, currentNamespace, callGraph)
+		constructors = resolveJSMemberExpression(constructorNode, treeData, currentNamespace, callGraph)
 	case "identifier":
 		// Simple constructor: new TestClass()
-		constructorName := constructorNode.Content(treeData)
-		constructorNamespace, resolved = resolveJSIdentifier(constructorName, currentNamespace, callGraph)
+		constructor, bound := resolveJSIdentifier(constructorNode.Content(treeData), currentNamespace, callGraph)
+		constructors, unbound = []string{constructor}, !bound
 	default:
 		// Fallback: use content as-is
-		constructorNamespace = constructorNode.Content(treeData)
-		resolved = true
+		constructors = []string{constructorNode.Content(treeData)}
 	}
 
-	if !resolved {
-		return result
-	}
+	for _, constructor := range constructors {
+		log.Debugf("JS constructor resolved to %s", constructor)
 
-	log.Debugf("JS constructor resolved to %s", constructorNamespace)
+		callGraph.addCall(currentNamespace, nil, CallReference{
+			CalleeNamespace:  constructor,
+			CallerIdentifier: newNode,
+			Arguments:        callArguments,
+			Unbound:          unbound,
+		})
 
-	// Add constructor call edge
-	callGraph.addEdge(
-		currentNamespace, nil, newNode,
-		constructorNamespace, nil,
-		callArguments,
-	)
-
-	// Try to find the class/constructor in the assignment graph for return value tracking
-	classAssignment, classResolved := searchSymbolInScopeChain(constructorNamespace, currentNamespace, callGraph)
-	if classResolved {
-		result.ImmediateAssignments = append(result.ImmediateAssignments, classAssignment)
+		// Try to find the class/constructor in the assignment graph for return value tracking
+		if classAssignment, classResolved := searchSymbolInScopeChain(constructor, currentNamespace, callGraph); classResolved {
+			result.addAssignments(classAssignment)
+		}
 	}
 
 	return result

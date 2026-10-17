@@ -73,8 +73,8 @@ func (p *callgraphPlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) 
 }
 
 // buildCallGraph builds a call graph from the syntax tree. When ctx is done
-// during the walk of the tree, it returns the graph so far, with
-// LimitExceeded set.
+// during the walk of the tree, it returns the graph so far with a deadline
+// truncation.
 func buildCallGraph(ctx context.Context, tree core.ParseTree, lang core.Language, filePath string) (*CallGraph, error) {
 	astRootNode := tree.Tree().RootNode()
 
@@ -130,7 +130,7 @@ func processChildren(node *sitter.Node, treeData []byte, currentNamespace string
 
 	// Check processing depth to prevent stack overflow in deeply nested structures
 	if metadata.processingDepth > maxProcessingDepth {
-		log.Warnf("Maximum processing depth (%d) exceeded at namespace %s, skipping children", maxProcessingDepth, currentNamespace)
+		callGraph.truncate(TruncationDepth, currentNamespace, node)
 		return newProcessorResult()
 	}
 

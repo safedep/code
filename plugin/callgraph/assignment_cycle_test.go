@@ -67,14 +67,14 @@ func TestAssignmentGraphCycleDetection(t *testing.T) {
 				"A": {"B"},
 				"B": {"A"},
 			},
-			resolveKey: "B", // Resolve from different starting point
+			resolveKey: "B",           // Resolve from different starting point
 			wantLeaves: []string{"B"}, // Cycle detected at B when resolving from B
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ag := newAssignmentGraph()
+			ag := newAssignmentGraph(nil)
 
 			// Build the assignment graph
 			for identifier, targets := range tt.assignments {
@@ -118,7 +118,7 @@ func TestAssignmentGraphCycleDetection(t *testing.T) {
 // TestAssignmentGraphInProgressCleanup specifically tests that inProgress map
 // doesn't have dangling entries that could cause issues
 func TestAssignmentGraphInProgressCleanup(t *testing.T) {
-	ag := newAssignmentGraph()
+	ag := newAssignmentGraph(nil)
 
 	// Create a complex cycle scenario
 	// A -> B -> C -> B (cycle)

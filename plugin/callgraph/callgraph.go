@@ -14,8 +14,8 @@ import (
 const namespaceSeparator = "//"
 
 const (
-	// Maximum number of nodes in callgraph before warning
-	// Prevents memory exhaustion in extremely large/complex files
+	// The limits keep the memory of a large or hostile file bounded. A
+	// build past a limit records a Truncation.
 	maxCallGraphNodes       = 50000
 	maxAssignmentGraphNodes = 100000
 	maxDFSResultItems       = 100000
@@ -44,6 +44,11 @@ type CallReference struct {
 
 	// Arguments passed to the function call
 	Arguments []CallArgument
+
+	// Unbound marks a bare callee that the scope chain did not bind, as a
+	// function that the file declares after the call. CalleeNamespace is
+	// then a fallback key.
+	Unbound bool
 }
 
 // CallGraphNode represents a single node in the call graph
@@ -100,8 +105,13 @@ type CallGraph struct {
 	assignmentGraph   assignmentGraph
 	classConstructors map[string]bool
 	languageCode      core.LanguageCode
-	nodeCount         int  // Track total nodes added
-	limitExceeded     bool // Flag to indicate if processing was truncated
+
+	// order holds the nodes in the order of the build, so DFS gives one
+	// result for one file.
+	order          []*CallGraphNode
+	truncations    truncations
+	unresolved     []UnresolvedCall
+	unresolvedSeen map[UnresolvedCall]bool
 
 	// ctx stops processChildren when it is done. buildCallGraph sets it for
 	// the walk of the tree and clears it after, so the graph does not keep
@@ -123,10 +133,11 @@ func newCallGraph(fileName string, rootNode *sitter.Node, imports []*ast.ImportN
 		FileName:          fileName,
 		Nodes:             make(map[string]*CallGraphNode),
 		Tree:              tree,
-		assignmentGraph:   *newAssignmentGraph(),
 		classConstructors: make(map[string]bool),
 		languageCode:      language.Meta().Code,
+		unresolvedSeen:    make(map[UnresolvedCall]bool),
 	}
+	cg.assignmentGraph = *newAssignmentGraph(&cg.truncations)
 
 	// Add root node to the call graph
 	cg.addRootNode(rootNode)
@@ -141,13 +152,11 @@ func newCallGraph(fileName string, rootNode *sitter.Node, imports []*ast.ImportN
 		cg.addEdge(fileName, rootNode, wildcardImport.NamespaceTreeNode, wildcardImport.Namespace, wildcardImport.NamespaceTreeNode, []CallArgument{})
 	}
 
-	for identifier, importedIdentifier := range importedIdentifiers {
+	for _, importedIdentifier := range importedIdentifiers {
 		cg.addNode(importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
 
-		if identifier == importedIdentifier.Namespace {
-			cg.assignmentGraph.addNode(importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
-		} else {
-			cg.assignmentGraph.addAssignment(identifier, importedIdentifier.IdentifierTreeNode, importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
+		if importedIdentifier.Identifier != importedIdentifier.Namespace {
+			cg.assignmentGraph.addAssignment(importedIdentifier.Identifier, importedIdentifier.IdentifierTreeNode, importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
 		}
 	}
 
@@ -178,63 +187,71 @@ func (cg *CallGraph) stopped() bool {
 	if err := cg.ctx.Err(); err != nil {
 		log.Debugf("CallGraph build stopped for file %s: %v", cg.FileName, err)
 		cg.ctxErr = err
-		cg.limitExceeded = true
+		cg.truncate(TruncationDeadline, cg.FileName, nil)
 		return true
 	}
 	return false
 }
 
 func (cg *CallGraph) addRootNode(treeNode *sitter.Node) {
-	cg.addNode(cg.FileName, treeNode)
-	cg.RootNode = cg.Nodes[cg.FileName]
+	cg.RootNode = cg.addNode(cg.FileName, treeNode)
 }
 
-func (cg *CallGraph) ensureNodeInAssignmentGraph(identifier string, treeNode *sitter.Node) {
-	cg.assignmentGraph.addNode(identifier, treeNode)
-}
-
+// addNode adds a node to the call graph and to the assignment graph. Past
+// maxCallGraphNodes it adds no node to the call graph and returns nil.
 func (cg *CallGraph) addNode(identifier string, treeNode *sitter.Node) *CallGraphNode {
-	// Check if we've exceeded node limits
-	if cg.nodeCount >= maxCallGraphNodes && !cg.limitExceeded {
-		log.Warnf("CallGraph node limit (%d) exceeded for file %s, some nodes may be skipped", maxCallGraphNodes, cg.FileName)
-		cg.limitExceeded = true
-	}
+	cg.assignmentGraph.addNode(identifier, treeNode)
+	return cg.addCallGraphNode(identifier, treeNode)
+}
 
-	// Still add to assignment graph for resolution, but skip callgraph if limit exceeded
-	cg.ensureNodeInAssignmentGraph(identifier, treeNode)
-
-	existingCgNode, exists := cg.Nodes[identifier]
-	if !exists {
-		if cg.nodeCount < maxCallGraphNodes {
-			cg.Nodes[identifier] = newCallGraphNode(identifier, treeNode)
-			cg.nodeCount++
-		} else {
-			// Return a stub node to prevent nil pointer errors
-			return &CallGraphNode{
-				Namespace: identifier,
-				CallsTo:   []CallReference{},
-				TreeNode:  treeNode,
-			}
+func (cg *CallGraph) addCallGraphNode(identifier string, treeNode *sitter.Node) *CallGraphNode {
+	if node, exists := cg.Nodes[identifier]; exists {
+		if node.TreeNode == nil {
+			node.TreeNode = treeNode
 		}
-	} else if treeNode != nil && existingCgNode.TreeNode == nil {
-		// If the existing node has no tree node, we can set it now
-		cg.Nodes[identifier].TreeNode = treeNode
+		return node
 	}
 
-	return cg.Nodes[identifier]
+	if len(cg.order) >= maxCallGraphNodes {
+		cg.truncate(TruncationNodes, identifier, treeNode)
+		return nil
+	}
+
+	node := newCallGraphNode(identifier, treeNode)
+	cg.Nodes[identifier] = node
+	cg.order = append(cg.order, node)
+	return node
 }
 
 // addEdge adds an edge from one function to another
-func (cg *CallGraph) addEdge(caller string, callerTreeNode *sitter.Node, CallerIdentifier *sitter.Node, callee string, calleeTreeNode *sitter.Node, arguments []CallArgument) {
-	cg.addNode(caller, callerTreeNode)
-	cg.addNode(callee, calleeTreeNode)
-
-	cg.Nodes[caller].CallsTo = append(cg.Nodes[caller].CallsTo, CallReference{
+func (cg *CallGraph) addEdge(caller string, callerTreeNode *sitter.Node, callerIdentifier *sitter.Node, callee string, calleeTreeNode *sitter.Node, arguments []CallArgument) {
+	cg.addCall(caller, callerTreeNode, CallReference{
 		CalleeNamespace:  callee,
 		CalleeTreeNode:   calleeTreeNode,
-		CallerIdentifier: CallerIdentifier,
+		CallerIdentifier: callerIdentifier,
 		Arguments:        arguments,
 	})
+}
+
+// addCall adds the edge of ref from caller. It adds no edge when the graph
+// has no room for the caller or the callee.
+func (cg *CallGraph) addCall(caller string, callerTreeNode *sitter.Node, ref CallReference) {
+	callerNode := cg.addNode(caller, callerTreeNode)
+
+	// An unbound callee stays out of the assignment graph. Otherwise the
+	// scope chain finds the fallback key, and a second call to the name
+	// looks bound.
+	var calleeNode *CallGraphNode
+	if ref.Unbound {
+		calleeNode = cg.addCallGraphNode(ref.CalleeNamespace, ref.CalleeTreeNode)
+	} else {
+		calleeNode = cg.addNode(ref.CalleeNamespace, ref.CalleeTreeNode)
+	}
+
+	if callerNode == nil || calleeNode == nil {
+		return
+	}
+	callerNode.CallsTo = append(callerNode.CallsTo, ref)
 }
 
 func (cg *CallGraph) PrintCallGraph() error {
@@ -336,27 +353,22 @@ func (cg *CallGraph) DFS() []DfsResultItem {
 	// the file name which has reference for entrypoints (if any)
 	cg.dfsUtil(cg.FileName, cg.RootNode, nil, []CallArgument{}, visited, &dfsResult, 0, &resultCount)
 
-	// Check if we hit the limit during initial traversal
-	if resultCount >= maxDFSResultItems {
-		log.Warnf("DFS result limit (%d) reached for file %s, some paths may be incomplete", maxDFSResultItems, cg.FileName)
-		return dfsResult
-	}
-
 	// Assumption - All functions and class constructors are reachable
 	// This is required because most files only expose their classes/functions
 	// which are imported and used by other files, so an entrypoint may not be
 	// present in every file.
-	for namespace, node := range cg.Nodes {
+	for _, node := range cg.order {
 		if resultCount >= maxDFSResultItems {
-			log.Warnf("DFS result limit (%d) reached for file %s, stopping traversal", maxDFSResultItems, cg.FileName)
 			break
 		}
 
-		if node.TreeNode != nil && dfsSourceNodeTypes[node.TreeNode.Type()] {
-			if !visited[namespace] {
-				cg.dfsUtil(namespace, cg.RootNode, nil, []CallArgument{}, visited, &dfsResult, 0, &resultCount)
-			}
+		if node.TreeNode != nil && dfsSourceNodeTypes[node.TreeNode.Type()] && !visited[node.Namespace] {
+			cg.dfsUtil(node.Namespace, cg.RootNode, nil, []CallArgument{}, visited, &dfsResult, 0, &resultCount)
 		}
+	}
+
+	if resultCount >= maxDFSResultItems {
+		cg.truncate(TruncationDFSResults, cg.FileName, nil)
 	}
 
 	return dfsResult
@@ -431,15 +443,6 @@ func (cg *CallGraph) dfsUtil(namespace string, caller *CallGraphNode, callerIden
 }
 
 func (cg *CallGraph) getInstanceKeyword() (string, bool) {
-	language, err := cg.Tree.Language()
-	if err != nil {
-		log.Errorf("failed to get language from parse tree: %v", err)
-		return "", false
-	}
-	return resolveInstanceKeyword(language)
-}
-
-// LimitExceeded returns true if processing was truncated due to complexity limits
-func (cg *CallGraph) LimitExceeded() bool {
-	return cg.limitExceeded
+	keyword, exists := instanceKeywordMapping[string(cg.languageCode)]
+	return keyword, exists
 }

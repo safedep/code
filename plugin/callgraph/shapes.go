@@ -341,7 +341,7 @@ func (p *shapedProcessors) instanceOf(callee string) string {
 
 func (p *shapedProcessors) valueResult(namespace string, callGraph *CallGraph) processorResult {
 	result := newProcessorResult()
-	result.ImmediateAssignments = append(result.ImmediateAssignments, callGraph.assignmentGraph.addNode(namespace, nil))
+	result.addAssignments(callGraph.assignmentGraph.addNode(namespace, nil))
 	return result
 }
 
