@@ -176,7 +176,7 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 					Site:     site,
 					Text:     call.Callee,
 					Receiver: call.Receiver,
-					Method:   r.fail.name,
+					Method:   cmp.Or(call.Method, r.fail.name),
 					Reason:   r.fail.reason,
 				})
 				continue
@@ -272,6 +272,11 @@ func (b *builder) walk(key string, names []string) resolution {
 		case kind == NodeExternal:
 			r.key = b.external(Join(r.key, names[i:]...))
 			r.rule = cmp.Or(r.rule, "external")
+			return r
+		case kind == NodeFunction || kind == NodeMethod || kind == NodeConstructor:
+			// The name is a local variable or a parameter of the function,
+			// and the index does not know its value.
+			r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
 			return r
 		default:
 			r.fail = noDefinition(name)

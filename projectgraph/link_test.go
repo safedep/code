@@ -272,6 +272,14 @@ func TestBuildPython(t *testing.T) {
 			},
 		},
 		{
+			name: "python/local-receiver",
+			unresolved: []string{
+				"main.py:6 main.py//read unknown-receiver read",
+				"main.py:10 main.py//load_plugin dynamic-import import_module",
+				"main.py:11 main.py//load_plugin unknown-receiver run",
+			},
+		},
+		{
 			name: "python/wildcard",
 			edges: []string{
 				"main.py -> util.py import python.import.absolute",

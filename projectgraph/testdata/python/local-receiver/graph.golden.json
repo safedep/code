@@ -1,0 +1,144 @@
+{
+  "nodes": {
+    "importlib//import_module": {
+      "key": "importlib//import_module",
+      "kind": "external"
+    },
+    "main.py": {
+      "key": "main.py",
+      "kind": "module",
+      "path": "main.py",
+      "line": 1,
+      "exported": true
+    },
+    "main.py//load_plugin": {
+      "key": "main.py//load_plugin",
+      "kind": "function",
+      "path": "main.py",
+      "line": 9,
+      "exported": true,
+      "flags": [
+        {
+          "kind": "computed-import",
+          "line": 10
+        }
+      ]
+    },
+    "main.py//read": {
+      "key": "main.py//read",
+      "kind": "function",
+      "path": "main.py",
+      "line": 4,
+      "exported": true
+    },
+    "open": {
+      "key": "open",
+      "kind": "external"
+    }
+  },
+  "edges": [
+    {
+      "from": "main.py//load_plugin",
+      "to": "importlib//import_module",
+      "site": {
+        "path": "main.py",
+        "line": 10,
+        "column": 14
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.external"
+    },
+    {
+      "from": "main.py//read",
+      "to": "open",
+      "site": {
+        "path": "main.py",
+        "line": 5,
+        "column": 10
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.external"
+    }
+  ],
+  "unresolved": [
+    {
+      "caller": "main.py//read",
+      "site": {
+        "path": "main.py",
+        "line": 6,
+        "column": 16
+      },
+      "text": "f.read",
+      "receiver": "f",
+      "method": "read",
+      "reason": "unknown-receiver"
+    },
+    {
+      "caller": "main.py//load_plugin",
+      "site": {
+        "path": "main.py",
+        "line": 10,
+        "column": 14
+      },
+      "text": "importlib.import_module(name)",
+      "receiver": "importlib",
+      "method": "import_module",
+      "reason": "dynamic-import"
+    },
+    {
+      "caller": "main.py//load_plugin",
+      "site": {
+        "path": "main.py",
+        "line": 11,
+        "column": 12
+      },
+      "text": "module.run",
+      "receiver": "module",
+      "method": "run",
+      "reason": "unknown-receiver"
+    }
+  ],
+  "roots": [
+    {
+      "key": "main.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "main.py//load_plugin",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.py",
+        "line": 9
+      }
+    },
+    {
+      "key": "main.py//read",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.py",
+        "line": 4
+      }
+    }
+  ],
+  "files": {
+    "main.py": "indexed"
+  },
+  "stats": {
+    "version": "1",
+    "files": 1,
+    "nodes": 5,
+    "edges": 2,
+    "unresolved": 3,
+    "roots": 3,
+    "root_fallback": true
+  }
+}
