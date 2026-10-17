@@ -569,3 +569,39 @@ func TestBuildReportsProblems(t *testing.T) {
 	require.Len(t, g.Problems, 1)
 	assert.Equal(t, "package.json", g.Problems[0].Path)
 }
+
+func TestBuildImportBindings(t *testing.T) {
+	indexes := []*fileindex.Index{
+		{
+			Version: fileindex.Version, Path: "main.js", Language: langcode.Javascript,
+			Imports: []fileindex.Import{
+				{Line: 1, Module: "./polyfill", Wildcard: true, Kind: fileindex.ImportStatic, Namespace: ".//polyfill"},
+				{Line: 2, Module: "./api", Item: "f", Alias: "f", Kind: fileindex.ImportStatic, Namespace: ".//api//f"},
+			},
+			Calls: []fileindex.Call{{Caller: "main.js", Line: 3, Column: 1, Callee: "f", Targets: []string{".//api//f"}, Kind: fileindex.CallCall}},
+		},
+		{Version: fileindex.Version, Path: "polyfill.js", Language: langcode.Javascript, Exports: []fileindex.Export{{Name: "f", Target: "polyfill.js//f", Line: 1}},
+			Definitions: []fileindex.Definition{{Key: "polyfill.js//f", Kind: fileindex.DefFunction, Name: "f", StartLine: 1, EndLine: 1, Exported: true}}},
+		{
+			Version: fileindex.Version, Path: "api.js", Language: langcode.Javascript,
+			Imports: []fileindex.Import{{Line: 1, Module: "./polyfill", Wildcard: true, Kind: fileindex.ImportStatic, Namespace: ".//polyfill"}},
+		},
+		{
+			Version: fileindex.Version, Path: "app.py", Language: langcode.Python,
+			Imports: []fileindex.Import{{Line: 1, Module: "pkg", Item: "os", Alias: "os", Kind: fileindex.ImportStatic, Namespace: "pkg//os"}},
+			Calls:   []fileindex.Call{{Caller: "app.py", Line: 2, Column: 1, Callee: "os.getcwd", Targets: []string{"pkg//os//getcwd"}, Receiver: "os", Method: "getcwd", Kind: fileindex.CallCall}},
+		},
+		{
+			Version: fileindex.Version, Path: "pkg/__init__.py", Language: langcode.Python,
+			Imports: []fileindex.Import{{Line: 1, Module: "os.path", Alias: "os", Kind: fileindex.ImportStatic, Namespace: "os//path"}},
+		},
+	}
+	g, err := Build(context.Background(), indexes, Options{})
+	require.NoError(t, err)
+	edges := edgeStrings(g)
+	assert.Contains(t, edges, "main.js -> polyfill.js import javascript.import.relative", "a side-effect import runs the module")
+	assert.Contains(t, edges, "api.js -> polyfill.js import javascript.import.relative")
+	assert.Equal(t, []string{"main.js:3 main.js no-definition f"}, unresolvedStrings(g), "a side-effect import gives on no name")
+	assert.Contains(t, edges, "app.py -> os//getcwd direct python.external", "import os.path binds os")
+	assert.Contains(t, edges, "pkg/__init__.py//os -> os export python.reexport")
+}
