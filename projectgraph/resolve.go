@@ -36,7 +36,9 @@ func newScope(ix *fileindex.Index) *scope {
 			continue
 		}
 		if imp.Wildcard {
-			sc.stars = append(sc.stars, star{spec: imp.Module, line: imp.Line})
+			if ix.Language == langcode.Python {
+				sc.stars = append(sc.stars, star{spec: imp.Module, line: imp.Line})
+			}
 			continue
 		}
 		sc.imports = append(sc.imports, imp)
@@ -112,10 +114,17 @@ func bindingName(lang langcode.Code, imp fileindex.Import) string {
 
 // boundModule returns the module that the name of an import holds.
 func boundModule(lang langcode.Code, imp fileindex.Import) string {
-	if lang == langcode.Python && imp.Item == "" && (imp.Alias == "" || imp.Alias == imp.Module) {
+	if bindsRoot(lang, imp) {
 		return firstDotted(imp.Module)
 	}
 	return imp.Module
+}
+
+// bindsRoot reports whether a Python import a.b binds the root package a. A
+// bound name of a or no bound name both mean that.
+func bindsRoot(lang langcode.Code, imp fileindex.Import) bool {
+	return lang == langcode.Python && imp.Item == "" &&
+		(imp.Alias == "" || imp.Alias == imp.Module || imp.Alias == firstDotted(imp.Module))
 }
 
 type failure struct {
@@ -607,7 +616,7 @@ func isAssignment(sc *scope, call fileindex.Call, target string) bool {
 
 // boundNamespace returns the external key of the name that an import binds.
 func boundNamespace(lang langcode.Code, imp fileindex.Import) string {
-	if lang == langcode.Python && imp.Item == "" && (imp.Alias == "" || imp.Alias == imp.Module) {
+	if bindsRoot(lang, imp) {
 		return namespaceOf(lang, firstDotted(imp.Module))
 	}
 	return imp.Namespace
