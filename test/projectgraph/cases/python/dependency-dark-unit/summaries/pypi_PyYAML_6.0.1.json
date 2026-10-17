@@ -14,10 +14,7 @@
           "target": "marshal//loads",
           "path": [
             {
-              "key": "yaml//load",
-              "site": {
-                "path": ""
-              }
+              "key": "yaml//load"
             },
             {
               "key": "pypi:PyYAML@6.0.1//yaml/__init__.py//load",

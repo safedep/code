@@ -21,10 +21,7 @@
           "target": "gopkg.in//yaml.v3//Unmarshal",
           "path": [
             {
-              "key": "github.com//acme//yamlish//Load",
-              "site": {
-                "path": ""
-              }
+              "key": "github.com//acme//yamlish//Load"
             },
             {
               "key": "go:github.com/acme/yamlish@v1.2.0//load.go//Load",

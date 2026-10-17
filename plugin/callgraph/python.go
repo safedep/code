@@ -216,6 +216,16 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 		}
 		// The inner call is a call of its own, as getattr in getattr(o, n)()
 		processNode(function, treeData, currentNamespace, callGraph, metadata)
+		if object, name, ok := pythonGetattrLiteral(function, treeData, callGraph); ok {
+			// getattr(o, "x")() reads the member x of o, as o.x() does.
+			callees, reason = pythonValueOf(object, treeData, currentNamespace, callGraph, 0)
+			callees = qualify(callees, name)
+			if len(callees) == 0 && reason != "" {
+				callGraph.addRecord(currentNamespace, functionCallNode, object.Content(treeData), name, treeData, reason)
+				return result
+			}
+			break
+		}
 		reason = UnresolvedComputedName
 	}
 
@@ -232,6 +242,23 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 	}
 
 	return result
+}
+
+// pythonGetattrLiteral returns the object and the member name of a call of
+// getattr whose name is a string literal, as o and x in getattr(o, "x").
+func pythonGetattrLiteral(call *sitter.Node, treeData []byte, callGraph *CallGraph) (*sitter.Node, string, bool) {
+	if call.Type() != "call" || call.ChildByFieldName("function").Content(treeData) != "getattr" {
+		return nil, "", false
+	}
+	arguments := call.ChildByFieldName("arguments")
+	if arguments == nil || arguments.NamedChildCount() < 2 {
+		return nil, "", false
+	}
+	name, ok := callGraph.profile.memberName(arguments.NamedChild(1), treeData)
+	if !ok {
+		return nil, "", false
+	}
+	return arguments.NamedChild(0), name, true
 }
 
 // imported reports whether every value of the namespace is an import of

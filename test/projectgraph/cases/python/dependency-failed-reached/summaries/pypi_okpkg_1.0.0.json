@@ -14,10 +14,7 @@
           "target": "subprocess//run",
           "path": [
             {
-              "key": "okpkg//run",
-              "site": {
-                "path": ""
-              }
+              "key": "okpkg//run"
             },
             {
               "key": "pypi:okpkg@1.0.0//okpkg/__init__.py//run",

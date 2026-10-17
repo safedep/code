@@ -34,10 +34,7 @@
           "target": "lodash._reinterpolate",
           "path": [
             {
-              "key": "lodash//template",
-              "site": {
-                "path": ""
-              }
+              "key": "lodash//template"
             },
             {
               "key": "npm:lodash@4.17.21//lodash.js//template",
@@ -84,10 +81,7 @@
           "target": "lodash._reinterpolate",
           "path": [
             {
-              "key": "lodash//template//template",
-              "site": {
-                "path": ""
-              }
+              "key": "lodash//template//template"
             },
             {
               "key": "npm:lodash@4.17.21//template.js//template",

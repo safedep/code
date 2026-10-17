@@ -14,10 +14,7 @@
           "target": "fs//writeFileSync",
           "path": [
             {
-              "key": "util-kit//index//render",
-              "site": {
-                "path": ""
-              }
+              "key": "util-kit//index//render"
             },
             {
               "key": "npm:util-kit@1.0.0//index.js//render",
@@ -65,10 +62,7 @@
           "target": "fs//writeFileSync",
           "path": [
             {
-              "key": "util-kit//lib//util//format",
-              "site": {
-                "path": ""
-              }
+              "key": "util-kit//lib//util//format"
             },
             {
               "key": "npm:util-kit@1.0.0//lib/util.js//format",
@@ -105,10 +99,7 @@
           "target": "fs//writeFileSync",
           "path": [
             {
-              "key": "util-kit//render",
-              "site": {
-                "path": ""
-              }
+              "key": "util-kit//render"
             },
             {
               "key": "npm:util-kit@1.0.0//index.js//render",

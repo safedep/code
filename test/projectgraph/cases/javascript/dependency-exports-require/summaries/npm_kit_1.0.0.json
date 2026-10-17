@@ -15,10 +15,7 @@
           "target": "child_process//execSync",
           "path": [
             {
-              "key": "kit//run",
-              "site": {
-                "path": ""
-              }
+              "key": "kit//run"
             },
             {
               "key": "npm:kit@1.0.0//cjs.js//run",
@@ -47,10 +44,7 @@
           "target": "fs//readFileSync",
           "path": [
             {
-              "key": "kit//run",
-              "site": {
-                "path": ""
-              }
+              "key": "kit//run"
             },
             {
               "key": "npm:kit@1.0.0//esm.js//run",

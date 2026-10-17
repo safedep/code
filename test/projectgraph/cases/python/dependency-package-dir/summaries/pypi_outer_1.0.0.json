@@ -14,10 +14,7 @@
           "target": "os//system",
           "path": [
             {
-              "key": "outer//impl//run",
-              "site": {
-                "path": ""
-              }
+              "key": "outer//impl//run"
             },
             {
               "key": "pypi:outer@1.0.0//impl.py//run",
@@ -54,10 +51,7 @@
           "target": "os//system",
           "path": [
             {
-              "key": "outer//run",
-              "site": {
-                "path": ""
-              }
+              "key": "outer//run"
             },
             {
               "key": "pypi:outer@1.0.0//__init__.py//run",

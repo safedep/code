@@ -21,10 +21,7 @@
           "target": "fs//rmSync",
           "path": [
             {
-              "key": "plug//Plug//run",
-              "site": {
-                "path": ""
-              }
+              "key": "plug//Plug//run"
             },
             {
               "key": "npm:plug@1.0.0//index.js//Plug//run",
@@ -68,10 +65,7 @@
           "target": "fs//rmSync",
           "path": [
             {
-              "key": "plug//index//Plug//run",
-              "site": {
-                "path": ""
-              }
+              "key": "plug//index//Plug//run"
             },
             {
               "key": "npm:plug@1.0.0//index.js//Plug//run",

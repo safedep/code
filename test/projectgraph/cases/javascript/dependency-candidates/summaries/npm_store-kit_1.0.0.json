@@ -21,10 +21,7 @@
           "target": "fs//rmSync",
           "path": [
             {
-              "key": "store-kit//Store//close",
-              "site": {
-                "path": ""
-              }
+              "key": "store-kit//Store//close"
             },
             {
               "key": "npm:store-kit@1.0.0//index.js//Store//close",
@@ -75,10 +72,7 @@
           "target": "fs//rmSync",
           "path": [
             {
-              "key": "store-kit//index//Store//close",
-              "site": {
-                "path": ""
-              }
+              "key": "store-kit//index//Store//close"
             },
             {
               "key": "npm:store-kit@1.0.0//index.js//Store//close",

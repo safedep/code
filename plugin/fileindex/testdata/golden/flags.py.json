@@ -271,6 +271,24 @@
           "shape": "string"
         }
       ]
+    },
+    {
+      "caller": "flags.py//run",
+      "line": 16,
+      "column": 5,
+      "callee": "getattr(obj, \"fixed\")",
+      "targets": [
+        "flags.py//run//obj//fixed"
+      ],
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        },
+        {
+          "shape": "string"
+        }
+      ]
     }
   ],
   "references": [
@@ -307,13 +325,6 @@
       "line": 15,
       "column": 5,
       "text": "getattr(obj, attr)",
-      "reason": "computed-name"
-    },
-    {
-      "caller": "flags.py//run",
-      "line": 16,
-      "column": 5,
-      "text": "getattr(obj, \"fixed\")",
       "reason": "computed-name"
     },
     {

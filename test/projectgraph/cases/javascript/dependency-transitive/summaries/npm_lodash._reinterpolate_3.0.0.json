@@ -14,10 +14,7 @@
           "target": "child_process//execSync",
           "path": [
             {
-              "key": "lodash._reinterpolate",
-              "site": {
-                "path": ""
-              }
+              "key": "lodash._reinterpolate"
             },
             {
               "key": "npm:lodash._reinterpolate@3.0.0//index.js//reinterpolate",
@@ -54,10 +51,7 @@
           "target": "child_process//execSync",
           "path": [
             {
-              "key": "lodash._reinterpolate//index",
-              "site": {
-                "path": ""
-              }
+              "key": "lodash._reinterpolate//index"
             },
             {
               "key": "npm:lodash._reinterpolate@3.0.0//index.js//reinterpolate",

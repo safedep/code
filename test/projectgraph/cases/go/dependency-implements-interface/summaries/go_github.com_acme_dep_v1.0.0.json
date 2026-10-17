@@ -21,10 +21,7 @@
           "target": "os//exec//Command",
           "path": [
             {
-              "key": "github.com//acme//dep//Impl//Run",
-              "site": {
-                "path": ""
-              }
+              "key": "github.com//acme//dep//Impl//Run"
             },
             {
               "key": "go:github.com/acme/dep@v1.0.0//dep.go//Impl//Run",

@@ -66,7 +66,7 @@ type Query struct {
 // prompt of an llm edge.
 type Hop struct {
 	Key        string                  `json:"key"`
-	Site       projectgraph.Site       `json:"site"`
+	Site       projectgraph.Site       `json:"site,omitzero"`
 	EdgeKind   projectgraph.EdgeKind   `json:"edge_kind,omitempty"`
 	Confidence projectgraph.Confidence `json:"confidence,omitempty"`
 	Resolver   string                  `json:"resolver,omitempty"`
