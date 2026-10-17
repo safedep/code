@@ -113,9 +113,9 @@ type CallGraph struct {
 	unresolved     []UnresolvedCall
 	unresolvedSeen map[UnresolvedCall]bool
 
-	// ctx stops processChildren when it is done. buildCallGraph sets it for
-	// the walk of the tree and clears it after, so the graph does not keep
-	// the context.
+	// ctx stops processChildren when it is done. walk sets it for the walk
+	// of the tree and clears it after, so the graph does not keep the
+	// context.
 	ctx     context.Context
 	visited int
 	ctxErr  error

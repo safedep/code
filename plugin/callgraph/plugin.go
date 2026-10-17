@@ -63,7 +63,16 @@ func (p *callgraphPlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) 
 		return fmt.Errorf("failed to build call graph: %w", err)
 	}
 
-	return p.callgraphCallback(ctx, cg)
+	if err := p.callgraphCallback(ctx, cg); err != nil {
+		return err
+	}
+
+	// The callback gets the partial graph of a file that the deadline cut,
+	// but the file is not a success.
+	if cg.ctxErr != nil {
+		return fmt.Errorf("call graph of %s is partial: %w", file.Name(), cg.ctxErr)
+	}
+	return nil
 }
 
 // buildCallGraph builds a call graph from the syntax tree. When ctx is done
@@ -82,21 +91,21 @@ func buildCallGraph(ctx context.Context, tree core.ParseTree, lang core.Language
 		return nil, fmt.Errorf("failed to resolve imports: %w", err)
 	}
 
-	// log.Debugf("Imported identifier => namespace:")
-	// for identifier, parsedImport := range importedIdentifiers {
-	// 	log.Debugf("  %s => %s\n", identifier, parsedImport.Namespace)
-	// }
-
 	callGraph, err := newCallGraph(filePath, astRootNode, imports, tree)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create call graph: %w", err)
 	}
 
-	callGraph.ctx = ctx
-	processChildren(astRootNode, *treeData, filePath, callGraph, processorMetadata{})
-	callGraph.ctx = nil
-
+	callGraph.walk(ctx, astRootNode, *treeData)
 	return callGraph, nil
+}
+
+// walk processes the tree from root. It stops when ctx is done, and the
+// graph does not keep ctx after it.
+func (cg *CallGraph) walk(ctx context.Context, root *sitter.Node, treeData []byte) {
+	cg.ctx = ctx
+	defer func() { cg.ctx = nil }()
+	processChildren(root, treeData, cg.FileName, cg, processorMetadata{})
 }
 
 func processNode(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {

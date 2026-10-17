@@ -13,7 +13,8 @@ type PluginExecutor interface {
 	// Execute runs the plugins on each file of the file system. A file that
 	// fails at a stage is in the report and the walk goes on. Execute returns
 	// an error only when ctx is done or the walk itself fails, and then the
-	// report holds the files before the stop. To stop the walk, a plugin
+	// report holds the files before the stop. A plugin that fails because
+	// ctx is done puts its file in Failed. To stop the walk, a plugin
 	// callback cancels ctx.
 	Execute(context.Context, core.ImportAwareFileSystem) (*Report, error)
 }
@@ -88,10 +89,10 @@ func (v *treeVisitor) VisitTree(ctx context.Context, tree core.ParseTree) error 
 		}
 
 		if err := analyze(ctx, plugin, file, tree); err != nil {
+			v.report.Failed = append(v.report.Failed, FileError{File: file.Name(), Stage: core.Stage(plugin.Name()), Err: err})
 			if ctxErr := ctx.Err(); ctxErr != nil {
 				return ctxErr
 			}
-			v.report.Failed = append(v.report.Failed, FileError{File: file.Name(), Stage: core.Stage(plugin.Name()), Err: err})
 		}
 	}
 

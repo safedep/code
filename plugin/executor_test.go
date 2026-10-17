@@ -100,6 +100,29 @@ func TestExecuteStopsWhenTheContextIsCancelled(t *testing.T) {
 	assert.Len(t, report.Files, 1)
 }
 
+func TestExecuteFailsTheFileThatTheContextStops(t *testing.T) {
+	dir := writeFiles(t, map[string]string{"a.py": "import os\n", "b.py": "import sys\n"})
+	treeWalker, fileSystem, err := test.SetupBasicPluginContext(dir, nil, []core.LanguageCode{core.LanguageCodePython})
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	executor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+		treeFunc{name: "stopped", fn: func(ctx context.Context, _ core.ParseTree) error {
+			cancel()
+			return ctx.Err()
+		}},
+	})
+	require.NoError(t, err)
+
+	report, err := executor.Execute(ctx, fileSystem)
+	assert.ErrorIs(t, err, context.Canceled)
+	require.Len(t, report.Failed, 1)
+	assert.Equal(t, "a.py", report.Failed[0].File)
+	assert.Equal(t, core.Stage("stopped"), report.Failed[0].Stage)
+	assert.ErrorIs(t, report.Failed[0], context.Canceled)
+}
+
 func TestExecuteGoesOnPastAFileThatDoesNotParse(t *testing.T) {
 	dir := writeFiles(t, map[string]string{
 		"a_large.py": strings.Repeat("a = 1\n", 100),
