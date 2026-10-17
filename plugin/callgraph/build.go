@@ -176,16 +176,35 @@ func (cg *CallGraph) addCallGraphNode(identifier string, s syntax) *CallGraphNod
 }
 
 // reference makes the reference of a call of kind to callee. expression is
-// the node that names the callee.
+// the node that names the callee: the function of a call, the type of an
+// object creation, or the call itself in a grammar with no function node,
+// as a Java method invocation.
 func (cg *CallGraph) reference(callee string, kind CallKind, expression *sitter.Node, arguments []CallArgument) CallReference {
 	ref := CallReference{CalleeNamespace: callee, Kind: kind, Arguments: arguments}
 	if expression != nil {
-		ref.Site = ast.GetNodePosition(expression)
-		ref.Text = clip(expression.Content(cg.source))
+		ref.Site = cg.calleeSite(expression)
+		ref.Text = clip(string(cg.source[ref.Site.StartByte:ref.Site.EndByte]))
 		receiver, method := cg.profile.calleeParts(expression, cg.source)
 		ref.Receiver, ref.Method = clip(receiver), method
 	}
 	return ref
+}
+
+// calleeSite returns the position of the callee expression. A call that
+// holds its receiver and its name, as a.b(x) in Java or Ruby, has no node
+// for the callee, so the site runs from the start of the call to the end of
+// the name.
+func (cg *CallGraph) calleeSite(expression *sitter.Node) ast.NodePosition {
+	site := ast.GetNodePosition(expression)
+	shape, ok := cg.profile.members[expression.Type()]
+	if !ok || shape.index {
+		return site
+	}
+	if name := fieldChild(expression, shape.name); name != nil {
+		end := ast.GetNodePosition(name)
+		site.EndByte, site.EndLine, site.EndColumn = end.EndByte, end.EndLine, end.EndColumn
+	}
+	return site
 }
 
 // addEdge adds the edge of a call of kind from caller to callee.

@@ -161,12 +161,12 @@ func objectCreationExpressionProcessor(objectCreationNode *sitter.Node, treeData
 		if classResolvedBySearch {
 			log.Debugf("Constructor %s searched (direct) & resolved to %s\n", constructedClassName, classNode.Namespace)
 
-			callGraph.addEdge(currentNamespace, CallNew, objectCreationNode, classNode.Namespace, nil, argsResult)
+			callGraph.addEdge(currentNamespace, CallNew, constructedClassNode, classNode.Namespace, nil, argsResult)
 			markClassAssignment(classNode)
 		} else if constructedClassNode.Type() == "scoped_type_identifier" {
 			scopedIdentifierResult := scopedIdentifierProcessor(constructedClassNode, treeData, currentNamespace, callGraph, metadata)
 			for _, scopedIdentifierAssignment := range scopedIdentifierResult.ImmediateAssignments {
-				callGraph.addEdge(currentNamespace, CallNew, objectCreationNode, scopedIdentifierAssignment.Namespace, nil, argsResult)
+				callGraph.addEdge(currentNamespace, CallNew, constructedClassNode, scopedIdentifierAssignment.Namespace, nil, argsResult)
 				markClassAssignment(scopedIdentifierAssignment)
 			}
 		}

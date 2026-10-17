@@ -7,6 +7,7 @@ import (
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
+	"github.com/safedep/code/lang"
 	"github.com/safedep/code/parser"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -354,7 +355,7 @@ func TestCallKindAndReceiver(t *testing.T) {
 				{"a.js//A//this//constructor", "a.js//A//constructor", CallSynthetic, "", "", ""},
 				{"a.js//A//this//run", "a.js//A//run", CallSynthetic, "", "", ""},
 				{"a.js", "x//a//b", CallCall, "x.a", "b", "x.a.b"},
-				{"a.js", "a.js//A", CallNew, "", "", "new A()"},
+				{"a.js", "a.js//A", CallNew, "", "A", "A"},
 				{"a.js", "y//*", CallImport, "", "import", "import"},
 			},
 		},
@@ -454,6 +455,51 @@ func TestImportsInSourceOrder(t *testing.T) {
 				imp.Position = ast.NodePosition{}
 				assert.Equal(t, tc.imports[i], imp)
 			}
+		})
+	}
+}
+
+func TestSiteIsTheCalleeExpression(t *testing.T) {
+	cases := []struct {
+		name     string
+		language core.LanguageCode
+		file     string
+		source   string
+		callee   string
+		text     string
+		column   uint32
+		receiver string
+		method   string
+	}{
+		{"python call", core.LanguageCodePython, "a.py", "import os\nos.getenv(x)\n", "os//getenv", "os.getenv", 1, "os", "getenv"},
+		{"javascript object creation", core.LanguageCodeJavascript, "a.js", "import sqlite3 from 'sqlite3';\nx = new sqlite3.Database(':memory:');\n", "sqlite3//Database", "sqlite3.Database", 9, "sqlite3", "Database"},
+		{"go call", core.LanguageCodeGo, "a.go", "package a\nimport \"os\"\nfunc f() { os.Exit(1) }\n", "os//Exit", "os.Exit", 12, "os", "Exit"},
+		{"java method invocation", core.LanguageCodeJava, "A.java", "class A { void f() { Math.max(1, 2); } }\n", "Math//max", "Math.max", 22, "Math", "max"},
+		{"java object creation", core.LanguageCodeJava, "A.java", "import java.util.Random;\nclass A { void f() { new Random(1); } }\n", "Random", "Random", 26, "", "Random"},
+		{"ruby call with a receiver", core.LanguageCodeRuby, "a.rb", "Foo.bar(1)\n", "Foo//bar", "Foo.bar", 1, "Foo", "bar"},
+		{"php member call", core.LanguageCodePHP, "a.php", "<?php\n$c->send(1);\n", "$c//send", "$c->send", 1, "$c", "send"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			language, err := lang.GetLanguage(string(tc.language))
+			require.NoError(t, err)
+			cg := buildAndClose(t, language, tc.file, tc.source)
+
+			var found *CallReference
+			for _, node := range cg.order {
+				for i, ref := range node.CallsTo {
+					if ref.CalleeNamespace == tc.callee {
+						found = &node.CallsTo[i]
+					}
+				}
+			}
+			require.NotNil(t, found, "no call to %s", tc.callee)
+			assert.Equal(t, tc.text, found.Text)
+			assert.Equal(t, tc.column, found.Site.StartColumn)
+			assert.Equal(t, tc.receiver, found.Receiver)
+			assert.Equal(t, tc.method, found.Method)
+			assert.Equal(t, uint32(len(tc.text)), found.Site.EndByte-found.Site.StartByte)
 		})
 	}
 }

@@ -110,6 +110,11 @@ func shapedProfile(profile languageProfile, shapes syntaxShapes) languageProfile
 		members = map[string]memberShape{}
 	}
 	maps.Copy(members, shapes.members)
+	for nodeType, call := range shapes.calls {
+		if call.function == "" {
+			members[nodeType] = memberShape{object: call.receiver, name: call.name}
+		}
+	}
 
 	profile.processors = processors
 	profile.reachable = reachable
@@ -124,12 +129,12 @@ func (p *shapedProcessors) call(node *sitter.Node, treeData []byte, currentNames
 	shape := p.shapes.calls[node.Type()]
 
 	var callee string
-	var identifier *sitter.Node
+	expression := node
 	handled := []*sitter.Node{}
 
 	if function := fieldChild(node, shape.function); function != nil {
 		callee = p.resolve(function, treeData, currentNamespace, callGraph, metadata)
-		identifier = function
+		expression = function
 		handled = append(handled, function)
 	} else if name := fieldChild(node, shape.name); name != nil {
 		if receiver := fieldChild(node, shape.receiver); receiver != nil {
@@ -140,7 +145,6 @@ func (p *shapedProcessors) call(node *sitter.Node, treeData []byte, currentNames
 		} else {
 			callee = p.resolvePath(name.Content(treeData), currentNamespace, callGraph)
 		}
-		identifier = name
 		handled = append(handled, name)
 	}
 
@@ -157,7 +161,7 @@ func (p *shapedProcessors) call(node *sitter.Node, treeData []byte, currentNames
 		return newProcessorResult()
 	}
 
-	callGraph.addEdge(currentNamespace, CallCall, identifier, callee, nil, arguments)
+	callGraph.addEdge(currentNamespace, CallCall, expression, callee, nil, arguments)
 	return p.valueResult(p.instanceOf(callee), callGraph)
 }
 

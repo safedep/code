@@ -496,7 +496,7 @@ func jsNewExpressionProcessor(newNode *sitter.Node, treeData []byte, currentName
 	for _, constructor := range constructors {
 		log.Debugf("JS constructor resolved to %s", constructor)
 
-		ref := callGraph.reference(constructor, CallNew, newNode, callArguments)
+		ref := callGraph.reference(constructor, CallNew, constructorNode, callArguments)
 		ref.Unbound = unbound
 		callGraph.addCall(currentNamespace, nil, ref)
 
