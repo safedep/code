@@ -28,14 +28,16 @@ import (
 // subset of the edges of the graph, and no edge of the graph goes from a
 // key of NoEdges to its to key.
 type expectation struct {
-	Source      string       `yaml:"source"`
-	Description string       `yaml:"description"`
-	TestPaths   []string     `yaml:"test_paths,omitempty"`
-	Roots       []root       `yaml:"roots"`
-	Edges       []edge       `yaml:"edges"`
-	NoEdges     []noEdge     `yaml:"no_edges,omitempty"`
-	Unresolved  []unresolved `yaml:"unresolved"`
-	Results     []result     `yaml:"results"`
+	Source       string       `yaml:"source"`
+	Description  string       `yaml:"description"`
+	TestPaths    []string     `yaml:"test_paths,omitempty"`
+	MaxFileBytes int          `yaml:"max_file_bytes,omitempty"`
+	Failed       []string     `yaml:"failed,omitempty"`
+	Roots        []root       `yaml:"roots"`
+	Edges        []edge       `yaml:"edges"`
+	NoEdges      []noEdge     `yaml:"no_edges,omitempty"`
+	Unresolved   []unresolved `yaml:"unresolved"`
+	Results      []result     `yaml:"results"`
 }
 
 type noEdge struct {
@@ -126,9 +128,13 @@ func runCase(t *testing.T, dir string, languages []core.Language) {
 	fsys, err := fs.NewLocalFileSystem(fs.LocalFileSystemConfig{AppDirectories: []string{project}})
 	require.NoError(t, err)
 	ctx := context.Background()
-	indexed, err := (&fileindex.Indexer{}).Run(ctx, fsys, fileindex.Options{Languages: languages, Store: memstore.New()})
+	indexed, err := (&fileindex.Indexer{}).Run(ctx, fsys, fileindex.Options{Languages: languages, Store: memstore.New(), MaxFileBytes: want.MaxFileBytes})
 	require.NoError(t, err)
-	require.Empty(t, indexed.Report.Failed)
+	var failed []string
+	for _, f := range indexed.Report.Failed {
+		failed = append(failed, f.File)
+	}
+	require.Equal(t, want.Failed, failed, "failed files")
 
 	g, err := projectgraph.Build(ctx, indexed.Indexes, projectgraph.Options{
 		Root:      os.DirFS(project),

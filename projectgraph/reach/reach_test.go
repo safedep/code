@@ -189,6 +189,8 @@ func TestReachUncertainties(t *testing.T) {
 		{name: "a missing file", extra: "file handlers.py missing", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{Budget}},
 		{name: "a truncated file", extra: "file handlers.py truncated", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{Budget}},
 		{name: "a failed file", extra: "file handlers.py failed", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{Budget}},
+		{name: "a failed file that no search reaches", extra: "file server.py failed", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{Budget}},
+		{name: "a missing file that no node names", extra: "file lib/gen.py missing", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{Budget}},
 		{name: "a parse error", extra: "flag handlers.py//parse parse-error 9", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{Budget}},
 		{name: "the edge limit", extra: "truncated edges", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{Budget}},
 		{name: "a re-export limit on a reached node", extra: "truncated export-hops handlers.py//parse", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{Budget}},

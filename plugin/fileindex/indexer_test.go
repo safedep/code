@@ -265,6 +265,21 @@ func TestIndexerFailsAFileOverTheLimit(t *testing.T) {
 	assert.ErrorIs(t, result.Report.Failed[0], parser.ErrInputTooLarge)
 }
 
+func TestIndexerTakesAFileSizeLimit(t *testing.T) {
+	dir := t.TempDir()
+	writeFiles(t, dir, map[string]string{
+		"big.js":   strings.Repeat("x", 65) + "();\n",
+		"small.js": "x();\n",
+	})
+
+	var indexer Indexer
+	result, err := indexer.Run(context.Background(), appFileSystem(t, dir), Options{Languages: projectLanguages(t), MaxFileBytes: 64})
+	require.NoError(t, err)
+	assert.Equal(t, map[string]fidx.FileStatus{"big.js": fidx.FileFailed, "small.js": fidx.FileIndexed}, result.Files)
+	require.Len(t, result.Report.Failed, 1)
+	assert.ErrorIs(t, result.Report.Failed[0], parser.ErrInputTooLarge)
+}
+
 func TestIndexerNeedsALanguage(t *testing.T) {
 	var indexer Indexer
 	_, err := indexer.Run(context.Background(), appFileSystem(t, t.TempDir()), Options{})

@@ -38,6 +38,10 @@ type Options struct {
 	// Plugins run on the tree of each file, next to the index plugin. A
 	// run with plugins parses every file, because a plugin needs the tree.
 	Plugins []core.Plugin
+
+	// MaxFileBytes is the size limit of a file. A larger file fails at the
+	// parse. Zero selects parser.DefaultMaxBytes.
+	MaxFileBytes int
 }
 
 // Result is what one run of an Indexer did.
@@ -154,7 +158,7 @@ func (r *run) index(ctx context.Context, files []core.File, byExtension map[stri
 			r.result.Report.Skipped = append(r.result.Report.Skipped, file.Name())
 			continue
 		}
-		data, err := read(file)
+		data, err := read(file, r.maxBytes())
 		if err != nil {
 			r.fail(ctx, file, core.StageRead, err)
 			continue
@@ -177,15 +181,19 @@ func (r *run) index(ctx context.Context, files []core.File, byExtension map[stri
 	return r.flush(ctx, batch)
 }
 
-// read reads a file and closes it. It reads one byte over the parse limit
-// at most, so the parse can report the file as too large.
-func read(file core.File) ([]byte, error) {
+// read reads a file and closes it. It reads one byte over the limit at
+// most, so the parse can report the file as too large.
+func read(file core.File, limit int) ([]byte, error) {
 	reader, err := file.Reader()
 	if err != nil {
 		return nil, err
 	}
-	data, err := io.ReadAll(io.LimitReader(reader, parser.DefaultMaxBytes+1))
+	data, err := io.ReadAll(io.LimitReader(reader, int64(limit)+1))
 	return data, errors.Join(err, reader.Close())
+}
+
+func (r *run) maxBytes() int {
+	return cmp.Or(r.opts.MaxFileBytes, parser.DefaultMaxBytes)
 }
 
 // flush serves the files of a batch from the store, parses the rest and
@@ -248,7 +256,7 @@ func (r *run) parse(ctx context.Context, p pending) *fidx.Index {
 	if parse == nil {
 		parse = parser.ParseBytes
 	}
-	tree, err := parse(ctx, p.language, p.data, parser.WithFileName(p.file.Name()))
+	tree, err := parse(ctx, p.language, p.data, parser.WithFileName(p.file.Name()), parser.WithMaxBytes(r.maxBytes()))
 	if err != nil {
 		r.fail(ctx, p.file, core.StageParse, err)
 		return nil

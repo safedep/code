@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -390,16 +391,18 @@ func (ix *index) uncertainties(s *search, maxDepth int) *found {
 		}
 	}
 
-	files := map[string]bool{}
+	// A file with no complete index can hold a root or a caller that the
+	// graph does not know, so it counts where the search does not reach it.
+	for _, p := range slices.Sorted(maps.Keys(g.Files)) {
+		if status := g.Files[p]; !status.Complete() {
+			f.global = append(f.global, Uncertainty{Kind: Budget, Key: p, Site: projectgraph.Site{Path: p}, Text: "the file is " + string(status)})
+		}
+	}
 	for _, id := range s.order {
 		key := ix.keys[id]
 		n := g.Nodes[key]
 		if n == nil || n.Kind == projectgraph.NodeExternal {
 			continue
-		}
-		if status, ok := g.Files[n.Path]; ok && !files[n.Path] && !status.Complete() {
-			files[n.Path] = true
-			f.global = append(f.global, Uncertainty{Kind: Budget, Key: key, Site: projectgraph.Site{Path: n.Path}, Text: "the file is " + string(status)})
 		}
 		for _, t := range truncated[key] {
 			site := t.Site
