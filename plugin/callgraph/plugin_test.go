@@ -169,6 +169,7 @@ var testcases = []callgraphTestcase{
 				"testFunctions.py//somenumber",
 				"95",
 				"7.3",
+				"pstats//getsomestat",
 			},
 			"testFunctions.py//mul": {
 				"testFunctions.py//multiply",
@@ -190,7 +191,7 @@ var testcases = []callgraphTestcase{
 				{"testFunctions.py//add", [][]string{{"599", "\"going good\"", "39.2"}, {"\"gg\""}}},
 				{"testFunctions.py//add", [][]string{{"95", "True"}, {}}},
 				{"getenv", [][]string{{"\"SOME_ENV_VAR\""}}},
-				{"print", [][]string{{"\"gg\""}, {"1"}, {"2.5"}, {"True"}, {"None"}, {"mypkg//SOME_CONSTANT"}, {}, {}, {}, {}, {}, {}, {}}},
+				{"print", [][]string{{"\"gg\""}, {"1"}, {"2.5"}, {"True"}, {"None"}, {"mypkg//SOME_CONSTANT"}, {}, {}, {}, {}, {}, {}, {"os//getenv"}}},
 			},
 			"testFunctions.py//factorial": {
 				{

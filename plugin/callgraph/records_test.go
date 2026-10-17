@@ -634,3 +634,36 @@ func TestTypeAssertionGivesTheValueOfTheExpression(t *testing.T) {
 	}
 	assert.Contains(t, targets, ".//run//run")
 }
+
+func TestPythonCallOfAnImportGivesTheImport(t *testing.T) {
+	cases := []struct {
+		name   string
+		source string
+		target string
+	}{
+		{"imported class", "from .parser import Parser\np = Parser()\np.parse()\n", "//parser//Parser//parse"},
+		{"imported module member", "import requests\nr = requests.get(u)\nr.json()\n", "requests//get//json"},
+		{"aliased import", "from openai import OpenAI as AI\nc = AI()\nc.chat.completions.create()\n", "openai//OpenAI//chat//completions//create"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cg := buildFromSource(t, pythonLanguage(t), "a.py", tc.source)
+
+			var targets []string
+			for _, ref := range cg.Nodes["a.py"].CallsTo {
+				targets = append(targets, ref.Targets...)
+			}
+			assert.Contains(t, targets, tc.target)
+		})
+	}
+}
+
+func TestPythonCallOfALocalFunctionGivesNoValue(t *testing.T) {
+	cg := buildFromSource(t, pythonLanguage(t), "a.py", "def make():\n    pass\n\np = make()\np.go()\n")
+
+	var targets []string
+	for _, ref := range cg.Nodes["a.py"].CallsTo {
+		targets = append(targets, ref.Targets...)
+	}
+	assert.NotContains(t, targets, "a.py//make//go")
+}

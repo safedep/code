@@ -3,6 +3,7 @@ package callgraph
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/dry/log"
@@ -187,9 +188,17 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 	functionName := function.Content(treeData)
 
 	markClassAssignment := func(classAssignmentNode *assignmentNode) {
-		if classAssignmentNode != nil && callGraph.classConstructors[classAssignmentNode.Namespace] {
+		switch {
+		case classAssignmentNode == nil:
+		case callGraph.classConstructors[classAssignmentNode.Namespace]:
 			result.ImmediateAssignments = append(result.ImmediateAssignments, classAssignmentNode)
 			log.Debugf("Class constructed - %s in fncall for %s\n", classAssignmentNode.Namespace, functionName)
+		case callGraph.imported(classAssignmentNode.Namespace):
+			// The file cannot tell an imported class from an imported
+			// function. The value of the call is the callee, as for new X()
+			// in JavaScript, so p.parse() in p = Parser() keeps the import
+			// and the link step can find the class and its method.
+			result.ImmediateAssignments = append(result.ImmediateAssignments, classAssignmentNode)
 		}
 	}
 
@@ -236,13 +245,31 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 
 	for _, callee := range callees {
 		addEdge(callee, nil)
-		markClassAssignment(callGraph.assignmentGraph.Assignments[callee])
+		if callGraph.imported(callee) {
+			markClassAssignment(callGraph.assignmentGraph.addNode(callee, nil))
+		} else {
+			markClassAssignment(callGraph.assignmentGraph.Assignments[callee])
+		}
 	}
 	if len(callees) == 0 && reason != "" {
 		callGraph.addUnresolved(currentNamespace, functionCallNode, function, treeData, reason)
 	}
 
 	return result
+}
+
+// imported reports whether every value of the namespace is an import of
+// the file or a name under one, as requests//get.
+func (cg *CallGraph) imported(namespace string) bool {
+	values := cg.assignmentGraph.resolve(namespace)
+	if len(values) == 0 {
+		return false
+	}
+	return !slices.ContainsFunc(values, func(value *assignmentNode) bool {
+		return !slices.ContainsFunc(cg.Imports, func(imp Import) bool {
+			return imp.Namespace != "" && (value.Namespace == imp.Namespace || strings.HasPrefix(value.Namespace, imp.Namespace+namespaceSeparator))
+		})
+	})
 }
 
 // pythonDynamicImports are the functions that import a module by a name
