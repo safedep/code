@@ -1,0 +1,117 @@
+{
+  "nodes": {
+    "main.py": {
+      "key": "main.py",
+      "kind": "module",
+      "path": "main.py",
+      "line": 1,
+      "exported": true
+    },
+    "pkg/__init__.py": {
+      "key": "pkg/__init__.py",
+      "kind": "module",
+      "path": "pkg/__init__.py",
+      "line": 1,
+      "exported": true
+    },
+    "pkg/__init__.py//load": {
+      "key": "pkg/__init__.py//load",
+      "kind": "export",
+      "path": "pkg/__init__.py",
+      "line": 1,
+      "exported": true
+    },
+    "pkg/loader.py": {
+      "key": "pkg/loader.py",
+      "kind": "module",
+      "path": "pkg/loader.py",
+      "line": 1,
+      "exported": true
+    },
+    "pkg/loader.py//load": {
+      "key": "pkg/loader.py//load",
+      "kind": "function",
+      "path": "pkg/loader.py",
+      "line": 3,
+      "exported": true
+    },
+    "yaml//load": {
+      "key": "yaml//load",
+      "kind": "external"
+    }
+  },
+  "edges": [
+    {
+      "from": "main.py",
+      "to": "pkg/__init__.py",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "python.import.absolute"
+    },
+    {
+      "from": "main.py",
+      "to": "pkg/__init__.py//load",
+      "site": {
+        "path": "main.py",
+        "line": 2,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.import"
+    },
+    {
+      "from": "pkg/__init__.py",
+      "to": "pkg/loader.py",
+      "site": {
+        "path": "pkg/__init__.py",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "python.import.relative"
+    },
+    {
+      "from": "pkg/__init__.py//load",
+      "to": "pkg/loader.py//load",
+      "site": {
+        "path": "pkg/__init__.py",
+        "line": 1
+      },
+      "kind": "export",
+      "confidence": "high",
+      "resolver": "python.reexport"
+    },
+    {
+      "from": "pkg/loader.py//load",
+      "to": "yaml//load",
+      "site": {
+        "path": "pkg/loader.py",
+        "line": 4,
+        "column": 12
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.external"
+    }
+  ],
+  "unresolved": [],
+  "roots": [],
+  "files": {
+    "main.py": "indexed",
+    "pkg/__init__.py": "indexed",
+    "pkg/loader.py": "indexed"
+  },
+  "stats": {
+    "version": "1",
+    "files": 3,
+    "nodes": 6,
+    "edges": 5,
+    "unresolved": 0,
+    "roots": 0
+  }
+}

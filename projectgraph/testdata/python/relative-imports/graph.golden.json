@@ -1,0 +1,109 @@
+{
+  "nodes": {
+    "pkg/c.py": {
+      "key": "pkg/c.py",
+      "kind": "module",
+      "path": "pkg/c.py",
+      "line": 1,
+      "exported": true
+    },
+    "pkg/c.py//g": {
+      "key": "pkg/c.py//g",
+      "kind": "function",
+      "path": "pkg/c.py",
+      "line": 1,
+      "exported": true
+    },
+    "pkg/sub/a.py": {
+      "key": "pkg/sub/a.py",
+      "kind": "module",
+      "path": "pkg/sub/a.py",
+      "line": 1,
+      "exported": true
+    },
+    "pkg/sub/a.py//run": {
+      "key": "pkg/sub/a.py//run",
+      "kind": "function",
+      "path": "pkg/sub/a.py",
+      "line": 4,
+      "exported": true
+    },
+    "pkg/sub/b.py": {
+      "key": "pkg/sub/b.py",
+      "kind": "module",
+      "path": "pkg/sub/b.py",
+      "line": 1,
+      "exported": true
+    },
+    "pkg/sub/b.py//f": {
+      "key": "pkg/sub/b.py//f",
+      "kind": "function",
+      "path": "pkg/sub/b.py",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "pkg/sub/a.py",
+      "to": "pkg/sub/b.py",
+      "site": {
+        "path": "pkg/sub/a.py",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "python.import.relative"
+    },
+    {
+      "from": "pkg/sub/a.py",
+      "to": "pkg/c.py",
+      "site": {
+        "path": "pkg/sub/a.py",
+        "line": 2
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "python.import.relative"
+    },
+    {
+      "from": "pkg/sub/a.py//run",
+      "to": "pkg/sub/b.py//f",
+      "site": {
+        "path": "pkg/sub/a.py",
+        "line": 5,
+        "column": 5
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.import"
+    },
+    {
+      "from": "pkg/sub/a.py//run",
+      "to": "pkg/c.py//g",
+      "site": {
+        "path": "pkg/sub/a.py",
+        "line": 6,
+        "column": 5
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.import"
+    }
+  ],
+  "unresolved": [],
+  "roots": [],
+  "files": {
+    "pkg/c.py": "indexed",
+    "pkg/sub/a.py": "indexed",
+    "pkg/sub/b.py": "indexed"
+  },
+  "stats": {
+    "version": "1",
+    "files": 3,
+    "nodes": 6,
+    "edges": 4,
+    "unresolved": 0,
+    "roots": 0
+  }
+}

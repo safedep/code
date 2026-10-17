@@ -1,0 +1,21 @@
+[
+  {
+    "version": "1", "path": "main.py", "language": "python",
+    "imports": [
+      {"line": 1, "module": "requests", "alias": "requests", "kind": "static", "namespace": "requests"},
+      {"line": 2, "module": "yaml", "item": "load", "alias": "yl", "kind": "static", "namespace": "yaml//load"},
+      {"line": 6, "module": "plugins.", "kind": "dynamic-computed", "namespace": ""}
+    ],
+    "definitions": [
+      {"key": "main.py", "kind": "module", "name": "main", "start_line": 1, "end_line": 6, "exported": true},
+      {"key": "main.py//load_plugin", "kind": "function", "name": "load_plugin", "start_line": 5, "end_line": 6, "exported": true, "flags": [{"kind": "computed-import", "line": 6}]}
+    ],
+    "calls": [
+      {"caller": "main.py", "line": 3, "column": 1, "callee": "requests.get", "targets": ["requests//get"], "receiver": "requests", "method": "get", "kind": "call"},
+      {"caller": "main.py", "line": 4, "column": 1, "callee": "yl", "targets": ["yaml//load"], "kind": "call"},
+      {"caller": "main.py", "line": 4, "column": 4, "callee": "print", "targets": ["print"], "kind": "call"}
+    ],
+    "unresolved": [{"caller": "main.py//load_plugin", "line": 6, "column": 5, "text": "importlib.import_module", "reason": "dynamic-import"}],
+    "flags": [{"kind": "computed-import", "line": 6}]
+  }
+]

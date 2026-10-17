@@ -1,0 +1,34 @@
+[
+  {
+    "version": "1", "path": "main.py", "language": "python",
+    "imports": [{"line": 1, "module": "parser", "item": "Parser", "alias": "Parser", "kind": "static", "namespace": "parser//Parser"}],
+    "definitions": [{"key": "main.py", "kind": "module", "name": "main", "start_line": 1, "end_line": 4, "exported": true}],
+    "calls": [
+      {"caller": "main.py", "line": 2, "column": 5, "callee": "Parser", "targets": ["parser//Parser"], "kind": "new"},
+      {"caller": "main.py", "line": 3, "column": 1, "callee": "p.parse", "targets": ["parser//Parser//parse"], "receiver": "p", "method": "parse", "kind": "call"},
+      {"caller": "main.py", "line": 4, "column": 1, "callee": "p.close", "targets": ["parser//Parser//close"], "receiver": "p", "method": "close", "kind": "call"}
+    ]
+  },
+  {
+    "version": "1", "path": "parser.py", "language": "python",
+    "imports": [{"line": 1, "module": "base", "item": "Base", "alias": "Base", "kind": "static", "namespace": "base//Base"}],
+    "definitions": [
+      {"key": "parser.py", "kind": "module", "name": "parser", "start_line": 1, "end_line": 7, "exported": true},
+      {"key": "parser.py//Parser", "kind": "class", "name": "Parser", "start_line": 3, "end_line": 7, "exported": true},
+      {"key": "parser.py//Parser//__init__", "kind": "constructor", "name": "__init__", "start_line": 4, "end_line": 4, "exported": true, "parent": "parser.py//Parser"},
+      {"key": "parser.py//Parser//parse", "kind": "method", "name": "parse", "start_line": 5, "end_line": 7, "exported": true, "parent": "parser.py//Parser"}
+    ],
+    "classes": [{"key": "parser.py//Parser", "bases": ["Base"], "methods": ["parser.py//Parser//__init__", "parser.py//Parser//parse"]}],
+    "calls": [{"caller": "parser.py//Parser//parse", "line": 6, "column": 9, "callee": "self.helper", "targets": ["parser.py//Parser//helper"], "receiver": "self", "method": "helper", "kind": "call"}]
+  },
+  {
+    "version": "1", "path": "base.py", "language": "python",
+    "imports": [{"line": 1, "module": "io", "alias": "io", "kind": "static", "namespace": "io"}],
+    "definitions": [
+      {"key": "base.py", "kind": "module", "name": "base", "start_line": 1, "end_line": 4, "exported": true},
+      {"key": "base.py//Base", "kind": "class", "name": "Base", "start_line": 3, "end_line": 4, "exported": true},
+      {"key": "base.py//Base//helper", "kind": "method", "name": "helper", "start_line": 4, "end_line": 4, "exported": true, "parent": "base.py//Base"}
+    ],
+    "classes": [{"key": "base.py//Base", "bases": ["io.IOBase"], "methods": ["base.py//Base//helper"]}]
+  }
+]

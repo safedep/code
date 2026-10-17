@@ -1,0 +1,64 @@
+{
+  "nodes": {
+    "app/main.py": {
+      "key": "app/main.py",
+      "kind": "module",
+      "path": "app/main.py",
+      "line": 1,
+      "exported": true
+    },
+    "lib/shared.py": {
+      "key": "lib/shared.py",
+      "kind": "module",
+      "path": "lib/shared.py",
+      "line": 1,
+      "exported": true
+    },
+    "lib/shared.py//go": {
+      "key": "lib/shared.py//go",
+      "kind": "function",
+      "path": "lib/shared.py",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "app/main.py",
+      "to": "lib/shared.py",
+      "site": {
+        "path": "app/main.py",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "python.import.absolute"
+    },
+    {
+      "from": "app/main.py",
+      "to": "lib/shared.py//go",
+      "site": {
+        "path": "app/main.py",
+        "line": 2,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.import"
+    }
+  ],
+  "unresolved": [],
+  "roots": [],
+  "files": {
+    "app/main.py": "indexed",
+    "lib/shared.py": "indexed"
+  },
+  "stats": {
+    "version": "1",
+    "files": 2,
+    "nodes": 3,
+    "edges": 2,
+    "unresolved": 0,
+    "roots": 0
+  }
+}

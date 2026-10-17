@@ -1,0 +1,72 @@
+{
+  "nodes": {
+    "services/api/src/api/__init__.py": {
+      "key": "services/api/src/api/__init__.py",
+      "kind": "module",
+      "path": "services/api/src/api/__init__.py",
+      "line": 1,
+      "exported": true
+    },
+    "services/api/src/api/cli.py": {
+      "key": "services/api/src/api/cli.py",
+      "kind": "module",
+      "path": "services/api/src/api/cli.py",
+      "line": 1,
+      "exported": true
+    },
+    "services/api/src/api/core.py": {
+      "key": "services/api/src/api/core.py",
+      "kind": "module",
+      "path": "services/api/src/api/core.py",
+      "line": 1,
+      "exported": true
+    },
+    "services/api/src/api/core.py//run": {
+      "key": "services/api/src/api/core.py//run",
+      "kind": "function",
+      "path": "services/api/src/api/core.py",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "services/api/src/api/cli.py",
+      "to": "services/api/src/api/core.py",
+      "site": {
+        "path": "services/api/src/api/cli.py",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "python.import.absolute"
+    },
+    {
+      "from": "services/api/src/api/cli.py",
+      "to": "services/api/src/api/core.py//run",
+      "site": {
+        "path": "services/api/src/api/cli.py",
+        "line": 2,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.import"
+    }
+  ],
+  "unresolved": [],
+  "roots": [],
+  "files": {
+    "services/api/src/api/__init__.py": "indexed",
+    "services/api/src/api/cli.py": "indexed",
+    "services/api/src/api/core.py": "indexed"
+  },
+  "stats": {
+    "version": "1",
+    "files": 3,
+    "nodes": 4,
+    "edges": 2,
+    "unresolved": 0,
+    "roots": 0
+  }
+}
