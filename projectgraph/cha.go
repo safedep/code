@@ -209,8 +209,46 @@ func (b *builder) overrides(class string, call fileindex.Call, found string) []s
 			out = append(out, key)
 		}
 	}
+	family := languageFamily(b.languageOf(class))
+	for _, open := range b.openClasses() {
+		if languageFamily(b.languageOf(open)) != family {
+			continue
+		}
+		if key, ok := b.ownMethod(open, call.Method); ok && key != found && b.isMethod(key) && !slices.Contains(out, key) {
+			out = append(out, key)
+		}
+	}
 	slices.Sort(out)
 	return out
+}
+
+// openClasses returns the first-party classes of Python, JavaScript and
+// TypeScript with a base that names no class, in path order: a call, as
+// Loading(Base) in class App extends Loading(Base), or a parameter, as B in
+// (B) => class extends B {}. Such a base is a value of the program, so the
+// class can extend any class. A Go or Java base is a type, and it names a
+// class or a type of a dependency.
+func (b *builder) openClasses() []string {
+	if b.open != nil {
+		return b.open
+	}
+	b.open = []string{}
+	for _, p := range b.paths {
+		ix := b.byPath[p]
+		if ix == nil || ix.Language != langcode.Python && !ix.Language.IsECMAScript() {
+			continue
+		}
+		sc := b.scopes[p]
+		for _, c := range ix.Classes {
+			if slices.ContainsFunc(c.Bases, func(base string) bool {
+				_, ok := b.resolveNameIn(sc, fileindex.Parent(c.Key), base)
+				return !ok && !langcode.IsBuiltin(ix.Language, base)
+			}) {
+				b.open = append(b.open, c.Key)
+			}
+		}
+	}
+	return b.open
 }
 
 // implementations returns the Go methods of the project that a call of a

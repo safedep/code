@@ -322,3 +322,25 @@ func TestBuildStructuralTypesKeepFieldEdges(t *testing.T) {
 	}, edgesOfKind(g, EdgeMember, EdgeCHA, EdgeField),
 		"an interface and a method that no class of the hierarchy defines keep the field edges, and a class with the method narrows the site")
 }
+
+func TestBuildOpenClassesTakeCHAEdges(t *testing.T) {
+	ix := &fileindex.Index{
+		Version: fileindex.Version, Path: "a.js", Language: langcode.Javascript,
+		Definitions: []fileindex.Definition{
+			def(fileindex.DefFunction, "a.js//mix", 1),
+			def(fileindex.DefClass, "a.js//mix//<anonymous:1>", 1), def(fileindex.DefMethod, "a.js//mix//<anonymous:1>//load", 2),
+			def(fileindex.DefClass, "a.js//Err", 4), def(fileindex.DefMethod, "a.js//Err//load", 4),
+			def(fileindex.DefClass, "a.js//App", 5), def(fileindex.DefMethod, "a.js//App//start", 6),
+		},
+		Classes: []fileindex.Class{
+			{Key: "a.js//mix//<anonymous:1>", Bases: []string{"B"}, Methods: []string{"a.js//mix//<anonymous:1>//load"}},
+			{Key: "a.js//Err", Bases: []string{"Error"}, Methods: []string{"a.js//Err//load"}},
+			{Key: "a.js//App", Bases: []string{"mix(Object)"}, Methods: []string{"a.js//App//start"}},
+		},
+		Calls: []fileindex.Call{{Caller: "a.js//App//start", Line: 7, Column: 5, Callee: "this.load", Targets: []string{"a.js//App//this//load"}, Receiver: "this", Method: "load", Kind: fileindex.CallCall}},
+	}
+	g, err := Build(context.Background(), []*fileindex.Index{ix}, Options{})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"a.js//App//start -> a.js//mix//<anonymous:1>//load cha javascript.cha"}, edgesOfKind(g, EdgeCHA),
+		"a class whose base is a parameter can extend any class, and a builtin base names a class")
+}

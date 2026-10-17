@@ -1,0 +1,38 @@
+source: safedep:hand
+description: Loading returns a class expression that extends its parameter. The index defines the class with an anonymous name. Its base names no class, and the base of App is a call, so both classes are open. A call of load on this in App can run the load of any open class, so a cha edge joins it to the load of the mixin class.
+roots:
+  - key: src/app.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/app.js//App//start
+    to: src/mixins.js//Loading//<anonymous:3>//load
+    kind: cha
+    confidence: medium
+    site: src/app.js:7
+unresolved:
+  - caller: src/app.js//App//start
+    site: src/app.js:7
+    reason: no-definition
+    method: load
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/app.js
+      - key: src/app.js//App//start
+        site: src/app.js:11
+        kind: member
+        confidence: high
+      - key: src/mixins.js//Loading//<anonymous:3>//load
+        site: src/app.js:7
+        kind: cha
+        confidence: medium
+      - key: js-yaml//load
+        site: src/mixins.js:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/mixins.js//Loading//<anonymous:3>//load
+        site: src/mixins.js:5
+        reached: true

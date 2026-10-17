@@ -99,6 +99,8 @@ type builder struct {
 
 	mros     map[string][]string
 	children map[string][]string
+	// open holds the classes whose base can be any class.
+	open []string
 	// narrowed holds the call sites whose receiver a class narrowed. Such a
 	// site gets no field or name edge, and the link step owns its record.
 	narrowed map[Site]bool
