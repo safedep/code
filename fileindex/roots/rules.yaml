@@ -88,6 +88,10 @@ rules:
     language: java
     kind: framework
     match: { annotation: ["@RestController", "@Controller", "@RequestMapping", "@GetMapping", "@PostMapping", "@PutMapping", "@DeleteMapping", "@PatchMapping", "@ExceptionHandler", "@Scheduled", "@EventListener", "@KafkaListener", "@JmsListener", "@RabbitListener", "@Bean", "@PostConstruct"] }
+  - id: java.spring.component
+    language: java
+    kind: framework
+    match: { annotation: ["@Component", "@Service", "@Repository", "@Configuration"] }
   - id: test.files
     language: any
     kind: test

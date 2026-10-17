@@ -227,6 +227,7 @@ func (b *builder) link(ctx context.Context) error {
 		b.linkInits(ix)
 		b.linkClassInits(ix)
 		b.linkConstructors(ix)
+		b.linkOverrides(ix)
 		b.linkArgumentFunctions(ix)
 		b.linkCalls(ix)
 		b.linkReferences(ix)
@@ -505,6 +506,38 @@ func (b *builder) linkConstructors(ix *fileindex.Index) {
 			Resolver: resolverName(ix.Language, "constructor"),
 		})
 	}
+}
+
+// linkOverrides adds a reference edge from each class with a base of a
+// dependency to each method of the class that no first-party base defines,
+// as run of a subclass of threading.Thread or do_GET of a subclass of
+// BaseHTTPRequestHandler. The code of the dependency calls such a method on
+// an instance of the class, and the graph has no edge for that call. A
+// constructor runs with the class and gets its own edge.
+func (b *builder) linkOverrides(ix *fileindex.Index) {
+	for _, c := range ix.Classes {
+		if _, ok := b.externalBase(c.Key); !ok {
+			continue
+		}
+		for _, m := range c.Methods {
+			if b.kindOf(m) != NodeMethod || fileindex.Last(m) == javaClassInit || b.inheritsName(c.Key, fileindex.Last(m)) {
+				continue
+			}
+			n := b.g.Nodes[m]
+			b.addEdge(Edge{From: c.Key, To: m, Site: Site{Path: n.Path, Line: n.Line}, Kind: EdgeReference, Resolver: resolverName(ix.Language, "override")})
+		}
+	}
+}
+
+// inheritsName reports whether a first-party base of the class, at any
+// depth, defines a member of the name.
+func (b *builder) inheritsName(class, name string) bool {
+	for _, c := range b.mro(class)[1:] {
+		if _, ok := b.ownMethod(c, name); ok {
+			return true
+		}
+	}
+	return false
 }
 
 // linkArgumentFunctions adds an edge from the scope that defines each

@@ -63,6 +63,17 @@
   },
   "edges": [
     {
+      "from": "base.py//Base",
+      "to": "base.py//Base//helper",
+      "site": {
+        "path": "base.py",
+        "line": 4
+      },
+      "kind": "reference",
+      "confidence": "low",
+      "resolver": "python.override"
+    },
+    {
       "from": "main.py",
       "to": "parser.py",
       "site": {
@@ -130,6 +141,17 @@
       "kind": "direct",
       "confidence": "high",
       "resolver": "python.constructor"
+    },
+    {
+      "from": "parser.py//Parser",
+      "to": "parser.py//Parser//parse",
+      "site": {
+        "path": "parser.py",
+        "line": 5
+      },
+      "kind": "reference",
+      "confidence": "low",
+      "resolver": "python.override"
     },
     {
       "from": "parser.py//Parser//parse",
@@ -228,7 +250,7 @@
     "version": "7",
     "files": 3,
     "nodes": 9,
-    "edges": 7,
+    "edges": 9,
     "unresolved": 0,
     "roots": 8,
     "root_fallback": true

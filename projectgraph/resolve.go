@@ -998,13 +998,20 @@ func (b *builder) bind(sc *scope, name string, line int, target, rule string) st
 }
 
 // bases returns the keys of the bases of a class that the file scope
-// resolves. A builtin base, as object, resolves to nothing.
+// resolves. A builtin base, as object, resolves to nothing. A Java base
+// always names a type.
 func (b *builder) bases(rec classRecord) []string {
 	sc := b.scopes[rec.ix.Path]
 	var out []string
 	for _, base := range rec.class.Bases {
-		if key, ok := b.resolveNameIn(sc, fileindex.Parent(rec.class.Key), base); ok {
+		key, ok := b.resolveNameIn(sc, fileindex.Parent(rec.class.Key), base)
+		switch {
+		case ok:
 			out = append(out, key)
+		case rec.ix.Language == langcode.Java:
+			// A Java type that no import and no package of the project
+			// names is a type of java.lang, as Thread or Runnable.
+			out = append(out, fileindex.Namespace(langcode.Java, base))
 		}
 	}
 	return out

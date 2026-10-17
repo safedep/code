@@ -344,3 +344,26 @@ func TestBuildOpenClassesTakeCHAEdges(t *testing.T) {
 	assert.Equal(t, []string{"a.js//App//start -> a.js//mix//<anonymous:1>//load cha javascript.cha"}, edgesOfKind(g, EdgeCHA),
 		"a class whose base is a parameter can extend any class, and a builtin base names a class")
 }
+
+func TestBuildOverridesOfADependencyBase(t *testing.T) {
+	ix := &fileindex.Index{
+		Version: fileindex.Version, Path: "w.py", Language: langcode.Python,
+		Imports: []fileindex.Import{{Line: 1, Module: "threading", Alias: "threading", Kind: fileindex.ImportStatic, Namespace: "threading"}},
+		Definitions: []fileindex.Definition{
+			def(fileindex.DefClass, "w.py//Base", 2), def(fileindex.DefMethod, "w.py//Base//step", 3),
+			def(fileindex.DefClass, "w.py//W", 5), def(fileindex.DefConstructor, "w.py//W//__init__", 6),
+			def(fileindex.DefMethod, "w.py//W//run", 7), def(fileindex.DefMethod, "w.py//W//step", 8),
+			def(fileindex.DefClass, "w.py//Plain", 10), def(fileindex.DefMethod, "w.py//Plain//go", 11),
+		},
+		Classes: []fileindex.Class{
+			{Key: "w.py//Base", Methods: []string{"w.py//Base//step"}},
+			{Key: "w.py//W", Bases: []string{"Base", "threading.Thread"}, Methods: []string{"w.py//W//__init__", "w.py//W//run", "w.py//W//step"}},
+			{Key: "w.py//Plain", Methods: []string{"w.py//Plain//go"}},
+		},
+	}
+	ix.Definitions[3].Parent = "w.py//W"
+	g, err := Build(context.Background(), []*fileindex.Index{ix}, Options{})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"w.py//W -> w.py//W//run reference python.override"}, edgesOfKind(g, EdgeReference),
+		"the dependency can call a method that no first-party base defines, and the constructor runs with the class")
+}
