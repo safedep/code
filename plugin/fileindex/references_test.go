@@ -80,3 +80,8 @@ func TestFileIndexReferences(t *testing.T) {
 		})
 	}
 }
+
+func TestFileIndexClassBasesAreNoReferences(t *testing.T) {
+	ix := indexSource(t, core.LanguageCodePython, "a.py", "class Base:\n    pass\n\n\nclass Strict(Base):\n    pass\n")
+	assert.Empty(t, ix.References)
+}

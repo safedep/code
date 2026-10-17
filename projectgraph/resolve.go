@@ -178,13 +178,13 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			}
 			targets = []string{call.Callee}
 		}
-		from := call.Caller
-		if b.g.Nodes[from] == nil {
-			from = sc.enclosing(call.Line)
+		caller := call.Caller
+		if b.g.Nodes[caller] == nil {
+			caller = sc.enclosing(call.Line)
 		}
-		from = b.runner(from)
+		from := b.runner(caller)
 		site := Site{Path: ix.Path, Line: call.Line, Column: call.Column}
-		for _, r := range b.resolveTargets(sc, targets) {
+		for _, r := range b.resolveTargets(sc, caller, targets) {
 			if r.fail != nil {
 				b.addUnresolved(UnresolvedSite{
 					Caller:   from,
@@ -242,7 +242,7 @@ func (b *builder) linkReferences(ix *fileindex.Index) {
 	for _, ref := range ix.References {
 		from := b.runner(ref.Caller)
 		site := Site{Path: ix.Path, Line: ref.Line, Column: ref.Column}
-		for _, r := range b.resolveTargets(sc, ref.Targets) {
+		for _, r := range b.resolveTargets(sc, ref.Caller, ref.Targets) {
 			if r.fail != nil || r.unbound {
 				continue
 			}
@@ -253,10 +253,10 @@ func (b *builder) linkReferences(ix *fileindex.Index) {
 
 // resolveTargets resolves the per-file targets of a site. Each resolution
 // keeps the target that it came from.
-func (b *builder) resolveTargets(sc *scope, targets []string) []resolution {
+func (b *builder) resolveTargets(sc *scope, caller string, targets []string) []resolution {
 	var out []resolution
 	for _, t := range targets {
-		for _, r := range b.resolveTarget(sc, t) {
+		for _, r := range b.resolveTarget(sc, caller, t) {
 			r.target = t
 			out = append(out, r)
 		}
@@ -264,10 +264,17 @@ func (b *builder) resolveTargets(sc *scope, targets []string) []resolution {
 	return out
 }
 
-// resolveTarget resolves one per-file target. A bare name can resolve
-// through more than one wildcard import, so the result is a list.
-func (b *builder) resolveTarget(sc *scope, target string) []resolution {
+// resolveTarget resolves one per-file target of a site in the caller. A
+// bare name can resolve through more than one wildcard import, so the
+// result is a list.
+func (b *builder) resolveTarget(sc *scope, caller, target string) []resolution {
 	ix := sc.ix
+	if target == superKeyword && isECMAScript(ix.Language) {
+		return []resolution{b.resolveSuper(caller, nil)}
+	}
+	if rest, ok := strings.CutPrefix(target, superKeyword+Separator); ok {
+		return []resolution{b.resolveSuper(caller, strings.Split(rest, Separator))}
+	}
 	if HasKeyPrefix(target, ix.Path) {
 		return []resolution{b.resolveLocal(target)}
 	}
@@ -291,6 +298,64 @@ func (b *builder) resolveTarget(sc *scope, target string) []resolution {
 		}
 	}
 	return []resolution{{key: target, kind: EdgeDirect, rule: "external", unbound: true}}
+}
+
+// superKeyword is the receiver of a call of a method of the base class, as
+// super().load() in Python and super.load() in JavaScript. A bare call of it
+// in JavaScript calls the constructor of the base class.
+const superKeyword = "super"
+
+// resolveSuper resolves the names on super in a method of a class through
+// the bases of the class. No names is the call of the base class itself,
+// which runs its constructor. A builtin base, or no base in Python, gives
+// the external key of the builtin, as Exception//__init__ or
+// object//__init__.
+func (b *builder) resolveSuper(caller string, names []string) resolution {
+	class, ok := b.enclosingClass(caller)
+	if !ok {
+		return resolution{fail: noDefinition(superKeyword)}
+	}
+	rec := b.classes[class]
+	lang := rec.ix.Language
+	missing := false
+	for _, text := range rec.class.Bases {
+		base, ok := b.resolveScopeName(b.scopes[rec.ix.Path], text)
+		switch {
+		case !ok && langcode.IsBuiltin(lang, text):
+			base = text
+		case !ok:
+			missing = true
+			continue
+		}
+		switch {
+		case b.kindOf(base) != NodeClass:
+			return resolution{key: b.external(Join(base, names...)), kind: EdgeDirect, rule: "super"}
+		case len(names) == 0:
+			return resolution{key: base, kind: EdgeDirect, rule: "super"}
+		}
+		if key, fail := b.method(base, names[0], 0, map[string]bool{}); fail == nil {
+			r := b.walk(key, names[1:])
+			if r.kind == EdgeDirect && b.isMethod(r.key) {
+				r.kind = EdgeMember
+			}
+			r.rule = cmp.Or(r.rule, "super")
+			return r
+		}
+	}
+	if missing || lang != langcode.Python {
+		return resolution{fail: noDefinition(cmp.Or(strings.Join(names, Separator), superKeyword))}
+	}
+	return resolution{key: b.external(Join("object", names...)), kind: EdgeDirect, rule: "super"}
+}
+
+// enclosingClass returns the innermost class that holds the key.
+func (b *builder) enclosingClass(key string) (string, bool) {
+	for segs := Segments(key); len(segs) > 0; segs = segs[:len(segs)-1] {
+		if k := Join(Unit(key), segs...); b.kindOf(k) == NodeClass {
+			return k, true
+		}
+	}
+	return "", false
 }
 
 // resolveLocal resolves a key of the file. A key that names no node walks

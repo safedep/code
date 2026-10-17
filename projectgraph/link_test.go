@@ -866,3 +866,81 @@ func TestBuildReferenceEdges(t *testing.T) {
 	}, refs)
 	assert.Empty(t, g.Unresolved, "a reference that does not resolve is no call")
 }
+
+func TestBuildSuperCalls(t *testing.T) {
+	class := func(path, name string, bases []string, methods ...string) ([]fileindex.Definition, fileindex.Class) {
+		key := path + Separator + name
+		defs := []fileindex.Definition{{Key: key, Kind: fileindex.DefClass, Name: name, StartLine: 1, EndLine: 9}}
+		c := fileindex.Class{Key: key, Bases: bases}
+		for _, m := range methods {
+			kind := fileindex.DefMethod
+			if m == "constructor" || m == "__init__" {
+				kind = fileindex.DefConstructor
+			}
+			defs = append(defs, fileindex.Definition{Key: Join(key, m), Kind: kind, Name: m, StartLine: 2, EndLine: 3, Parent: key})
+			c.Methods = append(c.Methods, Join(key, m))
+		}
+		return defs, c
+	}
+	index := func(path string, lang langcode.Code, imports []fileindex.Import, calls []fileindex.Call, classes ...func() ([]fileindex.Definition, fileindex.Class)) *fileindex.Index {
+		ix := &fileindex.Index{Version: fileindex.Version, Path: path, Language: lang, Imports: imports, Calls: calls}
+		for _, c := range classes {
+			defs, cl := c()
+			ix.Definitions = append(ix.Definitions, defs...)
+			ix.Classes = append(ix.Classes, cl)
+		}
+		return ix
+	}
+	call := func(caller, target string) fileindex.Call {
+		return fileindex.Call{Caller: caller, Line: 3, Column: 9, Callee: target, Targets: []string{target}, Method: Last(target), Kind: fileindex.CallCall}
+	}
+
+	py := index("a.py", langcode.Python,
+		[]fileindex.Import{{Line: 1, Module: "lib", Item: "Remote", Alias: "Remote", Kind: fileindex.ImportStatic, Namespace: "lib//Remote"}},
+		[]fileindex.Call{
+			call("a.py//Strict//load", "super//load"),
+			call("a.py//Plain//__init__", "super//__init__"),
+			call("a.py//Err//__init__", "super//__init__"),
+			call("a.py//Client//send", "super//send"),
+		},
+		func() ([]fileindex.Definition, fileindex.Class) { return class("a.py", "Base", nil, "load") },
+		func() ([]fileindex.Definition, fileindex.Class) {
+			return class("a.py", "Strict", []string{"Base"}, "load")
+		},
+		func() ([]fileindex.Definition, fileindex.Class) { return class("a.py", "Plain", nil, "__init__") },
+		func() ([]fileindex.Definition, fileindex.Class) {
+			return class("a.py", "Err", []string{"Exception"}, "__init__")
+		},
+		func() ([]fileindex.Definition, fileindex.Class) {
+			return class("a.py", "Client", []string{"Remote"}, "send")
+		},
+	)
+	js := index("a.js", langcode.Javascript, nil,
+		[]fileindex.Call{
+			call("a.js//Strict//constructor", "super"),
+			call("a.js//Strict//load", "super//load"),
+			call("a.js//Lone//load", "super//load"),
+		},
+		func() ([]fileindex.Definition, fileindex.Class) { return class("a.js", "Base", nil, "load") },
+		func() ([]fileindex.Definition, fileindex.Class) {
+			return class("a.js", "Strict", []string{"Base"}, "constructor", "load")
+		},
+		func() ([]fileindex.Definition, fileindex.Class) { return class("a.js", "Lone", nil, "load") },
+	)
+	js.Unresolved = []fileindex.Unresolved{{Caller: "a.js//Strict//load", Line: 3, Column: 9, Text: "super.load", Receiver: "super", Method: "load", Reason: fileindex.UnresolvedUnknownReceiver}}
+
+	g, err := Build(context.Background(), []*fileindex.Index{py, js}, Options{})
+	require.NoError(t, err)
+	edges := edgeStrings(g)
+	for _, e := range []string{
+		"a.py//Strict//load -> a.py//Base//load member python.super",
+		"a.py//Plain//__init__ -> object//__init__ direct python.super",
+		"a.py//Err//__init__ -> Exception//__init__ direct python.super",
+		"a.py//Client//send -> lib//Remote//send direct python.super",
+		"a.js//Strict//constructor -> a.js//Base direct javascript.super",
+		"a.js//Strict//load -> a.js//Base//load member javascript.super",
+	} {
+		assert.Contains(t, edges, e)
+	}
+	assert.Equal(t, []string{"a.js:3 a.js//Lone//load no-definition load"}, unresolvedStrings(g), "a class with no base has no super method")
+}

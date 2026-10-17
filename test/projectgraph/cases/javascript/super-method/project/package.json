@@ -1,0 +1,4 @@
+{
+  "name": "super-method",
+  "bin": { "app": "src/main.js" }
+}

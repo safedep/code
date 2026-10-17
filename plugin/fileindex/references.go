@@ -27,6 +27,9 @@ type referenceSyntax struct {
 	// logical holds the operators of a binary node whose operands are
 	// values, as a || b.
 	logical map[string]bool
+	// bases holds the parent types of a holder that names the bases of a
+	// class, as the argument list of class A(Base). A base is no value.
+	bases map[string]bool
 }
 
 var referenceSyntaxes = map[core.LanguageCode]referenceSyntax{
@@ -52,6 +55,7 @@ var referenceSyntaxes = map[core.LanguageCode]referenceSyntax{
 		property:    "attribute",
 		identifiers: map[string]bool{"identifier": true},
 		instances:   map[string]bool{"self": true, "cls": true},
+		bases:       map[string]bool{"class_definition": true},
 	},
 	core.LanguageCodeJavascript: ecmascriptReferences,
 	core.LanguageCodeTypescript: ecmascriptReferences,
@@ -119,7 +123,12 @@ func (p *projection) addReferences(ctx context.Context) {
 			stack = append(stack, open{key: key, end: node.EndByte()})
 		}
 		field, ok := syntax.holders[node.Type()]
-		if !ok || node.Type() == "binary_expression" && !syntax.logical[p.text(node.ChildByFieldName("operator"))] {
+		switch {
+		case !ok:
+			return true
+		case node.Type() == "binary_expression" && !syntax.logical[p.text(node.ChildByFieldName("operator"))]:
+			return true
+		case node.Parent() != nil && syntax.bases[node.Parent().Type()]:
 			return true
 		}
 		values := ts.NamedChildren(node)

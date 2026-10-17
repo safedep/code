@@ -439,6 +439,11 @@ func (b *builder) constructor(class string, depth int, seen map[string]bool) (st
 
 func (b *builder) copyUnresolved(ix *fileindex.Index) {
 	for _, u := range ix.Unresolved {
+		// The link step resolves a call on super through the bases of the
+		// class, and it records a call that it cannot resolve.
+		if u.Receiver == superKeyword && isECMAScript(ix.Language) {
+			continue
+		}
 		site := UnresolvedSite{
 			Caller:   b.runner(u.Caller),
 			Site:     Site{Path: ix.Path, Line: u.Line, Column: u.Column},

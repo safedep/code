@@ -1,0 +1,39 @@
+source: safedep:hand
+description: Strict.load calls super.load, which is Base.load through the class heritage of Strict.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.js
+    to: src/loaders.js//Strict//load
+    kind: member
+    confidence: high
+    site: src/main.js:3
+  - from: src/loaders.js//Strict//load
+    to: src/loaders.js//Base//load
+    kind: member
+    confidence: high
+    site: src/loaders.js:11
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/main.js
+      - key: src/loaders.js//Strict//load
+        site: src/main.js:3
+        kind: member
+        confidence: high
+      - key: src/loaders.js//Base//load
+        site: src/loaders.js:11
+        kind: member
+        confidence: high
+      - key: js-yaml//load
+        site: src/loaders.js:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/loaders.js//Base//load
+        site: src/loaders.js:5
+        reached: true

@@ -1,0 +1,44 @@
+source: safedep:hand
+description: Strict.load calls super().load, which is Base.load through the bases of Strict.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+edges:
+  - from: main.py
+    to: loaders.py//Strict//load
+    kind: member
+    confidence: high
+    site: main.py:3
+  - from: loaders.py//Strict//load
+    to: loaders.py//Base//load
+    kind: member
+    confidence: high
+    site: loaders.py:11
+no_edges:
+  - from: loaders.py//Strict//load
+    to: super//load
+  - from: loaders.py
+    to: loaders.py//Base
+unresolved: []
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: loaders.py//Strict//load
+        site: main.py:3
+        kind: member
+        confidence: high
+      - key: loaders.py//Base//load
+        site: loaders.py:11
+        kind: member
+        confidence: high
+      - key: yaml//load
+        site: loaders.py:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: loaders.py//Base//load
+        site: loaders.py:6
+        reached: true
