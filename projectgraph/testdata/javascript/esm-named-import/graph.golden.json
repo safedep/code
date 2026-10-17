@@ -113,7 +113,53 @@
       "import_prefix": "src/locale/"
     }
   ],
-  "roots": [],
+  "roots": [
+    {
+      "key": "src/main.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/main.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/parser.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/parser.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/parser.js//parse",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/parser.js",
+        "line": 2
+      }
+    },
+    {
+      "key": "src/util.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/util.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/util.js//fmt",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/util.js",
+        "line": 1
+      }
+    }
+  ],
   "files": {
     "src/main.js": "indexed",
     "src/parser.js": "indexed",
@@ -125,6 +171,7 @@
     "nodes": 6,
     "edges": 5,
     "unresolved": 1,
-    "roots": 0
+    "roots": 5,
+    "root_fallback": true
   }
 }

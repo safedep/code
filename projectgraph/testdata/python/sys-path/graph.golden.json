@@ -48,7 +48,35 @@
     }
   ],
   "unresolved": [],
-  "roots": [],
+  "roots": [
+    {
+      "key": "app/main.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "app/main.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "lib/shared.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "lib/shared.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "lib/shared.py//go",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "lib/shared.py",
+        "line": 1
+      }
+    }
+  ],
   "files": {
     "app/main.py": "indexed",
     "lib/shared.py": "indexed"
@@ -59,6 +87,7 @@
     "nodes": 3,
     "edges": 2,
     "unresolved": 0,
-    "roots": 0
+    "roots": 3,
+    "root_fallback": true
   }
 }

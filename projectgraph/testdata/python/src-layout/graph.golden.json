@@ -55,7 +55,44 @@
     }
   ],
   "unresolved": [],
-  "roots": [],
+  "roots": [
+    {
+      "key": "services/api/src/api/__init__.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "services/api/src/api/__init__.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "services/api/src/api/cli.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "services/api/src/api/cli.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "services/api/src/api/core.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "services/api/src/api/core.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "services/api/src/api/core.py//run",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "services/api/src/api/core.py",
+        "line": 1
+      }
+    }
+  ],
   "files": {
     "services/api/src/api/__init__.py": "indexed",
     "services/api/src/api/cli.py": "indexed",
@@ -67,6 +104,7 @@
     "nodes": 4,
     "edges": 2,
     "unresolved": 0,
-    "roots": 0
+    "roots": 4,
+    "root_fallback": true
   }
 }

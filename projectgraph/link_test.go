@@ -13,6 +13,7 @@ import (
 	"testing/fstest"
 
 	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/fileindex/roots"
 	"github.com/safedep/code/langcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,12 +23,14 @@ var update = flag.Bool("update", false, "rewrite the golden graphs")
 
 // caseOptions is the options.json of a case.
 type caseOptions struct {
-	SysPath []string              `json:"sys_path"`
-	Files   map[string]FileStatus `json:"files"`
+	SysPath   []string              `json:"sys_path"`
+	Files     map[string]FileStatus `json:"files"`
+	TestPaths []string              `json:"test_paths"`
 }
 
-// loadCase reads the indexes of a case under testdata, its options, and the
-// files under its fs directory as the project root.
+// loadCase reads the indexes of a case under testdata, its options, its
+// extra root rules, and the files under its fs directory as the project
+// root.
 func loadCase(t *testing.T, name string) ([]*fileindex.Index, Options) {
 	t.Helper()
 	dir := filepath.Join("testdata", name)
@@ -63,7 +66,14 @@ func loadCase(t *testing.T, name string) ([]*fileindex.Index, Options) {
 			return nil
 		}))
 	}
-	return indexes, Options{Root: root, SysPath: co.SysPath, Files: co.Files}
+	var rules []roots.Rule
+	if data, err := os.ReadFile(filepath.Join(dir, "rules.yaml")); err == nil {
+		rules, err = roots.Parse(data)
+		require.NoError(t, err)
+	} else {
+		require.ErrorIs(t, err, fs.ErrNotExist)
+	}
+	return indexes, Options{Root: root, SysPath: co.SysPath, Files: co.Files, TestPaths: co.TestPaths, Rules: rules}
 }
 
 func buildCase(t *testing.T, name string) *Graph {
@@ -452,4 +462,110 @@ func TestBuildTypeScript(t *testing.T) {
 			},
 		},
 	})
+}
+
+func rootStrings(g *Graph) []string {
+	out := make([]string, 0, len(g.Roots))
+	for _, r := range g.Roots {
+		out = append(out, fmt.Sprintf("%s %s %s", r.Key, r.Kind, r.Rule))
+	}
+	return out
+}
+
+func TestBuildRoots(t *testing.T) {
+	tests := []struct {
+		name     string
+		roots    []string
+		fallback bool
+	}{
+		{
+			name:  "roots/package-json-bin",
+			roots: []string{"bin/cli.js manifest node.package-json"},
+		},
+		{
+			name: "roots/library-surface",
+			roots: []string{
+				"lib/api.py library-surface library-surface",
+				"lib/api.py//public library-surface library-surface",
+				"lib/test_api.py test test.files",
+				"lib/test_api.py//test_public test test.files",
+			},
+			fallback: true,
+		},
+		{
+			name: "roots/test-file",
+			roots: []string{
+				"tests/test_app.py test test.files",
+				"tests/test_app.py//TestApp//test_run test test.files",
+				"tests/test_app.py//helper test test.files",
+			},
+			fallback: true,
+		},
+		{
+			name:  "roots/main-guard",
+			roots: []string{"app.py main python.main-guard"},
+		},
+		{
+			name: "roots/pyproject-scripts",
+			roots: []string{
+				"src/app/cli.py//main manifest python.project-scripts",
+				"src/app/legacy.py manifest python.project-scripts",
+				"src/app/plugin.py//Plugin//load manifest python.project-scripts",
+				"src/app/tool.py//run manifest python.project-scripts",
+			},
+		},
+		{
+			name: "roots/setup-py",
+			roots: []string{
+				"tool/admin.py//run manifest python.setup-py",
+				"tool/main.py//cli manifest python.setup-py",
+			},
+		},
+		{
+			name: "roots/procfile-dockerfile",
+			roots: []string{
+				"app/cli.py manifest dockerfile",
+				"app/wsgi.py//app manifest procfile",
+				"web/server.js manifest dockerfile",
+				"worker.py manifest procfile",
+			},
+		},
+		{
+			name: "roots/extra-rules",
+			roots: []string{
+				"app/users/route.ts framework routes",
+				"src/handler.js//Handler//handle framework handlers",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := buildCase(t, tt.name)
+			assert.Equal(t, tt.roots, rootStrings(g))
+			assert.Equal(t, tt.fallback, g.Stats.RootFallback)
+			assert.Empty(t, g.Problems)
+			checkGolden(t, tt.name, g)
+		})
+	}
+}
+
+func TestBuildMarksTestFiles(t *testing.T) {
+	g := buildCase(t, "roots/test-file")
+	assert.True(t, g.Nodes["tests/test_app.py//helper"].Test)
+}
+
+func TestBuildRejectsBadOptions(t *testing.T) {
+	_, err := Build(context.Background(), nil, Options{TestPaths: []string{"a/["}})
+	assert.ErrorContains(t, err, "test path")
+
+	_, err = Build(context.Background(), nil, Options{Rules: []roots.Rule{{ID: "x", Language: "any", Kind: "route"}}})
+	assert.ErrorContains(t, err, `root rule "x": unknown kind "route"`)
+}
+
+func TestBuildReportsProblems(t *testing.T) {
+	ix := &fileindex.Index{Version: fileindex.Version, Path: "a.js", Language: langcode.Javascript}
+	g, err := Build(context.Background(), []*fileindex.Index{ix}, Options{Root: fstest.MapFS{"package.json": {Data: []byte("{")}}})
+	require.NoError(t, err)
+	require.Len(t, g.Problems, 1)
+	assert.Equal(t, "package.json", g.Problems[0].Path)
 }

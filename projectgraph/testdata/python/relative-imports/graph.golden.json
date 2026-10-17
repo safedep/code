@@ -92,7 +92,62 @@
     }
   ],
   "unresolved": [],
-  "roots": [],
+  "roots": [
+    {
+      "key": "pkg/c.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "pkg/c.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "pkg/c.py//g",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "pkg/c.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "pkg/sub/a.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "pkg/sub/a.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "pkg/sub/a.py//run",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "pkg/sub/a.py",
+        "line": 4
+      }
+    },
+    {
+      "key": "pkg/sub/b.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "pkg/sub/b.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "pkg/sub/b.py//f",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "pkg/sub/b.py",
+        "line": 1
+      }
+    }
+  ],
   "files": {
     "pkg/c.py": "indexed",
     "pkg/sub/a.py": "indexed",
@@ -104,6 +159,7 @@
     "nodes": 6,
     "edges": 4,
     "unresolved": 0,
-    "roots": 0
+    "roots": 6,
+    "root_fallback": true
   }
 }

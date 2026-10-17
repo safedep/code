@@ -145,7 +145,80 @@
     }
   ],
   "unresolved": [],
-  "roots": [],
+  "roots": [
+    {
+      "key": "base.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "base.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "base.py//Base",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "base.py",
+        "line": 3
+      }
+    },
+    {
+      "key": "base.py//Base//helper",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "base.py",
+        "line": 4
+      }
+    },
+    {
+      "key": "main.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "parser.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "parser.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "parser.py//Parser",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "parser.py",
+        "line": 3
+      }
+    },
+    {
+      "key": "parser.py//Parser//__init__",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "parser.py",
+        "line": 4
+      }
+    },
+    {
+      "key": "parser.py//Parser//parse",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "parser.py",
+        "line": 5
+      }
+    }
+  ],
   "files": {
     "base.py": "indexed",
     "main.py": "indexed",
@@ -157,6 +230,7 @@
     "nodes": 9,
     "edges": 7,
     "unresolved": 0,
-    "roots": 0
+    "roots": 8,
+    "root_fallback": true
   }
 }

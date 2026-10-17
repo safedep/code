@@ -1,0 +1,22 @@
+[
+  {
+    "version": "1", "path": "app/users/route.ts", "language": "typescript",
+    "definitions": [{"key": "app/users/route.ts", "kind": "module", "name": "route", "start_line": 1, "end_line": 1, "exported": true}]
+  },
+  {
+    "version": "1", "path": "src/handler.js", "language": "javascript",
+    "definitions": [
+      {"key": "src/handler.js", "kind": "module", "name": "handler", "start_line": 1, "end_line": 4, "exported": true},
+      {"key": "src/handler.js//Handler", "kind": "class", "name": "Handler", "start_line": 1, "end_line": 4, "exported": true},
+      {"key": "src/handler.js//Handler//handle", "kind": "method", "name": "handle", "start_line": 2, "end_line": 3, "exported": true, "parent": "src/handler.js//Handler"},
+      {"key": "src/handler.js//handle", "kind": "function", "name": "handle", "start_line": 4, "end_line": 4, "exported": true}
+    ]
+  },
+  {
+    "version": "1", "path": "views.py", "language": "python",
+    "definitions": [
+      {"key": "views.py", "kind": "module", "name": "views", "start_line": 1, "end_line": 3, "exported": true},
+      {"key": "views.py//index", "kind": "function", "name": "index", "start_line": 2, "end_line": 3, "exported": true, "decorators": ["@app.route"]}
+    ]
+  }
+]

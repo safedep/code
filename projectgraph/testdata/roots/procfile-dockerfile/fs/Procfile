@@ -1,0 +1,3 @@
+web: gunicorn app.wsgi:app --workers 2
+worker: python worker.py
+# comment: python ignored.py

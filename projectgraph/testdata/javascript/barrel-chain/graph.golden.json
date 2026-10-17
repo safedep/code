@@ -120,7 +120,53 @@
     }
   ],
   "unresolved": [],
-  "roots": [],
+  "roots": [
+    {
+      "key": "src/api/index.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/api/index.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/core/index.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/core/index.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/core/parse.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/core/parse.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/core/parse.js//doParse",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/core/parse.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/main.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/main.js",
+        "line": 1
+      }
+    }
+  ],
   "files": {
     "src/api/index.js": "indexed",
     "src/core/index.js": "indexed",
@@ -133,6 +179,7 @@
     "nodes": 7,
     "edges": 6,
     "unresolved": 0,
-    "roots": 0
+    "roots": 5,
+    "root_fallback": true
   }
 }

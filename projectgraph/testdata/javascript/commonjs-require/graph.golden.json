@@ -85,7 +85,53 @@
     }
   ],
   "unresolved": [],
-  "roots": [],
+  "roots": [
+    {
+      "key": "helper.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "helper.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "helper.js//helper",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "helper.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "lib/index.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "lib/index.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "lib/index.js//run",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "lib/index.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "main.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.js",
+        "line": 1
+      }
+    }
+  ],
   "files": {
     "helper.js": "indexed",
     "lib/index.js": "indexed",
@@ -97,6 +143,7 @@
     "nodes": 5,
     "edges": 4,
     "unresolved": 0,
-    "roots": 0
+    "roots": 5,
+    "root_fallback": true
   }
 }

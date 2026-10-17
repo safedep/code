@@ -1,0 +1,15 @@
+[project]
+name = "app"
+scripts = { tool = "app.tool:run" }
+
+[project.scripts]
+cli = "app.cli:main"   # the command line
+
+[project.entry-points."app.plugins"]
+plugin = 'app.plugin:Plugin.load'
+
+[tool.poetry.scripts]
+legacy = "app.legacy:missing_function"
+
+[tool.other]
+ignored = "app.ignored:x"

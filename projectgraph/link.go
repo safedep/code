@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/fileindex/roots"
+	"github.com/safedep/code/internal/pathglob"
 	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/projectgraph/modules"
 )
@@ -29,6 +31,11 @@ type Options struct {
 	// Files is the status of each file that the index step reports. A path
 	// with FileMissing and no index becomes a module node with that status.
 	Files map[string]FileStatus
+	// TestPaths marks the test files, next to Index.Test. A glob with no "/"
+	// matches one part of the path, as tests or test_*.py.
+	TestPaths []string
+	// Rules go over the embedded root rules by id.
+	Rules []roots.Rule
 
 	maxEdges      int
 	maxExportHops int
@@ -46,6 +53,7 @@ func Build(ctx context.Context, indexes []*fileindex.Index, opts Options) (*Grap
 	if err := b.link(ctx); err != nil {
 		return nil, err
 	}
+	b.markRoots()
 	g := b.finish()
 	g.Stats.Duration = time.Since(start)
 	return g, nil
@@ -62,6 +70,8 @@ type builder struct {
 	python *modules.Python
 	js     *modules.JavaScript
 	scopes map[string]*scope
+	test   map[string]bool
+	rules  []roots.Rule
 
 	edges       map[Edge]bool
 	unresolved  map[UnresolvedSite]bool
@@ -82,6 +92,16 @@ type classRecord struct {
 func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 	opts.maxEdges = cmp.Or(opts.maxEdges, defaultMaxEdges)
 	opts.maxExportHops = cmp.Or(opts.maxExportHops, defaultMaxExportHops)
+	for _, g := range opts.TestPaths {
+		if err := pathglob.Validate(g); err != nil {
+			return nil, fmt.Errorf("test path: %w", err)
+		}
+	}
+	for _, r := range opts.Rules {
+		if err := r.Validate(); err != nil {
+			return nil, fmt.Errorf("root rule %q: %w", r.ID, err)
+		}
+	}
 
 	b := &builder{
 		opts: opts,
@@ -98,6 +118,8 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		visiting:    map[nameKey]bool{},
 		bindings:    map[string]string{},
 		classes:     map[string]classRecord{},
+		test:        map[string]bool{},
+		rules:       roots.Merge(roots.Default(), opts.Rules),
 	}
 	for _, ix := range indexes {
 		if ix.Version != fileindex.Version {
@@ -115,6 +137,10 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		}
 	}
 	slices.Sort(b.paths)
+	for _, p := range b.paths {
+		ix := b.byPath[p]
+		b.test[p] = ix != nil && ix.Test || pathglob.MatchAny(opts.TestPaths, p)
+	}
 
 	b.files = modules.NewFiles(b.paths)
 	b.python = modules.NewPython(b.files, opts.Root, opts.SysPath)
@@ -132,7 +158,7 @@ func (b *builder) link(ctx context.Context) error {
 		ix := b.byPath[p]
 		if ix == nil {
 			b.g.Files[p] = FileMissing
-			b.addNode(&Node{Key: p, Kind: NodeModule, Path: p})
+			b.addNode(&Node{Key: p, Kind: NodeModule, Path: p, Test: b.test[p]})
 			continue
 		}
 		b.g.Files[p] = b.status(ix)
@@ -175,7 +201,7 @@ func (b *builder) addDefinitions(ix *fileindex.Index) {
 			defFlags[f] = true
 		}
 	}
-	module := &Node{Key: ix.Path, Kind: NodeModule, Path: ix.Path, Line: 1, Exported: true, Test: ix.Test}
+	module := &Node{Key: ix.Path, Kind: NodeModule, Path: ix.Path, Line: 1, Exported: true, Test: b.test[ix.Path]}
 	for _, f := range ix.Flags {
 		if !defFlags[f] {
 			module.Flags = append(module.Flags, f)
@@ -195,7 +221,7 @@ func (b *builder) addDefinitions(ix *fileindex.Index) {
 			Path:     ix.Path,
 			Line:     def.StartLine,
 			Exported: def.Exported,
-			Test:     ix.Test,
+			Test:     b.test[ix.Path],
 			Flags:    slices.Clone(def.Flags),
 		})
 	}
@@ -381,6 +407,9 @@ func (b *builder) finish() *Graph {
 	g.Edges = sortedKeys(b.edges, compareEdges)
 	g.Unresolved = sortedKeys(b.unresolved, compareUnresolved)
 	g.Truncated = sortedKeys(b.truncations, compareTruncations)
+	slices.SortFunc(g.Roots, func(a, b Root) int {
+		return cmp.Or(cmp.Compare(a.Key, b.Key), cmp.Compare(a.Kind, b.Kind), cmp.Compare(a.Rule, b.Rule))
+	})
 	if g.Roots == nil {
 		g.Roots = []Root{}
 	}

@@ -62,7 +62,35 @@
     }
   ],
   "unresolved": [],
-  "roots": [],
+  "roots": [
+    {
+      "key": "src/main.ts",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/main.ts",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/types.ts",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/types.ts",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/types.ts//Opts",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/types.ts",
+        "line": 1
+      }
+    }
+  ],
   "files": {
     "src/decl.d.ts": "indexed",
     "src/main.ts": "indexed",
@@ -74,6 +102,7 @@
     "nodes": 5,
     "edges": 2,
     "unresolved": 0,
-    "roots": 0
+    "roots": 3,
+    "root_fallback": true
   }
 }
