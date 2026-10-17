@@ -34,40 +34,8 @@ func (p *dependencyUsagePlugin) Name() string {
 	return "DependencyUsagePlugin"
 }
 
-var supportedLanguages = []core.LanguageCode{
-	core.LanguageCodePython,
-	core.LanguageCodeGo,
-	core.LanguageCodeJavascript,
-	core.LanguageCodeJava,
-	core.LanguageCodeTypescript,
-	core.LanguageCodeCSharp,
-	core.LanguageCodeRust,
-	core.LanguageCodePHP,
-	core.LanguageCodeRuby,
-	core.LanguageCodeKotlin,
-}
-
 func (p *dependencyUsagePlugin) SupportedLanguages() []core.LanguageCode {
-	return supportedLanguages
-}
-
-var usageEvidentNodeTypes = map[string]bool{
-	"identifier":      true,
-	"type_identifier": true,
-}
-
-// languageUsageEvidentNodeTypes replaces usageEvidentNodeTypes for a grammar
-// with other names for identifier nodes.
-var languageUsageEvidentNodeTypes = map[core.LanguageCode]map[string]bool{
-	core.LanguageCodePHP:    {"name": true},
-	core.LanguageCodeKotlin: {"simple_identifier": true, "type_identifier": true},
-}
-
-func usageEvidentNodeTypesOf(code core.LanguageCode) map[string]bool {
-	if nodeTypes, ok := languageUsageEvidentNodeTypes[code]; ok {
-		return nodeTypes
-	}
-	return usageEvidentNodeTypes
+	return supportedLanguages()
 }
 
 func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) error {
@@ -89,11 +57,13 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 		return fmt.Errorf("failed to resolve imports: %w", err)
 	}
 
+	profile := usageProfileOf(lang.Meta().Code)
+
 	moduleIdentifiers := make(map[string]*identifierItem)
 	for _, imp := range imports {
 		moduleName, moduleItem, moduleAlias := imp.ModuleName(), imp.ModuleItem(), imp.ModuleAlias()
 
-		packageHint, err := resolvePackageHint(moduleName, lang)
+		packageHint, err := profile.packageHintOf(moduleName)
 		if err != nil {
 			log.Debugf("failed to resolve package hint: %s", err)
 		}
@@ -116,24 +86,17 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 		return fmt.Errorf("failed to get tree data: %w", err)
 	}
 
-	treeLanguage, err := tree.Language()
-	if err != nil {
-		return fmt.Errorf("failed to get tree language: %w", err)
-	}
-
-	evidentNodeTypes := usageEvidentNodeTypesOf(lang.Meta().Code)
-
 	// The walk collects the evidence and the callbacks run after it, because
 	// a visit cannot stop the walk with the error of a callback.
 	var evidences []*UsageEvidence
 	err = ts.Walk(ctx, tree.Tree().RootNode(), ts.WalkOptions{}, func(n *sitter.Node) bool {
-		if evidentNodeTypes[n.Type()] {
+		if profile.evidentNodeTypes[n.Type()] {
 			identifierKey := n.Content(*treeData)
 			if identifiedItem, ok := moduleIdentifiers[identifierKey]; ok {
 				evidences = append(evidences, newUsageEvidence(identifiedItem.PackageHint, identifiedItem.Module, identifiedItem.Item, identifiedItem.Alias, false, identifierKey, file.Name(), uint(n.StartPoint().Row)+1))
 			}
 		}
-		return !isIgnoredNode(n, &treeLanguage, treeData)
+		return !profile.ignores(n, treeData)
 	})
 	if err != nil {
 		return fmt.Errorf("failed to walk the tree: %w", err)

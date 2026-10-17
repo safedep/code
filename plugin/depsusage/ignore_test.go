@@ -92,7 +92,7 @@ somevar2 = uint32(1)`,
 
 			for i := range int(rootNode.ChildCount()) {
 				node := rootNode.Child(i)
-				isIgnored := isIgnoredNode(node, &language, &data)
+				isIgnored := usageProfileOf(language.Meta().Code).ignores(node, &data)
 				assert.Equal(t, tc.ignored, isIgnored)
 			}
 		})
@@ -135,7 +135,7 @@ somevar2 = uint32(1)`,
 				variableDeclaratorNode := lexicalDeclarationNode.Child(1)
 				assert.Equal(t, "variable_declarator", variableDeclaratorNode.Type())
 
-				isIgnored := isIgnoredNode(variableDeclaratorNode, &language, &data)
+				isIgnored := usageProfileOf(language.Meta().Code).ignores(variableDeclaratorNode, &data)
 				assert.Equal(t, testcase.ignored, isIgnored)
 			})
 		}
