@@ -22,10 +22,27 @@ type PackageJSON struct {
 	Bin        json.RawMessage `json:"bin"`
 	Exports    json.RawMessage `json:"exports"`
 	Workspaces json.RawMessage `json:"workspaces"`
+
+	Dependencies         map[string]json.RawMessage `json:"dependencies"`
+	DevDependencies      map[string]json.RawMessage `json:"devDependencies"`
+	PeerDependencies     map[string]json.RawMessage `json:"peerDependencies"`
+	OptionalDependencies map[string]json.RawMessage `json:"optionalDependencies"`
 }
 
 // Path returns the project path of the package.json.
 func (p *PackageJSON) Path() string { return path.Join(p.Dir, "package.json") }
+
+// DependencyNames returns the names of the packages that the package.json
+// depends on, in any dependency field.
+func (p *PackageJSON) DependencyNames() []string {
+	set := map[string]bool{}
+	for _, deps := range []map[string]json.RawMessage{p.Dependencies, p.DevDependencies, p.PeerDependencies, p.OptionalDependencies} {
+		for name := range deps {
+			set[name] = true
+		}
+	}
+	return sortedKeys(set)
+}
 
 // BinFiles returns the files of the bin field, a string or a map from a
 // command to a file, in the order of the commands.

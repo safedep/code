@@ -49,12 +49,18 @@ var manifestFields = map[string][]string{
 }
 
 // Rule marks the roots of one kind. Language is a langcode or AnyLanguage.
-// A javascript rule also matches typescript files.
+// A javascript rule also matches typescript files. Requires names the
+// packages of the framework of the rule, as next. A javascript rule then
+// applies only when a package.json of the project depends on one of them,
+// and a python rule when a pyproject.toml, a setup.py, a Pipfile or a
+// requirements file does. A project whose manifests declare no dependency
+// gives no evidence, so the rule applies.
 type Rule struct {
-	ID       string `yaml:"id"`
-	Language string `yaml:"language"`
-	Kind     Kind   `yaml:"kind"`
-	Match    Match  `yaml:"match"`
+	ID       string   `yaml:"id"`
+	Language string   `yaml:"language"`
+	Kind     Kind     `yaml:"kind"`
+	Requires []string `yaml:"requires,omitempty"`
+	Match    Match    `yaml:"match"`
 }
 
 // Match holds one match key. Annotation matches as Decorator does, on the
@@ -226,6 +232,12 @@ func (r Rule) Validate() error {
 	case Main, Manifest, Framework, Test:
 	default:
 		return fmt.Errorf("unknown kind %q", r.Kind)
+	}
+	if len(r.Requires) > 0 && r.Language != string(langcode.Javascript) && r.Language != string(langcode.Python) {
+		return fmt.Errorf("requires: the language %q has no manifest of dependencies", r.Language)
+	}
+	if slices.Contains(r.Requires, "") {
+		return errors.New("requires: an empty package name")
 	}
 	return r.Match.validate()
 }

@@ -1,0 +1,20 @@
+source: safedep:hand
+description: app/views/page.js matches the path of a Next.js page, but the package.json depends on express and not on next. The rule node.next.route requires next, so it marks nothing, and the dead render function stays not found.
+roots:
+  - key: server.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: app/views/page.js//default
+    to: js-yaml//load
+    kind: direct
+    confidence: high
+    site: app/views/page.js:4
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: not-found
+    call_sites:
+      - caller: app/views/page.js//default
+        site: app/views/page.js:4
+        reached: false

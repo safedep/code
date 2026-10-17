@@ -95,6 +95,8 @@ func TestParseErrorsNameTheRule(t *testing.T) {
 		{name: "a call with no callee", yaml: "{id: x.y, language: any, kind: framework, match: {call: {arg: 1}}}", want: `call: no callee`},
 		{name: "a definition with no name", yaml: "{id: x.y, language: any, kind: main, match: {definition: {parent: A}}}", want: `definition: no name`},
 		{name: "no id", yaml: "{language: any, kind: main, match: {test_file: true}}", want: `root rule #1: no id`},
+		{name: "requires with no manifest", yaml: "{id: x.y, language: go, kind: main, requires: [gin], match: {test_file: true}}", want: `requires: the language "go" has no manifest of dependencies`},
+		{name: "requires an empty name", yaml: "{id: x.y, language: python, kind: main, requires: [''], match: {test_file: true}}", want: `requires: an empty package name`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

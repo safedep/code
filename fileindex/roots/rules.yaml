@@ -1,7 +1,8 @@
 # Root rules of the project graph. A rule marks the definitions or the
 # module top levels that run with no caller in the graph.
 # A callee is a symbol key as the graph writes it, as django//urls//path for
-# path of django.urls.
+# path of django.urls. requires names the packages of the framework of a
+# rule, and the rule applies only to a project that depends on one of them.
 version: 1
 rules:
   - id: go.main
@@ -43,42 +44,52 @@ rules:
   - id: python.flask.route
     language: python
     kind: framework
+    requires: [flask]
     match: { call: { callee_suffix: ["//route", "//get", "//post", "//put", "//delete", "//patch", "//before_request", "//after_request", "//teardown_request", "//errorhandler"], receiver_from: ["flask//Flask", "flask//Blueprint"] } }
   - id: python.fastapi.route
     language: python
     kind: framework
+    requires: [fastapi]
     match: { call: { callee_suffix: ["//get", "//post", "//put", "//delete", "//patch", "//head", "//options", "//trace", "//api_route", "//websocket", "//on_event", "//middleware", "//exception_handler"], receiver_from: ["fastapi//FastAPI", "fastapi//APIRouter"] } }
   - id: python.django.urls
     language: python
     kind: framework
+    requires: [django]
     match: { call: { callee: ["django//urls//path", "django//urls//re_path", "django//conf//urls//url"], arg: 1, shape: [name, member] } }
   - id: python.click.command
     language: python
     kind: framework
+    requires: [click]
     match: { decorator: ["@click.command", "@click.group"] }
   - id: python.click.subcommand
     language: python
     kind: framework
+    requires: [click]
     match: { call: { callee_suffix: ["//command", "//group"], receiver_from: ["click//group", "click//Group"] } }
   - id: python.typer.command
     language: python
     kind: framework
+    requires: [typer]
     match: { call: { callee_suffix: ["//command", "//callback"], receiver_from: ["typer//Typer"] } }
   - id: node.express.route
     language: javascript
     kind: framework
+    requires: [express]
     match: { call: { callee_suffix: ["//get", "//post", "//put", "//delete", "//patch", "//head", "//options", "//all", "//use", "//param", "//route"], receiver_from: ["express"], arg: -1, shape: [function, name, member] } }
   - id: node.koa.route
     language: javascript
     kind: framework
+    requires: [koa, "@koa/router", koa-router]
     match: { call: { callee_suffix: ["//use", "//get", "//post", "//put", "//delete", "//patch", "//all"], receiver_from: ["koa", "@koa//router", "koa-router"], arg: -1, shape: [function, name, member] } }
   - id: node.commander.action
     language: javascript
     kind: framework
+    requires: [commander]
     match: { call: { callee_suffix: ["//action", "//hook"], receiver_from: ["commander"], arg: -1, shape: [function, name, member] } }
   - id: node.next.route
     language: javascript
     kind: framework
+    requires: [next]
     match: { path: ["app/**/route.*", "app/**/page.*", "app/**/layout.*", "src/app/**/route.*", "src/app/**/page.*", "src/app/**/layout.*", "pages/**", "src/pages/**"] }
   - id: node.serverless.handler
     language: javascript
