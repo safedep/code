@@ -1,6 +1,7 @@
 package fileindex
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/safedep/code/langcode"
@@ -65,4 +66,26 @@ func Namespace(lang langcode.Code, module string) string {
 		sep = "."
 	}
 	return strings.ReplaceAll(module, sep, Separator)
+}
+
+// anonymousPrefix starts the name of a definition that has no name in the
+// source.
+const anonymousPrefix = "<anonymous:"
+
+// Anonymous returns the name of the n-th definition from 1 with no name in
+// the source that starts on the line, as <anonymous:12> or <anonymous:12#2>.
+// The index names a function literal that a call takes as an argument, and
+// a class expression, so a root rule can mark it and its calls have a
+// caller of their own.
+func Anonymous(line, n int) string {
+	name := anonymousPrefix + strconv.Itoa(line)
+	if n > 1 {
+		name += "#" + strconv.Itoa(n)
+	}
+	return name + ">"
+}
+
+// IsAnonymous reports whether a name is a name that Anonymous returns.
+func IsAnonymous(name string) bool {
+	return strings.HasPrefix(name, anonymousPrefix)
 }

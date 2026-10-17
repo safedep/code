@@ -1,22 +1,22 @@
 [
   {
-    "version": "6", "path": "src/main.js", "language": "javascript",
+    "version": "7", "path": "src/main.js", "language": "javascript",
     "imports": [{"line": 1, "module": "./api", "item": "parse", "alias": "parse", "kind": "static", "namespace": ".//api//parse"}],
     "definitions": [{"key": "src/main.js", "kind": "module", "name": "main", "start_line": 1, "end_line": 2, "exported": true}],
     "calls": [{"caller": "src/main.js", "line": 2, "column": 1, "callee": "parse", "targets": [".//api//parse"], "kind": "call"}]
   },
   {
-    "version": "6", "path": "src/api/index.js", "language": "javascript",
+    "version": "7", "path": "src/api/index.js", "language": "javascript",
     "exports": [{"name": "parse", "target": "", "from": "../core", "item": "parse", "line": 1}],
     "definitions": [{"key": "src/api/index.js", "kind": "module", "name": "index", "start_line": 1, "end_line": 1, "exported": true}]
   },
   {
-    "version": "6", "path": "src/core/index.js", "language": "javascript",
+    "version": "7", "path": "src/core/index.js", "language": "javascript",
     "exports": [{"name": "parse", "target": "", "from": "./parse", "item": "doParse", "line": 1}],
     "definitions": [{"key": "src/core/index.js", "kind": "module", "name": "index", "start_line": 1, "end_line": 1, "exported": true}]
   },
   {
-    "version": "6", "path": "src/core/parse.js", "language": "javascript",
+    "version": "7", "path": "src/core/parse.js", "language": "javascript",
     "exports": [{"name": "doParse", "target": "src/core/parse.js//doParse", "line": 1}],
     "definitions": [
       {"key": "src/core/parse.js", "kind": "module", "name": "parse", "start_line": 1, "end_line": 3, "exported": true},

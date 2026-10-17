@@ -32,7 +32,7 @@ func TestFileIndexCallArguments(t *testing.T) {
 	assert.Equal(t, []fidx.Arg{{Shape: fidx.ArgString}, {Shape: fidx.ArgName, Targets: []string{"app.js//handler"}}}, argsOf(ix, "app.get"))
 	assert.Equal(t, []fidx.Arg{
 		{Shape: fidx.ArgTemplate},
-		{Shape: fidx.ArgFunction},
+		{Shape: fidx.ArgFunction, Targets: []string{"app.js//<anonymous:6>"}},
 		{Shape: fidx.ArgMember, Targets: []string{"app.js//h//list"}},
 		{Shape: fidx.ArgLiteral},
 		{Shape: fidx.ArgComputed},

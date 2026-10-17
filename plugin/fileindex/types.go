@@ -87,19 +87,21 @@ func (p *projection) interfaceBases(node *sitter.Node) []string {
 	return bases
 }
 
-// propertyVisitor adds each JavaScript function that an object property, a
-// property assignment or a class field holds, as go in
-// api = { go: function () {} }, api.go = () => {} or go = () => {} in a
-// class. The call graph names no such function, so its calls land on the
-// scope that holds it. The definition has the names of the object and the
-// property in that scope, as api//go, and it takes the calls of its body. A
-// function value that already is a definition, or a key that a definition
-// already holds, adds nothing.
+// bodyVisitor adds each JavaScript function that an object property, a
+// property assignment, a class field or a call argument holds, as go in
+// api = { go: function () {} }, api.go = () => {}, go = () => {} in a class
+// or the handler in app.get('/x', (req, res) => {}). The call graph names no
+// such function, so its calls land on the scope that holds it. The
+// definition has the names of the object and the property in that scope,
+// as api//go, and it takes the calls of its body. An argument has no name,
+// so its definition gets an anonymous name, as <anonymous:12>. A function
+// value that already is a definition, or a key that a definition already
+// holds, adds nothing.
 //
-// The visitor runs before the others of the walk, and it sees a property
-// before the function of the property, so the flags and the references of
-// the body land on the new definition.
-func (p *projection) propertyVisitor() visitor {
+// The visitor runs before the others of the walk, and it sees a property or
+// an argument list before the function that it holds, so the flags and the
+// references of the body land on the new definition.
+func (p *projection) bodyVisitor() visitor {
 	if !p.ix.Language.IsECMAScript() {
 		return nil
 	}
@@ -107,6 +109,11 @@ func (p *projection) propertyVisitor() visitor {
 		var name, value *sitter.Node
 		var holder []string
 		switch kind {
+		case "arguments":
+			for _, arg := range ts.NamedChildren(node) {
+				p.addArgumentFunction(arg)
+			}
+			return
 		case "pair":
 			name, value = node.ChildByFieldName("key"), node.ChildByFieldName("value")
 			holder = p.objectNames(node.Parent(), 0)
@@ -125,10 +132,7 @@ func (p *projection) propertyVisitor() visitor {
 		default:
 			return
 		}
-		if name == nil || value == nil || !functionValues[value.Type()] {
-			return
-		}
-		if _, defined := p.spans[spanOf(value)]; defined {
+		if name == nil || value == nil || !functionValues[value.Type()] || p.defined(value) {
 			return
 		}
 		switch name.Type() {
@@ -137,21 +141,47 @@ func (p *projection) propertyVisitor() visitor {
 			return
 		}
 		key := fidx.Join(p.innermost(value.StartByte()), append(holder, p.text(name))...)
-		if _, defined := p.defs[key]; defined {
-			return
+		if _, defined := p.defs[key]; !defined {
+			p.addBody(key, fidx.DefMethod, value)
 		}
-		def := &fidx.Definition{
-			Key:       key,
-			Kind:      fidx.DefMethod,
-			Name:      p.text(name),
-			StartLine: lineOf(value),
-			EndLine:   int(value.EndPoint().Row) + 1,
-		}
-		p.defs[key] = def
-		p.addSyntax(key, value)
-		p.properties[spanOf(value)] = key
-		p.fillDefinition(def)
 	}
+}
+
+// addArgumentFunction adds a function literal that a call takes as an
+// argument as a function with an anonymous name in the innermost
+// definition. Two such functions on one line get an ordinal.
+func (p *projection) addArgumentFunction(value *sitter.Node) {
+	if !functionValues[value.Type()] || p.defined(value) {
+		return
+	}
+	scope := p.innermost(value.StartByte())
+	key := ""
+	for n := 1; key == "" || p.defs[key] != nil; n++ {
+		key = fidx.Join(scope, fidx.Anonymous(lineOf(value), n))
+	}
+	p.addBody(key, fidx.DefFunction, value)
+}
+
+// defined reports whether a tree node already is a definition.
+func (p *projection) defined(node *sitter.Node) bool {
+	_, ok := p.spans[spanOf(node)]
+	return ok
+}
+
+// addBody adds a definition that the call graph does not know and that
+// takes the calls of the node.
+func (p *projection) addBody(key string, kind fidx.DefKind, node *sitter.Node) {
+	def := &fidx.Definition{
+		Key:       key,
+		Kind:      kind,
+		Name:      fidx.Last(key),
+		StartLine: lineOf(node),
+		EndLine:   int(node.EndPoint().Row) + 1,
+	}
+	p.defs[key] = def
+	p.addSyntax(key, node)
+	p.bodies[spanOf(node)] = key
+	p.fillDefinition(def)
 }
 
 // objectNames returns the names that lead to an object, as [api] for the

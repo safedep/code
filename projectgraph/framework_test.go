@@ -33,7 +33,7 @@ func TestBuildFrameworkRoots(t *testing.T) {
 	js := &fileindex.Index{
 		Version: fileindex.Version, Path: "server.js", Language: langcode.Javascript,
 		Imports:     []fileindex.Import{{Line: 1, Module: "express", Alias: "express", Kind: fileindex.ImportStatic, Namespace: "express"}},
-		Definitions: []fileindex.Definition{handler, def(fileindex.DefFunction, "server.js//other", 4)},
+		Definitions: []fileindex.Definition{handler, def(fileindex.DefFunction, "server.js//other", 4), def(fileindex.DefFunction, "server.js//other//<anonymous:11>", 11)},
 		Calls: []fileindex.Call{
 			{Caller: "server.js", Line: 6, Column: 1, Callee: "app.get", Targets: []string{"express//get"}, Receiver: "app", Method: "get", Kind: fileindex.CallCall,
 				Args: []fileindex.Arg{{Shape: fileindex.ArgString}, {Shape: fileindex.ArgName, Targets: []string{"server.js//handler"}}}},
@@ -42,6 +42,10 @@ func TestBuildFrameworkRoots(t *testing.T) {
 			{Caller: "server.js", Line: 8, Column: 1, Callee: "app.get", Targets: []string{"express//get"}, Receiver: "app", Method: "get", Kind: fileindex.CallCall,
 				Args: []fileindex.Arg{{Shape: fileindex.ArgComputed, Targets: []string{"server.js//other"}}}},
 			{Caller: "server.js", Line: 9, Column: 1, Callee: "app.get", Targets: []string{"express//get"}, Receiver: "app", Method: "get", Kind: fileindex.CallCall},
+			{Caller: "server.js//other", Line: 10, Column: 1, Callee: "app.get", Targets: []string{"express//get"}, Receiver: "app", Method: "get", Kind: fileindex.CallCall,
+				Args: []fileindex.Arg{{Shape: fileindex.ArgFunction}}},
+			{Caller: "server.js//other", Line: 11, Column: 1, Callee: "app.get", Targets: []string{"express//get"}, Receiver: "app", Method: "get", Kind: fileindex.CallCall,
+				Args: []fileindex.Arg{{Shape: fileindex.ArgFunction, Targets: []string{"server.js//other//<anonymous:11>"}}}},
 		},
 	}
 	g, err := Build(context.Background(), []*fileindex.Index{py, js}, Options{})
@@ -53,10 +57,13 @@ func TestBuildFrameworkRoots(t *testing.T) {
 		got[r.Key] = r.Rule + " " + site(r.Site)
 	}
 	assert.Equal(t, map[string]string{
-		"app.py//route":      "python.flask.route app.py:8",
-		"app.py//items":      "python.fastapi.route app.py:12",
-		"server.js//handler": "node.express.route server.js:6",
-	}, got, "the receiver tells Flask from FastAPI, and a callee, a shape or an argument that does not match marks nothing")
+		"app.py//route":                    "python.flask.route app.py:8",
+		"app.py//items":                    "python.fastapi.route app.py:12",
+		"server.js//handler":               "node.express.route server.js:6",
+		"server.js//other//<anonymous:11>": "node.express.route server.js:11",
+	}, got, "the receiver tells Flask from FastAPI, a callee, a shape or an argument that does not match marks nothing, and the scope of a call is no root")
+	assert.Contains(t, edgesOfKind(g, EdgeDirect), "server.js//other -> server.js//other//<anonymous:11> direct javascript.argument-function",
+		"the scope that passes a function literal to a call runs the literal")
 }
 
 func site(s Site) string {

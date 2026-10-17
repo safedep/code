@@ -246,7 +246,7 @@ func graphPairs(g *projectgraph.Graph, imported map[string]bool) map[callPair][]
 	}
 	pairs := map[callPair][]projectgraph.EdgeKind{}
 	for _, e := range g.Edges {
-		if e.Kind == projectgraph.EdgeImport || e.Kind == projectgraph.EdgeExport || isConstructorHop(e) {
+		if e.Kind == projectgraph.EdgeImport || e.Kind == projectgraph.EdgeExport || isConstructorHop(e) || isArgumentFunction(e) {
 			continue
 		}
 		for _, to := range follow(e.To, hops, map[string]bool{}) {
@@ -264,6 +264,12 @@ func graphPairs(g *projectgraph.Graph, imported map[string]bool) map[callPair][]
 
 func isConstructorHop(e projectgraph.Edge) bool {
 	return strings.HasSuffix(e.Resolver, ".constructor")
+}
+
+// isArgumentFunction reports whether an edge joins a scope to a function
+// literal that it passes to a call.
+func isArgumentFunction(e projectgraph.Edge) bool {
+	return strings.HasSuffix(e.Resolver, ".argument-function")
 }
 
 func follow(key string, hops map[string][]string, seen map[string]bool) []string {
@@ -303,7 +309,9 @@ var packageFiles = map[string]string{".py": "__init__", ".js": "index", ".mjs": 
 
 // callgraphName writes a key as PyCG and SWARM-JS do: the module path with
 // dots and no extension, a package file as its directory, then the
-// segments.
+// segments. The sets number the functions with no name in an order that
+// the index does not keep, so a function with an anonymous name stands for
+// the scope that defines it.
 func callgraphName(key string) string {
 	unit := fidx.Unit(key)
 	segments := fidx.Segments(key)
@@ -315,7 +323,7 @@ func callgraphName(key string) string {
 		}
 	}
 	parts := append(strings.Split(unit, "/"), segments...)
-	return strings.Join(slices.DeleteFunc(parts, func(s string) bool { return s == "" }), ".")
+	return strings.Join(slices.DeleteFunc(parts, func(s string) bool { return s == "" || fidx.IsAnonymous(s) }), ".")
 }
 
 // callSites counts the distinct call sites of the indexes and the sites

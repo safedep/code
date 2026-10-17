@@ -30,3 +30,10 @@ func TestNamespace(t *testing.T) {
 	assert.Equal(t, "java//util//List", Namespace(langcode.Java, "java.util.List"))
 	assert.Equal(t, "net//http", Namespace(langcode.Go, "net/http"))
 }
+
+func TestAnonymous(t *testing.T) {
+	assert.Equal(t, "<anonymous:12>", Anonymous(12, 1))
+	assert.Equal(t, "<anonymous:12#2>", Anonymous(12, 2))
+	assert.True(t, IsAnonymous(Anonymous(3, 1)))
+	assert.False(t, IsAnonymous("handler"))
+}

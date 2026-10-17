@@ -1,6 +1,6 @@
 [
   {
-    "version": "6", "path": "src/main.ts", "language": "typescript",
+    "version": "7", "path": "src/main.ts", "language": "typescript",
     "imports": [
       {"line": 1, "module": "./types", "item": "Opts", "alias": "Opts", "kind": "type-only", "namespace": ".//types//Opts"},
       {"line": 2, "module": "./decl", "item": "decl", "alias": "decl", "kind": "static", "namespace": ".//decl//decl"}
@@ -9,7 +9,7 @@
     "calls": [{"caller": "src/main.ts", "line": 3, "column": 1, "callee": "decl", "targets": [".//decl//decl"], "kind": "call"}]
   },
   {
-    "version": "6", "path": "src/types.ts", "language": "typescript",
+    "version": "7", "path": "src/types.ts", "language": "typescript",
     "exports": [{"name": "Opts", "target": "src/types.ts//Opts", "line": 1}],
     "definitions": [
       {"key": "src/types.ts", "kind": "module", "name": "types", "start_line": 1, "end_line": 1, "exported": true},
@@ -17,7 +17,7 @@
     ]
   },
   {
-    "version": "6", "path": "src/decl.d.ts", "language": "typescript",
+    "version": "7", "path": "src/decl.d.ts", "language": "typescript",
     "exports": [{"name": "decl", "target": "src/decl.d.ts//decl", "line": 1}],
     "definitions": [
       {"key": "src/decl.d.ts", "kind": "module", "name": "decl", "start_line": 1, "end_line": 1, "exported": true},

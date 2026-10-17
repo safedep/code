@@ -1,6 +1,6 @@
 [
   {
-    "version": "6", "path": "pkg/sub/a.py", "language": "python",
+    "version": "7", "path": "pkg/sub/a.py", "language": "python",
     "imports": [
       {"line": 1, "module": ".b", "item": "f", "alias": "f", "kind": "static", "namespace": "//b//f"},
       {"line": 2, "module": "..c", "item": "g", "alias": "g", "kind": "static", "namespace": "////c//g"}
@@ -15,14 +15,14 @@
     ]
   },
   {
-    "version": "6", "path": "pkg/sub/b.py", "language": "python",
+    "version": "7", "path": "pkg/sub/b.py", "language": "python",
     "definitions": [
       {"key": "pkg/sub/b.py", "kind": "module", "name": "b", "start_line": 1, "end_line": 2, "exported": true},
       {"key": "pkg/sub/b.py//f", "kind": "function", "name": "f", "start_line": 1, "end_line": 2, "exported": true}
     ]
   },
   {
-    "version": "6", "path": "pkg/c.py", "language": "python",
+    "version": "7", "path": "pkg/c.py", "language": "python",
     "definitions": [
       {"key": "pkg/c.py", "kind": "module", "name": "c", "start_line": 1, "end_line": 2, "exported": true},
       {"key": "pkg/c.py//g", "kind": "function", "name": "g", "start_line": 1, "end_line": 2, "exported": true}

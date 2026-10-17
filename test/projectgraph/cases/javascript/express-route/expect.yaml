@@ -1,11 +1,11 @@
 source: safedep:hand
-description: router comes from express.Router(), so router.get('/config', loadConfig) makes loadConfig a root of the rule node.express.route at the call. app.post takes a function literal that the index does not define. Its body runs in the module, so the module is the root. app.use takes router, which is no first-party definition.
+description: router comes from express.Router(), so router.get('/config', loadConfig) makes loadConfig a root of the rule node.express.route at the call. app.post takes a function literal. The index defines it with an anonymous name, and the literal is the root, not the module. app.use takes router, which is no first-party definition.
 roots:
   - key: src/handlers.js//loadConfig
     kind: framework
     rule: node.express.route
     site: src/server.js:7
-  - key: src/server.js
+  - key: src/server.js//<anonymous:9>
     kind: framework
     rule: node.express.route
     site: src/server.js:9
@@ -20,7 +20,7 @@ unresolved:
     site: src/handlers.js:4
     reason: unknown-receiver
     method: json
-  - caller: src/server.js
+  - caller: src/server.js//<anonymous:9>
     site: src/server.js:10
     reason: unknown-receiver
     method: json

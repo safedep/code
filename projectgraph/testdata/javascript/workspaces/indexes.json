@@ -1,6 +1,6 @@
 [
   {
-    "version": "6", "path": "packages/app/src/main.js", "language": "javascript",
+    "version": "7", "path": "packages/app/src/main.js", "language": "javascript",
     "imports": [
       {"line": 1, "module": "@acme/core", "item": "start", "alias": "start", "kind": "static", "namespace": "@acme//core//start"},
       {"line": 2, "module": "@acme/core/util", "item": "tidy", "alias": "tidy", "kind": "static", "namespace": "@acme//core//util//tidy"},
@@ -14,7 +14,7 @@
     ]
   },
   {
-    "version": "6", "path": "packages/core/lib/index.js", "language": "javascript",
+    "version": "7", "path": "packages/core/lib/index.js", "language": "javascript",
     "exports": [{"name": "start", "target": "packages/core/lib/index.js//start", "line": 1}],
     "definitions": [
       {"key": "packages/core/lib/index.js", "kind": "module", "name": "index", "start_line": 1, "end_line": 1, "exported": true},
@@ -22,7 +22,7 @@
     ]
   },
   {
-    "version": "6", "path": "packages/core/util.js", "language": "javascript",
+    "version": "7", "path": "packages/core/util.js", "language": "javascript",
     "exports": [{"name": "tidy", "target": "packages/core/util.js//tidy", "line": 1}],
     "definitions": [
       {"key": "packages/core/util.js", "kind": "module", "name": "util", "start_line": 1, "end_line": 1, "exported": true},

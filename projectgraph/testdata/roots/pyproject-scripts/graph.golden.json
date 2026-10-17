@@ -119,7 +119,7 @@
     "src/app/tool.py": "indexed"
   },
   "stats": {
-    "version": "6",
+    "version": "7",
     "files": 5,
     "nodes": 10,
     "edges": 0,

@@ -65,16 +65,17 @@ type projection struct {
 	ix       *fidx.Index
 
 	// defs holds the definitions by key. syntax holds the tree node of each
-	// definition, and spans the key of each such node. properties holds the
-	// key of each function that a JavaScript property holds. exports holds
-	// the definition keys that an export names, and bindings the names that
-	// the imports bind.
-	defs       map[string]*fidx.Definition
-	syntax     map[string]*sitter.Node
-	spans      map[span]string
-	properties map[span]string
-	exports    map[string]bool
-	bindings   map[string]bool
+	// definition, and spans the key of each such node. bodies holds the key
+	// of each definition that the call graph does not know and that takes
+	// the calls of its node, as a function that a JavaScript property or
+	// argument holds. exports holds the definition keys that an export
+	// names, and bindings the names that the imports bind.
+	defs     map[string]*fidx.Definition
+	syntax   map[string]*sitter.Node
+	spans    map[span]string
+	bodies   map[span]string
+	exports  map[string]bool
+	bindings map[string]bool
 
 	// exportStatements are the export statements and the CommonJS export
 	// assignments of the file.
@@ -107,12 +108,12 @@ func project(ctx context.Context, tree core.ParseTree) (*fidx.Index, error) {
 			Language:    language.Meta().Code,
 			ContentHash: fidx.HashContent(*data),
 		},
-		defs:       map[string]*fidx.Definition{},
-		syntax:     map[string]*sitter.Node{},
-		spans:      map[span]string{},
-		properties: map[span]string{},
-		exports:    map[string]bool{},
-		bindings:   map[string]bool{},
+		defs:     map[string]*fidx.Definition{},
+		syntax:   map[string]*sitter.Node{},
+		spans:    map[span]string{},
+		bodies:   map[span]string{},
+		exports:  map[string]bool{},
+		bindings: map[string]bool{},
 	}
 
 	switch {
@@ -308,8 +309,10 @@ func (p *projection) fillDefinition(def *fidx.Definition) {
 	if def.Kind == fidx.DefModule {
 		return
 	}
+	// A function with an anonymous name in a class body, as an argument in
+	// a static block, is no method of the class.
 	scope := fidx.Parent(def.Key)
-	if parent, ok := p.defs[scope]; ok && (parent.Kind == fidx.DefClass || parent.Kind == fidx.DefInterface) {
+	if parent, ok := p.defs[scope]; ok && (parent.Kind == fidx.DefClass || parent.Kind == fidx.DefInterface) && !fidx.IsAnonymous(def.Name) {
 		def.Parent = scope
 		if def.Kind == fidx.DefFunction {
 			def.Kind = fidx.DefMethod
@@ -482,9 +485,9 @@ func (p *projection) addCalls() {
 }
 
 // caller returns the definition that runs the call site that the
-// definition key holds. A function that a JavaScript property holds is a
-// definition that the call graph does not know, so it takes the calls of
-// its body. A JavaScript static field or static block runs when the class
+// definition key holds. A function that a JavaScript property or argument
+// holds is a definition that the call graph does not know, so it takes the
+// calls of its body. A JavaScript static field or static block runs when the class
 // is defined, so its calls belong to the scope that defines the class. A
 // function value in a static field runs only when a call runs it. A flag in
 // a static block stays on the class.
@@ -494,7 +497,7 @@ func (p *projection) caller(key string, site ast.NodePosition) string {
 	}
 	def, ok := p.defs[key]
 	class := ok && def.Kind == fidx.DefClass
-	if !class && len(p.properties) == 0 {
+	if !class && len(p.bodies) == 0 {
 		return key
 	}
 	var own span
@@ -502,8 +505,8 @@ func (p *projection) caller(key string, site ast.NodePosition) string {
 		own = spanOf(node)
 	}
 	for node := p.descendant(site); node != nil && spanOf(node) != own; node = node.Parent() {
-		if property, ok := p.properties[spanOf(node)]; ok {
-			return property
+		if body, ok := p.bodies[spanOf(node)]; ok {
+			return body
 		}
 		if !class {
 			continue

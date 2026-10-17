@@ -56,9 +56,9 @@ func (f *finder) matchDecoratorCall(r rules.Rule) {
 }
 
 // matchCall marks the definition that an argument of each matching call
-// names, as handler in app.get('/x', handler). A function literal that the
-// index does not define runs its body in the scope of the call, so that
-// scope is the root.
+// names, as handler in app.get('/x', handler). The index defines a
+// function literal of an argument, so the literal is the root. The scope of
+// the call is never the root, because it can be dead code.
 func (f *finder) matchCall(r rules.Rule) {
 	m := r.Match.Call
 	for _, ix := range f.applying(r) {
@@ -79,10 +79,6 @@ func (f *finder) matchCall(r rules.Rule) {
 				continue
 			}
 			site := Site{Path: ix.Path, Line: call.Line, Column: call.Column}
-			if arg.Shape == fileindex.ArgFunction && len(arg.Targets) == 0 {
-				f.addAt(r, call.Caller, site)
-				continue
-			}
 			for _, key := range f.Resolve(ix, call.Caller, arg.Targets) {
 				f.addAt(r, key, site)
 			}

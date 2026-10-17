@@ -119,3 +119,32 @@ func TestFileIndexPropertyFunctions(t *testing.T) {
 	assert.True(t, definitionOf(t, ix, "a.js//extra").Exported)
 	assert.False(t, definitionOf(t, ix, "a.js//api//later").Exported)
 }
+
+func TestFileIndexArgumentFunctions(t *testing.T) {
+	source := strings.Join([]string{
+		"const yaml = require('js-yaml');",
+		"app.get('/a', (req, res) => yaml.a());",
+		"p.then(() => yaml.b(), function () { yaml.c(); });",
+		"function outer() { run(() => { db.q(() => yaml.d()); }); }",
+		"class K { static { register(() => yaml.e()); } }",
+		"(() => yaml.f())();",
+	}, "\n") + "\n"
+	ix := indexSource(t, core.LanguageCodeJavascript, "a.js", source)
+
+	callers := map[string]string{}
+	for _, call := range ix.Calls {
+		callers[call.Callee] = call.Caller
+	}
+	assert.Equal(t, "a.js//<anonymous:2>", callers["yaml.a"])
+	assert.Equal(t, "a.js//<anonymous:3>", callers["yaml.b"])
+	assert.Equal(t, "a.js//<anonymous:3#2>", callers["yaml.c"])
+	assert.Equal(t, "a.js//outer//<anonymous:4>//<anonymous:4>", callers["yaml.d"])
+	assert.Equal(t, "a.js//K//<anonymous:5>", callers["yaml.e"])
+	assert.Equal(t, "a.js", callers["yaml.f"], "the body of an immediately invoked function runs in the caller")
+
+	def := definitionOf(t, ix, "a.js//K//<anonymous:5>")
+	assert.Equal(t, fidx.DefFunction, def.Kind)
+	assert.Empty(t, def.Parent, "a function of a static block is no method")
+	assert.False(t, def.Exported)
+	assert.Equal(t, []fidx.Arg{{Shape: fidx.ArgString}, {Shape: fidx.ArgFunction, Targets: []string{"a.js//<anonymous:2>"}}}, argsOf(ix, "app.get"))
+}

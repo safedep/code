@@ -74,6 +74,9 @@ maps each call edge of the graph to a pair of names:
   the class, as `main.A.__init__`. A class with no constructor makes no pair.
 - An edge to a re-exported name goes on through the export hops.
 - `import` and `export` edges make no pair, because they are not calls.
+- A function with an anonymous name, as `<anonymous:12>`, stands for the
+  scope that defines it, because the sets number such functions in another
+  order. The edge from the scope to the function makes no pair.
 
 The govulncheck set has call stacks and no `callgraph.json`, so
 `TestGovulncheckTraces` scores it on its own. For each stack it asks the

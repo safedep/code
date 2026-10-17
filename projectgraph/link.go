@@ -218,6 +218,7 @@ func (b *builder) link(ctx context.Context) error {
 		b.linkInits(ix)
 		b.linkClassInits(ix)
 		b.linkConstructors(ix)
+		b.linkArgumentFunctions(ix)
 		b.linkCalls(ix)
 		b.linkReferences(ix)
 		b.linkDecorators(ix)
@@ -498,6 +499,22 @@ func (b *builder) linkConstructors(ix *fileindex.Index) {
 			Kind:     EdgeDirect,
 			Resolver: resolverName(ix.Language, "constructor"),
 		})
+	}
+}
+
+// linkArgumentFunctions adds an edge from the scope that defines each
+// function literal of a call argument to the function, as from the module
+// to the handler of app.get('/x', (req, res) => {}). The callee gets the
+// function and can call it at any time. Before the index named such a
+// function, its body ran with its definer, so the edge keeps that with a
+// direct edge. A root rule can mark the function itself.
+func (b *builder) linkArgumentFunctions(ix *fileindex.Index) {
+	for _, def := range ix.Definitions {
+		if def.Kind != fileindex.DefFunction || !fileindex.IsAnonymous(def.Name) {
+			continue
+		}
+		site := Site{Path: ix.Path, Line: def.StartLine}
+		b.addEdge(Edge{From: b.definer(def.Key), To: def.Key, Site: site, Kind: EdgeDirect, Resolver: resolverName(ix.Language, "argument-function")})
 	}
 }
 
