@@ -413,10 +413,26 @@ func memberExpressionProcessor(memberNode *sitter.Node, treeData []byte, current
 	return result
 }
 
+// arrowValueWrappers are the nodes between an arrow function and the
+// declarator or the assignment whose value is the arrow function, as the
+// ternary in const f = c ? () => 1 : g.
+var arrowValueWrappers = map[string]bool{
+	"parenthesized_expression": true,
+	"ternary_expression":       true,
+	"binary_expression":        true,
+	"await_expression":         true,
+	"as_expression":            true,
+	"satisfies_expression":     true,
+	"non_null_expression":      true,
+	"sequence_expression":      true,
+}
+
 // arrowFunctionProcessor processes an arrow function in the namespace of the
 // name it gets, as arrowFunc in const arrowFunc = (x) => x, or else in the
 // current namespace. A named arrow function is a node and an assignment, so
-// a call of the name resolves to it.
+// a call of the name resolves to it. An arrow function in an argument, an
+// object or an array is no value of the declarator, so it gets no name of
+// it.
 func arrowFunctionProcessor(arrowNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
 	if arrowNode == nil {
 		return newProcessorResult()
@@ -425,24 +441,22 @@ func arrowFunctionProcessor(arrowNode *sitter.Node, treeData []byte, currentName
 	results := newProcessorResult()
 
 	functionName := ""
-	parentNode := arrowNode.Parent()
-
-	for parentNode != nil && functionName == "" {
+	for parentNode := arrowNode.Parent(); parentNode != nil; parentNode = parentNode.Parent() {
 		if parentNode.Type() == "variable_declarator" {
-			nameNode := parentNode.ChildByFieldName("name")
-			if nameNode != nil {
+			if nameNode := parentNode.ChildByFieldName("name"); nameNode != nil {
 				functionName = nameNode.Content(treeData)
-				break
 			}
+			break
 		}
 		if parentNode.Type() == "assignment_expression" {
-			leftNode := parentNode.ChildByFieldName("left")
-			if leftNode != nil && leftNode.Type() == "identifier" {
+			if leftNode := parentNode.ChildByFieldName("left"); leftNode != nil && leftNode.Type() == "identifier" {
 				functionName = leftNode.Content(treeData)
-				break
 			}
+			break
 		}
-		parentNode = parentNode.Parent()
+		if !arrowValueWrappers[parentNode.Type()] {
+			break
+		}
 	}
 
 	arrowFunctionNamespace := currentNamespace

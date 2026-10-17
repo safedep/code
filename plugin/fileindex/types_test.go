@@ -177,3 +177,15 @@ func TestFileIndexClassExpressions(t *testing.T) {
 		assert.True(t, definitionOf(t, ix, "a.js//Kept").Exported, code)
 	}
 }
+
+func TestFileIndexArrowInAnObjectOrAnArgument(t *testing.T) {
+	source := "const o = { m: () => yaml.x() };\nconst h = handle(async (req, res) => yaml.y());\n"
+	ix := indexSource(t, core.LanguageCodeJavascript, "a.js", source)
+	callers := map[string]string{}
+	for _, call := range ix.Calls {
+		callers[call.Callee] = call.Caller
+	}
+	assert.Equal(t, "a.js//o//m", callers["yaml.x"])
+	assert.Equal(t, "a.js//<anonymous:2>", callers["yaml.y"])
+	assert.Equal(t, fidx.DefVariable, definitionOf(t, ix, "a.js//h").Kind)
+}

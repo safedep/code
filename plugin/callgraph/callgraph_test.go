@@ -627,3 +627,23 @@ func TestClassExpressionIsAClass(t *testing.T) {
 	}
 	assert.Contains(t, targets, "a.js//Named//c")
 }
+
+func TestArrowFunctionTakesOnlyTheNameThatHoldsIt(t *testing.T) {
+	source := strings.Join([]string{
+		"const a = wrap(() => one());",
+		"const b = ready ? () => two() : null;",
+		"const o = { m: () => three() };",
+		"let c;",
+		"c = (() => four());",
+	}, "\n") + "\n"
+	cg := buildAndClose(t, javascriptLanguage(t), "a.js", source)
+	for key, kind := range map[string]string{"a.js//b": "arrow_function", "a.js//c": "arrow_function"} {
+		require.Contains(t, cg.Nodes, key)
+		assert.Equal(t, kind, cg.Nodes[key].Kind, key)
+	}
+	for _, key := range []string{"a.js//a", "a.js//o"} {
+		if node, ok := cg.Nodes[key]; ok {
+			assert.NotEqual(t, "arrow_function", node.Kind, "an arrow function in an argument or an object is no value of %s", key)
+		}
+	}
+}
