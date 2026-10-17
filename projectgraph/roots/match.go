@@ -72,6 +72,7 @@ func Find(p Project, rs []rules.Rule) ([]Root, []modules.Problem) {
 		defs:      map[string]*fileindex.Definition{},
 		calls:     map[*fileindex.Call][]string{},
 		deps:      map[langcode.Code]map[string]bool{},
+		imported:  map[langcode.Code]map[string]bool{},
 	}
 	for _, ix := range p.Indexes {
 		f.languages[ix.Path] = ix.Language
@@ -94,8 +95,10 @@ type finder struct {
 	defs      map[string]*fileindex.Definition
 	// calls holds the keys that each call resolves to.
 	calls map[*fileindex.Call][]string
-	// deps holds the packages that the manifests declare, by language.
+	// deps holds the packages that the manifests declare, and imported the
+	// packages that the files import, by language.
 	deps     map[langcode.Code]map[string]bool
+	imported map[langcode.Code]map[string]bool
 	roots    []Root
 	seen     map[Root]bool
 	problems []modules.Problem

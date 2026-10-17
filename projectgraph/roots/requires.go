@@ -20,18 +20,61 @@ var (
 
 // requires reports whether the project depends on a package that the rule
 // requires. A project whose manifests declare no dependency of the
-// ecosystem of the rule gives no evidence, so the rule applies.
+// ecosystem of the rule gives no evidence, so the rule applies. A file that
+// imports the package shows the dependency too, as a manifest can miss a
+// package that the environment gives.
 func (f *finder) requires(r rules.Rule) bool {
 	if len(r.Requires) == 0 {
 		return true
 	}
-	deps := f.dependencies(langcode.Code(r.Language))
+	lang := langcode.Code(r.Language)
+	deps := f.dependencies(lang)
 	if len(deps) == 0 {
 		return true
 	}
+	imported := f.importedPackages(lang)
 	return slices.ContainsFunc(r.Requires, func(name string) bool {
-		return deps[normalizeDependency(langcode.Code(r.Language), name)]
+		name = normalizeDependency(lang, name)
+		return deps[name] || imported[name]
 	})
+}
+
+// importedPackages returns the normalized names of the packages that the
+// files of the ecosystem of the language import.
+func (f *finder) importedPackages(lang langcode.Code) map[string]bool {
+	if pkgs, ok := f.imported[lang]; ok {
+		return pkgs
+	}
+	pkgs := map[string]bool{}
+	for _, ix := range f.Indexes {
+		if !(rules.Rule{Language: string(lang)}).Applies(ix.Language) {
+			continue
+		}
+		for _, imp := range ix.Imports {
+			if name := packageOf(lang, imp.Module); name != "" {
+				pkgs[normalizeDependency(lang, name)] = true
+			}
+		}
+	}
+	f.imported[lang] = pkgs
+	return pkgs
+}
+
+// packageOf returns the package of an import as written: the first part of
+// a Python module, or the name of an npm package, with its scope.
+func packageOf(lang langcode.Code, module string) string {
+	if module == "" || strings.HasPrefix(module, ".") || strings.HasPrefix(module, "/") {
+		return ""
+	}
+	if lang == langcode.Python {
+		first, _, _ := strings.Cut(module, ".")
+		return first
+	}
+	parts := strings.SplitN(module, "/", 3)
+	if strings.HasPrefix(module, "@") && len(parts) > 1 {
+		return parts[0] + "/" + parts[1]
+	}
+	return parts[0]
 }
 
 // dependencies returns the normalized names of the packages that the

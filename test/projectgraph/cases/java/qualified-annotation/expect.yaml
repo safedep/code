@@ -1,0 +1,60 @@
+source: safedep:hand
+description: Jobs.tick has the Spring annotation Scheduled, written with its package. A rule name matches a qualified annotation by its last part, so tick is a root. Poller extends Thread, so Thread.start runs its run, and new ProcessBuilder in run names a class, not a method of Thread.
+roots:
+  - key: com/y/Jobs.java//Jobs
+    kind: framework
+    rule: java.spring.component
+  - key: com/y/Jobs.java//Jobs//tick
+    kind: framework
+    rule: java.spring.web
+  - key: com/y/Main.java//Main//main
+    kind: main
+    rule: java.main
+edges:
+  - from: com/y/Poller.java//Poller
+    to: com/y/Poller.java//Poller//run
+    kind: reference
+    confidence: low
+    site: com/y/Poller.java:4
+  - from: com/y/Poller.java//Poller//run
+    to: ProcessBuilder
+    kind: direct
+    confidence: high
+    site: com/y/Poller.java:6
+no_edges:
+  - from: com/y/Poller.java//Poller//run
+    to: Thread//ProcessBuilder
+unresolved: []
+results:
+  - target: java//nio//file//Files//delete
+    status: found
+    path:
+      - key: com/y/Jobs.java//Jobs//tick
+      - key: java//nio//file//Files//delete
+        site: com/y/Jobs.java:9
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: com/y/Jobs.java//Jobs//tick
+        site: com/y/Jobs.java:9
+        reached: true
+  - target: ProcessBuilder//start
+    status: found
+    path:
+      - key: com/y/Main.java//Main//main
+      - key: com/y/Poller.java//Poller
+        site: com/y/Main.java:5
+        kind: direct
+        confidence: high
+      - key: com/y/Poller.java//Poller//run
+        site: com/y/Poller.java:4
+        kind: reference
+        confidence: low
+      - key: ProcessBuilder//start
+        site: com/y/Poller.java:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: com/y/Poller.java//Poller//run
+        site: com/y/Poller.java:6
+        reached: true

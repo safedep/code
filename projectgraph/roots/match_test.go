@@ -44,6 +44,9 @@ func TestDecoratorIs(t *testing.T) {
 		{"@click.group_x", "@click.group", false},
 		{"@ScheduledTask", "@Scheduled", false},
 		{"@GetMapping(\"/a\")", "@GetMapping", true},
+		{"@org.springframework.scheduling.annotation.Scheduled", "@Scheduled", true},
+		{"@org.x.ScheduledTask", "@Scheduled", false},
+		{"@pkg.click.command", "@click.command", false},
 	}
 	for _, tt := range tests {
 		assert.Equal(t, tt.want, decoratorIs(tt.decorator, tt.name), "%s %s", tt.decorator, tt.name)

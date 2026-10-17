@@ -42,10 +42,19 @@ func (f *finder) matchDecorator(r rules.Rule) {
 }
 
 // decoratorIs reports whether a decorator as written is the name, or the
-// name with arguments.
+// name with arguments. A qualified Java annotation, as
+// @org.springframework.scheduling.annotation.Scheduled, is the name of its
+// last part too.
 func decoratorIs(decorator, name string) bool {
-	rest, ok := strings.CutPrefix(decorator, name)
-	return ok && (rest == "" || strings.HasPrefix(rest, "("))
+	if rest, ok := strings.CutPrefix(decorator, name); ok && (rest == "" || strings.HasPrefix(rest, "(")) {
+		return true
+	}
+	simple, ok := strings.CutPrefix(name, "@")
+	if !ok || strings.Contains(simple, ".") {
+		return false
+	}
+	written, _, _ := strings.Cut(decorator, "(")
+	return strings.HasPrefix(written, "@") && strings.HasSuffix(written, "."+simple)
 }
 
 // matchDecoratorCall marks each definition with a decorator whose key

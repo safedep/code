@@ -4,6 +4,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/safedep/code/fileindex"
 	rules "github.com/safedep/code/fileindex/roots"
 	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/projectgraph/modules"
@@ -32,7 +33,12 @@ pytest = "*"
 		"svc/requirements/extra.txt": {Data: []byte("python_dateutil\n")},
 	}
 	files := modules.NewFiles([]string{"app.py", "svc/a.py"})
-	f := &finder{Project: Project{Root: root, Files: files, JS: modules.NewJavaScript(files, root)}, deps: map[langcode.Code]map[string]bool{}}
+	indexes := []*fileindex.Index{{Path: "svc/a.py", Language: langcode.Python, Imports: []fileindex.Import{{Module: "quart.app"}, {Module: ".local"}}}}
+	f := &finder{
+		Project:  Project{Indexes: indexes, Root: root, Files: files, JS: modules.NewJavaScript(files, root)},
+		deps:     map[langcode.Code]map[string]bool{},
+		imported: map[langcode.Code]map[string]bool{},
+	}
 	deps := f.dependencies(langcode.Python)
 	for _, name := range []string{"flask", "requests", "click", "fastapi", "pytest", "django", "typer", "pyyaml", "black", "zope-interface", "python-dateutil"} {
 		assert.True(t, deps[name], name)
@@ -44,5 +50,13 @@ pytest = "*"
 	next := rules.Rule{ID: "n", Language: "javascript", Requires: []string{"next"}}
 	assert.True(t, f.requires(flask), "a name matches in its normal form")
 	assert.True(t, f.requires(next), "a project with no package.json gives no evidence")
-	assert.False(t, f.requires(rules.Rule{ID: "q", Language: "python", Requires: []string{"quart"}}))
+	assert.True(t, f.requires(rules.Rule{ID: "q", Language: "python", Requires: []string{"quart"}}), "an import shows a package that the manifests miss")
+	assert.False(t, f.requires(rules.Rule{ID: "s", Language: "python", Requires: []string{"sanic"}}))
+}
+
+func TestPackageOf(t *testing.T) {
+	assert.Equal(t, "flask", packageOf(langcode.Python, "flask.views"))
+	assert.Equal(t, "@koa/router", packageOf(langcode.Javascript, "@koa/router/lib"))
+	assert.Equal(t, "next", packageOf(langcode.Javascript, "next/router"))
+	assert.Empty(t, packageOf(langcode.Javascript, "./util"))
 }
