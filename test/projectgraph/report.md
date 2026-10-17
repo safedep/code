@@ -14,6 +14,10 @@ Steps 32 and 33 add one more run, on 2026-10-17, at 1,000, 10,000 and
 the "step 33" rows and the section "Steps 32 and 33". The earlier rows stay
 as history.
 
+The review fixes of steps 27 to 30 add one more run, on 2026-10-17, at
+1,000 files per language with the default workers, and of the public
+sets. Its numbers are the section "Review fixes of steps 27 to 30".
+
 ## Machine
 
 | Item | Value |
@@ -93,6 +97,84 @@ false. The link step is 0.07 to 0.11 s slower per 1,000 files. JavaScript is at 
 public sets names the causes. The unresolved rate of the sets went up,
 because a call of a bare name with no binding is now a record and not an
 external edge.
+
+## Review fixes of steps 27 to 30
+
+"Before" is 209b8ad, the last commit of step 33. "After" is the commit
+that adds this section. Both ran back to back on the machine below, with
+`-benchtime 1x` and one run per step.
+
+### 1,000 files
+
+| Language | Step | Before | After |
+| --- | --- | --- | --- |
+| Python | index-cold, 4 workers | 1.53 s | 1.48 s |
+| Python | link | 0.33 s, 48,566 edges, 113 roots | 0.28 s, 48,566 edges, 114 roots |
+| Python | reach | 200 of 200 found | 200 of 200 found |
+| JavaScript | index-cold, 4 workers | 1.68 s | 1.88 s |
+| JavaScript | link | 0.30 s, 38,462 edges, 39 roots | 0.32 s, 41,348 edges, 150 roots |
+| JavaScript | reach | 200 of 200 found | 200 of 200 found |
+| TypeScript | index-cold, 4 workers | 2.41 s | 2.48 s |
+| TypeScript | link | 0.30 s, 31,486 edges, 39 roots | 0.31 s, 31,598 edges, 150 roots |
+| TypeScript | reach | 199 of 200 found | 199 of 200 found |
+| Go | index-cold, 4 workers | 1.38 s | 1.50 s |
+| Go | link | 0.21 s, 32,015 edges, 76 roots | 0.23 s, 32,015 edges, 76 roots |
+| Go | reach | 199 of 200 found | 199 of 200 found |
+| Java | index-cold, 4 workers | 1.08 s | 1.11 s |
+| Java | link | 0.28 s, 37,534 edges, 75 roots | 0.32 s, 28,284 edges, 75 roots |
+| Java | reach | 200 of 200 found | 200 of 200 found |
+
+The serial cold step is within 9% of before for each language, faster
+for three of them, so the changes of the 4-worker step are the noise of
+one run. The index of a JavaScript file is 0.9 KiB larger as JSON, 12.3
+KiB, because of the definitions of the function literals. The other
+languages change by less than 0.1 KiB. JavaScript and
+TypeScript have about 110 more roots: a function literal that a test file
+passes to describe or test is now a definition, so it is a test root.
+JavaScript has 2,886 more edges, one per function literal of an argument.
+Java has 9,250 fewer edges. Before, each method of a class with an
+instance field initializer had a class-init edge to the class. Now only a
+class with static code has them, and they go to `<clinit>`.
+
+### Public sets
+
+| Metric | pycg-micro before | pycg-micro after | swarm-js before | swarm-js after |
+| --- | --- | --- | --- | --- |
+| Cases with the exact pairs | 0.454 (54/119) | 0.454 (54/119) | 0.333 (42/126) | 0.341 (43/126) |
+| Precision | 0.703 (187/266) | 0.700 (187/267) | 0.664 (204/307) | 0.670 (207/309) |
+| Precision, high and medium | 0.954 (145/152) | 0.954 (145/152) | 0.821 (156/190) | 0.828 (159/192) |
+| Recall | 0.708 (187/264) | 0.708 (187/264) | 0.706 (204/289) | 0.716 (207/289) |
+| Unresolved rate | 0.340 (85/250) | 0.340 (85/250) | 0.352 (108/307) | 0.345 (106/307) |
+
+- An arrow function in an argument no longer takes the name of the
+  declarator above it, so the callback of `const a = list.filter(x => f())`
+  is no function `a`. Two `arrays` pairs and one `direct` pair are new.
+- A class expression in a class field is a class with the name of the
+  field, so `new A.B()` reaches the constructor of `B`. `exceptions` finds
+  3 of 3. The `super()` of that class makes one more pair to the builtin
+  `Error`, which swarm-js does not list.
+- The one new `reference` pair of pycg-micro is an `override` edge.
+- The runner maps a function with an anonymous name to the scope that
+  defines it, so the function literals of arguments change no pair.
+
+govulncheck stays at 9 of 9 stacks found, 7 of 7 call sites, 9 of 9
+stacks in order and 0 of 63 false found.
+
+### The language profiles
+
+The language profiles of projectgraph change no output. The JSON of the
+index step and the link step for the 93 hand-written cases, and for a
+generated project of 3,000 files per language, has the same sha256 before
+and after the change.
+
+| Input | sha256 |
+| --- | --- |
+| 93 cases | `bbde0029f4876000e6f541362ba97a176c3587676b100f95005c7392d1353c65` |
+| Python, 3,000 files | `8894d2d8cea3b808f6b049eedcbcffa224c2829a52f5d84aec9d2d05b9f1f567` |
+| JavaScript, 3,000 files | `082794a806da95629ae91e16620293709410550ded7e6d05c72f22fa9eae6618` |
+| TypeScript, 3,000 files | `9788a26829c6bd67813b988f3dc32fec36035588f0af1987c78a307d8f726023` |
+| Go, 3,000 files | `8ca2bf14a7b76946a96ff307e226509467670bad3ae11c58b7de7cee63decca9` |
+| Java, 3,000 files | `2ee9d26b74c1d35cb7ff10248c125637ab207032f866193018015abbee4c8f36` |
 
 ## Steps 32 and 33
 
