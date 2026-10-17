@@ -25,9 +25,9 @@ type referenceSyntax struct {
 	// logical holds the operators of a binary node whose operands are
 	// values, as a || b.
 	logical map[string]bool
-	// bases holds the parent types of a holder that names the bases of a
-	// class, as the argument list of class A(Base). A base is no value.
-	bases map[string]bool
+	// bases maps the type of a class to the field that names its bases, as
+	// the argument list of class A(Base). A base is no value.
+	bases map[string]string
 }
 
 var referenceSyntaxes = map[core.LanguageCode]referenceSyntax{
@@ -53,7 +53,7 @@ var referenceSyntaxes = map[core.LanguageCode]referenceSyntax{
 		property:    "attribute",
 		identifiers: map[string]bool{"identifier": true},
 		instances:   map[string]bool{"self": true, "cls": true},
-		bases:       map[string]bool{"class_definition": true},
+		bases:       map[string]string{"class_definition": "superclasses"},
 	},
 	core.LanguageCodeJavascript: ecmascriptReferences,
 	core.LanguageCodeTypescript: ecmascriptReferences,
@@ -112,6 +112,9 @@ func (p *projection) referenceVisitor() visitor {
 		caller, text string
 	}
 	seen := map[site]bool{}
+	// bases holds the start of each list of class bases. The walk visits a
+	// class before its bases, and a parent lookup costs a walk from the root.
+	bases := map[uint32]bool{}
 	return func(node *sitter.Node, kind string) {
 		start := node.StartByte()
 		for len(stack) > 1 && start >= stack[len(stack)-1].end {
@@ -122,13 +125,16 @@ func (p *projection) referenceVisitor() visitor {
 				stack = append(stack, open{key: key, end: node.EndByte()})
 			}
 		}
+		if field, ok := syntax.bases[kind]; ok {
+			if list := node.ChildByFieldName(field); list != nil {
+				bases[list.StartByte()] = true
+			}
+		}
 		field, ok := syntax.holders[kind]
 		switch {
-		case !ok:
+		case !ok || bases[start]:
 			return
 		case kind == "binary_expression" && !syntax.logical[p.text(node.ChildByFieldName("operator"))]:
-			return
-		case node.Parent() != nil && syntax.bases[node.Parent().Type()]:
 			return
 		}
 		values := ts.NamedChildren(node)
