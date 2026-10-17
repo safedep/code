@@ -25,19 +25,27 @@ func (f *finder) matchPath(r rules.Rule) {
 }
 
 // matchDecorator marks each definition with a decorator or an annotation
-// whose text, as written, starts with one of the prefixes of the rule. The
-// index holds the annotations of Java as decorators.
+// whose text, as written, is one of the names of the rule, with or without
+// arguments. A longer name, as @ScheduledTask for @Scheduled, is another
+// decorator. The index holds the annotations of Java as decorators.
 func (f *finder) matchDecorator(r rules.Rule) {
-	prefixes := append(slices.Clone(r.Match.Decorator), r.Match.Annotation...)
+	names := append(slices.Clone(r.Match.Decorator), r.Match.Annotation...)
 	for _, ix := range f.applying(r) {
 		for _, def := range ix.Definitions {
 			if slices.ContainsFunc(def.Decorators, func(d string) bool {
-				return slices.ContainsFunc(prefixes, func(prefix string) bool { return strings.HasPrefix(d, prefix) })
+				return slices.ContainsFunc(names, func(name string) bool { return decoratorIs(d, name) })
 			}) {
 				f.add(r, def.Key)
 			}
 		}
 	}
+}
+
+// decoratorIs reports whether a decorator as written is the name, or the
+// name with arguments.
+func decoratorIs(decorator, name string) bool {
+	rest, ok := strings.CutPrefix(decorator, name)
+	return ok && (rest == "" || strings.HasPrefix(rest, "("))
 }
 
 // matchDecoratorCall marks each definition with a decorator whose key

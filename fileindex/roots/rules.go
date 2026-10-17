@@ -63,8 +63,10 @@ type Rule struct {
 	Match    Match    `yaml:"match"`
 }
 
-// Match holds one match key. Annotation matches as Decorator does, on the
-// annotations of Java that the index holds as decorators.
+// Match holds one match key. Decorator lists the names of the decorators as
+// written, as @click.command, and a decorator matches when it is one of
+// them, with or without arguments. Annotation matches as Decorator does,
+// on the annotations of Java that the index holds as decorators.
 type Match struct {
 	Definition   *DefinitionMatch `yaml:"definition,omitempty"`
 	Decorator    []string         `yaml:"decorator,omitempty"`

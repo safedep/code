@@ -33,3 +33,19 @@ func TestCommands(t *testing.T) {
 	assert.Equal(t, [][]string{{"node", "/srv/a.js"}, {"python", "-m", "app"}},
 		dockerfileCommands([]byte("FROM node:20\nCMD [\"node\", \"/srv/a.js\"]\n  entrypoint python -m app\nRUN make\n")))
 }
+
+func TestDecoratorIs(t *testing.T) {
+	tests := []struct {
+		decorator, name string
+		want            bool
+	}{
+		{"@click.group", "@click.group", true},
+		{"@click.group()", "@click.group", true},
+		{"@click.group_x", "@click.group", false},
+		{"@ScheduledTask", "@Scheduled", false},
+		{"@GetMapping(\"/a\")", "@GetMapping", true},
+	}
+	for _, tt := range tests {
+		assert.Equal(t, tt.want, decoratorIs(tt.decorator, tt.name), "%s %s", tt.decorator, tt.name)
+	}
+}
