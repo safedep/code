@@ -63,3 +63,36 @@ func TestFileIndexJava(t *testing.T) {
 		assert.Contains(t, ix.Flags, fidx.Flag{Kind: fidx.FlagReflection, Line: 12})
 	})
 }
+
+func TestFileIndexJavaStaticInitializer(t *testing.T) {
+	source := strings.Join([]string{
+		"class A {",
+		"  static { Service s = new Service(); s.boot(); }",
+		"  static final Log LOG = Log.get();",
+		"  static final int N = 1;",
+		"  Store store = Store.open();",
+		"  static void run() {}",
+		"}",
+		"class B { static final int M = 2; }",
+		"enum Op { PLUS, MINUS; }",
+	}, "\n") + "\n"
+	ix := indexSource(t, core.LanguageCodeJava, "A.java", source)
+
+	callers := map[string]string{}
+	for _, call := range ix.Calls {
+		callers[call.Callee] = call.Caller
+	}
+	assert.Equal(t, "A.java//A//<clinit>", callers["s.boot"])
+	assert.Equal(t, "A.java//A//<clinit>", callers["Log.get"])
+	assert.Equal(t, "A.java//A", callers["Store.open"], "an instance field runs with the instance")
+	assert.Equal(t, "A.java//Op//<clinit>", callers["Op"], "the constants of an enum are instances of it")
+
+	init := definitionOf(t, ix, "A.java//A//<clinit>")
+	assert.Equal(t, fidx.DefMethod, init.Kind)
+	assert.True(t, init.Static)
+	assert.Equal(t, []fidx.Typed{{Name: "s", Type: "Service"}}, init.Locals)
+	assert.Contains(t, classOf(t, ix, "A.java//A").Methods, "A.java//A//<clinit>")
+	for _, def := range ix.Definitions {
+		assert.NotEqual(t, "A.java//B//<clinit>", def.Key, "a static field with no call runs no code")
+	}
+}

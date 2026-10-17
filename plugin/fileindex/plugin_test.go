@@ -104,7 +104,7 @@ func TestFileIndexGolden(t *testing.T) {
 // needs a new Version, and both constants change with it.
 const (
 	goldenVersion = "7"
-	goldenHash    = "da6c3f9cc2dcfdbb938fbeaa1ade674bcfd5003b3eacaf846cf0100100ae8a7c"
+	goldenHash    = "b968f7e8be51f91faf8fd855397c63ab20534f5e144b166c5c304affad381989"
 )
 
 func TestFileIndexGoldenHashFollowsVersion(t *testing.T) {

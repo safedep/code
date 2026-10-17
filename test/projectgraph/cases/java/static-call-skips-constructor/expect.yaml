@@ -1,0 +1,53 @@
+source: safedep:hand
+description: Main calls the static method Codec.name. The JVM runs the static field initializer of Codec first, so Logger.getLogger runs. A static call makes no instance, so the constructor and its call of Yaml.load do not run.
+roots:
+  - key: com/app/Main.java//Main//main
+    kind: main
+    rule: java.main
+edges:
+  - from: com/app/Codec.java//Codec//name
+    to: com/app/Codec.java//Codec//<clinit>
+    kind: direct
+    confidence: high
+    site: com/app/Codec.java:14
+  - from: com/app/Codec.java//Codec//<init>
+    to: com/app/Codec.java//Codec//<clinit>
+    kind: direct
+    confidence: high
+    site: com/app/Codec.java:9
+  - from: com/app/Codec.java//Codec//<clinit>
+    to: java//util//logging//Logger//getLogger
+    kind: direct
+    confidence: high
+    site: com/app/Codec.java:7
+no_edges:
+  - from: com/app/Codec.java//Codec//name
+    to: com/app/Codec.java//Codec
+unresolved: []
+results:
+  - target: java//util//logging//Logger//getLogger
+    status: found
+    path:
+      - key: com/app/Main.java//Main//main
+      - key: com/app/Codec.java//Codec//name
+        site: com/app/Main.java:5
+        kind: member
+        confidence: high
+      - key: com/app/Codec.java//Codec//<clinit>
+        site: com/app/Codec.java:14
+        kind: direct
+        confidence: high
+      - key: java//util//logging//Logger//getLogger
+        site: com/app/Codec.java:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: com/app/Codec.java//Codec//<clinit>
+        site: com/app/Codec.java:7
+        reached: true
+  - target: org//yaml//snakeyaml//Yaml//load
+    status: not-found
+    call_sites:
+      - caller: com/app/Codec.java//Codec//<init>
+        site: com/app/Codec.java:11
+        reached: false

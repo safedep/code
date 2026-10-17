@@ -69,3 +69,23 @@ func TestBuildFrameworkRoots(t *testing.T) {
 func site(s Site) string {
 	return fmt.Sprintf("%s:%d", s.Path, s.Line)
 }
+
+func TestBuildJavaClassInit(t *testing.T) {
+	init := def(fileindex.DefMethod, "A.java//A//<clinit>", 2)
+	init.Static = true
+	ctor := def(fileindex.DefConstructor, "A.java//A//<init>", 3)
+	ctor.Parent = "A.java//A"
+	ix := &fileindex.Index{
+		Version: fileindex.Version, Path: "A.java", Language: langcode.Java, Package: "app",
+		Definitions: []fileindex.Definition{def(fileindex.DefClass, "A.java//A", 1), init, ctor, def(fileindex.DefMethod, "A.java//A//run", 4)},
+		Classes:     []fileindex.Class{{Key: "A.java//A", Methods: []string{"A.java//A//<clinit>", "A.java//A//<init>", "A.java//A//run"}}},
+	}
+	g, err := Build(context.Background(), []*fileindex.Index{ix}, Options{})
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{
+		"A.java//A -> A.java//A//<clinit> direct java.class-init",
+		"A.java//A -> A.java//A//<init> direct java.constructor",
+		"A.java//A//<init> -> A.java//A//<clinit> direct java.class-init",
+		"A.java//A//run -> A.java//A//<clinit> direct java.class-init",
+	}, edgesOfKind(g, EdgeDirect), "a static call reaches the static initializer and not the constructor")
+}

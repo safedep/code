@@ -174,6 +174,16 @@
       "exported": true
     },
     {
+      "key": "App.java//Mode//\u003cclinit\u003e",
+      "kind": "method",
+      "name": "\u003cclinit\u003e",
+      "start_line": 53,
+      "end_line": 53,
+      "exported": true,
+      "parent": "App.java//Mode",
+      "static": true
+    },
+    {
       "key": "App.java//Mode//apply",
       "kind": "method",
       "name": "apply",
@@ -217,6 +227,7 @@
     {
       "key": "App.java//Mode",
       "methods": [
+        "App.java//Mode//\u003cclinit\u003e",
         "App.java//Mode//apply"
       ]
     },
@@ -396,6 +407,16 @@
       ],
       "method": "write",
       "kind": "call"
+    },
+    {
+      "caller": "App.java//Mode//\u003cclinit\u003e",
+      "line": 53,
+      "column": 5,
+      "callee": "Mode",
+      "targets": [
+        "App.java//Mode"
+      ],
+      "kind": "new"
     },
     {
       "caller": "App.java//Mode//apply",

@@ -92,6 +92,115 @@ func (p *projection) addJavaSignatures() {
 	}
 }
 
+// javaInitName names the static initializer of a Java class, as the JVM
+// does.
+const javaInitName = "<clinit>"
+
+// addJavaInits adds the static initializer of each Java class whose body
+// runs code when the class loads: a static block, the initializer of a
+// static field, a constant of an interface or a constant of an enum. The
+// JVM runs that code once, before the first static call, the first access
+// to a static field and the first instance. So it is a static method
+// <clinit> of the class, which takes the calls of those members. A call of
+// a static method then does not run the constructor. The constants of an
+// enum are instances, so the <clinit> of an enum calls the enum.
+func (p *projection) addJavaInits() {
+	if !p.isJava() {
+		return
+	}
+	var classes []string
+	for key, def := range p.defs {
+		if def.Kind == fidx.DefClass || def.Kind == fidx.DefInterface {
+			classes = append(classes, key)
+		}
+	}
+	for _, class := range classes {
+		node := p.syntax[class]
+		if node == nil {
+			continue
+		}
+		members := javaStaticMembers(node.ChildByFieldName("body"))
+		if len(members) == 0 {
+			continue
+		}
+		key := fidx.Join(class, javaInitName)
+		def := &fidx.Definition{
+			Key:       key,
+			Kind:      fidx.DefMethod,
+			Name:      javaInitName,
+			StartLine: lineOf(members[0]),
+			EndLine:   int(members[len(members)-1].EndPoint().Row) + 1,
+			Parent:    class,
+			Static:    true,
+		}
+		constant := false
+		for _, m := range members {
+			p.bodies[spanOf(m)] = key
+			switch {
+			case m.Type() == "static_initializer" && m.NamedChildCount() > 0:
+				def.Locals = append(def.Locals, p.javaLocals(m.NamedChild(0))...)
+			case m.Type() == "enum_constant" && !constant:
+				constant = true
+				site := ast.GetNodePosition(m)
+				p.ix.Calls = append(p.ix.Calls, fidx.Call{
+					Caller:  key,
+					Line:    int(site.StartLine),
+					Column:  int(site.StartColumn),
+					Callee:  fidx.Last(class),
+					Targets: []string{class},
+					Kind:    fidx.CallNew,
+				})
+			}
+		}
+		p.defs[key] = def
+	}
+}
+
+// dropIdleJavaInits removes each static initializer that runs no call, no
+// reference and no unresolved site, as the one of static final int X = 1.
+func (p *projection) dropIdleJavaInits() {
+	if !p.isJava() {
+		return
+	}
+	busy := map[string]bool{}
+	for _, c := range p.ix.Calls {
+		busy[c.Caller] = true
+	}
+	for _, r := range p.ix.References {
+		busy[r.Caller] = true
+	}
+	for _, u := range p.ix.Unresolved {
+		busy[u.Caller] = true
+	}
+	for key, def := range p.defs {
+		if def.Name == javaInitName && !busy[key] && len(def.Flags) == 0 {
+			delete(p.defs, key)
+		}
+	}
+}
+
+// javaStaticMembers returns the members of a class body that run when the
+// class loads.
+func javaStaticMembers(body *sitter.Node) []*sitter.Node {
+	if body == nil {
+		return nil
+	}
+	var members []*sitter.Node
+	for _, m := range ts.NamedChildren(body) {
+		switch m.Type() {
+		case "static_initializer", "constant_declaration", "enum_constant":
+			members = append(members, m)
+		case "field_declaration":
+			if modifiers := javaModifiers(m); modifiers != nil && hasKeyword(modifiers, "static") {
+				members = append(members, m)
+			}
+		case "enum_body_declarations":
+			members = append(members, javaStaticMembers(m)...)
+		}
+	}
+	return members
+}
+
 // javaLocals returns the local variables of a body that declare a class
 // type, as s in Service s = f(), or that a new constructs, as s in
 // var s = new Service().

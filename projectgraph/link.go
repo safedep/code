@@ -449,38 +449,34 @@ func (b *builder) linkInits(ix *fileindex.Index) {
 	b.addEdge(Edge{From: ix.Path, To: key, Site: Site{Path: ix.Path, Line: n.Line}, Kind: EdgeDirect, Resolver: resolverName(ix.Language, "init")})
 }
 
-// linkClassInits adds an edge from each method of a Java class to the
-// class when the body of the class runs code: a static block or the
-// initializer of a field. The JVM runs the static code before the first
-// call of a method of the class and before an access to a static field, so
-// the class node holds that code. The edge also reaches the constructor of
-// the class, which a static call need not run.
+// linkClassInits adds an edge from the class node and each method of a
+// Java class to the static initializer <clinit> of the class, which the
+// index defines when the class runs code at load. The JVM runs that code
+// before the first instance, the first static call and the first access to
+// a static field. The edge goes to <clinit> and not to the class node,
+// because the class node leads to the constructor, which a static call
+// does not run.
 func (b *builder) linkClassInits(ix *fileindex.Index) {
 	if ix.Language != langcode.Java {
 		return
 	}
-	runs := map[string]bool{}
-	for _, c := range ix.Calls {
-		runs[c.Caller] = true
-	}
-	for _, r := range ix.References {
-		runs[r.Caller] = true
-	}
-	for _, u := range ix.Unresolved {
-		runs[u.Caller] = true
-	}
 	for _, c := range ix.Classes {
-		if !runs[c.Key] {
+		init := fileindex.Join(c.Key, javaClassInit)
+		if !b.isMethod(init) {
 			continue
 		}
-		for _, m := range c.Methods {
-			if b.isMethod(m) {
-				n := b.g.Nodes[m]
-				b.addEdge(Edge{From: m, To: c.Key, Site: Site{Path: n.Path, Line: n.Line}, Kind: EdgeDirect, Resolver: resolverName(ix.Language, "class-init")})
+		for _, from := range append([]string{c.Key}, c.Methods...) {
+			if from == init || b.g.Nodes[from] == nil {
+				continue
 			}
+			n := b.g.Nodes[from]
+			b.addEdge(Edge{From: from, To: init, Site: Site{Path: n.Path, Line: n.Line}, Kind: EdgeDirect, Resolver: resolverName(ix.Language, "class-init")})
 		}
 	}
 }
+
+// javaClassInit names the static initializer of a Java class.
+const javaClassInit = "<clinit>"
 
 // linkConstructors adds an edge from each class to the constructor that
 // runs when a call makes an instance. A call to a class reaches the class

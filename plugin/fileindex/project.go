@@ -128,13 +128,15 @@ func project(ctx context.Context, tree core.ParseTree) (*fidx.Index, error) {
 	p.addTruncations()
 	p.addGoSignatures()
 	p.addJavaSignatures()
+	p.addJavaInits()
 	p.walkTree(ctx)
 	p.addDeclaredTypes()
+	p.addCalls()
+	p.addUnresolved()
+	p.dropIdleJavaInits()
 	if err := p.addClasses(ctx); err != nil {
 		return nil, err
 	}
-	p.addCalls()
-	p.addUnresolved()
 	for _, def := range p.defs {
 		def.Exported = p.exported(def)
 		p.ix.Definitions = append(p.ix.Definitions, *def)
@@ -486,17 +488,14 @@ func (p *projection) addCalls() {
 
 // caller returns the definition that runs the call site that the
 // definition key holds. A function that a JavaScript property or argument
-// holds is a definition that the call graph does not know, so it takes the
-// calls of its body. A JavaScript static field or static block runs when the class
+// holds, and the static initializer of a Java class, are definitions that
+// the call graph does not know, so they take the calls of their nodes. A JavaScript static field or static block runs when the class
 // is defined, so its calls belong to the scope that defines the class. A
 // function value in a static field runs only when a call runs it. A flag in
 // a static block stays on the class.
 func (p *projection) caller(key string, site ast.NodePosition) string {
-	if !p.ix.Language.IsECMAScript() {
-		return key
-	}
 	def, ok := p.defs[key]
-	class := ok && def.Kind == fidx.DefClass
+	class := ok && def.Kind == fidx.DefClass && p.ix.Language.IsECMAScript()
 	if !class && len(p.bodies) == 0 {
 		return key
 	}
