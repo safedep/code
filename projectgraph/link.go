@@ -32,8 +32,8 @@ type Options struct {
 	// with no index and a status that is not complete, as missing or
 	// failed, becomes a module node with that status.
 	Files map[string]fileindex.FileStatus
-	// TestPaths marks the test files, next to Index.Test. A glob with no "/"
-	// matches one part of the path, as tests or test_*.py.
+	// TestPaths marks the test files. A glob with no "/" matches one part
+	// of the path, as tests or test_*.py.
 	TestPaths []string
 	// Rules go over the embedded root rules by id.
 	Rules []roots.Rule
@@ -264,8 +264,7 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		return nil, err
 	}
 	for _, p := range b.paths {
-		ix := b.byPath[p]
-		b.test[p] = ix != nil && ix.Test || pathglob.MatchAny(opts.TestPaths, b.spaceOf(p).inner(p))
+		b.test[p] = pathglob.MatchAny(opts.TestPaths, b.spaceOf(p).inner(p))
 	}
 	for _, p := range profiles {
 		if p.units != nil {

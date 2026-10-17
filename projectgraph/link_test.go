@@ -841,7 +841,7 @@ func TestBuildNameEdges(t *testing.T) {
 	}
 	lib := &fileindex.Index{Version: fileindex.Version, Path: "lib.py", Language: langcode.Python,
 		Definitions: []fileindex.Definition{fn("lib.py//cb"), fn("lib.py//run")}}
-	tests := &fileindex.Index{Version: fileindex.Version, Path: "tests/test_lib.py", Language: langcode.Python, Test: true,
+	tests := &fileindex.Index{Version: fileindex.Version, Path: "tests/test_lib.py", Language: langcode.Python,
 		Definitions: []fileindex.Definition{fn("tests/test_lib.py//run")}}
 	js := &fileindex.Index{Version: fileindex.Version, Path: "web.js", Language: langcode.Javascript,
 		Definitions: []fileindex.Definition{fn("web.js//run")}}
@@ -850,7 +850,7 @@ func TestBuildNameEdges(t *testing.T) {
 		many.Definitions = append(many.Definitions, fn(fmt.Sprintf("many.py//C%d//get", i)))
 	}
 
-	g, err := Build(context.Background(), []*fileindex.Index{caller, lib, tests, js, many}, Options{})
+	g, err := Build(context.Background(), []*fileindex.Index{caller, lib, tests, js, many}, Options{TestPaths: []string{"tests"}})
 	require.NoError(t, err)
 
 	var names []string

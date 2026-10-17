@@ -132,7 +132,6 @@ type Index struct {
 	Path        string        `json:"path"`
 	Language    langcode.Code `json:"language"`
 	ContentHash string        `json:"content_hash"`
-	Test        bool          `json:"test,omitempty"`
 	Package     string        `json:"package,omitempty"`
 	Unit        string        `json:"unit,omitempty"`
 
@@ -342,8 +341,8 @@ func (s FileStatus) Complete() bool {
 }
 
 // Key identifies the stored index of a file. The index depends on the path,
-// because its definition keys and its test mark hold the path. Two files with
-// the same bytes at two paths have two keys. The Path of a file of
+// because its definition keys hold the path. Two files with the same bytes
+// at two paths have two keys. The Path of a file of
 // dependency code holds its unit, so two projects that install one package
 // version share its indexes.
 type Key struct {

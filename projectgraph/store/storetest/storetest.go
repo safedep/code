@@ -126,7 +126,7 @@ func testPutReplaces(t *testing.T, s store.Store) {
 	put(t, s, a)
 
 	b := Index("src/a.py")
-	b.Test = true
+	b.Package = "app"
 	b.Calls = nil
 	put(t, s, b)
 

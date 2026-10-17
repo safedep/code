@@ -17,7 +17,6 @@ func fullIndex() *Index {
 		Path:        "src/app.py",
 		Language:    langcode.Python,
 		ContentHash: HashContent([]byte("app")),
-		Test:        true,
 		Package:     "app",
 		Imports: []Import{
 			{Line: 1, Module: "yaml", Kind: ImportStatic, Namespace: "yaml"},

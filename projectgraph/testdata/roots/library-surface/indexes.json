@@ -8,7 +8,7 @@
     ]
   },
   {
-    "version": "10", "path": "lib/test_api.py", "language": "python", "test": true,
+    "version": "10", "path": "lib/test_api.py", "language": "python",
     "definitions": [
       {"key": "lib/test_api.py", "kind": "module", "name": "test_api", "start_line": 1, "end_line": 2, "exported": true},
       {"key": "lib/test_api.py//test_public", "kind": "function", "name": "test_public", "start_line": 1, "end_line": 2, "exported": true}
