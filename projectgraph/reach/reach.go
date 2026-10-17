@@ -361,7 +361,7 @@ type prefixed struct {
 
 // found collects the uncertainties of the nodes that a search reached, in
 // the order of the search. A record with a method name concerns only the
-// targets with that last segment.
+// targets with that last segment, unless its reason can name any target.
 type found struct {
 	global   []Uncertainty
 	byMethod map[string][]Uncertainty
@@ -424,7 +424,7 @@ func (ix *index) uncertainties(s *search, maxDepth int) *found {
 			switch {
 			case r.ImportPrefix != "":
 				f.prefixed = append(f.prefixed, prefixed{u: u, prefix: r.ImportPrefix})
-			case r.Method != "":
+			case r.Method != "" && !reachesAny(r.Reason):
 				if _, ok := f.byMethod[r.Method]; !ok {
 					f.methods = append(f.methods, r.Method)
 				}
@@ -441,6 +441,13 @@ func (ix *index) uncertainties(s *search, maxDepth int) *found {
 		f.global = append(f.global, Uncertainty{Kind: Budget, Text: "the search stopped at the deadline"})
 	}
 	return f
+}
+
+// reachesAny reports whether an unresolved site of the reason can call any
+// target. A computed name or a computed module can name every target, even
+// when the site names the function that it calls, as import_module.
+func reachesAny(reason fileindex.UnresolvedReason) bool {
+	return reason == fileindex.UnresolvedComputedName || reason == fileindex.UnresolvedDynamicImport
 }
 
 // forTarget returns the uncertainties of a target, at most maxPerKind of

@@ -171,6 +171,8 @@ func TestReachUncertainties(t *testing.T) {
 		{name: "a record of the same method", extra: "unresolved handlers.py//parse 5 unknown-receiver load", target: "yaml//dump", status: NotFound, kinds: []UncertaintyKind{}},
 		{name: "a record of the target method", extra: "unresolved handlers.py//parse 5 unknown-receiver dump", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{UnresolvedCall}},
 		{name: "a computed name", extra: "unresolved handlers.py//parse 5 computed-name", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{UnresolvedCall}},
+		{name: "a computed name with a method", extra: "unresolved handlers.py//parse 5 computed-name getattr", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{UnresolvedCall}},
+		{name: "a computed import by a named function", extra: "unresolved handlers.py//parse 5 dynamic-import import_module", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{UnresolvedCall}},
 		{name: "a record on an unreached node", extra: "unresolved handlers.py//dead 41 computed-name", target: "yaml//dump", status: NotFound, kinds: []UncertaintyKind{}},
 		{name: "a dynamic flag", extra: "flag handlers.py//parse eval 6", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{DynamicFlag}},
 		{name: "a flag on an unreached node", extra: "flag handlers.py//dead eval 41", target: "yaml//dump", status: NotFound, kinds: []UncertaintyKind{}},
