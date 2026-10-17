@@ -25,6 +25,7 @@ type trackedFile struct {
 }
 
 func (f *trackedFile) Name() string   { return f.name }
+func (f *trackedFile) Path() string   { return f.name }
 func (f *trackedFile) IsApp() bool    { return true }
 func (f *trackedFile) IsImport() bool { return false }
 func (f *trackedFile) Reader() (io.ReadCloser, error) {

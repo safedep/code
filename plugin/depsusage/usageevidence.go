@@ -46,7 +46,8 @@ type UsageEvidence struct {
 	// The identifier which led to this usage evidence
 	Identifier string
 
-	// File path where the usage was found
+	// The name of the file where the usage was found. It is the path
+	// relative to the root of the walk, with /, as core.File.Name gives it.
 	FilePath string
 
 	// Line number where the usage was found

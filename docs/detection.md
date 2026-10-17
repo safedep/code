@@ -14,8 +14,8 @@ TypeScript assertions that the JavaScript grammar reads.
 at a file name. Node runs a required file of any name as JavaScript, so a detection parses a `.svg`
 file as JavaScript. The tree keeps a copy of data.
 
-- `parser.WithFileName(name)` sets the name that `tree.File().Name()` reports. A resolver that keys
-  its results by file name reads it.
+- `parser.WithFileName(name)` sets the name that `tree.File().Name()` and `Path()` report. A
+  resolver that keys its results by file name reads it.
 - `parser.WithMaxBytes(n)` sets the size limit. Zero selects `parser.DefaultMaxBytes` (4 MiB). A
   negative value removes the limit. A larger input gives `parser.ErrInputTooLarge`.
 - The parse stops when `ctx` is done and returns the error of `ctx`.

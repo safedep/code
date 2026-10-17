@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/safedep/code/core"
@@ -44,8 +45,8 @@ func TestLocalFileSystem(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.ElementsMatch(t, []string{
-				"fixtures/fs/app/file-1.txt",
-				"fixtures/fs/app/file-2.txt",
+				"file-1.txt",
+				"file-2.txt",
 			}, files)
 		})
 	})
@@ -67,8 +68,8 @@ func TestLocalFileSystem(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.ElementsMatch(t, []string{
-				"fixtures/fs/import/import-1.txt",
-				"fixtures/fs/import/import-2.txt",
+				"import-1.txt",
+				"import-2.txt",
 			}, files)
 		})
 	})
@@ -90,10 +91,10 @@ func TestLocalFileSystem(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.ElementsMatch(t, []string{
-				"fixtures/fs/app/file-1.txt",
-				"fixtures/fs/app/file-2.txt",
-				"fixtures/fs/import/import-1.txt",
-				"fixtures/fs/import/import-2.txt",
+				"file-1.txt",
+				"file-2.txt",
+				"import-1.txt",
+				"import-2.txt",
 			}, files)
 		})
 	})
@@ -116,9 +117,9 @@ func TestLocalFileSystem(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.ElementsMatch(t, []string{
-				"fixtures/fs/app/file-1.txt",
-				"fixtures/fs/app/file-2.txt",
-				"fixtures/fs/import/import-1.txt",
+				"file-1.txt",
+				"file-2.txt",
+				"import-1.txt",
 			}, files)
 		})
 	})
@@ -134,7 +135,8 @@ func TestLocalFileSystem(t *testing.T) {
 			file, err := fs.Find(context.Background(), "file-1.txt")
 
 			assert.NoError(t, err)
-			assert.Equal(t, "fixtures/fs/app/file-1.txt", file.Name())
+			assert.Equal(t, "file-1.txt", file.Name())
+			assert.Equal(t, filepath.Join("fixtures", "fs", "app", "file-1.txt"), file.Path())
 			assert.False(t, file.IsImport())
 			assert.True(t, file.IsApp())
 		})
@@ -170,12 +172,70 @@ func TestLocalFileSystemSkipsLinksToNoFile(t *testing.T) {
 
 	var files []string
 	err = fs.EnumerateApp(context.Background(), func(f core.File) error {
-		files = append(files, filepath.Base(f.Name()))
+		files = append(files, f.Name())
 		return nil
 	})
 
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"app.js", "linked.js"}, files)
+}
+
+func TestFileNameAndPath(t *testing.T) {
+	dir := t.TempDir()
+	nested := filepath.Join(dir, "src", "pkg", "app.py")
+	top := filepath.Join(dir, "main.py")
+	require.NoError(t, os.MkdirAll(filepath.Dir(nested), 0o700))
+	require.NoError(t, os.WriteFile(nested, []byte("pass\n"), 0o600))
+	require.NoError(t, os.WriteFile(top, []byte("pass\n"), 0o600))
+
+	enumerate := func(root string) map[string]string {
+		fs, err := NewLocalFileSystem(LocalFileSystemConfig{AppDirectories: []string{root}})
+		require.NoError(t, err)
+		paths := map[string]string{}
+		require.NoError(t, fs.EnumerateApp(context.Background(), func(f core.File) error {
+			paths[f.Name()] = f.Path()
+			return nil
+		}))
+		return paths
+	}
+
+	cases := []struct {
+		name string
+		root string
+		want map[string]string
+	}{
+		{
+			name: "a directory root names a nested file and a file at the root with /",
+			root: dir,
+			want: map[string]string{"src/pkg/app.py": nested, "main.py": top},
+		},
+		{
+			name: "a root that is a file names the file by its base name",
+			root: nested,
+			want: map[string]string{"app.py": nested},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, enumerate(tc.root))
+		})
+	}
+
+	t.Run("find names the file relative to the root", func(t *testing.T) {
+		fs, err := NewLocalFileSystem(LocalFileSystemConfig{AppDirectories: []string{dir}})
+		require.NoError(t, err)
+		file, err := fs.Find(context.Background(), filepath.Join("src", "pkg", "app.py"))
+		require.NoError(t, err)
+		assert.Equal(t, "src/pkg/app.py", file.Name())
+		assert.Equal(t, nested, file.Path())
+	})
+
+	t.Run("a reader file keeps the name it was given, with /", func(t *testing.T) {
+		name := filepath.Join("src", "pkg", "app.py")
+		file := NewFileFromReader(strings.NewReader("pass\n"), name, false)
+		assert.Equal(t, "src/pkg/app.py", file.Name())
+		assert.Equal(t, name, file.Path())
+	})
 }
 
 // fakeEntry is a directory entry of a walk.

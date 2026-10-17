@@ -109,7 +109,7 @@ func TestTypescriptLanguageResolvers(t *testing.T) {
 			imports, err := typescriptLanguage.Resolvers().ResolveImports(t.Context(), parseTree)
 			assert.NoError(t, err)
 
-			expectedImports, ok := importExpectationsMapper[f.Name()]
+			expectedImports, ok := importExpectationsMapper[f.Path()]
 			assert.True(t, ok)
 
 			var foundImports []string
@@ -148,7 +148,7 @@ func TestTypescriptLanguageResolvers(t *testing.T) {
 			functions, err := typescriptLanguage.Resolvers().ResolveFunctions(t.Context(), parseTree)
 			assert.NoError(t, err)
 
-			expectedFunctions, ok := typescriptFunctionExpectations[f.Name()]
+			expectedFunctions, ok := typescriptFunctionExpectations[f.Path()]
 			assert.True(t, ok)
 
 			var foundFunctions []string

@@ -99,7 +99,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "JavaScript signatures",
 			Language:  core.LanguageCodeJavascript,
-			FilePaths: []string{"fixtures/testJavascript.js"},
+			FilePaths: []string{"testJavascript.js"},
 			Signatures: []*callgraphv1.Signature{
 				{
 					Id: "js.console.log.usage",
@@ -192,7 +192,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "JavaScript CommonJS signatures",
 			Language:  core.LanguageCodeJavascript,
-			FilePaths: []string{"fixtures/testCommonJS.js"},
+			FilePaths: []string{"testCommonJS.js"},
 			Signatures: []*callgraphv1.Signature{
 				callSignature("anthropic.client", core.LanguageCodeJavascript, MatchAny, "@anthropic-ai/sdk"),
 				callSignature("node.events.emitter", core.LanguageCodeJavascript, MatchAny, "events/EventEmitter"),
@@ -207,7 +207,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "C# signatures",
 			Language:  core.LanguageCodeCSharp,
-			FilePaths: []string{"fixtures/testShapes.cs"},
+			FilePaths: []string{"testShapes.cs"},
 			Signatures: []*callgraphv1.Signature{
 				callSignature("openai.chat", core.LanguageCodeCSharp, MatchAll, "OpenAI.Chat.*", "ChatClient.CompleteChatAsync"),
 				callSignature("http.client", core.LanguageCodeCSharp, MatchAny, "System.Net.Http.HttpClient.*"),
@@ -222,7 +222,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "Rust signatures",
 			Language:  core.LanguageCodeRust,
-			FilePaths: []string{"fixtures/testShapes.rs"},
+			FilePaths: []string{"testShapes.rs"},
 			Signatures: []*callgraphv1.Signature{
 				callSignature("openai.client", core.LanguageCodeRust, MatchAny, "async_openai::Client::new"),
 				callSignature("http.client", core.LanguageCodeRust, MatchAny, "reqwest::*"),
@@ -237,7 +237,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "PHP signatures",
 			Language:  core.LanguageCodePHP,
-			FilePaths: []string{"fixtures/testShapes.php"},
+			FilePaths: []string{"testShapes.php"},
 			Signatures: []*callgraphv1.Signature{
 				callSignature("openai.client", core.LanguageCodePHP, MatchAny, "OpenAI::client"),
 				callSignature("http.client", core.LanguageCodePHP, MatchAny, "GuzzleHttp\\Client"),
@@ -252,7 +252,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "Ruby signatures",
 			Language:  core.LanguageCodeRuby,
-			FilePaths: []string{"fixtures/testShapes.rb"},
+			FilePaths: []string{"testShapes.rb"},
 			Signatures: []*callgraphv1.Signature{
 				callSignature("openai.client", core.LanguageCodeRuby, MatchAny, "OpenAI::Client.new"),
 				callSignature("http.client", core.LanguageCodeRuby, MatchAny, "Net::HTTP.*"),
@@ -267,7 +267,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "JavaScript chained calls",
 			Language:  core.LanguageCodeJavascript,
-			FilePaths: []string{"fixtures/testChains.js"},
+			FilePaths: []string{"testChains.js"},
 			Signatures: []*callgraphv1.Signature{
 				argSignature("crypto.md5", core.LanguageCodeJavascript, "crypto/createHash", "'md5'", `"md5"`),
 				callSignature("openai.chat", core.LanguageCodeJavascript, MatchAny, "openai/chat/completions/create"),
@@ -288,7 +288,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "Go chained calls and versioned imports",
 			Language:  core.LanguageCodeGo,
-			FilePaths: []string{"fixtures/testChains.go"},
+			FilePaths: []string{"testChains.go"},
 			Signatures: []*callgraphv1.Signature{
 				callSignature("crypto.ecdh", core.LanguageCodeGo, MatchAny, "crypto/ecdh/X25519/GenerateKey"),
 				callSignature("crypto.jwt", core.LanguageCodeGo, MatchAny, "github.com/golang-jwt/jwt/v5/NewWithClaims"),
@@ -306,7 +306,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "Python chained calls",
 			Language:  core.LanguageCodePython,
-			FilePaths: []string{"fixtures/testChains.py"},
+			FilePaths: []string{"testChains.py"},
 			Signatures: []*callgraphv1.Signature{
 				callSignature("crypto.argon2", core.LanguageCodePython, MatchAny, "argon2.PasswordHasher.hash"),
 				callSignature("crypto.sha256", core.LanguageCodePython, MatchAny, "hashlib.sha256.hexdigest"),
@@ -321,7 +321,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "Java calls on new objects",
 			Language:  core.LanguageCodeJava,
-			FilePaths: []string{"fixtures/testChains.java"},
+			FilePaths: []string{"testChains.java"},
 			Signatures: []*callgraphv1.Signature{
 				callSignature("pinecone.client", core.LanguageCodeJava, MatchAny, "io.pinecone.clients.Pinecone.Builder.build"),
 				callSignature("http.send", core.LanguageCodeJava, MatchAny, "com.example.http.Request.send"),
@@ -338,7 +338,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "Rust turbofish",
 			Language:  core.LanguageCodeRust,
-			FilePaths: []string{"fixtures/testGenerics.rs"},
+			FilePaths: []string{"testGenerics.rs"},
 			Signatures: []*callgraphv1.Signature{
 				callSignature("crypto.hmac", core.LanguageCodeRust, MatchAny, "hmac::Hmac::new_from_slice"),
 			},
@@ -349,7 +349,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "PHP string arguments",
 			Language:  core.LanguageCodePHP,
-			FilePaths: []string{"fixtures/testStrings.php"},
+			FilePaths: []string{"testStrings.php"},
 			Signatures: []*callgraphv1.Signature{
 				argSignature("crypto.sha256", core.LanguageCodePHP, "hash", `"sha256"`, "'sha256'"),
 				argSignature("crypto.md5", core.LanguageCodePHP, "hash", `"md5"`, "'md5'"),
@@ -364,7 +364,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "Python signatures",
 			Language:  core.LanguageCodePython,
-			FilePaths: []string{"fixtures/testFunctions.py"},
+			FilePaths: []string{"testFunctions.py"},
 			Signatures: []*callgraphv1.Signature{
 				{
 					Id: "python.print.usage",
@@ -457,7 +457,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "Go signatures",
 			Language:  core.LanguageCodeGo,
-			FilePaths: []string{"fixtures/testCallGraph.go"},
+			FilePaths: []string{"testCallGraph.go"},
 			Signatures: []*callgraphv1.Signature{
 				{
 					Id: "go.fmt.println.usage",
@@ -550,7 +550,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "Java signatures",
 			Language:  core.LanguageCodeJava,
-			FilePaths: []string{"fixtures/CallgraphTestcases.java"},
+			FilePaths: []string{"CallgraphTestcases.java"},
 			Signatures: []*callgraphv1.Signature{
 				{
 					Id: "java.system.println.usage",
@@ -643,7 +643,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "Java argument matching by index",
 			Language:  core.LanguageCodeJava,
-			FilePaths: []string{"fixtures/testJavaArguments.java"},
+			FilePaths: []string{"testJavaArguments.java"},
 			Signatures: []*callgraphv1.Signature{
 				{
 					Id: "java.crypto.md5.literal",
@@ -795,7 +795,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "TypeScript falls back to JavaScript signatures",
 			Language:  core.LanguageCodeTypescript,
-			FilePaths: []string{"fixtures/testTypescript.ts"},
+			FilePaths: []string{"testTypescript.ts"},
 			Signatures: []*callgraphv1.Signature{
 				// JS-only signature: should match TS via fallback
 				{
@@ -949,7 +949,7 @@ func TestSignatureMatcher(t *testing.T) {
 			assert.NotNil(t, matcher, "Expected matcher to be non-nil")
 
 			// Setup test context
-			treeWalker, fileSystem, err := test.SetupBasicPluginContext(tc.FilePaths, []core.LanguageCode{tc.Language})
+			treeWalker, fileSystem, err := test.SetupBasicPluginContext("fixtures", tc.FilePaths, []core.LanguageCode{tc.Language})
 			assert.NoError(t, err, "Failed to setup plugin context")
 
 			// The graph holds nodes of the tree, and the executor closes the

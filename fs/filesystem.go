@@ -22,7 +22,6 @@ type localFile struct {
 
 type readerFile struct {
 	reader   io.Reader
-	path     string
 	name     string
 	isImport bool
 }
@@ -30,7 +29,28 @@ type readerFile struct {
 var _ core.File = &localFile{}
 var _ core.File = &readerFile{}
 
+// newLocalFile makes the file at path, which a walk of root found.
+func newLocalFile(root, path string, isImport bool) (*localFile, error) {
+	relPath, err := filepath.Rel(root, path)
+	if err != nil {
+		return nil, fmt.Errorf("error getting relative path: %w", err)
+	}
+	if relPath == "." {
+		relPath = filepath.Base(path)
+	}
+
+	return &localFile{
+		path:     path,
+		name:     filepath.ToSlash(relPath),
+		isImport: isImport,
+	}, nil
+}
+
 func (f *localFile) Name() string {
+	return f.name
+}
+
+func (f *localFile) Path() string {
 	return f.path
 }
 
@@ -47,20 +67,24 @@ func (f *localFile) IsImport() bool {
 }
 
 // NewFileFromReader creates a new readerFile for provided io.Reader
-// with the given path and isImport flag. readerFile is an implementation of core.File
+// with the given name and isImport flag. readerFile is an implementation of core.File
 // which is used to represent a file in the Code analysis framework
 //
 // This is required when you want to analyze a standalone file eg. an artifact file
-func NewFileFromReader(reader io.Reader, path string, isImport bool) *readerFile {
+func NewFileFromReader(reader io.Reader, name string, isImport bool) *readerFile {
 	return &readerFile{
 		reader:   reader,
-		path:     path,
-		name:     filepath.Base(path),
+		name:     name,
 		isImport: isImport,
 	}
 }
 
 func (f *readerFile) Name() string {
+	return filepath.ToSlash(f.name)
+}
+
+// Path returns the name that the caller gave. The reader is open already.
+func (f *readerFile) Path() string {
 	return f.name
 }
 
@@ -151,16 +175,7 @@ func (fs *localFileSystem) findFileInDir(ctx context.Context, dir, name string, 
 	}
 
 	if st, err := os.Stat(fullPath); err == nil && !st.IsDir() {
-		relPath, err := filepath.Rel(dir, fullPath)
-		if err != nil {
-			return nil, fmt.Errorf("error getting relative path: %w", err)
-		}
-
-		return &localFile{
-			path:     fullPath,
-			name:     relPath,
-			isImport: isImport,
-		}, nil
+		return newLocalFile(dir, fullPath, isImport)
 	}
 
 	return nil, fmt.Errorf("file not found: %s", name)
@@ -187,15 +202,9 @@ func (fs *localFileSystem) enumerateDir(ctx context.Context,
 			return nil
 		}
 
-		relPath, err := filepath.Rel(root, path)
+		file, err := newLocalFile(root, path, isImport)
 		if err != nil {
-			return fmt.Errorf("error getting relative path: %w", err)
-		}
-
-		file := &localFile{
-			path:     path,
-			isImport: isImport,
-			name:     relPath,
+			return err
 		}
 		return callback(file)
 	})

@@ -54,7 +54,7 @@ func writeFiles(t *testing.T, files map[string]string) string {
 }
 
 func execute(t *testing.T, dir string, plugins []core.Plugin, opts ...parser.Option) *plugin.Report {
-	treeWalker, fileSystem, err := test.SetupBasicPluginContext([]string{dir}, []core.LanguageCode{core.LanguageCodePython}, opts...)
+	treeWalker, fileSystem, err := test.SetupBasicPluginContext(dir, nil, []core.LanguageCode{core.LanguageCodePython}, opts...)
 	require.NoError(t, err)
 	executor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, plugins)
 	require.NoError(t, err)
@@ -79,7 +79,7 @@ func TestExecuteStopsWhenTheContextIsCancelled(t *testing.T) {
 	}
 	dir := writeFiles(t, files)
 
-	treeWalker, fileSystem, err := test.SetupBasicPluginContext([]string{dir}, []core.LanguageCode{core.LanguageCodePython})
+	treeWalker, fileSystem, err := test.SetupBasicPluginContext(dir, nil, []core.LanguageCode{core.LanguageCodePython})
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(t.Context())
@@ -215,7 +215,7 @@ func (v *recordingVisitor) VisitTree(ctx context.Context, tree core.ParseTree) e
 
 func TestExecuteClosesEachTreeAfterTheLastPlugin(t *testing.T) {
 	dir := writeFiles(t, map[string]string{"a.py": "import os\n", "b.py": "import sys\n"})
-	treeWalker, fileSystem, err := test.SetupBasicPluginContext([]string{dir}, []core.LanguageCode{core.LanguageCodePython})
+	treeWalker, fileSystem, err := test.SetupBasicPluginContext(dir, nil, []core.LanguageCode{core.LanguageCodePython})
 	require.NoError(t, err)
 	walker := &recordingWalker{TreeWalker: treeWalker}
 

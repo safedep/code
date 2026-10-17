@@ -55,6 +55,7 @@ type bytesFile struct {
 }
 
 func (f *bytesFile) Name() string   { return f.name }
+func (f *bytesFile) Path() string   { return f.name }
 func (f *bytesFile) IsApp() bool    { return true }
 func (f *bytesFile) IsImport() bool { return false }
 func (f *bytesFile) Reader() (io.ReadCloser, error) {

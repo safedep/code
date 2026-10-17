@@ -23,12 +23,12 @@ type StripCommentsTestcase struct {
 var testcases = []StripCommentsTestcase{
 	{
 		Language:          core.LanguageCodePython,
-		CommentedFilePath: "fixtures/commented.py",
+		CommentedFilePath: "commented.py",
 		StrippedFilePath:  "fixtures/stripped.py",
 	},
 	{
 		Language:          core.LanguageCodeJavascript,
-		CommentedFilePath: "fixtures/commented.js",
+		CommentedFilePath: "commented.js",
 		StrippedFilePath:  "fixtures/stripped.js",
 	},
 }
@@ -38,7 +38,7 @@ func TestStripComments(t *testing.T) {
 	for _, testcase := range testcases {
 		t.Run(fmt.Sprintf("%s (%s)", testcase.CommentedFilePath, testcase.Language), func(t *testing.T) {
 			filePaths := []string{testcase.CommentedFilePath}
-			treeWalker, fileSystem, err := test.SetupBasicPluginContext(filePaths, []core.LanguageCode{testcase.Language})
+			treeWalker, fileSystem, err := test.SetupBasicPluginContext("fixtures", filePaths, []core.LanguageCode{testcase.Language})
 			assert.NoError(t, err)
 
 			readers := []io.Reader{}
@@ -78,9 +78,9 @@ func TestStripComments(t *testing.T) {
 }
 
 func benchmarkStripComments(b *testing.B) {
-	treeWalker, fileSystem, err := test.SetupBasicPluginContext([]string{
-		"fixtures/commented.js",
-		"fixtures/commented.py",
+	treeWalker, fileSystem, err := test.SetupBasicPluginContext("fixtures", []string{
+		"commented.js",
+		"commented.py",
 	}, []core.LanguageCode{core.LanguageCodeJavascript})
 	assert.NoError(b, err)
 

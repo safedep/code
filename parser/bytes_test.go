@@ -60,6 +60,7 @@ func TestParseBytesFile(t *testing.T) {
 	f, err := tree.File()
 	require.NoError(t, err)
 	assert.Equal(t, "dir/logo.svg", f.Name())
+	assert.Equal(t, "dir/logo.svg", f.Path())
 	assert.True(t, f.IsApp())
 
 	r, err := f.Reader()
