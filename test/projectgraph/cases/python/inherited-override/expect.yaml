@@ -1,0 +1,42 @@
+source: safedep:hand
+description: Base extends threading.Thread and defines run. Worker extends Base and defines no method. Thread.start of a Worker runs the run that the MRO of Worker gives, which is Base.run. So the class Worker has an override edge to Base.run, and Loud, which overrides run, has one to its own run.
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: main.py//Worker
+    to: main.py//Base//run
+    kind: reference
+    confidence: low
+    site: main.py:7
+  - from: main.py//Loud
+    to: main.py//Loud//run
+    kind: reference
+    confidence: low
+    site: main.py:16
+no_edges:
+  - from: main.py//Loud
+    to: main.py//Base//run
+unresolved: []
+results:
+  - target: yaml//safe_load
+    status: found
+    path:
+      - key: main.py
+      - key: main.py//Worker
+        site: main.py:22
+        kind: direct
+        confidence: high
+      - key: main.py//Base//run
+        site: main.py:7
+        kind: reference
+        confidence: low
+      - key: yaml//safe_load
+        site: main.py:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.py//Base//run
+        site: main.py:8
+        reached: true

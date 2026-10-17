@@ -364,8 +364,10 @@ func TestBuildOverridesOfADependencyBase(t *testing.T) {
 	ix.Definitions[3].Parent = "w.py//W"
 	g, err := Build(context.Background(), []*fileindex.Index{ix}, Options{})
 	require.NoError(t, err)
-	assert.Equal(t, []string{"w.py//W -> w.py//W//run reference python.override"}, edgesOfKind(g, EdgeReference),
-		"the dependency can call a method that no first-party base defines, and the constructor runs with the class")
+	assert.Equal(t, []string{
+		"w.py//W -> w.py//W//run reference python.override",
+		"w.py//W -> w.py//W//step reference python.override",
+	}, edgesOfKind(g, EdgeReference), "the dependency can call each method of an instance, and the constructor runs with the class")
 }
 
 func TestBuildFieldCandidatesComeFromTheProject(t *testing.T) {
@@ -386,4 +388,20 @@ func TestBuildFieldCandidatesComeFromTheProject(t *testing.T) {
 	assert.Equal(t, []string{"main.js -> store.js//cache//get field javascript.field"}, edgesOfKind(g, EdgeField),
 		"the definitions of a dependency are no candidates, so they make no site ambiguous")
 	assert.Equal(t, []string{"main.js:1 main.js unknown-receiver get"}, unresolvedStrings(g))
+}
+
+func TestBuildJavaCallOnThisOfADependencyBase(t *testing.T) {
+	ix := &fileindex.Index{
+		Version: fileindex.Version, Path: "P.java", Language: langcode.Java, Package: "app",
+		Definitions: []fileindex.Definition{def(fileindex.DefClass, "P.java//P", 1), def(fileindex.DefMethod, "P.java//P//run", 2)},
+		Classes:     []fileindex.Class{{Key: "P.java//P", Bases: []string{"Thread"}, Methods: []string{"P.java//P//run"}}},
+		Calls: []fileindex.Call{
+			{Caller: "P.java//P//run", Line: 3, Column: 9, Callee: "ProcessBuilder", Targets: []string{"ProcessBuilder"}, Kind: fileindex.CallNew},
+			{Caller: "P.java//P//run", Line: 4, Column: 9, Callee: "interrupt", Targets: []string{"interrupt"}, Method: "interrupt", Kind: fileindex.CallCall},
+		},
+	}
+	g, err := Build(context.Background(), []*fileindex.Index{ix}, Options{})
+	require.NoError(t, err)
+	assert.Contains(t, edgeStrings(g), "P.java//P//run -> Thread//interrupt member java.declared-type", "a call with no receiver runs on this")
+	assert.NotContains(t, edgeStrings(g), "P.java//P//run -> Thread//ProcessBuilder member java.declared-type", "a new names a class, not a method of the base")
 }

@@ -133,6 +133,17 @@
     },
     {
       "from": "parser.py//Parser",
+      "to": "base.py//Base//helper",
+      "site": {
+        "path": "base.py",
+        "line": 4
+      },
+      "kind": "reference",
+      "confidence": "low",
+      "resolver": "python.override"
+    },
+    {
+      "from": "parser.py//Parser",
       "to": "parser.py//Parser//__init__",
       "site": {
         "path": "parser.py",
@@ -250,7 +261,7 @@
     "version": "7",
     "files": 3,
     "nodes": 9,
-    "edges": 9,
+    "edges": 10,
     "unresolved": 0,
     "roots": 8,
     "root_fallback": true

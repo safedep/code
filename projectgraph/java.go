@@ -190,7 +190,7 @@ func startsUpper(s string) bool {
 // so a subclass can override the method.
 func (b *builder) thisMethod(caller, name string) (resolution, bool) {
 	for class, ok := b.enclosingClass(caller); ok; class, ok = b.enclosingClass(fileindex.Parent(class)) {
-		if _, fail := b.method(class, name); fail == nil {
+		if _, ok := b.ownMethod(class, name); ok {
 			return b.walkTyped(class, []string{name}), true
 		}
 	}
