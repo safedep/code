@@ -102,6 +102,9 @@ type builder struct {
 	// narrowed holds the call sites whose receiver a class narrowed. Such a
 	// site gets no field or name edge, and the link step owns its record.
 	narrowed map[Site]bool
+	// structural holds the narrowed sites whose type an object of another
+	// class can satisfy, so they keep their field edges.
+	structural map[Site]bool
 	// goMethods holds the Go methods of the project by name.
 	goMethods map[string][]string
 	// implemented holds whether a Go type implements an interface.
@@ -158,6 +161,7 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		loads:        map[string]bool{},
 		mros:         map[string][]string{},
 		narrowed:     map[Site]bool{},
+		structural:   map[Site]bool{},
 		implemented:  map[[2]string]bool{},
 		test:         map[string]bool{},
 		rules:        roots.Merge(roots.Default(), opts.Rules),

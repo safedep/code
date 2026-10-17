@@ -1,0 +1,4 @@
+{
+  "name": "structural-interface",
+  "bin": { "app": "src/main.ts" }
+}

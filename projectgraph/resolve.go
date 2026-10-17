@@ -277,7 +277,8 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 // declared type. It adds a cha edge to the method of each subclass that the
 // call can run besides the resolution, also when the class itself has no
 // such method, as an abstract method. A narrowed site gets no field or name
-// edge, and its record comes from the link step.
+// edge, unless its type is structural, and its record comes from the link
+// step.
 //
 // A receiver that a call of the class makes, as p = Parser(), holds an
 // instance of that class only, so it gets no cha edge.
@@ -304,8 +305,16 @@ func (b *builder) linkCHA(call fileindex.Call, r resolution, from string, site S
 	if r.fail == nil {
 		found = r.key
 	}
-	for _, key := range b.overrides(class, call, found) {
+	overrides := b.overrides(class, call, found)
+	for _, key := range overrides {
 		b.addEdge(Edge{From: from, To: key, Site: site, Kind: EdgeCHA, Resolver: resolverName(lang, "cha")})
+	}
+	// An ECMAScript type is structural. A value of an interface type can be
+	// an object literal or an instance of a class with no implements, and an
+	// abstract method with no first-party override has its code elsewhere.
+	// So such a site also gets the field edges of the method name.
+	if lang.IsECMAScript() && (b.kindOf(class) == NodeInterface || r.fail != nil && len(overrides) == 0) {
+		b.structural[site] = true
 	}
 }
 

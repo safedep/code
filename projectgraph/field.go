@@ -14,7 +14,8 @@ const maxNameCandidates = 20
 // method name to each first-party definition that the call can run by that
 // name. The site stays unresolved, so an external target with the name
 // stays uncertain. A test file holds no candidate for a caller outside the
-// tests. A site whose receiver a class narrowed has its cha edges instead.
+// tests. A site whose receiver a class narrowed has its cha edges instead,
+// unless the type of the receiver is structural.
 //
 // A JavaScript or TypeScript member call, as x.parse(), reads a property of
 // x. So its field edges go to the methods, the object properties and the
@@ -25,7 +26,7 @@ const maxNameCandidates = 20
 func (b *builder) linkFields() {
 	fields, names := b.definitionsByName()
 	for _, u := range sortedKeys(b.unresolved, compareUnresolved) {
-		if u.Method == "" || ReachesAny(u.Reason) || b.narrowed[u.Site] {
+		if u.Method == "" || ReachesAny(u.Reason) || b.narrowed[u.Site] && !b.structural[u.Site] {
 			continue
 		}
 		ix := b.byPath[u.Site.Path]

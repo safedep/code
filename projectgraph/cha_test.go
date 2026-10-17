@@ -290,3 +290,35 @@ func TestBuildExternalBaseGivesOnlyTheLastName(t *testing.T) {
 	assert.Equal(t, []string{"w.py:6 w.py//W//go unknown-receiver parse"}, unresolvedStrings(g),
 		"an attribute of an instance of a class with a dependency base has no known value")
 }
+
+func TestBuildStructuralTypesKeepFieldEdges(t *testing.T) {
+	start := def(fileindex.DefFunction, "a.ts//start", 10)
+	start.EndLine = 12
+	start.Params = []fileindex.Typed{{Name: "r", Type: "Runner"}, {Name: "b", Type: "Base"}, {Name: "c", Type: "Closed"}}
+	ix := &fileindex.Index{
+		Version: fileindex.Version, Path: "a.ts", Language: langcode.Typescript,
+		Definitions: []fileindex.Definition{
+			def(fileindex.DefInterface, "a.ts//Runner", 1),
+			def(fileindex.DefClass, "a.ts//Base", 2),
+			def(fileindex.DefClass, "a.ts//Closed", 3), def(fileindex.DefMethod, "a.ts//Closed//stop", 3),
+			def(fileindex.DefClass, "a.ts//Plain", 4), def(fileindex.DefMethod, "a.ts//Plain//run", 4), def(fileindex.DefMethod, "a.ts//Plain//stop", 4),
+			def(fileindex.DefMethod, "a.ts//obj//halt", 5),
+			start,
+		},
+		Classes: []fileindex.Class{{Key: "a.ts//Runner"}, {Key: "a.ts//Base"}, {Key: "a.ts//Closed", Methods: []string{"a.ts//Closed//stop"}},
+			{Key: "a.ts//Plain", Methods: []string{"a.ts//Plain//run", "a.ts//Plain//stop"}}},
+		Calls: []fileindex.Call{
+			{Caller: "a.ts//start", Line: 11, Column: 3, Callee: "r.run", Targets: []string{"r//run"}, Receiver: "r", Method: "run", Kind: fileindex.CallCall},
+			{Caller: "a.ts//start", Line: 12, Column: 3, Callee: "b.halt", Targets: []string{"b//halt"}, Receiver: "b", Method: "halt", Kind: fileindex.CallCall},
+			{Caller: "a.ts//start", Line: 13, Column: 3, Callee: "c.stop", Targets: []string{"c//stop"}, Receiver: "c", Method: "stop", Kind: fileindex.CallCall},
+		},
+	}
+	g, err := Build(context.Background(), []*fileindex.Index{ix}, Options{})
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{
+		"a.ts//start -> a.ts//Plain//run field typescript.field",
+		"a.ts//start -> a.ts//obj//halt field typescript.field",
+		"a.ts//start -> a.ts//Closed//stop member typescript.declared-type",
+	}, edgesOfKind(g, EdgeMember, EdgeCHA, EdgeField),
+		"an interface and a method that no class of the hierarchy defines keep the field edges, and a class with the method narrows the site")
+}
