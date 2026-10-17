@@ -1,0 +1,183 @@
+{
+  "nodes": {
+    "app.py": {
+      "key": "app.py",
+      "kind": "module",
+      "path": "app.py",
+      "line": 1,
+      "exported": true
+    },
+    "app.py//Point": {
+      "key": "app.py//Point",
+      "kind": "class",
+      "path": "app.py",
+      "line": 18,
+      "exported": true
+    },
+    "app.py//Point//norm": {
+      "key": "app.py//Point//norm",
+      "kind": "method",
+      "path": "app.py",
+      "line": 26,
+      "exported": true
+    },
+    "app.py//Point//origin": {
+      "key": "app.py//Point//origin",
+      "kind": "method",
+      "path": "app.py",
+      "line": 22,
+      "exported": true
+    },
+    "app.py//helper": {
+      "key": "app.py//helper",
+      "kind": "function",
+      "path": "app.py",
+      "line": 13,
+      "exported": true
+    },
+    "app.py//logged": {
+      "key": "app.py//logged",
+      "kind": "function",
+      "path": "app.py",
+      "line": 5,
+      "exported": true
+    },
+    "app.py//logged//inner": {
+      "key": "app.py//logged//inner",
+      "kind": "function",
+      "path": "app.py",
+      "line": 7,
+      "flags": [
+        {
+          "kind": "decorator-wrap",
+          "line": 6
+        }
+      ]
+    },
+    "dataclasses//dataclass": {
+      "key": "dataclasses//dataclass",
+      "kind": "external"
+    },
+    "functools//wraps": {
+      "key": "functools//wraps",
+      "kind": "external"
+    }
+  },
+  "edges": [
+    {
+      "from": "app.py",
+      "to": "app.py//logged",
+      "site": {
+        "path": "app.py",
+        "line": 13
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.decorator"
+    },
+    {
+      "from": "app.py",
+      "to": "dataclasses//dataclass",
+      "site": {
+        "path": "app.py",
+        "line": 18
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.decorator"
+    },
+    {
+      "from": "app.py//logged",
+      "to": "functools//wraps",
+      "site": {
+        "path": "app.py",
+        "line": 6,
+        "column": 6
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.external"
+    }
+  ],
+  "unresolved": [
+    {
+      "caller": "app.py//logged//inner",
+      "site": {
+        "path": "app.py",
+        "line": 8,
+        "column": 16
+      },
+      "text": "fn",
+      "method": "fn",
+      "reason": "unknown-receiver"
+    }
+  ],
+  "roots": [
+    {
+      "key": "app.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "app.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "app.py//Point",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "app.py",
+        "line": 18
+      }
+    },
+    {
+      "key": "app.py//Point//norm",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "app.py",
+        "line": 26
+      }
+    },
+    {
+      "key": "app.py//Point//origin",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "app.py",
+        "line": 22
+      }
+    },
+    {
+      "key": "app.py//helper",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "app.py",
+        "line": 13
+      }
+    },
+    {
+      "key": "app.py//logged",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "app.py",
+        "line": 5
+      }
+    }
+  ],
+  "files": {
+    "app.py": "indexed"
+  },
+  "stats": {
+    "version": "1",
+    "files": 1,
+    "nodes": 9,
+    "edges": 3,
+    "unresolved": 1,
+    "roots": 6,
+    "root_fallback": true
+  }
+}

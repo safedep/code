@@ -280,6 +280,21 @@ func TestBuildPython(t *testing.T) {
 			},
 		},
 		{
+			name: "python/decorators",
+			edges: []string{
+				"app.py -> app.py//logged direct python.decorator",
+				"app.py -> dataclasses//dataclass direct python.decorator",
+				"app.py//logged -> functools//wraps direct python.external",
+			},
+			unresolved: []string{"app.py:8 app.py//logged//inner unknown-receiver fn"},
+			check: func(t *testing.T, g *Graph) {
+				assert.False(t, slices.ContainsFunc(g.Edges, func(e Edge) bool {
+					return e.To == "functools//wraps" && e.Resolver == "python.decorator"
+				}), "a called decorator has its call edge only")
+				assert.NotContains(t, g.Nodes, "staticmethod")
+			},
+		},
+		{
 			name: "python/wildcard",
 			edges: []string{
 				"main.py -> util.py import python.import.absolute",

@@ -75,6 +75,7 @@ type builder struct {
 	rules  []roots.Rule
 
 	edges       map[Edge]bool
+	linked      map[[2]string]bool
 	unresolved  map[UnresolvedSite]bool
 	truncations map[Truncation]bool
 	problems    []modules.Problem
@@ -113,6 +114,7 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		byPath:      make(map[string]*fileindex.Index, len(indexes)),
 		scopes:      make(map[string]*scope, len(indexes)),
 		edges:       map[Edge]bool{},
+		linked:      map[[2]string]bool{},
 		unresolved:  map[UnresolvedSite]bool{},
 		truncations: map[Truncation]bool{},
 		names:       map[nameKey]resolution{},
@@ -178,6 +180,7 @@ func (b *builder) link(ctx context.Context) error {
 		b.linkImports(ix)
 		b.linkConstructors(ix)
 		b.linkCalls(ix)
+		b.linkDecorators(ix)
 		b.copyUnresolved(ix)
 	}
 	return nil
@@ -293,6 +296,7 @@ func (b *builder) addEdge(e Edge) {
 	}
 	e.Confidence = e.Kind.Confidence()
 	b.edges[e] = true
+	b.linked[[2]string{e.From, e.To}] = true
 }
 
 func (b *builder) addUnresolved(u UnresolvedSite) {
@@ -353,6 +357,51 @@ func (b *builder) linkConstructors(ix *fileindex.Index) {
 			Kind:     EdgeDirect,
 			Resolver: resolverName(ix.Language, "constructor"),
 		})
+	}
+}
+
+// linkDecorators adds an edge from the scope that defines each decorated
+// definition to each decorator that the file scope resolves. The decorator
+// runs when the definition runs, as logged in @logged on a function of the
+// module. A decorator with arguments, as @wraps(fn), is a call that the
+// index holds already, and the index writes both forms with no arguments.
+// So a decorator that the scope calls gets no second edge.
+func (b *builder) linkDecorators(ix *fileindex.Index) {
+	sc := b.scopes[ix.Path]
+	for _, def := range ix.Definitions {
+		if len(def.Decorators) == 0 {
+			continue
+		}
+		from := b.definer(def.Key)
+		site := Site{Path: ix.Path, Line: def.StartLine}
+		for _, d := range def.Decorators {
+			key, ok := b.resolveScopeName(sc, strings.TrimPrefix(d, "@"))
+			if !ok {
+				continue
+			}
+			if b.linked[[2]string{from, key}] {
+				continue
+			}
+			if b.g.Nodes[key] == nil {
+				b.external(key)
+			}
+			b.addEdge(Edge{From: from, To: key, Site: site, Kind: EdgeDirect, Resolver: resolverName(ix.Language, "decorator")})
+		}
+	}
+}
+
+// definer returns the key of the definition whose run runs the definition
+// of the key. A class body runs with the scope that defines the class.
+func (b *builder) definer(key string) string {
+	for {
+		segs := Segments(key)
+		if len(segs) == 0 {
+			return key
+		}
+		key = Join(Unit(key), segs[:len(segs)-1]...)
+		if b.kindOf(key) != NodeClass {
+			return b.runner(key)
+		}
 	}
 }
 

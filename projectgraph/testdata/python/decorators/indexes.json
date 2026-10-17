@@ -1,0 +1,145 @@
+[
+  {
+    "version": "1",
+    "path": "app.py",
+    "language": "python",
+    "imports": [
+      {
+        "line": 1,
+        "module": "dataclasses",
+        "item": "dataclass",
+        "alias": "dataclass",
+        "kind": "static",
+        "namespace": "dataclasses//dataclass"
+      },
+      {
+        "line": 2,
+        "module": "functools",
+        "item": "wraps",
+        "alias": "wraps",
+        "kind": "static",
+        "namespace": "functools//wraps"
+      }
+    ],
+    "definitions": [
+      {
+        "key": "app.py",
+        "kind": "module",
+        "name": "app",
+        "start_line": 1,
+        "end_line": 28,
+        "exported": true
+      },
+      {
+        "key": "app.py//logged",
+        "kind": "function",
+        "name": "logged",
+        "start_line": 5,
+        "end_line": 9,
+        "exported": true
+      },
+      {
+        "key": "app.py//logged//inner",
+        "kind": "function",
+        "name": "inner",
+        "start_line": 7,
+        "end_line": 8,
+        "exported": false,
+        "decorators": [
+          "@wraps"
+        ],
+        "flags": [
+          {
+            "kind": "decorator-wrap",
+            "line": 6
+          }
+        ]
+      },
+      {
+        "key": "app.py//helper",
+        "kind": "function",
+        "name": "helper",
+        "start_line": 13,
+        "end_line": 14,
+        "exported": true,
+        "decorators": [
+          "@logged"
+        ]
+      },
+      {
+        "key": "app.py//Point",
+        "kind": "class",
+        "name": "Point",
+        "start_line": 18,
+        "end_line": 27,
+        "exported": true,
+        "decorators": [
+          "@dataclass"
+        ]
+      },
+      {
+        "key": "app.py//Point//origin",
+        "kind": "method",
+        "name": "origin",
+        "start_line": 22,
+        "end_line": 23,
+        "exported": true,
+        "parent": "app.py//Point",
+        "decorators": [
+          "@staticmethod"
+        ]
+      },
+      {
+        "key": "app.py//Point//norm",
+        "kind": "method",
+        "name": "norm",
+        "start_line": 26,
+        "end_line": 27,
+        "exported": true,
+        "parent": "app.py//Point",
+        "decorators": [
+          "@logged"
+        ]
+      }
+    ],
+    "classes": [
+      {
+        "key": "app.py//Point",
+        "methods": [
+          "app.py//Point//norm",
+          "app.py//Point//origin"
+        ]
+      }
+    ],
+    "calls": [
+      {
+        "caller": "app.py//logged",
+        "line": 6,
+        "column": 6,
+        "callee": "wraps",
+        "targets": [
+          "functools//wraps"
+        ],
+        "method": "wraps",
+        "kind": "call"
+      },
+      {
+        "caller": "app.py//logged//inner",
+        "line": 8,
+        "column": 16,
+        "callee": "fn",
+        "targets": [
+          "app.py//logged//fn"
+        ],
+        "method": "fn",
+        "kind": "call"
+      }
+    ],
+    "flags": [
+      {
+        "kind": "decorator-wrap",
+        "line": 6
+      }
+    ]
+  }
+]
