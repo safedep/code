@@ -294,6 +294,53 @@
       "kind": "call"
     }
   ],
+  "references": [
+    {
+      "caller": "app.js//Parser//parse",
+      "line": 16,
+      "column": 19,
+      "text": "this.text",
+      "targets": [
+        "app.js//Parser//text"
+      ]
+    },
+    {
+      "caller": "app.js//main",
+      "line": 36,
+      "column": 17,
+      "text": "write",
+      "targets": [
+        "fs//promises//writeFile"
+      ]
+    },
+    {
+      "caller": "app.js//main",
+      "line": 36,
+      "column": 24,
+      "text": "fs",
+      "targets": [
+        "fs"
+      ]
+    },
+    {
+      "caller": "app.js//main",
+      "line": 36,
+      "column": 28,
+      "text": "yaml",
+      "targets": [
+        "js-yaml"
+      ]
+    },
+    {
+      "caller": "app.js//main",
+      "line": 36,
+      "column": 34,
+      "text": "util",
+      "targets": [
+        "util"
+      ]
+    }
+  ],
   "unresolved": [
     {
       "caller": "app.js//main",

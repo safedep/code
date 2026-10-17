@@ -1,0 +1,47 @@
+source: safedep:hand
+description: src/main.js passes the imported load to Array.map and the first-party parse to Promise.then. Each reference makes its function possibly called.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.js
+    to: js-yaml//load
+    kind: reference
+    confidence: low
+    site: src/main.js:4
+  - from: src/main.js
+    to: src/parse.js//parse
+    kind: reference
+    confidence: low
+    site: src/main.js:5
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/main.js
+      - key: js-yaml//load
+        site: src/main.js:4
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: src/main.js
+        site: src/main.js:4
+        reached: true
+  - target: js-yaml//loadAll
+    status: found
+    path:
+      - key: src/main.js
+      - key: src/parse.js//parse
+        site: src/main.js:5
+        kind: reference
+        confidence: low
+      - key: js-yaml//loadAll
+        site: src/parse.js:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/parse.js//parse
+        site: src/parse.js:4
+        reached: true

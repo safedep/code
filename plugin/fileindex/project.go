@@ -71,6 +71,10 @@ type projection struct {
 	syntax   map[string]*sitter.Node
 	exports  map[string]bool
 	bindings map[string]bool
+
+	// exportStatements are the export statements and the CommonJS export
+	// assignments of the file.
+	exportStatements []*sitter.Node
 }
 
 // project builds the call graph of tree and projects it into an index.
@@ -114,6 +118,7 @@ func project(ctx context.Context, tree core.ParseTree) (*fidx.Index, error) {
 		return nil, err
 	}
 	p.addCalls()
+	p.addReferences(ctx)
 	p.addUnresolved()
 	for _, def := range p.defs {
 		def.Exported = p.exported(def)

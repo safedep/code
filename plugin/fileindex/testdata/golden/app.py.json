@@ -297,6 +297,44 @@
       "kind": "call"
     }
   ],
+  "references": [
+    {
+      "caller": "app.py//Parser//parse",
+      "line": 17,
+      "column": 23,
+      "text": "self.text",
+      "targets": [
+        "app.py//Parser//text"
+      ]
+    },
+    {
+      "caller": "app.py//main",
+      "line": 30,
+      "column": 25,
+      "text": "Loader",
+      "targets": [
+        "yaml//loader//SafeLoader"
+      ]
+    },
+    {
+      "caller": "app.py//main",
+      "line": 35,
+      "column": 13,
+      "text": "sibling",
+      "targets": [
+        "////sibling"
+      ]
+    },
+    {
+      "caller": "app.py//main",
+      "line": 35,
+      "column": 22,
+      "text": "other",
+      "targets": [
+        "////pkg//thing"
+      ]
+    }
+  ],
   "unresolved": [
     {
       "caller": "app.py//main",

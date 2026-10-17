@@ -20,6 +20,7 @@ func (p *projection) addExports() {
 	for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
 		switch {
 		case statement.Type() == "export_statement":
+			p.exportStatements = append(p.exportStatements, statement)
 			p.addExportStatement(statement)
 		case statement.Type() == "expression_statement" && statement.NamedChildCount() > 0:
 			p.addExportAssignment(statement, statement.NamedChild(0))
@@ -186,10 +187,15 @@ func (p *projection) addExportAssignment(statement, assignment *sitter.Node) {
 
 	switch target := p.text(left); {
 	case target == "module.exports":
+		p.exportStatements = append(p.exportStatements, statement)
 		p.addModuleExports(right, line)
-	case left.Type() == "member_expression" && right.Type() == "identifier":
+	case left.Type() == "member_expression":
 		object := p.text(left.ChildByFieldName("object"))
-		if object == "exports" || object == "module.exports" {
+		if object != "exports" && object != "module.exports" {
+			return
+		}
+		p.exportStatements = append(p.exportStatements, statement)
+		if right.Type() == "identifier" {
 			p.export(p.text(left.ChildByFieldName("property")), p.text(right), line)
 		}
 	}

@@ -1,0 +1,42 @@
+source: safedep:hand
+description: main.py passes the function process to run, and run calls its parameter cb. The reference makes process possibly called, and the call of the parameter is a record.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+edges:
+  - from: main.py
+    to: tasks.py//run
+    kind: direct
+    confidence: high
+    site: main.py:3
+  - from: main.py
+    to: tasks.py//process
+    kind: reference
+    confidence: low
+    site: main.py:3
+no_edges:
+  - from: tasks.py//run
+    to: cb
+unresolved:
+  - caller: tasks.py//run
+    site: tasks.py:5
+    reason: unknown-receiver
+    method: cb
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: tasks.py//process
+        site: main.py:3
+        kind: reference
+        confidence: low
+      - key: yaml//load
+        site: tasks.py:9
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: tasks.py//process
+        site: tasks.py:9
+        reached: true

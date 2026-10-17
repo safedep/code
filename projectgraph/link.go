@@ -180,6 +180,7 @@ func (b *builder) link(ctx context.Context) error {
 		b.linkImports(ix)
 		b.linkConstructors(ix)
 		b.linkCalls(ix)
+		b.linkReferences(ix)
 		b.linkDecorators(ix)
 		b.copyUnresolved(ix)
 	}

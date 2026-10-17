@@ -46,6 +46,10 @@ const (
 	// EdgeName joins the caller of a call with an unknown receiver to each
 	// first-party definition with the name of the called method.
 	EdgeName EdgeKind = "name"
+	// EdgeReference joins a definition to a function, a method, a class or
+	// an import that it uses as a value. The code that gets the value can
+	// call it.
+	EdgeReference EdgeKind = "reference"
 )
 
 // Confidence returns the confidence that an edge of the kind carries.
@@ -53,7 +57,7 @@ func (k EdgeKind) Confidence() Confidence {
 	switch k {
 	case EdgeCHA:
 		return ConfidenceMedium
-	case EdgeField, EdgeWildcard, EdgeLLM, EdgeName:
+	case EdgeField, EdgeWildcard, EdgeLLM, EdgeName, EdgeReference:
 		return ConfidenceLow
 	default:
 		return ConfidenceHigh

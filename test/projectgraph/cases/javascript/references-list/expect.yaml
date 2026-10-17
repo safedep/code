@@ -1,0 +1,30 @@
+source: safedep:hand
+description: src/main.js keeps yaml.load in an array and calls each item. The reference in the array makes yaml.load possibly called.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.js
+    to: js-yaml//load
+    kind: reference
+    confidence: low
+    site: src/main.js:3
+unresolved:
+  - caller: src/main.js
+    site: src/main.js:6
+    reason: no-definition
+    method: handler
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/main.js
+      - key: js-yaml//load
+        site: src/main.js:3
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: src/main.js
+        site: src/main.js:3
+        reached: true

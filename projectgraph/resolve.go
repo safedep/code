@@ -230,6 +230,27 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 	}
 }
 
+// linkReferences adds a reference edge from the definition that holds each
+// reference to each target that resolves. A reference that does not resolve
+// is no call, so it makes no record. The call that gets the value has its
+// own record.
+func (b *builder) linkReferences(ix *fileindex.Index) {
+	if isDeclarationFile(ix.Path) {
+		return
+	}
+	sc := b.scopes[ix.Path]
+	for _, ref := range ix.References {
+		from := b.runner(ref.Caller)
+		site := Site{Path: ix.Path, Line: ref.Line, Column: ref.Column}
+		for _, r := range b.resolveTargets(sc, ref.Targets) {
+			if r.fail != nil || r.unbound {
+				continue
+			}
+			b.addEdge(Edge{From: from, To: r.key, Site: site, Kind: EdgeReference, Resolver: resolverName(ix.Language, "reference")})
+		}
+	}
+}
+
 // resolveTargets resolves the per-file targets of a site. Each resolution
 // keeps the target that it came from.
 func (b *builder) resolveTargets(sc *scope, targets []string) []resolution {

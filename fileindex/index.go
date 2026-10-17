@@ -120,6 +120,7 @@ type Index struct {
 	Definitions []Definition `json:"definitions,omitempty"`
 	Classes     []Class      `json:"classes,omitempty"`
 	Calls       []Call       `json:"calls,omitempty"`
+	References  []Reference  `json:"references,omitempty"`
 	Unresolved  []Unresolved `json:"unresolved,omitempty"`
 	Flags       []Flag       `json:"flags,omitempty"`
 	Truncated   []Truncation `json:"truncated,omitempty"`
@@ -193,6 +194,18 @@ type Call struct {
 	Method   string     `json:"method,omitempty"`
 	Kind     CallKind   `json:"kind"`
 	Args     []ArgShape `json:"args,omitempty"`
+}
+
+// Reference is a function, a method, a class or an import that the file
+// uses as a value and does not call, as yaml.load in run(yaml.load). The
+// code that gets the value can call it, so the link step counts the target
+// as possibly called. Targets are per-file resolutions, as in a Call.
+type Reference struct {
+	Caller  string   `json:"caller"`
+	Line    int      `json:"line"`
+	Column  int      `json:"column"`
+	Text    string   `json:"text"`
+	Targets []string `json:"targets"`
 }
 
 // Unresolved is a call site whose callee the index does not know in full.
@@ -384,6 +397,17 @@ func (ix *Index) Sort() {
 			cmp.Compare(a.Receiver, b.Receiver),
 			cmp.Compare(a.Method, b.Method),
 			cmp.Compare(a.Kind, b.Kind),
+		)
+	})
+	for i := range ix.References {
+		slices.Sort(ix.References[i].Targets)
+	}
+	slices.SortFunc(ix.References, func(a, b Reference) int {
+		return cmp.Or(
+			cmp.Compare(a.Line, b.Line),
+			cmp.Compare(a.Column, b.Column),
+			cmp.Compare(a.Caller, b.Caller),
+			cmp.Compare(a.Text, b.Text),
 		)
 	})
 	slices.SortFunc(ix.Unresolved, func(a, b Unresolved) int {

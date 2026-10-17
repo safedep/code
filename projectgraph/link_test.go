@@ -831,3 +831,38 @@ func TestBuildNameEdges(t *testing.T) {
 	assert.Contains(t, g.Nodes, "print", "a builtin stays external")
 	assert.NotContains(t, g.Nodes, "cb")
 }
+
+func TestBuildReferenceEdges(t *testing.T) {
+	main := &fileindex.Index{
+		Version: fileindex.Version, Path: "main.py", Language: langcode.Python,
+		Imports: []fileindex.Import{
+			{Line: 1, Module: "yaml", Alias: "yaml", Kind: fileindex.ImportStatic, Namespace: "yaml"},
+			{Line: 2, Module: "tasks", Item: "process", Alias: "process", Kind: fileindex.ImportStatic, Namespace: "tasks//process"},
+			{Line: 3, Module: "tasks", Item: "gone", Alias: "gone", Kind: fileindex.ImportStatic, Namespace: "tasks//gone"},
+		},
+		References: []fileindex.Reference{
+			{Caller: "main.py", Line: 5, Column: 5, Text: "yaml.load", Targets: []string{"yaml//load"}},
+			{Caller: "main.py", Line: 6, Column: 5, Text: "process", Targets: []string{"tasks//process"}},
+			{Caller: "main.py", Line: 7, Column: 5, Text: "gone", Targets: []string{"tasks//gone"}},
+		},
+	}
+	tasks := &fileindex.Index{
+		Version: fileindex.Version, Path: "tasks.py", Language: langcode.Python,
+		Definitions: []fileindex.Definition{{Key: "tasks.py//process", Kind: fileindex.DefFunction, Name: "process", StartLine: 1, EndLine: 2, Exported: true}},
+	}
+	g, err := Build(context.Background(), []*fileindex.Index{main, tasks}, Options{})
+	require.NoError(t, err)
+
+	var refs []string
+	for _, e := range g.Edges {
+		if e.Kind == EdgeReference {
+			assert.Equal(t, ConfidenceLow, e.Confidence)
+			refs = append(refs, fmt.Sprintf("%s -> %s %s", e.From, e.To, e.Resolver))
+		}
+	}
+	assert.Equal(t, []string{
+		"main.py -> yaml//load python.reference",
+		"main.py -> tasks.py//process python.reference",
+	}, refs)
+	assert.Empty(t, g.Unresolved, "a reference that does not resolve is no call")
+}
