@@ -1,7 +1,8 @@
 // Command projectgraph builds the call graph of a directory and prints the
 // path from a root to each target, as main.py:3 -> handlers.py:12 ->
 // yaml//load. It keeps the file indexes in a localdb file in the -store
-// directory, so a second run parses only the files that changed.
+// directory, so a second run parses only the files that changed. With
+// -overlay it merges a file of llm edges into the graph before the query.
 package main
 
 import (
@@ -22,6 +23,7 @@ import (
 	"github.com/safedep/code/lang"
 	"github.com/safedep/code/plugin/fileindex"
 	"github.com/safedep/code/projectgraph"
+	"github.com/safedep/code/projectgraph/overlay"
 	"github.com/safedep/code/projectgraph/reach"
 	"github.com/safedep/code/projectgraph/store"
 	"github.com/safedep/code/projectgraph/store/localdbstore"
@@ -60,6 +62,7 @@ func (s *stringList) Set(value string) error {
 type config struct {
 	dir          string
 	store        string
+	overlay      string
 	targets      stringList
 	includeTests bool
 	json         bool
@@ -70,6 +73,7 @@ func main() {
 	var cfg config
 	flag.StringVar(&cfg.dir, "dir", "", "directory of the project")
 	flag.StringVar(&cfg.store, "store", "", "directory of the localdb file that keeps the file indexes")
+	flag.StringVar(&cfg.overlay, "overlay", "", "JSON file of llm edges to merge into the graph")
 	flag.Var(&cfg.targets, "target", "external symbol to reach, as yaml//load (repeatable)")
 	flag.BoolVar(&cfg.includeTests, "include-tests", false, "count the test files as roots")
 	flag.BoolVar(&cfg.json, "json", false, "print the reach results as JSON")
@@ -129,6 +133,11 @@ func run(ctx context.Context, cfg config, out io.Writer) (err error) {
 	if err != nil {
 		return fmt.Errorf("failed to link %s: %w", root, err)
 	}
+	if cfg.overlay != "" {
+		if err := mergeOverlay(g, cfg.overlay, os.Stderr); err != nil {
+			return err
+		}
+	}
 	results, err := reach.Reach(ctx, g, reach.Query{Targets: cfg.targets, IncludeTests: cfg.includeTests})
 	if err != nil {
 		return err
@@ -141,6 +150,25 @@ func run(ctx context.Context, cfg config, out io.Writer) (err error) {
 	}
 	for _, r := range results {
 		if err := printResult(out, r); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// mergeOverlay merges the overlay at path into g and writes each edge that
+// the merge drops to warn.
+func mergeOverlay(g *projectgraph.Graph, path string, warn io.Writer) error {
+	f, err := overlay.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	report, err := overlay.Merge(g, f)
+	if err != nil {
+		return fmt.Errorf("failed to merge %s: %w", path, err)
+	}
+	for _, d := range report.Diagnostics {
+		if _, err := fmt.Fprintln(warn, d); err != nil {
 			return err
 		}
 	}
@@ -193,11 +221,15 @@ func printResult(out io.Writer, r reach.Result) error {
 // pathText writes a path as the call site of each hop and then the target,
 // as main.py:3 -> handlers.py:12 -> yaml//load. A hop with low confidence
 // names its edge kind, as main.py:3 (name), so a reader sees the weak hop.
+// An llm hop also names its model and its prompt.
 func pathText(hops []reach.Hop) string {
 	parts := make([]string, 0, len(hops))
 	for _, h := range hops[1:] {
 		part := siteText(h.Site)
-		if h.Confidence == projectgraph.ConfidenceLow {
+		switch {
+		case h.EdgeKind == projectgraph.EdgeLLM:
+			part += " (" + string(h.EdgeKind) + ", " + h.Resolver + ")"
+		case h.Confidence == projectgraph.ConfidenceLow:
 			part += " (" + string(h.EdgeKind) + ")"
 		}
 		parts = append(parts, part)

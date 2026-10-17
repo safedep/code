@@ -1,10 +1,12 @@
 // Package projectgraph runs the hand-written cases end to end: the source
-// files of each case go through the indexer, the link step and the reach
-// query, and the result must match the expect.yaml of the case.
+// files of each case go through the indexer, the link step, the merge of an
+// optional overlay.json and the reach query, and the result must match the
+// expect.yaml of the case.
 package projectgraph
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,6 +17,7 @@ import (
 	"github.com/safedep/code/fs"
 	"github.com/safedep/code/plugin/fileindex"
 	"github.com/safedep/code/projectgraph"
+	"github.com/safedep/code/projectgraph/overlay"
 	"github.com/safedep/code/projectgraph/reach"
 	"github.com/safedep/code/projectgraph/store/memstore"
 	"github.com/stretchr/testify/assert"
@@ -37,7 +40,15 @@ type expectation struct {
 	NoEdges      []noEdge     `yaml:"no_edges,omitempty"`
 	Unresolved   []unresolved `yaml:"unresolved"`
 	Truncated    []truncation `yaml:"truncated,omitempty"`
+	Dropped      []dropped    `yaml:"dropped,omitempty"`
 	Results      []result     `yaml:"results"`
+}
+
+// dropped is an edge of the overlay.json of a case that the merge drops.
+type dropped struct {
+	Site   string `yaml:"site"`
+	Callee string `yaml:"callee"`
+	Reason string `yaml:"reason"`
 }
 
 type truncation struct {
@@ -84,11 +95,14 @@ type result struct {
 	SetAside      []uncertainty `yaml:"set_aside,omitempty"`
 }
 
+// hop has a resolver only for an llm edge, so a case checks the model and
+// the prompt of the hop.
 type hop struct {
 	Key        string `yaml:"key"`
 	Site       string `yaml:"site,omitempty"`
 	Kind       string `yaml:"kind,omitempty"`
 	Confidence string `yaml:"confidence,omitempty"`
+	Resolver   string `yaml:"resolver,omitempty"`
 }
 
 type callSite struct {
@@ -144,6 +158,7 @@ func runCase(t *testing.T, dir string, languages []core.Language) {
 	})
 	require.NoError(t, err)
 	assert.Empty(t, g.Problems)
+	assert.Equal(t, want.Dropped, mergeOverlay(t, filepath.Join(dir, "overlay.json"), g), "dropped overlay edges")
 
 	assert.Equal(t, want.Roots, rootsOf(g, want.Roots), "roots")
 	assert.Subset(t, edgesOf(g), want.Edges, "edges")
@@ -159,6 +174,24 @@ func runCase(t *testing.T, dir string, languages []core.Language) {
 		require.Len(t, results, 1)
 		assert.Equal(t, w, resultOf(w, results[0]), "result for %s", w.Target)
 	}
+}
+
+// mergeOverlay merges the overlay at path, when the case has one, and returns
+// the edges that the merge drops.
+func mergeOverlay(t *testing.T, path string, g *projectgraph.Graph) []dropped {
+	t.Helper()
+	f, err := overlay.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	require.NoError(t, err)
+	report, err := overlay.Merge(g, f)
+	require.NoError(t, err)
+	var out []dropped
+	for _, d := range report.Diagnostics {
+		out = append(out, dropped{Site: site(d.Edge.Site), Callee: d.Edge.Callee, Reason: string(d.Reason)})
+	}
+	return out
 }
 
 func site(s projectgraph.Site) string {
@@ -231,7 +264,11 @@ func resultOf(w result, r reach.Result) result {
 func hopsOf(hops []reach.Hop) []hop {
 	var out []hop
 	for _, h := range hops {
-		out = append(out, hop{Key: h.Key, Site: site(h.Site), Kind: string(h.EdgeKind), Confidence: string(h.Confidence)})
+		got := hop{Key: h.Key, Site: site(h.Site), Kind: string(h.EdgeKind), Confidence: string(h.Confidence)}
+		if h.EdgeKind == projectgraph.EdgeLLM {
+			got.Resolver = h.Resolver
+		}
+		out = append(out, got)
 	}
 	return out
 }
