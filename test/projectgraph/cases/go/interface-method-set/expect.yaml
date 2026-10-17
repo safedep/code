@@ -1,0 +1,50 @@
+source: safedep:hand
+description: start calls Run on a parameter of the interface type Runner, which declares Run and Stop. Real has both methods, so it can hold the call. Script has Run with the arity of the call but no Stop, so it is no Runner and its Run gets no cha edge.
+roots:
+  - key: cmd/app/main.go
+    kind: main
+    rule: go.main
+  - key: cmd/app/main.go//main
+    kind: main
+    rule: go.main
+edges:
+  - from: cmd/app/main.go//start
+    to: worker/worker.go//Real//Run
+    kind: cha
+    confidence: medium
+    site: cmd/app/main.go:10
+no_edges:
+  - from: cmd/app/main.go//start
+    to: worker/script.go//Script//Run
+unresolved:
+  - caller: cmd/app/main.go//start
+    site: cmd/app/main.go:10
+    reason: no-definition
+    method: Run
+results:
+  - target: net//http//Get
+    status: found
+    path:
+      - key: cmd/app/main.go//main
+      - key: cmd/app/main.go//start
+        site: cmd/app/main.go:6
+        kind: direct
+        confidence: high
+      - key: worker/worker.go//Real//Run
+        site: cmd/app/main.go:10
+        kind: cha
+        confidence: medium
+      - key: net//http//Get
+        site: worker/worker.go:13
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: worker/worker.go//Real//Run
+        site: worker/worker.go:13
+        reached: true
+  - target: os//exec//Command
+    status: not-found
+    call_sites:
+      - caller: worker/script.go//Script//Run
+        site: worker/script.go:8
+        reached: false

@@ -189,10 +189,22 @@
       "key": "app.go//ReadCloser",
       "bases": [
         "Reader"
+      ],
+      "abstract": [
+        {
+          "name": "Close",
+          "arity": 0
+        }
       ]
     },
     {
-      "key": "app.go//Reader"
+      "key": "app.go//Reader",
+      "abstract": [
+        {
+          "name": "Read",
+          "arity": 1
+        }
+      ]
     },
     {
       "key": "app.go//Server",

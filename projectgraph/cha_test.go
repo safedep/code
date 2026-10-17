@@ -229,3 +229,42 @@ func TestBuildKeepsTheBestEdgeOfASite(t *testing.T) {
 	}
 	assert.Equal(t, []string{"a -> b member high", "a -> c cha medium"}, got)
 }
+
+func TestBuildGoInterfaceMethodSets(t *testing.T) {
+	method := func(key string, arity int) fileindex.Definition {
+		d := def(fileindex.DefMethod, key, 1)
+		d.Arity = arity
+		return d
+	}
+	run := fileindex.Call{Caller: "a.go//start", Line: 20, Column: 2, Callee: "r.Run", Targets: []string{"a.go//start//r//Run"}, Receiver: "r", Method: "Run", Kind: fileindex.CallCall}
+	start := def(fileindex.DefFunction, "a.go//start", 19)
+	start.Params = []fileindex.Typed{{Name: "r", Type: "Runner"}}
+	ix := &fileindex.Index{
+		Version: fileindex.Version, Path: "a.go", Language: langcode.Go, Package: "a",
+		Definitions: []fileindex.Definition{
+			def(fileindex.DefInterface, "a.go//Stopper", 1), def(fileindex.DefInterface, "a.go//Runner", 2),
+			def(fileindex.DefClass, "a.go//Full", 3), method("a.go//Full//Run", 0), method("a.go//Full//Stop", 1),
+			def(fileindex.DefClass, "a.go//Half", 4), method("a.go//Half//Run", 0),
+			def(fileindex.DefClass, "a.go//Wrong", 5), method("a.go//Wrong//Run", 0), method("a.go//Wrong//Stop", 0),
+			def(fileindex.DefClass, "a.go//Embeds", 6), method("a.go//Embeds//Run", 0),
+			def(fileindex.DefClass, "a.go//Remote", 7), method("a.go//Remote//Run", 0),
+			start,
+		},
+		Imports: []fileindex.Import{{Line: 1, Module: "example.com/ext", Alias: "ext", Kind: fileindex.ImportStatic, Namespace: "example.com//ext"}},
+		Classes: []fileindex.Class{
+			{Key: "a.go//Stopper", Abstract: []fileindex.Signature{{Name: "Stop", Arity: 1}}},
+			{Key: "a.go//Runner", Bases: []string{"Stopper", "ext.Closer"}, Abstract: []fileindex.Signature{{Name: "Run", Arity: 0}}},
+			{Key: "a.go//Full"}, {Key: "a.go//Half"}, {Key: "a.go//Wrong"},
+			{Key: "a.go//Embeds", Bases: []string{"Full"}},
+			{Key: "a.go//Remote", Bases: []string{"ext.Base"}},
+		},
+		Calls: []fileindex.Call{run},
+	}
+	g, err := Build(context.Background(), []*fileindex.Index{ix}, Options{})
+	require.NoError(t, err)
+	assert.Equal(t, []string{
+		"a.go//start -> a.go//Embeds//Run cha go.cha",
+		"a.go//start -> a.go//Full//Run cha go.cha",
+		"a.go//start -> a.go//Remote//Run cha go.cha",
+	}, edgesOfKind(g, EdgeCHA), "a type implements Runner when its methods, its embedded types or a dependency hold Run and Stop by arity")
+}

@@ -199,12 +199,23 @@ type Definition struct {
 // Class is one class or interface of the file. Bases are as written, in
 // source order, and the link step resolves them. Methods are definition
 // keys. Fields are the fields that declare the type of a class, in source
-// order.
+// order. Abstract are the methods that a Go interface declares, in source
+// order. They have no definition, and a type implements the interface when
+// its methods hold them.
 type Class struct {
-	Key     string   `json:"key"`
-	Bases   []string `json:"bases,omitempty"`
-	Methods []string `json:"methods,omitempty"`
-	Fields  []Typed  `json:"fields,omitempty"`
+	Key      string      `json:"key"`
+	Bases    []string    `json:"bases,omitempty"`
+	Methods  []string    `json:"methods,omitempty"`
+	Fields   []Typed     `json:"fields,omitempty"`
+	Abstract []Signature `json:"abstract,omitempty"`
+}
+
+// Signature is a method that an interface declares: its name, the count of
+// its parameters and a last parameter of the form ...T.
+type Signature struct {
+	Name     string `json:"name"`
+	Arity    int    `json:"arity"`
+	Variadic bool   `json:"variadic,omitempty"`
 }
 
 // Typed is a parameter, a field or a local variable with the type that it

@@ -90,6 +90,26 @@ func (p *projection) goBases(spec *sitter.Node) []string {
 	return bases
 }
 
+// goMethodElems returns the methods that a Go interface declares.
+func (p *projection) goMethodElems(spec *sitter.Node) []fidx.Signature {
+	if !p.isGo() || spec == nil {
+		return nil
+	}
+	t := spec.ChildByFieldName("type")
+	if t == nil || t.Type() != "interface_type" {
+		return nil
+	}
+	var sigs []fidx.Signature
+	for _, elem := range ts.NamedChildren(t) {
+		if elem.Type() != "method_elem" {
+			continue
+		}
+		_, arity, variadic := p.goParams(elem.ChildByFieldName("parameters"), nil)
+		sigs = append(sigs, fidx.Signature{Name: p.text(elem.ChildByFieldName("name")), Arity: arity, Variadic: variadic})
+	}
+	return sigs
+}
+
 // goFields returns the named fields of a Go struct that declare a type name.
 func (p *projection) goFields(spec *sitter.Node) []fidx.Typed {
 	t := spec.ChildByFieldName("type")

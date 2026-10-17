@@ -384,7 +384,7 @@ func (p *projection) addClasses(ctx context.Context) error {
 		node := p.syntax[key]
 		switch {
 		case def.Kind == fidx.DefInterface:
-			p.ix.Classes = append(p.ix.Classes, fidx.Class{Key: key, Bases: p.interfaceBases(node)})
+			p.ix.Classes = append(p.ix.Classes, fidx.Class{Key: key, Bases: p.interfaceBases(node), Abstract: p.goMethodElems(node)})
 		case def.Kind != fidx.DefClass:
 		case node == nil:
 			p.ix.Classes = append(p.ix.Classes, fidx.Class{Key: key, Methods: methods[key]})

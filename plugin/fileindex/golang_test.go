@@ -43,6 +43,7 @@ func TestFileIndexGo(t *testing.T) {
 		assert.Equal(t, []string{"Base", "store.Store"}, cart.Bases)
 		assert.Equal(t, []fidx.Typed{{Name: "db", Type: "store.DB"}}, cart.Fields)
 		assert.Equal(t, []string{"io.Writer"}, classOf(t, ix, "shop.go//Saver").Bases)
+		assert.Equal(t, []fidx.Signature{{Name: "Save", Arity: 1}}, classOf(t, ix, "shop.go//Saver").Abstract)
 		assert.Equal(t, []string{"store.ID"}, classOf(t, ix, "shop.go//ID").Bases)
 	})
 	t.Run("a function has its signature", func(t *testing.T) {

@@ -104,6 +104,8 @@ type builder struct {
 	narrowed map[Site]bool
 	// goMethods holds the Go methods of the project by name.
 	goMethods map[string][]string
+	// implemented holds whether a Go type implements an interface.
+	implemented map[[2]string]bool
 	// loads holds whether the module top level of each file runs code.
 	loads map[string]bool
 }
@@ -156,6 +158,7 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		loads:        map[string]bool{},
 		mros:         map[string][]string{},
 		narrowed:     map[Site]bool{},
+		implemented:  map[[2]string]bool{},
 		test:         map[string]bool{},
 		rules:        roots.Merge(roots.Default(), opts.Rules),
 	}

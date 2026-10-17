@@ -178,11 +178,12 @@ func (b *builder) subclasses(class string) []string {
 // overrides returns the first-party methods that a call of the method on
 // an instance of the class can run besides found: for each subclass, the
 // method that its MRO gives. This is class hierarchy analysis. A Go type
-// implements an interface with no declaration, so a Go interface gets
-// every method of the project with the name and the arity of the call.
+// implements an interface with no declaration, so a Go interface gets the
+// methods of the project with the name and the arity of the call whose
+// type implements the interface.
 func (b *builder) overrides(class string, call fileindex.Call, found string) []string {
 	if b.languageOf(class) == langcode.Go {
-		return b.implementations(call)
+		return b.implementations(class, call)
 	}
 	var out []string
 	for _, sub := range b.subclasses(class) {
@@ -195,11 +196,12 @@ func (b *builder) overrides(class string, call fileindex.Call, found string) []s
 	return out
 }
 
-// implementations returns the Go methods of the project that a call of an
-// interface method can run: the methods of a type with the name of the call
-// and a signature that takes its arguments. One call as the only argument
-// can give more values, so it takes any arity.
-func (b *builder) implementations(call fileindex.Call) []string {
+// implementations returns the Go methods of the project that a call of a
+// method of the interface can run: the methods with the name of the call
+// and a signature that takes its arguments, of a type that implements the
+// interface. One call as the only argument can give more values, so it
+// takes any arity.
+func (b *builder) implementations(iface string, call fileindex.Call) []string {
 	if b.goMethods == nil {
 		b.goMethods = map[string][]string{}
 		for _, p := range b.paths {
@@ -219,10 +221,49 @@ func (b *builder) implementations(call fileindex.Call) []string {
 	var out []string
 	for _, key := range b.goMethods[call.Method] {
 		def := b.defs[key]
-		if spread || def.Arity == args || def.Variadic && args >= def.Arity-1 {
+		takes := spread || def.Arity == args || def.Variadic && args >= def.Arity-1
+		if takes && b.implements(fileindex.Parent(key), iface) {
 			out = append(out, key)
 		}
 	}
 	slices.Sort(out)
 	return out
+}
+
+// implements reports whether the method set of a Go type holds each method
+// of a first-party interface by name and arity. The method set has the
+// methods of the type and of the types that it embeds. A method that an
+// embedded type of a dependency can give counts as held. The methods of an
+// embedded interface of a dependency are not known, so the type needs none
+// of them.
+func (b *builder) implements(typ, iface string) bool {
+	k := [2]string{typ, iface}
+	if held, ok := b.implemented[k]; ok {
+		return held
+	}
+	held := true
+	for _, sig := range b.abstract(iface, 0) {
+		key, fail := b.method(typ, sig.Name)
+		def := b.defs[key]
+		if fail != nil || def != nil && (def.Arity != sig.Arity || def.Variadic != sig.Variadic) {
+			held = false
+			break
+		}
+	}
+	b.implemented[k] = held
+	return held
+}
+
+// abstract returns the methods that a first-party Go interface declares,
+// with the methods of the first-party interfaces that it embeds.
+func (b *builder) abstract(iface string, depth int) []fileindex.Signature {
+	rec, ok := b.classes[iface]
+	if !ok || depth > b.opts.maxExportHops {
+		return nil
+	}
+	sigs := slices.Clone(rec.class.Abstract)
+	for _, base := range b.typeBases(iface) {
+		sigs = append(sigs, b.abstract(base, depth+1)...)
+	}
+	return sigs
 }

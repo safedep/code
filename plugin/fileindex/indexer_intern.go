@@ -96,6 +96,9 @@ func (t interner) index(ix *fidx.Index) {
 		internAll(t, c.Bases)
 		internAll(t, c.Methods)
 		t.typed(c.Fields)
+		for j := range c.Abstract {
+			intern(t, &c.Abstract[j].Name)
+		}
 	}
 	for i := range ix.Calls {
 		c := &ix.Calls[i]
