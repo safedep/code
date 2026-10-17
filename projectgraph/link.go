@@ -346,12 +346,13 @@ func (b *builder) external(key string) string {
 
 // addEdge adds an edge unless the caller already has an edge to the callee
 // at the site with a confidence at least as high. A higher one replaces it,
-// so a path through the site shows the best kind.
+// so a path through the site shows the best kind. Graph.AddEdge keeps the
+// same rule after the build.
 func (b *builder) addEdge(e Edge) {
 	slot := b.edges.slot(e)
 	old, ok := b.edges.kind(slot)
 	switch {
-	case ok && old.Confidence().Rank() >= e.Kind.Confidence().Rank():
+	case ok && !e.Kind.outranks(old):
 		return
 	case !ok && b.edges.len() >= b.opts.maxEdges:
 		b.truncations[Truncation{Kind: TruncationEdges}] = true

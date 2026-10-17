@@ -4,6 +4,9 @@
 package projectgraph
 
 import (
+	"cmp"
+	"fmt"
+	"slices"
 	"time"
 
 	"github.com/safedep/code/fileindex"
@@ -57,6 +60,13 @@ const (
 	// call it.
 	EdgeReference EdgeKind = "reference"
 )
+
+// outranks reports whether an edge of the kind replaces an edge of the old
+// kind at one slot: the caller, the callee and the site. The higher
+// confidence wins, and a tie keeps the old edge.
+func (k EdgeKind) outranks(old EdgeKind) bool {
+	return k.Confidence().Rank() > old.Confidence().Rank()
+}
 
 // Confidence returns the confidence that an edge of the kind carries.
 func (k EdgeKind) Confidence() Confidence {
@@ -213,4 +223,47 @@ func (g *Graph) IsExternal(key string) bool {
 	}
 	_, ok := g.Files[fileindex.Unit(key)]
 	return !ok
+}
+
+// AddEdge adds an edge to a built graph with the rule of the link step: the
+// graph keeps one edge per caller, callee and site, and the edge of the
+// higher confidence. It sets the confidence from the kind. It reports
+// whether the graph changed. It never removes an unresolved site, so an
+// edge from another source, as an LLM overlay, adds a path and leaves the
+// uncertainty of the site. The caller must be a node of the graph, and a
+// callee outside the project gets an external node.
+func (g *Graph) AddEdge(e Edge) (bool, error) {
+	if g.Nodes[e.From] == nil {
+		return false, fmt.Errorf("edge from %s: no such node", e.From)
+	}
+	if g.Nodes[e.To] == nil {
+		if !g.IsExternal(e.To) {
+			return false, fmt.Errorf("edge to %s: no such node", e.To)
+		}
+		g.Nodes[e.To] = &Node{Key: e.To, Kind: NodeExternal}
+		g.Stats.Nodes = len(g.Nodes)
+	}
+	e.Confidence = e.Kind.Confidence()
+	i, found := slices.BinarySearchFunc(g.Edges, e, compareSlots)
+	switch {
+	case found && !e.Kind.outranks(g.Edges[i].Kind):
+		return false, nil
+	case found:
+		g.Edges[i] = e
+	default:
+		g.Edges = slices.Insert(g.Edges, i, e)
+		g.Stats.Edges = len(g.Edges)
+	}
+	return true, nil
+}
+
+// compareSlots orders edges by caller, site and callee, as Edges are.
+func compareSlots(a, b Edge) int {
+	return cmp.Or(
+		cmp.Compare(a.From, b.From),
+		cmp.Compare(a.Site.Path, b.Site.Path),
+		cmp.Compare(a.Site.Line, b.Site.Line),
+		cmp.Compare(a.Site.Column, b.Site.Column),
+		cmp.Compare(a.To, b.To),
+	)
 }
