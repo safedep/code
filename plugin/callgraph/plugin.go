@@ -6,7 +6,6 @@ import (
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/dry/log"
-	sitter "github.com/smacker/go-tree-sitter"
 )
 
 type CallgraphCallback core.PluginCallback[*CallGraph]
@@ -29,20 +28,8 @@ func (p *callgraphPlugin) Name() string {
 	return "CallgraphPlugin"
 }
 
-var supportedLanguages = []core.LanguageCode{
-	core.LanguageCodePython,
-	core.LanguageCodeJava,
-	core.LanguageCodeGo,
-	core.LanguageCodeJavascript,
-	core.LanguageCodeTypescript,
-	core.LanguageCodeCSharp,
-	core.LanguageCodeRust,
-	core.LanguageCodePHP,
-	core.LanguageCodeRuby,
-}
-
 func (p *callgraphPlugin) SupportedLanguages() []core.LanguageCode {
-	return supportedLanguages
+	return supportedLanguages()
 }
 
 func (p *callgraphPlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) error {
@@ -92,50 +79,4 @@ func buildCallGraph(ctx context.Context, tree core.ParseTree, lang core.Language
 	callGraph := newCallGraph(filePath, lang.Meta().Code)
 	callGraph.build(ctx, tree.Tree().RootNode(), imports, *treeData)
 	return callGraph, nil
-}
-
-func processNode(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	if node == nil {
-		return newProcessorResult()
-	}
-
-	if nodeProcessor, exists := languageNodeProcessors[callGraph.Language][node.Type()]; exists {
-		return nodeProcessor(node, treeData, currentNamespace, callGraph, metadata)
-	}
-
-	nodeProcessor, exists := nodeProcessors[node.Type()]
-	if exists {
-		return nodeProcessor(node, treeData, currentNamespace, callGraph, metadata)
-	}
-
-	// log.Debugf("Can't process %s with namespace: %s => %s", node.Type(), currentNamespace, node.Content(treeData))
-	return emptyProcessor(node, treeData, currentNamespace, callGraph, metadata)
-}
-
-func processChildren(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	if node == nil || callGraph.ctxErr != nil {
-		return newProcessorResult()
-	}
-
-	// Check processing depth to prevent stack overflow in deeply nested structures
-	if metadata.processingDepth > maxProcessingDepth {
-		callGraph.truncate(TruncationDepth, currentNamespace, node)
-		return newProcessorResult()
-	}
-
-	childrenResults := newProcessorResult()
-
-	// Increment depth for child processing
-	childMetadata := metadata
-	childMetadata.processingDepth++
-
-	for i := 0; i < int(node.ChildCount()); i++ {
-		if callGraph.stopped() {
-			break
-		}
-		result := processNode(node.Child(i), treeData, currentNamespace, callGraph, childMetadata)
-		childrenResults.addResults(result)
-	}
-
-	return childrenResults
 }

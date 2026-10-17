@@ -1,18 +1,18 @@
 package callgraph
 
 import (
+	"maps"
 	"regexp"
 	"slices"
 	"strings"
 
-	"github.com/safedep/code/core"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
 // syntaxShapes tells where the call, member, assignment and scope nodes of a
-// grammar keep their parts. registerShapedLanguage makes the node processors
-// of a language from it, so a grammar with named fields needs no processor
-// code of its own.
+// grammar keep their parts. shapedProfile makes the node processors of a
+// language from it, so a grammar with named fields needs no processor code
+// of its own.
 type syntaxShapes struct {
 	calls       map[string]callShape
 	creations   map[string]creationShape
@@ -70,14 +70,25 @@ type scopeShape struct {
 var assignableNamePattern = regexp.MustCompile(`^[$@]*[A-Za-z_][A-Za-z0-9_]*$`)
 
 type shapedProcessors struct {
-	shapes syntaxShapes
-	code   core.LanguageCode
+	shapes     syntaxShapes
+	separators []string
 }
 
-func registerShapedLanguage(code core.LanguageCode, shapes syntaxShapes) {
-	p := &shapedProcessors{shapes: shapes, code: code}
+// shapedProfile adds to profile the node processors that shapes give, and
+// the reachable scopes. A shape replaces a processor of profile for the same
+// node type.
+func shapedProfile(profile languageProfile, shapes syntaxShapes) languageProfile {
+	p := &shapedProcessors{shapes: shapes, separators: profile.separators}
 
-	processors := map[string]nodeProcessor{}
+	processors := maps.Clone(profile.processors)
+	if processors == nil {
+		processors = map[string]nodeProcessor{}
+	}
+	reachable := maps.Clone(profile.reachable)
+	if reachable == nil {
+		reachable = map[string]bool{}
+	}
+
 	for nodeType := range shapes.calls {
 		processors[nodeType] = p.call
 	}
@@ -90,14 +101,16 @@ func registerShapedLanguage(code core.LanguageCode, shapes syntaxShapes) {
 	for nodeType, scope := range shapes.scopes {
 		processors[nodeType] = p.scope
 		if scope.reachable {
-			dfsSourceNodeTypes[nodeType] = true
+			reachable[nodeType] = true
 		}
 	}
 	for _, nodeType := range shapes.skipped {
 		processors[nodeType] = skippedProcessor
 	}
 
-	registerLanguageProcessors(code, processors)
+	profile.processors = processors
+	profile.reachable = reachable
+	return profile
 }
 
 // call adds an edge from the current namespace to the callee. Its result is
@@ -300,7 +313,7 @@ var wrapperTypes = map[string]bool{
 // System.Console.
 func (p *shapedProcessors) resolvePath(path string, currentNamespace string, callGraph *CallGraph) string {
 	var segments []string
-	for _, segment := range splitQualifiedName(withoutTypeArguments(path), p.code) {
+	for _, segment := range splitQualifiedName(withoutTypeArguments(path), p.separators) {
 		if segment = cleanSegment(segment); segment != "" {
 			segments = append(segments, segment)
 		}
@@ -320,7 +333,7 @@ func (p *shapedProcessors) resolvePath(path string, currentNamespace string, cal
 }
 
 func (p *shapedProcessors) qualifiedName(name string) string {
-	return strings.Join(splitQualifiedName(withoutTypeArguments(name), p.code), namespaceSeparator)
+	return strings.Join(splitQualifiedName(withoutTypeArguments(name), p.separators), namespaceSeparator)
 }
 
 // cleanSegment removes the spaces and the null-safe marks around a segment

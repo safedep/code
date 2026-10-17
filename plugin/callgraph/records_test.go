@@ -585,7 +585,7 @@ func TestImportsThatShareAnIdentifierKeepSourceOrder(t *testing.T) {
 	require.NoError(t, err)
 
 	for range 20 {
-		parsed, wildcards := parseImports(imports, python.Meta().Code)
+		parsed, wildcards := parseImports(imports, profileOf(python.Meta().Code))
 		assert.Empty(t, wildcards)
 
 		var pairs []string

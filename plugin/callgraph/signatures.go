@@ -110,7 +110,7 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 					Evidences: []MatchedEvidence{},
 				}
 
-				lookupNamespace := resolveNamespaceWithSeparator(condition.Value, languageCode)
+				lookupNamespace := profileOf(languageCode).moduleNamespace(condition.Value)
 				lookupNamespace, isWildcardLookup := trimWildcardLookupNamespace(lookupNamespace)
 
 				var dfsResultItemsWithMatchedFunctionName []DfsResultItem
@@ -190,11 +190,13 @@ func matchesArgumentConstraints(
 
 	callArguments := dfsResultItem.Arguments
 
+	profile := profileOf(languageCode)
+
 	// Strictly all arguments must match their respective constraints
 	for _, requiredArg := range requiredArgs {
 		requiredArgResolvesToNamespaces := make([]string, len(requiredArg.ResolvesTo))
 		for i, resolvesTo := range requiredArg.ResolvesTo {
-			requiredArgResolvesToNamespaces[i] = resolveNamespaceWithSeparator(resolvesTo, languageCode)
+			requiredArgResolvesToNamespaces[i] = profile.moduleNamespace(resolvesTo)
 		}
 
 		// No values or resolves_to specified, so no constraints to satisfy
@@ -304,5 +306,6 @@ func isSupportedLanguageKey(violation *protovalidate.Violation) bool {
 		return false
 	}
 
-	return slices.Contains(supportedLanguages, core.LanguageCode(elements[0].GetStringKey()))
+	_, supported := profilesByCode[core.LanguageCode(elements[0].GetStringKey())]
+	return supported
 }

@@ -49,13 +49,14 @@ func newCallGraph(fileName string, language core.LanguageCode) *CallGraph {
 	cg := &CallGraph{
 		FileName:          fileName,
 		Language:          language,
+		profile:           profileOf(language),
 		Nodes:             make(map[string]*CallGraphNode),
 		classConstructors: make(map[string]bool),
 		unresolvedSeen:    make(map[UnresolvedCall]bool),
 	}
 	cg.assignmentGraph = *newAssignmentGraph(&cg.truncations)
 
-	for _, namespace := range getBuiltins(language) {
+	for _, namespace := range cg.profile.builtins {
 		cg.assignmentGraph.addNode(namespace, nil)
 	}
 	return cg
@@ -80,7 +81,7 @@ func (cg *CallGraph) build(ctx context.Context, root *sitter.Node, imports []*as
 func (cg *CallGraph) addImports(root *sitter.Node, imports []*ast.ImportNode) {
 	// Required to map identifiers to imported modules as assignments
 	// and register default calls for wildcard imports
-	importedIdentifiers, wildcardImports := parseImports(imports, cg.Language)
+	importedIdentifiers, wildcardImports := parseImports(imports, cg.profile)
 
 	for _, wildcardImport := range wildcardImports {
 		// For wildcard imports, we add a call to importeditem//*

@@ -80,6 +80,7 @@ type CallGraph struct {
 	Nodes    map[string]*CallGraphNode
 	RootNode *CallGraphNode
 
+	profile           *languageProfile
 	assignmentGraph   assignmentGraph
 	classConstructors map[string]bool
 
@@ -102,7 +103,7 @@ type CallGraph struct {
 // Dump writes the assignment graph and the call graph to w, in the order of
 // the keys. It leaves out the builtins that have no edge.
 func (cg *CallGraph) Dump(w io.Writer) error {
-	builtins := getBuiltinsMap(cg.Language)
+	builtins := profileOf(cg.Language).builtinSet()
 	var out strings.Builder
 
 	out.WriteString("Assignment Graph:\n")
@@ -130,26 +131,6 @@ func (cg *CallGraph) Dump(w io.Writer) error {
 
 	_, err := io.WriteString(w, out.String())
 	return err
-}
-
-// Assumption - All functions and class constructors are reachable
-var dfsSourceNodeTypes = map[string]bool{
-	"program":                    true,
-	"file":                       true,
-	"module":                     true,
-	"function_definition":        true,
-	"method_declaration":         true,
-	"class_definition":           true,
-	"class_body":                 true,
-	"class_declaration":          true,
-	"abstract_class_declaration": true,
-	// JavaScript and TypeScript functions, which a file often exports and
-	// does not call
-	"function_declaration":           true,
-	"generator_function_declaration": true,
-	"function_expression":            true,
-	"arrow_function":                 true,
-	"method_definition":              true,
 }
 
 // DfsResultItem is one node that DFS reached. Site and Text give the call
@@ -188,16 +169,15 @@ func (cg *CallGraph) DFS() []DfsResultItem {
 	// the file name which has reference for entrypoints (if any)
 	cg.dfsUtil(cg.FileName, cg.RootNode, CallReference{Arguments: []CallArgument{}}, visited, &dfsResult, 0, &resultCount)
 
-	// Assumption - All functions and class constructors are reachable
-	// This is required because most files only expose their classes/functions
-	// which are imported and used by other files, so an entrypoint may not be
-	// present in every file.
+	// A file often exports its definitions and does not call them, so DFS
+	// starts again from each reachable definition of the profile.
+	reachable := profileOf(cg.Language).reachable
 	for _, node := range cg.order {
 		if resultCount >= maxDFSResultItems {
 			break
 		}
 
-		if dfsSourceNodeTypes[node.Kind] && !visited[node.Namespace] {
+		if reachable[node.Kind] && !visited[node.Namespace] {
 			cg.dfsUtil(node.Namespace, cg.RootNode, CallReference{Arguments: []CallArgument{}}, visited, &dfsResult, 0, &resultCount)
 		}
 	}
@@ -278,9 +258,4 @@ func (cg *CallGraph) dfsUtil(namespace string, caller *CallGraphNode, call CallR
 			cg.dfsUtil(callRef.CalleeNamespace, callgraphNode, callRef, visited, result, depth+1, resultCount)
 		}
 	}
-}
-
-func (cg *CallGraph) getInstanceKeyword() (string, bool) {
-	keyword, exists := instanceKeywordMapping[string(cg.Language)]
-	return keyword, exists
 }

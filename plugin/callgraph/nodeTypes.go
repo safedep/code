@@ -1,9 +1,6 @@
 package callgraph
 
-import (
-	"github.com/safedep/code/core"
-	sitter "github.com/smacker/go-tree-sitter"
-)
+import sitter "github.com/smacker/go-tree-sitter"
 
 var literalNodeTypes = map[string]bool{
 	"string":                         true,
@@ -27,15 +24,16 @@ var literalNodeTypes = map[string]bool{
 	"undefined":                      true,
 	"true":                           true,
 	"false":                          true,
-	// Go literals
-	"int_literal":                true,
-	"float_literal":              true,
-	"imaginary_literal":          true,
-	"rune_literal":               true,
-	"raw_string_literal":         true,
-	"interpreted_string_literal": true,
+	"int_literal":                    true,
+	"float_literal":                  true,
+	"imaginary_literal":              true,
+	"rune_literal":                   true,
+	"raw_string_literal":             true,
+	"interpreted_string_literal":     true,
 }
 
+// initialisedDataStructures are the literals of a collection. The items can
+// hold calls, but the collection is no value of a name.
 var initialisedDataStructures = map[string]bool{
 	"list":       true,
 	"set":        true,
@@ -44,58 +42,22 @@ var initialisedDataStructures = map[string]bool{
 	"array":      true,
 	"map":        true,
 	"object":     true,
-	// Go data structures
-	"composite_literal": true,
-	"slice_expression":  true,
 }
 
-// pythonLiteralReceivers and jsLiteralReceivers map a literal node to the
-// builtin type of its value, so that "a,b".split() calls String//split.
-var pythonLiteralReceivers = map[string]string{
-	"string":                   "str",
-	"concatenated_string":      "str",
-	"integer":                  "int",
-	"float":                    "float",
-	"list":                     "list",
-	"list_comprehension":       "list",
-	"dictionary":               "dict",
-	"dictionary_comprehension": "dict",
-	"set":                      "set",
-	"set_comprehension":        "set",
-	"tuple":                    "tuple",
-}
-
-var jsLiteralReceivers = map[string]string{
-	"string":          "String",
-	"template_string": "String",
-	"number":          "Number",
-	"array":           "Array",
-	"object":          "Object",
-	"regex":           "RegExp",
-}
-
-// transparentNodes are the nodes whose value is the value of one child, as
-// (x) or await x. The resolvers read through them.
-var transparentNodes = map[core.LanguageCode]map[string]bool{
-	core.LanguageCodePython:     {"parenthesized_expression": true},
-	core.LanguageCodeGo:         {"parenthesized_expression": true},
-	core.LanguageCodeJavascript: jsTransparentNodes,
-	core.LanguageCodeTypescript: jsTransparentNodes,
-}
-
-var jsTransparentNodes = map[string]bool{
-	"parenthesized_expression": true,
-	"await_expression":         true,
-	"sequence_expression":      true,
-	"non_null_expression":      true,
-	"as_expression":            true,
-	"satisfies_expression":     true,
+// ignoredNodeTypes are the imports, comments and punctuation. The resolvers
+// read the imports, and the others hold no call.
+var ignoredNodeTypes = map[string]bool{
+	"import_statement": true, "import": true, "import_from_statement": true, "import_declaration": true,
+	"comment": true, "whitespace": true, "newline": true, "line_comment": true,
+	"+": true, "-": true, "*": true, "/": true, "%": true, "**": true, "//": true,
+	"=": true, "+=": true, "-=": true, "*=": true, "/=": true, "%=": true,
+	",": true, ":": true, ";": true, ".": true, "(": true, ")": true, "{": true, "}": true, "[": true, "]": true,
 }
 
 // unwrap returns the node that gives the value of node. A sequence gives
 // the value of its last expression, as fn in (0, fn)().
 func (cg *CallGraph) unwrap(node *sitter.Node) *sitter.Node {
-	transparent := transparentNodes[cg.Language]
+	transparent := cg.profile.transparent
 	for depth := 0; node != nil && transparent[node.Type()] && node.NamedChildCount() > 0 && depth <= maxMemberExpressionDepth; depth++ {
 		if node.Type() == "sequence_expression" {
 			node = node.NamedChild(int(node.NamedChildCount()) - 1)
