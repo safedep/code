@@ -204,7 +204,7 @@ func (p *shapedProcessors) assignment(node *sitter.Node, treeData []byte, curren
 
 	variable := currentNamespace + namespaceSeparator + left.Content(treeData)
 	for _, value := range result.ImmediateAssignments {
-		callGraph.assignmentGraph.addAssignment(variable, left, value.Namespace, value.TreeNode)
+		callGraph.assignmentGraph.addAssignment(variable, left, value.Namespace, nil)
 	}
 
 	return newProcessorResult()

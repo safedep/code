@@ -11,7 +11,7 @@ type assignmentNode struct {
 	Namespace  string
 	AssignedTo []string
 	AssignedBy []string
-	TreeNode   *sitter.Node
+	syntax
 }
 
 func newAssignmentGraphNode(namespace string, treeNode *sitter.Node) *assignmentNode {
@@ -19,12 +19,12 @@ func newAssignmentGraphNode(namespace string, treeNode *sitter.Node) *assignment
 		Namespace:  namespace,
 		AssignedTo: []string{},
 		AssignedBy: []string{},
-		TreeNode:   treeNode,
+		syntax:     syntaxOf(treeNode),
 	}
 }
 
 func (an *assignmentNode) IsLiteralValue() bool {
-	return an.TreeNode != nil && literalNodeTypes[an.TreeNode.Type()]
+	return literalNodeTypes[an.kind]
 }
 
 type assignmentGraph struct {
@@ -47,8 +47,8 @@ func newAssignmentGraph(truncations *truncations) *assignmentGraph {
 // maxAssignmentGraphNodes it adds no node and returns nil.
 func (ag *assignmentGraph) addNode(identifier string, treeNode *sitter.Node) *assignmentNode {
 	if node, exists := ag.Assignments[identifier]; exists {
-		if node.TreeNode == nil {
-			node.TreeNode = treeNode
+		if !node.known() {
+			node.syntax = syntaxOf(treeNode)
 		}
 		return node
 	}

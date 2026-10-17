@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/safedep/code/core"
@@ -67,19 +68,8 @@ func run() error {
 
 	// consume callgraph
 	var callgraphCallback callgraph.CallgraphCallback = func(_ context.Context, cg *callgraph.CallGraph) error {
-		err := cg.PrintAssignmentGraph()
-		if err != nil {
-			return fmt.Errorf("failed to print assignment graph: %w", err)
-		}
-
-		err = cg.PrintCallGraph()
-		if err != nil {
-			return fmt.Errorf("failed to print call graph: %w", err)
-		}
-
-		treeData, err := cg.Tree.Data()
-		if err != nil {
-			return fmt.Errorf("failed to get tree data: %w", err)
+		if err := cg.Dump(os.Stdout); err != nil {
+			return fmt.Errorf("failed to dump call graph: %w", err)
 		}
 
 		fmt.Printf("DFS Traversal results for %s:\n", cg.FileName)
@@ -90,12 +80,12 @@ func run() error {
 			}
 
 			callerIdentifierStr := "(callerIdentifier not avl)"
-			if resultItem.CallerIdentifier != nil {
+			if resultItem.Text != "" {
 				callerIdentifierStr = fmt.Sprintf(
 					"(L%d:%d - %s)",
-					resultItem.CallerIdentifier.StartPoint().Row+1,
-					resultItem.CallerIdentifier.StartPoint().Column+1,
-					utils.TrimWithEllipsis(resultItem.CallerIdentifier.Content(*treeData), 100, true, 3),
+					resultItem.Site.StartLine,
+					resultItem.Site.StartColumn,
+					utils.TrimWithEllipsis(resultItem.Text, 100, true, 3),
 				)
 			}
 
@@ -124,29 +114,23 @@ func run() error {
 			for _, condition := range match.MatchedConditions {
 				fmt.Printf("\tCondition: %s - %s\n", condition.Condition.Type, condition.Condition.Value)
 				for _, evidence := range condition.Evidences {
-					evidenceMetadata := evidence.Metadata(treeData)
-
-					calledByStr := "called by " + evidenceMetadata.CallerNamespace
-					if evidenceMetadata.CallerMetadata != nil {
-						calledByStr += fmt.Sprintf(" (L%d - L%d)", evidenceMetadata.CallerMetadata.StartLine+1, evidenceMetadata.CallerMetadata.EndLine+1)
+					calledByStr := "called by " + evidence.Caller.Namespace
+					if evidence.Caller.Kind != "" {
+						calledByStr += fmt.Sprintf(" (L%d - L%d)", evidence.Caller.Position.StartLine, evidence.Caller.Position.EndLine)
 					}
 
 					calledAtStr := "exact location not available"
-					if evidenceMetadata.CallerIdentifierMetadata != nil {
-						calledAtStr = fmt.Sprintf("at L%d:%d (%s)", evidenceMetadata.CallerIdentifierMetadata.StartLine+1, evidenceMetadata.CallerIdentifierMetadata.StartColumn+1, utils.TrimWithEllipsis(evidenceMetadata.CallerIdentifierContent, 100, true, 3))
+					if evidence.Text != "" {
+						calledAtStr = fmt.Sprintf("at L%d:%d (%s)", evidence.Site.StartLine, evidence.Site.StartColumn, utils.TrimWithEllipsis(evidence.Text, 100, true, 3))
 					}
 
-					fmt.Printf("\t\tEvidence: %s %s %s \n", evidenceMetadata.CalleeNamespace, calledByStr, calledAtStr)
+					fmt.Printf("\t\tEvidence: %s %s %s \n", evidence.Callee.Namespace, calledByStr, calledAtStr)
 
 					argString := ""
 					for _, arg := range evidence.Arguments {
-						argNamespaces := make([]string, len(arg.Nodes))
-						for i, node := range arg.Nodes {
-							if node.TreeNode != nil {
-								argNamespaces[i] = node.Namespace
-							} else {
-								argNamespaces[i] = "(no namespace)"
-							}
+						argNamespaces := make([]string, len(arg.Values))
+						for i, value := range arg.Values {
+							argNamespaces[i] = value.Namespace
 						}
 						argString += fmt.Sprintf("(%s), ", strings.Join(argNamespaces, ", "))
 					}

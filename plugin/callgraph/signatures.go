@@ -10,10 +10,10 @@ import (
 	callgraphv1 "buf.build/gen/go/safedep/api/protocolbuffers/go/safedep/messages/code/callgraph/v1"
 	"buf.build/go/protovalidate"
 	"github.com/safedep/code/core"
+	"github.com/safedep/code/core/ast"
 	"github.com/safedep/dry/ds/trie"
 	"github.com/safedep/dry/log"
 	"github.com/safedep/dry/utils"
-	sitter "github.com/smacker/go-tree-sitter"
 )
 
 const (
@@ -21,58 +21,14 @@ const (
 	MatchAll = "all"
 )
 
+// MatchedEvidence is one call that matched a condition. Site is the
+// position of the expression that makes the call, and Text its source.
 type MatchedEvidence struct {
-	Caller           *CallGraphNode
-	Callee           *CallGraphNode
-	CallerIdentifier *sitter.Node
-	Arguments        []CallArgument
-}
-
-// Note - We're only providing content details for the caller identifier since its
-// expected to be at most one line from the entire file, but callerNamespace is an entire
-// scope (fn/class/module) which consumes a lot of repetitive memory
-type EvidenceMetadata struct {
-	CallerNamespace string
-	CallerMetadata  *TreeNodeMetadata
-
-	CalleeNamespace string
-	CalleeMetadata  *TreeNodeMetadata
-
-	// Keyword / statement that caused the match
-	CallerIdentifierContent  string
-	CallerIdentifierMetadata *TreeNodeMetadata
-}
-
-func (evidence *MatchedEvidence) Metadata(treeData *[]byte) EvidenceMetadata {
-	result := EvidenceMetadata{}
-
-	if evidence.Caller != nil {
-		result.CallerNamespace = evidence.Caller.Namespace
-		callerMetadata, exists := evidence.Caller.Metadata()
-		if exists {
-			result.CallerMetadata = &callerMetadata
-		}
-	}
-
-	if evidence.Callee != nil {
-		result.CalleeNamespace = evidence.Callee.Namespace
-		calleeMetadata, exists := evidence.Callee.Metadata()
-		if exists {
-			result.CalleeMetadata = &calleeMetadata
-		}
-	}
-
-	if evidence.CallerIdentifier != nil {
-		result.CallerIdentifierContent = evidence.CallerIdentifier.Content(*treeData)
-		result.CallerIdentifierMetadata = &TreeNodeMetadata{
-			StartLine:   evidence.CallerIdentifier.StartPoint().Row,
-			EndLine:     evidence.CallerIdentifier.EndPoint().Row,
-			StartColumn: evidence.CallerIdentifier.StartPoint().Column,
-			EndColumn:   evidence.CallerIdentifier.EndPoint().Column,
-		}
-	}
-
-	return result
+	Caller    *CallGraphNode
+	Callee    *CallGraphNode
+	Site      ast.NodePosition
+	Text      string
+	Arguments []CallArgument
 }
 
 type MatchedCondition struct {
@@ -106,12 +62,7 @@ func NewSignatureMatcher(targetSignatures []*callgraphv1.Signature) (*SignatureM
 }
 
 func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResult, error) {
-	language, err := cg.Tree.Language()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get language from parse tree: %w", err)
-	}
-
-	languageCode := language.Meta().Code
+	languageCode := cg.Language
 
 	matcherResults := []SignatureMatchResult{}
 
@@ -159,8 +110,8 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 					Evidences: []MatchedEvidence{},
 				}
 
-				lookupNamespace := resolveNamespaceWithSeparator(condition.Value, language)
-				lookupNamespace, isWildcardLookup := trimWildcardLookupNamespace(lookupNamespace, language)
+				lookupNamespace := resolveNamespaceWithSeparator(condition.Value, languageCode)
+				lookupNamespace, isWildcardLookup := trimWildcardLookupNamespace(lookupNamespace)
 
 				var dfsResultItemsWithMatchedFunctionName []DfsResultItem
 
@@ -180,13 +131,14 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 				}
 
 				for _, evidenceResultItem := range dfsResultItemsWithMatchedFunctionName {
-					if matchesArgumentConstraints(evidenceResultItem, condition.Args, language) {
+					if matchesArgumentConstraints(evidenceResultItem, condition.Args, languageCode) {
 						// If the arguments match the required constraints, we can add this evidence
 						matchCondition.Evidences = append(matchCondition.Evidences, MatchedEvidence{
-							Caller:           evidenceResultItem.Caller,
-							Callee:           calleeOf(evidenceResultItem),
-							CallerIdentifier: evidenceResultItem.CallerIdentifier,
-							Arguments:        evidenceResultItem.Arguments,
+							Caller:    evidenceResultItem.Caller,
+							Callee:    calleeOf(evidenceResultItem),
+							Site:      evidenceResultItem.Site,
+							Text:      evidenceResultItem.Text,
+							Arguments: evidenceResultItem.Arguments,
 						})
 					} else {
 						// Skip this evidence if it doesn't match the argument constraints
@@ -230,7 +182,7 @@ func calleeOf(item DfsResultItem) *CallGraphNode {
 func matchesArgumentConstraints(
 	dfsResultItem DfsResultItem,
 	requiredArgs []*callgraphv1.Signature_LanguageMatcher_SignatureCondition_Argument,
-	language core.Language,
+	languageCode core.LanguageCode,
 ) bool {
 	if len(requiredArgs) == 0 {
 		return true // No conditions to match, so it matches by default
@@ -242,7 +194,7 @@ func matchesArgumentConstraints(
 	for _, requiredArg := range requiredArgs {
 		requiredArgResolvesToNamespaces := make([]string, len(requiredArg.ResolvesTo))
 		for i, resolvesTo := range requiredArg.ResolvesTo {
-			requiredArgResolvesToNamespaces[i] = resolveNamespaceWithSeparator(resolvesTo, language)
+			requiredArgResolvesToNamespaces[i] = resolveNamespaceWithSeparator(resolvesTo, languageCode)
 		}
 
 		// No values or resolves_to specified, so no constraints to satisfy
@@ -261,16 +213,16 @@ func matchesArgumentConstraints(
 
 		// an argument can be resolved to multiple namespaces or literal nodes
 		// so we need to check if "any" of the resolved nodes satisfy the constraints
-		for _, argNode := range argAtIndex.Nodes {
-			if argNode.IsLiteralValue() {
-				if slices.Contains(requiredArg.Values, argNode.Namespace) {
+		for _, value := range argAtIndex.Values {
+			if value.Literal {
+				if slices.Contains(requiredArg.Values, value.Namespace) {
 					// If this is a literal value and it matches any of the required values,
 					// then this arg's constraints are satisfied
 					constraintsSatisfied = true
 					break
 				}
 			} else {
-				if slices.Contains(requiredArgResolvesToNamespaces, argNode.Namespace) {
+				if slices.Contains(requiredArgResolvesToNamespaces, value.Namespace) {
 					// If this is a resolved type and it matches any of the required
 					// arg resolves_to namespaces, then this arg's constraints are satisfied
 					constraintsSatisfied = true
@@ -292,7 +244,7 @@ func matchesArgumentConstraints(
 // qualifier and a boolean indicating if it was a wildcard lookup.
 // Note - We only support wildcard lookup qualifier at the end of the namespace.
 // eg. "foo//bar//*" is a valid wildcard lookup namespace, but "foo//*//bar" is not valid
-func trimWildcardLookupNamespace(namespace string, language core.Language) (string, bool) {
+func trimWildcardLookupNamespace(namespace string) (string, bool) {
 	if strings.HasSuffix(namespace, "//*") {
 		// Remove the wildcard qualifier from the namespace
 		return strings.TrimSuffix(namespace, "//*"), true

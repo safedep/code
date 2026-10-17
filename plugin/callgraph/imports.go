@@ -29,13 +29,13 @@ type wildcardImport struct {
 // parseImports returns the imported identifiers and the wildcard imports, in
 // source order. A later import of an identifier replaces the earlier one, at
 // the place of the earlier one.
-func parseImports(imports []*ast.ImportNode, lang core.Language) ([]parsedImport, []wildcardImport) {
+func parseImports(imports []*ast.ImportNode, code core.LanguageCode) ([]parsedImport, []wildcardImport) {
 	importedIdentifiers := []parsedImport{}
 	importedIndex := make(map[string]int)
 	wildcardImports := []wildcardImport{}
 
 	for _, imp := range imports {
-		moduleNamespace := resolveNamespaceWithSeparator(imp.ModuleName(), lang)
+		moduleNamespace := resolveNamespaceWithSeparator(imp.ModuleName(), code)
 
 		if imp.IsWildcardImport() {
 			wildcardImports = append(wildcardImports, wildcardImport{
@@ -51,12 +51,12 @@ func parseImports(imports []*ast.ImportNode, lang core.Language) ([]parsedImport
 		if finalisedNamespace == "" {
 			finalisedNamespace = moduleNamespace
 		} else {
-			finalisedNamespace = moduleNamespace + namespaceSeparator + resolveNamespaceWithSeparator(finalisedNamespace, lang)
+			finalisedNamespace = moduleNamespace + namespaceSeparator + resolveNamespaceWithSeparator(finalisedNamespace, code)
 		}
 
-		moduleItemIdentifierKey := resolveSubmoduleIdentifier(imp.ModuleItem(), lang)
-		moduleAliasIdentifierKey := resolveSubmoduleIdentifier(imp.ModuleAlias(), lang)
-		if lang.Meta().Code == core.LanguageCodeGo && imp.ModuleAlias() == imp.ModuleName() {
+		moduleItemIdentifierKey := resolveSubmoduleIdentifier(imp.ModuleItem(), code)
+		moduleAliasIdentifierKey := resolveSubmoduleIdentifier(imp.ModuleAlias(), code)
+		if code == core.LanguageCodeGo && imp.ModuleAlias() == imp.ModuleName() {
 			// A Go import with no alias has the module as its alias node
 			moduleAliasIdentifierKey = helpers.GoPackageName(imp.ModuleName())
 		}
@@ -69,7 +69,7 @@ func parseImports(imports []*ast.ImportNode, lang core.Language) ([]parsedImport
 		} else if moduleItemIdentifierKey != "" {
 			identifierKey = moduleItemIdentifierKey
 			identifierTreeNode = imp.GetModuleItemNode()
-		} else if lang.Meta().Code == core.LanguageCodeGo {
+		} else if code == core.LanguageCodeGo {
 			// For Go, when there's no explicit alias, use the package name of the import path
 			// e.g., "net/http" -> http
 			identifierKey = helpers.GoPackageName(imp.ModuleName())
@@ -122,27 +122,27 @@ func splitQualifiedName(name string, code core.LanguageCode) []string {
 	return parts
 }
 
-func resolveNamespaceWithSeparator(moduleName string, lang core.Language) string {
+func resolveNamespaceWithSeparator(moduleName string, code core.LanguageCode) string {
 	// Strip quotes for Go string literals
-	if lang.Meta().Code == core.LanguageCodeGo {
+	if code == core.LanguageCodeGo {
 		moduleName = strings.Trim(moduleName, "\"")
 	}
 
 	// A fully qualified PHP name, as in use \GuzzleHttp\Client, has a
 	// leading separator that names no namespace.
-	if lang.Meta().Code == core.LanguageCodePHP {
+	if code == core.LanguageCodePHP {
 		moduleName = strings.TrimPrefix(moduleName, `\`)
 	}
 
-	return strings.Join(splitQualifiedName(moduleName, lang.Meta().Code), namespaceSeparator)
+	return strings.Join(splitQualifiedName(moduleName, code), namespaceSeparator)
 }
 
-func resolveSubmoduleIdentifier(identifier string, lang core.Language) string {
+func resolveSubmoduleIdentifier(identifier string, code core.LanguageCode) string {
 	// Strip quotes for Go string literals
-	if lang.Meta().Code == core.LanguageCodeGo {
+	if code == core.LanguageCodeGo {
 		identifier = strings.Trim(identifier, "\"")
 	}
 
-	parts := splitQualifiedName(identifier, lang.Meta().Code)
+	parts := splitQualifiedName(identifier, code)
 	return parts[len(parts)-1]
 }

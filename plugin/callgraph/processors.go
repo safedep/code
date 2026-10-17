@@ -30,23 +30,17 @@ type processorMetadata struct {
 }
 
 type processorResult struct {
-	ImmediateCallRefs    []CallReference
 	ImmediateAssignments []*assignmentNode
 }
 
 func newProcessorResult() processorResult {
 	return processorResult{
-		ImmediateCallRefs:    []CallReference{},
 		ImmediateAssignments: []*assignmentNode{},
 	}
 }
 
 func (pr *processorResult) ToString() string {
-	result := "Immediate Calls:\n"
-	for _, call := range pr.ImmediateCallRefs {
-		result += fmt.Sprintf("\t%s\n", call.CalleeNamespace)
-	}
-	result += "Immediate Assignments:\n"
+	result := "Immediate Assignments:\n"
 	for _, assignment := range pr.ImmediateAssignments {
 		result += fmt.Sprintf("\t%s\n", assignment.Namespace)
 	}
@@ -220,12 +214,7 @@ func expressionStatementProcessorWrapper(node *sitter.Node, treeData []byte, cur
 				continue
 			}
 
-			childResult := processNode(childNode, treeData, currentNamespace, callGraph, metadata)
-
-			// Register any immediate calls from module level
-			for _, callRef := range childResult.ImmediateCallRefs {
-				callGraph.addCall(currentNamespace, nil, callRef)
-			}
+			processNode(childNode, treeData, currentNamespace, callGraph, metadata)
 		}
 	} else {
 		// Inside function/class: skip results propagation (original behavior)
@@ -321,7 +310,7 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 	functionNamespace := currentNamespace + namespaceSeparator + funcName
 
 	// Java - Register direct call from root namespace to main function
-	if callGraph.languageCode == core.LanguageCodeJava && funcName == "main" {
+	if callGraph.Language == core.LanguageCodeJava && funcName == "main" {
 		rootNamespace := resolveRootNamespaceQualifier(currentNamespace)
 		callGraph.addEdge(
 			rootNamespace, nil, nil,
@@ -349,7 +338,7 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 			}
 
 			// Python - Register direct call from current namespace to class constructor
-			if callGraph.languageCode == core.LanguageCodePython && funcName == "__init__" {
+			if callGraph.Language == core.LanguageCodePython && funcName == "__init__" {
 				callGraph.addEdge(
 					currentNamespace, nil, nil,
 					functionNamespace, functionDefNode,
@@ -428,15 +417,8 @@ func assignmentProcessor(node *sitter.Node, treeData []byte, currentNamespace st
 
 	// Assign/Call edge from all resolutions of left part => all resolutions of right part
 	for _, assigneeNode := range assigneeNodes {
-		for _, immediateCall := range result.ImmediateCallRefs {
-			callGraph.addCall(assigneeNode.Namespace, assigneeNode.TreeNode, immediateCall)
-		}
-
 		for _, immediateAssignment := range result.ImmediateAssignments {
-			callGraph.assignmentGraph.addAssignment(
-				assigneeNode.Namespace, assigneeNode.TreeNode,
-				immediateAssignment.Namespace, immediateAssignment.TreeNode,
-			)
+			callGraph.assignmentGraph.addAssignment(assigneeNode.Namespace, nil, immediateAssignment.Namespace, nil)
 		}
 
 		// log.Debugf("Resolved assignment for '%s' => %v\n", assigneeNode.Namespace, assigneeNode.AssignedTo)
@@ -587,13 +569,6 @@ func resolveCallArguments(argumentsListNode *sitter.Node, treeData []byte, curre
 
 		childProcessorResult := processNode(childNode, treeData, currentNamespace, callGraph, metadata)
 
-		// Register ImmediateCallRefs (from holding current namespace)
-		// eg. if we're processing args for "foo(a, b, bar(x))" in main function
-		// this will register call from "main" to "bar"
-		for _, callRef := range childProcessorResult.ImmediateCallRefs {
-			callGraph.addCall(currentNamespace, nil, callRef)
-		}
-
 		resolvedTerminalAssignmentNodes := []*assignmentNode{}
 		for _, assignmentNode := range childProcessorResult.ImmediateAssignments {
 			// Resolve the assignment node to its terminal nodes
@@ -601,9 +576,7 @@ func resolveCallArguments(argumentsListNode *sitter.Node, treeData []byte, curre
 			resolvedTerminalAssignmentNodes = append(resolvedTerminalAssignmentNodes, resolvedNodes...)
 		}
 
-		result[i] = CallArgument{
-			Nodes: resolvedTerminalAssignmentNodes,
-		}
+		result[i] = argumentOf(resolvedTerminalAssignmentNodes)
 	}
 
 	return result
@@ -644,16 +617,13 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 	case "identifier":
 		if assignment, found := searchSymbolInScopeChain(functionName, currentNamespace, callGraph); found {
 			log.Debugf("Call %s searched (direct) & resolved to %s\n", functionName, assignment.Namespace)
-			addEdge(assignment.Namespace, assignment.TreeNode)
+			addEdge(assignment.Namespace, nil)
 			markClassAssignment(assignment)
 			return result
 		}
-		callGraph.addCall(currentNamespace, nil, CallReference{
-			CalleeNamespace:  functionName,
-			CallerIdentifier: functionCallNode,
-			Arguments:        callArguments,
-			Unbound:          true,
-		})
+		ref := callGraph.reference(functionName, functionCallNode, callArguments)
+		ref.Unbound = true
+		callGraph.addCall(currentNamespace, nil, nil, ref)
 		return result
 	case "lambda":
 		// The body of an immediately called lambda runs in the caller
@@ -704,7 +674,7 @@ var pythonDynamicImports = map[string]bool{
 // isPythonDynamicImport reports that namespace, or a value of it, is a
 // function that imports a module by name.
 func (cg *CallGraph) isPythonDynamicImport(namespace string) bool {
-	if cg.languageCode != core.LanguageCodePython {
+	if cg.Language != core.LanguageCodePython {
 		return false
 	}
 	if pythonDynamicImports[namespace] {
@@ -944,7 +914,7 @@ func objectCreationExpressionProcessor(objectCreationNode *sitter.Node, treeData
 
 			callGraph.addEdge(
 				currentNamespace, nil, objectCreationNode,
-				classNode.Namespace, classNode.TreeNode,
+				classNode.Namespace, nil,
 				argsResult,
 			) // Assumption - current namespace exists in the graph
 
@@ -991,7 +961,7 @@ func variableDeclaratorProcessor(declaratorNode *sitter.Node, treeData []byte, c
 		for _, immediateAssignment := range accumulatedResult.ImmediateAssignments {
 			callGraph.assignmentGraph.addAssignment(
 				declaredVariableNamespace, declaredVariableNode,
-				immediateAssignment.Namespace, immediateAssignment.TreeNode,
+				immediateAssignment.Namespace, nil,
 			)
 		}
 	}
@@ -1156,7 +1126,7 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 		log.Debugf("Method invocation %s searched (direct) & resolved to %s\n", methodName, functionAssignmentNode.Namespace)
 		callGraph.addEdge(
 			currentNamespace, nil, methodInvocationNode,
-			functionAssignmentNode.Namespace, functionAssignmentNode.TreeNode,
+			functionAssignmentNode.Namespace, nil,
 			argsResult,
 		) // Assumption - current namespace exists in the graph
 		return newProcessorResult()
@@ -1205,7 +1175,7 @@ func resolveQualifierObjectFieldaccess(invokedObjNode *sitter.Node, treeData []b
 // Wrapper functions to check language before processing language-specific nodes
 
 func callExpressionProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	switch callGraph.languageCode {
+	switch callGraph.Language {
 	case core.LanguageCodeGo:
 		return goCallExpressionProcessor(node, treeData, currentNamespace, callGraph, metadata)
 	case core.LanguageCodeJavascript, core.LanguageCodeTypescript:
@@ -1216,7 +1186,7 @@ func callExpressionProcessorWrapper(node *sitter.Node, treeData []byte, currentN
 }
 
 func functionDeclarationProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	switch callGraph.languageCode {
+	switch callGraph.Language {
 	case core.LanguageCodeGo:
 		return goFunctionDeclarationProcessor(node, treeData, currentNamespace, callGraph, metadata)
 	case core.LanguageCodeJavascript, core.LanguageCodeTypescript:
@@ -1228,7 +1198,7 @@ func functionDeclarationProcessorWrapper(node *sitter.Node, treeData []byte, cur
 }
 
 func goMethodDeclarationProcessorWrapper(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	if callGraph.languageCode == core.LanguageCodeGo {
+	if callGraph.Language == core.LanguageCodeGo {
 		return goMethodDeclarationProcessor(node, treeData, currentNamespace, callGraph, metadata)
 	}
 
@@ -1296,12 +1266,9 @@ func goCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 	}
 
 	for _, callee := range callees {
-		callGraph.addCall(currentNamespace, nil, CallReference{
-			CalleeNamespace:  callee,
-			CallerIdentifier: functionNode,
-			Arguments:        callArguments,
-			Unbound:          unbound,
-		})
+		ref := callGraph.reference(callee, functionNode, callArguments)
+		ref.Unbound = unbound
+		callGraph.addCall(currentNamespace, nil, nil, ref)
 		log.Debugf("Go call: %s -> %s", currentNamespace, callee)
 	}
 
@@ -1329,20 +1296,13 @@ func resolveGoCallArguments(argumentsNode *sitter.Node, treeData []byte, current
 
 		childProcessorResult := processNode(childNode, treeData, currentNamespace, callGraph, metadata)
 
-		// Register ImmediateCallRefs from arguments
-		for _, callRef := range childProcessorResult.ImmediateCallRefs {
-			callGraph.addCall(currentNamespace, nil, callRef)
-		}
-
 		resolvedTerminalAssignmentNodes := []*assignmentNode{}
 		for _, assignmentNode := range childProcessorResult.ImmediateAssignments {
 			resolvedNodes := callGraph.assignmentGraph.resolve(assignmentNode.Namespace)
 			resolvedTerminalAssignmentNodes = append(resolvedTerminalAssignmentNodes, resolvedNodes...)
 		}
 
-		result = append(result, CallArgument{
-			Nodes: resolvedTerminalAssignmentNodes,
-		})
+		result = append(result, argumentOf(resolvedTerminalAssignmentNodes))
 	}
 
 	return result
@@ -1680,12 +1640,9 @@ func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 	}
 
 	for _, callee := range callees {
-		callGraph.addCall(currentNamespace, nil, CallReference{
-			CalleeNamespace:  callee,
-			CallerIdentifier: functionNode,
-			Arguments:        callArguments,
-			Unbound:          unbound,
-		})
+		ref := callGraph.reference(callee, functionNode, callArguments)
+		ref.Unbound = unbound
+		callGraph.addCall(currentNamespace, nil, nil, ref)
 		log.Debugf("JS call: %s -> %s", currentNamespace, callee)
 	}
 
@@ -2094,12 +2051,9 @@ func jsNewExpressionProcessor(newNode *sitter.Node, treeData []byte, currentName
 	for _, constructor := range constructors {
 		log.Debugf("JS constructor resolved to %s", constructor)
 
-		callGraph.addCall(currentNamespace, nil, CallReference{
-			CalleeNamespace:  constructor,
-			CallerIdentifier: newNode,
-			Arguments:        callArguments,
-			Unbound:          unbound,
-		})
+		ref := callGraph.reference(constructor, newNode, callArguments)
+		ref.Unbound = unbound
+		callGraph.addCall(currentNamespace, nil, nil, ref)
 
 		// Try to find the class/constructor in the assignment graph for return value tracking
 		if classAssignment, classResolved := searchSymbolInScopeChain(constructor, currentNamespace, callGraph); classResolved {

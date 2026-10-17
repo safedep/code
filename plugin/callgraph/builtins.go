@@ -33,17 +33,17 @@ var loadBuiltins = sync.OnceValue(func() languageBuiltins {
 	return builtins
 })
 
-func getBuiltins(lang core.Language) []string {
-	builtins, ok := loadBuiltins()[string(lang.Meta().Code)]
+func getBuiltins(code core.LanguageCode) []string {
+	builtins, ok := loadBuiltins()[string(code)]
 	if !ok {
-		log.Debugf("No built-ins defined for language %s", lang.Meta().Code)
+		log.Debugf("No built-ins defined for language %s", code)
 		return []string{}
 	}
 	return builtins
 }
 
-func getBuiltinsMap(lang core.Language) map[string]bool {
-	builtins := getBuiltins(lang)
+func getBuiltinsMap(code core.LanguageCode) map[string]bool {
+	builtins := getBuiltins(code)
 	builtinsMap := make(map[string]bool, len(builtins))
 	for _, builtin := range builtins {
 		builtinsMap[builtin] = true

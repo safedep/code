@@ -12,9 +12,9 @@ import (
 )
 
 type dfsResultExpectation struct {
-	Namespace               string
-	CallerNamespace         string
-	CallerIdentifierContent string
+	Namespace       string
+	CallerNamespace string
+	Text            string
 }
 
 type expectedCallgraphRefs struct {
@@ -120,28 +120,28 @@ var testcases = []callgraphTestcase{
 			},
 		},
 		ExpectedDfsResults: []dfsResultExpectation{
-			{Namespace: "testClass.py", CallerNamespace: "testClass.py", CallerIdentifierContent: ""},
-			{Namespace: "testClass.py//TesterClass//__init__", CallerNamespace: "testClass.py//TesterClass", CallerIdentifierContent: ""},
-			{Namespace: "getenv", CallerNamespace: "testClass.py//TesterClass//__init__", CallerIdentifierContent: "getenv"},
-			{Namespace: "os//getenv", CallerNamespace: "testClass.py//TesterClass//__init__", CallerIdentifierContent: "getenv"},
-			{Namespace: "print", CallerNamespace: "testClass.py//TesterClass//aboutme", CallerIdentifierContent: "print"},
-			{Namespace: "print", CallerNamespace: "testClass.py//TesterClass//deepest_method", CallerIdentifierContent: "print"},
-			{Namespace: "print", CallerNamespace: "testClass.py//TesterClass//helper_method", CallerIdentifierContent: "print"},
-			{Namespace: "xyz//printxyz2", CallerNamespace: "testClass.py//ClassA//method1", CallerIdentifierContent: "printxyz2"},
-			{Namespace: "xyz//printxyz2", CallerNamespace: "testClass.py//ClassA//method2", CallerIdentifierContent: "printxyz2"},
-			{Namespace: "xyz//printxyz2", CallerNamespace: "testClass.py//ClassB//method1", CallerIdentifierContent: "printxyz2"},
-			{Namespace: "xyz//printxyz2", CallerNamespace: "testClass.py//ClassB//method2", CallerIdentifierContent: "printxyz2"},
-			{Namespace: "xyz//printxyz3", CallerNamespace: "testClass.py//ClassB//methodUnique", CallerIdentifierContent: "prt3"},
-			{Namespace: "testClass.py//TesterClass", CallerNamespace: "testClass.py", CallerIdentifierContent: "TesterClass"},
-			{Namespace: "testClass.py//TesterClass//aboutme", CallerNamespace: "testClass.py", CallerIdentifierContent: "alice.aboutme"},
-			{Namespace: "testClass.py//ClassA", CallerNamespace: "testClass.py", CallerIdentifierContent: "ClassA"},
-			{Namespace: "testClass.py//ClassA//method1", CallerNamespace: "testClass.py", CallerIdentifierContent: "x.method1"},
-			{Namespace: "testClass.py//ClassA//method1", CallerNamespace: "testClass.py", CallerIdentifierContent: "y.method1"},
-			{Namespace: "testClass.py//ClassA//method2", CallerNamespace: "testClass.py", CallerIdentifierContent: "y.method2"},
-			{Namespace: "testClass.py//ClassB//methodUnique", CallerNamespace: "testClass.py", CallerIdentifierContent: "y.methodUnique"},
-			{Namespace: "testClass.py//TesterClass//deepest_method", CallerNamespace: "testClass.py", CallerIdentifierContent: ""},
-			{Namespace: "testClass.py//TesterClass//self//helper_method", CallerNamespace: "testClass.py//TesterClass//deepest_method", CallerIdentifierContent: "self.helper_method"},
-			{Namespace: "testClass.py//TesterClass//helper_method", CallerNamespace: "testClass.py//TesterClass//self//helper_method", CallerIdentifierContent: ""},
+			{Namespace: "testClass.py", CallerNamespace: "testClass.py", Text: ""},
+			{Namespace: "testClass.py//TesterClass//__init__", CallerNamespace: "testClass.py//TesterClass", Text: ""},
+			{Namespace: "getenv", CallerNamespace: "testClass.py//TesterClass//__init__", Text: "getenv"},
+			{Namespace: "os//getenv", CallerNamespace: "testClass.py//TesterClass//__init__", Text: "getenv"},
+			{Namespace: "print", CallerNamespace: "testClass.py//TesterClass//aboutme", Text: "print"},
+			{Namespace: "print", CallerNamespace: "testClass.py//TesterClass//deepest_method", Text: "print"},
+			{Namespace: "print", CallerNamespace: "testClass.py//TesterClass//helper_method", Text: "print"},
+			{Namespace: "xyz//printxyz2", CallerNamespace: "testClass.py//ClassA//method1", Text: "printxyz2"},
+			{Namespace: "xyz//printxyz2", CallerNamespace: "testClass.py//ClassA//method2", Text: "printxyz2"},
+			{Namespace: "xyz//printxyz2", CallerNamespace: "testClass.py//ClassB//method1", Text: "printxyz2"},
+			{Namespace: "xyz//printxyz2", CallerNamespace: "testClass.py//ClassB//method2", Text: "printxyz2"},
+			{Namespace: "xyz//printxyz3", CallerNamespace: "testClass.py//ClassB//methodUnique", Text: "prt3"},
+			{Namespace: "testClass.py//TesterClass", CallerNamespace: "testClass.py", Text: "TesterClass"},
+			{Namespace: "testClass.py//TesterClass//aboutme", CallerNamespace: "testClass.py", Text: "alice.aboutme"},
+			{Namespace: "testClass.py//ClassA", CallerNamespace: "testClass.py", Text: "ClassA"},
+			{Namespace: "testClass.py//ClassA//method1", CallerNamespace: "testClass.py", Text: "x.method1"},
+			{Namespace: "testClass.py//ClassA//method1", CallerNamespace: "testClass.py", Text: "y.method1"},
+			{Namespace: "testClass.py//ClassA//method2", CallerNamespace: "testClass.py", Text: "y.method2"},
+			{Namespace: "testClass.py//ClassB//methodUnique", CallerNamespace: "testClass.py", Text: "y.methodUnique"},
+			{Namespace: "testClass.py//TesterClass//deepest_method", CallerNamespace: "testClass.py", Text: ""},
+			{Namespace: "testClass.py//TesterClass//self//helper_method", CallerNamespace: "testClass.py//TesterClass//deepest_method", Text: "self.helper_method"},
+			{Namespace: "testClass.py//TesterClass//helper_method", CallerNamespace: "testClass.py//TesterClass//self//helper_method", Text: ""},
 		},
 	},
 	{
@@ -245,26 +245,26 @@ var testcases = []callgraphTestcase{
 			},
 		},
 		ExpectedDfsResults: []dfsResultExpectation{
-			{Namespace: "testFunctions.py", CallerNamespace: "testFunctions.py", CallerIdentifierContent: ""},
-			{Namespace: "testFunctions.py//factorial", CallerNamespace: "testFunctions.py", CallerIdentifierContent: "factorial"},
-			{Namespace: "testFunctions.py//factorial", CallerNamespace: "testFunctions.py//factorial", CallerIdentifierContent: "factorial"},
-			{Namespace: "testFunctions.py//foo", CallerNamespace: "testFunctions.py", CallerIdentifierContent: "xyz"},
-			{Namespace: "testFunctions.py//bar", CallerNamespace: "testFunctions.py", CallerIdentifierContent: "xyz"},
-			{Namespace: "os//chmod", CallerNamespace: "testFunctions.py//outerfn1", CallerIdentifierContent: "chmod"},
-			{Namespace: "os//listdir", CallerNamespace: "testFunctions.py//outerfn2", CallerIdentifierContent: "listdirfn"},
-			{Namespace: "xyzprintmodule//printer4", CallerNamespace: "testFunctions.py//fn1", CallerIdentifierContent: "printer4"},
-			{Namespace: "pprint//pp", CallerNamespace: "testFunctions.py//nestParent//nestChild//nestGrandChild", CallerIdentifierContent: "pprint.pp"},
-			{Namespace: "pprint//pprint", CallerNamespace: "testFunctions.py//foo", CallerIdentifierContent: "pprint.pprint"},
-			{Namespace: "testFunctions.py//nestParent//nestChild", CallerNamespace: "testFunctions.py//nestParent", CallerIdentifierContent: "nestChild"},
-			{Namespace: "testFunctions.py//nestParent//nestChild//childScopedFn", CallerNamespace: "testFunctions.py//nestParent//nestChild//nestGrandChild", CallerIdentifierContent: "childScopedFn"},
-			{Namespace: "testFunctions.py//nestParent//nestChild//nestGrandChild", CallerNamespace: "testFunctions.py//nestParent//nestChild", CallerIdentifierContent: "nestGrandChild"},
-			{Namespace: "testFunctions.py//add", CallerNamespace: "testFunctions.py", CallerIdentifierContent: "add"},
-			{Namespace: "testFunctions.py//sub", CallerNamespace: "testFunctions.py", CallerIdentifierContent: "sub"},
-			{Namespace: "random//randint", CallerNamespace: "testFunctions.py", CallerIdentifierContent: "random.randint"},
-			{Namespace: "testFunctions.py//mul", CallerNamespace: "testFunctions.py", CallerIdentifierContent: "mul"},
-			{Namespace: "testFunctions.py//addProxy", CallerNamespace: "testFunctions.py", CallerIdentifierContent: "addProxy"},
-			{Namespace: "testFunctions.py//add", CallerNamespace: "testFunctions.py", CallerIdentifierContent: "add"},
-			{Namespace: "testFunctions.py//concat", CallerNamespace: "testFunctions.py", CallerIdentifierContent: "concat"},
+			{Namespace: "testFunctions.py", CallerNamespace: "testFunctions.py", Text: ""},
+			{Namespace: "testFunctions.py//factorial", CallerNamespace: "testFunctions.py", Text: "factorial"},
+			{Namespace: "testFunctions.py//factorial", CallerNamespace: "testFunctions.py//factorial", Text: "factorial"},
+			{Namespace: "testFunctions.py//foo", CallerNamespace: "testFunctions.py", Text: "xyz"},
+			{Namespace: "testFunctions.py//bar", CallerNamespace: "testFunctions.py", Text: "xyz"},
+			{Namespace: "os//chmod", CallerNamespace: "testFunctions.py//outerfn1", Text: "chmod"},
+			{Namespace: "os//listdir", CallerNamespace: "testFunctions.py//outerfn2", Text: "listdirfn"},
+			{Namespace: "xyzprintmodule//printer4", CallerNamespace: "testFunctions.py//fn1", Text: "printer4"},
+			{Namespace: "pprint//pp", CallerNamespace: "testFunctions.py//nestParent//nestChild//nestGrandChild", Text: "pprint.pp"},
+			{Namespace: "pprint//pprint", CallerNamespace: "testFunctions.py//foo", Text: "pprint.pprint"},
+			{Namespace: "testFunctions.py//nestParent//nestChild", CallerNamespace: "testFunctions.py//nestParent", Text: "nestChild"},
+			{Namespace: "testFunctions.py//nestParent//nestChild//childScopedFn", CallerNamespace: "testFunctions.py//nestParent//nestChild//nestGrandChild", Text: "childScopedFn"},
+			{Namespace: "testFunctions.py//nestParent//nestChild//nestGrandChild", CallerNamespace: "testFunctions.py//nestParent//nestChild", Text: "nestGrandChild"},
+			{Namespace: "testFunctions.py//add", CallerNamespace: "testFunctions.py", Text: "add"},
+			{Namespace: "testFunctions.py//sub", CallerNamespace: "testFunctions.py", Text: "sub"},
+			{Namespace: "random//randint", CallerNamespace: "testFunctions.py", Text: "random.randint"},
+			{Namespace: "testFunctions.py//mul", CallerNamespace: "testFunctions.py", Text: "mul"},
+			{Namespace: "testFunctions.py//addProxy", CallerNamespace: "testFunctions.py", Text: "addProxy"},
+			{Namespace: "testFunctions.py//add", CallerNamespace: "testFunctions.py", Text: "add"},
+			{Namespace: "testFunctions.py//concat", CallerNamespace: "testFunctions.py", Text: "concat"},
 		},
 	},
 	{
@@ -416,69 +416,69 @@ var testcases = []callgraphTestcase{
 			},
 		},
 		ExpectedDfsResults: []dfsResultExpectation{
-			{Namespace: "CallgraphTestcases.java", CallerNamespace: "CallgraphTestcases.java", CallerIdentifierContent: ""},
-			{Namespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerNamespace: "CallgraphTestcases.java", CallerIdentifierContent: ""},
+			{Namespace: "CallgraphTestcases.java", CallerNamespace: "CallgraphTestcases.java", Text: ""},
+			{Namespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerNamespace: "CallgraphTestcases.java", Text: ""},
 
-			{Namespace: "Frame", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new Frame(true)"},
-			{Namespace: "java//awt//Frame", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new Frame(true)"},
-			{Namespace: "Window", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new Window(new Frame(true))"},
-			{Namespace: "java//awt//Window", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new Window(new Frame(true))"},
-			{Namespace: "Dialog", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new Dialog(new Window(new Frame(true)))"},
-			{Namespace: "java//awt//Dialog", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new Dialog(new Window(new Frame(true)))"},
-			{Namespace: "java//awt//Dialog//setTitle", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "dg.setTitle(\"Test Dialog\")"},
-			{Namespace: "java//awt//Dialog//prop//getSomething", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "dg.prop.getSomething()"},
-			{Namespace: "java//awt//Canvas", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new java.awt.Canvas()"},
-			{Namespace: "java//awt//ScrollPane", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new ScrollPane()"},
-			{Namespace: "java//awt//Canvas//getWidth", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "cnv.getWidth()"},
-			{Namespace: "java//awt//ScrollPane//getWidth", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "cnv.getWidth()"},
-			{Namespace: "Math//random", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "Math.random()"},
-			{Namespace: "java//awt//Canvas//setSize", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "cnv.setSize(width, (Math.random() < 0.5) ? 55 : ht)"},
-			{Namespace: "java//awt//ScrollPane//setSize", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "cnv.setSize(width, (Math.random() < 0.5) ? 55 : ht)"},
-			{Namespace: "java//awt//Canvas//prop//subprop//subsubprop//getSomething", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "cnv.prop.subprop.subsubprop.getSomething()"},
-			{Namespace: "java//awt//ScrollPane//prop//subprop//subsubprop//getSomething", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "cnv.prop.subprop.subsubprop.getSomething()"},
+			{Namespace: "Frame", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "new Frame(true)"},
+			{Namespace: "java//awt//Frame", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "new Frame(true)"},
+			{Namespace: "Window", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "new Window(new Frame(true))"},
+			{Namespace: "java//awt//Window", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "new Window(new Frame(true))"},
+			{Namespace: "Dialog", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "new Dialog(new Window(new Frame(true)))"},
+			{Namespace: "java//awt//Dialog", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "new Dialog(new Window(new Frame(true)))"},
+			{Namespace: "java//awt//Dialog//setTitle", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "dg.setTitle(\"Test Dialog\")"},
+			{Namespace: "java//awt//Dialog//prop//getSomething", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "dg.prop.getSomething()"},
+			{Namespace: "java//awt//Canvas", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "new java.awt.Canvas()"},
+			{Namespace: "java//awt//ScrollPane", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "new ScrollPane()"},
+			{Namespace: "java//awt//Canvas//getWidth", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "cnv.getWidth()"},
+			{Namespace: "java//awt//ScrollPane//getWidth", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "cnv.getWidth()"},
+			{Namespace: "Math//random", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "Math.random()"},
+			{Namespace: "java//awt//Canvas//setSize", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "cnv.setSize(width, (Math.random() < 0.5) ? 55 : ht)"},
+			{Namespace: "java//awt//ScrollPane//setSize", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "cnv.setSize(width, (Math.random() < 0.5) ? 55 : ht)"},
+			{Namespace: "java//awt//Canvas//prop//subprop//subsubprop//getSomething", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "cnv.prop.subprop.subsubprop.getSomething()"},
+			{Namespace: "java//awt//ScrollPane//prop//subprop//subsubprop//getSomething", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "cnv.prop.subprop.subsubprop.getSomething()"},
 
-			{Namespace: "java//awt//BorderLayout", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new java.awt.BorderLayout()"},
-			{Namespace: "java//awt//Button", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new java.awt.Button(\"North Button\")"},
-			{Namespace: "java//awt//BorderLayout//addLayoutComponent", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "lm.addLayoutComponent(componentName, new java.awt.Button(\"North Button\"))"},
-			{Namespace: "java//awt//FlowLayout", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new java.awt.FlowLayout()"},
-			{Namespace: "java//awt//Container", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new java.awt.Container()"},
-			{Namespace: "java//awt//BorderLayout//minimumLayoutSize", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "lm.minimumLayoutSize(new java.awt.Container())"},
-			{Namespace: "java//awt//FlowLayout//minimumLayoutSize", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "lm.minimumLayoutSize(new java.awt.Container())"},
-			{Namespace: "java//awt//GridLayout", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new GridLayout()"},
-			{Namespace: "java//awt//BorderLayout//toString", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "lm.toString()"},
-			{Namespace: "java//awt//FlowLayout//toString", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "lm.toString()"},
-			{Namespace: "java//awt//GridLayout//toString", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "lm.toString()"},
-			{Namespace: "java//awt//BorderLayout//prop//getSomething", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "lm.prop.getSomething()"},
-			{Namespace: "java//awt//FlowLayout//prop//getSomething", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "lm.prop.getSomething()"},
-			{Namespace: "java//awt//GridLayout//prop//getSomething", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "lm.prop.getSomething()"},
+			{Namespace: "java//awt//BorderLayout", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "new java.awt.BorderLayout()"},
+			{Namespace: "java//awt//Button", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "new java.awt.Button(\"North Button\")"},
+			{Namespace: "java//awt//BorderLayout//addLayoutComponent", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "lm.addLayoutComponent(componentName, new java.awt.Button(\"North Button\"))"},
+			{Namespace: "java//awt//FlowLayout", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "new java.awt.FlowLayout()"},
+			{Namespace: "java//awt//Container", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "new java.awt.Container()"},
+			{Namespace: "java//awt//BorderLayout//minimumLayoutSize", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "lm.minimumLayoutSize(new java.awt.Container())"},
+			{Namespace: "java//awt//FlowLayout//minimumLayoutSize", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "lm.minimumLayoutSize(new java.awt.Container())"},
+			{Namespace: "java//awt//GridLayout", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "new GridLayout()"},
+			{Namespace: "java//awt//BorderLayout//toString", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "lm.toString()"},
+			{Namespace: "java//awt//FlowLayout//toString", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "lm.toString()"},
+			{Namespace: "java//awt//GridLayout//toString", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "lm.toString()"},
+			{Namespace: "java//awt//BorderLayout//prop//getSomething", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "lm.prop.getSomething()"},
+			{Namespace: "java//awt//FlowLayout//prop//getSomething", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "lm.prop.getSomething()"},
+			{Namespace: "java//awt//GridLayout//prop//getSomething", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "lm.prop.getSomething()"},
 
-			{Namespace: "java//awt//SomeLayoutWorker", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new java.awt.SomeLayoutWorker(lm)"},
+			{Namespace: "java//awt//SomeLayoutWorker", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "new java.awt.SomeLayoutWorker(lm)"},
 
-			{Namespace: "CallgraphTestcases.java//UtilityClass", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new UtilityClass(10)"},
-			{Namespace: "System//out//println", CallerNamespace: "CallgraphTestcases.java//UtilityClass", CallerIdentifierContent: "System.out.println(x)"},
-			{Namespace: "CallgraphTestcases.java//UtilityClass//somelibfn", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "util.somelibfn(5, 10)"},
+			{Namespace: "CallgraphTestcases.java//UtilityClass", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "new UtilityClass(10)"},
+			{Namespace: "System//out//println", CallerNamespace: "CallgraphTestcases.java//UtilityClass", Text: "System.out.println(x)"},
+			{Namespace: "CallgraphTestcases.java//UtilityClass//somelibfn", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "util.somelibfn(5, 10)"},
 
-			{Namespace: "somelibfn", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "somelibfn()"},
-			{Namespace: "somelib//xyz//somelibfn", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "somelibfn()"},
-			{Namespace: "CallgraphTestcases.java//CallgraphTestcases//myfunc", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "myfunc()"},
-			{Namespace: "String//valueOf", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//myfunc", CallerIdentifierContent: "String.valueOf('c')"},
-			{Namespace: "String//valueOf", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//myfunc", CallerIdentifierContent: "String.valueOf(false ? 'c' : 59)"},
-			{Namespace: "System//out//println", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "System.out.println(\"GG\")"},
-			{Namespace: "System//out//xyz//println", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "System.out.xyz.println(\"GG\")"},
+			{Namespace: "somelibfn", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "somelibfn()"},
+			{Namespace: "somelib//xyz//somelibfn", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "somelibfn()"},
+			{Namespace: "CallgraphTestcases.java//CallgraphTestcases//myfunc", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "myfunc()"},
+			{Namespace: "String//valueOf", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//myfunc", Text: "String.valueOf('c')"},
+			{Namespace: "String//valueOf", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//myfunc", Text: "String.valueOf(false ? 'c' : 59)"},
+			{Namespace: "System//out//println", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "System.out.println(\"GG\")"},
+			{Namespace: "System//out//xyz//println", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "System.out.xyz.println(\"GG\")"},
 
-			{Namespace: "System//console", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "System.console().readPassword()"},
-			{Namespace: "com//companyX//fn1", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "com.companyX.fn1()"},
-			{Namespace: "System//getenv", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "System.getenv().keySet().iterator(com.companyX.fn1()).hasNext()"},
-			{Namespace: "Math//atan", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "Math.atan(1.0)"},
+			{Namespace: "System//console", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "System.console().readPassword()"},
+			{Namespace: "com//companyX//fn1", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "com.companyX.fn1()"},
+			{Namespace: "System//getenv", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "System.getenv().keySet().iterator(com.companyX.fn1()).hasNext()"},
+			{Namespace: "Math//atan", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "Math.atan(1.0)"},
 
-			{Namespace: "com//somecompany//customlib//datatransfer//DataTransferer//getInstance", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "com.somecompany.customlib.datatransfer.DataTransferer.getInstance()"},
+			{Namespace: "com//somecompany//customlib//datatransfer//DataTransferer//getInstance", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "com.somecompany.customlib.datatransfer.DataTransferer.getInstance()"},
 
-			{Namespace: "org//mycompany//mylib//SomeClass", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new org.mycompany.mylib.SomeClass()"},
-			{Namespace: "org//mycompany//mylib//SomeClass//prop//someMethod", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "obj.prop.someMethod(\"GG\")"},
+			{Namespace: "org//mycompany//mylib//SomeClass", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "new org.mycompany.mylib.SomeClass()"},
+			{Namespace: "org//mycompany//mylib//SomeClass//prop//someMethod", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "obj.prop.someMethod(\"GG\")"},
 
-			{Namespace: "com//custompkg//SomeClass//defaultConstructor", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases", CallerIdentifierContent: "com.custompkg.SomeClass.defaultConstructor()"},
-			{Namespace: "com//custompkg//SomeClass//someMethod", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases", CallerIdentifierContent: "com.custompkg.SomeClass.someMethod(i)"},
-			{Namespace: "com//custompkg//SomeClass//someOtherMethod", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases", CallerIdentifierContent: "com.custompkg.SomeClass.someOtherMethod(i, s)"},
+			{Namespace: "com//custompkg//SomeClass//defaultConstructor", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases", Text: "com.custompkg.SomeClass.defaultConstructor()"},
+			{Namespace: "com//custompkg//SomeClass//someMethod", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases", Text: "com.custompkg.SomeClass.someMethod(i)"},
+			{Namespace: "com//custompkg//SomeClass//someOtherMethod", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases", Text: "com.custompkg.SomeClass.someOtherMethod(i, s)"},
 		},
 	},
 	{
@@ -517,17 +517,17 @@ var testcases = []callgraphTestcase{
 			},
 		},
 		ExpectedDfsResults: []dfsResultExpectation{
-			{Namespace: "testCallGraph.go", CallerNamespace: "testCallGraph.go", CallerIdentifierContent: ""},
-			{Namespace: "testCallGraph.go//helper", CallerNamespace: "testCallGraph.go", CallerIdentifierContent: ""},
-			{Namespace: "testCallGraph.go//processFile", CallerNamespace: "testCallGraph.go", CallerIdentifierContent: ""},
-			{Namespace: "testCallGraph.go//main", CallerNamespace: "testCallGraph.go", CallerIdentifierContent: ""},
-			{Namespace: "testCallGraph.go//helper", CallerNamespace: "testCallGraph.go//main", CallerIdentifierContent: "helper"},
-			{Namespace: "testCallGraph.go//processFile", CallerNamespace: "testCallGraph.go//main", CallerIdentifierContent: "processFile"},
-			{Namespace: "fmt//Println", CallerNamespace: "testCallGraph.go//helper", CallerIdentifierContent: "fmt.Println"},
-			{Namespace: "os//WriteFile", CallerNamespace: "testCallGraph.go//processFile", CallerIdentifierContent: "os.WriteFile"},
-			{Namespace: "fmt//Printf", CallerNamespace: "testCallGraph.go//processFile", CallerIdentifierContent: "fmt.Printf"},
-			{Namespace: "os//Getenv", CallerNamespace: "testCallGraph.go//main", CallerIdentifierContent: "os.Getenv"},
-			{Namespace: "fmt//Sprintf", CallerNamespace: "testCallGraph.go//main", CallerIdentifierContent: "fmt.Sprintf"},
+			{Namespace: "testCallGraph.go", CallerNamespace: "testCallGraph.go", Text: ""},
+			{Namespace: "testCallGraph.go//helper", CallerNamespace: "testCallGraph.go", Text: ""},
+			{Namespace: "testCallGraph.go//processFile", CallerNamespace: "testCallGraph.go", Text: ""},
+			{Namespace: "testCallGraph.go//main", CallerNamespace: "testCallGraph.go", Text: ""},
+			{Namespace: "testCallGraph.go//helper", CallerNamespace: "testCallGraph.go//main", Text: "helper"},
+			{Namespace: "testCallGraph.go//processFile", CallerNamespace: "testCallGraph.go//main", Text: "processFile"},
+			{Namespace: "fmt//Println", CallerNamespace: "testCallGraph.go//helper", Text: "fmt.Println"},
+			{Namespace: "os//WriteFile", CallerNamespace: "testCallGraph.go//processFile", Text: "os.WriteFile"},
+			{Namespace: "fmt//Printf", CallerNamespace: "testCallGraph.go//processFile", Text: "fmt.Printf"},
+			{Namespace: "os//Getenv", CallerNamespace: "testCallGraph.go//main", Text: "os.Getenv"},
+			{Namespace: "fmt//Sprintf", CallerNamespace: "testCallGraph.go//main", Text: "fmt.Sprintf"},
 		},
 	},
 	{
@@ -560,17 +560,17 @@ var testcases = []callgraphTestcase{
 			},
 		},
 		ExpectedDfsResults: []dfsResultExpectation{
-			{Namespace: "testGoLibrary.go", CallerNamespace: "testGoLibrary.go", CallerIdentifierContent: ""},
-			{Namespace: "testGoLibrary.go//ProcessData", CallerNamespace: "testGoLibrary.go", CallerIdentifierContent: ""},
-			{Namespace: "testGoLibrary.go//ValidateInput", CallerNamespace: "testGoLibrary.go", CallerIdentifierContent: ""},
-			{Namespace: "testGoLibrary.go//logError", CallerNamespace: "testGoLibrary.go", CallerIdentifierContent: ""},
-			{Namespace: "testGoLibrary.go//Transform", CallerNamespace: "testGoLibrary.go", CallerIdentifierContent: ""},
-			{Namespace: "strings//ToUpper", CallerNamespace: "testGoLibrary.go//ProcessData", CallerIdentifierContent: "strings.ToUpper"},
-			{Namespace: "fmt//Printf", CallerNamespace: "testGoLibrary.go//ProcessData", CallerIdentifierContent: "fmt.Printf"},
-			{Namespace: "testGoLibrary.go//logError", CallerNamespace: "testGoLibrary.go//ValidateInput", CallerIdentifierContent: "logError"},
-			{Namespace: "fmt//Println", CallerNamespace: "testGoLibrary.go//logError", CallerIdentifierContent: "fmt.Println"},
-			{Namespace: "testGoLibrary.go//ValidateInput", CallerNamespace: "testGoLibrary.go//Transform", CallerIdentifierContent: "ValidateInput"},
-			{Namespace: "testGoLibrary.go//ProcessData", CallerNamespace: "testGoLibrary.go//Transform", CallerIdentifierContent: "ProcessData"},
+			{Namespace: "testGoLibrary.go", CallerNamespace: "testGoLibrary.go", Text: ""},
+			{Namespace: "testGoLibrary.go//ProcessData", CallerNamespace: "testGoLibrary.go", Text: ""},
+			{Namespace: "testGoLibrary.go//ValidateInput", CallerNamespace: "testGoLibrary.go", Text: ""},
+			{Namespace: "testGoLibrary.go//logError", CallerNamespace: "testGoLibrary.go", Text: ""},
+			{Namespace: "testGoLibrary.go//Transform", CallerNamespace: "testGoLibrary.go", Text: ""},
+			{Namespace: "strings//ToUpper", CallerNamespace: "testGoLibrary.go//ProcessData", Text: "strings.ToUpper"},
+			{Namespace: "fmt//Printf", CallerNamespace: "testGoLibrary.go//ProcessData", Text: "fmt.Printf"},
+			{Namespace: "testGoLibrary.go//logError", CallerNamespace: "testGoLibrary.go//ValidateInput", Text: "logError"},
+			{Namespace: "fmt//Println", CallerNamespace: "testGoLibrary.go//logError", Text: "fmt.Println"},
+			{Namespace: "testGoLibrary.go//ValidateInput", CallerNamespace: "testGoLibrary.go//Transform", Text: "ValidateInput"},
+			{Namespace: "testGoLibrary.go//ProcessData", CallerNamespace: "testGoLibrary.go//Transform", Text: "ProcessData"},
 		},
 	},
 	{
@@ -629,15 +629,15 @@ var testcases = []callgraphTestcase{
 			},
 		},
 		ExpectedDfsResults: []dfsResultExpectation{
-			{Namespace: "testGoNestedImports.go", CallerNamespace: "testGoNestedImports.go", CallerIdentifierContent: ""},
-			{Namespace: "testGoNestedImports.go//main", CallerNamespace: "testGoNestedImports.go", CallerIdentifierContent: ""},
-			{Namespace: "net//http//Get", CallerNamespace: "testGoNestedImports.go//makeHTTPRequest", CallerIdentifierContent: "http.Get"},
-			{Namespace: "encoding//json//Unmarshal", CallerNamespace: "testGoNestedImports.go//parseJSON", CallerIdentifierContent: "json.Unmarshal"},
-			{Namespace: "path//filepath//Join", CallerNamespace: "testGoNestedImports.go//processPath", CallerIdentifierContent: "filepath.Join"},
-			{Namespace: "io//ioutil//ReadFile", CallerNamespace: "testGoNestedImports.go//readConfig", CallerIdentifierContent: "ioutil.ReadFile"},
-			{Namespace: "testGoNestedImports.go//makeHTTPRequest", CallerNamespace: "testGoNestedImports.go//main", CallerIdentifierContent: "makeHTTPRequest"},
-			{Namespace: "testGoNestedImports.go//readConfig", CallerNamespace: "testGoNestedImports.go//main", CallerIdentifierContent: "readConfig"},
-			{Namespace: "testGoNestedImports.go//parseJSON", CallerNamespace: "testGoNestedImports.go//main", CallerIdentifierContent: "parseJSON"},
+			{Namespace: "testGoNestedImports.go", CallerNamespace: "testGoNestedImports.go", Text: ""},
+			{Namespace: "testGoNestedImports.go//main", CallerNamespace: "testGoNestedImports.go", Text: ""},
+			{Namespace: "net//http//Get", CallerNamespace: "testGoNestedImports.go//makeHTTPRequest", Text: "http.Get"},
+			{Namespace: "encoding//json//Unmarshal", CallerNamespace: "testGoNestedImports.go//parseJSON", Text: "json.Unmarshal"},
+			{Namespace: "path//filepath//Join", CallerNamespace: "testGoNestedImports.go//processPath", Text: "filepath.Join"},
+			{Namespace: "io//ioutil//ReadFile", CallerNamespace: "testGoNestedImports.go//readConfig", Text: "ioutil.ReadFile"},
+			{Namespace: "testGoNestedImports.go//makeHTTPRequest", CallerNamespace: "testGoNestedImports.go//main", Text: "makeHTTPRequest"},
+			{Namespace: "testGoNestedImports.go//readConfig", CallerNamespace: "testGoNestedImports.go//main", Text: "readConfig"},
+			{Namespace: "testGoNestedImports.go//parseJSON", CallerNamespace: "testGoNestedImports.go//main", Text: "parseJSON"},
 		},
 	},
 	{
@@ -717,17 +717,17 @@ var testcases = []callgraphTestcase{
 			},
 		},
 		ExpectedDfsResults: []dfsResultExpectation{
-			{Namespace: "testJavascript.js//simpleFunction", CallerNamespace: "testJavascript.js", CallerIdentifierContent: "simpleFunction"},
-			{Namespace: "testJavascript.js//arrowFunc", CallerNamespace: "testJavascript.js", CallerIdentifierContent: "arrowFunc"},
-			{Namespace: "console//log", CallerNamespace: "testJavascript.js", CallerIdentifierContent: "log"},
-			{Namespace: "console//log", CallerNamespace: "testJavascript.js//simpleFunction", CallerIdentifierContent: "log"},
-			{Namespace: "console//warn", CallerNamespace: "testJavascript.js//arrowFunc", CallerIdentifierContent: "warn"},
-			{Namespace: "console//log", CallerNamespace: "testJavascript.js//TestClass//constructor", CallerIdentifierContent: "log"},
-			{Namespace: "console//log", CallerNamespace: "testJavascript.js//TestClass//helperMethod", CallerIdentifierContent: "log"},
-			{Namespace: "console//log", CallerNamespace: "testJavascript.js//TestClass//deepMethod", CallerIdentifierContent: "log"},
-			{Namespace: "console//log", CallerNamespace: "testJavascript.js//ClassA//method1", CallerIdentifierContent: "log"},
-			{Namespace: "console//warn", CallerNamespace: "testJavascript.js//ClassA//method2", CallerIdentifierContent: "warn"},
-			{Namespace: "fs//readFileSync", CallerNamespace: "testJavascript.js", CallerIdentifierContent: "fs.readFileSync"},
+			{Namespace: "testJavascript.js//simpleFunction", CallerNamespace: "testJavascript.js", Text: "simpleFunction"},
+			{Namespace: "testJavascript.js//arrowFunc", CallerNamespace: "testJavascript.js", Text: "arrowFunc"},
+			{Namespace: "console//log", CallerNamespace: "testJavascript.js", Text: "log"},
+			{Namespace: "console//log", CallerNamespace: "testJavascript.js//simpleFunction", Text: "log"},
+			{Namespace: "console//warn", CallerNamespace: "testJavascript.js//arrowFunc", Text: "warn"},
+			{Namespace: "console//log", CallerNamespace: "testJavascript.js//TestClass//constructor", Text: "log"},
+			{Namespace: "console//log", CallerNamespace: "testJavascript.js//TestClass//helperMethod", Text: "log"},
+			{Namespace: "console//log", CallerNamespace: "testJavascript.js//TestClass//deepMethod", Text: "log"},
+			{Namespace: "console//log", CallerNamespace: "testJavascript.js//ClassA//method1", Text: "log"},
+			{Namespace: "console//warn", CallerNamespace: "testJavascript.js//ClassA//method2", Text: "warn"},
+			{Namespace: "fs//readFileSync", CallerNamespace: "testJavascript.js", Text: "fs.readFileSync"},
 		},
 	},
 	{
@@ -831,34 +831,34 @@ var testcases = []callgraphTestcase{
 		},
 		ExpectedDfsResults: []dfsResultExpectation{
 			// Constructor chain: new TestClass -> constructor -> log
-			{Namespace: "testTypescript.ts//TestClass", CallerNamespace: "testTypescript.ts", CallerIdentifierContent: "new TestClass(\"test\", 42)"},
-			{Namespace: "testTypescript.ts//TestClass//constructor", CallerNamespace: "testTypescript.ts//TestClass", CallerIdentifierContent: ""},
-			{Namespace: "console//log", CallerNamespace: "testTypescript.ts//TestClass//constructor", CallerIdentifierContent: "log"},
+			{Namespace: "testTypescript.ts//TestClass", CallerNamespace: "testTypescript.ts", Text: "new TestClass(\"test\", 42)"},
+			{Namespace: "testTypescript.ts//TestClass//constructor", CallerNamespace: "testTypescript.ts//TestClass", Text: ""},
+			{Namespace: "console//log", CallerNamespace: "testTypescript.ts//TestClass//constructor", Text: "log"},
 			// Method calls on instance
-			{Namespace: "testTypescript.ts//TestClass//helperMethod", CallerNamespace: "testTypescript.ts", CallerIdentifierContent: "instance.helperMethod"},
-			{Namespace: "console//log", CallerNamespace: "testTypescript.ts//TestClass//helperMethod", CallerIdentifierContent: "log"},
-			{Namespace: "testTypescript.ts//TestClass//deepMethod", CallerNamespace: "testTypescript.ts", CallerIdentifierContent: "instance.deepMethod"},
-			{Namespace: "testTypescript.ts//TestClass//this//helperMethod", CallerNamespace: "testTypescript.ts//TestClass//deepMethod", CallerIdentifierContent: "this.helperMethod"},
-			{Namespace: "console//log", CallerNamespace: "testTypescript.ts//TestClass//deepMethod", CallerIdentifierContent: "log"},
+			{Namespace: "testTypescript.ts//TestClass//helperMethod", CallerNamespace: "testTypescript.ts", Text: "instance.helperMethod"},
+			{Namespace: "console//log", CallerNamespace: "testTypescript.ts//TestClass//helperMethod", Text: "log"},
+			{Namespace: "testTypescript.ts//TestClass//deepMethod", CallerNamespace: "testTypescript.ts", Text: "instance.deepMethod"},
+			{Namespace: "testTypescript.ts//TestClass//this//helperMethod", CallerNamespace: "testTypescript.ts//TestClass//deepMethod", Text: "this.helperMethod"},
+			{Namespace: "console//log", CallerNamespace: "testTypescript.ts//TestClass//deepMethod", Text: "log"},
 			// Module-level function calls
-			{Namespace: "testTypescript.ts//simpleFunction", CallerNamespace: "testTypescript.ts", CallerIdentifierContent: "simpleFunction"},
-			{Namespace: "console//log", CallerNamespace: "testTypescript.ts//simpleFunction", CallerIdentifierContent: "log"},
-			{Namespace: "testTypescript.ts//arrowFunc", CallerNamespace: "testTypescript.ts", CallerIdentifierContent: "arrowFunc"},
-			{Namespace: "console//warn", CallerNamespace: "testTypescript.ts//arrowFunc", CallerIdentifierContent: "warn"},
+			{Namespace: "testTypescript.ts//simpleFunction", CallerNamespace: "testTypescript.ts", Text: "simpleFunction"},
+			{Namespace: "console//log", CallerNamespace: "testTypescript.ts//simpleFunction", Text: "log"},
+			{Namespace: "testTypescript.ts//arrowFunc", CallerNamespace: "testTypescript.ts", Text: "arrowFunc"},
+			{Namespace: "console//warn", CallerNamespace: "testTypescript.ts//arrowFunc", Text: "warn"},
 			// Module-level log call
-			{Namespace: "console//log", CallerNamespace: "testTypescript.ts", CallerIdentifierContent: "log"},
+			{Namespace: "console//log", CallerNamespace: "testTypescript.ts", Text: "log"},
 			// Imported module calls
-			{Namespace: "axios//get", CallerNamespace: "testTypescript.ts", CallerIdentifierContent: "axios.get"},
-			{Namespace: "crypto//createHash", CallerNamespace: "testTypescript.ts", CallerIdentifierContent: "createHash"},
+			{Namespace: "axios//get", CallerNamespace: "testTypescript.ts", Text: "axios.get"},
+			{Namespace: "crypto//createHash", CallerNamespace: "testTypescript.ts", Text: "createHash"},
 			// Polymorphic dispatch: new ClassA/ClassB
-			{Namespace: "testTypescript.ts//ClassA", CallerNamespace: "testTypescript.ts", CallerIdentifierContent: "new ClassA()"},
-			{Namespace: "testTypescript.ts//ClassB", CallerNamespace: "testTypescript.ts", CallerIdentifierContent: "new ClassB()"},
+			{Namespace: "testTypescript.ts//ClassA", CallerNamespace: "testTypescript.ts", Text: "new ClassA()"},
+			{Namespace: "testTypescript.ts//ClassB", CallerNamespace: "testTypescript.ts", Text: "new ClassB()"},
 			// x.method1()/y.method1() resolve to ClassA methods
-			{Namespace: "testTypescript.ts//ClassA//method1", CallerNamespace: "testTypescript.ts", CallerIdentifierContent: "x.method1"},
-			{Namespace: "testTypescript.ts//ClassA//method1", CallerNamespace: "testTypescript.ts", CallerIdentifierContent: "y.method1"},
+			{Namespace: "testTypescript.ts//ClassA//method1", CallerNamespace: "testTypescript.ts", Text: "x.method1"},
+			{Namespace: "testTypescript.ts//ClassA//method1", CallerNamespace: "testTypescript.ts", Text: "y.method1"},
 			// ClassA methods reach their distinct imported callees
-			{Namespace: "printers//printA1", CallerNamespace: "testTypescript.ts//ClassA//method1", CallerIdentifierContent: "printA1"},
-			{Namespace: "printers//printA2", CallerNamespace: "testTypescript.ts//ClassA//method2", CallerIdentifierContent: "printA2"},
+			{Namespace: "printers//printA1", CallerNamespace: "testTypescript.ts//ClassA//method1", Text: "printA1"},
+			{Namespace: "printers//printA2", CallerNamespace: "testTypescript.ts//ClassA//method2", Text: "printA2"},
 		},
 	},
 }
@@ -876,15 +876,11 @@ func TestCallgraphPlugin(t *testing.T) {
 				assert.NotNil(t, cg, "Expected call graph to be non-nil")
 				assert.NotNil(t, cg.assignmentGraph, "Expected assignment graph to be non-nil")
 
-				treeData, err := cg.Tree.Data()
-				assert.NoError(t, err)
-				assert.NotNil(t, treeData, "Expected tree data to be non-nil")
-
 				assertAssignmentGraph(t, cg, testcase.ExpectedAssignmentGraph)
 
 				assertCallGraph(t, cg, testcase.ExpectedCallGraph)
 
-				assertDfs(t, cg, testcase.ExpectedDfsResults, treeData)
+				assertDfs(t, cg, testcase.ExpectedDfsResults)
 
 				return nil
 			}
@@ -931,7 +927,7 @@ func assertCallGraph(t *testing.T, cg *CallGraph, expectedCallGraph map[string][
 			arguments := [][]string{}
 			for _, arg := range call.Arguments {
 				argResolutions := []string{}
-				for _, argResolution := range arg.Nodes {
+				for _, argResolution := range arg.Values {
 					argResolutions = append(argResolutions, argResolution.Namespace)
 				}
 				arguments = append(arguments, argResolutions)
@@ -946,7 +942,7 @@ func assertCallGraph(t *testing.T, cg *CallGraph, expectedCallGraph map[string][
 	}
 }
 
-func assertDfs(t *testing.T, cg *CallGraph, expectedDfsResults []dfsResultExpectation, treeData *[]byte) {
+func assertDfs(t *testing.T, cg *CallGraph, expectedDfsResults []dfsResultExpectation) {
 	dfsResults := cg.DFS()
 
 	actualDfsItems := make(map[dfsResultExpectation]int)
@@ -958,15 +954,10 @@ func assertDfs(t *testing.T, cg *CallGraph, expectedDfsResults []dfsResultExpect
 			callerNamespace = dfsResultItem.Caller.Namespace
 		}
 
-		callerIdentifierContent := ""
-		if dfsResultItem.CallerIdentifier != nil {
-			callerIdentifierContent = dfsResultItem.CallerIdentifier.Content(*treeData)
-		}
-
 		key := dfsResultExpectation{
-			Namespace:               namespace,
-			CallerNamespace:         callerNamespace,
-			CallerIdentifierContent: callerIdentifierContent,
+			Namespace:       namespace,
+			CallerNamespace: callerNamespace,
+			Text:            dfsResultItem.Text,
 		}
 		actualDfsItems[key]++
 	}

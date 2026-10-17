@@ -65,12 +65,11 @@ func TestLimitDeadlineStopsBuildCallGraph(t *testing.T) {
 
 	imports, err := python.Resolvers().ResolveImports(t.Context(), tree)
 	require.NoError(t, err)
-	cg, err := newCallGraph("calls.py", tree.Tree().RootNode(), imports, tree)
-	require.NoError(t, err)
+	cg := newCallGraph("calls.py", python.Meta().Code)
 	treeData, err := tree.Data()
 	require.NoError(t, err)
 
-	cg.walk(&nodeDeadline{Context: t.Context(), graph: cg, nodes: 2 * ctxCheckInterval}, tree.Tree().RootNode(), *treeData)
+	cg.build(&nodeDeadline{Context: t.Context(), graph: cg, nodes: 2 * ctxCheckInterval}, tree.Tree().RootNode(), imports, *treeData)
 
 	assert.Equal(t, 2*ctxCheckInterval, cg.visited, "the walk stops at the first check past the deadline")
 	assert.ErrorIs(t, cg.ctxErr, context.DeadlineExceeded)

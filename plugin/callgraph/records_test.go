@@ -403,7 +403,7 @@ func TestUnresolvedTextIsClipped(t *testing.T) {
 
 	require.Len(t, cg.Unresolved(), 1)
 	text := cg.Unresolved()[0].Text
-	assert.LessOrEqual(t, len(text), maxUnresolvedText)
+	assert.LessOrEqual(t, len(text), maxSiteText)
 	assert.True(t, strings.HasPrefix("obj["+strings.Repeat("é", 100), text))
 }
 
@@ -585,7 +585,7 @@ func TestImportsThatShareAnIdentifierKeepSourceOrder(t *testing.T) {
 	require.NoError(t, err)
 
 	for range 20 {
-		parsed, wildcards := parseImports(imports, python)
+		parsed, wildcards := parseImports(imports, python.Meta().Code)
 		assert.Empty(t, wildcards)
 
 		var pairs []string

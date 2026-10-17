@@ -95,7 +95,7 @@ var jsTransparentNodes = map[string]bool{
 // unwrap returns the node that gives the value of node. A sequence gives
 // the value of its last expression, as fn in (0, fn)().
 func (cg *CallGraph) unwrap(node *sitter.Node) *sitter.Node {
-	transparent := transparentNodes[cg.languageCode]
+	transparent := transparentNodes[cg.Language]
 	for depth := 0; node != nil && transparent[node.Type()] && node.NamedChildCount() > 0 && depth <= maxMemberExpressionDepth; depth++ {
 		if node.Type() == "sequence_expression" {
 			node = node.NamedChild(int(node.NamedChildCount()) - 1)

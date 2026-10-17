@@ -45,8 +45,9 @@ const (
 	UnresolvedLimit           UnresolvedReason = "limit"
 )
 
-// maxUnresolvedText is the maximum length in bytes of UnresolvedCall.Text.
-const maxUnresolvedText = 120
+// maxSiteText is the maximum length in bytes of the source text of a call
+// site that a graph keeps.
+const maxSiteText = 120
 
 // UnresolvedCall is a call site whose callee the graph does not know, or
 // does not know in full. Text is the source of the callee, or of the call
@@ -71,10 +72,14 @@ type UnresolvedCall struct {
 type truncations []Truncation
 
 func (t *truncations) add(kind TruncationKind, namespace string, node *sitter.Node) {
+	t.addAt(kind, namespace, ast.GetNodePosition(node))
+}
+
+func (t *truncations) addAt(kind TruncationKind, namespace string, position ast.NodePosition) {
 	if t == nil || slices.ContainsFunc(*t, func(r Truncation) bool { return r.Kind == kind }) {
 		return
 	}
-	line := int(ast.GetNodePosition(node).StartLine)
+	line := int(position.StartLine)
 	log.Debugf("CallGraph limit %s hit at %s, line %d", kind, namespace, line)
 	*t = append(*t, Truncation{Kind: kind, Namespace: namespace, Line: line})
 }
@@ -163,10 +168,10 @@ func (cg *CallGraph) LimitExceeded() bool {
 }
 
 func clip(text string) string {
-	if len(text) <= maxUnresolvedText {
+	if len(text) <= maxSiteText {
 		return text
 	}
-	cut := maxUnresolvedText
+	cut := maxSiteText
 	for cut > 0 && !utf8.RuneStart(text[cut]) {
 		cut--
 	}

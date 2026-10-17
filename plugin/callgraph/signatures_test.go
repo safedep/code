@@ -9,6 +9,7 @@ import (
 	"github.com/safedep/code/pkg/test"
 	"github.com/safedep/code/plugin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestValidateSignatures(t *testing.T) {
@@ -952,29 +953,15 @@ func TestSignatureMatcher(t *testing.T) {
 			treeWalker, fileSystem, err := test.SetupBasicPluginContext("fixtures", tc.FilePaths, []core.LanguageCode{tc.Language})
 			assert.NoError(t, err, "Failed to setup plugin context")
 
-			// The graph holds nodes of the tree, and the executor closes the
-			// tree after the callback, so the callback reads the nodes.
+			// The executor closes the tree after the callback, so the
+			// assertions below read a graph that outlives its tree.
 			var capturedCallgraph *CallGraph
 			var matchResults []SignatureMatchResult
-			firstEvidence := map[string]EvidenceMetadata{}
 			callgraphCallback := func(ctx context.Context, cg *CallGraph) error {
 				capturedCallgraph = cg
 				var err error
 				matchResults, err = matcher.MatchSignatures(cg)
-				if err != nil {
-					return err
-				}
-
-				treeData, err := cg.Tree.Data()
-				if err != nil {
-					return err
-				}
-				for _, result := range matchResults {
-					if len(result.MatchedConditions) > 0 && len(result.MatchedConditions[0].Evidences) > 0 {
-						firstEvidence[result.MatchedSignature.Id] = result.MatchedConditions[0].Evidences[0].Metadata(treeData)
-					}
-				}
-				return nil
+				return err
 			}
 
 			// Execute plugin
@@ -1024,11 +1011,14 @@ func TestSignatureMatcher(t *testing.T) {
 
 						// Verify callee namespace if specified
 						if expectation.CalleeContains != "" && totalEvidences > 0 {
-							metadata := firstEvidence[expectation.SignatureID]
-							assert.NotEmpty(t, metadata.CallerNamespace, "Expected caller namespace")
-							assert.NotEmpty(t, metadata.CalleeNamespace, "Expected callee namespace")
-							assert.Contains(t, metadata.CalleeNamespace, expectation.CalleeContains,
+							evidence := matchResult.MatchedConditions[0].Evidences[0]
+							require.NotNil(t, evidence.Caller)
+							require.NotNil(t, evidence.Callee)
+							assert.NotEmpty(t, evidence.Caller.Namespace, "Expected caller namespace")
+							assert.Contains(t, evidence.Callee.Namespace, expectation.CalleeContains,
 								"Expected callee namespace to contain '%s'", expectation.CalleeContains)
+							assert.NotEmpty(t, evidence.Text, "Expected the source of the call")
+							assert.Positive(t, evidence.Site.StartLine, "Expected a 1-based line")
 						}
 					} else {
 						assert.False(t, found, "Expected signature %s NOT to match", expectation.SignatureID)
@@ -1069,7 +1059,4 @@ func TestCalleeOfKeepsTheNamespace(t *testing.T) {
 	assert.Same(t, node, calleeOf(DfsResultItem{Namespace: "openai//OpenAI", Node: node}))
 	assert.Equal(t, "crewai//flow//Flow", calleeOf(DfsResultItem{Namespace: "crewai//flow//Flow"}).Namespace)
 
-	evidence := MatchedEvidence{Callee: calleeOf(DfsResultItem{Namespace: "crewai//flow//Flow"})}
-	data := []byte{}
-	assert.Equal(t, "crewai//flow//Flow", evidence.Metadata(&data).CalleeNamespace)
 }

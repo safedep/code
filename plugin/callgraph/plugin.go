@@ -77,10 +77,8 @@ func (p *callgraphPlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) 
 
 // buildCallGraph builds a call graph from the syntax tree. When ctx is done
 // during the walk of the tree, it returns the graph so far with a deadline
-// truncation.
+// truncation. The graph keeps neither the tree nor its data.
 func buildCallGraph(ctx context.Context, tree core.ParseTree, lang core.Language, filePath string) (*CallGraph, error) {
-	astRootNode := tree.Tree().RootNode()
-
 	treeData, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tree data: %w", err)
@@ -91,21 +89,9 @@ func buildCallGraph(ctx context.Context, tree core.ParseTree, lang core.Language
 		return nil, fmt.Errorf("failed to resolve imports: %w", err)
 	}
 
-	callGraph, err := newCallGraph(filePath, astRootNode, imports, tree)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create call graph: %w", err)
-	}
-
-	callGraph.walk(ctx, astRootNode, *treeData)
+	callGraph := newCallGraph(filePath, lang.Meta().Code)
+	callGraph.build(ctx, tree.Tree().RootNode(), imports, *treeData)
 	return callGraph, nil
-}
-
-// walk processes the tree from root. It stops when ctx is done, and the
-// graph does not keep ctx after it.
-func (cg *CallGraph) walk(ctx context.Context, root *sitter.Node, treeData []byte) {
-	cg.ctx = ctx
-	defer func() { cg.ctx = nil }()
-	processChildren(root, treeData, cg.FileName, cg, processorMetadata{})
 }
 
 func processNode(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
@@ -113,7 +99,7 @@ func processNode(node *sitter.Node, treeData []byte, currentNamespace string, ca
 		return newProcessorResult()
 	}
 
-	if nodeProcessor, exists := languageNodeProcessors[callGraph.languageCode][node.Type()]; exists {
+	if nodeProcessor, exists := languageNodeProcessors[callGraph.Language][node.Type()]; exists {
 		return nodeProcessor(node, treeData, currentNamespace, callGraph, metadata)
 	}
 
