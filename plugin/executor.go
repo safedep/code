@@ -21,14 +21,14 @@ type PluginExecutor interface {
 
 // Report is what one Execute did. It lists files by name, in walk order.
 type Report struct {
-	// Files are the files whose tree reached the plugins.
-	Files []string
+	// Visited are the files whose tree reached the plugins.
+	Visited []string
 
 	// Skipped are the files that no language of the walker parses.
 	Skipped []string
 
 	// Failed are the failures of files at a stage. A file that fails in a
-	// plugin is also in Files.
+	// plugin is also in Visited.
 	Failed []FileError
 }
 
@@ -81,7 +81,7 @@ func (v *treeVisitor) VisitTree(ctx context.Context, tree core.ParseTree) error 
 		return fmt.Errorf("failed to get language from tree: %w", err)
 	}
 
-	v.report.Files = append(v.report.Files, file.Name())
+	v.report.Visited = append(v.report.Visited, file.Name())
 	code := language.Meta().Code
 	for _, plugin := range v.plugins {
 		if !slices.Contains(plugin.SupportedLanguages(), code) {

@@ -245,5 +245,5 @@ func assertCallbackFailure(t *testing.T, report *plugin.Report) {
 	assert.Equal(t, "testcases.py", failure.File)
 	assert.Equal(t, core.Stage("DependencyUsagePlugin"), failure.Stage)
 	assert.ErrorContains(t, failure, "aborting due to user err in callback")
-	assert.Equal(t, []string{"testcases.py"}, report.Files)
+	assert.Equal(t, []string{"testcases.py"}, report.Visited)
 }

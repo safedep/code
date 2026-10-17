@@ -12,7 +12,8 @@ type TreeVisitor interface {
 	VisitTree(context.Context, ParseTree) error
 }
 
-// Stage names the step of a walk at which a file failed.
+// Stage names the step of a walk at which a file failed. The name of a
+// plugin is also a stage, for a file that fails in that plugin.
 type Stage string
 
 const (

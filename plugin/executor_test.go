@@ -98,7 +98,7 @@ func TestExecuteStopsWhenTheContextIsCancelled(t *testing.T) {
 	report, err := executor.Execute(ctx, fileSystem)
 	assert.ErrorIs(t, err, context.Canceled)
 	assert.Equal(t, 1, visited)
-	assert.Len(t, report.Files, 1)
+	assert.Len(t, report.Visited, 1)
 }
 
 func TestExecuteFailsTheFileThatTheContextStops(t *testing.T) {
@@ -134,7 +134,7 @@ func TestExecuteGoesOnPastAFileThatDoesNotParse(t *testing.T) {
 	report := execute(t, dir, []core.Plugin{fileNames(&names)}, parser.WithMaxBytes(64))
 
 	assert.Equal(t, []string{"b_good.py"}, names)
-	assert.Equal(t, []string{"b_good.py"}, baseNames(report.Files))
+	assert.Equal(t, []string{"b_good.py"}, baseNames(report.Visited))
 	assert.Empty(t, report.Skipped)
 	require.Len(t, report.Failed, 1)
 	assert.Equal(t, "a_large.py", filepath.Base(report.Failed[0].File))
@@ -160,7 +160,7 @@ func TestExecuteGoesOnPastAPluginError(t *testing.T) {
 	report := execute(t, dir, []core.Plugin{failing, fileNames(&names)})
 
 	assert.Equal(t, []string{"a.py", "b.py"}, names, "the next plugin and the next file still run")
-	assert.Equal(t, []string{"a.py", "b.py"}, baseNames(report.Files))
+	assert.Equal(t, []string{"a.py", "b.py"}, baseNames(report.Visited))
 	require.Len(t, report.Failed, 1)
 	assert.Equal(t, "a.py", filepath.Base(report.Failed[0].File))
 	assert.Equal(t, core.Stage("failing"), report.Failed[0].Stage)
@@ -186,7 +186,7 @@ func TestExecuteSkipsAFileThatNoLanguageParses(t *testing.T) {
 	report, err := executor.Execute(t.Context(), fileSystem)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"a.js"}, baseNames(report.Skipped))
-	assert.Equal(t, []string{"b.py"}, baseNames(report.Files))
+	assert.Equal(t, []string{"b.py"}, baseNames(report.Visited))
 	assert.Empty(t, report.Failed)
 }
 
@@ -230,7 +230,7 @@ func TestExecuteGoesOnPastAFileThatDoesNotRead(t *testing.T) {
 	report, err := executor.Execute(t.Context(), nil)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"b.py"}, names)
-	assert.Equal(t, []string{"b.py"}, report.Files)
+	assert.Equal(t, []string{"b.py"}, report.Visited)
 	require.Len(t, report.Failed, 1)
 	assert.Equal(t, "a.py", report.Failed[0].File)
 	assert.Equal(t, core.StageRead, report.Failed[0].Stage)

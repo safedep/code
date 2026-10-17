@@ -24,8 +24,10 @@ const (
 	TruncationDeadline        TruncationKind = "deadline"
 )
 
-// Truncation records the first place where the build hit a limit. The graph
-// is partial after it. Line is 1-based, and 0 when no node marks the place.
+// Truncation records the first place where the build of a file hit one kind
+// of limit. A graph keeps only the first hit of each kind, so a later hit of
+// the same kind in the file has no record. The graph is partial after it.
+// Line is 1-based, and 0 when no node marks the place.
 type Truncation struct {
 	Kind      TruncationKind
 	Namespace string
