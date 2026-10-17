@@ -111,12 +111,11 @@ func project(ctx context.Context, tree core.ParseTree) (*fidx.Index, error) {
 	p.addDefinitions()
 	p.addExports()
 	p.addTruncations()
-	p.addFlags(ctx)
+	p.walkTree(ctx)
 	if err := p.addClasses(ctx); err != nil {
 		return nil, err
 	}
 	p.addCalls()
-	p.addReferences(ctx)
 	p.addUnresolved()
 	for _, def := range p.defs {
 		def.Exported = p.exported(def)

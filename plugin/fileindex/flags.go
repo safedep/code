@@ -59,20 +59,45 @@ var dynamicSyntaxes = map[core.LanguageCode]dynamicSyntax{
 	},
 }
 
-// addFlags marks the dynamic features of the file. A flag lands on the
-// file and on the innermost definition that holds it. The pass also adds a
-// dynamic import that the import resolvers do not see, and marks a require
-// in a function as dynamic.
-func (p *projection) addFlags(ctx context.Context) {
+// visitor reads one node of a walk of the tree, with the type of the node.
+type visitor func(node *sitter.Node, kind string)
+
+// walkTree walks the tree once for the flags and the references of the
+// file. A walk costs about as much as the parse, so the passes share it.
+func (p *projection) walkTree(ctx context.Context) {
 	root := p.tree.Tree().RootNode()
 	p.addParseErrors(ctx, root)
 
-	syntax, ok := dynamicSyntaxes[p.ix.Language]
-	if !ok {
+	var visitors []visitor
+	for _, v := range []visitor{p.flagVisitor(), p.referenceVisitor()} {
+		if v != nil {
+			visitors = append(visitors, v)
+		}
+	}
+	if len(visitors) == 0 {
 		return
 	}
 	err := ts.Walk(ctx, root, ts.WalkOptions{}, func(node *sitter.Node) bool {
-		switch node.Type() {
+		kind := node.Type()
+		for _, v := range visitors {
+			v(node, kind)
+		}
+		return true
+	})
+	p.truncateWalk(err)
+}
+
+// flagVisitor marks the dynamic features of the file. A flag lands on the
+// file and on the innermost definition that holds it. The pass also adds a
+// dynamic import that the import resolvers do not see, and marks a require
+// in a function as dynamic.
+func (p *projection) flagVisitor() visitor {
+	syntax, ok := dynamicSyntaxes[p.ix.Language]
+	if !ok {
+		return nil
+	}
+	return func(node *sitter.Node, kind string) {
+		switch kind {
 		case syntax.call:
 			p.flagCall(syntax, node)
 		case "new_expression":
@@ -86,9 +111,7 @@ func (p *projection) addFlags(ctx context.Context) {
 				p.flagAt(fidx.FlagDecoratorWrap, decorated(node).StartByte(), lineOf(node))
 			}
 		}
-		return true
-	})
-	p.truncateWalk(err)
+	}
 }
 
 // decorated returns the node that a decorator wraps. A TypeScript class

@@ -1,7 +1,6 @@
 package fileindex
 
 import (
-	"context"
 	"slices"
 
 	"github.com/safedep/code/core"
@@ -83,24 +82,23 @@ var ecmascriptReferences = referenceSyntax{
 	logical:     map[string]bool{"||": true, "??": true, "&&": true},
 }
 
-// addReferences adds each function, method, class or import that the file
-// uses as a value and does not call, as yaml.load in run(yaml.load). The
-// code that gets the value can call it. A name in an export statement or a
-// CommonJS export is an export record, not a reference.
-func (p *projection) addReferences(ctx context.Context) {
+// referenceVisitor adds each function, method, class or import that the
+// file uses as a value and does not call, as yaml.load in run(yaml.load).
+// The code that gets the value can call it. A name in an export statement
+// or a CommonJS export is an export record, not a reference.
+func (p *projection) referenceVisitor() visitor {
 	syntax, ok := referenceSyntaxes[p.ix.Language]
 	if !ok {
-		return
+		return nil
 	}
 	type span struct {
 		start, end uint32
 		kind       string
 	}
-	spanOf := func(node *sitter.Node) span { return span{node.StartByte(), node.EndByte(), node.Type()} }
 	defs := make(map[span]string, len(p.syntax))
 	for key, node := range p.syntax {
 		if node != nil {
-			defs[spanOf(node)] = key
+			defs[span{node.StartByte(), node.EndByte(), node.Type()}] = key
 		}
 	}
 
@@ -114,21 +112,24 @@ func (p *projection) addReferences(ctx context.Context) {
 		caller, text string
 	}
 	seen := map[site]bool{}
-	err := ts.Walk(ctx, p.tree.Tree().RootNode(), ts.WalkOptions{}, func(node *sitter.Node) bool {
-		for len(stack) > 1 && node.StartByte() >= stack[len(stack)-1].end {
+	return func(node *sitter.Node, kind string) {
+		start := node.StartByte()
+		for len(stack) > 1 && start >= stack[len(stack)-1].end {
 			stack = stack[:len(stack)-1]
 		}
-		if key, ok := defs[spanOf(node)]; ok {
-			stack = append(stack, open{key: key, end: node.EndByte()})
+		if _, definition := definitionKinds[kind]; definition {
+			if key, ok := defs[span{start, node.EndByte(), kind}]; ok {
+				stack = append(stack, open{key: key, end: node.EndByte()})
+			}
 		}
-		field, ok := syntax.holders[node.Type()]
+		field, ok := syntax.holders[kind]
 		switch {
 		case !ok:
-			return true
-		case node.Type() == "binary_expression" && !syntax.logical[p.text(node.ChildByFieldName("operator"))]:
-			return true
+			return
+		case kind == "binary_expression" && !syntax.logical[p.text(node.ChildByFieldName("operator"))]:
+			return
 		case node.Parent() != nil && syntax.bases[node.Parent().Type()]:
-			return true
+			return
 		}
 		values := ts.NamedChildren(node)
 		if field != "" {
@@ -142,9 +143,7 @@ func (p *projection) addReferences(ctx context.Context) {
 				p.ix.References = append(p.ix.References, ref)
 			}
 		}
-		return true
-	})
-	p.truncateWalk(err)
+	}
 }
 
 // reference returns the reference of a value. The value is a name or a
