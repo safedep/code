@@ -63,6 +63,15 @@
       }
     },
     {
+      "key": "app/wsgi.py",
+      "kind": "manifest",
+      "rule": "procfile",
+      "site": {
+        "path": "app/wsgi.py",
+        "line": 1
+      }
+    },
+    {
       "key": "app/wsgi.py//app",
       "kind": "manifest",
       "rule": "procfile",
@@ -104,6 +113,6 @@
     "nodes": 7,
     "edges": 0,
     "unresolved": 0,
-    "roots": 4
+    "roots": 5
   }
 }

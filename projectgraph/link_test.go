@@ -592,16 +592,21 @@ func TestBuildRoots(t *testing.T) {
 		{
 			name: "roots/pyproject-scripts",
 			roots: []string{
+				"src/app/cli.py manifest python.project-scripts",
 				"src/app/cli.py//main manifest python.project-scripts",
 				"src/app/legacy.py manifest python.project-scripts",
+				"src/app/plugin.py manifest python.project-scripts",
 				"src/app/plugin.py//Plugin//load manifest python.project-scripts",
+				"src/app/tool.py manifest python.project-scripts",
 				"src/app/tool.py//run manifest python.project-scripts",
 			},
 		},
 		{
 			name: "roots/setup-py",
 			roots: []string{
+				"tool/admin.py manifest python.setup-py",
 				"tool/admin.py//run manifest python.setup-py",
+				"tool/main.py manifest python.setup-py",
 				"tool/main.py//cli manifest python.setup-py",
 			},
 		},
@@ -609,6 +614,7 @@ func TestBuildRoots(t *testing.T) {
 			name: "roots/procfile-dockerfile",
 			roots: []string{
 				"app/cli.py manifest dockerfile",
+				"app/wsgi.py manifest procfile",
 				"app/wsgi.py//app manifest procfile",
 				"web/server.js manifest dockerfile",
 				"worker.py manifest procfile",

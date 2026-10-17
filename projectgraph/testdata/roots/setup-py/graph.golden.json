@@ -33,11 +33,29 @@
   "unresolved": [],
   "roots": [
     {
+      "key": "tool/admin.py",
+      "kind": "manifest",
+      "rule": "python.setup-py",
+      "site": {
+        "path": "tool/admin.py",
+        "line": 1
+      }
+    },
+    {
       "key": "tool/admin.py//run",
       "kind": "manifest",
       "rule": "python.setup-py",
       "site": {
         "path": "tool/admin.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "tool/main.py",
+      "kind": "manifest",
+      "rule": "python.setup-py",
+      "site": {
+        "path": "tool/main.py",
         "line": 1
       }
     },
@@ -61,6 +79,6 @@
     "nodes": 4,
     "edges": 0,
     "unresolved": 0,
-    "roots": 2
+    "roots": 4
   }
 }

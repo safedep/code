@@ -75,6 +75,15 @@
   "unresolved": [],
   "roots": [
     {
+      "key": "src/app/cli.py",
+      "kind": "manifest",
+      "rule": "python.project-scripts",
+      "site": {
+        "path": "src/app/cli.py",
+        "line": 1
+      }
+    },
+    {
       "key": "src/app/cli.py//main",
       "kind": "manifest",
       "rule": "python.project-scripts",
@@ -93,12 +102,30 @@
       }
     },
     {
+      "key": "src/app/plugin.py",
+      "kind": "manifest",
+      "rule": "python.project-scripts",
+      "site": {
+        "path": "src/app/plugin.py",
+        "line": 1
+      }
+    },
+    {
       "key": "src/app/plugin.py//Plugin//load",
       "kind": "manifest",
       "rule": "python.project-scripts",
       "site": {
         "path": "src/app/plugin.py",
         "line": 2
+      }
+    },
+    {
+      "key": "src/app/tool.py",
+      "kind": "manifest",
+      "rule": "python.project-scripts",
+      "site": {
+        "path": "src/app/tool.py",
+        "line": 1
       }
     },
     {
@@ -124,6 +151,6 @@
     "nodes": 10,
     "edges": 0,
     "unresolved": 0,
-    "roots": 4
+    "roots": 7
   }
 }

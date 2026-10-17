@@ -280,8 +280,9 @@ func (f *finder) entryFiles(dir string, entries []string) []string {
 	return files
 }
 
-// addPythonEntry marks the target of a module:function entry point. A
-// function that the index does not define leaves the module top level.
+// addPythonEntry marks the target of a module:function entry point and the
+// module top level. The entry point imports the module first, so its top
+// level runs, as application = create_app() for gunicorn app.wsgi:application.
 func (f *finder) addPythonEntry(r rules.Rule, dir, entry string) {
 	fields := strings.Fields(entry)
 	if len(fields) == 0 {
@@ -295,13 +296,13 @@ func (f *finder) addPythonEntry(r rules.Rule, dir, entry string) {
 	if lang, ok := f.languages[file]; !ok || !r.Applies(lang) {
 		return
 	}
-	if attr != "" {
-		if key := fileindex.Join(file, strings.Split(attr, ".")...); f.Defined(key) {
-			f.add(r, key)
-			return
-		}
-	}
 	f.add(r, file)
+	if attr == "" {
+		return
+	}
+	if key := fileindex.Join(file, strings.Split(attr, ".")...); f.Defined(key) {
+		f.add(r, key)
+	}
 }
 
 // addCommand marks each file of the project that a command names, as
