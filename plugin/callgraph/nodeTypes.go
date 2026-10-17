@@ -1,5 +1,10 @@
 package callgraph
 
+import (
+	"github.com/safedep/code/core"
+	sitter "github.com/smacker/go-tree-sitter"
+)
+
 var literalNodeTypes = map[string]bool{
 	"string":                         true,
 	"encapsed_string":                true,
@@ -42,4 +47,61 @@ var initialisedDataStructures = map[string]bool{
 	// Go data structures
 	"composite_literal": true,
 	"slice_expression":  true,
+}
+
+// pythonLiteralReceivers and jsLiteralReceivers map a literal node to the
+// builtin type of its value, so that "a,b".split() calls String//split.
+var pythonLiteralReceivers = map[string]string{
+	"string":                   "str",
+	"concatenated_string":      "str",
+	"integer":                  "int",
+	"float":                    "float",
+	"list":                     "list",
+	"list_comprehension":       "list",
+	"dictionary":               "dict",
+	"dictionary_comprehension": "dict",
+	"set":                      "set",
+	"set_comprehension":        "set",
+	"tuple":                    "tuple",
+}
+
+var jsLiteralReceivers = map[string]string{
+	"string":          "String",
+	"template_string": "String",
+	"number":          "Number",
+	"array":           "Array",
+	"object":          "Object",
+	"regex":           "RegExp",
+}
+
+// transparentNodes are the nodes whose value is the value of one child, as
+// (x) or await x. The resolvers read through them.
+var transparentNodes = map[core.LanguageCode]map[string]bool{
+	core.LanguageCodePython:     {"parenthesized_expression": true},
+	core.LanguageCodeGo:         {"parenthesized_expression": true},
+	core.LanguageCodeJavascript: jsTransparentNodes,
+	core.LanguageCodeTypescript: jsTransparentNodes,
+}
+
+var jsTransparentNodes = map[string]bool{
+	"parenthesized_expression": true,
+	"await_expression":         true,
+	"sequence_expression":      true,
+	"non_null_expression":      true,
+	"as_expression":            true,
+	"satisfies_expression":     true,
+}
+
+// unwrap returns the node that gives the value of node. A sequence gives
+// the value of its last expression, as fn in (0, fn)().
+func (cg *CallGraph) unwrap(node *sitter.Node) *sitter.Node {
+	transparent := transparentNodes[cg.languageCode]
+	for depth := 0; node != nil && transparent[node.Type()] && node.NamedChildCount() > 0 && depth <= maxMemberExpressionDepth; depth++ {
+		if node.Type() == "sequence_expression" {
+			node = node.NamedChild(int(node.NamedChildCount()) - 1)
+			continue
+		}
+		node = node.NamedChild(0)
+	}
+	return node
 }
