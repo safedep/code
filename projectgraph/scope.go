@@ -137,6 +137,8 @@ func importedModule(lang langcode.Code, imp fileindex.Import) (string, []string)
 	switch {
 	case bindsRoot(lang, imp):
 		return firstDotted(imp.Module), nil
+	case imp.Item != "" && profileOf(lang).itemPaths != "":
+		return imp.Module + profileOf(lang).itemPaths + imp.Item, nil
 	case imp.Item != "":
 		return imp.Module, []string{imp.Item}
 	}

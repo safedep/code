@@ -1,0 +1,88 @@
+source: safedep:hand
+description: The binary src/bin/server.rs names the lib crate web-app as web_app. actix runs the handler of the get attribute and the handler that route passes to to. admin::purge has no route and no caller.
+roots:
+  - key: src/bin/server.rs//main
+    kind: main
+    rule: rust.main
+  - key: src/handlers.rs//list_users
+    kind: framework
+    rule: rust.web.attribute
+edges:
+  - from: src/bin/server.rs//main
+    to: src/handlers.rs//list_users
+    kind: reference
+    confidence: low
+    site: src/bin/server.rs:8
+  - from: src/bin/server.rs//main
+    to: src/handlers.rs//health
+    kind: reference
+    confidence: low
+    site: src/bin/server.rs:9
+unresolved:
+  - caller: src/admin.rs//purge
+    site: src/admin.rs:2
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/bin/server.rs//main
+    site: src/bin/server.rs:6
+    reason: unknown-receiver
+    method: run
+  - caller: src/bin/server.rs//main
+    site: src/bin/server.rs:7
+    reason: unknown-receiver
+    method: route
+  - caller: src/bin/server.rs//main
+    site: src/bin/server.rs:9
+    reason: unknown-receiver
+    method: to
+  - caller: src/handlers.rs//list_users
+    site: src/handlers.rs:5
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/handlers.rs//list_users
+    site: src/handlers.rs:6
+    reason: unknown-receiver
+    method: body
+  - caller: src/handlers.rs//health
+    site: src/handlers.rs:10
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/handlers.rs//health
+    site: src/handlers.rs:11
+    reason: unknown-receiver
+    method: finish
+results:
+  - target: std//process//Command//new
+    status: found
+    path:
+      - key: src/handlers.rs//list_users
+      - key: std//process//Command//new
+        site: src/handlers.rs:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/handlers.rs//list_users
+        site: src/handlers.rs:5
+        reached: true
+  - target: std//env//var
+    status: found
+    path:
+      - key: src/bin/server.rs//main
+      - key: src/handlers.rs//health
+        site: src/bin/server.rs:9
+        kind: reference
+        confidence: low
+      - key: std//env//var
+        site: src/handlers.rs:10
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/handlers.rs//health
+        site: src/handlers.rs:10
+        reached: true
+  - target: std//fs//remove_dir_all
+    status: not-found
+    call_sites:
+      - caller: src/admin.rs//purge
+        site: src/admin.rs:2
+        reached: false

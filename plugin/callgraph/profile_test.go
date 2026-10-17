@@ -20,10 +20,10 @@ func TestLanguageProfiles(t *testing.T) {
 		{core.LanguageCodeGo, "", true},
 		{core.LanguageCodeJavascript, "this", true},
 		{core.LanguageCodeTypescript, "this", true},
-		{core.LanguageCodeCSharp, "this", false},
-		{core.LanguageCodeRust, "self", false},
-		{core.LanguageCodePHP, "$this", false},
-		{core.LanguageCodeRuby, "self", false},
+		{core.LanguageCodeCSharp, "this", true},
+		{core.LanguageCodeRust, "self", true},
+		{core.LanguageCodePHP, "$this", true},
+		{core.LanguageCodeRuby, "self", true},
 		{core.LanguageCodeKotlin, "this", true},
 	}
 

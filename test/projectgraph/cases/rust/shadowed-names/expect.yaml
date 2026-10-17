@@ -1,0 +1,123 @@
+source: safedep:adversarial
+description: Names that look alike run different code. net::send and disk::send are two functions of two modules beside send of main.rs. self::flush in disk is not inner::flush. c.area() on a Circle is not area of Square, and Square::area_of is not area. A comment and a string call nothing. A local closure named send shadows the function send, so its call stays a record whose name edges are low.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//main
+    to: src/net/mod.rs//send
+    kind: direct
+    confidence: high
+    site: src/main.rs:13
+  - from: src/disk.rs//run
+    to: src/disk.rs//flush
+    kind: direct
+    confidence: high
+    site: src/disk.rs:6
+  - from: src/main.rs//main
+    to: src/shapes.rs//Circle//area
+    kind: member
+    confidence: high
+    site: src/main.rs:17
+unresolved:
+  - caller: src/disk.rs//send
+    site: src/disk.rs:2
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/disk.rs//flush
+    site: src/disk.rs:10
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/disk.rs//inner//flush
+    site: src/disk.rs:15
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/main.rs//main
+    site: src/main.rs:15
+    reason: unknown-receiver
+    method: send
+  - caller: src/net/mod.rs//send
+    site: src/net/mod.rs:2
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/shapes.rs//Circle//area
+    site: src/shapes.rs:6
+    reason: unknown-receiver
+    method: unwrap
+results:
+  - target: std//net//TcpStream//connect
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/net/mod.rs//send
+        site: src/main.rs:13
+        kind: direct
+        confidence: high
+      - key: std//net//TcpStream//connect
+        site: src/net/mod.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/net/mod.rs//send
+        site: src/net/mod.rs:2
+        reached: true
+  - target: std//fs//File//create
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/disk.rs//run
+        site: src/main.rs:21
+        kind: direct
+        confidence: high
+      - key: src/disk.rs//flush
+        site: src/disk.rs:6
+        kind: direct
+        confidence: high
+      - key: std//fs//File//create
+        site: src/disk.rs:10
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/disk.rs//flush
+        site: src/disk.rs:10
+        reached: true
+  - target: std//fs//remove_dir_all
+    status: not-found
+    call_sites:
+      - caller: src/disk.rs//inner//flush
+        site: src/disk.rs:15
+        reached: false
+  - target: std//env//var
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/shapes.rs//Circle//area
+        site: src/main.rs:17
+        kind: member
+        confidence: high
+      - key: std//env//var
+        site: src/shapes.rs:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/shapes.rs//Circle//area
+        site: src/shapes.rs:6
+        reached: true
+  - target: std//env//remove_var
+    status: not-found
+    call_sites:
+      - caller: src/shapes.rs//Square//area
+        site: src/shapes.rs:13
+        reached: false
+  - target: std//env//set_var
+    status: not-found
+    call_sites:
+      - caller: src/shapes.rs//Square//area
+        site: src/shapes.rs:28
+        reached: false
+  - target: std//fs//remove_file
+    status: not-found

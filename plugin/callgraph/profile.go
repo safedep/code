@@ -96,6 +96,10 @@ type languageProfile struct {
 	// trimModule removes the part of an imported module name that names no
 	// namespace. It can be nil.
 	trimModule func(string) string
+
+	// callables map a function that calls a callable to the position of the
+	// argument that names it, as call_user_func of PHP.
+	callables map[string]int
 }
 
 // childPosition picks the named child that gives the value of a node.
@@ -216,4 +220,12 @@ func (p *languageProfile) moduleNamespace(moduleName string) string {
 func (p *languageProfile) lastSegment(name string) string {
 	parts := splitQualifiedName(name, p.separators)
 	return parts[len(parts)-1]
+}
+
+// CallableArgument returns the position of the argument that names the
+// callable that a function of the language calls, as 0 for call_user_func
+// of PHP.
+func CallableArgument(code core.LanguageCode, function string) (int, bool) {
+	position, ok := profileOf(code).callables[function]
+	return position, ok
 }

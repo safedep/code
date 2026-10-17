@@ -75,7 +75,7 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			// runs unless the class has a method of the name.
 			if r.unbound && sc.profile.thisCalls && call.Kind == fileindex.CallCall && call.Receiver == "" && isIdentifier(r.key) {
 				if class, ok := b.enclosingClass(caller); ok {
-					if typed := b.walkTyped(class, []string{r.key}); typed.fail == nil || !langcode.IsBuiltin(ix.Language, r.key) {
+					if typed := b.walkTyped(class, []string{b.selfName(class, caller, r.key)}); typed.fail == nil || !langcode.IsBuiltin(ix.Language, r.key) {
 						r = typed
 					}
 				}
@@ -84,8 +84,8 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			// A declared type gives the class of the receiver, so the
 			// link step owns the record of the site and no name edge
 			// goes from it.
-			if r.declared && (r.fail == nil || r.fail.name == call.Method) {
-				b.narrowed[site] = true
+			if r.declared && (r.fail == nil || r.fail.name == call.Method) && (r.fail == nil || !b.forwards(r.class)) {
+				b.narrow(site, call.Callee)
 			}
 			if r.fail != nil {
 				b.addUnresolved(UnresolvedSite{
@@ -150,10 +150,19 @@ func (b *builder) linkCHA(call fileindex.Call, r resolution, from string, site S
 	class, virtual := r.class, r.virtual
 	// A Java call with no receiver runs on this.
 	this := isInstanceKeyword(lang, call.Receiver) || profileOf(lang).thisCalls && call.Receiver == "" && call.Kind == fileindex.CallCall
-	if r.fail == nil && class == "" && this && b.isMethod(r.key) && !b.defs[r.key].Static {
+	// A static method is no virtual method, unless the call binds it late,
+	// as static::make() of PHP.
+	late := call.Receiver != "" && call.Receiver == profileOf(lang).lateStatic
+	if r.fail == nil && class == "" && this && b.isMethod(r.key) && (!b.defs[r.key].Static || late) {
 		if parent := fileindex.Parent(r.key); b.isType(parent) {
 			class, virtual = parent, true
 		}
+	}
+	// A call on the instance keyword of a method that the class does not
+	// define, as self.step() in a default method of a Rust trait, runs the
+	// method of a subclass.
+	if r.fail != nil && class != "" && isInstanceKeyword(lang, call.Receiver) {
+		virtual = true
 	}
 	switch {
 	case !virtual || class == "" || call.Method == "" || !b.dispatches(lang, class):
@@ -163,7 +172,7 @@ func (b *builder) linkCHA(call fileindex.Call, r resolution, from string, site S
 	case r.fail == nil && fileindex.Last(r.key) != call.Method:
 		return
 	}
-	b.narrowed[site] = true
+	b.narrow(site, call.Callee)
 	found := ""
 	if r.fail == nil {
 		found = r.key
@@ -177,7 +186,7 @@ func (b *builder) linkCHA(call fileindex.Call, r resolution, from string, site S
 	// abstract method with no first-party override has its code elsewhere.
 	// So such a site also gets the field edges of the method name.
 	if profileOf(lang).structuralTypes && (b.kindOf(class) == NodeInterface || r.fail != nil && len(overrides) == 0) {
-		b.structural[site] = true
+		b.structural[siteCall{site, call.Callee}] = true
 	}
 }
 
@@ -233,7 +242,7 @@ func (b *builder) resolveTarget(sc *scope, caller, target string) []resolution {
 	if target == superKeyword && sc.profile.superCalls {
 		return []resolution{b.resolveSuper(caller, nil)}
 	}
-	if rest, ok := strings.CutPrefix(target, superKeyword+fileindex.Separator); ok {
+	if rest, ok := strings.CutPrefix(target, superKeyword+fileindex.Separator); ok && !sc.profile.superModule {
 		return []resolution{b.resolveSuper(caller, strings.Split(rest, fileindex.Separator))}
 	}
 	if fileindex.HasKeyPrefix(target, ix.Path) {
@@ -276,7 +285,9 @@ func (b *builder) resolveScope(sc *scope, caller, target string) []resolution {
 		}
 	}
 	if key, ok := b.nestedType(sc, caller, first); ok {
-		return []resolution{b.walk(key, rest)}
+		r := b.walk(key, rest)
+		r.rule = cmp.Or(r.rule, "nested")
+		return []resolution{r}
 	}
 	var out []resolution
 	for _, key := range b.unitNames(sc.ix.Path, first) {
@@ -304,7 +315,7 @@ func (b *builder) resolveScope(sc *scope, caller, target string) []resolution {
 		out = append(out, r)
 	}
 	if len(out) == 0 && sc.profile.scopeFallback != nil {
-		return sc.profile.scopeFallback(b, sc, first, rest, target)
+		return sc.profile.scopeFallback(b, sc, caller, first, rest, target)
 	}
 	return out
 }
@@ -333,9 +344,21 @@ func (b *builder) wildcardImported(sc *scope, name string) []string {
 
 // walkTyped resolves the names on a receiver of a declared type.
 func (b *builder) walkTyped(class string, names []string) resolution {
-	r := b.walk(class, names)
+	r := b.walkFrom(resolution{key: class, kind: EdgeDirect, virtual: true}, names)
 	r.virtual, r.declared = true, true
 	return r
+}
+
+// forwards reports whether a class forwards a call that it has no method
+// for to another type, as a Rust type with Deref runs the methods of its
+// target. The walk does not know that type, so the receiver is unknown.
+func (b *builder) forwards(class string) bool {
+	m := profileOf(b.languageOf(class)).forwardMethod
+	if m == "" || class == "" {
+		return false
+	}
+	_, ok := b.ownMethod(class, m)
+	return ok
 }
 
 // splitKey returns the first segment of a key and the segments after it.
@@ -442,15 +465,25 @@ func (b *builder) resolveLocal(sc *scope, caller, target string) resolution {
 // walk resolves the names one at a time from a key: a name of a module, a
 // method of a class, or a member of an external key.
 func (b *builder) walk(key string, names []string) resolution {
-	r := resolution{key: key, kind: EdgeDirect}
+	return b.walkFrom(resolution{key: key, kind: EdgeDirect}, names)
+}
+
+// walkFrom walks the names from the key of r. A virtual r is an instance of
+// its class, whose class methods the walk does not read.
+func (b *builder) walkFrom(r resolution, names []string) resolution {
+	instance := r.virtual
 	for i := 0; i < len(names); {
 		name := names[i]
 		switch kind := b.kindOf(r.key); {
 		case b.units[r.key] != nil:
 			keys := b.units[r.key].names[name]
 			if len(keys) == 0 {
-				r.fail = noDefinition(name)
-				return r
+				key, ok := b.unitMember(r.key, name)
+				if !ok {
+					r.fail = noDefinition(name)
+					return r
+				}
+				keys = []string{key}
 			}
 			r.key = keys[0]
 			i++
@@ -485,10 +518,36 @@ func (b *builder) walk(key string, names []string) resolution {
 			}
 			r.key = value
 		case kind == NodeClass || kind == NodeInterface:
-			if isInstanceKeyword(b.byPath[fileindex.Unit(r.key)].Language, name) {
+			lang := b.byPath[fileindex.Unit(r.key)].Language
+			if isInstanceKeyword(lang, name) {
 				r.virtual = true
 				i++
 				continue
+			}
+			// Client.new makes an instance of the class, and the edge to
+			// the class leads to its constructor.
+			if c := profileOf(lang).constructorCall; c != "" && name == c {
+				if _, own := b.ownMethod(r.key, name); !own {
+					instance = true
+					i++
+					continue
+				}
+			}
+			// self.class in Ruby is the class of the instance, whose class
+			// methods a call on it runs.
+			if c := profileOf(lang).classOf; c != "" && name == c {
+				instance, r.virtual = false, false
+				i++
+				continue
+			}
+			// A call on the class itself, as Report.build in Ruby, runs a
+			// method of the class before a method of its instances.
+			if prefix := profileOf(lang).classMethodPrefix; prefix != "" && !instance && !r.virtual {
+				if key, ok := b.ownMethod(r.key, prefix+name); ok {
+					r.key, r.kind, r.rule, r.class = key, EdgeMember, "member", r.key
+					i++
+					continue
+				}
 			}
 			r.class = r.key
 			// A dependency base can give the method that a call names
@@ -511,6 +570,9 @@ func (b *builder) walk(key string, names []string) resolution {
 			}
 			base, external := b.externalBase(r.key)
 			switch {
+			case b.forwards(r.key):
+				r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+				return r
 			case external && last:
 				r.key, r.kind, r.rule = b.external(fileindex.Join(base, name)), EdgeMember, "member"
 				i++
@@ -631,6 +693,9 @@ func (b *builder) bases(rec classRecord) []string {
 // resolveScopeName resolves a dotted name as written in the file, as a base
 // class mod.Base.
 func (b *builder) resolveScopeName(sc *scope, text string) (string, bool) {
+	// A qualified name of Ruby, PHP or Rust, as Shop::Base or \App\Base,
+	// has the parts of a dotted name.
+	text = qualifiedNames.Replace(strings.TrimPrefix(text, `\`))
 	segs := strings.Split(text, ".")
 	var r resolution
 	imp, ok := sc.bindings[segs[0]]
@@ -737,12 +802,21 @@ func (b *builder) bindsName(module, name string) bool {
 // inside the file: the target has another name than the call writes, and
 // the written name is not an import binding.
 func isAssignment(sc *scope, call fileindex.Call, target string) bool {
-	written := cmp.Or(call.Method, lastDotted(call.Callee))
+	written := cmp.Or(call.Method, lastWritten(call.Callee))
 	if written == "" || fileindex.Last(target) == written {
 		return false
 	}
 	_, bound := sc.bindings[firstDotted(call.Callee)]
 	return !bound
+}
+
+var qualifiedNames = strings.NewReplacer("::", ".", `\`, ".")
+
+// lastWritten returns the last name of a callee as written, after a ., a
+// \ of PHP or a :: of Rust.
+func lastWritten(callee string) string {
+	i := max(strings.LastIndex(callee, "."), strings.LastIndex(callee, `\`), strings.LastIndex(callee, ":"))
+	return callee[i+1:]
 }
 
 func isNamespacePackage(key string) bool {

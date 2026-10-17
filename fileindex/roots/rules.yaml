@@ -108,6 +108,74 @@ rules:
     language: java
     kind: framework
     match: { annotation: ["@Component", "@Service", "@Repository", "@Configuration", "@SpringBootApplication"] }
+  - id: csharp.main
+    language: csharp
+    kind: main
+    match: { definition: { name: Main, static: true } }
+  - id: csharp.top-level-statements
+    language: csharp
+    kind: main
+    match: { definition: { name: "<Main>$" } }
+  - id: csharp.aspnet.action
+    language: csharp
+    kind: framework
+    match: { annotation: ["@HttpGet", "@HttpPost", "@HttpPut", "@HttpDelete", "@HttpPatch", "@HttpHead", "@HttpOptions", "@Route", "@Function", "@FunctionName"] }
+  - id: csharp.aspnet.controllers
+    language: csharp
+    kind: framework
+    match: { path: ["**/Controllers/**"] }
+  - id: php.script
+    language: php
+    kind: main
+    match: { path: ["index.php", "public/*.php", "web/*.php", "bin/*.php", "cli/*.php", "scripts/*.php"] }
+  - id: php.composer-bin
+    language: php
+    kind: manifest
+    match: { manifest: { file: composer.json, fields: [bin] } }
+  - id: php.laravel.routes
+    language: php
+    kind: framework
+    match: { path: ["routes/*.php"] }
+  - id: php.laravel.controllers
+    language: php
+    kind: framework
+    match: { path: ["app/Http/Controllers/**", "app/Console/Commands/**", "app/Jobs/**", "app/Listeners/**"] }
+  - id: php.symfony.attribute
+    language: php
+    kind: framework
+    match: { annotation: ["@Route", "@AsCommand", "@AsController", "@AsEventListener", "@AsMessageHandler"] }
+  - id: ruby.main-guard
+    language: ruby
+    kind: main
+    match: { file_contains: "__FILE__ == $0" }
+  - id: ruby.main-guard-program-name
+    language: ruby
+    kind: main
+    match: { file_contains: "__FILE__ == $PROGRAM_NAME" }
+  - id: ruby.script
+    language: ruby
+    kind: main
+    match: { path: ["exe/*", "bin/*", "script/*", "scripts/*", "Rakefile", "*.rake", "config.ru", "**/tasks/*.rake"] }
+  - id: ruby.rails.app
+    language: ruby
+    kind: framework
+    match: { path: ["app/controllers/**", "app/jobs/**", "app/mailers/**", "app/channels/**", "app/helpers/**", "app/workers/**", "app/views/**", "config/routes.rb", "config/initializers/**", "db/migrate/**", "db/seeds.rb"] }
+  - id: rust.main
+    language: rust
+    kind: main
+    match: { definition: { name: main } }
+  - id: rust.build-script
+    language: rust
+    kind: main
+    match: { path: ["build.rs", "**/build.rs"] }
+  - id: rust.web.attribute
+    language: rust
+    kind: framework
+    match: { annotation: ["@get", "@post", "@put", "@delete", "@patch", "@head", "@options", "@route", "@catch", "@launch"] }
+  - id: rust.test.attribute
+    language: rust
+    kind: test
+    match: { annotation: ["@test", "@tokio::test", "@rstest", "@bench"] }
   - id: test.files
     language: any
     kind: test

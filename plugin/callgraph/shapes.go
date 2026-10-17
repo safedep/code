@@ -56,6 +56,17 @@ type syntaxShapes struct {
 	// with(x) { } in Kotlin. The grammar makes such a call a call of the
 	// call before the lambda, and the lambda is an argument of that call.
 	trailing childRef
+
+	// callables map a function that calls a callable to the position of
+	// the argument that names the callable, as call_user_func in PHP. An
+	// argument whose node type is not in staticCallables computes the
+	// callable, so the call is unresolved.
+	callables       map[string]int
+	staticCallables map[string]bool
+
+	// destructures are the node types of a list of names on the left side
+	// of an assignment, as a, b in Ruby a, b = pair. Each name binds.
+	destructures map[string]bool
 }
 
 // childRef finds a child of a node by the name of its field. A grammar that
@@ -147,13 +158,19 @@ type assignmentShape struct {
 // as a class or a function. A reachable scope is a start node of the DFS.
 // A class scope holds the namespace that the instance keyword names. A
 // scope with a header processes its other children, as the parameters and
-// the base classes, in its namespace before the body. A scope with a
-// required body is no definition without one, as an abstract method of
-// Kotlin. It runs no code, and a call of it reaches the methods that
-// override it. Its arguments still run, as for an enum entry.
+// the base classes, in its namespace before the body. The parameters of a
+// scope run there too. A scope with a required body is no definition
+// without one, as an abstract method of Kotlin. It runs no code, and a call
+// of it reaches the methods that override it. Its arguments still run, as
+// for an enum entry.
 type scopeShape struct {
-	name         childRef
+	name childRef
+	// prefix starts the name of the scope, as self. for a method of the
+	// class in Ruby, so that it is a second method beside the method of
+	// the name on an instance.
+	prefix       string
 	body         childRef
+	params       childRef
 	reachable    bool
 	class        bool
 	header       bool
@@ -223,6 +240,7 @@ func shapedProfile(profile languageProfile, shapes syntaxShapes) languageProfile
 	profile.processors = processors
 	profile.reachable = reachable
 	profile.members = members
+	profile.callables = shapes.callables
 	return profile
 }
 
@@ -272,6 +290,10 @@ func (p *shapedProcessors) call(node *sitter.Node, treeData []byte, currentNames
 	// Blocks and other children can hold calls, as in Ruby list.each do ... end
 	p.processUnhandledChildren(node, handled, treeData, currentNamespace, callGraph, metadata)
 
+	if p.computesCallable(node, shape, callee) {
+		callGraph.addUnresolved(currentNamespace, node, nil, treeData, UnresolvedComputedName)
+	}
+
 	switch {
 	case computed:
 		callGraph.addUnresolved(currentNamespace, expression, nil, treeData, UnresolvedComputedName)
@@ -296,6 +318,25 @@ func (p *shapedProcessors) call(node *sitter.Node, treeData []byte, currentNames
 		callGraph.results[value] = true
 	}
 	return p.valueResult(value, callGraph)
+}
+
+// computesCallable reports whether a call of a function that calls a
+// callable, as call_user_func($f), passes a callable that its source does
+// not name.
+func (p *shapedProcessors) computesCallable(node *sitter.Node, shape callShape, callee string) bool {
+	position, ok := p.shapes.callables[lastOf(callee)]
+	if !ok {
+		return false
+	}
+	arguments := shape.arguments.of(node)
+	if arguments == nil || position >= int(arguments.NamedChildCount()) {
+		return false
+	}
+	arg := arguments.NamedChild(position)
+	if arg.Type() == "argument" && arg.NamedChildCount() > 0 {
+		arg = arg.NamedChild(int(arg.NamedChildCount()) - 1)
+	}
+	return !p.shapes.staticCallables[arg.Type()]
 }
 
 // throughResult reports whether a callee is a member of the value of a
@@ -376,6 +417,15 @@ func (p *shapedProcessors) assignment(node *sitter.Node, treeData []byte, curren
 	}
 
 	result := processNode(right, treeData, currentNamespace, callGraph, metadata)
+	left = transparentChild(left, callGraph)
+	if left != nil && p.shapes.destructures[left.Type()] {
+		for _, name := range ts.NamedChildren(left) {
+			if assignableNamePattern.MatchString(name.Content(treeData)) {
+				callGraph.assignmentGraph.addNode(currentNamespace+namespaceSeparator+name.Content(treeData), name)
+			}
+		}
+		return newProcessorResult()
+	}
 	if left == nil || !assignableNamePattern.MatchString(left.Content(treeData)) {
 		return newProcessorResult()
 	}
@@ -406,7 +456,7 @@ func (p *shapedProcessors) scope(node *sitter.Node, treeData []byte, currentName
 		return newProcessorResult()
 	}
 
-	scopeNamespace := currentNamespace + namespaceSeparator + withoutTypeArguments(name.Content(treeData))
+	scopeNamespace := currentNamespace + namespaceSeparator + shape.prefix + withoutTypeArguments(name.Content(treeData))
 	callGraph.addNode(scopeNamespace, node)
 	if shape.class {
 		callGraph.classConstructors[scopeNamespace] = true
@@ -419,11 +469,59 @@ func (p *shapedProcessors) scope(node *sitter.Node, treeData []byte, currentName
 			}
 		}
 	}
+	if params := shape.params.of(node); params != nil {
+		processNode(params, treeData, scopeNamespace, callGraph, metadata)
+	}
 	if body != nil {
 		processChildren(body, treeData, scopeNamespace, callGraph, metadata)
 	}
 
 	return newProcessorResult()
+}
+
+// parameterProcessor names a parameter in the scope of its function, so a
+// call on it does not bind a name of an outer scope. Its default value runs
+// in the scope. The name is in the field name or pattern, and the type,
+// which runs no code, in the field type.
+func parameterProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if node == nil {
+		return newProcessorResult()
+	}
+	name := node.ChildByFieldName("name")
+	if name == nil {
+		name = transparentChild(node.ChildByFieldName("pattern"), callGraph)
+	}
+	if name != nil {
+		callGraph.assignmentGraph.addNode(currentNamespace+namespaceSeparator+name.Content(treeData), name)
+	}
+	typ := node.ChildByFieldName("type")
+	for _, child := range ts.NamedChildren(node) {
+		if (name == nil || !sameNode(child, name)) && (typ == nil || !sameNode(child, typ)) {
+			processNode(child, treeData, currentNamespace, callGraph, metadata)
+		}
+	}
+	return newProcessorResult()
+}
+
+// transparentChild returns the child of a node that the profile reads
+// through, as x in the Rust pattern mut x, or else the node.
+func transparentChild(node *sitter.Node, callGraph *CallGraph) *sitter.Node {
+	if node == nil {
+		return nil
+	}
+	if position, ok := callGraph.profile.transparent[node.Type()]; ok && position == firstChild && node.NamedChildCount() == 1 {
+		return node.NamedChild(0)
+	}
+	return node
+}
+
+// bodyProcessor processes the body of a node in the current namespace, as
+// the body of a C# namespace, whose name is no namespace of the graph.
+func bodyProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if node == nil {
+		return newProcessorResult()
+	}
+	return processChildren(node.ChildByFieldName("body"), treeData, currentNamespace, callGraph, metadata)
 }
 
 // enclosingClass returns the namespace of the innermost class scope that

@@ -38,7 +38,7 @@ const (
 	benchWorkersEnv = "PROJECTGRAPH_BENCH_WORKERS"
 )
 
-var benchTestPaths = []string{"tests", "test_*.py", "*.test.js", "*.test.ts", "*_test.go", "*Test.java", "*Test.kt"}
+var benchTestPaths = []string{"tests", "test", "test_*.py", "*.test.js", "*.test.ts", "*_test.go", "*Test.java", "*Test.kt", "*Tests.cs", "*Test.php", "*_test.rb"}
 
 func benchSizes(b *testing.B) []int {
 	return envInts(b, benchFilesEnv, 1000)

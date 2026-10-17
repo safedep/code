@@ -90,25 +90,54 @@ type builder struct {
 	reading map[string]bool
 
 	golang *modules.Golang
+	// composer holds the autoload maps of PHP.
+	composer *modules.Composer
+	// groupMembers holds the members of each group of aliases by its first
+	// alias, and nodesByParent the keys of the nodes by their parent.
+	groupMembers  map[string]map[string]string
+	nodesByParent map[string][]string
+	// groupRecords holds the class records of each group of aliases, and
+	// externalBases the first external base of each class, or "".
+	groupRecords  map[string][]classRecord
+	externalBases map[string]string
+	// cargo holds the crates of Rust, and rustModules the module path of
+	// each Rust file.
+	cargo       *modules.Cargo
+	rustModules map[string]string
+	// rubyLoadPath holds the directories that a Ruby require reads.
+	rubyLoadPath []string
+	// constants holds the Ruby classes and modules by constant path, as
+	// Shop::Loader.
+	constants map[string][]string
 	// resolvers holds the module resolver of each language.
 	resolvers map[langcode.Code]modules.Resolver
 	units     map[string]*unit
 	unitOf    map[string]*unit
 	// goPackages holds the package that an import of each directory names.
 	goPackages map[string]*unit
-	// javaPackages holds the unit of each Java package by name.
-	javaPackages map[string]*unit
+	// namespaces holds the table of the units of each language family whose
+	// files declare a package or a namespace.
+	namespaces map[langcode.Code]*namespaces
 
 	mros     map[string][]string
 	children map[string][]string
+	// aliases holds the definitions of each class that the language joins
+	// to one class, the class too.
+	aliases map[string][]string
+	// extensionDefs holds the extension functions by family and name.
+	extensionDefs map[familyName][]string
 	// open holds the classes whose base can be any class.
 	open []string
-	// narrowed holds the call sites whose receiver a class narrowed. Such a
-	// site gets no field or name edge, and the link step owns its record.
-	narrowed map[Site]bool
-	// structural holds the narrowed sites whose type an object of another
+	// narrowed holds the callees of the calls whose receiver a class
+	// narrowed, by site. Such a call gets no field or name edge, and the
+	// link step owns its record and the records of its receiver, as s.enc
+	// of s.enc.Encode(). A chain of calls, as a.b().c(), has one site, and
+	// the call of c stays a record when the class of a narrows the call of
+	// b.
+	narrowed map[Site][]string
+	// structural holds the narrowed calls whose type an object of another
 	// class can satisfy, so they keep their field edges.
-	structural map[Site]bool
+	structural map[siteCall]bool
 	// goMethods holds the Go methods of the project by name.
 	goMethods map[string][]string
 	// implemented holds whether a Go type implements an interface.
@@ -147,29 +176,30 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 			Nodes: make(map[string]*Node, defs),
 			Files: make(map[string]fileindex.FileStatus, len(indexes)),
 		},
-		byPath:       make(map[string]*fileindex.Index, len(indexes)),
-		scopes:       make(map[string]*scope, len(indexes)),
-		edges:        newEdgeSet(sites),
-		unresolved:   map[UnresolvedSite]bool{},
-		truncations:  map[Truncation]bool{},
-		names:        map[nameKey]resolution{},
-		visiting:     map[nameKey]bool{},
-		bindings:     map[string]string{},
-		classes:      map[string]classRecord{},
-		defs:         make(map[string]*fileindex.Definition, defs),
-		reading:      map[string]bool{},
-		units:        map[string]*unit{},
-		unitOf:       map[string]*unit{},
-		goPackages:   map[string]*unit{},
-		javaPackages: map[string]*unit{},
-		loads:        map[string]bool{},
-		mros:         map[string][]string{},
-		narrowed:     map[Site]bool{},
-		structural:   map[Site]bool{},
-		implemented:  map[[2]string]bool{},
-		resolvers:    map[langcode.Code]modules.Resolver{},
-		test:         map[string]bool{},
-		rules:        roots.Merge(roots.Default(), opts.Rules),
+		byPath:      make(map[string]*fileindex.Index, len(indexes)),
+		scopes:      make(map[string]*scope, len(indexes)),
+		edges:       newEdgeSet(sites),
+		unresolved:  map[UnresolvedSite]bool{},
+		truncations: map[Truncation]bool{},
+		names:       map[nameKey]resolution{},
+		visiting:    map[nameKey]bool{},
+		bindings:    map[string]string{},
+		classes:     map[string]classRecord{},
+		defs:        make(map[string]*fileindex.Definition, defs),
+		reading:     map[string]bool{},
+		units:       map[string]*unit{},
+		unitOf:      map[string]*unit{},
+		goPackages:  map[string]*unit{},
+		namespaces:  map[langcode.Code]*namespaces{},
+		loads:       map[string]bool{},
+		mros:        map[string][]string{},
+		aliases:     map[string][]string{},
+		narrowed:    map[Site][]string{},
+		structural:  map[siteCall]bool{},
+		implemented: map[[2]string]bool{},
+		resolvers:   map[langcode.Code]modules.Resolver{},
+		test:        map[string]bool{},
+		rules:       roots.Merge(roots.Default(), opts.Rules),
 	}
 	for _, ix := range indexes {
 		if ix.Version != fileindex.Version {
@@ -225,6 +255,16 @@ func (b *builder) link(ctx context.Context) error {
 		b.addDefinitions(ix)
 		b.scopes[p] = newScope(ix)
 	}
+	for _, p := range profiles {
+		if p.aliases != nil {
+			p.aliases(b)
+		}
+	}
+	// The classes are whole from here, so the members of a group of
+	// aliases can be one table.
+	b.groupMembers = map[string]map[string]string{}
+	b.groupRecords = map[string][]classRecord{}
+	b.externalBases = map[string]string{}
 
 	for _, p := range b.paths {
 		if err := ctx.Err(); err != nil {
@@ -602,13 +642,34 @@ func (b *builder) definer(key string) string {
 	}
 }
 
+// siteCall is a call at a site, by the text of its callee.
+type siteCall struct {
+	site   Site
+	callee string
+}
+
+func (b *builder) narrow(site Site, callee string) {
+	if !slices.Contains(b.narrowed[site], callee) {
+		b.narrowed[site] = append(b.narrowed[site], callee)
+	}
+}
+
+// isNarrowed reports whether the call of the callee text at the site is a
+// narrowed call or a part of the receiver of one.
+func (b *builder) isNarrowed(site Site, text string) bool {
+	return slices.ContainsFunc(b.narrowed[site], func(callee string) bool {
+		rest, ok := strings.CutPrefix(callee, text)
+		return ok && (rest == "" || strings.IndexFunc(rest[:1], func(r rune) bool { return r == '.' || r == ':' || r == '-' }) == 0)
+	})
+}
+
 func (b *builder) copyUnresolved(ix *fileindex.Index) {
 	for _, u := range ix.Unresolved {
 		// The link step resolves a call on super through the bases of the
 		// class, and the call on a narrowed receiver through the class. It
 		// records a call that it cannot resolve.
 		at := Site{Path: ix.Path, Line: u.Line, Column: u.Column}
-		if u.Receiver == superKeyword && profileOf(ix.Language).superCalls || b.narrowed[at] {
+		if u.Receiver == superKeyword && profileOf(ix.Language).superCalls || b.isNarrowed(at, u.Text) {
 			continue
 		}
 		site := UnresolvedSite{

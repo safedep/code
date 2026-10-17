@@ -1,0 +1,252 @@
+source: safedep:adversarial
+description: Ruby calls methods with no call of their name. An alias and alias_method call the old method by the new name. A mixin gives start_job to Runner. Interpolation calls to_s, and a + b calls +. method(:name) and &:name pass a method by a symbol. A bare name calls a top-level method of another file. Deep::Inner finds Helper in module Jobs. A block of Struct.new defines show on a class that the source does not name, so its target stays uncertain and does not look like not-found.
+roots:
+  - key: main.rb
+    kind: main
+    rule: ruby.main-guard
+edges:
+  - from: main.rb
+    to: main.rb//Runner//secret
+    kind: reference
+    confidence: low
+    site: main.rb:12
+  - from: main.rb
+    to: lib/jobs.rb//Jobs//Mixin//start_job
+    kind: name
+    confidence: low
+    site: main.rb:11
+  - from: lib/jobs.rb//Jobs//Pretty
+    to: lib/jobs.rb//Jobs//Pretty//to_s
+    kind: reference
+    confidence: low
+    site: lib/jobs.rb:9
+  - from: lib/jobs.rb//Jobs//Money
+    to: lib/jobs.rb//Jobs//Money//+
+    kind: reference
+    confidence: low
+    site: lib/jobs.rb:15
+  - from: main.rb//Runner//run
+    to: lib/helpers.rb//helper_top
+    kind: direct
+    confidence: high
+    site: main.rb:15
+  - from: lib/jobs.rb//Jobs//Deep//Inner//reach_up
+    to: lib/jobs.rb//Jobs//Helper//self.assist
+    kind: member
+    confidence: high
+    site: lib/jobs.rb:51
+unresolved:
+  - caller: main.rb
+    site: main.rb:11
+    reason: unknown-receiver
+    method: start_job
+  - caller: main.rb//Runner//run
+    site: main.rb:16
+    reason: no-definition
+    method: launch
+  - caller: main.rb//Runner//run
+    site: main.rb:17
+    reason: no-definition
+    method: boot
+  - caller: main.rb//Runner//run
+    site: main.rb:21
+    reason: unknown-receiver
+    method: call
+  - caller: main.rb//Runner//run
+    site: main.rb:22
+    reason: unknown-receiver
+    method: each
+  - caller: main.rb//Runner//run
+    site: main.rb:22
+    reason: no-definition
+    method: method
+  - caller: main.rb//Runner//run
+    site: main.rb:22
+    reason: unknown-receiver
+    method: by_method
+  - caller: main.rb//Runner//run
+    site: main.rb:23
+    reason: no-definition
+    method: then
+  - caller: main.rb//Runner//run
+    site: main.rb:26
+    reason: no-definition
+    method: tap
+  - caller: main.rb//Runner//run
+    site: main.rb:26
+    reason: unknown-receiver
+    method: by_symbol
+results:
+  - target: Kernel//system
+    status: found
+    path:
+      - key: main.rb
+      - key: main.rb//Runner//secret
+        site: main.rb:12
+        kind: reference
+        confidence: low
+      - key: Kernel//system
+        site: main.rb:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.rb//Runner//secret
+        site: main.rb:8
+        reached: true
+  - target: Process//spawn
+    status: found
+    path:
+      - key: main.rb
+      - key: lib/jobs.rb//Jobs//Mixin//start_job
+        site: main.rb:11
+        kind: name
+        confidence: low
+      - key: Process//spawn
+        site: lib/jobs.rb:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib/jobs.rb//Jobs//Mixin//start_job
+        site: lib/jobs.rb:4
+        reached: true
+  - target: Open3//capture2
+    status: found
+    path:
+      - key: main.rb
+      - key: main.rb//Runner//run
+        site: main.rb:39
+        kind: member
+        confidence: high
+      - key: lib/jobs.rb//Jobs//Pretty
+        site: main.rb:18
+        kind: member
+        confidence: high
+      - key: lib/jobs.rb//Jobs//Pretty//to_s
+        site: lib/jobs.rb:9
+        kind: reference
+        confidence: low
+      - key: Open3//capture2
+        site: lib/jobs.rb:10
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib/jobs.rb//Jobs//Pretty//to_s
+        site: lib/jobs.rb:10
+        reached: true
+  - target: Kernel//exec
+    status: found
+    path:
+      - key: main.rb
+      - key: main.rb//Runner//run
+        site: main.rb:39
+        kind: member
+        confidence: high
+      - key: lib/jobs.rb//Jobs//Money
+        site: main.rb:19
+        kind: member
+        confidence: high
+      - key: lib/jobs.rb//Jobs//Money//+
+        site: lib/jobs.rb:15
+        kind: reference
+        confidence: low
+      - key: Kernel//exec
+        site: lib/jobs.rb:16
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib/jobs.rb//Jobs//Money//+
+        site: lib/jobs.rb:16
+        reached: true
+  - target: Kernel//spawn
+    status: found
+    path:
+      - key: main.rb
+      - key: main.rb//Runner//run
+        site: main.rb:39
+        kind: member
+        confidence: high
+      - key: lib/jobs.rb//Jobs//self.by_method
+        site: main.rb:22
+        kind: name
+        confidence: low
+      - key: Kernel//spawn
+        site: lib/jobs.rb:25
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib/jobs.rb//Jobs//self.by_method
+        site: lib/jobs.rb:25
+        reached: true
+  - target: Kernel//exit!
+    status: found
+    path:
+      - key: main.rb
+      - key: main.rb//Runner//run
+        site: main.rb:39
+        kind: member
+        confidence: high
+      - key: lib/jobs.rb//Jobs//Hidden//by_symbol
+        site: main.rb:26
+        kind: name
+        confidence: low
+      - key: Kernel//exit!
+        site: lib/jobs.rb:38
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib/jobs.rb//Jobs//Hidden//by_symbol
+        site: lib/jobs.rb:38
+        reached: true
+  - target: Kernel//abort
+    status: found
+    path:
+      - key: main.rb
+      - key: main.rb//Runner//run
+        site: main.rb:39
+        kind: member
+        confidence: high
+      - key: lib/jobs.rb//Jobs//Deep//Inner//reach_up
+        site: main.rb:27
+        kind: member
+        confidence: high
+      - key: lib/jobs.rb//Jobs//Helper//self.assist
+        site: lib/jobs.rb:51
+        kind: member
+        confidence: high
+      - key: Kernel//abort
+        site: lib/jobs.rb:44
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib/jobs.rb//Jobs//Helper//self.assist
+        site: lib/jobs.rb:44
+        reached: true
+  - target: IO//popen
+    status: found
+    path:
+      - key: main.rb
+      - key: main.rb//Runner//run
+        site: main.rb:39
+        kind: member
+        confidence: high
+      - key: lib/helpers.rb//helper_top
+        site: main.rb:15
+        kind: direct
+        confidence: high
+      - key: IO//popen
+        site: lib/helpers.rb:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib/helpers.rb//helper_top
+        site: lib/helpers.rb:2
+        reached: true
+  - target: Kernel//sleep
+    status: uncertain
+    call_sites:
+      - caller: main.rb//show
+        site: main.rb:34
+        reached: false
+    uncertainties:
+      - kind: dynamic-flag
+        site: main.rb:32

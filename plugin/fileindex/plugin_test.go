@@ -77,6 +77,10 @@ func TestFileIndexGolden(t *testing.T) {
 	}{
 		{"App.java", core.LanguageCodeJava},
 		{"App.kt", core.LanguageCodeKotlin},
+		{"App.cs", core.LanguageCodeCSharp},
+		{"app.php", core.LanguageCodePHP},
+		{"app.rb", core.LanguageCodeRuby},
+		{"app.rs", core.LanguageCodeRust},
 		{"app.go", core.LanguageCodeGo},
 		{"app.js", core.LanguageCodeJavascript},
 		{"app.ts", core.LanguageCodeTypescript},
@@ -105,7 +109,7 @@ func TestFileIndexGolden(t *testing.T) {
 // needs a new Version, and both constants change with it.
 const (
 	goldenVersion = "8"
-	goldenHash    = "a29bbdd4462c370e186afae14d7327547fe218de628b34e9f3382563cfce94c2"
+	goldenHash    = "3784e1d64398978363d5cc6a2af54a8cb3d570919bf0a57b4a39e8bb559e0ee4"
 )
 
 func TestFileIndexGoldenHashFollowsVersion(t *testing.T) {

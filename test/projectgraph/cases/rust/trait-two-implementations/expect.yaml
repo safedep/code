@@ -1,0 +1,124 @@
+source: safedep:hand
+description: DbStore and FileStore implement the trait Store in two files. persist calls save on a &dyn Store, so it reaches both impls. flush takes a type parameter with the bound Store, so it reaches the default flush of the trait and the flush of FileStore.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//persist
+    to: src/stores/db.rs//DbStore//save
+    kind: cha
+    confidence: medium
+    site: src/main.rs:6
+  - from: src/main.rs//persist
+    to: src/stores/file.rs//FileStore//save
+    kind: cha
+    confidence: medium
+    site: src/main.rs:6
+  - from: src/main.rs//flush
+    to: src/stores/mod.rs//Store//flush
+    kind: member
+    confidence: high
+    site: src/main.rs:10
+  - from: src/main.rs//flush
+    to: src/stores/file.rs//FileStore//flush
+    kind: cha
+    confidence: medium
+    site: src/main.rs:10
+unresolved:
+  - caller: src/main.rs//persist
+    site: src/main.rs:6
+    reason: no-definition
+    method: save
+  - caller: src/stores/db.rs//DbStore//save
+    site: src/stores/db.rs:7
+    reason: unknown-receiver
+    method: spawn
+  - caller: src/stores/db.rs//DbStore//save
+    site: src/stores/db.rs:7
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/stores/file.rs//FileStore//save
+    site: src/stores/file.rs:7
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/stores/file.rs//FileStore//flush
+    site: src/stores/file.rs:11
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/stores/file.rs//FileStore//flush
+    site: src/stores/file.rs:11
+    reason: unknown-receiver
+    method: sync_all
+  - caller: src/stores/file.rs//FileStore//flush
+    site: src/stores/file.rs:11
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/stores/mod.rs//Store//flush
+    site: src/stores/mod.rs:8
+    reason: unknown-receiver
+    method: flush_all
+results:
+  - target: std//process//Command//new
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//persist
+        site: src/main.rs:14
+        kind: direct
+        confidence: high
+      - key: src/stores/db.rs//DbStore//save
+        site: src/main.rs:6
+        kind: cha
+        confidence: medium
+      - key: std//process//Command//new
+        site: src/stores/db.rs:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/stores/db.rs//DbStore//save
+        site: src/stores/db.rs:7
+        reached: true
+  - target: std//fs//remove_file
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//persist
+        site: src/main.rs:14
+        kind: direct
+        confidence: high
+      - key: src/stores/file.rs//FileStore//save
+        site: src/main.rs:6
+        kind: cha
+        confidence: medium
+      - key: std//fs//remove_file
+        site: src/stores/file.rs:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/stores/file.rs//FileStore//save
+        site: src/stores/file.rs:7
+        reached: true
+  - target: std//fs//File//open
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//flush
+        site: src/main.rs:15
+        kind: direct
+        confidence: high
+      - key: src/stores/file.rs//FileStore//flush
+        site: src/main.rs:10
+        kind: cha
+        confidence: medium
+      - key: std//fs//File//open
+        site: src/stores/file.rs:11
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/stores/file.rs//FileStore//flush
+        site: src/stores/file.rs:11
+        reached: true

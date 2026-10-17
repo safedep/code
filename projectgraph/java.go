@@ -1,8 +1,6 @@
 package projectgraph
 
 import (
-	"maps"
-	"slices"
 	"strings"
 	"unicode"
 
@@ -14,7 +12,7 @@ import (
 var javaProfile = profile{
 	code:            langcode.Java,
 	family:          langcode.Java,
-	resolver:        func(b *builder) modules.Resolver { return javaResolver{b} },
+	resolver:        func(b *builder) modules.Resolver { return namespaceResolver{b, langcode.Java} },
 	units:           (*builder).addJavaUnits,
 	link:            (*builder).linkClassInits,
 	qualified:       (*builder).resolveJava,
@@ -30,27 +28,10 @@ var javaProfile = profile{
 	exactWildcards:  true,
 }
 
-// javaResolver resolves a Java import to a class or a package of the
-// project.
-type javaResolver struct{ b *builder }
-
-func (r javaResolver) Module(_, spec string) (string, string, bool) {
-	if key, ok := r.b.resolveJava(spec); ok {
-		return key, "class", true
-	}
-	return "", "", false
-}
-
-// FirstParty reports whether a qualified name starts with a package of the
-// project.
-func (r javaResolver) FirstParty(spec string) bool {
-	return r.b.javaFirstParty(spec)
-}
-
 // javaScopeFallback resolves a name that no scope of the file binds: a
 // class or a member of a wildcard import of a dependency, or a qualified
 // name, as org.yaml.Yaml.load.
-func (b *builder) javaScopeFallback(sc *scope, first string, rest []string, target string) []resolution {
+func (b *builder) javaScopeFallback(sc *scope, _, first string, rest []string, target string) []resolution {
 	var out []resolution
 	for _, key := range b.externalWildcards(sc, first) {
 		out = append(out, resolution{key: b.external(fileindex.Join(key, rest...)), kind: EdgeWildcard, rule: "wildcard-external"})
@@ -70,18 +51,11 @@ func (b *builder) javaScopeFallback(sc *scope, first string, rest []string, targ
 // class by its package and its name, and a class names the classes of its
 // package with no import.
 func (b *builder) addJavaUnits() {
-	files := map[string][]string{}
-	for _, p := range b.paths {
-		if ix := b.byPath[p]; ix != nil && (ix.Language == langcode.Java || ix.Language == langcode.Kotlin) {
-			files[ix.Package] = append(files[ix.Package], p)
-		}
-	}
-	for _, pkg := range slices.Sorted(maps.Keys(files)) {
-		u := b.addUnit("java:"+pkg, files[pkg])
-		b.javaPackages[pkg] = u
-		// Java code names the top-level functions of a Kotlin file
-		// through the class of the file, as UtilsKt.helper().
-		for _, p := range files[pkg] {
+	t := b.addNamespaceUnits(langcode.Java, ".", langcode.Java, langcode.Kotlin)
+	// Java code names the top-level functions of a Kotlin file through the
+	// class of the file, as UtilsKt.helper().
+	for _, u := range t.units {
+		for _, p := range u.files {
 			if b.byPath[p].Language == langcode.Kotlin {
 				facade := kotlinFacade(p)
 				u.names[facade] = append(u.names[facade], p)
@@ -90,48 +64,9 @@ func (b *builder) addJavaUnits() {
 	}
 }
 
-// resolveJava resolves a qualified name, as com.x.Service or
-// com.x.Outer.Inner, to the unit of a package or to a class of the project
-// and a member under it. The longest package that the name starts with
-// wins. The default package has no name, so no import names it.
+// resolveJava resolves a qualified Java or Kotlin name, as com.x.Service.
 func (b *builder) resolveJava(name string) (string, bool) {
-	parts := strings.Split(name, ".")
-	for i := len(parts); i > 0; i-- {
-		u := b.javaPackages[strings.Join(parts[:i], ".")]
-		if u == nil {
-			continue
-		}
-		if i == len(parts) {
-			return u.key, true
-		}
-		// A top-level property of Kotlin has no value that a walk can
-		// read, but an import names it.
-		if keys := u.names[parts[i]]; i == len(parts)-1 && len(keys) > 0 {
-			return keys[0], true
-		}
-		if r := b.walk(u.key, parts[i:]); r.fail == nil {
-			return r.key, true
-		}
-		return "", false
-	}
-	return "", false
-}
-
-// javaFirstParty reports whether a qualified name starts with a package of
-// the project. It looks up each dotted prefix of the name, because a scan
-// of the packages at each import grows with the square of the project.
-func (b *builder) javaFirstParty(name string) bool {
-	for prefix := name; prefix != ""; {
-		if _, ok := b.javaPackages[prefix]; ok {
-			return true
-		}
-		i := strings.LastIndexByte(prefix, '.')
-		if i < 0 {
-			return false
-		}
-		prefix = prefix[:i]
-	}
-	return false
+	return b.resolveQualified(langcode.Java, name)
 }
 
 // linkClassInits adds an edge from the class node and each method of a
@@ -203,16 +138,45 @@ func startsUpper(s string) bool {
 // of a class that holds the caller, or of its bases. The receiver is this,
 // so a subclass can override the method.
 func (b *builder) thisMethod(caller, name string) (resolution, bool) {
+	// new in a class method of Ruby makes an instance of the class, and
+	// the edge to the class leads to its constructor.
+	if p := profileOf(b.languageOf(caller)); p.constructorCall == name && p.classMethodPrefix != "" && strings.HasPrefix(fileindex.Last(caller), p.classMethodPrefix) {
+		if class, ok := b.enclosingClass(caller); ok {
+			if _, own := b.ownMethod(class, name); !own {
+				return resolution{key: class, kind: EdgeDirect, rule: "constructor"}, true
+			}
+		}
+	}
 	for class, ok := b.enclosingClass(caller); ok; class, ok = b.enclosingClass(fileindex.Parent(class)) {
 		if _, ok := b.ownMethod(class, name); ok {
-			return b.walkTyped(class, []string{name}), true
+			return b.walkTyped(class, []string{b.selfName(class, caller, name)}), true
+		}
+		if self := b.selfName(class, caller, name); self != name {
+			return b.walkTyped(class, []string{self}), true
 		}
 	}
 	return resolution{}, false
 }
 
-// nestedType returns the class that a Java name names in the classes that
-// hold the key, as Inner in a method of Outer for Outer.Inner.
+// selfName returns the name of the method of the class that a call with no
+// receiver in the caller names. In a class method of Ruby, self is the
+// class, so build names the class method self.build when the class has
+// one.
+func (b *builder) selfName(class, caller, name string) string {
+	prefix := profileOf(b.languageOf(caller)).classMethodPrefix
+	if prefix == "" || !strings.HasPrefix(fileindex.Last(caller), prefix) {
+		return name
+	}
+	if _, ok := b.ownMethod(class, prefix+name); ok {
+		return prefix + name
+	}
+	return name
+}
+
+// nestedType returns the class that a name names in the classes that hold
+// the key, as Inner in a method of Outer for Outer.Inner in Java. A Ruby
+// module of another file can hold it too, as Loader in module Shop for
+// Shop::Loader.
 func (b *builder) nestedType(sc *scope, from, name string) (string, bool) {
 	if !sc.profile.nestedTypes {
 		return "", false
@@ -220,6 +184,9 @@ func (b *builder) nestedType(sc *scope, from, name string) (string, bool) {
 	for class, ok := b.enclosingClass(from); ok; class, ok = b.enclosingClass(fileindex.Parent(class)) {
 		if nested := fileindex.Join(class, name); b.isType(nested) {
 			return nested, true
+		}
+		if keys := b.constants[constantPath(class, name)]; len(keys) > 0 {
+			return keys[0], true
 		}
 	}
 	return "", false

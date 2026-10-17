@@ -92,9 +92,8 @@ func (p *projection) addJavaSignatures() {
 	}
 }
 
-// javaInitName names the static initializer of a Java class, as the JVM
-// does.
-const javaInitName = "<clinit>"
+// javaInitName names the static initializer of a Java class.
+const javaInitName = staticInitName
 
 // addJavaInits adds the static initializer of each Java class whose body
 // runs code when the class loads: a static block, the initializer of a

@@ -267,6 +267,10 @@ func title(s string) string {
 func snake(w [2]int) string { return synthVerbs[w[0]] + "_" + synthNouns[w[1]] }
 func camel(w [2]int) string { return synthVerbs[w[0]] + title(synthNouns[w[1]]) }
 
+// synthSources are the extensions of the source files of the generated
+// projects.
+var synthSources = []string{".py", ".js", ".ts", ".go", ".java", ".kt", ".cs", ".php", ".rb", ".rs"}
+
 // write renders the project into dir and returns the number of source
 // files.
 func (p *synthProject) write(dir string) (int, error) {
@@ -284,6 +288,14 @@ func (p *synthProject) write(dir string) (int, error) {
 		p.renderJava(files)
 	case core.LanguageCodeKotlin:
 		p.renderKotlin(files)
+	case core.LanguageCodeCSharp:
+		p.renderCSharp(files)
+	case core.LanguageCodePHP:
+		p.renderPHP(files)
+	case core.LanguageCodeRuby:
+		p.renderRuby(files)
+	case core.LanguageCodeRust:
+		p.renderRust(files)
 	default:
 		return 0, fmt.Errorf("no template for %s", p.language)
 	}
@@ -296,7 +308,7 @@ func (p *synthProject) write(dir string) (int, error) {
 		if err := os.WriteFile(file, []byte(text), 0o644); err != nil {
 			return 0, err
 		}
-		if ext := filepath.Ext(name); ext == ".py" || ext == ".js" || ext == ".ts" || ext == ".go" || ext == ".java" || ext == ".kt" {
+		if slices.Contains(synthSources, filepath.Ext(name)) {
 			sources++
 		}
 	}

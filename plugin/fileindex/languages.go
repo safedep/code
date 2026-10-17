@@ -1,6 +1,8 @@
 package fileindex
 
 import (
+	"strings"
+
 	"github.com/safedep/code/core"
 	fidx "github.com/safedep/code/fileindex"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -44,6 +46,10 @@ var languageRulesByCode = map[core.LanguageCode]*languageRules{}
 
 func init() {
 	languageRulesByCode[core.LanguageCodeKotlin] = &kotlinRules
+	languageRulesByCode[core.LanguageCodeCSharp] = &csharpRules
+	languageRulesByCode[core.LanguageCodePHP] = &phpRules
+	languageRulesByCode[core.LanguageCodeRuby] = &rubyRules
+	languageRulesByCode[core.LanguageCodeRust] = &rustRules
 }
 
 // rules returns the rules of the language of the file, or empty rules.
@@ -72,4 +78,13 @@ func (p *projection) addSignatures() {
 // receiver.
 func (p *projection) memberScopes() bool {
 	return p.isJava() || p.rules().memberScopes
+}
+
+// withoutTypeArgs removes the type arguments of a name, as List for
+// List<string>.
+func withoutTypeArgs(name string) string {
+	if i := strings.IndexByte(name, '<'); i >= 0 {
+		return strings.TrimSpace(name[:i])
+	}
+	return name
 }

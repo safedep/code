@@ -32,6 +32,10 @@ type referenceSyntax struct {
 	// of a, b := f, g. The last child of each list holds the value, so the
 	// key of a keyed element is no value.
 	lists map[string]bool
+	// rawNames marks a language whose files name the classes of other
+	// files of a unit with no import, as C#. A name that the file does not
+	// bind keeps its text, and the link step resolves it or drops it.
+	rawNames bool
 }
 
 var referenceSyntaxes = map[core.LanguageCode]referenceSyntax{
@@ -61,6 +65,42 @@ var referenceSyntaxes = map[core.LanguageCode]referenceSyntax{
 	},
 	core.LanguageCodeJavascript: ecmascriptReferences,
 	core.LanguageCodeTypescript: ecmascriptReferences,
+	// A C# method group, as Process in list.ForEach(Process) or OnClick in
+	// button.Click += OnClick, is a delegate that the code that gets it
+	// calls.
+	core.LanguageCodeCSharp: {
+		holders: map[string]string{
+			"argument":                "",
+			"assignment_expression":   "right",
+			"return_statement":        "",
+			"arrow_expression_clause": "",
+		},
+		member:      "member_access_expression",
+		object:      "expression",
+		property:    "name",
+		identifiers: map[string]bool{"identifier": true},
+		instances:   map[string]bool{"this": true},
+		rawNames:    true,
+	},
+	// A Rust path to a function, as handler in get(handler) or
+	// Self::visit in items.iter().for_each(Self::visit), is a value that
+	// the code that gets it calls.
+	core.LanguageCodeRust: {
+		holders: map[string]string{
+			"arguments":             "",
+			"let_declaration":       "value",
+			"assignment_expression": "right",
+			"return_expression":     "",
+			"field_initializer":     "value",
+			"array_expression":      "",
+		},
+		member:      "scoped_identifier",
+		object:      "path",
+		property:    "name",
+		identifiers: map[string]bool{"identifier": true},
+		instances:   map[string]bool{"Self": true},
+		rawNames:    true,
+	},
 	core.LanguageCodeGo: {
 		holders: map[string]string{
 			"argument_list":         "",
@@ -206,7 +246,10 @@ func (p *projection) reference(syntax referenceSyntax, caller string, value *sit
 	slices.Reverse(names)
 
 	unit, ok := p.valueOf(syntax, caller, p.text(root))
-	if !ok {
+	switch {
+	case !ok && syntax.rawNames && syntax.identifiers[root.Type()]:
+		unit = p.text(root)
+	case !ok:
 		return fidx.Reference{}, false
 	}
 	// A Go parameter or local of a declared type holds a value of the

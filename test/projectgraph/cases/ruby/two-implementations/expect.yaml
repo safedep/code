@@ -1,0 +1,67 @@
+source: safedep:hand
+description: DbStore and FileStore both override Store#save. persist calls save on a parameter of no known class, so the call reaches each save of the project by name, and the call stays an unresolved site.
+roots:
+  - key: main.rb
+    kind: main
+    rule: ruby.main-guard-program-name
+edges:
+  - from: main.rb//persist
+    to: lib/stores.rb//DbStore//save
+    kind: name
+    confidence: low
+    site: main.rb:4
+  - from: main.rb//persist
+    to: lib/stores.rb//FileStore//save
+    kind: name
+    confidence: low
+    site: main.rb:4
+unresolved:
+  - caller: lib/stores.rb//DbStore//save
+    site: lib/stores.rb:9
+    reason: unknown-receiver
+    method: exec
+  - caller: main.rb//persist
+    site: main.rb:4
+    reason: unknown-receiver
+    method: save
+results:
+  - target: File//delete
+    status: found
+    path:
+      - key: main.rb
+      - key: main.rb//persist
+        site: main.rb:8
+        kind: direct
+        confidence: high
+      - key: lib/stores.rb//FileStore//save
+        site: main.rb:4
+        kind: name
+        confidence: low
+      - key: File//delete
+        site: lib/stores.rb:15
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib/stores.rb//FileStore//save
+        site: lib/stores.rb:15
+        reached: true
+  - target: PG//connect
+    status: found
+    path:
+      - key: main.rb
+      - key: main.rb//persist
+        site: main.rb:8
+        kind: direct
+        confidence: high
+      - key: lib/stores.rb//DbStore//save
+        site: main.rb:4
+        kind: name
+        confidence: low
+      - key: PG//connect
+        site: lib/stores.rb:9
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib/stores.rb//DbStore//save
+        site: lib/stores.rb:9
+        reached: true

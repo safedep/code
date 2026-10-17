@@ -26,7 +26,7 @@ const maxNameCandidates = 20
 func (b *builder) linkFields() {
 	fields, names := b.definitionsByName()
 	for _, u := range sortedKeys(b.unresolved, compareUnresolved) {
-		if u.Method == "" || ReachesAny(u.Reason) || b.narrowed[u.Site] && !b.structural[u.Site] {
+		if u.Method == "" || ReachesAny(u.Reason) || b.isNarrowed(u.Site, u.Text) && !b.structural[siteCall{u.Site, u.Text}] {
 			continue
 		}
 		ix := b.byPath[u.Site.Path]
@@ -41,12 +41,14 @@ func (b *builder) linkFields() {
 		// The scan stops past the cap, because a common name has a
 		// candidate in most files of a large project.
 		var candidates []string
-		for _, key := range byName[familyName{family: family, name: u.Method}] {
-			if len(candidates) > maxNameCandidates {
-				break
-			}
-			if !b.test[fileindex.Unit(key)] || b.test[u.Site.Path] {
-				candidates = append(candidates, key)
+		for _, name := range append([]string{u.Method}, profileOf(ix.Language).methodAliases[u.Method]...) {
+			for _, key := range byName[familyName{family: family, name: name}] {
+				if len(candidates) > maxNameCandidates {
+					break
+				}
+				if !b.test[fileindex.Unit(key)] || b.test[u.Site.Path] {
+					candidates = append(candidates, key)
+				}
 			}
 		}
 		if len(candidates) > maxNameCandidates {

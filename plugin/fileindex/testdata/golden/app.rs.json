@@ -1,0 +1,399 @@
+{
+  "version": "8",
+  "path": "app.rs",
+  "language": "rust",
+  "content_hash": "f07a751f9610f47e7b49679223d4ca80f85ecb21abde61488935d2f21a5c3603",
+  "imports": [
+    {
+      "line": 1,
+      "module": "crate::store::Store",
+      "alias": "Store",
+      "kind": "static",
+      "namespace": "crate//store//Store"
+    },
+    {
+      "line": 2,
+      "module": "serde_yaml",
+      "alias": "serde_yaml",
+      "kind": "static",
+      "namespace": "serde_yaml"
+    },
+    {
+      "line": 23,
+      "module": "log",
+      "kind": "static",
+      "namespace": "log"
+    }
+  ],
+  "definitions": [
+    {
+      "key": "app.rs",
+      "kind": "module",
+      "name": "app",
+      "start_line": 1,
+      "end_line": 44,
+      "exported": true
+    },
+    {
+      "key": "app.rs//App",
+      "kind": "class",
+      "name": "App",
+      "start_line": 8,
+      "end_line": 25,
+      "exported": true
+    },
+    {
+      "key": "app.rs//App//new",
+      "kind": "method",
+      "name": "new",
+      "start_line": 9,
+      "end_line": 11,
+      "exported": true,
+      "parent": "app.rs//App",
+      "params": [
+        {
+          "name": "store",
+          "type": "Store"
+        }
+      ],
+      "returns": "App",
+      "static": true
+    },
+    {
+      "key": "app.rs//App//run",
+      "kind": "method",
+      "name": "run",
+      "start_line": 14,
+      "end_line": 20,
+      "exported": true,
+      "parent": "app.rs//App",
+      "decorators": [
+        "@instrument"
+      ],
+      "locals": [
+        {
+          "name": "text",
+          "type": "String"
+        }
+      ],
+      "returns": "Result"
+    },
+    {
+      "key": "app.rs//App//audit",
+      "kind": "method",
+      "name": "audit",
+      "start_line": 22,
+      "end_line": 24,
+      "exported": false,
+      "parent": "app.rs//App"
+    },
+    {
+      "key": "app.rs//App//go",
+      "kind": "method",
+      "name": "go",
+      "start_line": 28,
+      "end_line": 30,
+      "exported": true,
+      "parent": "app.rs//App"
+    },
+    {
+      "key": "app.rs//Runner",
+      "kind": "interface",
+      "name": "Runner",
+      "start_line": 33,
+      "end_line": 35,
+      "exported": true
+    },
+    {
+      "key": "app.rs//helper",
+      "kind": "function",
+      "name": "helper",
+      "start_line": 37,
+      "end_line": 39,
+      "exported": false,
+      "returns": "String"
+    },
+    {
+      "key": "app.rs//main",
+      "kind": "function",
+      "name": "main",
+      "start_line": 41,
+      "end_line": 43,
+      "exported": false
+    }
+  ],
+  "classes": [
+    {
+      "key": "app.rs//App",
+      "bases": [
+        "Runner"
+      ],
+      "methods": [
+        "app.rs//App//audit",
+        "app.rs//App//go",
+        "app.rs//App//new",
+        "app.rs//App//run"
+      ],
+      "fields": [
+        {
+          "name": "store",
+          "type": "Store"
+        }
+      ]
+    },
+    {
+      "key": "app.rs//Runner"
+    }
+  ],
+  "calls": [
+    {
+      "caller": "app.rs//App//new",
+      "line": 10,
+      "column": 9,
+      "callee": "App",
+      "targets": [
+        "app.rs//App"
+      ],
+      "method": "App",
+      "kind": "new"
+    },
+    {
+      "caller": "app.rs//App//run",
+      "line": 15,
+      "column": 28,
+      "callee": "std::fs::read_to_string",
+      "targets": [
+        "std//fs//read_to_string"
+      ],
+      "kind": "call"
+    },
+    {
+      "caller": "app.rs//App//run",
+      "line": 16,
+      "column": 9,
+      "callee": "self.store.save",
+      "targets": [
+        "app.rs//App//store//save"
+      ],
+      "receiver": "self.store",
+      "method": "save",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rs//App//run",
+      "line": 16,
+      "column": 25,
+      "callee": "serde_yaml::from_str",
+      "targets": [
+        "serde_yaml//from_str"
+      ],
+      "kind": "call"
+    },
+    {
+      "caller": "app.rs//App//run",
+      "line": 16,
+      "column": 25,
+      "callee": "serde_yaml::from_str(\u0026text).unwrap",
+      "targets": [
+        "serde_yaml//from_str//unwrap"
+      ],
+      "receiver": "serde_yaml::from_str(\u0026text)",
+      "method": "unwrap",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rs//App//run",
+      "line": 17,
+      "column": 9,
+      "callee": "self.audit",
+      "targets": [
+        "app.rs//App//audit"
+      ],
+      "receiver": "self",
+      "method": "audit",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rs//App//run",
+      "line": 18,
+      "column": 9,
+      "callee": "println",
+      "targets": [
+        "println"
+      ],
+      "method": "println",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rs//App//run",
+      "line": 18,
+      "column": 24,
+      "callee": "helper",
+      "targets": [
+        "helper"
+      ],
+      "method": "helper",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rs//App//run",
+      "line": 19,
+      "column": 9,
+      "callee": "Ok",
+      "targets": [
+        "Ok"
+      ],
+      "method": "Ok",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rs//App//audit",
+      "line": 23,
+      "column": 9,
+      "callee": "log::info",
+      "targets": [
+        "log//info"
+      ],
+      "kind": "call"
+    },
+    {
+      "caller": "app.rs//App//go",
+      "line": 29,
+      "column": 9,
+      "callee": "self.run",
+      "targets": [
+        "app.rs//App//run"
+      ],
+      "receiver": "self",
+      "method": "run",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rs//App//go",
+      "line": 29,
+      "column": 9,
+      "callee": "self.run(\"a.yaml\").unwrap",
+      "targets": [
+        "app.rs//App//run//unwrap"
+      ],
+      "receiver": "self.run(\"a.yaml\")",
+      "method": "unwrap",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rs//helper",
+      "line": 38,
+      "column": 5,
+      "callee": "path.trim",
+      "targets": [
+        "app.rs//helper//path//trim"
+      ],
+      "receiver": "path",
+      "method": "trim",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rs//helper",
+      "line": 38,
+      "column": 5,
+      "callee": "path.trim().to_string",
+      "targets": [
+        "app.rs//helper//path//trim//to_string"
+      ],
+      "receiver": "path.trim()",
+      "method": "to_string",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rs//main",
+      "line": 42,
+      "column": 5,
+      "callee": "App::new",
+      "targets": [
+        "app.rs//App//new"
+      ],
+      "kind": "call"
+    },
+    {
+      "caller": "app.rs//main",
+      "line": 42,
+      "column": 5,
+      "callee": "App::new(Box::new(crate::store::Memory {})).go",
+      "targets": [
+        "app.rs//App//go"
+      ],
+      "receiver": "App::new(Box::new(crate::store::Memory {}))",
+      "method": "go",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rs//main",
+      "line": 42,
+      "column": 14,
+      "callee": "Box::new",
+      "targets": [
+        "Box//new"
+      ],
+      "kind": "call"
+    },
+    {
+      "caller": "app.rs//main",
+      "line": 42,
+      "column": 23,
+      "callee": "crate::store::Memory",
+      "targets": [
+        "crate//store//Memory"
+      ],
+      "kind": "new"
+    }
+  ],
+  "references": [
+    {
+      "caller": "app.rs//App//run",
+      "line": 14,
+      "column": 49,
+      "text": "Error",
+      "targets": [
+        "Error"
+      ]
+    },
+    {
+      "caller": "app.rs//App//run",
+      "line": 15,
+      "column": 52,
+      "text": "path",
+      "targets": [
+        "path"
+      ]
+    }
+  ],
+  "unresolved": [
+    {
+      "caller": "app.rs//App//run",
+      "line": 16,
+      "column": 25,
+      "text": "serde_yaml::from_str(\u0026text).unwrap",
+      "receiver": "serde_yaml::from_str(\u0026text)",
+      "method": "unwrap",
+      "reason": "unknown-receiver"
+    },
+    {
+      "caller": "app.rs//App//go",
+      "line": 29,
+      "column": 9,
+      "text": "self.run(\"a.yaml\").unwrap",
+      "receiver": "self.run(\"a.yaml\")",
+      "method": "unwrap",
+      "reason": "unknown-receiver"
+    },
+    {
+      "caller": "app.rs//helper",
+      "line": 38,
+      "column": 5,
+      "text": "path.trim().to_string",
+      "receiver": "path.trim()",
+      "method": "to_string",
+      "reason": "unknown-receiver"
+    }
+  ]
+}

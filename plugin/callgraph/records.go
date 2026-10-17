@@ -93,6 +93,11 @@ func (cg *CallGraph) truncate(kind TruncationKind, namespace string, node *sitte
 // the function of the call.
 func (cg *CallGraph) addUnresolved(caller string, site, callee *sitter.Node, treeData []byte, reason UnresolvedReason) {
 	receiver, method := cg.profile.calleeParts(callee, treeData)
+	cg.addRecord(caller, site, receiver, method, treeData, reason)
+}
+
+// addRecord records a call site of the method with the receiver once.
+func (cg *CallGraph) addRecord(caller string, site *sitter.Node, receiver, method string, treeData []byte, reason UnresolvedReason) {
 	record := UnresolvedCall{
 		Caller:   caller,
 		Site:     ast.GetNodePosition(site),

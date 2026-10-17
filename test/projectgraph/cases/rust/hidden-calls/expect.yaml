@@ -1,0 +1,274 @@
+source: safedep:adversarial
+description: Rust runs code with no call of its name. A fn pointer and a function that map takes are references. Display::fmt runs for {} in println!, whose tokens hold the struct literal Pretty {}. Drop runs at the end of a scope, Add for +, Iterator::next for a for loop and From for ?. A call on a Deref type can run a method of its target, and an impl of a trait for String adds shout to String. A macro_rules macro of another module runs its tokens.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//main
+    to: src/main.rs//helper
+    kind: reference
+    confidence: low
+    site: src/main.rs:24
+  - from: src/main.rs//main
+    to: src/types.rs//Pretty
+    kind: direct
+    confidence: high
+    site: src/main.rs:27
+  - from: src/types.rs//Guard
+    to: src/types.rs//Guard//drop
+    kind: reference
+    confidence: low
+    site: src/types.rs:16
+  - from: src/main.rs//read
+    to: src/types.rs//MyError
+    kind: reference
+    confidence: low
+    site: src/main.rs:18
+  - from: src/main.rs//main
+    to: src/ext.rs//String//shout
+    kind: name
+    confidence: low
+    site: src/main.rs:34
+  - from: src/main.rs//main
+    to: src/types.rs//Inner//inner_call
+    kind: name
+    confidence: low
+    site: src/main.rs:32
+unresolved:
+  - caller: src/ext.rs//String//shout
+    site: src/ext.rs:7
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/main.rs//main
+    site: src/main.rs:26
+    reason: unknown-receiver
+    method: into_iter
+  - caller: src/main.rs//main
+    site: src/main.rs:26
+    reason: unknown-receiver
+    method: map
+  - caller: src/main.rs//main
+    site: src/main.rs:26
+    reason: unknown-receiver
+    method: collect
+  - caller: src/main.rs//main
+    site: src/main.rs:32
+    reason: unknown-receiver
+    method: inner_call
+  - caller: src/main.rs//main
+    site: src/main.rs:37
+    reason: unknown-receiver
+    method: log_and_quit
+  - caller: src/types.rs//Pretty//fmt
+    site: src/types.rs:8
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/types.rs//Guard//drop
+    site: src/types.rs:17
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/types.rs//Money//add
+    site: src/types.rs:26
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/types.rs//Inner//inner_call
+    site: src/types.rs:53
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/types.rs//MyError//from
+    site: src/types.rs:72
+    reason: unknown-receiver
+    method: unwrap
+results:
+  - target: std//process//abort
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//helper
+        site: src/main.rs:25
+        kind: assignment
+        confidence: high
+      - key: std//process//abort
+        site: src/main.rs:10
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.rs//helper
+        site: src/main.rs:10
+        reached: true
+  - target: std//env//set_var
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//worker
+        site: src/main.rs:26
+        kind: reference
+        confidence: low
+      - key: std//env//set_var
+        site: src/main.rs:14
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.rs//worker
+        site: src/main.rs:14
+        reached: true
+  - target: std//process//Command//new
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/types.rs//Pretty
+        site: src/main.rs:27
+        kind: direct
+        confidence: high
+      - key: src/types.rs//Pretty//fmt
+        site: src/types.rs:7
+        kind: reference
+        confidence: low
+      - key: std//process//Command//new
+        site: src/types.rs:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/types.rs//Pretty//fmt
+        site: src/types.rs:8
+        reached: true
+  - target: std//fs//remove_file
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/types.rs//Guard
+        site: src/main.rs:28
+        kind: direct
+        confidence: high
+      - key: src/types.rs//Guard//drop
+        site: src/types.rs:16
+        kind: reference
+        confidence: low
+      - key: std//fs//remove_file
+        site: src/types.rs:17
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/types.rs//Guard//drop
+        site: src/types.rs:17
+        reached: true
+  - target: std//net//TcpStream//connect
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/types.rs//Money
+        site: src/main.rs:29
+        kind: direct
+        confidence: high
+      - key: src/types.rs//Money//add
+        site: src/types.rs:25
+        kind: reference
+        confidence: low
+      - key: std//net//TcpStream//connect
+        site: src/types.rs:26
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/types.rs//Money//add
+        site: src/types.rs:26
+        reached: true
+  - target: std//thread//sleep
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/types.rs//Counter//new
+        site: src/main.rs:30
+        kind: member
+        confidence: high
+      - key: src/types.rs//Counter
+        site: src/types.rs:37
+        kind: direct
+        confidence: high
+      - key: src/types.rs//Counter//next
+        site: src/types.rs:43
+        kind: reference
+        confidence: low
+      - key: std//thread//sleep
+        site: src/types.rs:44
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/types.rs//Counter//next
+        site: src/types.rs:44
+        reached: true
+  - target: std//fs//remove_dir
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/types.rs//Inner//inner_call
+        site: src/main.rs:32
+        kind: name
+        confidence: low
+      - key: std//fs//remove_dir
+        site: src/types.rs:53
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/types.rs//Inner//inner_call
+        site: src/types.rs:53
+        reached: true
+  - target: std//fs//copy
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/ext.rs//String//shout
+        site: src/main.rs:34
+        kind: name
+        confidence: low
+      - key: std//fs//copy
+        site: src/ext.rs:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/ext.rs//String//shout
+        site: src/ext.rs:7
+        reached: true
+  - target: std//fs//write
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//read
+        site: src/main.rs:35
+        kind: direct
+        confidence: high
+      - key: src/types.rs//MyError
+        site: src/main.rs:18
+        kind: reference
+        confidence: low
+      - key: src/types.rs//MyError//from
+        site: src/types.rs:71
+        kind: reference
+        confidence: low
+      - key: std//fs//write
+        site: src/types.rs:72
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/types.rs//MyError//from
+        site: src/types.rs:72
+        reached: true
+  - target: std//process//exit
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/macros.rs//log_and_quit
+        site: src/main.rs:37
+        kind: name
+        confidence: low
+      - key: std//process//exit
+        site: src/macros.rs:3
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/macros.rs//log_and_quit
+        site: src/macros.rs:3
+        reached: true

@@ -1,0 +1,41 @@
+source: safedep:hand
+description: Main calls Report.Print, a static method of another file. Upload has no caller, so no root reaches WebClient.UploadFile. Both calls name their classes by qualified names of the platform.
+roots:
+  - key: src/Program.cs//Program//Main
+    kind: main
+    rule: csharp.main
+edges:
+  - from: src/Program.cs//Program//Main
+    to: src/Report.cs//Report//Print
+    kind: member
+    confidence: high
+    site: src/Program.cs:7
+  - from: src/Report.cs//Report//Print
+    to: System//Console//WriteLine
+    kind: direct
+    confidence: high
+    site: src/Report.cs:7
+unresolved: []
+results:
+  - target: System//Console//WriteLine
+    status: found
+    path:
+      - key: src/Program.cs//Program//Main
+      - key: src/Report.cs//Report//Print
+        site: src/Program.cs:7
+        kind: member
+        confidence: high
+      - key: System//Console//WriteLine
+        site: src/Report.cs:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Report.cs//Report//Print
+        site: src/Report.cs:7
+        reached: true
+  - target: System//Net//WebClient//UploadFile
+    status: not-found
+    call_sites:
+      - caller: src/Report.cs//Report//Upload
+        site: src/Report.cs:12
+        reached: false

@@ -1,0 +1,67 @@
+source: safedep:hand
+description: Adversarial case. index.php is in the namespace App and uses Lib\Mailer, a class of a dependency, so the send of App\Mailer is not called. helper() names the function of the namespace App first, not the global helper. new Local\Mailer() names App\Local\Mailer relative to the namespace, so its constructor runs and its send does not.
+roots:
+  - key: index.php
+    kind: main
+    rule: php.script
+edges:
+  - from: index.php
+    to: Lib//Mailer//send
+    kind: direct
+    confidence: high
+    site: index.php:6
+  - from: index.php
+    to: src/Mailer.php//helper
+    kind: direct
+    confidence: high
+    site: index.php:7
+  - from: index.php
+    to: src/LocalMailer.php//Mailer
+    kind: direct
+    confidence: high
+    site: index.php:8
+no_edges:
+  - from: index.php
+    to: src/Mailer.php//Mailer//send
+  - from: index.php
+    to: src/global.php//helper
+unresolved: []
+results:
+  - target: mail
+    status: not-found
+    call_sites:
+      - caller: src/Mailer.php//Mailer//send
+        site: src/Mailer.php:8
+        reached: false
+  - target: system
+    status: not-found
+    call_sites:
+      - caller: src/global.php//helper
+        site: src/global.php:4
+        reached: false
+  - target: unlink
+    status: found
+    path:
+      - key: index.php
+      - key: src/LocalMailer.php//Mailer
+        site: index.php:8
+        kind: direct
+        confidence: high
+      - key: src/LocalMailer.php//Mailer//__construct
+        site: src/LocalMailer.php:6
+        kind: direct
+        confidence: high
+      - key: unlink
+        site: src/LocalMailer.php:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/LocalMailer.php//Mailer//__construct
+        site: src/LocalMailer.php:8
+        reached: true
+  - target: passthru
+    status: not-found
+    call_sites:
+      - caller: src/LocalMailer.php//Mailer//send
+        site: src/LocalMailer.php:13
+        reached: false

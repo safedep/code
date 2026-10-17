@@ -1,0 +1,90 @@
+source: safedep:hand
+description: main.rs declares the child modules config and store. A use names Config by crate::config, and FileStore by the child module store and its child file. file.rs names the trait Store of its parent module by super. persist calls save on a &dyn Store, which the impl of Store for FileStore runs. Config::unused has no caller.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//main
+    to: src/config.rs//Config//load
+    kind: member
+    confidence: high
+    site: src/main.rs:8
+  - from: src/main.rs//main
+    to: src/store/file.rs//FileStore//new
+    kind: member
+    confidence: high
+    site: src/main.rs:9
+  - from: src/main.rs//main
+    to: src/main.rs//helper
+    kind: direct
+    confidence: high
+    site: src/main.rs:11
+  - from: src/main.rs//persist
+    to: src/store/file.rs//FileStore//save
+    kind: cha
+    confidence: medium
+    site: src/main.rs:15
+unresolved:
+  - caller: src/config.rs//Config//load
+    site: src/config.rs:9
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/config.rs//Config//unused
+    site: src/config.rs:14
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/main.rs//persist
+    site: src/main.rs:15
+    reason: no-definition
+    method: save
+  - caller: src/store/file.rs//FileStore//save
+    site: src/store/file.rs:15
+    reason: unknown-receiver
+    method: unwrap
+results:
+  - target: std//fs//write
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//persist
+        site: src/main.rs:10
+        kind: direct
+        confidence: high
+      - key: src/store/file.rs//FileStore//save
+        site: src/main.rs:15
+        kind: cha
+        confidence: medium
+      - key: std//fs//write
+        site: src/store/file.rs:15
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/store/file.rs//FileStore//save
+        site: src/store/file.rs:15
+        reached: true
+  - target: std//fs//read_to_string
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/config.rs//Config//load
+        site: src/main.rs:8
+        kind: member
+        confidence: high
+      - key: std//fs//read_to_string
+        site: src/config.rs:9
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/config.rs//Config//load
+        site: src/config.rs:9
+        reached: true
+  - target: std//process//Command//new
+    status: not-found
+    call_sites:
+      - caller: src/config.rs//Config//unused
+        site: src/config.rs:14
+        reached: false

@@ -11,13 +11,17 @@ import (
 
 // matchPath marks the module top level and the exports of each file that a
 // path convention names, as a route file of Next.js. The framework loads
-// the file and calls what it exports.
+// the file and calls what it exports. A path rule of kind main names a
+// script, and only its top level runs.
 func (f *finder) matchPath(r rules.Rule) {
 	for _, ix := range f.applying(r) {
 		if !pathglob.MatchAny(r.Match.Path, ix.Path) {
 			continue
 		}
 		f.add(r, ix.Path)
+		if r.Kind == rules.Main {
+			continue
+		}
 		for _, key := range f.Exports(ix.Path) {
 			f.add(r, key)
 		}
@@ -43,8 +47,8 @@ func (f *finder) matchDecorator(r rules.Rule) {
 
 // decoratorIs reports whether a decorator as written is the name, or the
 // name with arguments. A qualified Java annotation, as
-// @org.springframework.scheduling.annotation.Scheduled, is the name of its
-// last part too.
+// @org.springframework.scheduling.annotation.Scheduled, or a qualified
+// Rust attribute, as @actix_web::get, is the name of its last part too.
 func decoratorIs(decorator, name string) bool {
 	if rest, ok := strings.CutPrefix(decorator, name); ok && (rest == "" || strings.HasPrefix(rest, "(")) {
 		return true
@@ -54,7 +58,7 @@ func decoratorIs(decorator, name string) bool {
 		return false
 	}
 	written, _, _ := strings.Cut(decorator, "(")
-	return strings.HasPrefix(written, "@") && strings.HasSuffix(written, "."+simple)
+	return strings.HasPrefix(written, "@") && (strings.HasSuffix(written, "."+simple) || strings.HasSuffix(written, "::"+simple))
 }
 
 // matchDecoratorCall marks each definition with a decorator whose key

@@ -29,6 +29,11 @@ func TestNamespace(t *testing.T) {
 	assert.Equal(t, ".//utils", Namespace(langcode.Typescript, "./utils"))
 	assert.Equal(t, "java//util//List", Namespace(langcode.Java, "java.util.List"))
 	assert.Equal(t, "net//http", Namespace(langcode.Go, "net/http"))
+	assert.Equal(t, "System//IO", Namespace(langcode.CSharp, "System.IO"))
+	assert.Equal(t, "App//Services//Loader", Namespace(langcode.PHP, `\App\Services\Loader`))
+	assert.Equal(t, "crate//loader", Namespace(langcode.Rust, "crate::loader"))
+	assert.Equal(t, "net//http", Namespace(langcode.Ruby, "net/http"))
+	assert.Equal(t, "Net//HTTP", Namespace(langcode.Ruby, "Net::HTTP"))
 }
 
 func TestAnonymous(t *testing.T) {

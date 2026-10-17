@@ -44,9 +44,10 @@ var rootDirs = []string{"vendor", "third_party", "env", "dist", "build", "out", 
 var testPaths = []string{
 	"test", "tests", "__tests__", "spec", "test_*.py", "*_test.py", "conftest.py",
 	"*.test.js", "*.spec.js", "*.test.ts", "*.spec.ts", "*.test.tsx", "*.spec.tsx", "*_test.go", "*Test.java", "*Tests.java", "*Test.kt", "*Tests.kt",
+	"*Test.cs", "*Tests.cs", "*Test.php", "*_test.rb", "*_spec.rb", "benches",
 }
 
-var languageCodes = []core.LanguageCode{core.LanguageCodePython, core.LanguageCodeJavascript, core.LanguageCodeTypescript, core.LanguageCodeGo, core.LanguageCodeJava, core.LanguageCodeKotlin}
+var languageCodes = []core.LanguageCode{core.LanguageCodePython, core.LanguageCodeJavascript, core.LanguageCodeTypescript, core.LanguageCodeGo, core.LanguageCodeJava, core.LanguageCodeKotlin, core.LanguageCodeCSharp, core.LanguageCodePHP, core.LanguageCodeRuby, core.LanguageCodeRust}
 
 type stringList []string
 

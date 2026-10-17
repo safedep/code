@@ -1,0 +1,146 @@
+source: safedep:adversarial
+description: A workspace of two crates. app names the lib crate core-lib as core_lib. lib.rs gives on transmit by pub use with a rename and globbed by a glob pub use. A path walks into the child modules a and b, and super::super names the crate root. The default run of the trait Task calls step on self, which the impl of Job runs. shout is a macro_rules macro that a use names.
+roots:
+  - key: crates/app/src/main.rs
+    kind: main
+    rule: rust.main
+  - key: crates/app/src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: crates/app/src/main.rs//main
+    to: crates/corelib/src/hidden.rs//reexported
+    kind: direct
+    confidence: high
+    site: crates/app/src/main.rs:12
+  - from: crates/app/src/main.rs//main
+    to: crates/corelib/src/hidden.rs//glob//globbed
+    kind: direct
+    confidence: high
+    site: crates/app/src/main.rs:13
+  - from: crates/app/src/main.rs//main
+    to: crates/corelib/src/a/b/mod.rs//deep
+    kind: direct
+    confidence: high
+    site: crates/app/src/main.rs:14
+  - from: crates/corelib/src/a/b/mod.rs//deep
+    to: crates/corelib/src/lib.rs//top
+    kind: direct
+    confidence: high
+    site: crates/corelib/src/a/b/mod.rs:2
+  - from: crates/corelib/src/lib.rs//Task//run
+    to: crates/app/src/main.rs//Job//step
+    kind: cha
+    confidence: medium
+    site: crates/corelib/src/lib.rs:16
+  - from: crates/app/src/main.rs//main
+    to: crates/corelib/src/lib.rs//shout
+    kind: direct
+    confidence: high
+    site: crates/app/src/main.rs:15
+unresolved:
+  - caller: crates/app/src/main.rs//Job//step
+    site: crates/app/src/main.rs:7
+    reason: unknown-receiver
+    method: unwrap
+  - caller: crates/corelib/src/hidden.rs//reexported
+    site: crates/corelib/src/hidden.rs:2
+    reason: unknown-receiver
+    method: unwrap
+  - caller: crates/corelib/src/lib.rs//Task//run
+    site: crates/corelib/src/lib.rs:16
+    reason: no-definition
+    method: step
+  - caller: crates/corelib/src/lib.rs//top
+    site: crates/corelib/src/lib.rs:22
+    reason: unknown-receiver
+    method: unwrap
+results:
+  - target: std//fs//remove_file
+    status: found
+    path:
+      - key: crates/app/src/main.rs//main
+      - key: crates/corelib/src/hidden.rs//reexported
+        site: crates/app/src/main.rs:12
+        kind: direct
+        confidence: high
+      - key: std//fs//remove_file
+        site: crates/corelib/src/hidden.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: crates/corelib/src/hidden.rs//reexported
+        site: crates/corelib/src/hidden.rs:2
+        reached: true
+  - target: std//env//set_var
+    status: found
+    path:
+      - key: crates/app/src/main.rs//main
+      - key: crates/corelib/src/hidden.rs//glob//globbed
+        site: crates/app/src/main.rs:13
+        kind: direct
+        confidence: high
+      - key: std//env//set_var
+        site: crates/corelib/src/hidden.rs:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: crates/corelib/src/hidden.rs//glob//globbed
+        site: crates/corelib/src/hidden.rs:7
+        reached: true
+  - target: std//fs//create_dir
+    status: found
+    path:
+      - key: crates/app/src/main.rs//main
+      - key: crates/corelib/src/a/b/mod.rs//deep
+        site: crates/app/src/main.rs:14
+        kind: direct
+        confidence: high
+      - key: crates/corelib/src/lib.rs//top
+        site: crates/corelib/src/a/b/mod.rs:2
+        kind: direct
+        confidence: high
+      - key: std//fs//create_dir
+        site: crates/corelib/src/lib.rs:22
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: crates/corelib/src/lib.rs//top
+        site: crates/corelib/src/lib.rs:22
+        reached: true
+  - target: std//process//abort
+    status: found
+    path:
+      - key: crates/app/src/main.rs//main
+      - key: crates/corelib/src/lib.rs//shout
+        site: crates/app/src/main.rs:15
+        kind: direct
+        confidence: high
+      - key: std//process//abort
+        site: crates/corelib/src/lib.rs:10
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: crates/corelib/src/lib.rs//shout
+        site: crates/corelib/src/lib.rs:10
+        reached: true
+  - target: std//net//UdpSocket//bind
+    status: found
+    path:
+      - key: crates/app/src/main.rs//main
+      - key: crates/corelib/src/lib.rs//Task//run
+        site: crates/app/src/main.rs:17
+        kind: member
+        confidence: high
+      - key: crates/app/src/main.rs//Job//step
+        site: crates/corelib/src/lib.rs:16
+        kind: cha
+        confidence: medium
+      - key: std//net//UdpSocket//bind
+        site: crates/app/src/main.rs:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: crates/app/src/main.rs//Job//step
+        site: crates/app/src/main.rs:7
+        reached: true

@@ -1,0 +1,47 @@
+source: safedep:hand
+description: main calls report::print through the child module report, which no use names. report::upload has no caller, so no root reaches Command::new.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//main
+    to: src/report.rs//print
+    kind: direct
+    confidence: high
+    site: src/main.rs:4
+unresolved:
+  - caller: src/report.rs//upload
+    site: src/report.rs:6
+    reason: unknown-receiver
+    method: spawn
+  - caller: src/report.rs//upload
+    site: src/report.rs:6
+    reason: unknown-receiver
+    method: unwrap
+results:
+  - target: println
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/report.rs//print
+        site: src/main.rs:4
+        kind: direct
+        confidence: high
+      - key: println
+        site: src/report.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/report.rs//print
+        site: src/report.rs:2
+        reached: true
+  - target: std//process//Command//new
+    status: not-found
+    call_sites:
+      - caller: src/report.rs//upload
+        site: src/report.rs:6
+        reached: false

@@ -19,7 +19,8 @@ func TestIsBuiltin(t *testing.T) {
 		{Typescript, "require", true},
 		{Go, "len", true},
 		{Java, "System", true},
-		{Ruby, "puts", false},
+		{Ruby, "puts", true},
+		{Ruby, "load_data", false},
 	}
 	for _, tt := range tests {
 		assert.Equal(t, tt.want, IsBuiltin(tt.code, tt.name), "%s %s", tt.code, tt.name)

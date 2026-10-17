@@ -1,6 +1,7 @@
 package projectgraph
 
 import (
+	"maps"
 	"slices"
 
 	"github.com/safedep/code/fileindex"
@@ -13,14 +14,47 @@ func (b *builder) isType(key string) bool {
 	return k == NodeClass || k == NodeInterface
 }
 
-// typeBases returns the first-party classes and interfaces that a class
-// extends or implements, in source order.
-func (b *builder) typeBases(class string) []string {
-	rec, ok := b.classes[class]
-	if !ok {
-		return nil
+// aliasesOf returns the definitions of one class: the class and the other
+// definitions that the language joins to it, as a partial class of C# in
+// another file, a Ruby class that another file reopens, or an impl block of
+// Rust in another file than its type.
+func (b *builder) aliasesOf(class string) []string {
+	if group := b.aliases[class]; len(group) > 0 {
+		return group
 	}
-	return slices.DeleteFunc(b.bases(rec), func(base string) bool { return !b.isType(base) })
+	return []string{class}
+}
+
+// joinAliases makes the classes of each group one class.
+func (b *builder) joinAliases(groups [][]string) {
+	for _, group := range groups {
+		slices.Sort(group)
+		group = slices.Compact(group)
+		if len(group) < 2 {
+			continue
+		}
+		for _, class := range group {
+			b.aliases[class] = group
+		}
+	}
+}
+
+// typeBases returns the first-party classes and interfaces that a class
+// extends or implements, in source order, with those of its aliases.
+func (b *builder) typeBases(class string) []string {
+	var out []string
+	for _, c := range b.aliasesOf(class) {
+		rec, ok := b.classes[c]
+		if !ok {
+			continue
+		}
+		for _, base := range b.bases(rec) {
+			if b.isType(base) && !slices.Contains(out, base) && !slices.Contains(b.aliasesOf(class), base) {
+				out = append(out, base)
+			}
+		}
+	}
+	return out
 }
 
 // mro returns the first-party classes in the order that a method lookup on
@@ -72,44 +106,125 @@ func (b *builder) method(class, name string) (string, *failure) {
 // MRO of the class defines.
 func (b *builder) ownMethod(class, name string) (string, bool) {
 	for _, c := range b.mro(class) {
-		if n := b.g.Nodes[fileindex.Join(c, name)]; n != nil {
-			return n.Key, true
-		}
-		if key, ok := b.member(c, name); ok {
-			return key, true
-		}
-	}
-	return "", false
-}
-
-// externalBase returns the first external base of a class of the MRO of
-// the class.
-func (b *builder) externalBase(class string) (string, bool) {
-	for _, c := range b.mro(class) {
-		rec, ok := b.classes[c]
-		if !ok {
+		if group := b.aliases[c]; len(group) > 0 && b.groupMembers != nil {
+			if key, ok := b.groupMember(group, name); ok {
+				return key, true
+			}
 			continue
 		}
-		for _, base := range b.bases(rec) {
-			if !b.isType(base) && b.g.IsExternal(base) {
-				return base, true
+		for _, a := range b.aliasesOf(c) {
+			if key, ok := b.ownMember(a, name); ok {
+				return key, true
 			}
 		}
 	}
 	return "", false
 }
 
+// ownMember returns the definition of the name under a class, or the
+// member of the name that a file of the unit of the class defines.
+func (b *builder) ownMember(class, name string) (string, bool) {
+	if n := b.g.Nodes[fileindex.Join(class, name)]; n != nil {
+		return n.Key, true
+	}
+	return b.member(class, name)
+}
+
+// groupMember returns the member of the name of a group of aliases, as
+// ownMember of the first alias that has one. The table of a group holds
+// each name once. A Ruby module that 1,000 files reopen has 1,000 aliases,
+// and a scan of them at each lookup costs the square of the project.
+func (b *builder) groupMember(group []string, name string) (string, bool) {
+	table, ok := b.groupMembers[group[0]]
+	if !ok {
+		table = map[string]string{}
+		for _, a := range group {
+			for _, child := range b.childKeys()[a] {
+				if _, ok := table[fileindex.Last(child)]; !ok {
+					table[fileindex.Last(child)] = child
+				}
+			}
+			if u, segs := b.unitOf[fileindex.Unit(a)], fileindex.Segments(a); u != nil && len(segs) == 1 {
+				for _, member := range slices.Sorted(maps.Keys(u.members[segs[0]])) {
+					if _, ok := table[member]; !ok {
+						table[member] = u.members[segs[0]][member][0]
+					}
+				}
+			}
+		}
+		b.groupMembers[group[0]] = table
+	}
+	key, ok := table[name]
+	return key, ok
+}
+
+// childKeys returns the keys of the nodes by the key of their parent.
+func (b *builder) childKeys() map[string][]string {
+	if b.nodesByParent == nil {
+		b.nodesByParent = map[string][]string{}
+		for key := range b.g.Nodes {
+			if fileindex.Unit(key) != key {
+				b.nodesByParent[fileindex.Parent(key)] = append(b.nodesByParent[fileindex.Parent(key)], key)
+			}
+		}
+	}
+	return b.nodesByParent
+}
+
+// externalBase returns the first external base of a class of the MRO of
+// the class.
+func (b *builder) externalBase(class string) (string, bool) {
+	if b.externalBases == nil {
+		return b.findExternalBase(class)
+	}
+	base, ok := b.externalBases[class]
+	if !ok {
+		base, _ = b.findExternalBase(class)
+		b.externalBases[class] = base
+	}
+	return base, base != ""
+}
+
+func (b *builder) findExternalBase(class string) (string, bool) {
+	for _, c := range b.mro(class) {
+		for _, rec := range b.records(c) {
+			for _, base := range b.bases(rec) {
+				if !b.isType(base) && b.g.IsExternal(base) {
+					return base, true
+				}
+			}
+		}
+	}
+	return "", false
+}
+
+// records returns the class records of a class and of its aliases.
+func (b *builder) records(class string) []classRecord {
+	group := b.aliasesOf(class)
+	if out, ok := b.groupRecords[group[0]]; ok {
+		return out
+	}
+	var out []classRecord
+	for _, a := range group {
+		if rec, ok := b.classes[a]; ok {
+			out = append(out, rec)
+		}
+	}
+	if b.groupRecords != nil && len(group) > 1 {
+		b.groupRecords[group[0]] = out
+	}
+	return out
+}
+
 // constructor returns the constructor that runs when a call makes an
 // instance of the class.
 func (b *builder) constructor(class string) (string, bool) {
 	for _, c := range b.mro(class) {
-		rec, ok := b.classes[c]
-		if !ok {
-			continue
-		}
-		for _, m := range rec.class.Methods {
-			if b.kindOf(m) == NodeConstructor {
-				return m, true
+		for _, rec := range b.records(c) {
+			for _, m := range rec.class.Methods {
+				if b.kindOf(m) == NodeConstructor {
+					return m, true
+				}
 			}
 		}
 	}

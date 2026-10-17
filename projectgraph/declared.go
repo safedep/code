@@ -66,13 +66,11 @@ func (b *builder) resultType(fn string) (string, bool) {
 // field of the class, or of a class in its MRO, names.
 func (b *builder) fieldType(class, name string) (string, bool) {
 	for _, c := range b.mro(class) {
-		rec, ok := b.classes[c]
-		if !ok {
-			continue
-		}
-		for _, f := range rec.class.Fields {
-			if f.Name == name {
-				return b.resolveType(b.scopes[rec.ix.Path], c, f.Type)
+		for _, rec := range b.records(c) {
+			for _, f := range rec.class.Fields {
+				if f.Name == name {
+					return b.resolveType(b.scopes[rec.ix.Path], rec.class.Key, f.Type)
+				}
 			}
 		}
 	}

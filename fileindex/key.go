@@ -67,12 +67,19 @@ func HasKeyPrefix(key, prefix string) bool {
 
 // Namespace returns the key form of a module as the source writes it, as
 // yaml//loader for yaml.loader in Python, java//util for java.util in Java,
-// or fs//promises for fs/promises in JavaScript. It keeps the leading dots
-// of a relative module.
+// fs//promises for fs/promises in JavaScript or App//Kernel for \App\Kernel
+// in PHP. It keeps the leading dots of a relative module.
 func Namespace(lang langcode.Code, module string) string {
 	sep := "/"
-	if lang == langcode.Python || lang == langcode.Java {
+	switch lang {
+	case langcode.Python, langcode.Java, langcode.Kotlin, langcode.CSharp:
 		sep = "."
+	case langcode.PHP:
+		sep, module = `\`, strings.TrimPrefix(module, `\`)
+	case langcode.Rust:
+		sep = "::"
+	case langcode.Ruby:
+		module = strings.ReplaceAll(module, "::", "/")
 	}
 	return strings.ReplaceAll(module, sep, Separator)
 }

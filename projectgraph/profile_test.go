@@ -14,8 +14,10 @@ func TestProfiles(t *testing.T) {
 		assert.NotNil(t, p.resolver, "%s has a module resolver", p.code)
 	}
 	assert.Equal(t, langcode.Javascript, languageFamily(langcode.Typescript))
-	assert.Equal(t, langcode.Ruby, languageFamily(langcode.Ruby), "a language with no profile is a family of its own")
-	assert.Same(t, noProfile, profileOf(langcode.Ruby))
+	assert.Equal(t, langcode.Java, languageFamily(langcode.Kotlin))
+	swift := langcode.Code("swift")
+	assert.Equal(t, swift, languageFamily(swift), "a language with no profile is a family of its own")
+	assert.Same(t, noProfile, profileOf(swift))
 	assert.True(t, isInstanceKeyword(langcode.Python, "cls"))
 	assert.False(t, isInstanceKeyword(langcode.Go, "this"))
 }
@@ -23,6 +25,6 @@ func TestProfiles(t *testing.T) {
 func TestModulesOfALanguageWithNoResolver(t *testing.T) {
 	b, err := newBuilder(nil, Options{})
 	assert.NoError(t, err)
-	assert.True(t, b.mayBeFirstParty(langcode.Ruby, "app/models"), "a language with no resolver can name any file")
+	assert.True(t, b.mayBeFirstParty(langcode.Code("swift"), "app/models"), "a language with no resolver can name any file")
 	assert.False(t, b.mayBeFirstParty(langcode.Python, "yaml"))
 }

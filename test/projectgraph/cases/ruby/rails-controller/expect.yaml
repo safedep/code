@@ -1,0 +1,58 @@
+source: safedep:hand
+description: Rails routes to the actions of a controller under app/controllers, so each class and method there is a root. before_action names authenticate by a symbol, which is a reference. User#purge has no caller.
+roots:
+  - key: app/controllers/users_controller.rb
+    kind: framework
+    rule: ruby.rails.app
+  - key: app/controllers/users_controller.rb//UsersController
+    kind: framework
+    rule: ruby.rails.app
+  - key: app/controllers/users_controller.rb//UsersController//authenticate
+    kind: framework
+    rule: ruby.rails.app
+  - key: app/controllers/users_controller.rb//UsersController//show
+    kind: framework
+    rule: ruby.rails.app
+edges:
+  - from: app/controllers/users_controller.rb
+    to: app/controllers/users_controller.rb//UsersController//authenticate
+    kind: reference
+    confidence: low
+    site: app/controllers/users_controller.rb:2
+  - from: app/controllers/users_controller.rb//UsersController//show
+    to: app/models/user.rb//User//profile
+    kind: name
+    confidence: low
+    site: app/controllers/users_controller.rb:6
+unresolved:
+  - caller: app/controllers/users_controller.rb//UsersController//show
+    site: app/controllers/users_controller.rb:6
+    reason: unknown-receiver
+    method: profile
+  - caller: app/controllers/users_controller.rb//UsersController//authenticate
+    site: app/controllers/users_controller.rb:12
+    reason: unknown-receiver
+    method: info
+results:
+  - target: Digest//SHA256//hexdigest
+    status: found
+    path:
+      - key: app/controllers/users_controller.rb//UsersController//show
+      - key: app/models/user.rb//User//profile
+        site: app/controllers/users_controller.rb:6
+        kind: name
+        confidence: low
+      - key: Digest//SHA256//hexdigest
+        site: app/models/user.rb:3
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: app/models/user.rb//User//profile
+        site: app/models/user.rb:3
+        reached: true
+  - target: FileUtils//rm_rf
+    status: not-found
+    call_sites:
+      - caller: app/models/user.rb//User//purge
+        site: app/models/user.rb:7
+        reached: false

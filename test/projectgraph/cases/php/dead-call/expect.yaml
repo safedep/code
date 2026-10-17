@@ -1,0 +1,41 @@
+source: safedep:hand
+description: index.php requires lib.php by a path relative to its directory and calls print_report, a function of the global namespace of that file. upload_report has no caller, so no root reaches exec.
+roots:
+  - key: index.php
+    kind: main
+    rule: php.script
+edges:
+  - from: index.php
+    to: lib.php
+    kind: import
+    confidence: high
+    site: index.php:2
+  - from: index.php
+    to: lib.php//print_report
+    kind: direct
+    confidence: high
+    site: index.php:4
+unresolved: []
+results:
+  - target: htmlspecialchars
+    status: found
+    path:
+      - key: index.php
+      - key: lib.php//print_report
+        site: index.php:4
+        kind: direct
+        confidence: high
+      - key: htmlspecialchars
+        site: lib.php:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib.php//print_report
+        site: lib.php:4
+        reached: true
+  - target: exec
+    status: not-found
+    call_sites:
+      - caller: lib.php//upload_report
+        site: lib.php:9
+        reached: false

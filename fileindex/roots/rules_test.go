@@ -20,7 +20,11 @@ func TestDefaultRules(t *testing.T) {
 		"python.project-scripts", "python.setup-py", "procfile", "dockerfile",
 		"python.flask.route", "python.fastapi.route", "python.django.urls", "python.django.view", "python.click.command",
 		"python.click.subcommand", "python.typer.command", "node.express.route", "node.koa.route",
-		"node.commander.action", "node.next.route", "node.serverless.handler", "java.spring.web", "java.spring.component", "test.files",
+		"node.commander.action", "node.next.route", "node.serverless.handler", "java.spring.web", "java.spring.component",
+		"csharp.main", "csharp.top-level-statements", "csharp.aspnet.action", "csharp.aspnet.controllers",
+		"php.script", "php.composer-bin", "php.laravel.routes", "php.laravel.controllers", "php.symfony.attribute",
+		"ruby.main-guard", "ruby.main-guard-program-name", "ruby.script", "ruby.rails.app",
+		"rust.main", "rust.build-script", "rust.web.attribute", "rust.test.attribute", "test.files",
 	}, ids)
 }
 

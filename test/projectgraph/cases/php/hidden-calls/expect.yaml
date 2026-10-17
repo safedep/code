@@ -1,0 +1,142 @@
+source: safedep:hand
+description: Adversarial case. Each target runs through code that no call names by its key. label runs in an interpolated string. echo of $job runs __toString. A string names the callable App\Job::tick, and a string the function App\trim_all. A qualified name from the root names notify. static::build() in a static method of Base binds the class at run time, so it reaches the build of the subclass Job. No target may be not-found.
+roots:
+  - key: index.php
+    kind: main
+    rule: php.script
+edges:
+  - from: src/Job.php//Job
+    to: src/Job.php//Job//__toString
+    kind: reference
+    confidence: low
+    site: src/Job.php:29
+  - from: index.php
+    to: src/Job.php//Job//tick
+    kind: reference
+    confidence: low
+    site: index.php:7
+  - from: index.php
+    to: src/Job.php//trim_all
+    kind: reference
+    confidence: low
+    site: index.php:8
+  - from: index.php
+    to: src/Util/notify.php//notify
+    kind: direct
+    confidence: high
+    site: index.php:9
+  - from: src/Job.php//Base//create
+    to: src/Job.php//Job//build
+    kind: cha
+    confidence: medium
+    site: src/Job.php:8
+unresolved: []
+results:
+  - target: exec
+    status: found
+    path:
+      - key: index.php
+      - key: src/Job.php//Job//run
+        site: index.php:5
+        kind: member
+        confidence: high
+      - key: src/Job.php//Job//label
+        site: src/Job.php:21
+        kind: member
+        confidence: high
+      - key: exec
+        site: src/Job.php:26
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Job.php//Job//label
+        site: src/Job.php:26
+        reached: true
+  - target: shell_exec
+    status: found
+    path:
+      - key: index.php
+      - key: src/Job.php//Job
+        site: index.php:4
+        kind: direct
+        confidence: high
+      - key: src/Job.php//Job//__toString
+        site: src/Job.php:29
+        kind: reference
+        confidence: low
+      - key: shell_exec
+        site: src/Job.php:31
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Job.php//Job//__toString
+        site: src/Job.php:31
+        reached: true
+  - target: system
+    status: found
+    path:
+      - key: index.php
+      - key: src/Job.php//Job//tick
+        site: index.php:7
+        kind: reference
+        confidence: low
+      - key: system
+        site: src/Job.php:36
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Job.php//Job//tick
+        site: src/Job.php:36
+        reached: true
+  - target: passthru
+    status: found
+    path:
+      - key: index.php
+      - key: src/Job.php//Base//create
+        site: index.php:10
+        kind: member
+        confidence: high
+      - key: src/Job.php//Job//build
+        site: src/Job.php:8
+        kind: cha
+        confidence: medium
+      - key: passthru
+        site: src/Job.php:41
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Job.php//Job//build
+        site: src/Job.php:41
+        reached: true
+  - target: mail
+    status: found
+    path:
+      - key: index.php
+      - key: src/Job.php//trim_all
+        site: index.php:8
+        kind: reference
+        confidence: low
+      - key: mail
+        site: src/Job.php:48
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Job.php//trim_all
+        site: src/Job.php:48
+        reached: true
+  - target: unlink
+    status: found
+    path:
+      - key: index.php
+      - key: src/Util/notify.php//notify
+        site: index.php:9
+        kind: direct
+        confidence: high
+      - key: unlink
+        site: src/Util/notify.php:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Util/notify.php//notify
+        site: src/Util/notify.php:6
+        reached: true

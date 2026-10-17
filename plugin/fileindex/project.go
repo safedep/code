@@ -41,6 +41,10 @@ var definitionKinds = map[string]fidx.DefKind{
 	"function_expression":             fidx.DefFunction,
 	"arrow_function":                  fidx.DefFunction,
 	"function_item":                   fidx.DefFunction,
+	"impl_item":                       fidx.DefClass,
+	"trait_item":                      fidx.DefInterface,
+	"mod_item":                        fidx.DefClass,
+	"macro_definition":                fidx.DefFunction,
 	"local_function_statement":        fidx.DefFunction,
 	"method_definition":               fidx.DefMethod,
 	"method_declaration":              fidx.DefMethod,
@@ -50,10 +54,12 @@ var definitionKinds = map[string]fidx.DefKind{
 	"compact_constructor_declaration": fidx.DefConstructor,
 	// A Java enum constant is a definition only when it has a class body.
 	"enum_constant": fidx.DefClass,
-	// The node of a Kotlin companion object holds the static initializer
-	// of its class.
-	"companion_object": fidx.DefMethod,
 }
+
+// staticInitName names the static initializer of a class, as the JVM does.
+// The call graph of Kotlin and C# keys the code that runs when a class
+// loads under it.
+const staticInitName = "<clinit>"
 
 // constructorNames name the method that makes an instance of a class.
 var constructorNames = map[core.LanguageCode]string{
@@ -242,7 +248,11 @@ func (p *projection) addDefinitions() {
 		switch {
 		case key == file:
 			kind = fidx.DefModule
-		case !ok || !strings.HasPrefix(key, file+fidx.Separator):
+		case !strings.HasPrefix(key, file+fidx.Separator):
+			continue
+		case fidx.Last(key) == staticInitName && node.Kind != "":
+			kind = fidx.DefMethod
+		case !ok:
 			continue
 		}
 

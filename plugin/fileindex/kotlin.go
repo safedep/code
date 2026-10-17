@@ -10,10 +10,11 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-// kotlinExtensionReceiver names the parameter that holds the receiver of a
-// Kotlin extension function, as s in fun String.shout(). No parameter can
-// have the name, so the name marks an extension.
-const kotlinExtensionReceiver = "this"
+// extensionParam names the parameter that holds the receiver of an
+// extension function, as the String of fun String.shout() in Kotlin or s of
+// this string s in C#. No parameter can have the name, so the name marks an
+// extension.
+const extensionParam = "this"
 
 var kotlinRules = languageRules{
 	packageOf:    kotlinPackage,
@@ -192,7 +193,7 @@ func kotlinAnnotations(p *projection, node *sitter.Node) []string {
 // receiver of an extension function is its first parameter, with the name
 // this.
 func kotlinSignature(p *projection, def *fidx.Definition, node *sitter.Node) {
-	if node.Type() == "companion_object" {
+	if def.Name == staticInitName {
 		def.Static = true
 		return
 	}
@@ -207,7 +208,7 @@ func kotlinSignature(p *projection, def *fidx.Definition, node *sitter.Node) {
 			break
 		}
 		if typ := p.kotlinTypeName(child); typ != "" {
-			def.Params = append(def.Params, fidx.Typed{Name: kotlinExtensionReceiver, Type: typ})
+			def.Params = append(def.Params, fidx.Typed{Name: extensionParam, Type: typ})
 		}
 	}
 	if params := childOfType(node, "function_value_parameters"); params != nil {

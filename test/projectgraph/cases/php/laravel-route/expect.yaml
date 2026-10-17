@@ -1,0 +1,66 @@
+source: safedep:hand
+description: Laravel loads the route file, so its top level is a root. A route names its action by an array of a class and a method name, which is a reference. Every class and method under app/Http/Controllers is a root too. Audit.purge has no route and no caller.
+roots:
+  - key: app/Http/Controllers/UserController.php
+    kind: framework
+    rule: php.laravel.controllers
+  - key: app/Http/Controllers/UserController.php//UserController
+    kind: framework
+    rule: php.laravel.controllers
+  - key: app/Http/Controllers/UserController.php//UserController//show
+    kind: framework
+    rule: php.laravel.controllers
+  - key: routes/web.php
+    kind: framework
+    rule: php.laravel.routes
+edges:
+  - from: routes/web.php
+    to: app/Support/Audit.php//Audit//record
+    kind: reference
+    confidence: low
+    site: routes/web.php:7
+  - from: routes/web.php
+    to: app/Http/Controllers/UserController.php//UserController//show
+    kind: reference
+    confidence: low
+    site: routes/web.php:6
+unresolved:
+  - caller: app/Http/Controllers/UserController.php//UserController//show
+    site: app/Http/Controllers/UserController.php:8
+    reason: unknown-receiver
+    method: json
+results:
+  - target: shell_exec
+    status: found
+    path:
+      - key: app/Http/Controllers/UserController.php//UserController//show
+      - key: shell_exec
+        site: app/Http/Controllers/UserController.php:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: app/Http/Controllers/UserController.php//UserController//show
+        site: app/Http/Controllers/UserController.php:8
+        reached: true
+  - target: error_log
+    status: found
+    path:
+      - key: routes/web.php
+      - key: app/Support/Audit.php//Audit//record
+        site: routes/web.php:7
+        kind: reference
+        confidence: low
+      - key: error_log
+        site: app/Support/Audit.php:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: app/Support/Audit.php//Audit//record
+        site: app/Support/Audit.php:8
+        reached: true
+  - target: passthru
+    status: not-found
+    call_sites:
+      - caller: app/Support/Audit.php//Audit//purge
+        site: app/Support/Audit.php:13
+        reached: false

@@ -758,10 +758,10 @@ func TestBuildImportShapes(t *testing.T) {
 		{
 			name: "a language with no module resolver makes every import a site that can reach any target",
 			indexes: []*fileindex.Index{{
-				Version: fileindex.Version, Path: "main.rb", Language: langcode.Ruby,
+				Version: fileindex.Version, Path: "main.swift", Language: langcode.Code("swift"),
 				Imports: []fileindex.Import{{Line: 3, Module: "app/util", Kind: fileindex.ImportStatic, Namespace: "app//util"}},
 			}},
-			unresolved: []string{"main.rb:3 main.rb no-definition "},
+			unresolved: []string{"main.swift:3 main.swift no-definition "},
 		},
 		{
 			name: "a Go import under the module path that names no package can reach any target",
@@ -1060,8 +1060,8 @@ func TestBuildModuleVariables(t *testing.T) {
 	assert.Equal(t, NodeVariable, g.Nodes["app.py//parser"].Kind)
 }
 
-func TestJavaFirstPartyMatchesAPackagePrefix(t *testing.T) {
-	b := &builder{javaPackages: map[string]*unit{"": {}, "com.acme": {}, "com.acme.web": {}}}
+func TestFirstPartyMatchesAPackagePrefix(t *testing.T) {
+	java := &namespaces{sep: ".", units: map[string]*unit{"": {}, "com.acme": {}, "com.acme.web": {}}}
 	for name, want := range map[string]bool{
 		"com.acme":            true,
 		"com.acme.Service":    true,
@@ -1071,8 +1071,11 @@ func TestJavaFirstPartyMatchesAPackagePrefix(t *testing.T) {
 		"Service":             false,
 		"":                    false,
 	} {
-		assert.Equal(t, want, b.javaFirstParty(name), name)
+		assert.Equal(t, want, java.firstParty(name), name)
 	}
+	php := &namespaces{sep: `\`, units: map[string]*unit{`App\Http`: {}}}
+	assert.True(t, php.firstParty(`\App\Http\Kernel`))
+	assert.False(t, php.firstParty(`App\Console`))
 }
 
 func TestBuildWalksIntoTheDefaultValueOfAModule(t *testing.T) {

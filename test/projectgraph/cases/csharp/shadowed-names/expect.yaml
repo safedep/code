@@ -1,0 +1,38 @@
+source: safedep:hand
+description: Adversarial case. Touch is static, so it runs the static initializer and not the field initializer of an instance, and no root reaches ClearAllPools. Main binds a local Report, so Report.Upload is a record with a name edge, and no high edge goes to the static class Report. new Other.Report() names the class of the namespace Shop.Other relative to Shop, so Print of the other class with the name stays unreached.
+roots:
+  - key: src/Program.cs//Program//Main
+    kind: main
+    rule: csharp.main
+edges:
+  - from: src/Program.cs//Program//Main
+    to: src/Program.cs//Report//Upload
+    kind: name
+    confidence: low
+    site: src/Program.cs:9
+  - from: src/Program.cs//Program//Main
+    to: src/Other.cs//Report//Print
+    kind: member
+    confidence: high
+    site: src/Program.cs:10
+no_edges:
+  - from: src/Program.cs//Program//Main
+    to: src/Other.cs//Unused//Print
+unresolved:
+  - caller: src/Program.cs//Program//Main
+    site: src/Program.cs:9
+    reason: unknown-receiver
+    method: Upload
+results:
+  - target: System//Data//SqlClient//SqlConnection//ClearAllPools
+    status: not-found
+    call_sites:
+      - caller: src/Program.cs//Holder
+        site: src/Program.cs:18
+        reached: false
+  - target: System//Environment//Exit
+    status: not-found
+    call_sites:
+      - caller: src/Other.cs//Unused//Print
+        site: src/Other.cs:10
+        reached: false

@@ -243,6 +243,12 @@ func (f *finder) matchManifest(r rules.Rule) {
 			for _, cmd := range dockerfileCommands(data) {
 				f.addCommand(r, dir, cmd)
 			}
+		case rules.Composer:
+			for _, bin := range composerBins(data) {
+				if file, ok := modules.Join(dir, bin); ok {
+					f.addFile(r, file)
+				}
+			}
 		}
 	}
 }
@@ -432,6 +438,26 @@ func setupEntries(data []byte) []string {
 		}
 	}
 	return entries
+}
+
+// composerBins returns the scripts of the bin field of a composer.json, a
+// string or a list.
+func composerBins(data []byte) []string {
+	var manifest struct {
+		Bin json.RawMessage `json:"bin"`
+	}
+	if json.Unmarshal(data, &manifest) != nil || len(manifest.Bin) == 0 {
+		return nil
+	}
+	var one string
+	if json.Unmarshal(manifest.Bin, &one) == nil {
+		return []string{one}
+	}
+	var many []string
+	if json.Unmarshal(manifest.Bin, &many) == nil {
+		return many
+	}
+	return nil
 }
 
 // procfileCommands returns the command of each process of a Procfile.

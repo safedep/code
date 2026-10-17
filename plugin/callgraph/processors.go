@@ -172,7 +172,7 @@ func literalValueProcessor(literalNode *sitter.Node, treeData []byte, currentNam
 	}
 	for i := 0; i < int(literalNode.NamedChildCount()); i++ {
 		if child := literalNode.NamedChild(i); callGraph.profile.strings.interpolations[child.Type()] {
-			processChildren(child, treeData, currentNamespace, callGraph, metadata)
+			processNode(child, treeData, currentNamespace, callGraph, metadata)
 		}
 	}
 

@@ -1,0 +1,43 @@
+source: safedep:hand
+description: Persist calls Save on a parameter of the interface type IStore. The interface method has no body, so it is no definition, the site keeps a record, and cha edges go to the Save of DbStore and of FileStore.
+roots:
+  - key: src/Program.cs//Program//Main
+    kind: main
+    rule: csharp.main
+edges:
+  - from: src/Program.cs//Program//Persist
+    to: src/Stores.cs//DbStore//Save
+    kind: cha
+    confidence: medium
+    site: src/Program.cs:7
+  - from: src/Program.cs//Program//Persist
+    to: src/Stores.cs//FileStore//Save
+    kind: cha
+    confidence: medium
+    site: src/Program.cs:7
+unresolved:
+  - caller: src/Program.cs//Program//Persist
+    site: src/Program.cs:7
+    reason: no-definition
+    method: Save
+results:
+  - target: System//IO//File//Delete
+    status: found
+    path:
+      - key: src/Program.cs//Program//Main
+      - key: src/Program.cs//Program//Persist
+        site: src/Program.cs:12
+        kind: direct
+        confidence: high
+      - key: src/Stores.cs//FileStore//Save
+        site: src/Program.cs:7
+        kind: cha
+        confidence: medium
+      - key: System//IO//File//Delete
+        site: src/Stores.cs:20
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Stores.cs//FileStore//Save
+        site: src/Stores.cs:20
+        reached: true

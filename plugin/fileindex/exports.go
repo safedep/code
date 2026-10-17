@@ -40,6 +40,8 @@ func (p *projection) exported(def *fidx.Definition) bool {
 	case p.ix.Language == core.LanguageCodeGo:
 		r, _ := utf8.DecodeRuneInString(def.Name)
 		return unicode.IsUpper(r)
+	case p.ix.Language == core.LanguageCodeRust:
+		return p.rustPublic(def)
 	case def.Parent != "":
 		return p.exported(p.defs[def.Parent])
 	case p.ix.Language.IsECMAScript():

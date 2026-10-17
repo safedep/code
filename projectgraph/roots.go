@@ -126,7 +126,8 @@ func (b *builder) resolveRuleName(p, name string) (string, bool) {
 
 // exportKeys returns the keys of the names that a file exports. A name that
 // the file gives on from another file is an export node, so a path from the
-// root keeps the hop. An export * gives the names of its module. An
+// root keeps the hop. An export * gives the names of its module. A file of
+// a language with no export statement exports its exported definitions. An
 // interface runs no code, so it is no root.
 func (b *builder) exportKeys(p string, seen map[string]bool) []string {
 	sc := b.scopes[p]
@@ -135,6 +136,13 @@ func (b *builder) exportKeys(p string, seen map[string]bool) []string {
 	}
 	seen[p] = true
 	var keys []string
+	if sc.profile.definitionExports {
+		for _, def := range sc.ix.Definitions {
+			if def.Exported && def.Key != p && def.Kind != fileindex.DefVariable && def.Kind != fileindex.DefInterface {
+				keys = append(keys, def.Key)
+			}
+		}
+	}
 	for name := range sc.exports {
 		if key, fail := b.resolveName(p, name, 0); fail == nil && b.kindOf(b.deref(key)) != NodeInterface {
 			keys = append(keys, key)

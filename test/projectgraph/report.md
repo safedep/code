@@ -59,6 +59,10 @@ step.
 | Go | step 33 | govulncheck | n/a | 1.000 (9/9) stacks | n/a | 0.082 | 1.38 s | 0.38 s | 0.21 s | 22 ms | 102 / 43 / 36 / 4 MiB |
 | Java | step 33 | none | n/a | n/a | n/a | 0.148 | 1.01 s | 0.39 s | 0.28 s | 25 ms | 76 / 37 / 37 / 5 MiB |
 | Kotlin | step 35 | none | n/a | n/a | n/a | 0.283 | 1.27 s | 0.46 s | 0.48 s | 32 ms | 94 / 45 / 45 / 8 MiB |
+| C# | step 36 | none | n/a | n/a | n/a | 0.330 | 1.28 s | 0.51 s | 0.92 s | 75 ms | 100 / 49 / 69 / 12 MiB |
+| PHP | step 36 | none | n/a | n/a | n/a | 0.093 | 1.02 s | 0.30 s | 0.19 s | 17 ms | 85 / 34 / 36 / 4 MiB |
+| Ruby | step 36 | none | n/a | n/a | n/a | 0.459 | 1.12 s | 0.56 s | 0.94 s | 53 ms | 90 / 52 / 48 / 11 MiB |
+| Rust | step 36 | none | n/a | n/a | n/a | 0.308 | 1.37 s | 0.32 s | 0.30 s | 27 ms | 80 / 39 / 40 / 6 MiB |
 
 Python is now at 0.940, just under the precision gate of the design (0.95
 for `high` and `medium` edges). After step 27 it is 0.954, and its recall is
@@ -97,6 +101,41 @@ value of a call, as `toString()` in `result.toString().tag00()`, and a call
 on a list of the standard library, as `items.forEach`, are records. The
 link step is 0.2 s slower per 1,000 files than Java, because each call
 with a receiver looks for an extension function of its name.
+
+The C#, PHP, Ruby and Rust rows come from step 36, with 4 workers. No
+public set with a license ships call graphs of these languages, so they
+have no precision or recall. Each synthetic project of 1,000 files has the
+shape of the Java project, and the reach query finds 200 of 200 targets in
+each one.
+
+- C# has one namespace per package, a lambda in `items.ForEach` and a
+  static `Package` class per namespace. It has 88,864 edges and 11,166
+  unresolved sites. It has the most edges, because each method that is not
+  static has an edge to its class, and the link step looks for an
+  extension method of the name of each call on a receiver that runs no
+  method of the project.
+- PHP has one namespace per package under a PSR-4 prefix of composer.json
+  and a script under bin. It has 32,930 edges and 2,811 unresolved sites,
+  the lowest unresolved rate of the four.
+- Ruby has one module per package under lib, a require_relative per
+  dependency and a script under exe. It has 53,354 edges and 18,563
+  unresolved sites. A call on an instance variable, as `@store.m(data)`,
+  and on a block parameter, as `item.on_event(data)`, has no known class,
+  so it is a record with name edges. The link step was 35 s at first,
+  because every file reopens the module Bench, and each lookup of a method
+  read the 1,000 aliases of the module. The members of a group of aliases
+  are now one table, and the link step is 0.94 s.
+- Rust has one module directory per package, whose mod.rs declares its
+  modules, a test file per package under tests, and a `Vec<Box<dyn
+  Listener>>` per module. It has 29,635 edges and 11,150 unresolved sites.
+  Most records are the calls on a value of a call of std, as `unwrap` and
+  `to_string`.
+
+Step 36 also keys a narrowed call by its site and its callee. A chain of
+calls, as `a.b().c()`, has one site. Before step 36, the narrowed call of
+`b` dropped the record of the call of `c`. The synthetic projects of the
+earlier languages have the same edges and unresolved sites after the
+change.
 
 The step 27 rows come from one more run of the benchmark at 1,000 files.
 The declared types of TypeScript narrow the calls on a typed field, as

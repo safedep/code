@@ -21,6 +21,9 @@ type profile struct {
 	resolver func(b *builder) modules.Resolver
 	// units groups the files of the language into units, as Go packages.
 	units func(b *builder)
+	// aliases joins the definitions of one class, as the partial classes
+	// of C#.
+	aliases func(b *builder)
 	// link adds the edges that the loader of the language runs, as the
 	// init functions of Go.
 	link func(b *builder, ix *fileindex.Index)
@@ -28,7 +31,7 @@ type profile struct {
 	qualified func(b *builder, name string) (string, bool)
 	// scopeFallback resolves a name that no scope of the file binds, as a
 	// Java class of a wildcard import of a dependency.
-	scopeFallback func(b *builder, sc *scope, first string, rest []string, target string) []resolution
+	scopeFallback func(b *builder, sc *scope, caller, first string, rest []string, target string) []resolution
 	// relativePath turns a relative module into a path, as ./pkg/ for ..pkg.
 	// in Python. A module that ends in its separator names a directory.
 	relativePath func(spec string) string
@@ -39,10 +42,17 @@ type profile struct {
 	// thisCalls marks a language where a call with no receiver in a method
 	// runs on this, as in Java.
 	thisCalls bool
+	// lateStatic names the receiver of a static call that binds the class
+	// at run time, as static of PHP. Such a call can run the static method
+	// of a subclass.
+	lateStatic string
 	// superCalls marks a language where super names the base class, so a
 	// call of super runs the constructor of the base and super.m() runs
 	// its method.
 	superCalls bool
+	// superModule marks a language where super names the parent module, as
+	// super::helper in Rust, and no base class.
+	superModule bool
 	// objectBase is the builtin base of a class with no base, as object in
 	// Python. A call on super of such a class runs its method.
 	objectBase string
@@ -87,7 +97,35 @@ type profile struct {
 	// framework reads, as Java annotations, and run no code where they
 	// stand.
 	annotationsData bool
+	// definitionExports marks a language with no export statement, whose
+	// files export their exported definitions to a path rule, as C#.
+	definitionExports bool
+	// classOf names the method of an instance that gives its class, as
+	// class of Ruby.
+	classOf string
+	// classMethodPrefix starts the name of a method of the class itself, as
+	// self.build in Ruby, which a call on the class runs.
+	classMethodPrefix string
+	// implicitMethods name the methods that the language calls with no
+	// call of the name, as an operator of Kotlin.
+	implicitMethods map[string]bool
+	// forwardMethod names the method of a class that forwards a call that
+	// the class has no method for to another type, as deref of Rust. A
+	// declared type with it does not narrow the receiver.
+	forwardMethod string
+	// methodAliases name the methods that a call of a method name can run
+	// by another name, as from for into of Rust.
+	methodAliases map[string][]string
+	// constructorCall names the method of a class that makes an instance,
+	// as new of Ruby. A call of it is a call of the class.
+	constructorCall string
 
+	// itemPaths joins the module and the item of an import into one path,
+	// as store::file::FileStore for use store::{file::FileStore} in Rust.
+	itemPaths string
+	// unitImports marks a language where a module gives on the names that
+	// its imports bind, as a pub use of Rust.
+	unitImports bool
 	// importBindsRoot marks a language where an import of a dotted module
 	// with no item and no alias binds the first segment, as os for import
 	// os.path in Python.
@@ -113,7 +151,7 @@ type profile struct {
 
 // profiles are the languages of the link step, in a fixed order. The units
 // of the languages are built in this order.
-var profiles = []*profile{&pythonProfile, &javascriptProfile, &typescriptProfile, &goProfile, &javaProfile, &kotlinProfile}
+var profiles = []*profile{&pythonProfile, &javascriptProfile, &typescriptProfile, &goProfile, &javaProfile, &kotlinProfile, &csharpProfile, &phpProfile, &rubyProfile, &rustProfile}
 
 // profilesByCode is filled in init. The functions of a profile call
 // profileOf, so a variable initializer would make an initialization cycle.

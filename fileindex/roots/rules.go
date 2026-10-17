@@ -38,6 +38,7 @@ const (
 	SetupPy     = "setup.py"
 	Procfile    = "Procfile"
 	Dockerfile  = "Dockerfile"
+	Composer    = "composer.json"
 )
 
 var manifestFields = map[string][]string{
@@ -46,6 +47,7 @@ var manifestFields = map[string][]string{
 	SetupPy:     {"console_scripts"},
 	Procfile:    nil,
 	Dockerfile:  nil,
+	Composer:    {"bin"},
 }
 
 // Rule marks the roots of one kind. Language is a langcode or AnyLanguage.
