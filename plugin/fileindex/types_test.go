@@ -215,3 +215,13 @@ func TestFileIndexObjectMembers(t *testing.T) {
 	assert.NotContains(t, methods, "go")
 	assert.Contains(t, ix.Exports, fidx.Export{Name: "load", Target: "a.js//load", Line: 5})
 }
+
+func TestFileIndexExportDefaultValue(t *testing.T) {
+	fn := indexSource(t, core.LanguageCodeTypescript, "f.ts", "export default function () { go(); }\n")
+	assert.Equal(t, fidx.DefFunction, definitionOf(t, fn, "f.ts//default").Kind)
+	assert.Equal(t, []fidx.Export{{Name: "default", Target: "f.ts//default", Line: 1}}, fn.Exports)
+
+	class := indexSource(t, core.LanguageCodeTypescript, "c.ts", "export default class extends Base { run() {} }\n")
+	assert.Equal(t, []string{"c.ts//default//run"}, classOf(t, class, "c.ts//default").Methods)
+	assert.Equal(t, []fidx.Export{{Name: "default", Target: "c.ts//default", Line: 1}}, class.Exports)
+}

@@ -1074,3 +1074,25 @@ func TestJavaFirstPartyMatchesAPackagePrefix(t *testing.T) {
 		assert.Equal(t, want, b.javaFirstParty(name), name)
 	}
 }
+
+func TestBuildWalksIntoTheDefaultValueOfAModule(t *testing.T) {
+	job := &fileindex.Index{
+		Version: fileindex.Version, Path: "job.js", Language: langcode.Javascript,
+		Exports:     []fileindex.Export{{Name: "default", Target: "job.js//default", Line: 1}, {Name: "helper", Target: "job.js//helper", Line: 5}},
+		Definitions: []fileindex.Definition{{Key: "job.js//default", Kind: fileindex.DefClass, Name: "default", StartLine: 1, EndLine: 3}, {Key: "job.js//default//run", Kind: fileindex.DefMethod, Name: "run", StartLine: 2, EndLine: 2, Parent: "job.js//default"}, {Key: "job.js//helper", Kind: fileindex.DefFunction, Name: "helper", StartLine: 5, EndLine: 5}},
+		Classes:     []fileindex.Class{{Key: "job.js//default", Methods: []string{"job.js//default//run"}}},
+	}
+	main := &fileindex.Index{
+		Version: fileindex.Version, Path: "main.js", Language: langcode.Javascript,
+		Imports: []fileindex.Import{{Line: 1, Module: "./job", Alias: "Job", Kind: fileindex.ImportStatic, Namespace: ".//job"}},
+		Calls: []fileindex.Call{
+			{Caller: "main.js", Line: 2, Column: 1, Callee: "new Job().run", Targets: []string{".//job//run"}, Receiver: "new Job()", Method: "run", Kind: fileindex.CallCall},
+			{Caller: "main.js", Line: 3, Column: 1, Callee: "Job.helper", Targets: []string{".//job//helper"}, Receiver: "Job", Method: "helper", Kind: fileindex.CallCall},
+		},
+	}
+	g, err := Build(context.Background(), []*fileindex.Index{job, main}, Options{})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"main.js -> job.js//default//run member javascript.member"}, edgesOfKind(g, EdgeMember),
+		"a member that the module does not name is a member of its default class")
+	assert.Contains(t, edgeStrings(g), "main.js -> job.js//helper direct javascript.import", "a name of the module wins")
+}

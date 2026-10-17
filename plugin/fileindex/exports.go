@@ -107,8 +107,11 @@ func (p *projection) addExportStatement(statement *sitter.Node) {
 		return
 	}
 	if value := statement.ChildByFieldName("value"); value != nil {
-		if value.Type() == "identifier" {
-			p.export("default", p.text(value), line)
+		switch {
+		case value.Type() == "identifier":
+			p.export(defaultExport, p.text(value), line)
+		case functionValues[value.Type()] || value.Type() == "class":
+			p.export(defaultExport, defaultExport, line)
 		}
 		return
 	}

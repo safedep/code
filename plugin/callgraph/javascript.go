@@ -544,7 +544,7 @@ func jsMethodDefinitionProcessor(node *sitter.Node, treeData []byte, currentName
 // module.exports = class {} or in (B) => class extends B {}, as a class in
 // its own namespace. Its name is the name that the file binds to it: the
 // name of the declarator or of the class field, default for the whole
-// module.exports, or the name of an export. A class that no such name holds gets an anonymous name. The
+// module.exports and for export default, or the name of an export. A class that no such name holds gets an anonymous name. The
 // value of the expression is the class, and a declarator of the same name
 // needs no value.
 func classExpressionProcessor(classNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
@@ -587,6 +587,8 @@ func classExpressionName(classNode *sitter.Node, treeData []byte) (string, bool)
 		if name != nil && name.Type() == "property_identifier" {
 			return name.Content(treeData), false
 		}
+	case "export_statement":
+		return "default", false
 	case "assignment_expression":
 		left := parent.ChildByFieldName("left")
 		if left == nil || left.Type() != "member_expression" {

@@ -1,0 +1,51 @@
+source: safedep:hand
+description: src/job.ts exports an anonymous class by export default, and src/store.ts exports a class expression as the const Store. The index names the default class default, with the export default. A default import binds that class, so new Job().run() is the method run of the class, as new Store() then load is the load of Store.
+roots:
+  - key: src/main.ts
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.ts
+    to: src/job.ts//default//run
+    kind: member
+    confidence: high
+    site: src/main.ts:6
+  - from: src/main.ts
+    to: src/store.ts//Store//load
+    kind: member
+    confidence: high
+    site: src/main.ts:5
+unresolved: []
+results:
+  - target: child_process//spawnSync
+    status: found
+    path:
+      - key: src/main.ts
+      - key: src/job.ts//default//run
+        site: src/main.ts:6
+        kind: member
+        confidence: high
+      - key: child_process//spawnSync
+        site: src/job.ts:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/job.ts//default//run
+        site: src/job.ts:5
+        reached: true
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/main.ts
+      - key: src/store.ts//Store//load
+        site: src/main.ts:5
+        kind: member
+        confidence: high
+      - key: js-yaml//load
+        site: src/store.ts:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/store.ts//Store//load
+        site: src/store.ts:5
+        reached: true

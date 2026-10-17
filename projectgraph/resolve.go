@@ -456,6 +456,10 @@ func (b *builder) walk(key string, names []string) resolution {
 		case isNamespacePackage(r.key) || kind == NodeModule:
 			key, fail := b.resolveName(r.key, name, 0)
 			if fail != nil {
+				if value, ok := b.defaultValue(r.key, name); ok {
+					r.key = value
+					continue
+				}
 				r.fail = fail
 				return r
 			}
@@ -549,6 +553,27 @@ func (b *builder) walk(key string, names []string) resolution {
 		r.key = value
 	}
 	return r
+}
+
+// defaultValue returns the class or the function that a module exports as
+// its whole value, as module.exports = class {} or export default class
+// {}, when the module has no name of its own for the member. A default
+// import and a require bind that value, so a member of it, as run in
+// new Job().run(), is a member of the class.
+func (b *builder) defaultValue(module, name string) (string, bool) {
+	def := b.profileAt(module).defaultExport
+	if def == "" || name == def {
+		return "", false
+	}
+	key, fail := b.resolveName(module, def, 0)
+	if fail != nil {
+		return "", false
+	}
+	switch b.kindOf(b.deref(key)) {
+	case NodeClass, NodeFunction:
+		return key, true
+	}
+	return "", false
 }
 
 // variableValue returns the one key that a module variable holds. A

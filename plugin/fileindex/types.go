@@ -115,6 +115,9 @@ func (p *projection) bodyVisitor() visitor {
 				p.addArgumentFunction(arg)
 			}
 			return
+		case "export_statement":
+			p.addDefaultFunction(node.ChildByFieldName("value"))
+			return
 		case "pair":
 			name, value = node.ChildByFieldName("key"), node.ChildByFieldName("value")
 			holder = callgraph.ObjectNames(node.Parent(), p.source)
@@ -130,7 +133,7 @@ func (p *projection) bodyVisitor() visitor {
 			}
 			value = node.ChildByFieldName("right")
 			if p.text(left) == "module.exports" {
-				p.addModuleExportsFunction(value)
+				p.addDefaultFunction(value)
 				return
 			}
 			name = left.ChildByFieldName("property")
@@ -153,9 +156,9 @@ func (p *projection) bodyVisitor() visitor {
 	}
 }
 
-// addModuleExportsFunction adds the function of module.exports = function
-// () {} as the default export of the module.
-func (p *projection) addModuleExportsFunction(value *sitter.Node) {
+// addDefaultFunction adds the function of module.exports = function () {}
+// or of export default function () {} as the definition default.
+func (p *projection) addDefaultFunction(value *sitter.Node) {
 	key := p.local(defaultExport)
 	if value == nil || !functionValues[value.Type()] || p.defined(value) || p.defs[key] != nil {
 		return

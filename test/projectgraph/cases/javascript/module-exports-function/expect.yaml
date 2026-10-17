@@ -1,5 +1,5 @@
 source: safedep:hand
-description: lib/parse.js sets module.exports to a function and lib/store.js to a class. Each one is the definition default with a default export, so the call of the required parse reaches the function. The value of store holds an instance of the class, and the walk does not follow it, so a field edge joins store.save() to the method save of the class.
+description: lib/parse.js sets module.exports to a function and lib/store.js to a class. Each one is the definition default with a default export, so the call of the required parse reaches the function. store holds an instance of the required class, and the module has no name save of its own, so store.save() is the method save of the default class.
 roots:
   - key: main.js
     kind: manifest
@@ -22,14 +22,10 @@ edges:
     site: main.js:5
   - from: main.js
     to: lib/store.js//default//save
-    kind: field
-    confidence: low
+    kind: member
+    confidence: high
     site: main.js:6
-unresolved:
-  - caller: main.js
-    site: main.js:6
-    reason: no-definition
-    method: save
+unresolved: []
 results:
   - target: js-yaml//load
     status: found
@@ -53,8 +49,8 @@ results:
       - key: main.js
       - key: lib/store.js//default//save
         site: main.js:6
-        kind: field
-        confidence: low
+        kind: member
+        confidence: high
       - key: fs//writeFileSync
         site: lib/store.js:5
         kind: direct
