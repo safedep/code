@@ -16,11 +16,7 @@ rules:
   - id: python.main-guard
     language: python
     kind: main
-    match: { file_contains: "__name__ == \"__main__\"" }
-  - id: python.main-guard-single-quote
-    language: python
-    kind: main
-    match: { file_contains: "__name__ == '__main__'" }
+    match: { main_guard: true }
   - id: node.package-json
     language: javascript
     kind: manifest
@@ -147,11 +143,7 @@ rules:
   - id: ruby.main-guard
     language: ruby
     kind: main
-    match: { file_contains: "__FILE__ == $0" }
-  - id: ruby.main-guard-program-name
-    language: ruby
-    kind: main
-    match: { file_contains: "__FILE__ == $PROGRAM_NAME" }
+    match: { main_guard: true }
   - id: ruby.script
     language: ruby
     kind: main

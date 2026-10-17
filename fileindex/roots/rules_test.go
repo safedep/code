@@ -16,14 +16,14 @@ func TestDefaultRules(t *testing.T) {
 		ids = append(ids, r.ID)
 	}
 	assert.Equal(t, []string{
-		"go.main", "java.main", "python.main-guard", "python.main-guard-single-quote", "node.package-json",
+		"go.main", "java.main", "python.main-guard", "node.package-json",
 		"python.project-scripts", "python.setup-py", "procfile", "dockerfile",
 		"python.flask.route", "python.fastapi.route", "python.django.urls", "python.django.view", "python.click.command",
 		"python.click.subcommand", "python.typer.command", "node.express.route", "node.koa.route",
 		"node.commander.action", "node.next.route", "node.serverless.handler", "java.spring.web", "java.spring.component",
 		"csharp.main", "csharp.top-level-statements", "csharp.aspnet.action", "csharp.aspnet.controllers",
 		"php.script", "php.composer-bin", "php.laravel.routes", "php.laravel.controllers", "php.symfony.attribute",
-		"ruby.main-guard", "ruby.main-guard-program-name", "ruby.script", "ruby.rails.app",
+		"ruby.main-guard", "ruby.script", "ruby.rails.app",
 		"rust.main", "rust.build-script", "rust.web.attribute", "rust.test.attribute", "test.files",
 	}, ids)
 }
@@ -62,7 +62,7 @@ rules:
   - id: a.file-contains
     language: python
     kind: main
-    match: { file_contains: "if True" }
+    match: { main_guard: true }
   - id: a.test-file
     language: any
     kind: test
@@ -83,11 +83,11 @@ func TestParseErrorsNameTheRule(t *testing.T) {
 		yaml string
 		want string
 	}{
-		{name: "an unknown field", yaml: "{id: x.y, language: python, kind: main, match: {file_contains: a}, extra: 1}", want: `root rule "x.y": unknown key "extra"`},
-		{name: "a bad type", yaml: "{id: x.y, language: python, kind: [main], match: {file_contains: a}}", want: `root rule "x.y": `},
-		{name: "an unknown kind", yaml: "{id: x.y, language: python, kind: route, match: {file_contains: a}}", want: `root rule "x.y": unknown kind "route"`},
-		{name: "an unknown language", yaml: "{id: x.y, language: cobol, kind: main, match: {file_contains: a}}", want: `root rule "x.y": unknown language "cobol"`},
-		{name: "two match keys", yaml: "{id: x.y, language: any, kind: main, match: {file_contains: a, test_file: true}}", want: `root rule "x.y": the match has 2 keys, want 1`},
+		{name: "an unknown field", yaml: "{id: x.y, language: python, kind: main, match: {main_guard: true}, extra: 1}", want: `root rule "x.y": unknown key "extra"`},
+		{name: "a bad type", yaml: "{id: x.y, language: python, kind: [main], match: {main_guard: true}}", want: `root rule "x.y": `},
+		{name: "an unknown kind", yaml: "{id: x.y, language: python, kind: route, match: {main_guard: true}}", want: `root rule "x.y": unknown kind "route"`},
+		{name: "an unknown language", yaml: "{id: x.y, language: cobol, kind: main, match: {main_guard: true}}", want: `root rule "x.y": unknown language "cobol"`},
+		{name: "two match keys", yaml: "{id: x.y, language: any, kind: main, match: {main_guard: true, test_file: true}}", want: `root rule "x.y": the match has 2 keys, want 1`},
 		{name: "no match key", yaml: "{id: x.y, language: any, kind: main, match: {}}", want: `the match has 0 keys`},
 		{name: "a bad glob", yaml: "{id: x.y, language: any, kind: framework, match: {path: ['a/[']}}", want: `root rule "x.y": glob`},
 		{name: "an unknown manifest", yaml: "{id: x.y, language: any, kind: manifest, match: {manifest: {file: Gemfile}}}", want: `unknown file "Gemfile"`},

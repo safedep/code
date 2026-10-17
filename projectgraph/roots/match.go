@@ -1,11 +1,11 @@
 // Package roots finds the roots of a project graph: the definitions and the
-// module top levels that the root rules mark. It reads the indexes, the
-// manifests of the project and, for a file_contains rule, the file itself.
+// module top levels that the root rules mark. It reads the indexes and the
+// manifests of the project, and no source file.
 package roots
 
 import (
-	"bytes"
 	"cmp"
+	"context"
 	"encoding/json"
 	"errors"
 	"io/fs"
@@ -62,9 +62,10 @@ type Project struct {
 	ResolveName func(path, name string) (string, bool)
 }
 
-// Find returns the roots that the rules mark, sorted, and the manifests and
-// files that it could not read.
-func Find(p Project, rs []rules.Rule) ([]Root, []modules.Problem) {
+// Find returns the roots that the rules mark, sorted, and the manifests
+// that it could not read. It stops with the error of the context when the
+// context ends.
+func Find(ctx context.Context, p Project, rs []rules.Rule) ([]Root, []modules.Problem, error) {
 	f := &finder{
 		Project:   p,
 		languages: map[string]langcode.Code{},
@@ -81,12 +82,15 @@ func Find(p Project, rs []rules.Rule) ([]Root, []modules.Problem) {
 		}
 	}
 	for _, r := range rs {
+		if err := ctx.Err(); err != nil {
+			return nil, nil, err
+		}
 		f.match(r)
 	}
 	slices.SortFunc(f.roots, func(a, b Root) int {
 		return cmp.Or(cmp.Compare(a.Key, b.Key), cmp.Compare(a.Kind, b.Kind), cmp.Compare(a.Rule, b.Rule))
 	})
-	return f.roots, f.problems
+	return f.roots, f.problems, nil
 }
 
 type finder struct {
@@ -136,8 +140,8 @@ func (f *finder) match(r rules.Rule) {
 	switch {
 	case m.Definition != nil:
 		f.matchDefinition(r)
-	case m.FileContains != "":
-		f.matchFileContains(r)
+	case m.MainGuard:
+		f.matchMainGuard(r)
 	case len(m.Path) > 0:
 		f.matchPath(r)
 	case len(m.Decorator) > 0 || len(m.Annotation) > 0:
@@ -189,11 +193,11 @@ func (f *finder) matchDefinition(r rules.Rule) {
 	}
 }
 
-func (f *finder) matchFileContains(r rules.Rule) {
-	needle := []byte(r.Match.FileContains)
+// matchMainGuard marks the module top level of each file whose index has
+// a main guard.
+func (f *finder) matchMainGuard(r rules.Rule) {
 	for _, ix := range f.applying(r) {
-		data, ok := f.read(ix.Path)
-		if ok && bytes.Contains(data, needle) {
+		if ix.MainGuard {
 			f.add(r, ix.Path)
 		}
 	}

@@ -3,6 +3,7 @@ package fileindex
 import (
 	"context"
 	"errors"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -93,7 +94,7 @@ func (p *projection) walkTree(ctx context.Context) {
 	p.addParseErrors(ctx, root)
 
 	var visitors []visitor
-	candidates := []visitor{p.bodyVisitor(), p.flagVisitor(), p.referenceVisitor(), p.javaFlagVisitor(), p.javaReferenceVisitor()}
+	candidates := []visitor{p.bodyVisitor(), p.flagVisitor(), p.mainGuardVisitor(), p.referenceVisitor(), p.javaFlagVisitor(), p.javaReferenceVisitor()}
 	for _, v := range p.rules().visitors {
 		candidates = append(candidates, v(p))
 	}
@@ -138,6 +139,35 @@ func (p *projection) flagVisitor() visitor {
 			if node.NamedChildCount() > 0 && node.NamedChild(0).Type() != "identifier" {
 				p.flagAt(fidx.FlagDecoratorWrap, decorated(node).StartByte(), lineOf(node))
 			}
+		}
+	}
+}
+
+// mainGuard names the if statement of a language and the condition that
+// runs its body only when the file is the program.
+type mainGuard struct {
+	statement string
+	condition *regexp.Regexp
+}
+
+var mainGuards = map[core.LanguageCode]mainGuard{
+	core.LanguageCodePython: {statement: "if_statement", condition: regexp.MustCompile(`^(__name__\s*==\s*["']__main__["']|["']__main__["']\s*==\s*__name__)$`)},
+	core.LanguageCodeRuby:   {statement: "if", condition: regexp.MustCompile(`^(__FILE__\s*==\s*\$(0|PROGRAM_NAME)|\$(0|PROGRAM_NAME)\s*==\s*__FILE__)$`)},
+}
+
+// mainGuardVisitor marks a file that holds a main guard, as
+// if __name__ == "__main__" of Python or if __FILE__ == $0 of Ruby.
+func (p *projection) mainGuardVisitor() visitor {
+	guard, ok := mainGuards[p.ix.Language]
+	if !ok {
+		return nil
+	}
+	return func(node *sitter.Node, kind string) {
+		if kind != guard.statement || p.ix.MainGuard {
+			return
+		}
+		if guard.condition.MatchString(p.text(node.ChildByFieldName("condition"))) {
+			p.ix.MainGuard = true
 		}
 	}
 }

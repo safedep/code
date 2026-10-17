@@ -68,17 +68,19 @@ type Rule struct {
 // Match holds one match key. Decorator lists the names of the decorators as
 // written, as @click.command, and a decorator matches when it is one of
 // them, with or without arguments. Annotation matches as Decorator does,
-// on the annotations of Java that the index holds as decorators.
+// on the annotations of Java that the index holds as decorators. MainGuard
+// matches a file whose index has a main guard, as
+// if __name__ == "__main__" of Python.
 type Match struct {
-	Definition   *DefinitionMatch `yaml:"definition,omitempty"`
-	Decorator    []string         `yaml:"decorator,omitempty"`
-	Annotation   []string         `yaml:"annotation,omitempty"`
-	Call         *CallMatch       `yaml:"call,omitempty"`
-	Export       *ExportMatch     `yaml:"export,omitempty"`
-	Path         []string         `yaml:"path,omitempty"`
-	Manifest     *ManifestMatch   `yaml:"manifest,omitempty"`
-	FileContains string           `yaml:"file_contains,omitempty"`
-	TestFile     bool             `yaml:"test_file,omitempty"`
+	Definition *DefinitionMatch `yaml:"definition,omitempty"`
+	Decorator  []string         `yaml:"decorator,omitempty"`
+	Annotation []string         `yaml:"annotation,omitempty"`
+	Call       *CallMatch       `yaml:"call,omitempty"`
+	Export     *ExportMatch     `yaml:"export,omitempty"`
+	Path       []string         `yaml:"path,omitempty"`
+	Manifest   *ManifestMatch   `yaml:"manifest,omitempty"`
+	MainGuard  bool             `yaml:"main_guard,omitempty"`
+	TestFile   bool             `yaml:"test_file,omitempty"`
 }
 
 // DefinitionMatch matches a definition by name and by the name of its
@@ -265,7 +267,7 @@ func (m Match) validate() error {
 	count(m.Export != nil)
 	count(len(m.Path) > 0)
 	count(m.Manifest != nil)
-	count(m.FileContains != "")
+	count(m.MainGuard)
 	count(m.TestFile)
 	if keys != 1 {
 		return fmt.Errorf("the match has %d keys, want 1", keys)

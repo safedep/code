@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"testing/fstest"
 	"time"
 
 	"github.com/safedep/code/fileindex"
@@ -359,7 +358,7 @@ func TestReachDeadline(t *testing.T) {
 func TestReachBuiltGraph(t *testing.T) {
 	indexes := []*fileindex.Index{
 		{
-			Version: fileindex.Version, Path: "main.py", Language: langcode.Python,
+			Version: fileindex.Version, Path: "main.py", Language: langcode.Python, MainGuard: true,
 			Imports: []fileindex.Import{{Line: 1, Module: "handlers", Alias: "handlers", Kind: fileindex.ImportStatic, Namespace: "handlers"}},
 			Calls:   []fileindex.Call{{Caller: "main.py", Line: 3, Column: 1, Callee: "handlers.parse", Targets: []string{"handlers//parse"}, Receiver: "handlers", Method: "parse", Kind: fileindex.CallCall}},
 		},
@@ -370,8 +369,7 @@ func TestReachBuiltGraph(t *testing.T) {
 			Calls:       []fileindex.Call{{Caller: "handlers.py//parse", Line: 12, Column: 5, Callee: "yaml.load", Targets: []string{"yaml//load"}, Receiver: "yaml", Method: "load", Kind: fileindex.CallCall}},
 		},
 	}
-	root := fstest.MapFS{"main.py": {Data: []byte("import handlers\nif __name__ == \"__main__\":\n    handlers.parse()\n")}}
-	g, err := projectgraph.Build(context.Background(), indexes, projectgraph.Options{Root: root})
+	g, err := projectgraph.Build(context.Background(), indexes, projectgraph.Options{})
 	require.NoError(t, err)
 
 	r := reachOne(t, g, Query{Targets: []string{"yaml//load"}})

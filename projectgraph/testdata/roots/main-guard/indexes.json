@@ -1,6 +1,6 @@
 [
   {
-    "version": "10", "path": "app.py", "language": "python",
+    "version": "10", "path": "app.py", "language": "python", "main_guard": true,
     "definitions": [
       {"key": "app.py", "kind": "module", "name": "app", "start_line": 1, "end_line": 5, "exported": true},
       {"key": "app.py//run", "kind": "function", "name": "run", "start_line": 1, "end_line": 2, "exported": true}

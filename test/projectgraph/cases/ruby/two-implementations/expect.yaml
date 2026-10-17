@@ -3,7 +3,7 @@ description: DbStore and FileStore both override Store#save. persist calls save 
 roots:
   - key: main.rb
     kind: main
-    rule: ruby.main-guard-program-name
+    rule: ruby.main-guard
 edges:
   - from: main.rb//persist
     to: lib/stores.rb//DbStore//save

@@ -71,7 +71,9 @@ func Build(ctx context.Context, indexes []*fileindex.Index, opts Options) (*Grap
 	if err := b.link(ctx); err != nil {
 		return nil, err
 	}
-	b.markRoots()
+	if err := b.markRoots(ctx); err != nil {
+		return nil, err
+	}
 	g := b.finish()
 	g.Stats.Duration = time.Since(start)
 	return g, nil

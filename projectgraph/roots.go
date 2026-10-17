@@ -1,6 +1,7 @@
 package projectgraph
 
 import (
+	"context"
 	"slices"
 	"strings"
 
@@ -14,14 +15,14 @@ import (
 // level of a file that is not a test becomes a root of kind
 // library-surface. Dependency code runs only when the project calls it, so
 // it holds no root.
-func (b *builder) markRoots() {
+func (b *builder) markRoots(ctx context.Context) error {
 	indexes := make([]*fileindex.Index, 0, len(b.byPath))
 	for _, p := range b.paths {
 		if ix := b.byPath[p]; ix != nil && ix.Unit == "" {
 			indexes = append(indexes, ix)
 		}
 	}
-	found, problems := pgroots.Find(pgroots.Project{
+	found, problems, err := pgroots.Find(ctx, pgroots.Project{
 		Indexes:     indexes,
 		IsTest:      func(p string) bool { return b.test[p] },
 		Root:        b.opts.Root,
@@ -34,6 +35,9 @@ func (b *builder) markRoots() {
 		Resolve:     b.resolveKeys,
 		ResolveName: b.resolveRuleName,
 	}, b.rules)
+	if err != nil {
+		return err
+	}
 	b.problems = append(b.problems, problems...)
 
 	entry := false
@@ -49,7 +53,7 @@ func (b *builder) markRoots() {
 		}
 	}
 	if entry {
-		return
+		return nil
 	}
 
 	b.g.Stats.RootFallback = true
@@ -64,6 +68,7 @@ func (b *builder) markRoots() {
 			}
 		}
 	}
+	return nil
 }
 
 func (b *builder) addRoot(key string, kind roots.Kind, rule string) {

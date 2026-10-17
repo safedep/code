@@ -134,6 +134,11 @@ type Index struct {
 	ContentHash string        `json:"content_hash"`
 	Package     string        `json:"package,omitempty"`
 	Unit        string        `json:"unit,omitempty"`
+	// MainGuard marks a file with a guard that runs code only when the
+	// file is the program, as if __name__ == "__main__" of Python or
+	// if __FILE__ == $0 of Ruby. A root rule reads it, so the link step
+	// reads no source file.
+	MainGuard bool `json:"main_guard,omitempty"`
 
 	Imports     []Import     `json:"imports,omitempty"`
 	Exports     []Export     `json:"exports,omitempty"`

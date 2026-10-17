@@ -160,3 +160,27 @@ func TestExports(t *testing.T) {
 		{Name: "shared", Line: 21},
 	}, py.Exports)
 }
+
+func TestMainGuard(t *testing.T) {
+	tests := []struct {
+		name   string
+		code   core.LanguageCode
+		file   string
+		source string
+		want   bool
+	}{
+		{name: "python double quotes", code: core.LanguageCodePython, file: "a.py", source: "if __name__ == \"__main__\":\n    run()\n", want: true},
+		{name: "python single quotes", code: core.LanguageCodePython, file: "a.py", source: "if __name__ == '__main__':\n    run()\n", want: true},
+		{name: "python reversed", code: core.LanguageCodePython, file: "a.py", source: "if '__main__' == __name__:\n    run()\n", want: true},
+		{name: "python other condition", code: core.LanguageCodePython, file: "a.py", source: "if __name__ == 'app':\n    run()\n", want: false},
+		{name: "ruby $0", code: core.LanguageCodeRuby, file: "a.rb", source: "if __FILE__ == $0\n  run\nend\n", want: true},
+		{name: "ruby $PROGRAM_NAME", code: core.LanguageCodeRuby, file: "a.rb", source: "if $PROGRAM_NAME == __FILE__\n  run\nend\n", want: true},
+		{name: "ruby other condition", code: core.LanguageCodeRuby, file: "a.rb", source: "if ARGV.empty?\n  run\nend\n", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ix := indexSource(t, tt.code, tt.file, tt.source)
+			assert.Equal(t, tt.want, ix.MainGuard)
+		})
+	}
+}
