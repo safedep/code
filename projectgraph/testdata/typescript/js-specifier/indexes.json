@@ -1,0 +1,16 @@
+[
+  {
+    "version": "1", "path": "src/main.ts", "language": "typescript",
+    "imports": [{"line": 1, "module": "./util.js", "item": "f", "alias": "f", "kind": "static", "namespace": ".//util.js//f"}],
+    "definitions": [{"key": "src/main.ts", "kind": "module", "name": "main", "start_line": 1, "end_line": 2, "exported": true}],
+    "calls": [{"caller": "src/main.ts", "line": 2, "column": 1, "callee": "f", "targets": [".//util.js//f"], "kind": "call"}]
+  },
+  {
+    "version": "1", "path": "src/util.ts", "language": "typescript",
+    "exports": [{"name": "f", "target": "src/util.ts//f", "line": 1}],
+    "definitions": [
+      {"key": "src/util.ts", "kind": "module", "name": "util", "start_line": 1, "end_line": 1, "exported": true},
+      {"key": "src/util.ts//f", "kind": "function", "name": "f", "start_line": 1, "end_line": 1, "exported": true}
+    ]
+  }
+]

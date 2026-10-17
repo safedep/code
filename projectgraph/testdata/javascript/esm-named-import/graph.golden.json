@@ -1,0 +1,130 @@
+{
+  "nodes": {
+    "js-yaml//load": {
+      "key": "js-yaml//load",
+      "kind": "external"
+    },
+    "src/main.js": {
+      "key": "src/main.js",
+      "kind": "module",
+      "path": "src/main.js",
+      "line": 1,
+      "exported": true
+    },
+    "src/parser.js": {
+      "key": "src/parser.js",
+      "kind": "module",
+      "path": "src/parser.js",
+      "line": 1,
+      "exported": true
+    },
+    "src/parser.js//parse": {
+      "key": "src/parser.js//parse",
+      "kind": "function",
+      "path": "src/parser.js",
+      "line": 2,
+      "exported": true
+    },
+    "src/util.js": {
+      "key": "src/util.js",
+      "kind": "module",
+      "path": "src/util.js",
+      "line": 1,
+      "exported": true
+    },
+    "src/util.js//fmt": {
+      "key": "src/util.js//fmt",
+      "kind": "function",
+      "path": "src/util.js",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "src/main.js",
+      "to": "src/parser.js",
+      "site": {
+        "path": "src/main.js",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.relative"
+    },
+    {
+      "from": "src/main.js",
+      "to": "src/util.js",
+      "site": {
+        "path": "src/main.js",
+        "line": 2
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.relative"
+    },
+    {
+      "from": "src/main.js",
+      "to": "src/parser.js//parse",
+      "site": {
+        "path": "src/main.js",
+        "line": 3,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.import"
+    },
+    {
+      "from": "src/main.js",
+      "to": "src/util.js//fmt",
+      "site": {
+        "path": "src/main.js",
+        "line": 4,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.import"
+    },
+    {
+      "from": "src/parser.js//parse",
+      "to": "js-yaml//load",
+      "site": {
+        "path": "src/parser.js",
+        "line": 3,
+        "column": 10
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.external"
+    }
+  ],
+  "unresolved": [
+    {
+      "caller": "src/main.js",
+      "site": {
+        "path": "src/main.js",
+        "line": 5,
+        "column": 1
+      },
+      "text": "import",
+      "reason": "dynamic-import",
+      "import_prefix": "src/locale/"
+    }
+  ],
+  "roots": [],
+  "files": {
+    "src/main.js": "indexed",
+    "src/parser.js": "indexed",
+    "src/util.js": "indexed"
+  },
+  "stats": {
+    "version": "1",
+    "files": 3,
+    "nodes": 6,
+    "edges": 5,
+    "unresolved": 1,
+    "roots": 0
+  }
+}

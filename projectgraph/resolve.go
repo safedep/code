@@ -558,6 +558,8 @@ func (b *builder) resolveModule(ix *fileindex.Index, spec string) (string, strin
 			via = "relative"
 		}
 		return mod, via, ok
+	case langcode.Javascript, langcode.Typescript:
+		return b.js.Resolve(ix.Path, spec, ix.Language == langcode.Typescript)
 	}
 	return "", "", false
 }

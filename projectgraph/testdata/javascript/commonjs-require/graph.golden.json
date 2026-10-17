@@ -1,0 +1,102 @@
+{
+  "nodes": {
+    "helper.js": {
+      "key": "helper.js",
+      "kind": "module",
+      "path": "helper.js",
+      "line": 1,
+      "exported": true
+    },
+    "helper.js//helper": {
+      "key": "helper.js//helper",
+      "kind": "function",
+      "path": "helper.js",
+      "line": 1,
+      "exported": true
+    },
+    "lib/index.js": {
+      "key": "lib/index.js",
+      "kind": "module",
+      "path": "lib/index.js",
+      "line": 1,
+      "exported": true
+    },
+    "lib/index.js//run": {
+      "key": "lib/index.js//run",
+      "kind": "function",
+      "path": "lib/index.js",
+      "line": 1,
+      "exported": true
+    },
+    "main.js": {
+      "key": "main.js",
+      "kind": "module",
+      "path": "main.js",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "main.js",
+      "to": "lib/index.js",
+      "site": {
+        "path": "main.js",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.relative"
+    },
+    {
+      "from": "main.js",
+      "to": "helper.js",
+      "site": {
+        "path": "main.js",
+        "line": 2
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.relative"
+    },
+    {
+      "from": "main.js",
+      "to": "lib/index.js//run",
+      "site": {
+        "path": "main.js",
+        "line": 3,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.import"
+    },
+    {
+      "from": "main.js",
+      "to": "helper.js//helper",
+      "site": {
+        "path": "main.js",
+        "line": 4,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.import"
+    }
+  ],
+  "unresolved": [],
+  "roots": [],
+  "files": {
+    "helper.js": "indexed",
+    "lib/index.js": "indexed",
+    "main.js": "indexed"
+  },
+  "stats": {
+    "version": "1",
+    "files": 3,
+    "nodes": 5,
+    "edges": 4,
+    "unresolved": 0,
+    "roots": 0
+  }
+}

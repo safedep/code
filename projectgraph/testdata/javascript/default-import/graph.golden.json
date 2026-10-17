@@ -1,0 +1,102 @@
+{
+  "nodes": {
+    "log.js": {
+      "key": "log.js",
+      "kind": "module",
+      "path": "log.js",
+      "line": 1,
+      "exported": true
+    },
+    "log.js//log": {
+      "key": "log.js//log",
+      "kind": "function",
+      "path": "log.js",
+      "line": 1,
+      "exported": true
+    },
+    "main.js": {
+      "key": "main.js",
+      "kind": "module",
+      "path": "main.js",
+      "line": 1,
+      "exported": true
+    },
+    "make.js": {
+      "key": "make.js",
+      "kind": "module",
+      "path": "make.js",
+      "line": 1,
+      "exported": true
+    },
+    "make.js//make": {
+      "key": "make.js//make",
+      "kind": "function",
+      "path": "make.js",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "main.js",
+      "to": "log.js",
+      "site": {
+        "path": "main.js",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.relative"
+    },
+    {
+      "from": "main.js",
+      "to": "make.js",
+      "site": {
+        "path": "main.js",
+        "line": 2
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.relative"
+    },
+    {
+      "from": "main.js",
+      "to": "log.js//log",
+      "site": {
+        "path": "main.js",
+        "line": 3,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.import"
+    },
+    {
+      "from": "main.js",
+      "to": "make.js//make",
+      "site": {
+        "path": "main.js",
+        "line": 4,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.import"
+    }
+  ],
+  "unresolved": [],
+  "roots": [],
+  "files": {
+    "log.js": "indexed",
+    "main.js": "indexed",
+    "make.js": "indexed"
+  },
+  "stats": {
+    "version": "1",
+    "files": 3,
+    "nodes": 5,
+    "edges": 4,
+    "unresolved": 0,
+    "roots": 0
+  }
+}

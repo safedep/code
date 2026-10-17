@@ -1,0 +1,138 @@
+{
+  "nodes": {
+    "src/api/index.js": {
+      "key": "src/api/index.js",
+      "kind": "module",
+      "path": "src/api/index.js",
+      "line": 1,
+      "exported": true
+    },
+    "src/api/index.js//parse": {
+      "key": "src/api/index.js//parse",
+      "kind": "export",
+      "path": "src/api/index.js",
+      "line": 1,
+      "exported": true
+    },
+    "src/core/index.js": {
+      "key": "src/core/index.js",
+      "kind": "module",
+      "path": "src/core/index.js",
+      "line": 1,
+      "exported": true
+    },
+    "src/core/index.js//parse": {
+      "key": "src/core/index.js//parse",
+      "kind": "export",
+      "path": "src/core/index.js",
+      "line": 1,
+      "exported": true
+    },
+    "src/core/parse.js": {
+      "key": "src/core/parse.js",
+      "kind": "module",
+      "path": "src/core/parse.js",
+      "line": 1,
+      "exported": true
+    },
+    "src/core/parse.js//doParse": {
+      "key": "src/core/parse.js//doParse",
+      "kind": "function",
+      "path": "src/core/parse.js",
+      "line": 1,
+      "exported": true
+    },
+    "src/main.js": {
+      "key": "src/main.js",
+      "kind": "module",
+      "path": "src/main.js",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "src/api/index.js",
+      "to": "src/core/index.js",
+      "site": {
+        "path": "src/api/index.js",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.relative"
+    },
+    {
+      "from": "src/api/index.js//parse",
+      "to": "src/core/index.js//parse",
+      "site": {
+        "path": "src/api/index.js",
+        "line": 1
+      },
+      "kind": "export",
+      "confidence": "high",
+      "resolver": "javascript.reexport"
+    },
+    {
+      "from": "src/core/index.js",
+      "to": "src/core/parse.js",
+      "site": {
+        "path": "src/core/index.js",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.relative"
+    },
+    {
+      "from": "src/core/index.js//parse",
+      "to": "src/core/parse.js//doParse",
+      "site": {
+        "path": "src/core/index.js",
+        "line": 1
+      },
+      "kind": "export",
+      "confidence": "high",
+      "resolver": "javascript.reexport"
+    },
+    {
+      "from": "src/main.js",
+      "to": "src/api/index.js",
+      "site": {
+        "path": "src/main.js",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.relative"
+    },
+    {
+      "from": "src/main.js",
+      "to": "src/api/index.js//parse",
+      "site": {
+        "path": "src/main.js",
+        "line": 2,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.import"
+    }
+  ],
+  "unresolved": [],
+  "roots": [],
+  "files": {
+    "src/api/index.js": "indexed",
+    "src/core/index.js": "indexed",
+    "src/core/parse.js": "indexed",
+    "src/main.js": "indexed"
+  },
+  "stats": {
+    "version": "1",
+    "files": 4,
+    "nodes": 7,
+    "edges": 6,
+    "unresolved": 0,
+    "roots": 0
+  }
+}
