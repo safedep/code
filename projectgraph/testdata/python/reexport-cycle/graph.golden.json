@@ -70,7 +70,35 @@
       "reason": "no-definition"
     }
   ],
-  "roots": [],
+  "roots": [
+    {
+      "key": "a/__init__.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "a/__init__.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "b/__init__.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "b/__init__.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "main.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      }
+    }
+  ],
   "files": {
     "a/__init__.py": "indexed",
     "b/__init__.py": "indexed",
@@ -82,6 +110,7 @@
     "nodes": 3,
     "edges": 3,
     "unresolved": 1,
-    "roots": 0
+    "roots": 3,
+    "root_fallback": true
   }
 }

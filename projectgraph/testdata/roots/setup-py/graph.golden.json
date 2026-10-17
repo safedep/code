@@ -1,0 +1,66 @@
+{
+  "nodes": {
+    "tool/admin.py": {
+      "key": "tool/admin.py",
+      "kind": "module",
+      "path": "tool/admin.py",
+      "line": 1,
+      "exported": true
+    },
+    "tool/admin.py//run": {
+      "key": "tool/admin.py//run",
+      "kind": "function",
+      "path": "tool/admin.py",
+      "line": 1,
+      "exported": true
+    },
+    "tool/main.py": {
+      "key": "tool/main.py",
+      "kind": "module",
+      "path": "tool/main.py",
+      "line": 1,
+      "exported": true
+    },
+    "tool/main.py//cli": {
+      "key": "tool/main.py//cli",
+      "kind": "function",
+      "path": "tool/main.py",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [],
+  "unresolved": [],
+  "roots": [
+    {
+      "key": "tool/admin.py//run",
+      "kind": "manifest",
+      "rule": "python.setup-py",
+      "site": {
+        "path": "tool/admin.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "tool/main.py//cli",
+      "kind": "manifest",
+      "rule": "python.setup-py",
+      "site": {
+        "path": "tool/main.py",
+        "line": 1
+      }
+    }
+  ],
+  "files": {
+    "tool/admin.py": "indexed",
+    "tool/main.py": "indexed"
+  },
+  "stats": {
+    "version": "1",
+    "files": 2,
+    "nodes": 4,
+    "edges": 0,
+    "unresolved": 0,
+    "roots": 2
+  }
+}

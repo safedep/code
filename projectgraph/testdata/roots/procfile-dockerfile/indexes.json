@@ -1,0 +1,100 @@
+[
+  {
+    "version": "1",
+    "path": "app/wsgi.py",
+    "language": "python",
+    "definitions": [
+      {
+        "key": "app/wsgi.py",
+        "kind": "module",
+        "name": "wsgi",
+        "start_line": 1,
+        "end_line": 2,
+        "exported": true
+      },
+      {
+        "key": "app/wsgi.py//app",
+        "kind": "function",
+        "name": "app",
+        "start_line": 1,
+        "end_line": 2,
+        "exported": true
+      }
+    ]
+  },
+  {
+    "version": "1",
+    "path": "app/cli.py",
+    "language": "python",
+    "definitions": [
+      {
+        "key": "app/cli.py",
+        "kind": "module",
+        "name": "cli",
+        "start_line": 1,
+        "end_line": 2,
+        "exported": true
+      }
+    ]
+  },
+  {
+    "version": "1",
+    "path": "app/__init__.py",
+    "language": "python",
+    "definitions": [
+      {
+        "key": "app/__init__.py",
+        "kind": "module",
+        "name": "__init__",
+        "start_line": 1,
+        "end_line": 2,
+        "exported": true
+      }
+    ]
+  },
+  {
+    "version": "1",
+    "path": "worker.py",
+    "language": "python",
+    "definitions": [
+      {
+        "key": "worker.py",
+        "kind": "module",
+        "name": "worker",
+        "start_line": 1,
+        "end_line": 2,
+        "exported": true
+      }
+    ]
+  },
+  {
+    "version": "1",
+    "path": "ignored.py",
+    "language": "python",
+    "definitions": [
+      {
+        "key": "ignored.py",
+        "kind": "module",
+        "name": "ignored",
+        "start_line": 1,
+        "end_line": 2,
+        "exported": true
+      }
+    ]
+  },
+  {
+    "version": "1",
+    "path": "web/server.js",
+    "language": "javascript",
+    "definitions": [
+      {
+        "key": "web/server.js",
+        "kind": "module",
+        "name": "server",
+        "start_line": 1,
+        "end_line": 2,
+        "exported": true
+      }
+    ]
+  }
+]

@@ -46,7 +46,26 @@
     }
   ],
   "unresolved": [],
-  "roots": [],
+  "roots": [
+    {
+      "key": "main.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "main.py//helper",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.py",
+        "line": 2
+      }
+    }
+  ],
   "files": {
     "main.py": "indexed"
   },
@@ -56,6 +75,7 @@
     "nodes": 3,
     "edges": 2,
     "unresolved": 0,
-    "roots": 0
+    "roots": 2,
+    "root_fallback": true
   }
 }

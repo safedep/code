@@ -85,7 +85,53 @@
     }
   ],
   "unresolved": [],
-  "roots": [],
+  "roots": [
+    {
+      "key": "log.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "log.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "log.js//log",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "log.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "main.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "make.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "make.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "make.js//make",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "make.js",
+        "line": 1
+      }
+    }
+  ],
   "files": {
     "log.js": "indexed",
     "main.js": "indexed",
@@ -97,6 +143,7 @@
     "nodes": 5,
     "edges": 4,
     "unresolved": 0,
-    "roots": 0
+    "roots": 5,
+    "root_fallback": true
   }
 }

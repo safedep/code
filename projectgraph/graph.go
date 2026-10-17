@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/fileindex/roots"
 	"github.com/safedep/code/projectgraph/modules"
 )
 
@@ -90,14 +91,15 @@ const (
 	FileTruncated FileStatus = "truncated"
 )
 
-type RootKind string
+// RootKind is the kind of a root, as the root rules name it.
+type RootKind = roots.Kind
 
 const (
-	RootMain           RootKind = "main"
-	RootManifest       RootKind = "manifest"
-	RootFramework      RootKind = "framework"
-	RootTest           RootKind = "test"
-	RootLibrarySurface RootKind = "library-surface"
+	RootMain           = roots.Main
+	RootManifest       = roots.Manifest
+	RootFramework      = roots.Framework
+	RootTest           = roots.Test
+	RootLibrarySurface = roots.LibrarySurface
 )
 
 type TruncationKind string

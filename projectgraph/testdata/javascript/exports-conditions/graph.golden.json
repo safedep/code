@@ -99,7 +99,26 @@
     }
   ],
   "unresolved": [],
-  "roots": [],
+  "roots": [
+    {
+      "key": "lib/cjs/index.cjs",
+      "kind": "manifest",
+      "rule": "node.package-json",
+      "site": {
+        "path": "lib/cjs/index.cjs",
+        "line": 1
+      }
+    },
+    {
+      "key": "lib/esm/index.mjs",
+      "kind": "manifest",
+      "rule": "node.package-json",
+      "site": {
+        "path": "lib/esm/index.mjs",
+        "line": 1
+      }
+    }
+  ],
   "files": {
     "app/main.mjs": "indexed",
     "lib/cjs/index.cjs": "indexed",
@@ -112,6 +131,6 @@
     "nodes": 7,
     "edges": 4,
     "unresolved": 0,
-    "roots": 0
+    "roots": 2
   }
 }

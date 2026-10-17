@@ -64,7 +64,35 @@
     }
   ],
   "unresolved": [],
-  "roots": [],
+  "roots": [
+    {
+      "key": "handlers.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "handlers.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "handlers.py//parse",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "handlers.py",
+        "line": 3
+      }
+    },
+    {
+      "key": "main.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      }
+    }
+  ],
   "files": {
     "handlers.py": "indexed",
     "main.py": "indexed"
@@ -75,6 +103,7 @@
     "nodes": 4,
     "edges": 3,
     "unresolved": 0,
-    "roots": 0
+    "roots": 3,
+    "root_fallback": true
   }
 }

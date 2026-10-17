@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/safedep/code/projectgraph/internal/pathglob"
+	"github.com/safedep/code/internal/pathglob"
 )
 
 var (

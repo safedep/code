@@ -103,7 +103,53 @@
       "reason": "no-definition"
     }
   ],
-  "roots": [],
+  "roots": [
+    {
+      "key": "main.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "pkg/__init__.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "pkg/__init__.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "pkg/a.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "pkg/a.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "pkg/a.py//f",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "pkg/a.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "pkg/a.py//g",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "pkg/a.py",
+        "line": 3
+      }
+    }
+  ],
   "files": {
     "main.py": "indexed",
     "pkg/__init__.py": "indexed",
@@ -115,6 +161,7 @@
     "nodes": 6,
     "edges": 4,
     "unresolved": 1,
-    "roots": 0
+    "roots": 5,
+    "root_fallback": true
   }
 }

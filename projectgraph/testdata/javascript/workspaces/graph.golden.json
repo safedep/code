@@ -101,7 +101,17 @@
     }
   ],
   "unresolved": [],
-  "roots": [],
+  "roots": [
+    {
+      "key": "packages/core/lib/index.js",
+      "kind": "manifest",
+      "rule": "node.package-json",
+      "site": {
+        "path": "packages/core/lib/index.js",
+        "line": 1
+      }
+    }
+  ],
   "files": {
     "packages/app/src/main.js": "indexed",
     "packages/core/lib/index.js": "indexed",
@@ -113,6 +123,6 @@
     "nodes": 6,
     "edges": 5,
     "unresolved": 0,
-    "roots": 0
+    "roots": 1
   }
 }

@@ -85,7 +85,53 @@
     }
   ],
   "unresolved": [],
-  "roots": [],
+  "roots": [
+    {
+      "key": "src/app/server.ts",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/app/server.ts",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/app/server.ts//serve",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/app/server.ts",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/config.ts",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/config.ts",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/config.ts//cfg",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/config.ts",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/main.ts",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/main.ts",
+        "line": 1
+      }
+    }
+  ],
   "files": {
     "src/app/server.ts": "indexed",
     "src/config.ts": "indexed",
@@ -97,6 +143,7 @@
     "nodes": 5,
     "edges": 4,
     "unresolved": 0,
-    "roots": 0
+    "roots": 5,
+    "root_fallback": true
   }
 }

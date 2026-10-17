@@ -84,7 +84,26 @@
       "import_prefix": "plugins//"
     }
   ],
-  "roots": [],
+  "roots": [
+    {
+      "key": "main.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "main.py//load_plugin",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.py",
+        "line": 5
+      }
+    }
+  ],
   "files": {
     "main.py": "indexed"
   },
@@ -94,6 +113,7 @@
     "nodes": 5,
     "edges": 3,
     "unresolved": 1,
-    "roots": 0
+    "roots": 2,
+    "root_fallback": true
   }
 }

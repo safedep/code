@@ -1,0 +1,45 @@
+# Root rules of the project graph. A rule marks the definitions or the
+# module top levels that run with no caller in the graph. The Go and Java
+# rules match nothing until the index records packages and static methods.
+version: 1
+rules:
+  - id: go.main
+    language: go
+    kind: main
+    match: { definition: { name: main, in_package: main } }
+  - id: java.main
+    language: java
+    kind: main
+    match: { definition: { name: main, static: true } }
+  - id: python.main-guard
+    language: python
+    kind: main
+    match: { file_contains: "__name__ == \"__main__\"" }
+  - id: python.main-guard-single-quote
+    language: python
+    kind: main
+    match: { file_contains: "__name__ == '__main__'" }
+  - id: node.package-json
+    language: javascript
+    kind: manifest
+    match: { manifest: { file: package.json, fields: [main, bin, exports, module] } }
+  - id: python.project-scripts
+    language: python
+    kind: manifest
+    match: { manifest: { file: pyproject.toml, fields: ["project.scripts", "project.entry-points", "tool.poetry.scripts"] } }
+  - id: python.setup-py
+    language: python
+    kind: manifest
+    match: { manifest: { file: setup.py, fields: [console_scripts] } }
+  - id: procfile
+    language: any
+    kind: manifest
+    match: { manifest: { file: Procfile } }
+  - id: dockerfile
+    language: any
+    kind: manifest
+    match: { manifest: { file: Dockerfile } }
+  - id: test.files
+    language: any
+    kind: test
+    match: { test_file: true }

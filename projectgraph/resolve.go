@@ -138,7 +138,7 @@ type resolution struct {
 }
 
 func (b *builder) linkCalls(ix *fileindex.Index) {
-	if strings.HasSuffix(ix.Path, ".d.ts") {
+	if isDeclarationFile(ix.Path) {
 		return
 	}
 	sc := b.scopes[ix.Path]
@@ -456,7 +456,7 @@ func (b *builder) bind(sc *scope, name string, line int, target, rule string) st
 		return target
 	}
 	key := Join(sc.ix.Path, name)
-	b.addNode(&Node{Key: key, Kind: NodeExport, Path: sc.ix.Path, Line: line, Exported: true, Test: sc.ix.Test})
+	b.addNode(&Node{Key: key, Kind: NodeExport, Path: sc.ix.Path, Line: line, Exported: true, Test: b.test[sc.ix.Path]})
 	b.bindings[key] = target
 	b.addEdge(Edge{
 		From:     key,
@@ -611,6 +611,11 @@ func boundNamespace(lang langcode.Code, imp fileindex.Import) string {
 		return namespaceOf(lang, firstDotted(imp.Module))
 	}
 	return imp.Namespace
+}
+
+// isDeclarationFile reports whether a TypeScript file only declares types.
+func isDeclarationFile(p string) bool {
+	return strings.HasSuffix(p, ".d.ts")
 }
 
 func isNamespacePackage(key string) bool {

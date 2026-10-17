@@ -1,0 +1,417 @@
+// Package roots finds the roots of a project graph: the definitions and the
+// module top levels that the root rules mark. It reads the indexes, the
+// manifests of the project and, for a file_contains rule, the file itself.
+package roots
+
+import (
+	"bytes"
+	"cmp"
+	"encoding/json"
+	"errors"
+	"io/fs"
+	"path"
+	"regexp"
+	"slices"
+	"strings"
+
+	"github.com/safedep/code/fileindex"
+	rules "github.com/safedep/code/fileindex/roots"
+	"github.com/safedep/code/internal/pathglob"
+	"github.com/safedep/code/langcode"
+	"github.com/safedep/code/projectgraph/modules"
+)
+
+// keySeparator joins the segments of a symbol key, as fileindex keys do.
+const keySeparator = "//"
+
+// Root is a key that a rule marks.
+type Root struct {
+	Key  string
+	Kind rules.Kind
+	Rule string
+}
+
+// Project is what the matcher reads.
+type Project struct {
+	// Indexes are in path order.
+	Indexes []*fileindex.Index
+	IsTest  func(path string) bool
+	// Root holds the manifests and the files. A nil Root reads nothing.
+	Root   fs.FS
+	Files  *modules.Files
+	Python *modules.Python
+	JS     *modules.JavaScript
+	// Defined reports whether a key names a node of the graph.
+	Defined func(key string) bool
+}
+
+// Find returns the roots that the rules mark, sorted, and the manifests and
+// files that it could not read.
+func Find(p Project, rs []rules.Rule) ([]Root, []modules.Problem) {
+	f := &finder{Project: p, languages: map[string]langcode.Code{}, seen: map[Root]bool{}}
+	for _, ix := range p.Indexes {
+		f.languages[ix.Path] = ix.Language
+	}
+	for _, r := range rs {
+		f.match(r)
+	}
+	slices.SortFunc(f.roots, func(a, b Root) int {
+		return cmp.Or(cmp.Compare(a.Key, b.Key), cmp.Compare(a.Kind, b.Kind), cmp.Compare(a.Rule, b.Rule))
+	})
+	return f.roots, f.problems
+}
+
+type finder struct {
+	Project
+	languages map[string]langcode.Code
+	roots     []Root
+	seen      map[Root]bool
+	problems  []modules.Problem
+}
+
+func (f *finder) add(r rules.Rule, key string) {
+	root := Root{Key: key, Kind: r.Kind, Rule: r.ID}
+	if f.seen[root] || !f.Defined(key) {
+		return
+	}
+	f.seen[root] = true
+	f.roots = append(f.roots, root)
+}
+
+// addFile marks the module top level of a file whose language the rule
+// takes.
+func (f *finder) addFile(r rules.Rule, file string) {
+	if lang, ok := f.languages[file]; ok && r.Applies(lang) {
+		f.add(r, file)
+	}
+}
+
+func (f *finder) match(r rules.Rule) {
+	m := r.Match
+	switch {
+	case m.Definition != nil:
+		f.matchDefinition(r)
+	case m.FileContains != "":
+		f.matchFileContains(r)
+	case len(m.Path) > 0:
+		for _, ix := range f.applying(r) {
+			if pathglob.MatchAny(m.Path, ix.Path) {
+				f.add(r, ix.Path)
+			}
+		}
+	case m.TestFile:
+		f.matchTestFiles(r)
+	case m.Manifest != nil:
+		f.matchManifest(r)
+	}
+}
+
+func (f *finder) applying(r rules.Rule) []*fileindex.Index {
+	var out []*fileindex.Index
+	for _, ix := range f.Indexes {
+		if r.Applies(ix.Language) {
+			out = append(out, ix)
+		}
+	}
+	return out
+}
+
+// matchDefinition marks a definition by its name and the name of its class.
+// No index records a static method or a package clause yet, so a match on
+// either marks nothing.
+func (f *finder) matchDefinition(r rules.Rule) {
+	m := r.Match.Definition
+	if m.Static || m.InPackage != "" {
+		return
+	}
+	for _, ix := range f.applying(r) {
+		for _, def := range ix.Definitions {
+			if def.Name == m.Name && (m.Parent == "" || lastSegment(def.Parent) == m.Parent) {
+				f.add(r, def.Key)
+			}
+		}
+	}
+}
+
+func (f *finder) matchFileContains(r rules.Rule) {
+	needle := []byte(r.Match.FileContains)
+	for _, ix := range f.applying(r) {
+		data, ok := f.read(ix.Path)
+		if ok && bytes.Contains(data, needle) {
+			f.add(r, ix.Path)
+		}
+	}
+}
+
+// matchTestFiles marks the module top level and every function, method and
+// constructor of a test file.
+func (f *finder) matchTestFiles(r rules.Rule) {
+	for _, ix := range f.Indexes {
+		if !f.IsTest(ix.Path) {
+			continue
+		}
+		f.add(r, ix.Path)
+		for _, def := range ix.Definitions {
+			if def.Kind != fileindex.DefClass {
+				f.add(r, def.Key)
+			}
+		}
+	}
+}
+
+func (f *finder) matchManifest(r rules.Rule) {
+	m := r.Match.Manifest
+	if m.File == rules.PackageJSON {
+		f.matchPackageJSON(r)
+		return
+	}
+	for _, dir := range f.Files.Dirs() {
+		data, ok := f.read(path.Join(dir, m.File))
+		if !ok {
+			continue
+		}
+		switch m.File {
+		case rules.PyProject:
+			for _, entry := range pyprojectEntries(data, m.Fields) {
+				f.addPythonEntry(r, dir, entry)
+			}
+		case rules.SetupPy:
+			for _, entry := range setupEntries(data) {
+				f.addPythonEntry(r, dir, entry)
+			}
+		case rules.Procfile:
+			for _, cmd := range procfileCommands(data) {
+				f.addCommand(r, dir, cmd)
+			}
+		case rules.Dockerfile:
+			for _, cmd := range dockerfileCommands(data) {
+				f.addCommand(r, dir, cmd)
+			}
+		}
+	}
+}
+
+func (f *finder) matchPackageJSON(r rules.Rule) {
+	for _, pj := range f.JS.Packages() {
+		var entries []string
+		for _, field := range r.Match.Manifest.Fields {
+			switch field {
+			case "main":
+				entries = append(entries, pj.Main)
+			case "module":
+				entries = append(entries, pj.Module)
+			case "bin":
+				entries = append(entries, pj.BinFiles()...)
+			case "exports":
+				entries = append(entries, pj.ExportFiles()...)
+			}
+		}
+		for _, entry := range entries {
+			if entry == "" {
+				continue
+			}
+			if base, ok := modules.Join(pj.Dir, entry); ok {
+				if file, ok := f.JS.File(base, true); ok {
+					f.addFile(r, file)
+				}
+			}
+		}
+	}
+}
+
+// addPythonEntry marks the target of a module:function entry point. A
+// function that the index does not define leaves the module top level.
+func (f *finder) addPythonEntry(r rules.Rule, dir, entry string) {
+	fields := strings.Fields(entry)
+	if len(fields) == 0 {
+		return
+	}
+	module, attr, _ := strings.Cut(fields[0], ":")
+	file, ok := f.Python.Absolute(path.Join(dir, rules.PyProject), module)
+	if !ok || strings.HasSuffix(file, "/") {
+		return
+	}
+	if lang, ok := f.languages[file]; !ok || !r.Applies(lang) {
+		return
+	}
+	if attr != "" {
+		if key := file + keySeparator + strings.ReplaceAll(attr, ".", keySeparator); f.Defined(key) {
+			f.add(r, key)
+			return
+		}
+	}
+	f.add(r, file)
+}
+
+// addCommand marks each file of the project that a command names, as
+// node server.js, python -m app.main or gunicorn app.wsgi:app.
+func (f *finder) addCommand(r rules.Rule, dir string, args []string) {
+	for i, arg := range args {
+		switch {
+		case arg == "-m" && i+1 < len(args):
+			f.addPythonEntry(r, dir, args[i+1])
+		case strings.Contains(arg, ":") && !strings.Contains(arg, "/"):
+			f.addPythonEntry(r, dir, arg)
+		default:
+			if file, ok := f.commandFile(dir, arg); ok {
+				f.addFile(r, file)
+			}
+		}
+	}
+}
+
+// commandFile finds the project file of a command argument. An absolute
+// path in a container, as /app/src/server.js, loses its leading parts until
+// a file of the project matches.
+func (f *finder) commandFile(dir, arg string) (string, bool) {
+	rel := strings.TrimPrefix(arg, "/")
+	for rel != "" {
+		if file, ok := modules.Join(dir, rel); ok && file != "" && f.Files.Has(file) {
+			return file, true
+		}
+		if !strings.HasPrefix(arg, "/") {
+			return "", false
+		}
+		_, rest, ok := strings.Cut(rel, "/")
+		if !ok {
+			return "", false
+		}
+		rel = rest
+	}
+	return "", false
+}
+
+func (f *finder) read(name string) ([]byte, bool) {
+	if f.Root == nil {
+		return nil, false
+	}
+	data, err := fs.ReadFile(f.Root, name)
+	if err == nil {
+		return data, true
+	}
+	if !errors.Is(err, fs.ErrNotExist) {
+		f.problems = append(f.problems, modules.Problem{Path: name, Text: err.Error()})
+	}
+	return nil, false
+}
+
+var (
+	tomlTable  = regexp.MustCompile(`^\[\[?\s*([^\]]+?)\s*\]\]?`)
+	tomlPair   = regexp.MustCompile(`^("[^"]*"|'[^']*'|[A-Za-z0-9_.-]+)\s*=\s*(.*)$`)
+	tomlString = regexp.MustCompile(`^("[^"]*"|'[^']*')`)
+	tomlInline = regexp.MustCompile(`("[^"]*"|'[^']*'|[A-Za-z0-9_.-]+)\s*=\s*("[^"]*"|'[^']*')`)
+	setupList  = regexp.MustCompile(`console_scripts['"]?\s*[:=]?\s*\[([^\]]*)\]`)
+	setupEntry = regexp.MustCompile(`['"]\s*[^'"=\s]+\s*=\s*([^'"\s]+)\s*['"]`)
+)
+
+// pyprojectEntries returns the string values of the tables that the fields
+// name, as project.scripts, and of their sub-tables, as
+// project.entry-points.console_scripts. It reads plain tables and inline
+// tables, which is how a pyproject.toml writes entry points.
+func pyprojectEntries(data []byte, fields []string) []string {
+	var entries []string
+	wanted := func(table string) bool {
+		return slices.ContainsFunc(fields, func(f string) bool {
+			return table == f || strings.HasPrefix(table, f+".")
+		})
+	}
+	table := ""
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if m := tomlTable.FindStringSubmatch(line); m != nil {
+			table = unquoteDotted(m[1])
+			continue
+		}
+		m := tomlPair.FindStringSubmatch(line)
+		if m == nil {
+			continue
+		}
+		key, value := unquote(m[1]), strings.TrimSpace(m[2])
+		if strings.HasPrefix(value, "{") {
+			if !wanted(joinTable(table, key)) {
+				continue
+			}
+			for _, pair := range tomlInline.FindAllStringSubmatch(value, -1) {
+				entries = append(entries, unquote(pair[2]))
+			}
+			continue
+		}
+		if str := tomlString.FindString(value); wanted(table) && str != "" {
+			entries = append(entries, unquote(str))
+		}
+	}
+	return entries
+}
+
+// setupEntries returns the targets of the console_scripts entry points of a
+// setup.py, as pkg.cli:main.
+func setupEntries(data []byte) []string {
+	var entries []string
+	for _, list := range setupList.FindAllSubmatch(data, -1) {
+		for _, m := range setupEntry.FindAllSubmatch(list[1], -1) {
+			entries = append(entries, string(m[1]))
+		}
+	}
+	return entries
+}
+
+// procfileCommands returns the command of each process of a Procfile.
+func procfileCommands(data []byte) [][]string {
+	var cmds [][]string
+	for _, line := range strings.Split(string(data), "\n") {
+		if _, cmd, ok := strings.Cut(line, ":"); ok && !strings.HasPrefix(strings.TrimSpace(line), "#") {
+			cmds = append(cmds, strings.Fields(cmd))
+		}
+	}
+	return cmds
+}
+
+// dockerfileCommands returns the arguments of each CMD and ENTRYPOINT, in
+// the exec form or the shell form.
+func dockerfileCommands(data []byte) [][]string {
+	var cmds [][]string
+	for _, line := range strings.Split(string(data), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		if op := strings.ToUpper(fields[0]); op != "CMD" && op != "ENTRYPOINT" {
+			continue
+		}
+		rest := strings.TrimSpace(line[len(fields[0])+strings.Index(line, fields[0]):])
+		var exec []string
+		if json.Unmarshal([]byte(rest), &exec) == nil {
+			cmds = append(cmds, exec)
+			continue
+		}
+		cmds = append(cmds, strings.Fields(rest))
+	}
+	return cmds
+}
+
+func joinTable(table, key string) string {
+	if table == "" {
+		return key
+	}
+	return table + "." + key
+}
+
+func unquote(s string) string {
+	if len(s) >= 2 && (s[0] == '"' || s[0] == '\'') && s[len(s)-1] == s[0] {
+		return s[1 : len(s)-1]
+	}
+	return s
+}
+
+// unquoteDotted removes the quotes of the parts of a table name, as
+// project.entry-points."flake8.extension".
+func unquoteDotted(s string) string {
+	return strings.NewReplacer(`"`, "", `'`, "").Replace(s)
+}
+
+func lastSegment(key string) string {
+	if i := strings.LastIndex(key, keySeparator); i >= 0 {
+		return key[i+len(keySeparator):]
+	}
+	return key
+}

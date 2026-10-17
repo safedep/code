@@ -39,7 +39,17 @@
     }
   ],
   "unresolved": [],
-  "roots": [],
+  "roots": [
+    {
+      "key": "main.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      }
+    }
+  ],
   "files": {
     "handlers.py": "missing",
     "main.py": "cached"
@@ -50,6 +60,7 @@
     "nodes": 2,
     "edges": 2,
     "unresolved": 0,
-    "roots": 0
+    "roots": 1,
+    "root_fallback": true
   }
 }

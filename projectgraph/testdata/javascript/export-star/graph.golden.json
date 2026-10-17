@@ -194,7 +194,80 @@
     }
   ],
   "unresolved": [],
-  "roots": [],
+  "roots": [
+    {
+      "key": "a.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "a.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "a.js//a",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "a.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "all.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "all.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "b.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "b.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "b.js//b",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "b.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "c.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "c.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "c.js//c",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "c.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "main.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.js",
+        "line": 1
+      }
+    }
+  ],
   "files": {
     "a.js": "indexed",
     "all.js": "indexed",
@@ -208,6 +281,7 @@
     "nodes": 11,
     "edges": 10,
     "unresolved": 0,
-    "roots": 0
+    "roots": 8,
+    "root_fallback": true
   }
 }

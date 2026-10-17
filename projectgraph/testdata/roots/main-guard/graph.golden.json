@@ -1,0 +1,70 @@
+{
+  "nodes": {
+    "app.py": {
+      "key": "app.py",
+      "kind": "module",
+      "path": "app.py",
+      "line": 1,
+      "exported": true
+    },
+    "app.py//run": {
+      "key": "app.py//run",
+      "kind": "function",
+      "path": "app.py",
+      "line": 1,
+      "exported": true
+    },
+    "lib.py": {
+      "key": "lib.py",
+      "kind": "module",
+      "path": "lib.py",
+      "line": 1,
+      "exported": true
+    },
+    "lib.py//lib": {
+      "key": "lib.py//lib",
+      "kind": "function",
+      "path": "lib.py",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "app.py",
+      "to": "app.py//run",
+      "site": {
+        "path": "app.py",
+        "line": 5,
+        "column": 5
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.local"
+    }
+  ],
+  "unresolved": [],
+  "roots": [
+    {
+      "key": "app.py",
+      "kind": "main",
+      "rule": "python.main-guard",
+      "site": {
+        "path": "app.py",
+        "line": 1
+      }
+    }
+  ],
+  "files": {
+    "app.py": "indexed",
+    "lib.py": "indexed"
+  },
+  "stats": {
+    "version": "1",
+    "files": 2,
+    "nodes": 4,
+    "edges": 1,
+    "unresolved": 0,
+    "roots": 1
+  }
+}

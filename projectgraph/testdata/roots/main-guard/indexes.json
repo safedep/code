@@ -1,0 +1,17 @@
+[
+  {
+    "version": "1", "path": "app.py", "language": "python",
+    "definitions": [
+      {"key": "app.py", "kind": "module", "name": "app", "start_line": 1, "end_line": 5, "exported": true},
+      {"key": "app.py//run", "kind": "function", "name": "run", "start_line": 1, "end_line": 2, "exported": true}
+    ],
+    "calls": [{"caller": "app.py", "line": 5, "column": 5, "callee": "run", "targets": ["app.py//run"], "kind": "call"}]
+  },
+  {
+    "version": "1", "path": "lib.py", "language": "python",
+    "definitions": [
+      {"key": "lib.py", "kind": "module", "name": "lib", "start_line": 1, "end_line": 2, "exported": true},
+      {"key": "lib.py//lib", "kind": "function", "name": "lib", "start_line": 1, "end_line": 2, "exported": true}
+    ]
+  }
+]
