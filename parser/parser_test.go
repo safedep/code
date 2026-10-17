@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/safedep/code/core"
+	"github.com/safedep/code/fs"
 	"github.com/safedep/code/lang"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -53,4 +56,154 @@ func TestParseClosesTheFile(t *testing.T) {
 	failing := &trackedFile{name: "app.py", content: "import os\n", closeErr: errors.New("close failed")}
 	_, err = p.Parse(context.Background(), failing)
 	assert.ErrorContains(t, err, "close failed")
+}
+
+func typescriptLanguages(t *testing.T) (withJSX, withoutJSX core.Language) {
+	withJSX, err := lang.NewTypescriptLanguage()
+	require.NoError(t, err)
+	withoutJSX, err = lang.NewTypescriptWithoutJSXLanguage()
+	require.NoError(t, err)
+	return withJSX, withoutJSX
+}
+
+func TestParseLimit(t *testing.T) {
+	python, err := lang.NewPythonLanguage()
+	require.NoError(t, err)
+	source := strings.Repeat("a = 1\n", 10)
+
+	cases := []struct {
+		name    string
+		opts    []Option
+		wantErr error
+	}{
+		{name: "default limit", opts: nil},
+		{name: "over the limit", opts: []Option{WithMaxBytes(len(source) - 1)}, wantErr: ErrInputTooLarge},
+		{name: "at the limit", opts: []Option{WithMaxBytes(len(source))}},
+		{name: "no limit when negative", opts: []Option{WithMaxBytes(-1)}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := NewParser([]core.Language{python}, tc.opts...)
+			require.NoError(t, err)
+
+			f := &trackedFile{name: "app.py", content: source}
+			tree, err := p.Parse(context.Background(), f)
+			assert.True(t, f.closed)
+			if tc.wantErr != nil {
+				assert.ErrorIs(t, err, tc.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			defer tree.Close()
+			assert.False(t, tree.Tree().RootNode().HasError())
+		})
+	}
+}
+
+func TestParseRejectsAFileWithNoLanguage(t *testing.T) {
+	python, err := lang.NewPythonLanguage()
+	require.NoError(t, err)
+	p, err := NewParser([]core.Language{python})
+	require.NoError(t, err)
+
+	f := &trackedFile{name: "app.js", content: "a()"}
+	_, err = p.Parse(context.Background(), f)
+	assert.ErrorIs(t, err, core.ErrNoLanguage)
+	assert.False(t, f.closed, "the parser does not read a file that it cannot parse")
+}
+
+func TestNewParserRejectsTwoLanguagesForOneExtension(t *testing.T) {
+	withJSX, withoutJSX := typescriptLanguages(t)
+	_, err := NewParser([]core.Language{withJSX, withoutJSX})
+	assert.ErrorContains(t, err, "two languages parse the extension .ts")
+}
+
+func TestParsePicksTheGrammarOfTheExtension(t *testing.T) {
+	withJSX, withoutJSX := typescriptLanguages(t)
+	const assertion = "const x = <string>y;\n"
+	const element = "const e = <div>{x}</div>;\n"
+
+	cases := []struct {
+		name      string
+		language  core.Language
+		file      string
+		content   string
+		wantError bool
+	}{
+		{name: "ts gets the grammar without JSX", language: withJSX, file: "a.ts", content: assertion},
+		{name: "mts gets the grammar without JSX", language: withJSX, file: "a.mts", content: assertion},
+		{name: "cts gets the grammar without JSX", language: withJSX, file: "a.cts", content: assertion},
+		{name: "tsx gets the TSX grammar", language: withJSX, file: "a.tsx", content: element},
+		{name: "the language without JSX parses tsx without JSX", language: withoutJSX, file: "a.tsx", content: element, wantError: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := NewParser([]core.Language{tc.language})
+			require.NoError(t, err)
+
+			tree, err := p.Parse(context.Background(), &trackedFile{name: tc.file, content: tc.content})
+			require.NoError(t, err)
+			defer tree.Close()
+			assert.Equal(t, tc.wantError, tree.Tree().RootNode().HasError())
+
+			treeLanguage, err := tree.Language()
+			require.NoError(t, err)
+			assert.Equal(t, core.LanguageCodeTypescript, treeLanguage.Meta().Code)
+		})
+	}
+}
+
+func TestTreeReportsTheLanguageThatParsedIt(t *testing.T) {
+	_, withoutJSX := typescriptLanguages(t)
+	p, err := NewParser([]core.Language{withoutJSX})
+	require.NoError(t, err)
+
+	tree, err := p.Parse(context.Background(), &trackedFile{name: "a.ts", content: "let a = 1;"})
+	require.NoError(t, err)
+	defer tree.Close()
+
+	treeLanguage, err := tree.Language()
+	require.NoError(t, err)
+	assert.Same(t, withoutJSX, treeLanguage)
+}
+
+func TestWalkingParserParsesTypescriptWithoutJSX(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "cast.ts"), []byte("const x = <string>y;\nfunction f() {}\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "view.tsx"), []byte("const e = <div>{x}</div>;\n"), 0o600))
+
+	withJSX, _ := typescriptLanguages(t)
+	languages := []core.Language{withJSX}
+	fileSystem, err := fs.NewLocalFileSystem(fs.LocalFileSystemConfig{AppDirectories: []string{dir}})
+	require.NoError(t, err)
+	sourceWalker, err := fs.NewSourceWalker(fs.SourceWalkerConfig{}, languages)
+	require.NoError(t, err)
+	walker, err := NewWalkingParser(sourceWalker, languages)
+	require.NoError(t, err)
+
+	visitor := &errorRecorder{hasError: map[string]bool{}}
+	require.NoError(t, walker.Walk(context.Background(), fileSystem, visitor))
+	assert.Equal(t, map[string]bool{"cast.ts": false, "view.tsx": false}, visitor.hasError)
+}
+
+type errorRecorder struct {
+	hasError map[string]bool
+}
+
+func (r *errorRecorder) VisitTree(tree core.ParseTree) error {
+	file, err := tree.File()
+	if err != nil {
+		return err
+	}
+	r.hasError[filepath.Base(file.Name())] = tree.Tree().RootNode().HasError()
+	return nil
+}
+
+func TestCloseTwice(t *testing.T) {
+	tree, err := ParseBytes(context.Background(), javascript(t), []byte("a()"))
+	require.NoError(t, err)
+	assert.NotPanics(t, func() {
+		tree.Close()
+		tree.Close()
+	})
 }

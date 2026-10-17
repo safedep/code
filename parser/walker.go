@@ -14,8 +14,10 @@ type walkingParser struct {
 
 var _ core.TreeWalker = (*walkingParser)(nil)
 
-func NewWalkingParser(walker core.SourceWalker, languages []core.Language) (*walkingParser, error) {
-	parser, err := NewParser(languages)
+// NewWalkingParser creates a tree walker that parses each file of the source
+// walker. The options apply to the parser, as in NewParser.
+func NewWalkingParser(walker core.SourceWalker, languages []core.Language, opts ...Option) (*walkingParser, error) {
+	parser, err := NewParser(languages, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create parser: %w", err)
 	}

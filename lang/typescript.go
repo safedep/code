@@ -11,12 +11,17 @@ const typescriptLanguageName = "typescript"
 
 type typescriptLanguage struct {
 	grammar func() *sitter.Language
+	noJSX   *typescriptLanguage
 }
 
 var _ core.Language = (*typescriptLanguage)(nil)
+var _ core.GrammarSelector = (*typescriptLanguage)(nil)
 
+// NewTypescriptLanguage returns TypeScript with the TSX grammar. A parser
+// built with it parses .ts, .mts and .cts files with the grammar that has no
+// JSX, through LanguageForExtension.
 func NewTypescriptLanguage() (*typescriptLanguage, error) {
-	return &typescriptLanguage{}, nil
+	return &typescriptLanguage{noJSX: &typescriptLanguage{grammar: typescript.GetLanguage}}, nil
 }
 
 // NewTypescriptWithoutJSXLanguage returns TypeScript with the grammar that
@@ -50,8 +55,15 @@ func (l *typescriptLanguage) Language() *sitter.Language {
 	return l.grammar()
 }
 
-func (l *typescriptLanguage) Resolvers() core.LanguageResolvers {
-	return &typescriptResolvers{
-		language: l,
+// LanguageForExtension returns the language without JSX for every extension
+// but .tsx. The language without JSX returns itself for every extension.
+func (l *typescriptLanguage) LanguageForExtension(ext string) core.Language {
+	if l.noJSX == nil || ext == ".tsx" {
+		return l
 	}
+	return l.noJSX
+}
+
+func (l *typescriptLanguage) Resolvers() core.LanguageResolvers {
+	return &typescriptResolvers{}
 }

@@ -9,9 +9,7 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-type typescriptResolvers struct {
-	language *typescriptLanguage
-}
+type typescriptResolvers struct{}
 
 var _ core.LanguageResolvers = (*typescriptResolvers)(nil)
 var _ core.ObjectOrientedLanguageResolvers = (*typescriptResolvers)(nil)
@@ -28,7 +26,7 @@ func (r *typescriptResolvers) ResolveImports(tree core.ParseTree) ([]*ast.Import
 	// The TypeScript tree-sitter grammar treats `import type` as regular
 	// import_statement nodes, so the shared ES queries already match them.
 	// No additional type-only import resolution is needed.
-	imports, err := resolveESImports(r.language, tree)
+	imports, err := resolveESImports(tree)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +35,7 @@ func (r *typescriptResolvers) ResolveImports(tree core.ParseTree) ([]*ast.Import
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
 	}
-	err = ts.ExecuteQueries(ts.NewQueriesRequest(r.language, []ts.QueryItem{
+	err = ts.ExecuteQueries(tree, []ts.QueryItem{
 		ts.NewQueryItem(tsImportRequireQuery, func(m *sitter.QueryMatch) error {
 			node := ast.NewImportNode(data)
 			node.SetModuleAliasNode(m.Captures[0].Node)
@@ -45,13 +43,13 @@ func (r *typescriptResolvers) ResolveImports(tree core.ParseTree) ([]*ast.Import
 			imports = append(imports, node)
 			return nil
 		}),
-	}), data, tree)
+	})
 	return imports, err
 }
 
 func (r *typescriptResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
 	// Resolve standard ES functions (shared with JS)
-	functions, err := resolveESFunctions(r.language, tree)
+	functions, err := resolveESFunctions(tree)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +129,7 @@ func (r *typescriptResolvers) resolveAbstractMethods(tree core.ParseTree) ([]*as
 		}),
 	}
 
-	err = ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	err = ts.ExecuteQueries(tree, queryRequestItems)
 	if err != nil {
 		return nil, err
 	}
@@ -361,7 +359,7 @@ func (r *typescriptResolvers) extractClassDefinitions(data *[]byte, tree core.Pa
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(tree, queryRequestItems)
 }
 
 func (r *typescriptResolvers) extractClassDecorators(m *sitter.QueryMatch, classNode *ast.ClassDeclarationNode, data []byte) {
@@ -449,7 +447,7 @@ func (r *typescriptResolvers) extractClassMethods(data *[]byte, tree core.ParseT
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(tree, queryRequestItems)
 }
 
 func (r *typescriptResolvers) extractClassFields(data *[]byte, tree core.ParseTree, classMap map[string]*ast.ClassDeclarationNode) error {
@@ -505,7 +503,7 @@ func (r *typescriptResolvers) extractClassFields(data *[]byte, tree core.ParseTr
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(tree, queryRequestItems)
 }
 
 func (r *typescriptResolvers) enrichClassInheritance(data *[]byte, tree core.ParseTree, classMap map[string]*ast.ClassDeclarationNode) error {
@@ -536,7 +534,7 @@ func (r *typescriptResolvers) enrichClassInheritance(data *[]byte, tree core.Par
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(tree, queryRequestItems)
 }
 
 func (r *typescriptResolvers) processInheritanceMatch(m *sitter.QueryMatch, data *[]byte, classMap map[string]*ast.ClassDeclarationNode) error {
@@ -646,7 +644,7 @@ func (r *typescriptResolvers) ResolveInheritance(tree core.ParseTree) (*ast.Inhe
 		}),
 	}
 
-	err = ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	err = ts.ExecuteQueries(tree, queryRequestItems)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute inheritance queries: %w", err)
 	}

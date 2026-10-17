@@ -34,7 +34,5 @@ func (l *goLanguage) Language() *sitter.Language {
 }
 
 func (l *goLanguage) Resolvers() core.LanguageResolvers {
-	return &goResolvers{
-		language: l,
-	}
+	return &goResolvers{}
 }

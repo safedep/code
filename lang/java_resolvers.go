@@ -9,9 +9,7 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-type javaResolvers struct {
-	language *javaLanguage
-}
+type javaResolvers struct{}
 
 var _ core.LanguageResolvers = (*javaResolvers)(nil)
 var _ core.ObjectOrientedLanguageResolvers = (*javaResolvers)(nil)
@@ -122,7 +120,7 @@ func (r *javaResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, 
 		}),
 	}
 
-	err = ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	err = ts.ExecuteQueries(tree, queryRequestItems)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +219,7 @@ func (r *javaResolvers) ResolveInheritance(tree core.ParseTree) (*ast.Inheritanc
 		}),
 	}
 
-	err = ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	err = ts.ExecuteQueries(tree, queryRequestItems)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute inheritance queries: %w", err)
 	}
@@ -304,7 +302,7 @@ func (r *javaResolvers) extractClassDefinitions(data *[]byte, tree core.ParseTre
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(tree, queryRequestItems)
 }
 
 func (r *javaResolvers) extractClassMethods(data *[]byte, tree core.ParseTree, classMap map[string]*ast.ClassDeclarationNode) error {
@@ -360,7 +358,7 @@ func (r *javaResolvers) extractClassMethods(data *[]byte, tree core.ParseTree, c
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(tree, queryRequestItems)
 }
 
 func (r *javaResolvers) extractClassFields(data *[]byte, tree core.ParseTree, classMap map[string]*ast.ClassDeclarationNode) error {
@@ -393,7 +391,7 @@ func (r *javaResolvers) extractClassFields(data *[]byte, tree core.ParseTree, cl
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(tree, queryRequestItems)
 }
 
 func (r *javaResolvers) extractClassAnnotations(data *[]byte, tree core.ParseTree, classMap map[string]*ast.ClassDeclarationNode) error {
@@ -420,7 +418,7 @@ func (r *javaResolvers) extractClassAnnotations(data *[]byte, tree core.ParseTre
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(tree, queryRequestItems)
 }
 
 // Helper methods
@@ -613,7 +611,7 @@ func (r *javaResolvers) extractJavaFunctions(data *[]byte, tree core.ParseTree,
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(tree, queryRequestItems)
 }
 
 func (r *javaResolvers) extractJavaConstructors(data *[]byte, tree core.ParseTree,
@@ -677,7 +675,7 @@ func (r *javaResolvers) extractJavaConstructors(data *[]byte, tree core.ParseTre
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(tree, queryRequestItems)
 }
 
 func (r *javaResolvers) extractJavaFunctionAnnotations(data *[]byte, tree core.ParseTree,
@@ -710,7 +708,7 @@ func (r *javaResolvers) extractJavaFunctionAnnotations(data *[]byte, tree core.P
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(tree, queryRequestItems)
 }
 
 // Helper methods for Java function processing

@@ -115,21 +115,21 @@ func NewQueryItem(query string, cb QueryMatchProcessor) QueryItem {
 	}
 }
 
-type QueriesRequest struct {
-	language   core.Language
-	queryItems []QueryItem
-}
-
-func NewQueriesRequest(language core.Language, queryItems []QueryItem) QueriesRequest {
-	return QueriesRequest{
-		language:   language,
-		queryItems: queryItems,
+// ExecuteQueries runs each query on the tree in order. It compiles a query
+// against the grammar of the tree. A query compiled against another grammar
+// matches the wrong nodes, because the node symbols of two grammars differ.
+func ExecuteQueries(tree core.ParseTree, queryItems []QueryItem) error {
+	language, err := tree.Language()
+	if err != nil {
+		return fmt.Errorf("failed to get language from parse tree: %w", err)
 	}
-}
+	data, err := tree.Data()
+	if err != nil {
+		return fmt.Errorf("failed to get data from parse tree: %w", err)
+	}
 
-func ExecuteQueries(queriesRequest QueriesRequest, data *[]byte, tree core.ParseTree) error {
-	for _, queryItem := range queriesRequest.queryItems {
-		q, err := compiledQuery(queriesRequest.language, queryItem.query)
+	for _, queryItem := range queryItems {
+		q, err := compiledQuery(language, queryItem.query)
 		if err != nil {
 			return err
 		}

@@ -9,9 +9,7 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-type goResolvers struct {
-	language *goLanguage
-}
+type goResolvers struct{}
 
 var _ core.LanguageResolvers = (*goResolvers)(nil)
 
@@ -72,7 +70,7 @@ func (r *goResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, er
 		}),
 	}
 
-	err = ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	err = ts.ExecuteQueries(tree, queryRequestItems)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +187,7 @@ func (r *goResolvers) extractGoFunctions(data *[]byte, tree core.ParseTree,
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(tree, queryRequestItems)
 }
 
 func (r *goResolvers) extractGoMethods(data *[]byte, tree core.ParseTree,
@@ -268,7 +266,7 @@ func (r *goResolvers) extractGoMethods(data *[]byte, tree core.ParseTree,
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(tree, queryRequestItems)
 }
 
 // Helper methods for Go function processing

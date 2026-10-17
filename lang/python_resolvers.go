@@ -51,9 +51,7 @@ const pyItemImportQuery = `
 			alias: (identifier) @module_item_alias))
 	`
 
-type pythonResolvers struct {
-	language *pythonLanguage
-}
+type pythonResolvers struct{}
 
 var _ core.LanguageResolvers = (*pythonResolvers)(nil)
 var _ core.ObjectOrientedLanguageResolvers = (*pythonResolvers)(nil)
@@ -92,7 +90,7 @@ func (r *pythonResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode
 		}),
 	}
 
-	err = ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	err = ts.ExecuteQueries(tree, queryRequestItems)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +234,7 @@ func (r *pythonResolvers) ResolveInheritance(tree core.ParseTree) (*ast.Inherita
 		}),
 	}
 
-	err = ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	err = ts.ExecuteQueries(tree, queryRequestItems)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute inheritance queries: %w", err)
 	}
@@ -280,7 +278,7 @@ func (r *pythonResolvers) extractClassDefinitions(data *[]byte, tree core.ParseT
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(tree, queryRequestItems)
 }
 
 func (r *pythonResolvers) extractClassMethods(data *[]byte, tree core.ParseTree,
@@ -326,7 +324,7 @@ func (r *pythonResolvers) extractClassMethods(data *[]byte, tree core.ParseTree,
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(tree, queryRequestItems)
 }
 
 func (r *pythonResolvers) extractClassFields(data *[]byte, tree core.ParseTree,
@@ -356,7 +354,7 @@ func (r *pythonResolvers) extractClassFields(data *[]byte, tree core.ParseTree,
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(tree, queryRequestItems)
 }
 
 func (r *pythonResolvers) extractClassDecorators(data *[]byte, tree core.ParseTree,
@@ -385,7 +383,7 @@ func (r *pythonResolvers) extractClassDecorators(data *[]byte, tree core.ParseTr
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(tree, queryRequestItems)
 }
 
 // Helper methods
@@ -546,7 +544,7 @@ func (r *pythonResolvers) extractFunctionDefinitions(data *[]byte, tree core.Par
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(tree, queryRequestItems)
 }
 
 func (r *pythonResolvers) extractFunctionDecorators(data *[]byte, tree core.ParseTree,
@@ -599,7 +597,7 @@ func (r *pythonResolvers) extractFunctionDecorators(data *[]byte, tree core.Pars
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(tree, queryRequestItems)
 }
 
 // Helper methods

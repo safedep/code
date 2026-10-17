@@ -85,3 +85,11 @@ type Language interface {
 	// Get language specific resolvers
 	Resolvers() LanguageResolvers
 }
+
+// GrammarSelector is an optional interface of a Language that parses some of
+// its file extensions with another grammar. The returned Language has the
+// same Meta and its own grammar. The tree of a file reports the returned
+// Language, so a query on the tree compiles against the grammar that parsed it.
+type GrammarSelector interface {
+	LanguageForExtension(ext string) Language
+}
