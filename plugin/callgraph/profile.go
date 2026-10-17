@@ -38,6 +38,11 @@ type languageProfile struct {
 	// transparent are the node types whose value is the value of one child.
 	transparent map[string]bool
 
+	// importBindsRoot marks a language where an import of a dotted module
+	// with no item and no alias binds its first segment, as os for import
+	// os.path in Python. The full module is a node too.
+	importBindsRoot bool
+
 	// trimModule removes the part of an imported module name that names no
 	// namespace. It can be nil.
 	trimModule func(string) string

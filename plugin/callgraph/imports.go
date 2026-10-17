@@ -1,6 +1,8 @@
 package callgraph
 
 import (
+	"strings"
+
 	"github.com/safedep/code/core/ast"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -26,6 +28,15 @@ func parseImports(imports []*ast.ImportNode, profile *languageProfile) ([]parsed
 	importedIndex := make(map[string]int)
 	wildcardImports := []wildcardImport{}
 
+	bind := func(parsed parsedImport) {
+		if i, exists := importedIndex[parsed.Identifier]; exists {
+			importedIdentifiers[i] = parsed
+			return
+		}
+		importedIndex[parsed.Identifier] = len(importedIdentifiers)
+		importedIdentifiers = append(importedIdentifiers, parsed)
+	}
+
 	for _, imp := range imports {
 		moduleNamespace := profile.moduleNamespace(imp.ModuleName())
 
@@ -34,6 +45,18 @@ func parseImports(imports []*ast.ImportNode, profile *languageProfile) ([]parsed
 				Namespace:         moduleNamespace + namespaceSeparator + "*",
 				NamespaceTreeNode: imp.GetModuleNameNode().Parent(),
 			})
+			continue
+		}
+
+		if root, ok := profile.boundRoot(imp, moduleNamespace); ok {
+			for _, namespace := range []string{moduleNamespace, root} {
+				bind(parsedImport{
+					Identifier:         namespace,
+					IdentifierTreeNode: imp.GetModuleNameNode(),
+					Namespace:          namespace,
+					NamespaceTreeNode:  imp.GetModuleNameNode().Parent(),
+				})
+			}
 			continue
 		}
 
@@ -55,19 +78,24 @@ func parseImports(imports []*ast.ImportNode, profile *languageProfile) ([]parsed
 			identifierTreeNode = imp.GetModuleItemNode()
 		}
 
-		parsed := parsedImport{
+		bind(parsedImport{
 			Identifier:         identifierKey,
 			IdentifierTreeNode: identifierTreeNode,
 			Namespace:          finalisedNamespace,
 			NamespaceTreeNode:  imp.GetModuleNameNode().Parent(),
-		}
-		if i, exists := importedIndex[identifierKey]; exists {
-			importedIdentifiers[i] = parsed
-			continue
-		}
-		importedIndex[identifierKey] = len(importedIdentifiers)
-		importedIdentifiers = append(importedIdentifiers, parsed)
+		})
 	}
 
 	return importedIdentifiers, wildcardImports
+}
+
+// boundRoot returns the first segment of a dotted module that the import
+// binds, as os for import os.path in Python. The resolver gives such an
+// import the module name as its alias.
+func (p *languageProfile) boundRoot(imp *ast.ImportNode, moduleNamespace string) (string, bool) {
+	if !p.importBindsRoot || imp.ModuleItem() != "" || imp.ModuleAlias() != imp.ModuleName() {
+		return "", false
+	}
+	root, _, dotted := strings.Cut(moduleNamespace, namespaceSeparator)
+	return root, dotted
 }

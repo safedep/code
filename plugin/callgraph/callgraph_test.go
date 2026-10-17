@@ -249,3 +249,14 @@ func TestDefinitionAfterTheCallKeepsItsKind(t *testing.T) {
 	assert.True(t, call.Unbound)
 	assert.Equal(t, []string{"a.js//g"}, call.Targets)
 }
+
+func TestDottedPythonImportBindsTheFirstSegment(t *testing.T) {
+	cg := buildAndClose(t, pythonLanguage(t), "a.py", "import os.path\nos.path.join(x)\n")
+
+	assert.Contains(t, cg.Nodes, "os//path")
+	require.Len(t, cg.RootNode.CallsTo, 1)
+	call := cg.RootNode.CallsTo[0]
+	assert.Equal(t, "os//path//join", call.CalleeNamespace)
+	assert.Equal(t, []string{"os//path//join"}, call.Targets)
+	assert.Empty(t, cg.Unresolved())
+}

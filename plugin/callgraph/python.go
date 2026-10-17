@@ -14,6 +14,7 @@ var pythonProfile = languageProfile{
 	separators:        []string{"."},
 	instanceKeyword:   "self",
 	constructorMethod: "__init__",
+	importBindsRoot:   true,
 	builtins: []string{
 		"ArithmeticError", "AssertionError", "AttributeError", "BaseException", "BaseExceptionGroup",
 		"BlockingIOError", "BrokenPipeError", "BufferError", "BytesWarning", "ChildProcessError",
