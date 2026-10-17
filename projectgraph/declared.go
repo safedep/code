@@ -41,7 +41,7 @@ func (b *builder) typedName(sc *scope, scopeKey, name string) (string, bool) {
 // local variable, or in Java a field of a class that holds the scope, which
 // a method names with no this.
 func (b *builder) memberType(sc *scope, scopeKey, name string) (string, bool) {
-	if class, ok := b.typedName(sc, scopeKey, name); ok || sc.ix.Language != langcode.Java {
+	if class, ok := b.typedName(sc, scopeKey, name); ok || !sc.profile.implicitFields {
 		return class, ok
 	}
 	for class, ok := b.enclosingClass(scopeKey); ok; class, ok = b.enclosingClass(fileindex.Parent(class)) {
@@ -94,7 +94,7 @@ func (b *builder) resolveType(sc *scope, from, text string) (string, bool) {
 		return "", false
 	case b.isType(key):
 		return key, true
-	case sc.ix.Language == langcode.Go && b.kindOf(key) == "" && b.g.IsExternal(key) && strings.Contains(key, fileindex.Separator):
+	case sc.profile.implicitInterfaces && b.kindOf(key) == "" && b.g.IsExternal(key) && strings.Contains(key, fileindex.Separator):
 		return key, true
 	}
 	return "", false
@@ -105,7 +105,7 @@ func (b *builder) resolveType(sc *scope, from, text string) (string, bool) {
 // run the method of that type. A Go value of a named type that is not an
 // interface holds that type only.
 func (b *builder) dispatches(lang langcode.Code, class string) bool {
-	if lang == langcode.Go {
+	if profileOf(lang).implicitInterfaces {
 		return b.kindOf(class) == NodeInterface
 	}
 	return true

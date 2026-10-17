@@ -90,8 +90,10 @@ type builder struct {
 	reading map[string]bool
 
 	golang *modules.Golang
-	units  map[string]*unit
-	unitOf map[string]*unit
+	// resolvers holds the module resolver of each language.
+	resolvers map[langcode.Code]modules.Resolver
+	units     map[string]*unit
+	unitOf    map[string]*unit
 	// goPackages holds the package that an import of each directory names.
 	goPackages map[string]*unit
 	// javaPackages holds the unit of each Java package by name.
@@ -165,6 +167,7 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		narrowed:     map[Site]bool{},
 		structural:   map[Site]bool{},
 		implemented:  map[[2]string]bool{},
+		resolvers:    map[langcode.Code]modules.Resolver{},
 		test:         map[string]bool{},
 		rules:        roots.Merge(roots.Default(), opts.Rules),
 	}
@@ -194,8 +197,16 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 	b.js = modules.NewJavaScript(b.files, opts.Root)
 	b.problems = append(b.problems, b.python.Problems()...)
 	b.problems = append(b.problems, b.js.Problems()...)
-	b.addGoUnits()
-	b.addJavaUnits()
+	for _, p := range profiles {
+		if p.units != nil {
+			p.units(b)
+		}
+	}
+	for _, p := range profiles {
+		if p.resolver != nil {
+			b.resolvers[p.code] = p.resolver(b)
+		}
+	}
 	return b, nil
 }
 
@@ -224,8 +235,9 @@ func (b *builder) link(ctx context.Context) error {
 			continue
 		}
 		b.linkImports(ix)
-		b.linkInits(ix)
-		b.linkClassInits(ix)
+		if link := profileOf(ix.Language).link; link != nil {
+			link(b, ix)
+		}
 		b.linkConstructors(ix)
 		b.linkOverrides(ix)
 		b.linkArgumentFunctions(ix)
@@ -307,7 +319,7 @@ func (b *builder) addDefinitions(ix *fileindex.Index) {
 // the calls and flags of the body belong to that scope. A call of the class
 // runs only the constructor.
 func (b *builder) runner(key string) string {
-	for b.kindOf(key) == NodeClass && b.byPath[fileindex.Unit(key)].Language == langcode.Python {
+	for b.kindOf(key) == NodeClass && b.profileAt(key).classBodyInDefiner {
 		segs := fileindex.Segments(key)
 		key = fileindex.Join(fileindex.Unit(key), segs[:len(segs)-1]...)
 	}
@@ -389,7 +401,7 @@ func (b *builder) linkImports(ix *fileindex.Index) {
 		for _, to := range b.moduleFiles(mod) {
 			b.addEdge(Edge{From: from, To: to, Site: site, Kind: EdgeImport, Resolver: resolver})
 		}
-		if ix.Language != langcode.Python || imp.Item == "" || b.bindsName(mod, imp.Item) {
+		if !profileOf(ix.Language).moduleNames || imp.Item == "" || b.bindsName(mod, imp.Item) {
 			continue
 		}
 		if sub, ok := b.python.Submodule(mod, imp.Item); ok && b.isModule(sub) {
@@ -444,50 +456,6 @@ func (b *builder) runsAtLoad(ix *fileindex.Index) bool {
 	b.loads[ix.Path] = runs
 	return runs
 }
-
-// linkInits adds an edge from the module top level of a Go file to each
-// init function of the file, because the program runs it when it loads
-// the package.
-func (b *builder) linkInits(ix *fileindex.Index) {
-	if ix.Language != langcode.Go {
-		return
-	}
-	key := fileindex.Join(ix.Path, "init")
-	if b.kindOf(key) != NodeFunction {
-		return
-	}
-	n := b.g.Nodes[key]
-	b.addEdge(Edge{From: ix.Path, To: key, Site: Site{Path: ix.Path, Line: n.Line}, Kind: EdgeDirect, Resolver: resolverName(ix.Language, "init")})
-}
-
-// linkClassInits adds an edge from the class node and each method of a
-// Java class to the static initializer <clinit> of the class, which the
-// index defines when the class runs code at load. The JVM runs that code
-// before the first instance, the first static call and the first access to
-// a static field. The edge goes to <clinit> and not to the class node,
-// because the class node leads to the constructor, which a static call
-// does not run.
-func (b *builder) linkClassInits(ix *fileindex.Index) {
-	if ix.Language != langcode.Java {
-		return
-	}
-	for _, c := range ix.Classes {
-		init := fileindex.Join(c.Key, javaClassInit)
-		if !b.isMethod(init) {
-			continue
-		}
-		for _, from := range append([]string{c.Key}, c.Methods...) {
-			if from == init || from != c.Key && !b.isMethod(from) {
-				continue
-			}
-			n := b.g.Nodes[from]
-			b.addEdge(Edge{From: from, To: init, Site: Site{Path: n.Path, Line: n.Line}, Kind: EdgeDirect, Resolver: resolverName(ix.Language, "class-init")})
-		}
-	}
-}
-
-// javaClassInit names the static initializer of a Java class.
-const javaClassInit = "<clinit>"
 
 // linkConstructors adds an edge from each class to the constructor that
 // runs when a call makes an instance. A call to a class reaches the class
@@ -570,7 +538,7 @@ func (b *builder) linkArgumentFunctions(ix *fileindex.Index) {
 func (b *builder) linkDecorators(ix *fileindex.Index) {
 	// A Java annotation is data that a framework reads, and it runs no
 	// code where it stands.
-	if ix.Language == langcode.Java {
+	if profileOf(ix.Language).annotationsData {
 		return
 	}
 	sc := b.scopes[ix.Path]
@@ -635,7 +603,7 @@ func (b *builder) copyUnresolved(ix *fileindex.Index) {
 		// class, and the call on a narrowed receiver through the class. It
 		// records a call that it cannot resolve.
 		at := Site{Path: ix.Path, Line: u.Line, Column: u.Column}
-		if u.Receiver == superKeyword && ix.Language.IsECMAScript() || b.narrowed[at] {
+		if u.Receiver == superKeyword && profileOf(ix.Language).superCalls || b.narrowed[at] {
 			continue
 		}
 		site := UnresolvedSite{
@@ -662,10 +630,10 @@ func (b *builder) importPrefix(ix *fileindex.Index, line int) string {
 		}
 		spec := imp.Module
 		if strings.HasPrefix(spec, ".") {
-			trailing := strings.HasSuffix(spec, "/") || ix.Language == langcode.Python && strings.HasSuffix(spec, ".")
-			if ix.Language == langcode.Python {
-				rest := strings.TrimLeft(spec, ".")
-				spec = "./" + strings.Repeat("../", len(spec)-len(rest)-1) + strings.ReplaceAll(rest, ".", "/")
+			trailing := strings.HasSuffix(spec, "/")
+			if relative := profileOf(ix.Language).relativePath; relative != nil {
+				trailing = trailing || strings.HasSuffix(spec, ".")
+				spec = relative(spec)
 			}
 			p, ok := modules.Join(modules.Dir(ix.Path), spec)
 			if !ok {

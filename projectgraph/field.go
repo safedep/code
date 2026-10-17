@@ -34,7 +34,7 @@ func (b *builder) linkFields() {
 			continue
 		}
 		kind, byName := EdgeName, names
-		if ix.Language.IsECMAScript() && u.Receiver != "" {
+		if profileOf(ix.Language).memberFields && u.Receiver != "" {
 			kind, byName = EdgeField, fields
 		}
 		family := languageFamily(ix.Language)
@@ -97,7 +97,7 @@ func (b *builder) definitionsByName() (fields, names map[familyName][]string) {
 			case fileindex.DefClass:
 				// A call of a Go type name is a conversion and runs no
 				// code.
-				if ix.Language != langcode.Go {
+				if !profileOf(ix.Language).typeConversions {
 					names[k] = append(names[k], def.Key)
 				}
 			}
@@ -111,12 +111,4 @@ func (b *builder) definitionsByName() (fields, names map[familyName][]string) {
 // when the site names the function that it calls, as import_module.
 func ReachesAny(reason fileindex.UnresolvedReason) bool {
 	return reason == fileindex.UnresolvedComputedName || reason == fileindex.UnresolvedDynamicImport
-}
-
-// languageFamily joins the languages whose files call each other.
-func languageFamily(lang langcode.Code) langcode.Code {
-	if lang == langcode.Typescript {
-		return langcode.Javascript
-	}
-	return lang
 }

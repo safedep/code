@@ -6,7 +6,6 @@ import (
 
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/fileindex/roots"
-	"github.com/safedep/code/langcode"
 	pgroots "github.com/safedep/code/projectgraph/roots"
 )
 
@@ -42,7 +41,7 @@ func (b *builder) markRoots() {
 		entry = entry || r.Kind != RootTest
 		// A Go program initializes its package before main runs, so the
 		// module top level of each file of the package is a root too.
-		if u := b.unitOf[fileindex.Unit(r.Key)]; r.Kind == RootMain && u != nil && b.languageOf(r.Key) == langcode.Go {
+		if u := b.unitOf[fileindex.Unit(r.Key)]; r.Kind == RootMain && u != nil && b.profileAt(r.Key).mainLoadsPackage {
 			for _, p := range u.files {
 				b.addRoot(p, r.Kind, r.Rule)
 			}

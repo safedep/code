@@ -9,146 +9,6 @@ import (
 	"github.com/safedep/code/langcode"
 )
 
-// scope holds what one file binds at its top level.
-type scope struct {
-	ix       *fileindex.Index
-	bindings map[string]fileindex.Import
-	// types holds the names that a TypeScript import type binds. Only a
-	// declared type or a base class reads them.
-	types   map[string]fileindex.Import
-	imports []fileindex.Import
-	exports map[string][]fileindex.Export
-	stars   []star
-	// wildcards are the Go dot imports and the Java wildcard imports,
-	// which put the names of a package or the members of a class in the
-	// scope of the file.
-	wildcards  []fileindex.Import
-	hasExports bool
-}
-
-// star is an export * from of JavaScript or a from m import * of Python.
-type star struct {
-	spec string
-	line int
-}
-
-func newScope(ix *fileindex.Index) *scope {
-	sc := &scope{
-		ix:       ix,
-		bindings: map[string]fileindex.Import{},
-		types:    map[string]fileindex.Import{},
-		exports:  map[string][]fileindex.Export{},
-	}
-	for _, imp := range ix.Imports {
-		if imp.Kind == fileindex.ImportTypeOnly {
-			if name := bindingName(ix.Language, imp); name != "" {
-				sc.types[name] = imp
-			}
-			continue
-		}
-		if imp.Kind != fileindex.ImportStatic && imp.Kind != fileindex.ImportDynamicString {
-			continue
-		}
-		if imp.Wildcard && ix.Language == langcode.Python {
-			sc.stars = append(sc.stars, star{spec: imp.Module, line: imp.Line})
-			continue
-		}
-		if imp.Wildcard && (ix.Language == langcode.Go || ix.Language == langcode.Java) {
-			sc.wildcards = append(sc.wildcards, imp)
-		}
-		// A JavaScript import for its side effect binds no name. Its
-		// namespace still names the module of a call on require('x').
-		sc.imports = append(sc.imports, imp)
-		if name := bindingName(ix.Language, imp); name != "" {
-			sc.bindings[name] = imp
-		}
-	}
-	for _, ex := range ix.Exports {
-		sc.hasExports = true
-		if ex.Name == "*" && ex.From != "" {
-			sc.stars = append(sc.stars, star{spec: ex.From, line: ex.Line})
-			continue
-		}
-		sc.exports[ex.Name] = append(sc.exports[ex.Name], ex)
-	}
-	return sc
-}
-
-// enclosing returns the key of the innermost definition that holds the line,
-// or the module key.
-func (sc *scope) enclosing(line int) string {
-	key, span := sc.ix.Path, -1
-	for _, def := range sc.ix.Definitions {
-		if def.StartLine > line || def.EndLine < line {
-			continue
-		}
-		if s := def.EndLine - def.StartLine; span < 0 || s <= span {
-			key, span = def.Key, s
-		}
-	}
-	return key
-}
-
-// importFor returns the import whose namespace is the longest prefix of the
-// target, and the segments of the target after that namespace.
-func (sc *scope) importFor(target string) (fileindex.Import, []string, bool) {
-	var best fileindex.Import
-	found := false
-	for _, imp := range sc.imports {
-		ns := imp.Namespace
-		if ns == "" || !fileindex.HasKeyPrefix(target, ns) || found && len(ns) <= len(best.Namespace) {
-			continue
-		}
-		best, found = imp, true
-	}
-	if !found {
-		return best, nil, false
-	}
-	var rest []string
-	if len(target) > len(best.Namespace) {
-		rest = strings.Split(target[len(best.Namespace)+len(fileindex.Separator):], fileindex.Separator)
-	}
-	return best, rest, true
-}
-
-func (sc *scope) exported(name string) bool {
-	return len(sc.exports[name]) > 0
-}
-
-// bindingName returns the name that an import binds in the file. A Python
-// import a.b with no alias binds a.
-func bindingName(lang langcode.Code, imp fileindex.Import) string {
-	switch {
-	case imp.Item != "":
-		return lastDotted(cmp.Or(imp.Alias, imp.Item))
-	case imp.Alias != "" && imp.Alias != imp.Module:
-		return imp.Alias
-	case lang == langcode.Python:
-		return firstDotted(imp.Module)
-	}
-	return ""
-}
-
-// importedModule returns the module that the name of an import holds, and
-// the names that lead from that module to the bound value. A Python import
-// a.b binds the package a. An import of an item binds the item.
-func importedModule(lang langcode.Code, imp fileindex.Import) (string, []string) {
-	switch {
-	case bindsRoot(lang, imp):
-		return firstDotted(imp.Module), nil
-	case imp.Item != "":
-		return imp.Module, []string{imp.Item}
-	}
-	return imp.Module, nil
-}
-
-// bindsRoot reports whether a Python import a.b binds the root package a. A
-// bound name of a or no bound name both mean that.
-func bindsRoot(lang langcode.Code, imp fileindex.Import) bool {
-	return lang == langcode.Python && imp.Item == "" &&
-		(imp.Alias == "" || imp.Alias == imp.Module || imp.Alias == firstDotted(imp.Module))
-}
-
 type failure struct {
 	reason fileindex.UnresolvedReason
 	name   string
@@ -212,7 +72,7 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			// A Java call of a name that nothing binds runs on this, as
 			// a method that a base of a dependency or an override in a
 			// subclass gives.
-			if r.unbound && ix.Language == langcode.Java && call.Kind == fileindex.CallCall && call.Receiver == "" && isIdentifier(r.key) {
+			if r.unbound && sc.profile.thisCalls && call.Kind == fileindex.CallCall && call.Receiver == "" && isIdentifier(r.key) {
 				if class, ok := b.enclosingClass(caller); ok {
 					r = b.walkTyped(class, []string{r.key})
 				}
@@ -286,7 +146,7 @@ func (b *builder) linkCHA(call fileindex.Call, r resolution, from string, site S
 	lang := b.byPath[site.Path].Language
 	class, virtual := r.class, r.virtual
 	// A Java call with no receiver runs on this.
-	this := isInstanceKeyword(lang, call.Receiver) || lang == langcode.Java && call.Receiver == "" && call.Kind == fileindex.CallCall
+	this := isInstanceKeyword(lang, call.Receiver) || profileOf(lang).thisCalls && call.Receiver == "" && call.Kind == fileindex.CallCall
 	if r.fail == nil && class == "" && this && b.isMethod(r.key) && !b.defs[r.key].Static {
 		if parent := fileindex.Parent(r.key); b.isType(parent) {
 			class, virtual = parent, true
@@ -313,7 +173,7 @@ func (b *builder) linkCHA(call fileindex.Call, r resolution, from string, site S
 	// an object literal or an instance of a class with no implements, and an
 	// abstract method with no first-party override has its code elsewhere.
 	// So such a site also gets the field edges of the method name.
-	if lang.IsECMAScript() && (b.kindOf(class) == NodeInterface || r.fail != nil && len(overrides) == 0) {
+	if profileOf(lang).structuralTypes && (b.kindOf(class) == NodeInterface || r.fail != nil && len(overrides) == 0) {
 		b.structural[site] = true
 	}
 }
@@ -333,7 +193,7 @@ func (b *builder) linkReferences(ix *fileindex.Index) {
 		for _, r := range b.resolveTargets(sc, ref.Caller, ref.Targets) {
 			// A Go value of a named type is no function, so passing it
 			// on calls nothing.
-			if r.fail != nil || r.unbound || ix.Language == langcode.Go && b.isType(r.key) {
+			if r.fail != nil || r.unbound || sc.profile.typeConversions && b.isType(r.key) {
 				continue
 			}
 			b.addEdge(Edge{From: from, To: r.key, Site: site, Kind: EdgeReference, Resolver: resolverName(ix.Language, "reference")})
@@ -367,7 +227,7 @@ func (b *builder) resolveTargets(sc *scope, caller string, targets []string) []r
 // result is a list.
 func (b *builder) resolveTarget(sc *scope, caller, target string) []resolution {
 	ix := sc.ix
-	if target == superKeyword && (ix.Language.IsECMAScript() || ix.Language == langcode.Java) {
+	if target == superKeyword && sc.profile.superCalls {
 		return []resolution{b.resolveSuper(caller, nil)}
 	}
 	if rest, ok := strings.CutPrefix(target, superKeyword+fileindex.Separator); ok {
@@ -388,8 +248,8 @@ func (b *builder) resolveTarget(sc *scope, caller, target string) []resolution {
 			return []resolution{{key: b.external(target), kind: EdgeDirect, rule: "external"}}
 		}
 		names := append(lead, rest...)
-		if len(names) == 0 && ix.Language.IsECMAScript() {
-			names = []string{"default"}
+		if len(names) == 0 && sc.profile.defaultExport != "" {
+			names = []string{sc.profile.defaultExport}
 		}
 		r := b.walk(mod, names)
 		r.rule = cmp.Or(r.rule, "import")
@@ -407,8 +267,7 @@ func (b *builder) resolveTarget(sc *scope, caller, target string) []resolution {
 // classes with no receiver.
 func (b *builder) resolveScope(sc *scope, caller, target string) []resolution {
 	first, rest := splitKey(target)
-	java := sc.ix.Language == langcode.Java
-	if java && len(rest) == 0 {
+	if sc.profile.thisCalls && len(rest) == 0 {
 		if r, ok := b.thisMethod(caller, first); ok {
 			return []resolution{r}
 		}
@@ -433,7 +292,7 @@ func (b *builder) resolveScope(sc *scope, caller, target string) []resolution {
 	for _, key := range b.wildcardImported(sc, first) {
 		r := b.walk(key, rest)
 		switch {
-		case java:
+		case sc.profile.exactWildcards:
 			r.rule = cmp.Or(r.rule, "wildcard-import")
 		case r.kind == EdgeDirect:
 			r.kind = EdgeWildcard
@@ -441,58 +300,10 @@ func (b *builder) resolveScope(sc *scope, caller, target string) []resolution {
 		}
 		out = append(out, r)
 	}
-	if len(out) == 0 && java {
-		for _, key := range b.externalWildcards(sc, first) {
-			out = append(out, resolution{key: b.external(fileindex.Join(key, rest...)), kind: EdgeWildcard, rule: "wildcard-external"})
-		}
-	}
-	if len(out) == 0 && java && qualifiedJava(target) {
-		dotted := strings.ReplaceAll(target, fileindex.Separator, ".")
-		if key, ok := b.resolveJava(dotted); ok {
-			return []resolution{b.walk(key, nil)}
-		}
-		return []resolution{{key: b.external(target), kind: EdgeDirect, rule: "external"}}
+	if len(out) == 0 && sc.profile.scopeFallback != nil {
+		return sc.profile.scopeFallback(b, sc, first, rest, target)
 	}
 	return out
-}
-
-// qualifiedJava reports whether a key is a qualified Java name, as
-// org//yaml//Yaml//load: two or more package names in lower case and then
-// a class name in upper case.
-func qualifiedJava(key string) bool {
-	segs := strings.Split(key, fileindex.Separator)
-	for i, seg := range segs {
-		if startsUpper(seg) {
-			return i >= 2
-		}
-	}
-	return false
-}
-
-// externalWildcards returns the external keys that a name can have through
-// the Java wildcard imports that name no package of the project. Java
-// names a class with an upper case letter and a member with a lower case
-// letter, so a class name comes from a package, as List from java.util.*,
-// and a member name from a class, as assertEquals from a static import of
-// org.junit.Assert.*.
-func (b *builder) externalWildcards(sc *scope, name string) []string {
-	var keys []string
-	for _, imp := range sc.wildcards {
-		if _, _, ok := b.resolveModule(sc.ix, imp.Module); ok {
-			continue
-		}
-		if startsUpper(lastDotted(imp.Module)) != startsUpper(name) {
-			keys = append(keys, fileindex.Join(fileindex.Namespace(sc.ix.Language, imp.Module), name))
-		}
-	}
-	return keys
-}
-
-func startsUpper(s string) bool {
-	for _, r := range s {
-		return unicode.IsUpper(r)
-	}
-	return false
 }
 
 // wildcardImported returns the definitions of the name in the packages
@@ -515,32 +326,6 @@ func (b *builder) wildcardImported(sc *scope, name string) []string {
 		}
 	}
 	return keys
-}
-
-// thisMethod resolves a call with no receiver in a Java method to a method
-// of a class that holds the caller, or of its bases. The receiver is this,
-// so a subclass can override the method.
-func (b *builder) thisMethod(caller, name string) (resolution, bool) {
-	for class, ok := b.enclosingClass(caller); ok; class, ok = b.enclosingClass(fileindex.Parent(class)) {
-		if _, fail := b.method(class, name); fail == nil {
-			return b.walkTyped(class, []string{name}), true
-		}
-	}
-	return resolution{}, false
-}
-
-// nestedType returns the class that a Java name names in the classes that
-// hold the key, as Inner in a method of Outer for Outer.Inner.
-func (b *builder) nestedType(sc *scope, from, name string) (string, bool) {
-	if sc.ix.Language != langcode.Java {
-		return "", false
-	}
-	for class, ok := b.enclosingClass(from); ok; class, ok = b.enclosingClass(fileindex.Parent(class)) {
-		if nested := fileindex.Join(class, name); b.isType(nested) {
-			return nested, true
-		}
-	}
-	return "", false
 }
 
 // walkTyped resolves the names on a receiver of a declared type.
@@ -601,10 +386,11 @@ func (b *builder) resolveSuper(caller string, names []string) resolution {
 			return r
 		}
 	}
-	if missing || lang != langcode.Python {
+	object := profileOf(lang).objectBase
+	if missing || object == "" {
 		return resolution{fail: noDefinition(cmp.Or(strings.Join(names, fileindex.Separator), superKeyword))}
 	}
-	return resolution{key: b.external(fileindex.Join("object", names...)), kind: EdgeDirect, rule: "super"}
+	return resolution{key: b.external(fileindex.Join(object, names...)), kind: EdgeDirect, rule: "super"}
 }
 
 // enclosingClass returns the innermost class or interface that holds the
@@ -794,209 +580,6 @@ func (b *builder) variableValue(key string) (string, bool) {
 	return value, value != ""
 }
 
-// resolveName returns the key that a name of a module stands for. A name
-// that the module re-exports gets a node of kind export in the module, with
-// an export edge to what it names.
-func (b *builder) resolveName(module, name string, hops int) (string, *failure) {
-	k := nameKey{module: module, name: name}
-	if r, ok := b.names[k]; ok {
-		return r.key, r.fail
-	}
-	if b.visiting[k] {
-		return "", &failure{reason: fileindex.UnresolvedNoDefinition, name: name, cut: true}
-	}
-	if hops > b.opts.maxExportHops {
-		path := strings.TrimSuffix(module, "/")
-		b.truncations[Truncation{Kind: TruncationExportHops, Key: fileindex.Join(path, name), Site: Site{Path: path}}] = true
-		return "", &failure{reason: fileindex.UnresolvedLimit, name: name, cut: true}
-	}
-	b.visiting[k] = true
-	key, fail := b.lookupName(module, name, hops)
-	delete(b.visiting, k)
-	if fail == nil || !fail.cut {
-		b.names[k] = resolution{key: key, fail: fail}
-	}
-	return key, fail
-}
-
-func (b *builder) lookupName(module, name string, hops int) (string, *failure) {
-	if isNamespacePackage(module) {
-		if sub, ok := b.python.Submodule(module, name); ok {
-			return sub, nil
-		}
-		return "", noDefinition(name)
-	}
-	sc := b.scopes[module]
-	if sc == nil {
-		return module, nil
-	}
-	if n := b.g.Nodes[fileindex.Join(module, name)]; n != nil && n.Kind != NodeExport {
-		return n.Key, nil
-	}
-
-	miss := noDefinition(name)
-	try := func(_ string, fail *failure) bool {
-		if fail == nil {
-			return true
-		}
-		miss.cut = miss.cut || fail.cut
-		if fail.reason == fileindex.UnresolvedLimit {
-			miss.reason = fail.reason
-		}
-		return false
-	}
-	for _, ex := range sc.exports[name] {
-		if key, fail := b.followExport(sc, ex, hops); try(key, fail) {
-			return key, nil
-		}
-	}
-	python := sc.ix.Language == langcode.Python
-	if imp, ok := sc.bindings[name]; ok && python && !sc.hasExports {
-		if key, fail := b.followBinding(sc, imp, name, hops); try(key, fail) {
-			return key, nil
-		}
-	}
-	if !python || !sc.hasExports || sc.exported(name) {
-		for _, st := range sc.stars {
-			if key, fail := b.followStar(sc, st, name, hops); try(key, fail) {
-				return key, nil
-			}
-		}
-	}
-	if python {
-		if sub, ok := b.python.Submodule(module, name); ok {
-			return sub, nil
-		}
-	}
-	return "", miss
-}
-
-// followExport resolves an export record of the file. A record with no
-// target and no module exports a name that the file imports, and Item holds
-// that local name when it differs from Name.
-func (b *builder) followExport(sc *scope, ex fileindex.Export, hops int) (string, *failure) {
-	switch {
-	case ex.Target != "":
-		if b.g.Nodes[ex.Target] != nil {
-			return ex.Target, nil
-		}
-		return "", noDefinition(ex.Name)
-	case ex.From != "":
-		mod, _, ok := b.resolveModule(sc.ix, ex.From)
-		var key string
-		switch {
-		case !ok:
-			key = b.external(fileindex.JoinNonEmpty(fileindex.Namespace(sc.ix.Language, ex.From), ex.Item))
-		case ex.Item == "":
-			key = mod
-		default:
-			var fail *failure
-			if key, fail = b.resolveName(mod, ex.Item, hops+1); fail != nil {
-				return "", fail
-			}
-		}
-		return b.bind(sc, ex.Name, ex.Line, key, "reexport"), nil
-	}
-	imp, ok := sc.bindings[cmp.Or(ex.Item, ex.Name)]
-	if !ok {
-		return "", noDefinition(ex.Name)
-	}
-	return b.followBinding(sc, imp, ex.Name, hops)
-}
-
-// followBinding resolves a name that the file imports and gives on.
-func (b *builder) followBinding(sc *scope, imp fileindex.Import, name string, hops int) (string, *failure) {
-	lang := sc.ix.Language
-	module, lead := importedModule(lang, imp)
-	mod, _, ok := b.resolveModule(sc.ix, module)
-	var key string
-	switch {
-	case !ok:
-		key = b.external(boundNamespace(lang, imp))
-	case len(lead) > 0:
-		var fail *failure
-		if key, fail = b.resolveName(mod, lead[0], hops+1); fail != nil {
-			return "", fail
-		}
-	case lang.IsECMAScript():
-		key = mod
-		if def, fail := b.resolveName(mod, "default", hops+1); fail == nil {
-			key = def
-		}
-	default:
-		key = mod
-	}
-	return b.bind(sc, name, imp.Line, key, "reexport"), nil
-}
-
-// followStar resolves a name through an export * from or a Python
-// from m import *. Python gives on only the names of __all__, or every name
-// with no leading underscore.
-func (b *builder) followStar(sc *scope, st star, name string, hops int) (string, *failure) {
-	mod, _, ok := b.resolveModule(sc.ix, st.spec)
-	if !ok || !b.starVisible(mod, name) {
-		return "", noDefinition(name)
-	}
-	key, fail := b.resolveName(mod, name, hops+1)
-	if fail != nil {
-		return "", fail
-	}
-	return b.bind(sc, name, st.line, key, "reexport-star"), nil
-}
-
-func (b *builder) starVisible(module, name string) bool {
-	src := b.scopes[module]
-	if src == nil || src.ix.Language != langcode.Python {
-		return true
-	}
-	if src.hasExports {
-		return src.exported(name)
-	}
-	return !strings.HasPrefix(name, "_")
-}
-
-// wildcard resolves a bare name through the from m import * of the file. A
-// first-party module that defines the name wins. Else each external module
-// of a star can define the name, so each one gets a wildcard edge.
-func (b *builder) wildcard(sc *scope, name string) []resolution {
-	if sc.ix.Language != langcode.Python {
-		return nil
-	}
-	var external []resolution
-	for _, st := range sc.stars {
-		mod, _, ok := b.resolveModule(sc.ix, st.spec)
-		if !ok {
-			key := b.external(fileindex.Join(fileindex.Namespace(sc.ix.Language, st.spec), name))
-			external = append(external, resolution{key: key, kind: EdgeWildcard, rule: "wildcard-external"})
-			continue
-		}
-		if !b.starVisible(mod, name) {
-			continue
-		}
-		if key, fail := b.resolveName(mod, name, 0); fail == nil {
-			return []resolution{{key: key, kind: EdgeWildcard, rule: "wildcard"}}
-		}
-	}
-	return external
-}
-
-func (b *builder) bind(sc *scope, name string, line int, target, rule string) string {
-	if isNamespacePackage(target) {
-		return target
-	}
-	key := fileindex.Join(sc.ix.Path, name)
-	b.addNode(&Node{Key: key, Kind: NodeExport, Path: sc.ix.Path, Line: line, Exported: true, Test: b.test[sc.ix.Path]})
-	b.bindings[key] = target
-	b.addEdge(Edge{
-		From:     key,
-		To:       target,
-		Site:     Site{Path: sc.ix.Path, Line: line},
-		Kind:     EdgeExport,
-		Resolver: resolverName(sc.ix.Language, rule),
-	})
-	return key
-}
-
 // bases returns the keys of the bases of a class that the file scope
 // resolves. A builtin base, as object, resolves to nothing. A Java base
 // always names a type.
@@ -1008,10 +591,10 @@ func (b *builder) bases(rec classRecord) []string {
 		switch {
 		case ok:
 			out = append(out, key)
-		case rec.ix.Language == langcode.Java:
+		case profileOf(rec.ix.Language).implicitBases:
 			// A Java type that no import and no package of the project
 			// names is a type of java.lang, as Thread or Runnable.
-			out = append(out, fileindex.Namespace(langcode.Java, base))
+			out = append(out, fileindex.Namespace(rec.ix.Language, base))
 		}
 	}
 	return out
@@ -1040,8 +623,8 @@ func (b *builder) resolveScopeName(sc *scope, text string) (string, bool) {
 		r = b.walk(mod, append(lead, segs[1:]...))
 	case len(scoped) > 0:
 		r = b.walk(scoped[0], segs[1:])
-	case sc.ix.Language == langcode.Java:
-		return b.resolveJava(text)
+	case sc.profile.qualified != nil:
+		return sc.profile.qualified(b, text)
 	default:
 		return "", false
 	}
@@ -1065,37 +648,12 @@ func (b *builder) resolveNameIn(sc *scope, from, text string) (string, bool) {
 	return b.resolveScopeName(sc, text)
 }
 
-func (b *builder) deref(key string) string {
-	for b.kindOf(key) == NodeExport {
-		key = b.bindings[key]
-	}
-	return key
-}
-
 func (b *builder) resolveModule(ix *fileindex.Index, spec string) (string, string, bool) {
-	if spec == "" {
+	r := b.resolvers[ix.Language]
+	if spec == "" || r == nil {
 		return "", "", false
 	}
-	switch ix.Language {
-	case langcode.Python:
-		mod, ok := b.python.Resolve(ix.Path, spec)
-		via := "absolute"
-		if strings.HasPrefix(spec, ".") {
-			via = "relative"
-		}
-		return mod, via, ok
-	case langcode.Javascript, langcode.Typescript:
-		return b.js.Resolve(ix.Path, spec, ix.Language == langcode.Typescript)
-	case langcode.Go:
-		if dir, ok := b.golang.Resolve(spec); ok {
-			return b.goPackages[dir].key, "module", true
-		}
-	case langcode.Java:
-		if key, ok := b.resolveJava(spec); ok {
-			return key, "class", true
-		}
-	}
-	return "", "", false
+	return r.Module(ix.Path, spec)
 }
 
 // mayBeFirstParty reports whether a module that resolves to no file can be
@@ -1105,20 +663,8 @@ func (b *builder) resolveModule(ix *fileindex.Index, spec string) (string, strin
 // A Go import path under the path of a module of the project, or a Java
 // name under a package of the project, names a file of the project.
 func (b *builder) mayBeFirstParty(lang langcode.Code, spec string) bool {
-	switch {
-	case lang == langcode.Go:
-		return b.golang.FirstParty(spec)
-	case lang == langcode.Java:
-		return b.javaFirstParty(spec)
-	case lang != langcode.Python && !lang.IsECMAScript():
-		return true
-	case strings.HasPrefix(spec, "."):
-		return true
-	case lang == langcode.Python:
-		return b.files.HasName(firstDotted(spec))
-	}
-	first, _, _ := strings.Cut(spec, "/")
-	return b.files.HasName(first)
+	r := b.resolvers[lang]
+	return r == nil || r.FirstParty(spec)
 }
 
 func (b *builder) kindOf(key string) NodeKind {
@@ -1171,19 +717,6 @@ func isAssignment(sc *scope, call fileindex.Call, target string) bool {
 	return !bound
 }
 
-// boundNamespace returns the external key of the name that an import binds.
-func boundNamespace(lang langcode.Code, imp fileindex.Import) string {
-	if bindsRoot(lang, imp) {
-		return fileindex.Namespace(lang, firstDotted(imp.Module))
-	}
-	return imp.Namespace
-}
-
-// isDeclarationFile reports whether a TypeScript file only declares types.
-func isDeclarationFile(p string) bool {
-	return strings.HasSuffix(p, ".d.ts")
-}
-
 func isNamespacePackage(key string) bool {
 	return strings.HasSuffix(key, "/")
 }
@@ -1198,13 +731,4 @@ func isIdentifier(s string) bool {
 		}
 	}
 	return true
-}
-
-func firstDotted(s string) string {
-	first, _, _ := strings.Cut(s, ".")
-	return first
-}
-
-func lastDotted(s string) string {
-	return s[strings.LastIndex(s, ".")+1:]
 }
