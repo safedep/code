@@ -1,0 +1,162 @@
+{
+  "nodes": {
+    "base.py": {
+      "key": "base.py",
+      "kind": "module",
+      "path": "base.py",
+      "line": 1,
+      "exported": true
+    },
+    "base.py//Base": {
+      "key": "base.py//Base",
+      "kind": "class",
+      "path": "base.py",
+      "line": 3,
+      "exported": true
+    },
+    "base.py//Base//helper": {
+      "key": "base.py//Base//helper",
+      "kind": "method",
+      "path": "base.py",
+      "line": 4,
+      "exported": true
+    },
+    "io//IOBase//close": {
+      "key": "io//IOBase//close",
+      "kind": "external"
+    },
+    "main.py": {
+      "key": "main.py",
+      "kind": "module",
+      "path": "main.py",
+      "line": 1,
+      "exported": true
+    },
+    "parser.py": {
+      "key": "parser.py",
+      "kind": "module",
+      "path": "parser.py",
+      "line": 1,
+      "exported": true
+    },
+    "parser.py//Parser": {
+      "key": "parser.py//Parser",
+      "kind": "class",
+      "path": "parser.py",
+      "line": 3,
+      "exported": true
+    },
+    "parser.py//Parser//__init__": {
+      "key": "parser.py//Parser//__init__",
+      "kind": "constructor",
+      "path": "parser.py",
+      "line": 4,
+      "exported": true
+    },
+    "parser.py//Parser//parse": {
+      "key": "parser.py//Parser//parse",
+      "kind": "method",
+      "path": "parser.py",
+      "line": 5,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "main.py",
+      "to": "parser.py",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "python.import.absolute"
+    },
+    {
+      "from": "main.py",
+      "to": "parser.py//Parser",
+      "site": {
+        "path": "main.py",
+        "line": 2,
+        "column": 5
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.import"
+    },
+    {
+      "from": "main.py",
+      "to": "parser.py//Parser//parse",
+      "site": {
+        "path": "main.py",
+        "line": 3,
+        "column": 1
+      },
+      "kind": "member",
+      "confidence": "high",
+      "resolver": "python.member"
+    },
+    {
+      "from": "main.py",
+      "to": "io//IOBase//close",
+      "site": {
+        "path": "main.py",
+        "line": 4,
+        "column": 1
+      },
+      "kind": "member",
+      "confidence": "high",
+      "resolver": "python.member"
+    },
+    {
+      "from": "parser.py",
+      "to": "base.py",
+      "site": {
+        "path": "parser.py",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "python.import.absolute"
+    },
+    {
+      "from": "parser.py//Parser",
+      "to": "parser.py//Parser//__init__",
+      "site": {
+        "path": "parser.py",
+        "line": 4
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.constructor"
+    },
+    {
+      "from": "parser.py//Parser//parse",
+      "to": "base.py//Base//helper",
+      "site": {
+        "path": "parser.py",
+        "line": 6,
+        "column": 9
+      },
+      "kind": "member",
+      "confidence": "high",
+      "resolver": "python.member"
+    }
+  ],
+  "unresolved": [],
+  "roots": [],
+  "files": {
+    "base.py": "indexed",
+    "main.py": "indexed",
+    "parser.py": "indexed"
+  },
+  "stats": {
+    "version": "1",
+    "files": 3,
+    "nodes": 9,
+    "edges": 7,
+    "unresolved": 0,
+    "roots": 0
+  }
+}

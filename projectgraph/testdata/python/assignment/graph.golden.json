@@ -1,0 +1,61 @@
+{
+  "nodes": {
+    "main.py": {
+      "key": "main.py",
+      "kind": "module",
+      "path": "main.py",
+      "line": 1,
+      "exported": true
+    },
+    "main.py//helper": {
+      "key": "main.py//helper",
+      "kind": "function",
+      "path": "main.py",
+      "line": 2,
+      "exported": true
+    },
+    "yaml//load": {
+      "key": "yaml//load",
+      "kind": "external"
+    }
+  },
+  "edges": [
+    {
+      "from": "main.py",
+      "to": "main.py//helper",
+      "site": {
+        "path": "main.py",
+        "line": 5,
+        "column": 1
+      },
+      "kind": "assignment",
+      "confidence": "high",
+      "resolver": "python.assignment"
+    },
+    {
+      "from": "main.py",
+      "to": "yaml//load",
+      "site": {
+        "path": "main.py",
+        "line": 7,
+        "column": 1
+      },
+      "kind": "assignment",
+      "confidence": "high",
+      "resolver": "python.assignment"
+    }
+  ],
+  "unresolved": [],
+  "roots": [],
+  "files": {
+    "main.py": "indexed"
+  },
+  "stats": {
+    "version": "1",
+    "files": 1,
+    "nodes": 3,
+    "edges": 2,
+    "unresolved": 0,
+    "roots": 0
+  }
+}
