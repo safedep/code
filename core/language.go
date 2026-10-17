@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/safedep/code/core/ast"
+	"github.com/safedep/code/langcode"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -38,19 +39,21 @@ type ObjectOrientedLanguageResolvers interface {
 	ResolveInheritance(tree ParseTree) (*ast.InheritanceGraph, error)
 }
 
-type LanguageCode string
+// LanguageCode identifies a language. It is an alias of langcode.Code, so
+// a package that builds with no CGO can name a language with no import of core.
+type LanguageCode = langcode.Code
 
 const (
-	LanguageCodePython     LanguageCode = "python"
-	LanguageCodeJavascript LanguageCode = "javascript"
-	LanguageCodeJava       LanguageCode = "java"
-	LanguageCodeGo         LanguageCode = "go"
-	LanguageCodeTypescript LanguageCode = "typescript"
-	LanguageCodeCSharp     LanguageCode = "csharp"
-	LanguageCodeRust       LanguageCode = "rust"
-	LanguageCodePHP        LanguageCode = "php"
-	LanguageCodeRuby       LanguageCode = "ruby"
-	LanguageCodeKotlin     LanguageCode = "kotlin"
+	LanguageCodePython     = langcode.Python
+	LanguageCodeJavascript = langcode.Javascript
+	LanguageCodeJava       = langcode.Java
+	LanguageCodeGo         = langcode.Go
+	LanguageCodeTypescript = langcode.Typescript
+	LanguageCodeCSharp     = langcode.CSharp
+	LanguageCodeRust       = langcode.Rust
+	LanguageCodePHP        = langcode.PHP
+	LanguageCodeRuby       = langcode.Ruby
+	LanguageCodeKotlin     = langcode.Kotlin
 )
 
 // LanguageMeta is exposes metadata about a language
