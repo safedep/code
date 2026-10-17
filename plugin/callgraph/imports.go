@@ -5,7 +5,6 @@ import (
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
-	"github.com/safedep/code/pkg/helpers"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -56,10 +55,6 @@ func parseImports(imports []*ast.ImportNode, code core.LanguageCode) ([]parsedIm
 
 		moduleItemIdentifierKey := resolveSubmoduleIdentifier(imp.ModuleItem(), code)
 		moduleAliasIdentifierKey := resolveSubmoduleIdentifier(imp.ModuleAlias(), code)
-		if code == core.LanguageCodeGo && imp.ModuleAlias() == imp.ModuleName() {
-			// A Go import with no alias has the module as its alias node
-			moduleAliasIdentifierKey = helpers.GoPackageName(imp.ModuleName())
-		}
 
 		identifierKey := moduleNamespace
 		identifierTreeNode := imp.GetModuleNameNode()
@@ -69,10 +64,6 @@ func parseImports(imports []*ast.ImportNode, code core.LanguageCode) ([]parsedIm
 		} else if moduleItemIdentifierKey != "" {
 			identifierKey = moduleItemIdentifierKey
 			identifierTreeNode = imp.GetModuleItemNode()
-		} else if code == core.LanguageCodeGo {
-			// For Go, when there's no explicit alias, use the package name of the import path
-			// e.g., "net/http" -> http
-			identifierKey = helpers.GoPackageName(imp.ModuleName())
 		}
 
 		parsed := parsedImport{
@@ -123,11 +114,6 @@ func splitQualifiedName(name string, code core.LanguageCode) []string {
 }
 
 func resolveNamespaceWithSeparator(moduleName string, code core.LanguageCode) string {
-	// Strip quotes for Go string literals
-	if code == core.LanguageCodeGo {
-		moduleName = strings.Trim(moduleName, "\"")
-	}
-
 	// A fully qualified PHP name, as in use \GuzzleHttp\Client, has a
 	// leading separator that names no namespace.
 	if code == core.LanguageCodePHP {
@@ -138,11 +124,6 @@ func resolveNamespaceWithSeparator(moduleName string, code core.LanguageCode) st
 }
 
 func resolveSubmoduleIdentifier(identifier string, code core.LanguageCode) string {
-	// Strip quotes for Go string literals
-	if code == core.LanguageCodeGo {
-		identifier = strings.Trim(identifier, "\"")
-	}
-
 	parts := splitQualifiedName(identifier, code)
 	return parts[len(parts)-1]
 }

@@ -3,9 +3,11 @@ package lang
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
+	"github.com/safedep/code/pkg/helpers"
 	"github.com/safedep/code/pkg/ts"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -58,12 +60,14 @@ func (r *goResolvers) ResolveImports(ctx context.Context, tree core.ParseTree) (
 				}
 			}
 			node.SetModuleNameNode(moduleNameNode)
+			importPath := strings.Trim(node.ModuleName(), `"`)
+			node.SetModuleName(importPath)
 			if explicitModuleAliasNode != nil {
 				node.SetModuleAliasNode(explicitModuleAliasNode)
 			} else if !node.IsWildcardImport() {
-				// For Go imports without explicit alias, set alias node to module name node
-				// The helpers.ResolveImportContentsGo() will extract the package name from it
+				// The path brings the package name into scope.
 				node.SetModuleAliasNode(moduleNameNode)
+				node.SetModuleAlias(helpers.GoPackageName(importPath))
 			}
 
 			imports = append(imports, node)

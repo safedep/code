@@ -91,12 +91,9 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 
 	moduleIdentifiers := make(map[string]*identifierItem)
 	for _, imp := range imports {
-		importContents, err := helpers.ResolveImportContents(imp, lang)
-		if err != nil {
-			return fmt.Errorf("failed to resolve import contents: %w", err)
-		}
+		moduleName, moduleItem, moduleAlias := imp.ModuleName(), imp.ModuleItem(), imp.ModuleAlias()
 
-		packageHint, err := resolvePackageHint(importContents.ModuleName, lang)
+		packageHint, err := resolvePackageHint(moduleName, lang)
 		if err != nil {
 			log.Debugf("failed to resolve package hint: %s", err)
 		}
@@ -104,13 +101,13 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 		if imp.IsWildcardImport() {
 			// @TODO - This is false positive case for wildcard imports
 			// If it is a wildcard import, mark the module as used by default
-			evidence := newUsageEvidence(packageHint, importContents.ModuleName, importContents.ModuleItem, importContents.ModuleAlias, true, "", file.Name(), uint(imp.GetModuleNameNode().StartPoint().Row)+1)
+			evidence := newUsageEvidence(packageHint, moduleName, moduleItem, moduleAlias, true, "", file.Name(), uint(imp.GetModuleNameNode().StartPoint().Row)+1)
 			if err := p.usageCallback(ctx, evidence); err != nil {
 				return fmt.Errorf("failed to call usage callback for wildcard import: %w", err)
 			}
 		} else {
-			identifierKey := helpers.GetFirstNonEmptyString(importContents.ModuleAlias, importContents.ModuleItem, importContents.ModuleName)
-			moduleIdentifiers[identifierKey] = newIdentifierItem(importContents.ModuleName, importContents.ModuleItem, importContents.ModuleAlias, identifierKey, packageHint)
+			identifierKey := helpers.GetFirstNonEmptyString(moduleAlias, moduleItem, moduleName)
+			moduleIdentifiers[identifierKey] = newIdentifierItem(moduleName, moduleItem, moduleAlias, identifierKey, packageHint)
 		}
 	}
 
