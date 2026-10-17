@@ -172,7 +172,7 @@ func (cg *CallGraph) DFS() []DfsResultItem {
 	// A file often exports its definitions and does not call them, so DFS
 	// starts again from each reachable definition of the profile.
 	reachable := profileOf(cg.Language).reachable
-	for _, node := range cg.order {
+	for _, node := range cg.nodesInOrder() {
 		if resultCount >= maxDFSResultItems {
 			break
 		}
@@ -187,6 +187,19 @@ func (cg *CallGraph) DFS() []DfsResultItem {
 	}
 
 	return dfsResult
+}
+
+// nodesInOrder returns the nodes in the order of the build. A decoded graph
+// has no build order, so its nodes come in the order of their keys.
+func (cg *CallGraph) nodesInOrder() []*CallGraphNode {
+	if len(cg.order) > 0 {
+		return cg.order
+	}
+	nodes := make([]*CallGraphNode, 0, len(cg.Nodes))
+	for _, namespace := range slices.Sorted(maps.Keys(cg.Nodes)) {
+		nodes = append(nodes, cg.Nodes[namespace])
+	}
+	return nodes
 }
 
 // dfsUtil visits namespace, which call reaches from caller.

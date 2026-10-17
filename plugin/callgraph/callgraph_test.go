@@ -89,7 +89,9 @@ func TestGraphOutlivesTheTree(t *testing.T) {
 }
 
 func TestGraphJSONRoundTrip(t *testing.T) {
-	cg := buildAndClose(t, pythonLanguage(t), "config.py", configSource)
+	cg := buildAndClose(t, pythonLanguage(t), "config.py", configSource+"later()\nlater()\n")
+	require.Len(t, cg.RootNode.CallsTo, 4)
+	require.Nil(t, cg.RootNode.CallsTo[2].Targets, "an unbound callee has no target")
 
 	data, err := json.Marshal(cg)
 	require.NoError(t, err)
@@ -99,8 +101,20 @@ func TestGraphJSONRoundTrip(t *testing.T) {
 
 	assert.Equal(t, cg.FileName, decoded.FileName)
 	assert.Equal(t, cg.Language, decoded.Language)
-	assert.Equal(t, cg.Nodes, decoded.Nodes)
+	assert.Equal(t, cg.Nodes, decoded.Nodes, "a nil and an empty list of targets keep their form")
 	assert.Equal(t, cg.RootNode, decoded.RootNode)
+
+	reached := func(items []DfsResultItem) []string {
+		var namespaces []string
+		for _, item := range items {
+			namespaces = append(namespaces, item.Namespace)
+		}
+		return namespaces
+	}
+	decodedReach := reached(decoded.DFS())
+	assert.Subset(t, reached(cg.DFS()), decodedReach)
+	assert.Contains(t, decodedReach, "config.py//read")
+	assert.Contains(t, decodedReach, "yaml//safe_load")
 }
 
 func TestCallTargetsResolveTheLocalName(t *testing.T) {

@@ -41,9 +41,8 @@ type assignmentGraph struct {
 
 func newAssignmentGraph(truncations *truncations) *assignmentGraph {
 	return &assignmentGraph{
-		Assignments:  make(map[string]*assignmentNode),
-		resolveCache: make(map[string][]*assignmentNode),
-		truncations:  truncations,
+		Assignments: make(map[string]*assignmentNode),
+		truncations: truncations,
 	}
 }
 
@@ -90,6 +89,9 @@ func (ag *assignmentGraph) addAssignment(identifier string, identifierTreeNode *
 func (ag *assignmentGraph) resolve(identifier string) []*assignmentNode {
 	if cached, exists := ag.resolveCache[identifier]; exists {
 		return cached
+	}
+	if ag.resolveCache == nil {
+		ag.resolveCache = make(map[string][]*assignmentNode)
 	}
 
 	targets := []*assignmentNode{}

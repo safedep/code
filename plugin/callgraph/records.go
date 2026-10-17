@@ -104,6 +104,9 @@ func (cg *CallGraph) addUnresolved(caller string, site, callee *sitter.Node, tre
 	if cg.unresolvedSeen[record] {
 		return
 	}
+	if cg.unresolvedSeen == nil {
+		cg.unresolvedSeen = make(map[UnresolvedCall]bool)
+	}
 	cg.unresolvedSeen[record] = true
 	cg.unresolved = append(cg.unresolved, record)
 }

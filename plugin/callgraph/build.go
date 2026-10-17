@@ -52,7 +52,6 @@ func newCallGraph(fileName string, language core.LanguageCode) *CallGraph {
 		profile:           profileOf(language),
 		Nodes:             make(map[string]*CallGraphNode),
 		classConstructors: make(map[string]bool),
-		unresolvedSeen:    make(map[UnresolvedCall]bool),
 	}
 	cg.assignmentGraph = *newAssignmentGraph(&cg.truncations)
 
