@@ -24,7 +24,7 @@ func (b *builder) typedName(sc *scope, scopeKey, name string) (string, bool) {
 					continue
 				}
 				if !t.Result {
-					return b.resolveType(sc, t.Type)
+					return b.resolveType(sc, key, t.Type)
 				}
 				fn, ok := b.resolveScopeName(sc, t.Type)
 				if !ok {
@@ -37,6 +37,21 @@ func (b *builder) typedName(sc *scope, scopeKey, name string) (string, bool) {
 	return "", false
 }
 
+// memberType returns the class of a name in a scope: a typed parameter or
+// local variable, or in Java a field of a class that holds the scope, which
+// a method names with no this.
+func (b *builder) memberType(sc *scope, scopeKey, name string) (string, bool) {
+	if class, ok := b.typedName(sc, scopeKey, name); ok || sc.ix.Language != langcode.Java {
+		return class, ok
+	}
+	for class, ok := b.enclosingClass(scopeKey); ok; class, ok = b.enclosingClass(fileindex.Parent(class)) {
+		if t, ok := b.fieldType(class, name); ok {
+			return t, true
+		}
+	}
+	return "", false
+}
+
 // resultType returns the class or interface that the first result of a Go
 // function names.
 func (b *builder) resultType(fn string) (string, bool) {
@@ -44,7 +59,7 @@ func (b *builder) resultType(fn string) (string, bool) {
 	if def == nil || def.Returns == "" {
 		return "", false
 	}
-	return b.resolveType(b.scopes[fileindex.Unit(fn)], def.Returns)
+	return b.resolveType(b.scopes[fileindex.Unit(fn)], fn, def.Returns)
 }
 
 // fieldType returns the class or interface that the declared type of a
@@ -57,23 +72,23 @@ func (b *builder) fieldType(class, name string) (string, bool) {
 		}
 		for _, f := range rec.class.Fields {
 			if f.Name == name {
-				return b.resolveType(b.scopes[rec.ix.Path], f.Type)
+				return b.resolveType(b.scopes[rec.ix.Path], c, f.Type)
 			}
 		}
 	}
 	return "", false
 }
 
-// resolveType resolves a type name as written in the file to a first-party
-// class or interface. A type of a dependency narrows nothing, as an
+// resolveType resolves a type name as written at a key of the file to a
+// first-party class or interface. A type of a dependency narrows nothing, as an
 // instance of a project class can extend it. A Go value holds its declared
 // type or, through an interface, a type of the project, so a Go type of a
 // dependency gives the external key of its methods.
-func (b *builder) resolveType(sc *scope, text string) (string, bool) {
+func (b *builder) resolveType(sc *scope, from, text string) (string, bool) {
 	if sc == nil {
 		return "", false
 	}
-	key, ok := b.resolveScopeName(sc, text)
+	key, ok := b.resolveNameIn(sc, from, text)
 	switch {
 	case !ok:
 		return "", false

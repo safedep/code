@@ -40,6 +40,12 @@ func goLanguage(t *testing.T) core.Language {
 	return language
 }
 
+func javaLanguage(t *testing.T) core.Language {
+	language, err := lang.NewJavaLanguage()
+	require.NoError(t, err)
+	return language
+}
+
 // buildFromSource builds the call graph of source. The tree lives until the
 // end of the test, so the test can read the nodes of the graph.
 func buildFromSource(t *testing.T, language core.Language, name, source string) *CallGraph {

@@ -281,14 +281,14 @@ var testcases = []callgraphTestcase{
 			"somelibfn":     {"somelib//xyz//somelibfn"},
 			"MailcapFile":   {"com//sun//activation//registries//MailcapFile"},
 			"CallgraphTestcases.java//UtilityClass//somelibfn//x": {"5"},
-			"CallgraphTestcases.java//CallgraphTestcases//i": {
+			"CallgraphTestcases.java//CallgraphTestcases//<init>//i": {
 				"5",
 				"7",
 				"1",
 				"2",
 				"59",
 			},
-			"CallgraphTestcases.java//CallgraphTestcases//s": {
+			"CallgraphTestcases.java//CallgraphTestcases//<init>//s": {
 				"\"GG\"",
 				"\"HH\"",
 				"\"ii\"",
@@ -329,9 +329,9 @@ var testcases = []callgraphTestcase{
 			},
 		},
 		ExpectedCallGraph: map[string][]expectedCallgraphRefs{
-			"CallgraphTestcases.java//UtilityClass": {
+			"CallgraphTestcases.java//UtilityClass//<init>": {
 				{"System//out//println", [][]string{
-					{"CallgraphTestcases.java//UtilityClass//x"},
+					{"CallgraphTestcases.java//UtilityClass//<init>//x"},
 				}},
 			},
 			"CallgraphTestcases.java//UtilityClass//somelibfn": {
@@ -340,7 +340,7 @@ var testcases = []callgraphTestcase{
 			"CallgraphTestcases.java": {
 				{"CallgraphTestcases.java//CallgraphTestcases//main", [][]string{}},
 			},
-			"CallgraphTestcases.java//CallgraphTestcases": {
+			"CallgraphTestcases.java//CallgraphTestcases//<init>": {
 				{"com//custompkg//SomeClass//defaultConstructor", [][]string{}},
 				{"com//custompkg//SomeClass//someMethod", [][]string{{"5", "7"}}},
 				{"com//custompkg//SomeClass//someOtherMethod", [][]string{
@@ -456,7 +456,7 @@ var testcases = []callgraphTestcase{
 			{Namespace: "java//awt//SomeLayoutWorker", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "java.awt.SomeLayoutWorker"},
 
 			{Namespace: "CallgraphTestcases.java//UtilityClass", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "UtilityClass"},
-			{Namespace: "System//out//println", CallerNamespace: "CallgraphTestcases.java//UtilityClass", Text: "System.out.println"},
+			{Namespace: "System//out//println", CallerNamespace: "CallgraphTestcases.java//UtilityClass//<init>", Text: "System.out.println"},
 			{Namespace: "CallgraphTestcases.java//UtilityClass//somelibfn", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "util.somelibfn"},
 
 			{Namespace: "somelibfn", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "somelibfn"},
@@ -477,9 +477,9 @@ var testcases = []callgraphTestcase{
 			{Namespace: "org//mycompany//mylib//SomeClass", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "org.mycompany.mylib.SomeClass"},
 			{Namespace: "org//mycompany//mylib//SomeClass//prop//someMethod", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "obj.prop.someMethod"},
 
-			{Namespace: "com//custompkg//SomeClass//defaultConstructor", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases", Text: "com.custompkg.SomeClass.defaultConstructor"},
-			{Namespace: "com//custompkg//SomeClass//someMethod", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases", Text: "com.custompkg.SomeClass.someMethod"},
-			{Namespace: "com//custompkg//SomeClass//someOtherMethod", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases", Text: "com.custompkg.SomeClass.someOtherMethod"},
+			{Namespace: "com//custompkg//SomeClass//defaultConstructor", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//<init>", Text: "com.custompkg.SomeClass.defaultConstructor"},
+			{Namespace: "com//custompkg//SomeClass//someMethod", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//<init>", Text: "com.custompkg.SomeClass.someMethod"},
+			{Namespace: "com//custompkg//SomeClass//someOtherMethod", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//<init>", Text: "com.custompkg.SomeClass.someOtherMethod"},
 		},
 	},
 	{

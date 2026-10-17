@@ -70,7 +70,7 @@ func (p *projection) walkTree(ctx context.Context) {
 	p.addParseErrors(ctx, root)
 
 	var visitors []visitor
-	for _, v := range []visitor{p.propertyVisitor(), p.flagVisitor(), p.referenceVisitor()} {
+	for _, v := range []visitor{p.propertyVisitor(), p.flagVisitor(), p.referenceVisitor(), p.javaFlagVisitor(), p.javaReferenceVisitor()} {
 		if v != nil {
 			visitors = append(visitors, v)
 		}

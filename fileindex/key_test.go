@@ -27,4 +27,6 @@ func TestNamespace(t *testing.T) {
 	assert.Equal(t, "yaml//loader", Namespace(langcode.Python, "yaml.loader"))
 	assert.Equal(t, "fs//promises", Namespace(langcode.Javascript, "fs/promises"))
 	assert.Equal(t, ".//utils", Namespace(langcode.Typescript, "./utils"))
+	assert.Equal(t, "java//util//List", Namespace(langcode.Java, "java.util.List"))
+	assert.Equal(t, "net//http", Namespace(langcode.Go, "net/http"))
 }

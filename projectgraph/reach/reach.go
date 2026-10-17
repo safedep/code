@@ -413,6 +413,11 @@ func (ix *index) uncertainties(s *search, maxDepth int) *found {
 			site := projectgraph.Site{Path: n.Path, Line: fl.Line}
 			u := Uncertainty{Kind: DynamicFlag, Key: key, Site: site, Text: string(fl.Kind)}
 			switch {
+			case fl.Kind == fileindex.FlagInjection:
+				// The declared type of an injected value narrows the
+				// calls on it, and an external type of it leaves the
+				// call unresolved, so the flag adds no uncertainty.
+				continue
 			case fl.Kind == fileindex.FlagParseError:
 				u.Kind = Budget
 				f.global = append(f.global, u)

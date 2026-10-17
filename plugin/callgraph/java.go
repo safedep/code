@@ -7,6 +7,7 @@ import (
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/langcode"
+	"github.com/safedep/code/pkg/ts"
 	"github.com/safedep/dry/log"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -18,20 +19,22 @@ var javaProfile = languageProfile{
 	entryFunction:   "main",
 	builtins:        langcode.Builtins(langcode.Java),
 	processors: map[string]nodeProcessor{
-		"assignment_expression":      assignmentProcessor,
-		"class_declaration":          classDefinitionProcessor,
-		"enum_declaration":           skipResultsProcessor,
-		"interface_body":             skippedProcessor,
-		"interface_declaration":      skipResultsProcessor,
-		"local_variable_declaration": localVariableDeclarationProcessor,
-		"method_declaration":         functionDefinitionProcessor,
-		"method_invocation":          methodInvocationProcessor,
-		"object_creation_expression": objectCreationExpressionProcessor,
-		"scoped_type_identifier":     scopedIdentifierProcessor,
-		"ternary_expression":         ternaryExpressionProcessor,
-		"type_arguments":             skippedProcessor,
-		"type_identifier":            skippedProcessor,
-		"variable_declarator":        variableDeclaratorProcessor,
+		"assignment_expression":           assignmentProcessor,
+		"class_declaration":               classDefinitionProcessor,
+		"constructor_declaration":         javaConstructorProcessor,
+		"enum_declaration":                classDefinitionProcessor,
+		"explicit_constructor_invocation": explicitConstructorInvocationProcessor,
+		"interface_declaration":           classDefinitionProcessor,
+		"local_variable_declaration":      localVariableDeclarationProcessor,
+		"method_reference":                skippedProcessor,
+		"method_declaration":              javaMethodDeclarationProcessor,
+		"method_invocation":               methodInvocationProcessor,
+		"object_creation_expression":      objectCreationExpressionProcessor,
+		"scoped_type_identifier":          scopedIdentifierProcessor,
+		"ternary_expression":              ternaryExpressionProcessor,
+		"type_arguments":                  skippedProcessor,
+		"type_identifier":                 skippedProcessor,
+		"variable_declarator":             variableDeclaratorProcessor,
 	},
 	literals: map[string]bool{
 		"binary_integer_literal":         true,
@@ -45,11 +48,12 @@ var javaProfile = languageProfile{
 		"string_literal":                 true,
 		"true":                           true,
 	},
-	ignored: map[string]bool{"import_declaration": true, "line_comment": true},
+	ignored: map[string]bool{"import_declaration": true, "package_declaration": true, "line_comment": true, "block_comment": true},
 	reachable: map[string]bool{
-		"program":            true,
-		"class_declaration":  true,
-		"method_declaration": true,
+		"program":                 true,
+		"class_declaration":       true,
+		"method_declaration":      true,
+		"constructor_declaration": true,
 	},
 	members: map[string]memberShape{
 		"method_invocation": {object: "object", name: "name"},
@@ -127,11 +131,64 @@ func disectScopedIdentifierQualifierUtil(node *sitter.Node, treeData []byte, cur
 	}
 }
 
+// javaMethodDeclarationProcessor processes a method with a body. An
+// abstract method or a method of an interface with no body runs no code,
+// so it is no definition. A call of it reaches the methods that override
+// it.
+func javaMethodDeclarationProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if node == nil || node.ChildByFieldName("body") == nil {
+		return newProcessorResult()
+	}
+	return functionDefinitionProcessor(node, treeData, currentNamespace, callGraph, metadata)
+}
+
+// javaConstructorName names the constructor of a Java class, as the JVM
+// does. The name of the class would hide the class in the scope chain of
+// its body, so new A() in a method of A would not find the class.
+const javaConstructorName = "<init>"
+
+// javaConstructorProcessor processes a constructor as a method of its class
+// with the name <init>. The class calls it, as a new of the class runs it.
+// The overloads of a constructor share one key.
+func javaConstructorProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if node == nil {
+		return newProcessorResult()
+	}
+	namespace := currentNamespace + namespaceSeparator + javaConstructorName
+	callGraph.addSyntheticEdge(currentNamespace, namespace, node)
+	callGraph.addDefinition(namespace, node)
+	return processFunctionBody(node, treeData, namespace, callGraph, metadata)
+}
+
+// explicitConstructorInvocationProcessor adds the call of super(...) in a
+// constructor, which runs the constructor of the base class. this(...)
+// runs another constructor of the class, which has the same key.
+func explicitConstructorInvocationProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if node == nil {
+		return newProcessorResult()
+	}
+	args := resolveCallArguments(node.ChildByFieldName("arguments"), treeData, currentNamespace, callGraph, metadata)
+	if constructor := node.ChildByFieldName("constructor"); constructor != nil && constructor.Type() == "super" {
+		ref := callGraph.reference("super", CallCall, constructor, args)
+		ref.Unbound = true
+		callGraph.addCall(currentNamespace, nil, ref)
+	}
+	return newProcessorResult()
+}
+
 // objectCreationExpressionProcessor adds the edge of new SomeClass() to the
-// class. The value of the creation is the class.
+// class. The value of the creation is the class. A class that the scope
+// chain does not bind, as a class of the package, keeps its name. The
+// methods of an anonymous class body run in the scope of the creation,
+// because the graph has no name for the class.
 func objectCreationExpressionProcessor(objectCreationNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
 	if objectCreationNode == nil {
 		return newProcessorResult()
+	}
+	for _, child := range ts.NamedChildren(objectCreationNode) {
+		if child.Type() == "class_body" {
+			processAnonymousClassBody(child, treeData, currentNamespace, callGraph, metadata)
+		}
 	}
 
 	argsResult := []CallArgument{}
@@ -165,6 +222,10 @@ func objectCreationExpressionProcessor(objectCreationNode *sitter.Node, treeData
 				callGraph.addEdge(currentNamespace, CallNew, constructedClassNode, scopedIdentifierAssignment.Namespace, nil, argsResult)
 				markClassAssignment(scopedIdentifierAssignment)
 			}
+		} else if name := withoutTypeArguments(constructedClassName); name != "" {
+			ref := callGraph.reference(strings.ReplaceAll(name, ".", namespaceSeparator), CallNew, constructedClassNode, argsResult)
+			ref.Unbound = true
+			callGraph.addCall(currentNamespace, nil, ref)
 		}
 	}
 
@@ -224,6 +285,7 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 	methodQualifierObjectNode := methodInvocationNode.ChildByFieldName("object")
 
 	if methodQualifierObjectNode != nil {
+		recordChainedCalls(methodInvocationNode, treeData, currentNamespace, callGraph)
 		for methodQualifierObjectNode.Type() == "method_invocation" {
 			processMethodArgs(methodQualifierObjectNode, treeData, currentNamespace, callGraph, metadata)
 
@@ -258,7 +320,7 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 			for _, class := range classes {
 				callGraph.addEdge(
 					currentNamespace, CallCall, methodInvocationNode,
-					class+namespaceSeparator+calledMethod, methodInvocationNode,
+					class+namespaceSeparator+calledMethod, nil,
 					argsResult,
 				)
 			}
@@ -266,6 +328,11 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 		}
 
 		methodObjectQualifierNamespace := resolveQualifierObjectFieldaccess(methodQualifierObjectNode, treeData)
+		// The first call of a chain names its callee by its object and
+		// its name. Its arguments are no part of the name.
+		if methodQualifierObjectNode.Type() == "method_invocation" {
+			methodObjectQualifierNamespace = invocationNamespace(methodQualifierObjectNode, treeData)
+		}
 		qualifiers := strings.Split(methodObjectQualifierNamespace, namespaceSeparator)
 		callerObjectNamespaces := []string{}
 
@@ -305,7 +372,7 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 				calledNamespace = calledNamespace + namespaceSeparator + methodName
 			}
 			log.Debugf("Method invocation %s searched (object qualified) & resolved to - %s\n", methodName, calledNamespace)
-			callGraph.addEdge(currentNamespace, CallCall, methodInvocationNode, calledNamespace, methodInvocationNode, argsResult)
+			callGraph.addEdge(currentNamespace, CallCall, methodInvocationNode, calledNamespace, nil, argsResult)
 		}
 
 		return newProcessorResult()
@@ -322,9 +389,42 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 		return newProcessorResult()
 	}
 
-	log.Debugf("Method invocation %s couldn't be processed", methodName)
-
+	// A name that the scope chain does not bind is a method of the class
+	// or of a base class, or a method that a static import names. The link
+	// step resolves it.
+	ref := callGraph.reference(methodName, CallCall, methodInvocationNode, argsResult)
+	ref.Unbound = true
+	callGraph.addCall(currentNamespace, nil, ref)
 	return newProcessorResult()
+}
+
+// processAnonymousClassBody processes the members of an anonymous class in
+// the scope that creates it. The body of each method runs there too.
+func processAnonymousClassBody(body *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) {
+	for _, member := range ts.NamedChildren(body) {
+		if member.Type() == "method_declaration" {
+			processFunctionBody(member, treeData, currentNamespace, callGraph, metadata)
+			continue
+		}
+		processNode(member, treeData, currentNamespace, callGraph, metadata)
+	}
+}
+
+// recordChainedCalls records each call of a chain on the value of the call
+// before it, as exec in Runtime.getRuntime().exec(), as a call on an
+// unknown receiver. The graph keeps only the first call of the chain, and
+// the value of a call is out of reach. The record sits at the name of the
+// method, so it does not hide the first call at the start of the chain.
+func recordChainedCalls(invocation *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph) {
+	for node := invocation; node != nil && node.Type() == "method_invocation"; node = node.ChildByFieldName("object") {
+		object := node.ChildByFieldName("object")
+		if object == nil || object.Type() != "method_invocation" {
+			return
+		}
+		if name := node.ChildByFieldName("name"); name != nil {
+			callGraph.addUnresolved(currentNamespace, name, node, treeData, UnresolvedUnknownReceiver)
+		}
+	}
 }
 
 // createdReceiver returns the object creation that receives the first call
@@ -343,6 +443,21 @@ func createdReceiver(qualifier *sitter.Node, methodName string, chained bool, tr
 		return nil, ""
 	}
 	return qualifier, methodName
+}
+
+// invocationNamespace returns the namespace of the callee of a method
+// invocation as written, as java//util//Logger//getLogger for
+// java.util.Logger.getLogger("x").
+func invocationNamespace(invocation *sitter.Node, treeData []byte) string {
+	name := invocation.ChildByFieldName("name")
+	if name == nil {
+		return ""
+	}
+	object := invocation.ChildByFieldName("object")
+	if object == nil {
+		return name.Content(treeData)
+	}
+	return resolveQualifierObjectFieldaccess(object, treeData) + namespaceSeparator + name.Content(treeData)
 }
 
 var methodInvocationNormaliserRegexp = regexp.MustCompile(`[-()\n ]`)

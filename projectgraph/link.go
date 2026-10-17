@@ -95,6 +95,8 @@ type builder struct {
 	unitOf map[string]*unit
 	// goPackages holds the package that an import of each directory names.
 	goPackages map[string]*unit
+	// javaPackages holds the unit of each Java package by name.
+	javaPackages map[string]*unit
 
 	mros     map[string][]string
 	children map[string][]string
@@ -139,27 +141,28 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 			Nodes: map[string]*Node{},
 			Files: map[string]fileindex.FileStatus{},
 		},
-		byPath:      make(map[string]*fileindex.Index, len(indexes)),
-		scopes:      make(map[string]*scope, len(indexes)),
-		edges:       map[Edge]bool{},
-		linked:      map[[2]string]bool{},
-		unresolved:  map[UnresolvedSite]bool{},
-		truncations: map[Truncation]bool{},
-		names:       map[nameKey]resolution{},
-		visiting:    map[nameKey]bool{},
-		bindings:    map[string]string{},
-		classes:     map[string]classRecord{},
-		defs:        map[string]*fileindex.Definition{},
-		reading:     map[string]bool{},
-		units:       map[string]*unit{},
-		unitOf:      map[string]*unit{},
-		goPackages:  map[string]*unit{},
-		loads:       map[string]bool{},
-		mros:        map[string][]string{},
-		narrowed:    map[Site]bool{},
-		slots:       map[edgeSlot]Edge{},
-		test:        map[string]bool{},
-		rules:       roots.Merge(roots.Default(), opts.Rules),
+		byPath:       make(map[string]*fileindex.Index, len(indexes)),
+		scopes:       make(map[string]*scope, len(indexes)),
+		edges:        map[Edge]bool{},
+		linked:       map[[2]string]bool{},
+		unresolved:   map[UnresolvedSite]bool{},
+		truncations:  map[Truncation]bool{},
+		names:        map[nameKey]resolution{},
+		visiting:     map[nameKey]bool{},
+		bindings:     map[string]string{},
+		classes:      map[string]classRecord{},
+		defs:         map[string]*fileindex.Definition{},
+		reading:      map[string]bool{},
+		units:        map[string]*unit{},
+		unitOf:       map[string]*unit{},
+		goPackages:   map[string]*unit{},
+		javaPackages: map[string]*unit{},
+		loads:        map[string]bool{},
+		mros:         map[string][]string{},
+		narrowed:     map[Site]bool{},
+		slots:        map[edgeSlot]Edge{},
+		test:         map[string]bool{},
+		rules:        roots.Merge(roots.Default(), opts.Rules),
 	}
 	for _, ix := range indexes {
 		if ix.Version != fileindex.Version {
@@ -188,6 +191,7 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 	b.problems = append(b.problems, b.python.Problems()...)
 	b.problems = append(b.problems, b.js.Problems()...)
 	b.addGoUnits()
+	b.addJavaUnits()
 	return b, nil
 }
 
@@ -217,6 +221,7 @@ func (b *builder) link(ctx context.Context) error {
 		}
 		b.linkImports(ix)
 		b.linkInits(ix)
+		b.linkClassInits(ix)
 		b.linkConstructors(ix)
 		b.linkCalls(ix)
 		b.linkReferences(ix)
@@ -453,6 +458,39 @@ func (b *builder) linkInits(ix *fileindex.Index) {
 	b.addEdge(Edge{From: ix.Path, To: key, Site: Site{Path: ix.Path, Line: n.Line}, Kind: EdgeDirect, Resolver: resolverName(ix.Language, "init")})
 }
 
+// linkClassInits adds an edge from each method of a Java class to the
+// class when the body of the class runs code: a static block or the
+// initializer of a field. The JVM runs the static code before the first
+// call of a method of the class and before an access to a static field, so
+// the class node holds that code. The edge also reaches the constructor of
+// the class, which a static call need not run.
+func (b *builder) linkClassInits(ix *fileindex.Index) {
+	if ix.Language != langcode.Java {
+		return
+	}
+	runs := map[string]bool{}
+	for _, c := range ix.Calls {
+		runs[c.Caller] = true
+	}
+	for _, r := range ix.References {
+		runs[r.Caller] = true
+	}
+	for _, u := range ix.Unresolved {
+		runs[u.Caller] = true
+	}
+	for _, c := range ix.Classes {
+		if !runs[c.Key] {
+			continue
+		}
+		for _, m := range c.Methods {
+			if b.isMethod(m) {
+				n := b.g.Nodes[m]
+				b.addEdge(Edge{From: m, To: c.Key, Site: Site{Path: n.Path, Line: n.Line}, Kind: EdgeDirect, Resolver: resolverName(ix.Language, "class-init")})
+			}
+		}
+	}
+}
+
 // linkConstructors adds an edge from each class to the constructor that
 // runs when a call makes an instance. A call to a class reaches the class
 // node, through a re-export or not, so the constructor hangs off the class.
@@ -484,6 +522,11 @@ func (b *builder) linkConstructors(ix *fileindex.Index) {
 // function. So each nested function of the decorator gets a reference edge
 // from the decorated definition. An external decorator gets no such edge.
 func (b *builder) linkDecorators(ix *fileindex.Index) {
+	// A Java annotation is data that a framework reads, and it runs no
+	// code where it stands.
+	if ix.Language == langcode.Java {
+		return
+	}
 	sc := b.scopes[ix.Path]
 	for _, def := range ix.Definitions {
 		if len(def.Decorators) == 0 {

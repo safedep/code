@@ -1,0 +1,47 @@
+source: safedep:hand
+description: Spring creates the @RestController class and calls the @GetMapping method, so both are framework roots. list calls render on the injected field service, whose declared type is OrderService. unused has no mapping, so no root reaches export.
+roots:
+  - key: src/main/java/com/shop/web/OrderController.java//OrderController
+    kind: framework
+    rule: java.spring.web
+  - key: src/main/java/com/shop/web/OrderController.java//OrderController//list
+    kind: framework
+    rule: java.spring.web
+edges:
+  - from: src/main/java/com/shop/web/OrderController.java//OrderController//list
+    to: src/main/java/com/shop/svc/OrderService.java//OrderService//render
+    kind: member
+    confidence: high
+    site: src/main/java/com/shop/web/OrderController.java:15
+unresolved:
+  - caller: src/main/java/com/shop/svc/OrderService.java//OrderService//export
+    site: src/main/java/com/shop/svc/OrderService.java:11
+    reason: unknown-receiver
+    method: encodeToString
+  - caller: src/main/java/com/shop/svc/OrderService.java//OrderService//export
+    site: src/main/java/com/shop/svc/OrderService.java:11
+    reason: unknown-receiver
+    method: getBytes
+results:
+  - target: freemarker//template//Template
+    status: found
+    path:
+      - key: src/main/java/com/shop/web/OrderController.java//OrderController//list
+      - key: src/main/java/com/shop/svc/OrderService.java//OrderService//render
+        site: src/main/java/com/shop/web/OrderController.java:15
+        kind: member
+        confidence: high
+      - key: freemarker//template//Template
+        site: src/main/java/com/shop/svc/OrderService.java:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main/java/com/shop/svc/OrderService.java//OrderService//render
+        site: src/main/java/com/shop/svc/OrderService.java:7
+        reached: true
+  - target: java//util//Base64//getEncoder
+    status: not-found
+    call_sites:
+      - caller: src/main/java/com/shop/svc/OrderService.java//OrderService//export
+        site: src/main/java/com/shop/svc/OrderService.java:11
+        reached: false

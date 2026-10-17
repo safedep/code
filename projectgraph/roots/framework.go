@@ -24,13 +24,15 @@ func (f *finder) matchPath(r rules.Rule) {
 	}
 }
 
-// matchDecorator marks each definition with a decorator whose text, as
-// written, starts with one of the prefixes of the rule.
+// matchDecorator marks each definition with a decorator or an annotation
+// whose text, as written, starts with one of the prefixes of the rule. The
+// index holds the annotations of Java as decorators.
 func (f *finder) matchDecorator(r rules.Rule) {
+	prefixes := append(slices.Clone(r.Match.Decorator), r.Match.Annotation...)
 	for _, ix := range f.applying(r) {
 		for _, def := range ix.Definitions {
 			if slices.ContainsFunc(def.Decorators, func(d string) bool {
-				return slices.ContainsFunc(r.Match.Decorator, func(prefix string) bool { return strings.HasPrefix(d, prefix) })
+				return slices.ContainsFunc(prefixes, func(prefix string) bool { return strings.HasPrefix(d, prefix) })
 			}) {
 				f.add(r, def.Key)
 			}

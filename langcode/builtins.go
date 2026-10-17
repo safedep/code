@@ -46,6 +46,14 @@ var builtins = map[Code][]string{
 		"Thread", "ThreadGroup", "Throwable", "Exception", "Error", "Math", "StrictMath", "Number",
 		"Void", "Package", "Process", "ProcessBuilder", "SecurityManager", "Boolean", "Byte",
 		"Character", "Short", "Integer", "Long", "Float", "Double",
+		"Runnable", "Iterable", "Comparable", "AutoCloseable", "CharSequence", "Cloneable",
+		"Override", "Deprecated", "SuppressWarnings", "FunctionalInterface", "SafeVarargs",
+		"RuntimeException", "IllegalArgumentException", "IllegalStateException",
+		"NullPointerException", "UnsupportedOperationException", "IndexOutOfBoundsException",
+		"ArithmeticException", "ClassCastException", "InterruptedException",
+		"NumberFormatException", "CloneNotSupportedException", "ReflectiveOperationException",
+		"ClassNotFoundException", "SecurityException", "AssertionError", "OutOfMemoryError",
+		"StackOverflowError", "ThreadLocal", "InheritableThreadLocal", "Record", "StackWalker",
 	},
 }
 

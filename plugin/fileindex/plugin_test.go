@@ -75,6 +75,7 @@ func TestFileIndexGolden(t *testing.T) {
 		file string
 		code core.LanguageCode
 	}{
+		{"App.java", core.LanguageCodeJava},
 		{"app.go", core.LanguageCodeGo},
 		{"app.js", core.LanguageCodeJavascript},
 		{"app.ts", core.LanguageCodeTypescript},
@@ -102,8 +103,8 @@ func TestFileIndexGolden(t *testing.T) {
 // serve an index of the old rules for it. So a change of the golden files
 // needs a new Version, and both constants change with it.
 const (
-	goldenVersion = "5"
-	goldenHash    = "3d04b12b8dc41301604e95504a5b2f433c3c77996f05f854dbd8c1c92c037688"
+	goldenVersion = "6"
+	goldenHash    = "1457da502431bf6643372dc1bfc4076409e51005efd51b45ebb9af0d9532335d"
 )
 
 func TestFileIndexGoldenHashFollowsVersion(t *testing.T) {

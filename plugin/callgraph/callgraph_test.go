@@ -564,3 +564,42 @@ func TestGoCallsOnTypedValues(t *testing.T) {
 		})
 	}
 }
+
+func TestJavaCallsTheLinkStepResolves(t *testing.T) {
+	source := strings.Join([]string{
+		"class A extends B {",
+		"  A(int x) { super(x); init(); }",
+		"  void run() {",
+		"    start();",
+		"    new Box<String>();",
+		"    Runtime.getRuntime().exec(\"ls\");",
+		"    new Runnable() { public void run() { anon(); } };",
+		"  }",
+		"  abstract void hook();",
+		"  void anon() {}",
+		"}",
+		"interface I { void m(); default void d() { m(); } }",
+		"enum E { ONE; void e() { work(); } }",
+	}, "\n") + "\n"
+	cg := buildAndClose(t, javaLanguage(t), "A.java", source)
+
+	callees := map[string][]string{}
+	for _, node := range cg.order {
+		for _, ref := range node.CallsTo {
+			if ref.Kind != CallSynthetic {
+				callees[node.Namespace] = append(callees[node.Namespace], ref.CalleeNamespace)
+			}
+		}
+	}
+	assert.Equal(t, []string{"super", "init"}, callees["A.java//A//<init>"], "a constructor is <init> of its class")
+	assert.Equal(t, []string{"start", "Box", "Runtime//getRuntime", "anon", "Runnable"}, callees["A.java//A//run"], "an anonymous class runs in its scope")
+	assert.Equal(t, []string{"m"}, callees["A.java//I//d"], "a default method is a method of the interface")
+	assert.Equal(t, []string{"work"}, callees["A.java//E//e"], "an enum is a class")
+	assert.NotContains(t, cg.Nodes, "A.java//A//hook", "an abstract method is no definition")
+
+	var methods []string
+	for _, u := range cg.Unresolved() {
+		methods = append(methods, u.Method)
+	}
+	assert.Equal(t, []string{"exec"}, methods, "a call on the value of a call is a record")
+}

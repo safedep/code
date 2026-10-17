@@ -123,7 +123,7 @@ func (f *finder) match(r rules.Rule) {
 		f.matchFileContains(r)
 	case len(m.Path) > 0:
 		f.matchPath(r)
-	case len(m.Decorator) > 0:
+	case len(m.Decorator) > 0 || len(m.Annotation) > 0:
 		f.matchDecorator(r)
 	case m.Call != nil && m.Call.Arg == nil:
 		f.matchDecoratorCall(r)
@@ -149,14 +149,10 @@ func (f *finder) applying(r rules.Rule) []*fileindex.Index {
 }
 
 // matchDefinition marks a definition by its name, the name of its class,
-// and the package clause of its file. A match in a package marks only a
-// top-level function, as func main in package main of Go. No index records
-// a static method yet, so a match on it marks nothing.
+// the static mark and the package clause of its file. A match in a package
+// marks only a top-level function, as func main in package main of Go.
 func (f *finder) matchDefinition(r rules.Rule) {
 	m := r.Match.Definition
-	if m.Static {
-		return
-	}
 	for _, ix := range f.applying(r) {
 		if m.InPackage != "" && ix.Package != m.InPackage {
 			continue
@@ -166,6 +162,7 @@ func (f *finder) matchDefinition(r rules.Rule) {
 			case def.Name != m.Name:
 			case m.Parent != "" && fileindex.Last(def.Parent) != m.Parent:
 			case m.InPackage != "" && (def.Kind != fileindex.DefFunction || len(fileindex.Segments(def.Key)) != 1):
+			case m.Static && !def.Static:
 			default:
 				f.add(r, def.Key)
 			}

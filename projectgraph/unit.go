@@ -2,6 +2,7 @@ package projectgraph
 
 import (
 	"cmp"
+	"maps"
 	"slices"
 	"strings"
 
@@ -105,6 +106,55 @@ func isGoTestPackage(name string, byClause map[string][]string) bool {
 		return false
 	}
 	return !slices.ContainsFunc(byClause[name], func(p string) bool { return !strings.HasSuffix(p, "_test.go") })
+}
+
+// addJavaUnits groups the Java files by their package clause. A Java
+// package is the class table of its classes: an import names a class by
+// its package and its name, and a class names the classes of its package
+// with no import.
+func (b *builder) addJavaUnits() {
+	files := map[string][]string{}
+	for _, p := range b.paths {
+		if ix := b.byPath[p]; ix != nil && ix.Language == langcode.Java {
+			files[ix.Package] = append(files[ix.Package], p)
+		}
+	}
+	for _, pkg := range slices.Sorted(maps.Keys(files)) {
+		b.javaPackages[pkg] = b.addUnit("java:"+pkg, files[pkg])
+	}
+}
+
+// resolveJava resolves a qualified name, as com.x.Service or
+// com.x.Outer.Inner, to the unit of a package or to a class of the project
+// and a member under it. The longest package that the name starts with
+// wins. The default package has no name, so no import names it.
+func (b *builder) resolveJava(name string) (string, bool) {
+	parts := strings.Split(name, ".")
+	for i := len(parts); i > 0; i-- {
+		u := b.javaPackages[strings.Join(parts[:i], ".")]
+		if u == nil {
+			continue
+		}
+		if i == len(parts) {
+			return u.key, true
+		}
+		if r := b.walk(u.key, parts[i:]); r.fail == nil {
+			return r.key, true
+		}
+		return "", false
+	}
+	return "", false
+}
+
+// javaFirstParty reports whether a qualified name starts with a package of
+// the project.
+func (b *builder) javaFirstParty(name string) bool {
+	for pkg := range b.javaPackages {
+		if pkg != "" && (name == pkg || strings.HasPrefix(name, pkg+".")) {
+			return true
+		}
+	}
+	return false
 }
 
 func goUnitKey(dir, clause string) string {

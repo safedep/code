@@ -1,5 +1,5 @@
 {
-  "version": "5",
+  "version": "6",
   "path": "src/app.py",
   "language": "python",
   "content_hash": "a172cedcae47474b615c54d510a5d84a8dea3032e958587430b413538be3f333",
@@ -121,7 +121,8 @@
       ],
       "arity": 2,
       "variadic": true,
-      "returns": "Parser"
+      "returns": "Parser",
+      "static": true
     },
     {
       "key": "src/app.py//Shape",
@@ -302,6 +303,10 @@
     }
   ],
   "flags": [
+    {
+      "kind": "injection",
+      "line": 4
+    },
     {
       "kind": "decorator-wrap",
       "line": 6

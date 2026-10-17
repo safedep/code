@@ -1,0 +1,63 @@
+source: safedep:hand
+description: The JVM runs the static block of Config before its first static call, and the initializer of Registry.INSTANCE, which runs the constructor, before the first access to the field. Each method of a class with such code has an edge to the class, so both calls are found.
+roots:
+  - key: com/shop/Main.java//Main//main
+    kind: main
+    rule: java.main
+edges:
+  - from: com/shop/Config.java//Config//get
+    to: com/shop/Config.java//Config
+    kind: direct
+    confidence: high
+    site: com/shop/Config.java:8
+  - from: com/shop/Registry.java//Registry//lookup
+    to: com/shop/Registry.java//Registry
+    kind: direct
+    confidence: high
+    site: com/shop/Registry.java:10
+unresolved: []
+results:
+  - target: System//loadLibrary
+    status: found
+    path:
+      - key: com/shop/Main.java//Main//main
+      - key: com/shop/Config.java//Config//get
+        site: com/shop/Main.java:5
+        kind: member
+        confidence: high
+      - key: com/shop/Config.java//Config
+        site: com/shop/Config.java:8
+        kind: direct
+        confidence: high
+      - key: System//loadLibrary
+        site: com/shop/Config.java:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: com/shop/Config.java//Config
+        site: com/shop/Config.java:5
+        reached: true
+  - target: java//rmi//registry//LocateRegistry//getRegistry
+    status: found
+    path:
+      - key: com/shop/Main.java//Main//main
+      - key: com/shop/Registry.java//Registry//lookup
+        site: com/shop/Main.java:6
+        kind: member
+        confidence: high
+      - key: com/shop/Registry.java//Registry
+        site: com/shop/Registry.java:10
+        kind: direct
+        confidence: high
+      - key: com/shop/Registry.java//Registry//<init>
+        site: com/shop/Registry.java:6
+        kind: direct
+        confidence: high
+      - key: java//rmi//registry//LocateRegistry//getRegistry
+        site: com/shop/Registry.java:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: com/shop/Registry.java//Registry//<init>
+        site: com/shop/Registry.java:7
+        reached: true

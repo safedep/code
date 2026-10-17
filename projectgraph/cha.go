@@ -13,6 +13,7 @@ var instanceKeywords = map[langcode.Code][]string{
 	langcode.Python:     {"self", "cls"},
 	langcode.Javascript: {"this"},
 	langcode.Typescript: {"this"},
+	langcode.Java:       {"this"},
 }
 
 func isInstanceKeyword(lang langcode.Code, name string) bool {

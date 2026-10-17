@@ -127,7 +127,7 @@
     "packages/core/util.js": "indexed"
   },
   "stats": {
-    "version": "5",
+    "version": "6",
     "files": 3,
     "nodes": 6,
     "edges": 5,

@@ -19,7 +19,7 @@ import (
 // Version is the version of the index records and of the rules that fill
 // them. Bump it when a field, a kind, an order or a fill rule changes. A
 // store keys an index by Version, so the bump makes every older index miss.
-const Version = "5"
+const Version = "6"
 
 type ImportKind string
 
@@ -91,6 +91,9 @@ const (
 	FlagMonkeyPatch       FlagKind = "monkey-patch"
 	FlagDecoratorWrap     FlagKind = "decorator-wrap"
 	FlagParseError        FlagKind = "parse-error"
+	// FlagInjection marks a value that a container sets, as a Java field
+	// with @Autowired. The declared type of the value narrows a call on it.
+	FlagInjection FlagKind = "injection"
 )
 
 // TruncationKind names a limit that the index of a file hit. The kinds of
@@ -112,7 +115,7 @@ const (
 // project root, with "/". ContentHash is the HashContent of the bytes. All
 // lines and columns are 1-based. Sort puts every slice in its defined order,
 // so one file gives one JSON form. Package is the package clause of a Go
-// file. The files of one package share their top-level names.
+// or a Java file. The files of one package share their top-level names.
 type Index struct {
 	Version     string        `json:"version"`
 	Path        string        `json:"path"`
@@ -163,15 +166,17 @@ type Export struct {
 // variable or interface. Key is its symbol key, as src/a.py//Parser//parse.
 // Parent is the class key of a method. A JavaScript function that an object
 // property or a property assignment holds is a method with no parent.
-// Decorators are as written, in source order. Values are the per-file
-// targets that a variable holds, as the targets of a Call. Params are the
-// parameters that declare the type of a class, in source order. A Go
-// method has its receiver first. Locals are the local variables of a Go
-// function whose type the source declares or constructs.
+// Decorators are as written, in source order, and hold the annotations of
+// a Java definition. Values are the per-file targets that a variable
+// holds, as the targets of a Call. Params are the parameters that declare
+// the type of a class, in source order. A Go method has its receiver
+// first. Locals are the local variables of a Go or Java function whose
+// type the source declares or constructs.
 //
 // Arity, Variadic and Returns hold the signature of a Go function or
 // method: the count of its parameters, a last parameter of the form ...T,
-// and the type name of its first result.
+// and the type name of its first result. Static marks a static method of
+// Java.
 type Definition struct {
 	Key        string   `json:"key"`
 	Kind       DefKind  `json:"kind"`
@@ -187,6 +192,7 @@ type Definition struct {
 	Arity      int      `json:"arity,omitempty"`
 	Variadic   bool     `json:"variadic,omitempty"`
 	Returns    string   `json:"returns,omitempty"`
+	Static     bool     `json:"static,omitempty"`
 	Flags      []Flag   `json:"flags,omitempty"`
 }
 

@@ -1,6 +1,5 @@
 # Root rules of the project graph. A rule marks the definitions or the
-# module top levels that run with no caller in the graph. The Java rules
-# match nothing until the index records static methods and annotations.
+# module top levels that run with no caller in the graph.
 # A callee is a symbol key as the graph writes it, as django//urls//path for
 # path of django.urls.
 version: 1
@@ -85,6 +84,10 @@ rules:
     language: javascript
     kind: framework
     match: { export: { names: [handler], path: ["**/handler.*", "**/handlers/**", "**/index.*", "**/lambda.*"] } }
+  - id: java.spring.web
+    language: java
+    kind: framework
+    match: { annotation: ["@RestController", "@Controller", "@RequestMapping", "@GetMapping", "@PostMapping", "@PutMapping", "@DeleteMapping", "@PatchMapping", "@ExceptionHandler", "@Scheduled", "@EventListener", "@KafkaListener", "@JmsListener", "@RabbitListener", "@Bean", "@PostConstruct"] }
   - id: test.files
     language: any
     kind: test

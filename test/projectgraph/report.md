@@ -43,6 +43,7 @@ step.
 | JavaScript | step 27 | swarm-js | 0.821 (156/190) | 0.706 (204/289) | 0.358 (110/307) | 0.263 | 4.80 s | 0.29 s | 0.35 s | 29 ms | 73 / 41 / 49 / 8 MiB |
 | TypeScript | step 27 | none | n/a | n/a | n/a | 0.094 | 7.38 s | 0.33 s | 0.34 s | 27 ms | 68 / 34 / 49 / 4 MiB |
 | Go | step 29 | govulncheck | n/a | 1.000 (9/9) stacks | n/a | 0.082 | 3.78 s | 0.30 s | 0.32 s | 31 ms | 89 / 42 / 52 / 4 MiB |
+| Java | step 30 | none | n/a | n/a | n/a | 0.148 | 2.76 s | 0.33 s | 0.46 s | 34 ms | 61 / 38 / 57 / 5 MiB |
 
 Python is now at 0.940, just under the precision gate of the design (0.95
 for `high` and `medium` edges). After step 27 it is 0.954, and its recall is
@@ -55,6 +56,15 @@ has the other numbers. The synthetic Go project of 1,000 files has 32,015
 edges and 2,860 unresolved sites, and the reach query finds 199 of 200
 targets. Most unresolved sites are calls on a loop variable of an interface
 type, as `item.Notify(data)`, which the template has in every method.
+
+The Java row comes from step 30. No public set with a license that allows
+a copy ships Java call graphs, so Java has no precision or recall yet. The
+synthetic Java project of 1,000 files has 37,534 edges and 4,745
+unresolved sites, and the reach query finds 200 of 200 targets. Most
+unresolved sites are the records of the calls on a loop variable of an
+interface type, as `item.onEvent(data)`, because a class of a dependency
+can implement the interface. The others are calls on the value of a call,
+as `invoke` in `getClass().getMethod(...).invoke(...)`.
 
 The step 27 rows come from one more run of the benchmark at 1,000 files.
 The declared types of TypeScript narrow the calls on a typed field, as

@@ -1,0 +1,43 @@
+source: safedep:hand
+description: Inner.work calls report of the class that holds Inner with no receiver. report calls getLogger with an argument and then severe on its value. The first call of the chain keeps its name with no argument, java.util.logging.Logger.getLogger, and severe is a record.
+roots:
+  - key: com/shop/Outer.java//Outer//main
+    kind: main
+    rule: java.main
+edges:
+  - from: com/shop/Outer.java//Outer//main
+    to: com/shop/Outer.java//Outer//Inner//work
+    kind: member
+    confidence: high
+    site: com/shop/Outer.java:7
+  - from: com/shop/Outer.java//Outer//Inner//work
+    to: com/shop/Outer.java//Outer//report
+    kind: direct
+    confidence: high
+    site: com/shop/Outer.java:16
+unresolved:
+  - caller: com/shop/Outer.java//Outer//report
+    site: com/shop/Outer.java:11
+    reason: unknown-receiver
+    method: severe
+results:
+  - target: java//util//logging//Logger//getLogger
+    status: found
+    path:
+      - key: com/shop/Outer.java//Outer//main
+      - key: com/shop/Outer.java//Outer//Inner//work
+        site: com/shop/Outer.java:7
+        kind: member
+        confidence: high
+      - key: com/shop/Outer.java//Outer//report
+        site: com/shop/Outer.java:16
+        kind: direct
+        confidence: high
+      - key: java//util//logging//Logger//getLogger
+        site: com/shop/Outer.java:11
+        kind: assignment
+        confidence: high
+    call_sites:
+      - caller: com/shop/Outer.java//Outer//report
+        site: com/shop/Outer.java:11
+        reached: true

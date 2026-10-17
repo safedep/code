@@ -1,17 +1,17 @@
 [
   {
-    "version": "5", "path": "main.py", "language": "python",
+    "version": "6", "path": "main.py", "language": "python",
     "imports": [{"line": 1, "module": "pkg", "item": "load", "alias": "load", "kind": "static", "namespace": "pkg//load"}],
     "definitions": [{"key": "main.py", "kind": "module", "name": "main", "start_line": 1, "end_line": 2, "exported": true}],
     "calls": [{"caller": "main.py", "line": 2, "column": 1, "callee": "load", "targets": ["pkg//load"], "kind": "call"}]
   },
   {
-    "version": "5", "path": "pkg/__init__.py", "language": "python",
+    "version": "6", "path": "pkg/__init__.py", "language": "python",
     "imports": [{"line": 1, "module": ".loader", "item": "load", "alias": "load", "kind": "static", "namespace": "//loader//load"}],
     "definitions": [{"key": "pkg/__init__.py", "kind": "module", "name": "__init__", "start_line": 1, "end_line": 1, "exported": true}]
   },
   {
-    "version": "5", "path": "pkg/loader.py", "language": "python",
+    "version": "6", "path": "pkg/loader.py", "language": "python",
     "imports": [{"line": 1, "module": "yaml", "alias": "yaml", "kind": "static", "namespace": "yaml"}],
     "definitions": [
       {"key": "pkg/loader.py", "kind": "module", "name": "loader", "start_line": 1, "end_line": 4, "exported": true},

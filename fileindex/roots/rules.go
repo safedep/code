@@ -57,8 +57,8 @@ type Rule struct {
 	Match    Match  `yaml:"match"`
 }
 
-// Match holds one match key. Annotation parses, and it matches nothing
-// until the index records the annotations of Java.
+// Match holds one match key. Annotation matches as Decorator does, on the
+// annotations of Java that the index holds as decorators.
 type Match struct {
 	Definition   *DefinitionMatch `yaml:"definition,omitempty"`
 	Decorator    []string         `yaml:"decorator,omitempty"`
@@ -73,8 +73,7 @@ type Match struct {
 
 // DefinitionMatch matches a definition by name and by the name of its
 // class. InPackage names the package clause of the file, as main for Go.
-// Static matches nothing until the index records the static methods of
-// Java.
+// Static matches a static method of Java.
 type DefinitionMatch struct {
 	Name      string `yaml:"name"`
 	Parent    string `yaml:"parent,omitempty"`

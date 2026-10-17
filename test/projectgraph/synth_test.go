@@ -83,6 +83,28 @@ var synthExternals = map[core.LanguageCode][]externalPackage{
 
 func init() {
 	synthExternals[core.LanguageCodeTypescript] = synthExternals[core.LanguageCodeJavascript]
+	synthExternals[core.LanguageCodeJava] = []externalPackage{
+		{"org/apache/commons/lang3/StringUtils", []string{"isBlank", "isEmpty", "trim", "join", "split", "capitalize", "abbreviate", "leftPad", "rightPad", "replace"}},
+		{"org/apache/commons/io/FileUtils", []string{"readFileToString", "writeStringToFile", "copyFile", "deleteDirectory", "listFiles", "forceMkdir", "moveFile", "sizeOf", "touch", "cleanDirectory"}},
+		{"com/google/common/base/Preconditions", []string{"checkNotNull", "checkArgument", "checkState", "checkElementIndex", "checkPositionIndex", "checkPositionIndexes", "verify", "verifyNotNull", "checkIndex", "checkFromToIndex"}},
+		{"com/google/common/collect/Lists", []string{"newArrayList", "newLinkedList", "partition", "reverse", "transform", "asList", "cartesianProduct", "charactersOf", "newArrayListWithCapacity", "newCopyOnWriteArrayList"}},
+		{"org/slf4j/LoggerFactory", []string{"getLogger", "getILoggerFactory", "getProvider", "reset", "bind", "findServiceProviders", "versionSanityCheck", "reportMultipleBindingAmbiguity", "reportActualBinding", "isAmbiguousProviderList"}},
+		{"com/fasterxml/jackson/databind/ObjectMapper", []string{"readValue", "writeValueAsString", "readTree", "convertValue", "valueToTree", "writeValue", "treeToValue", "createObjectNode", "createArrayNode", "registerModule"}},
+		{"org/yaml/snakeyaml/Yaml", []string{"load", "loadAs", "loadAll", "dump", "dumpAll", "dumpAs", "compose", "composeAll", "parse", "serialize"}},
+		{"org/apache/commons/codec/digest/DigestUtils", []string{"md5Hex", "sha1Hex", "sha256Hex", "sha512Hex", "md5", "sha1", "sha256", "sha512", "getDigest", "updateDigest"}},
+		{"org/apache/http/client/utils/URIBuilder", []string{"setScheme", "setHost", "setPort", "setPath", "addParameter", "setParameter", "build", "setFragment", "setUserInfo", "clearParameters"}},
+		{"com/google/gson/Gson", []string{"toJson", "fromJson", "toJsonTree", "getAdapter", "newJsonWriter", "newJsonReader", "getDelegateAdapter", "htmlSafe", "serializeNulls", "excluder"}},
+		{"org/springframework/util/StringUtils", []string{"hasText", "hasLength", "tokenizeToStringArray", "collectionToDelimitedString", "cleanPath", "getFilename", "applyRelativePath", "capitalize", "uncapitalize", "trimWhitespace"}},
+		{"org/apache/commons/collections4/CollectionUtils", []string{"isEmpty", "isNotEmpty", "union", "intersection", "subtract", "filter", "transform", "select", "collect", "containsAny"}},
+		{"io/jsonwebtoken/Jwts", []string{"builder", "parser", "parserBuilder", "header", "claims", "jwsHeader", "SIG", "ENC", "KEY", "ZIP"}},
+		{"org/bouncycastle/util/encoders/Hex", []string{"encode", "decode", "toHexString", "decodeStrict", "encodeTo", "decodeTo", "getEncoder", "getDecoder", "encodedLength", "decodedLength"}},
+		{"org/jsoup/Jsoup", []string{"parse", "connect", "clean", "isValid", "parseBodyFragment", "newSession", "parseFile", "parseUrl", "parseStream", "parseHtml"}},
+		{"freemarker/template/TemplateUtil", []string{"process", "getTemplate", "setTemplateLoader", "setDefaultEncoding", "setObjectWrapper", "setSetting", "getSetting", "clearTemplateCache", "removeTemplateFromCache", "getVersion"}},
+		{"org/apache/logging/log4j/LogManager", []string{"getLogger", "getRootLogger", "getContext", "shutdown", "getFormatterLogger", "exists", "getFactory", "setFactory", "hasShutdownHook", "getRootContext"}},
+		{"com/zaxxer/hikari/HikariUtil", []string{"getConnection", "close", "isRunning", "evictConnection", "suspendPool", "resumePool", "setMetricRegistry", "setHealthCheckRegistry", "validate", "unwrap"}},
+		{"org/h2/tools/Server", []string{"createTcpServer", "createWebServer", "createPgServer", "start", "stop", "shutdownTcpServer", "openBrowser", "startWebServer", "main", "runTool"}},
+		{"okhttp3/HttpUrl", []string{"parse", "get", "defaultPort", "newBuilder", "resolve", "redact", "topPrivateDomain", "uri", "url", "queryParameter"}},
+	}
 	synthExternals[core.LanguageCodeGo] = []externalPackage{
 		{"github.com/spf13/cobra", []string{"OnInitialize", "MarkFlagRequired", "ExactArgs", "MinimumNArgs", "NoArgs", "ArbitraryArgs", "CheckErr", "AddTemplateFunc", "Eq", "Gt"}},
 		{"github.com/spf13/viper", []string{"Get", "GetString", "GetInt", "GetBool", "Set", "SetDefault", "ReadInConfig", "AutomaticEnv", "BindEnv", "Unmarshal"}},
@@ -156,6 +178,7 @@ var entryFiles = map[core.LanguageCode]int{
 	core.LanguageCodeJavascript: 1,
 	core.LanguageCodeTypescript: 2,
 	core.LanguageCodeGo:         1,
+	core.LanguageCodeJava:       1,
 }
 
 // generate makes the shape of a project with files source files: the
@@ -251,6 +274,8 @@ func (p *synthProject) write(dir string) (int, error) {
 		p.renderTypeScript(files)
 	case core.LanguageCodeGo:
 		p.renderGo(files)
+	case core.LanguageCodeJava:
+		p.renderJava(files)
 	default:
 		return 0, fmt.Errorf("no template for %s", p.language)
 	}
@@ -263,7 +288,7 @@ func (p *synthProject) write(dir string) (int, error) {
 		if err := os.WriteFile(file, []byte(text), 0o644); err != nil {
 			return 0, err
 		}
-		if ext := filepath.Ext(name); ext == ".py" || ext == ".js" || ext == ".ts" || ext == ".go" {
+		if ext := filepath.Ext(name); ext == ".py" || ext == ".js" || ext == ".ts" || ext == ".go" || ext == ".java" {
 			sources++
 		}
 	}
@@ -1036,6 +1061,178 @@ func (p *synthProject) goModule(m *synthModule, ext []externalPackage) string {
 		l.add(1, "}")
 	}
 	l.add(1, "return service.%s(argv)", goMethod(m.methods[0]))
+	l.add(0, "}")
+	return l.String()
+}
+
+// javaRoot holds the sources of the generated Java project.
+const javaRoot = "src/main/java/bench/"
+
+func (p *synthProject) javaPackage(pkg int) string { return "bench." + p.pkgName(pkg) }
+
+// javaClassName returns the class of a module, as Go does with the index of
+// the module, because the modules of a package share one namespace.
+func javaClassName(m *synthModule) string { return goClass(m) }
+
+func javaHelper(m *synthModule, i int) string {
+	return fmt.Sprintf("%s%02d", camel(m.helpers[i]), m.idx)
+}
+
+func (p *synthProject) renderJava(files map[string]string) {
+	ext := synthExternals[core.LanguageCodeJava]
+	for _, pkg := range p.packages {
+		for _, m := range pkg {
+			files[fmt.Sprintf("%s%s/%s.java", javaRoot, p.pkgName(m.pkg), javaClassName(m))] = p.javaModule(m, ext)
+		}
+		first, last := pkg[0], pkg[len(pkg)-1]
+		files[fmt.Sprintf("%s%s/Package.java", javaRoot, p.pkgName(first.pkg))] = fmt.Sprintf(
+			"package %s;\n\npublic final class Package {\n    public static Object run(String[] argv) {\n        return %s.run%02d(argv);\n    }\n}\n",
+			p.javaPackage(first.pkg), javaClassName(first), first.idx)
+
+		var test lines
+		test.add(0, "package %s;", p.javaPackage(last.pkg))
+		test.add(0, "")
+		test.add(0, "import org.junit.jupiter.api.Test;")
+		test.add(0, "")
+		test.add(0, "class %sTest {", javaClassName(last))
+		test.add(1, "@Test")
+		test.add(1, "void runs() {")
+		test.add(2, "%s.run%02d(new String[] {\"input.yaml\"});", javaClassName(last), last.idx)
+		test.add(2, "%s.%s(1);", javaClassName(last), javaHelper(last, 0))
+		test.add(1, "}")
+		test.add(0, "}")
+		files[fmt.Sprintf("src/test/java/bench/%s/%sTest.java", p.pkgName(last.pkg), javaClassName(last))] = test.String()
+	}
+
+	var main lines
+	main.add(0, "package bench;")
+	main.add(0, "")
+	main.add(0, "public class App {")
+	main.add(1, "public static void main(String[] args) {")
+	for _, pkg := range p.packages {
+		main.add(2, "%s.Package.run(args);", p.javaPackage(pkg[0].pkg))
+	}
+	main.add(1, "}")
+	main.add(0, "}")
+	files[javaRoot+"App.java"] = main.String()
+}
+
+func (p *synthProject) javaModule(m *synthModule, ext []externalPackage) string {
+	var l lines
+	l.add(0, "package %s;", p.javaPackage(m.pkg))
+	l.add(0, "")
+	imported := map[string]string{}
+	for _, e := range m.externals {
+		pkg := ext[e.pkg]
+		if _, ok := imported[pkg.name]; ok {
+			continue
+		}
+		imported[pkg.name] = pkg.name[strings.LastIndex(pkg.name, "/")+1:]
+		l.add(0, "import %s;", strings.ReplaceAll(pkg.name, "/", "."))
+	}
+	for _, d := range m.deps {
+		if dep := p.modules[d]; dep.pkg != m.pkg {
+			l.add(0, "import %s.%s;", p.javaPackage(dep.pkg), javaClassName(dep))
+		}
+	}
+	l.add(0, "import java.util.ArrayList;")
+	l.add(0, "import java.util.List;")
+	l.add(0, "")
+	call := func(e externalCall) string {
+		return imported[ext[e.pkg].name] + "." + ext[e.pkg].funcs[e.fn]
+	}
+
+	class := javaClassName(m)
+	l.add(0, "public class %s {", class)
+	if len(m.deps) > 0 {
+		l.add(1, "private final %s store;", javaClassName(p.modules[m.deps[0]]))
+	}
+	l.add(1, "private final Object config;")
+	l.add(1, "private final List<Listener%02d> items = new ArrayList<>();", m.idx)
+	l.add(0, "")
+	l.add(1, "public %s(Object config) {", class)
+	l.add(2, "this.config = config;")
+	if len(m.deps) > 0 {
+		l.add(2, "this.store = new %s(config);", javaClassName(p.modules[m.deps[0]]))
+	}
+	l.add(1, "}")
+	for i, w := range m.methods {
+		l.add(0, "")
+		if i == len(m.methods)-1 {
+			l.add(1, "public int %s() {", camel(w))
+			l.add(2, "return items.size();")
+			l.add(1, "}")
+			continue
+		}
+		l.add(1, "public Object %s(Object value) {", camel(w))
+		l.add(2, "Object data = %s(value);", javaHelper(m, i%len(m.helpers)))
+		if i == 0 {
+			l.add(2, "data = %s(data);", call(m.externals[0]))
+		}
+		if i == 1 && len(m.deps) > 0 {
+			l.add(2, "data = store.%s(data);", camel(p.modules[m.deps[0]].methods[0]))
+		}
+		if i == 1 && m.dynamic == dynamicAttribute {
+			l.add(2, "data = getClass().getMethod(String.valueOf(config)).invoke(this, data);")
+		}
+		if i+1 < len(m.methods)-1 {
+			l.add(2, "data = this.%s(data);", camel(m.methods[i+1]))
+		}
+		l.add(2, "for (Listener%02d item : items) {", m.idx)
+		l.add(3, "item.onEvent(data);")
+		l.add(2, "}")
+		l.add(2, "return data;")
+		l.add(1, "}")
+	}
+	l.add(0, "")
+
+	for i := range m.helpers {
+		l.add(1, "public static Object %s(Object value) {", javaHelper(m, i))
+		l.add(2, "if (value == null) {")
+		l.add(3, "throw new IllegalArgumentException(\"%s needs a value\");", javaHelper(m, i))
+		l.add(2, "}")
+		switch {
+		case i+1 < len(m.helpers):
+			l.add(2, "value = %s(value);", javaHelper(m, i+1))
+		case m.sibling >= 0:
+			sib := p.modules[m.sibling]
+			l.add(2, "value = %s.%s(value);", javaClassName(sib), javaHelper(sib, 0))
+		}
+		if i < len(m.externals) && i > 0 {
+			l.add(2, "value = %s(value);", call(m.externals[i]))
+		}
+		if i < len(m.deps) {
+			dep := p.modules[m.deps[i]]
+			l.add(2, "value = %s.%s(value);", javaClassName(dep), javaHelper(dep, 0))
+		}
+		l.add(2, "return String.valueOf(value);")
+		l.add(1, "}")
+		l.add(0, "")
+	}
+
+	l.add(1, "public static Object run%02d(String[] argv) {", m.idx)
+	l.add(2, "%s service = new %s(\"%s\");", class, class, p.modName(m))
+	if m.sibling >= 0 {
+		sib := p.modules[m.sibling]
+		l.add(2, "new %s(null).%s(argv);", javaClassName(sib), camel(sib.methods[0]))
+	}
+	for _, d := range m.deps {
+		dep := p.modules[d]
+		l.add(2, "%s.run%02d(argv);", javaClassName(dep), dep.idx)
+	}
+	if m.dynamic == dynamicImport {
+		l.add(2, "try {")
+		l.add(3, "Class.forName(\"bench.plugins.\" + argv[0]).getMethod(\"run\").invoke(null);")
+		l.add(2, "} catch (ReflectiveOperationException e) {")
+		l.add(3, "throw new IllegalStateException(e);")
+		l.add(2, "}")
+	}
+	l.add(2, "return service.%s(argv);", camel(m.methods[0]))
+	l.add(1, "}")
+	l.add(0, "}")
+	l.add(0, "")
+	l.add(0, "interface Listener%02d {", m.idx)
+	l.add(1, "void onEvent(Object v);")
 	l.add(0, "}")
 	return l.String()
 }

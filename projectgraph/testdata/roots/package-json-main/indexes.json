@@ -1,6 +1,6 @@
 [
   {
-    "version": "5",
+    "version": "6",
     "path": "cli.js",
     "language": "javascript",
     "exports": [
@@ -30,7 +30,7 @@
     ]
   },
   {
-    "version": "5",
+    "version": "6",
     "path": "fmt.js",
     "language": "javascript",
     "exports": [
@@ -60,7 +60,7 @@
     ]
   },
   {
-    "version": "5",
+    "version": "6",
     "path": "index.js",
     "language": "javascript",
     "exports": [
@@ -104,7 +104,7 @@
     ]
   },
   {
-    "version": "5",
+    "version": "6",
     "path": "parser.js",
     "language": "javascript",
     "exports": [

@@ -24,6 +24,8 @@ const maxInstanceHops = 4
 // function in a class becomes a method. The root of the file is the module.
 var definitionKinds = map[string]fidx.DefKind{
 	"class_declaration":              fidx.DefClass,
+	"enum_declaration":               fidx.DefClass,
+	"interface_declaration":          fidx.DefInterface,
 	"abstract_class_declaration":     fidx.DefClass,
 	"class_definition":               fidx.DefClass,
 	"class":                          fidx.DefClass,
@@ -113,14 +115,18 @@ func project(ctx context.Context, tree core.ParseTree) (*fidx.Index, error) {
 		bindings:   map[string]bool{},
 	}
 
-	if p.isGo() {
+	switch {
+	case p.isGo():
 		p.ix.Package = p.goPackage()
+	case p.isJava():
+		p.ix.Package = p.javaPackage()
 	}
 	p.addImports()
 	p.addDefinitions()
 	p.addExports()
 	p.addTruncations()
 	p.addGoSignatures()
+	p.addJavaSignatures()
 	p.walkTree(ctx)
 	p.addDeclaredTypes()
 	if err := p.addClasses(ctx); err != nil {
@@ -303,7 +309,7 @@ func (p *projection) fillDefinition(def *fidx.Definition) {
 		return
 	}
 	scope := fidx.Parent(def.Key)
-	if parent, ok := p.defs[scope]; ok && parent.Kind == fidx.DefClass {
+	if parent, ok := p.defs[scope]; ok && (parent.Kind == fidx.DefClass || parent.Kind == fidx.DefInterface) {
 		def.Parent = scope
 		if def.Kind == fidx.DefFunction {
 			def.Kind = fidx.DefMethod
@@ -311,6 +317,10 @@ func (p *projection) fillDefinition(def *fidx.Definition) {
 		if def.Kind == fidx.DefMethod && def.Name == constructorNames[p.ix.Language] {
 			def.Kind = fidx.DefConstructor
 		}
+	}
+	if p.isJava() {
+		def.Decorators = p.javaAnnotations(p.syntax[def.Key])
+		return
 	}
 	def.Decorators = p.decorators(p.syntax[def.Key])
 }
@@ -397,6 +407,14 @@ func (p *projection) classBases(ctx context.Context) (map[uint32][]string, error
 		}
 		return bases, nil
 	}
+	if p.isJava() {
+		for _, node := range p.syntax {
+			if node != nil {
+				bases[node.StartByte()] = p.javaBases(node)
+			}
+		}
+		return bases, nil
+	}
 
 	classes, err := resolvers.ResolveClasses(ctx, p.tree)
 	if err != nil {
@@ -441,6 +459,11 @@ func (p *projection) addCalls() {
 			targets := p.targets(ref.Targets)
 			if ref.Unbound {
 				targets = p.rebind(key, ref.Method)
+				// A Java name that the file does not define keeps its
+				// name with no type arguments, as Box for new Box<>().
+				if len(targets) == 0 && p.isJava() {
+					targets = []string{ref.CalleeNamespace}
+				}
 			}
 			targets = p.throughRequire(ref.Receiver, targets)
 			p.ix.Calls = append(p.ix.Calls, fidx.Call{
@@ -577,14 +600,15 @@ func (p *projection) throughInstance(target string, hops int) []string {
 // rebind binds a name that the scope chain of the build did not bind to a
 // definition of the file, as a function that the file declares after the
 // call. It looks from the scope of the caller out to the module, and skips
-// a class scope, as the languages do. A name with no definition has no
-// target.
+// a class scope, as the languages do. A Java class scope holds the methods
+// and the nested classes that the class calls with no receiver. A name
+// with no definition has no target.
 func (p *projection) rebind(caller, name string) []string {
 	if name == "" || !fidx.HasKeyPrefix(caller, p.cg.FileName) {
 		return nil
 	}
 	for scope := caller; ; {
-		if def, ok := p.defs[scope]; ok && (def.Kind != fidx.DefClass || scope == caller) {
+		if def, ok := p.defs[scope]; ok && (def.Kind != fidx.DefClass || scope == caller || p.isJava()) {
 			if _, bound := p.defs[fidx.Join(scope, name)]; bound {
 				return []string{fidx.Join(scope, name)}
 			}

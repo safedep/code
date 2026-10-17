@@ -42,7 +42,7 @@ func fullIndex() *Index {
 			{
 				Key: "src/app.py//helper", Kind: DefFunction, Name: "helper", StartLine: 14, EndLine: 16,
 				Params: []Typed{{Name: "p", Type: "Parser"}}, Locals: []Typed{{Name: "q", Type: "NewParser", Result: true}},
-				Arity: 2, Variadic: true, Returns: "Parser",
+				Arity: 2, Variadic: true, Returns: "Parser", Static: true,
 			},
 			{Key: "src/app.py//Shape", Kind: DefInterface, Name: "Shape", StartLine: 20, EndLine: 20},
 		},
@@ -72,6 +72,7 @@ func fullIndex() *Index {
 			{Kind: FlagMonkeyPatch, Line: 18},
 			{Kind: FlagDecoratorWrap, Line: 6},
 			{Kind: FlagParseError, Line: 20},
+			{Kind: FlagInjection, Line: 4},
 		},
 		Truncated: []Truncation{
 			{Kind: TruncationNodes, Namespace: "src/app.py//helper", Line: 15},

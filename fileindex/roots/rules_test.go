@@ -20,7 +20,7 @@ func TestDefaultRules(t *testing.T) {
 		"python.project-scripts", "python.setup-py", "procfile", "dockerfile",
 		"python.flask.route", "python.fastapi.route", "python.django.urls", "python.click.command",
 		"python.click.subcommand", "python.typer.command", "node.express.route", "node.koa.route",
-		"node.commander.action", "node.next.route", "node.serverless.handler", "test.files",
+		"node.commander.action", "node.next.route", "node.serverless.handler", "java.spring.web", "test.files",
 	}, ids)
 }
 
