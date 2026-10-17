@@ -110,6 +110,15 @@
         "path": "packages/core/lib/index.js",
         "line": 1
       }
+    },
+    {
+      "key": "packages/core/lib/index.js//start",
+      "kind": "manifest",
+      "rule": "node.package-json",
+      "site": {
+        "path": "packages/core/lib/index.js",
+        "line": 1
+      }
     }
   ],
   "files": {
@@ -123,6 +132,6 @@
     "nodes": 6,
     "edges": 5,
     "unresolved": 0,
-    "roots": 1
+    "roots": 2
   }
 }

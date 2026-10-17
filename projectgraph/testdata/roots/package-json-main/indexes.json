@@ -1,0 +1,136 @@
+[
+  {
+    "version": "1",
+    "path": "cli.js",
+    "language": "javascript",
+    "exports": [
+      {
+        "name": "helper",
+        "target": "cli.js//helper",
+        "line": 1
+      }
+    ],
+    "definitions": [
+      {
+        "key": "cli.js",
+        "kind": "module",
+        "name": "cli",
+        "start_line": 1,
+        "end_line": 2,
+        "exported": true
+      },
+      {
+        "key": "cli.js//helper",
+        "kind": "function",
+        "name": "helper",
+        "start_line": 1,
+        "end_line": 1,
+        "exported": true
+      }
+    ]
+  },
+  {
+    "version": "1",
+    "path": "fmt.js",
+    "language": "javascript",
+    "exports": [
+      {
+        "name": "format",
+        "target": "fmt.js//format",
+        "line": 1
+      }
+    ],
+    "definitions": [
+      {
+        "key": "fmt.js",
+        "kind": "module",
+        "name": "fmt",
+        "start_line": 1,
+        "end_line": 2,
+        "exported": true
+      },
+      {
+        "key": "fmt.js//format",
+        "kind": "function",
+        "name": "format",
+        "start_line": 1,
+        "end_line": 1,
+        "exported": true
+      }
+    ]
+  },
+  {
+    "version": "1",
+    "path": "index.js",
+    "language": "javascript",
+    "exports": [
+      {
+        "name": "readConfig",
+        "target": "index.js//readConfig",
+        "line": 1
+      },
+      {
+        "name": "parse",
+        "target": "",
+        "from": "./parser.js",
+        "item": "parse",
+        "line": 4
+      },
+      {
+        "name": "*",
+        "target": "",
+        "from": "./fmt.js",
+        "item": "*",
+        "line": 5
+      }
+    ],
+    "definitions": [
+      {
+        "key": "index.js",
+        "kind": "module",
+        "name": "index",
+        "start_line": 1,
+        "end_line": 6,
+        "exported": true
+      },
+      {
+        "key": "index.js//readConfig",
+        "kind": "function",
+        "name": "readConfig",
+        "start_line": 1,
+        "end_line": 3,
+        "exported": true
+      }
+    ]
+  },
+  {
+    "version": "1",
+    "path": "parser.js",
+    "language": "javascript",
+    "exports": [
+      {
+        "name": "parse",
+        "target": "parser.js//parse",
+        "line": 1
+      }
+    ],
+    "definitions": [
+      {
+        "key": "parser.js",
+        "kind": "module",
+        "name": "parser",
+        "start_line": 1,
+        "end_line": 2,
+        "exported": true
+      },
+      {
+        "key": "parser.js//parse",
+        "kind": "function",
+        "name": "parse",
+        "start_line": 1,
+        "end_line": 1,
+        "exported": true
+      }
+    ]
+  }
+]

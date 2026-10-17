@@ -43,6 +43,8 @@ type Project struct {
 	JS     *modules.JavaScript
 	// Defined reports whether a key names a node of the graph.
 	Defined func(key string) bool
+	// Exports returns the keys of the names that a file exports.
+	Exports func(path string) []string
 }
 
 // Find returns the roots that the rules mark, sorted, and the manifests and
@@ -191,32 +193,54 @@ func (f *finder) matchManifest(r rules.Rule) {
 	}
 }
 
+// matchPackageJSON marks the module top level of each entry file. The main,
+// module and exports fields name the entry of a library, and the code of
+// another package calls what it exports. So the exports of such an entry
+// are roots too. A bin entry is a program, and only its top level runs.
 func (f *finder) matchPackageJSON(r rules.Rule) {
 	for _, pj := range f.JS.Packages() {
-		var entries []string
+		var programs, libraries []string
 		for _, field := range r.Match.Manifest.Fields {
 			switch field {
 			case "main":
-				entries = append(entries, pj.Main)
+				libraries = append(libraries, pj.Main)
 			case "module":
-				entries = append(entries, pj.Module)
+				libraries = append(libraries, pj.Module)
 			case "bin":
-				entries = append(entries, pj.BinFiles()...)
+				programs = append(programs, pj.BinFiles()...)
 			case "exports":
-				entries = append(entries, pj.ExportFiles()...)
+				libraries = append(libraries, pj.ExportFiles()...)
 			}
 		}
-		for _, entry := range entries {
-			if entry == "" {
-				continue
-			}
-			if base, ok := modules.Join(pj.Dir, entry); ok {
-				if file, ok := f.JS.File(base, true); ok {
-					f.addFile(r, file)
+		for _, file := range f.entryFiles(pj.Dir, programs) {
+			f.addFile(r, file)
+		}
+		for _, file := range f.entryFiles(pj.Dir, libraries) {
+			f.addFile(r, file)
+			if lang, ok := f.languages[file]; ok && r.Applies(lang) {
+				for _, key := range f.Exports(file) {
+					f.add(r, key)
 				}
 			}
 		}
 	}
+}
+
+// entryFiles returns the project files that the entries of a package.json
+// in dir name.
+func (f *finder) entryFiles(dir string, entries []string) []string {
+	var files []string
+	for _, entry := range entries {
+		if entry == "" {
+			continue
+		}
+		if base, ok := modules.Join(dir, entry); ok {
+			if file, ok := f.JS.File(base, true); ok {
+				files = append(files, file)
+			}
+		}
+	}
+	return files
 }
 
 // addPythonEntry marks the target of a module:function entry point. A

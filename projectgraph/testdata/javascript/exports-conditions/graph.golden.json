@@ -110,7 +110,25 @@
       }
     },
     {
+      "key": "lib/cjs/index.cjs//x",
+      "kind": "manifest",
+      "rule": "node.package-json",
+      "site": {
+        "path": "lib/cjs/index.cjs",
+        "line": 1
+      }
+    },
+    {
       "key": "lib/esm/index.mjs",
+      "kind": "manifest",
+      "rule": "node.package-json",
+      "site": {
+        "path": "lib/esm/index.mjs",
+        "line": 1
+      }
+    },
+    {
+      "key": "lib/esm/index.mjs//x",
       "kind": "manifest",
       "rule": "node.package-json",
       "site": {
@@ -131,6 +149,6 @@
     "nodes": 7,
     "edges": 4,
     "unresolved": 0,
-    "roots": 2
+    "roots": 4
   }
 }

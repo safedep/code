@@ -537,6 +537,16 @@ func TestBuildRoots(t *testing.T) {
 			roots: []string{"bin/cli.js manifest node.package-json"},
 		},
 		{
+			name: "roots/package-json-main",
+			roots: []string{
+				"cli.js manifest node.package-json",
+				"fmt.js//format manifest node.package-json",
+				"index.js manifest node.package-json",
+				"index.js//parse manifest node.package-json",
+				"index.js//readConfig manifest node.package-json",
+			},
+		},
+		{
 			name: "roots/library-surface",
 			roots: []string{
 				"lib/api.py library-surface library-surface",

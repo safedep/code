@@ -1,6 +1,8 @@
 package projectgraph
 
 import (
+	"slices"
+
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/fileindex/roots"
 	pgroots "github.com/safedep/code/projectgraph/roots"
@@ -25,6 +27,7 @@ func (b *builder) markRoots() {
 		Python:  b.python,
 		JS:      b.js,
 		Defined: func(key string) bool { return b.g.Nodes[key] != nil },
+		Exports: func(p string) []string { return b.exportKeys(p, map[string]bool{}) },
 	}, b.rules)
 	b.problems = append(b.problems, problems...)
 
@@ -54,4 +57,28 @@ func (b *builder) markRoots() {
 func (b *builder) addRoot(key string, kind roots.Kind, rule string) {
 	n := b.g.Nodes[key]
 	b.g.Roots = append(b.g.Roots, Root{Key: key, Kind: kind, Rule: rule, Site: Site{Path: n.Path, Line: n.Line}})
+}
+
+// exportKeys returns the keys of the names that a file exports. A name that
+// the file gives on from another file is an export node, so a path from the
+// root keeps the hop. An export * gives the names of its module.
+func (b *builder) exportKeys(p string, seen map[string]bool) []string {
+	sc := b.scopes[p]
+	if sc == nil || seen[p] || len(seen) > b.opts.maxExportHops {
+		return nil
+	}
+	seen[p] = true
+	var keys []string
+	for name := range sc.exports {
+		if key, fail := b.resolveName(p, name, 0); fail == nil {
+			keys = append(keys, key)
+		}
+	}
+	for _, st := range sc.stars {
+		if mod, _, ok := b.resolveModule(sc.ix, st.spec); ok {
+			keys = append(keys, b.exportKeys(mod, seen)...)
+		}
+	}
+	slices.Sort(keys)
+	return slices.Compact(keys)
 }
