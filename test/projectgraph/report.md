@@ -39,9 +39,23 @@ step.
 | JavaScript | after | swarm-js | 0.821 (156/190) | 0.706 (204/289) | 0.358 (110/307) | 0.263 | 4.48 s | 0.26 s | 0.28 s | 36 ms | 77 / 41 / 43 / 8 MiB |
 | TypeScript | before | none | n/a | n/a | n/a | 0.125 | 7.02 s | 0.27 s | 0.20 s | 31 ms | 66 / 32 / 34 / 5 MiB |
 | TypeScript | after | none | n/a | n/a | n/a | 0.125 | 6.94 s | 0.28 s | 0.23 s | 24 ms | 66 / 35 / 35 / 5 MiB |
+| Python | step 27 | pycg-micro | 0.954 (145/152) | 0.708 (187/264) | 0.340 (85/250) | 0.159 | 4.15 s | 0.33 s | 0.40 s | 37 ms | 81 / 45 / 56 / 6 MiB |
+| JavaScript | step 27 | swarm-js | 0.821 (156/190) | 0.706 (204/289) | 0.358 (110/307) | 0.263 | 4.80 s | 0.29 s | 0.35 s | 29 ms | 73 / 41 / 49 / 8 MiB |
+| TypeScript | step 27 | none | n/a | n/a | n/a | 0.094 | 7.38 s | 0.33 s | 0.34 s | 27 ms | 68 / 34 / 49 / 4 MiB |
 
 Python is now at 0.940, just under the precision gate of the design (0.95
-for `high` and `medium` edges). JavaScript is at 0.821. The section on the
+for `high` and `medium` edges). After step 27 it is 0.954, and its recall is
+0.708. JavaScript stays at 0.821 and 0.706.
+
+The step 27 rows come from one more run of the benchmark at 1,000 files.
+The declared types of TypeScript narrow the calls on a typed field, as
+`this.store.fetch(x)`, so the synthetic TypeScript project has 2,860 and
+not 3,781 unresolved sites and 31,486 and not 38,695 edges. It now finds
+199 of 200 targets. The one that it does not find is uncertain, because a
+call on the module of a computed import is ambiguous. Its path of before
+went through a `name` edge from `this.store.decodeToken(x)` to a function
+of another module, and the declared type of `store` shows that the path is
+false. The link step is 0.07 to 0.11 s slower per 1,000 files. JavaScript is at 0.821. The section on the
 public sets names the causes. The unresolved rate of the sets went up,
 because a call of a bare name with no binding is now a record and not an
 external edge.
@@ -59,7 +73,7 @@ targets in Python and JavaScript and 199 in TypeScript.
 The synthetic unresolved rate depends on the template. Most of its
 unresolved sites are calls on a field or a loop variable, as
 `self.items.append(x)`, `this.store.fetch(x)` and `item.notify(x)`. The link
-step has no field types before step 27, so these stay unresolved by design.
+step had no field types before step 27, so these stayed unresolved by design.
 
 ### 1,000 files
 
@@ -187,30 +201,70 @@ which has no license. The PyCG repository itself has 119 cases.
 
 ### Totals
 
-| Metric | pycg-micro before | pycg-micro after | swarm-js before | swarm-js after |
-| --- | --- | --- | --- | --- |
-| Cases with the exact pairs | 0.378 (45/119) | 0.445 (53/119) | 0.262 (33/126) | 0.333 (42/126) |
-| Precision | 0.741 (143/193) | 0.694 (184/265) | 0.618 (152/246) | 0.664 (204/307) |
-| Precision, high and medium | 0.735 (139/189) | 0.940 (142/151) | 0.618 (152/246) | 0.821 (156/190) |
-| Recall | 0.542 (143/264) | 0.697 (184/264) | 0.526 (152/289) | 0.706 (204/289) |
-| Unresolved rate | 0.204 (51/250) | 0.344 (86/250) | 0.189 (58/307) | 0.358 (110/307) |
+"Step 27" is the run after the `cha` and `field` edges and the declared
+types of plan step 27, on 2026-10-17. The benchmark did not run again.
+
+| Metric | pycg-micro before | pycg-micro after | pycg-micro step 27 | swarm-js before | swarm-js after | swarm-js step 27 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Cases with the exact pairs | 0.378 (45/119) | 0.445 (53/119) | 0.454 (54/119) | 0.262 (33/126) | 0.333 (42/126) | 0.333 (42/126) |
+| Precision | 0.741 (143/193) | 0.694 (184/265) | 0.703 (187/266) | 0.618 (152/246) | 0.664 (204/307) | 0.664 (204/307) |
+| Precision, high and medium | 0.735 (139/189) | 0.940 (142/151) | 0.954 (145/152) | 0.618 (152/246) | 0.821 (156/190) | 0.821 (156/190) |
+| Recall | 0.542 (143/264) | 0.697 (184/264) | 0.708 (187/264) | 0.526 (152/289) | 0.706 (204/289) | 0.706 (204/289) |
+| Unresolved rate | 0.204 (51/250) | 0.344 (86/250) | 0.340 (85/250) | 0.189 (58/307) | 0.358 (110/307) | 0.358 (110/307) |
 
 ### Precision per edge kind
 
-| Kind | pycg-micro before | pycg-micro after | swarm-js before | swarm-js after |
-| --- | --- | --- | --- | --- |
-| `direct` | 0.678 (99/146) | 0.934 (99/106) | 0.569 (112/197) | 0.810 (115/142) |
-| `member` | 0.938 (30/32) | 0.943 (33/35) | 0.929 (26/28) | 0.931 (27/29) |
-| `assignment` | 0.923 (12/13) | 1.000 (12/12) | 0.667 (14/21) | 0.737 (14/19) |
-| `wildcard` | 1.000 (4/4) | 1.000 (4/4) | none | none |
-| `name` | none | 0.400 (2/5) | none | 0.375 (3/8) |
-| `reference` | none | 0.405 (47/116) | none | 0.470 (62/132) |
+| Kind | pycg-micro before | pycg-micro after | pycg-micro step 27 | swarm-js before | swarm-js after | swarm-js step 27 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `direct` | 0.678 (99/146) | 0.934 (99/106) | 0.934 (99/106) | 0.569 (112/197) | 0.810 (115/142) | 0.810 (115/142) |
+| `member` | 0.938 (30/32) | 0.943 (33/35) | 1.000 (36/36) | 0.929 (26/28) | 0.931 (27/29) | 0.931 (27/29) |
+| `assignment` | 0.923 (12/13) | 1.000 (12/12) | 1.000 (12/12) | 0.667 (14/21) | 0.737 (14/19) | 0.737 (14/19) |
+| `wildcard` | 1.000 (4/4) | 1.000 (4/4) | 1.000 (4/4) | none | none | none |
+| `cha` | none | none | none | none | none | none |
+| `field` | none | none | none | none | none | 0.429 (3/7) |
+| `name` | none | 0.400 (2/5) | 0.400 (2/5) | none | 0.375 (3/8) | none |
+| `reference` | none | 0.405 (47/116) | 0.405 (47/116) | none | 0.470 (62/132) | 0.470 (62/132) |
 
-The sets make no `cha` or `field` edge, because the link step has no such
-edge before step 27. A `reference` edge goes from the definition that holds
-the value, as `main` in `run(func)`. The sets name the function that calls
-the value, as `run`, so most `reference` pairs count as false. They are
-`low`, so the gate does not count them.
+A `reference` edge goes from the definition that holds the value, as
+`main` in `run(func)`. The sets name the function that calls the value, as
+`run`, so most `reference` pairs count as false. They are `low`, so the
+gate does not count them.
+
+### Recall per edge kind
+
+The share of the `callgraph.json` pairs that an edge of the kind finds. A
+pair that edges of two kinds find counts for both. The first run did not
+measure it.
+
+| Kind | pycg-micro after | pycg-micro step 27 | swarm-js after | swarm-js step 27 |
+| --- | --- | --- | --- | --- |
+| `direct` | 0.375 (99/264) | 0.375 (99/264) | 0.398 (115/289) | 0.398 (115/289) |
+| `member` | 0.125 (33/264) | 0.136 (36/264) | 0.093 (27/289) | 0.093 (27/289) |
+| `assignment` | 0.045 (12/264) | 0.045 (12/264) | 0.048 (14/289) | 0.048 (14/289) |
+| `wildcard` | 0.015 (4/264) | 0.015 (4/264) | none | none |
+| `cha` | none | none | none | none |
+| `field` | none | none | none | 0.010 (3/289) |
+| `name` | 0.008 (2/264) | 0.008 (2/264) | 0.010 (3/289) | none |
+| `reference` | 0.178 (47/264) | 0.178 (47/264) | 0.215 (62/289) | 0.215 (62/289) |
+
+### What step 27 changed
+
+- Neither set makes a `cha` edge. Their class cases make each instance by
+  a call of the class, as `b = B()`, and such a receiver gets no `cha`
+  edge. The calls on `self` and `this` in the sets reach a method that no
+  subclass overrides, or an attribute that no class defines as a method.
+  So the sets do not measure `cha`. The hand-written `subclass-override`
+  and `interface` cases do, and each `cha` edge there is true.
+- In swarm-js the 8 `name` edges of member calls are now 7 `field`
+  edges. The edge to a plain function that no property holds is gone, and
+  the 3 true pairs stay. A JavaScript call of a bare name keeps the `name`
+  edge, and swarm-js has none.
+- The method lookup now reads the MRO, and a call on `self` whose method
+  a base in another file defines now resolves. The two false `member`
+  pairs of pycg-micro are gone, and three true pairs are new. `classes`,
+  `external` and `mro` each find one more pair.
+- The high and medium precision of Python is now 0.954, over the gate of
+  0.95. JavaScript stays at 0.821.
 
 ### Recall per callee
 
