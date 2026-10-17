@@ -1,0 +1,55 @@
+name: Project Graph Benchmark
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      files:
+        description: "Project sizes in files, comma separated"
+        required: false
+        default: "1000"
+
+permissions:
+  contents: read
+
+jobs:
+  bench:
+    timeout-minutes: 60
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568
+        with:
+          go-version-file: "go.mod"
+          check-latest: true
+
+      - name: Fetch SWARM-JS
+        run: echo "PROJECTGRAPH_SWARM_JS=$(bash scripts/fetch_swarm_js.sh "$RUNNER_TEMP/swarm-cg")" >> "$GITHUB_ENV"
+
+      - name: Score the public sets
+        env:
+          PROJECTGRAPH_PUBLIC_REPORT: ${{ runner.temp }}/public.txt
+        run: go test -tags projectgraph -run TestPublicSets -count=1 ./test/projectgraph/
+
+      - name: Run the benchmark
+        env:
+          PROJECTGRAPH_BENCH_FILES: ${{ inputs.files || '1000' }}
+        run: |
+          set -o pipefail
+          go test -tags projectgraph -run XXX -bench . -benchtime 1x -timeout 50m ./test/projectgraph/ | tee "$RUNNER_TEMP/bench.txt"
+
+      - name: Write the summary
+        run: |
+          {
+            echo "## Public sets"
+            echo '```'
+            cat "$RUNNER_TEMP/public.txt"
+            echo '```'
+            echo "## Benchmark"
+            echo '```'
+            grep -E '^(cpu|Benchmark)' "$RUNNER_TEMP/bench.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
