@@ -476,7 +476,7 @@ func (b *builder) linkClassInits(ix *fileindex.Index) {
 			continue
 		}
 		for _, from := range append([]string{c.Key}, c.Methods...) {
-			if from == init || b.g.Nodes[from] == nil {
+			if from == init || from != c.Key && !b.isMethod(from) {
 				continue
 			}
 			n := b.g.Nodes[from]

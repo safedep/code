@@ -21,7 +21,9 @@ var javaProfile = languageProfile{
 	processors: map[string]nodeProcessor{
 		"assignment_expression":           assignmentProcessor,
 		"class_declaration":               classDefinitionProcessor,
+		"compact_constructor_declaration": javaConstructorProcessor,
 		"constructor_declaration":         javaConstructorProcessor,
+		"enum_constant":                   enumConstantProcessor,
 		"enum_declaration":                classDefinitionProcessor,
 		"explicit_constructor_invocation": explicitConstructorInvocationProcessor,
 		"interface_declaration":           classDefinitionProcessor,
@@ -30,6 +32,7 @@ var javaProfile = languageProfile{
 		"method_declaration":              javaMethodDeclarationProcessor,
 		"method_invocation":               methodInvocationProcessor,
 		"object_creation_expression":      objectCreationExpressionProcessor,
+		"record_declaration":              classDefinitionProcessor,
 		"scoped_type_identifier":          scopedIdentifierProcessor,
 		"ternary_expression":              ternaryExpressionProcessor,
 		"type_arguments":                  skippedProcessor,
@@ -158,6 +161,23 @@ func javaConstructorProcessor(node *sitter.Node, treeData []byte, currentNamespa
 	callGraph.addSyntheticEdge(currentNamespace, namespace, node)
 	callGraph.addDefinition(namespace, node)
 	return processFunctionBody(node, treeData, namespace, callGraph, metadata)
+}
+
+// enumConstantProcessor processes a constant of an enum. A constant with a
+// class body is a class of its own under the enum, as Op//PLUS, so its
+// methods override the methods of the enum. Its arguments run in the scope
+// of the enum.
+func enumConstantProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if node == nil {
+		return newProcessorResult()
+	}
+	if args := node.ChildByFieldName("arguments"); args != nil {
+		resolveCallArguments(args, treeData, currentNamespace, callGraph, metadata)
+	}
+	if node.ChildByFieldName("body") != nil {
+		classDefinitionProcessor(node, treeData, currentNamespace, callGraph, metadata)
+	}
+	return newProcessorResult()
 }
 
 // explicitConstructorInvocationProcessor adds the call of super(...) in a

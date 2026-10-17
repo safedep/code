@@ -239,12 +239,20 @@ func (p *projection) javaLocals(body *sitter.Node) []fidx.Typed {
 }
 
 // javaFields returns the fields of a Java class that declare a class type.
+// The components of a record are fields too.
 func (p *projection) javaFields(class *sitter.Node) []fidx.Typed {
+	var fields []fidx.Typed
+	if components := class.ChildByFieldName("parameters"); class.Type() == "record_declaration" && components != nil {
+		for _, c := range ts.NamedChildren(components) {
+			if typ := p.javaTypeName(c.ChildByFieldName("type")); c.Type() == "formal_parameter" && typ != "" {
+				fields = append(fields, fidx.Typed{Name: p.text(c.ChildByFieldName("name")), Type: typ})
+			}
+		}
+	}
 	body := class.ChildByFieldName("body")
 	if body == nil {
-		return nil
+		return fields
 	}
-	var fields []fidx.Typed
 	for _, member := range ts.NamedChildren(body) {
 		if member.Type() != "field_declaration" {
 			continue
@@ -261,8 +269,15 @@ func (p *projection) javaFields(class *sitter.Node) []fidx.Typed {
 }
 
 // javaBases returns the class that a class extends and the interfaces that
-// it implements, or the interfaces that an interface extends, as written.
+// it implements, or the interfaces that an interface extends, as written. A
+// constant of an enum with a class body extends the enum.
 func (p *projection) javaBases(node *sitter.Node) []string {
+	if node.Type() == "enum_constant" {
+		if enum := node.Parent().Parent(); enum != nil && enum.Type() == "enum_declaration" {
+			return nonEmpty(p.text(enum.ChildByFieldName("name")))
+		}
+		return nil
+	}
 	var bases []string
 	for _, child := range ts.NamedChildren(node) {
 		switch child.Type() {

@@ -1,0 +1,69 @@
+source: safedep:hand
+description: Each constant of Op has a class body with its own apply. The index keys each body under its constant, as Op//PLUS//apply, with the enum as its base. So op.apply on a value of the type Op gets a cha edge to each apply. Point is a record, which is a class, so its method norm is Point//norm and new Point names the class.
+roots:
+  - key: com/calc/Main.java//Main//main
+    kind: main
+    rule: java.main
+edges:
+  - from: com/calc/Main.java//Main//main
+    to: com/calc/Op.java//Op//PLUS//apply
+    kind: cha
+    confidence: medium
+    site: com/calc/Main.java:6
+  - from: com/calc/Main.java//Main//main
+    to: com/calc/Op.java//Op//POW//apply
+    kind: cha
+    confidence: medium
+    site: com/calc/Main.java:6
+  - from: com/calc/Main.java//Main//main
+    to: com/calc/Point.java//Point
+    kind: direct
+    confidence: high
+    site: com/calc/Main.java:7
+  - from: com/calc/Main.java//Main//main
+    to: com/calc/Point.java//Point//norm
+    kind: member
+    confidence: high
+    site: com/calc/Main.java:8
+unresolved:
+  - caller: com/calc/Main.java//Main//main
+    site: com/calc/Main.java:5
+    reason: no-definition
+    method: valueOf
+  - caller: com/calc/Main.java//Main//main
+    site: com/calc/Main.java:6
+    reason: no-definition
+    method: apply
+results:
+  - target: Math//pow
+    status: found
+    path:
+      - key: com/calc/Main.java//Main//main
+      - key: com/calc/Op.java//Op//POW//apply
+        site: com/calc/Main.java:6
+        kind: cha
+        confidence: medium
+      - key: Math//pow
+        site: com/calc/Op.java:11
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: com/calc/Op.java//Op//POW//apply
+        site: com/calc/Op.java:11
+        reached: true
+  - target: Math//sqrt
+    status: found
+    path:
+      - key: com/calc/Main.java//Main//main
+      - key: com/calc/Point.java//Point//norm
+        site: com/calc/Main.java:8
+        kind: member
+        confidence: high
+      - key: Math//sqrt
+        site: com/calc/Point.java:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: com/calc/Point.java//Point//norm
+        site: com/calc/Point.java:5
+        reached: true

@@ -96,3 +96,31 @@ func TestFileIndexJavaStaticInitializer(t *testing.T) {
 		assert.NotEqual(t, "A.java//B//<clinit>", def.Key, "a static field with no call runs no code")
 	}
 }
+
+func TestFileIndexJavaRecordsAndEnumBodies(t *testing.T) {
+	source := strings.Join([]string{
+		"record Point(Store store, int x) implements Shape {",
+		"  Point { check(x); }",
+		"  double norm() { return store.size(); }",
+		"}",
+		"enum Op {",
+		"  PLUS { int apply(int a) { return a; } },",
+		"  MINUS;",
+		"  abstract int apply(int a);",
+		"}",
+	}, "\n") + "\n"
+	ix := indexSource(t, core.LanguageCodeJava, "P.java", source)
+
+	point := classOf(t, ix, "P.java//Point")
+	assert.Equal(t, []string{"Shape"}, point.Bases)
+	assert.Equal(t, []fidx.Typed{{Name: "store", Type: "Store"}}, point.Fields, "a component of a record is a field")
+	assert.Equal(t, fidx.DefConstructor, definitionOf(t, ix, "P.java//Point//<init>").Kind)
+	assert.Equal(t, "P.java//Point", definitionOf(t, ix, "P.java//Point//norm").Parent)
+
+	plus := classOf(t, ix, "P.java//Op//PLUS")
+	assert.Equal(t, []string{"Op"}, plus.Bases)
+	assert.Equal(t, []string{"P.java//Op//PLUS//apply"}, plus.Methods)
+	for _, def := range ix.Definitions {
+		assert.NotEqual(t, "P.java//Op//MINUS", def.Key, "a constant with no body is no class")
+	}
+}
