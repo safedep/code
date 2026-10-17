@@ -160,6 +160,15 @@ func (cg *CallGraph) addNode(identifier string, treeNode *sitter.Node) *CallGrap
 	return cg.addCallGraphNode(identifier, s)
 }
 
+// addDefinition adds the node of a definition. A call before the
+// definition, as g in g(); function g() {}, can have made the node with no
+// kind, and the definition fills it. It reports that the node is new.
+func (cg *CallGraph) addDefinition(namespace string, treeNode *sitter.Node) bool {
+	_, exists := cg.Nodes[namespace]
+	cg.addNode(namespace, treeNode)
+	return !exists
+}
+
 func (cg *CallGraph) addCallGraphNode(identifier string, s syntax) *CallGraphNode {
 	if node, exists := cg.Nodes[identifier]; exists {
 		if node.Kind == "" {

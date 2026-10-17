@@ -135,8 +135,7 @@ func jsFunctionDeclarationProcessor(funcDefNode *sitter.Node, treeData []byte, c
 	funcName := functionNameNode.Content(treeData)
 	functionNamespace := currentNamespace + namespaceSeparator + funcName
 
-	if _, exists := callGraph.Nodes[functionNamespace]; !exists {
-		callGraph.addNode(functionNamespace, funcDefNode)
+	if callGraph.addDefinition(functionNamespace, funcDefNode) {
 		log.Debugf("Register JS function declaration for %s - %s", funcName, functionNamespace)
 	}
 
@@ -470,12 +469,9 @@ func arrowFunctionProcessor(arrowNode *sitter.Node, treeData []byte, currentName
 	if functionName != "" {
 		arrowFunctionNamespace = currentNamespace + namespaceSeparator + functionName
 
-		if _, exists := callGraph.Nodes[arrowFunctionNamespace]; !exists {
-			callGraph.addNode(arrowFunctionNamespace, arrowNode)
+		if callGraph.addDefinition(arrowFunctionNamespace, arrowNode) {
 			log.Debugf("Register arrow function definition for %s - %s", functionName, arrowFunctionNamespace)
 		}
-
-		callGraph.assignmentGraph.addNode(arrowFunctionNamespace, arrowNode)
 	}
 
 	results.addResults(processFunctionBody(arrowNode, treeData, arrowFunctionNamespace, callGraph, metadata))
@@ -498,8 +494,7 @@ func methodDefinitionProcessor(methodDefNode *sitter.Node, treeData []byte, curr
 	methodName := methodNameNode.Content(treeData)
 	methodNamespace := currentNamespace + namespaceSeparator + methodName
 
-	if _, exists := callGraph.Nodes[methodNamespace]; !exists {
-		callGraph.addNode(methodNamespace, methodDefNode)
+	if callGraph.addDefinition(methodNamespace, methodDefNode) {
 		log.Debugf("Register JavaScript method definition for %s - %s", methodName, methodNamespace)
 
 		if metadata.insideClass {

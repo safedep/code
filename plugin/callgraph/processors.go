@@ -241,8 +241,7 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 		callGraph.addEdge(resolveRootNamespaceQualifier(currentNamespace), nil, nil, functionNamespace, functionDefNode, []CallArgument{})
 	}
 
-	if _, exists := callGraph.Nodes[functionNamespace]; !exists {
-		callGraph.addNode(functionNamespace, functionDefNode)
+	if callGraph.addDefinition(functionNamespace, functionDefNode) {
 		log.Debugf("Register function definition for %s - %s", funcName, functionNamespace)
 
 		if metadata.insideClass {

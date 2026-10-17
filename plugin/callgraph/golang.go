@@ -218,16 +218,10 @@ func goFunctionDeclarationProcessor(funcDefNode *sitter.Node, treeData []byte, c
 	funcName := functionNameNode.Content(treeData)
 	functionNamespace := currentNamespace + namespaceSeparator + funcName
 
-	callGraph.addEdge(
-		currentNamespace, nil, nil,
-		functionNamespace, funcDefNode,
-		[]CallArgument{},
-	)
-
-	if _, exists := callGraph.Nodes[functionNamespace]; !exists {
-		callGraph.addNode(functionNamespace, funcDefNode)
+	if callGraph.addDefinition(functionNamespace, funcDefNode) {
 		log.Debugf("Register Go function definition for %s - %s", funcName, functionNamespace)
 	}
+	callGraph.addEdge(currentNamespace, nil, nil, functionNamespace, funcDefNode, []CallArgument{})
 
 	results := newProcessorResult()
 
@@ -266,8 +260,7 @@ func goMethodDeclarationProcessor(methodDefNode *sitter.Node, treeData []byte, c
 		methodNamespace = currentNamespace + namespaceSeparator + receiverType + namespaceSeparator + methodName
 	}
 
-	if _, exists := callGraph.Nodes[methodNamespace]; !exists {
-		callGraph.addNode(methodNamespace, methodDefNode)
+	if callGraph.addDefinition(methodNamespace, methodDefNode) {
 		log.Debugf("Register Go method definition for %s on %s - %s", methodName, receiverType, methodNamespace)
 	}
 

@@ -201,3 +201,19 @@ func TestDumpSortsTheKeys(t *testing.T) {
 	assert.Contains(t, sections[1], "z.py//a (calls)=> [z.py//b]")
 	assert.NotContains(t, dump.String(), "  print ", "a builtin with no edge stays out")
 }
+
+func TestDefinitionAfterTheCallKeepsItsKind(t *testing.T) {
+	cg := buildAndClose(t, javascriptLanguage(t), "a.js", "g();\nfunction g() {}\n")
+
+	node := cg.Nodes["a.js//g"]
+	require.NotNil(t, node)
+	assert.Equal(t, "function_declaration", node.Kind)
+	assert.Equal(t, uint32(2), node.Position.StartLine)
+	assert.Equal(t, uint32(2), node.Position.EndLine)
+
+	require.Len(t, cg.RootNode.CallsTo, 1)
+	call := cg.RootNode.CallsTo[0]
+	assert.Equal(t, "a.js//g", call.CalleeNamespace)
+	assert.True(t, call.Unbound)
+	assert.Equal(t, []string{"a.js//g"}, call.Targets)
+}
