@@ -33,6 +33,6 @@ results:
     uncertainties:
       - kind: root-fallback
   - target: axios//get
-    status: not-found
+    status: no-such-target
     uncertainties:
       - kind: root-fallback

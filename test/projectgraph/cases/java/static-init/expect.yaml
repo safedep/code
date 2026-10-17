@@ -17,7 +17,7 @@ edges:
     site: com/shop/Registry.java:10
 unresolved: []
 results:
-  - target: System//loadLibrary
+  - target: java//lang//System//loadLibrary
     status: found
     path:
       - key: com/shop/Main.java//Main//main
@@ -29,7 +29,7 @@ results:
         site: com/shop/Config.java:8
         kind: direct
         confidence: high
-      - key: System//loadLibrary
+      - key: java//lang//System//loadLibrary
         site: com/shop/Config.java:5
         kind: direct
         confidence: high

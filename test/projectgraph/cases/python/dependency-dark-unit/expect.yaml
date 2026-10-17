@@ -36,4 +36,4 @@ results:
       - kind: unresolved-call
         site: pypi:PyYAML@6.0.1
   - target: x//y
-    status: not-found
+    status: no-such-target

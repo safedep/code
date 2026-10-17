@@ -120,4 +120,4 @@ results:
         site: src/shapes.rs:28
         reached: false
   - target: std//fs//remove_file
-    status: not-found
+    status: no-such-target

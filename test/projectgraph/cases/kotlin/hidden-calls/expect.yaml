@@ -40,7 +40,7 @@ unresolved:
     reason: unknown-receiver
     method: send
 results:
-  - target: ProcessBuilder//start
+  - target: java//lang//ProcessBuilder//start
     status: found
     path:
       - key: src/com/shop/App.kt//main
@@ -48,7 +48,7 @@ results:
         site: src/com/shop/App.kt:11
         kind: reference
         confidence: low
-      - key: ProcessBuilder//start
+      - key: java//lang//ProcessBuilder//start
         site: src/com/shop/App.kt:7
         kind: direct
         confidence: high
@@ -68,7 +68,7 @@ results:
       - caller: src/com/shop/App.kt//main
         site: src/com/shop/App.kt:12
         reached: true
-  - target: Math//addExact
+  - target: java//lang//Math//addExact
     status: found
     path:
       - key: src/com/shop/App.kt//main
@@ -80,7 +80,7 @@ results:
         site: src/com/shop/net/Net.kt:6
         kind: reference
         confidence: low
-      - key: Math//addExact
+      - key: java//lang//Math//addExact
         site: src/com/shop/net/Net.kt:7
         kind: direct
         confidence: high
@@ -109,7 +109,7 @@ results:
     uncertainties:
       - kind: unresolved-call
         site: src/com/shop/App.kt:14
-  - target: System//loadLibrary
+  - target: java//lang//System//loadLibrary
     status: found
     path:
       - key: src/com/shop/App.kt//main
@@ -121,7 +121,7 @@ results:
         site: src/com/shop/App.kt:22
         kind: direct
         confidence: high
-      - key: System//loadLibrary
+      - key: java//lang//System//loadLibrary
         site: src/com/shop/App.kt:21
         kind: direct
         confidence: high

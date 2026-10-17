@@ -48,4 +48,4 @@ results:
         site: pypi:okpkg@1.0.0//okpkg/__init__.py:5
         reached: true
   - target: os//system
-    status: not-found
+    status: no-such-target

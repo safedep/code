@@ -38,4 +38,4 @@ results:
         site: handlers.py:12
         reached: true
   - target: yaml//dump
-    status: not-found
+    status: no-such-target

@@ -38,7 +38,7 @@ results:
         site: index.js:5
         reached: true
   - target: js-yaml//load
-    status: not-found
+    status: no-such-target
   - target: js-yaml//dump
     status: not-found
     call_sites:

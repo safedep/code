@@ -28,20 +28,30 @@ var javaProfile = profile{
 	exactWildcards:  true,
 }
 
+// javaLang is the key of the package that a Java or a Kotlin file names
+// with no import.
+const javaLang = "java//lang"
+
 // javaScopeFallback resolves a name that no scope of the file binds: a
-// class or a member of a wildcard import of a dependency, or a qualified
-// name, as org.yaml.Yaml.load.
+// class or a member of a wildcard import of a dependency, a qualified
+// name, as org.yaml.Yaml.load, or a class of java.lang, as Thread, whose
+// key goes under java//lang so a symbol record matches it.
 func (b *builder) javaScopeFallback(sc *scope, _, first string, rest []string, target string) []resolution {
 	var out []resolution
 	for _, key := range b.externalWildcards(sc, first) {
 		out = append(out, resolution{key: b.external(fileindex.Join(key, rest...)), kind: EdgeWildcard, rule: "wildcard-external"})
 	}
-	if len(out) == 0 && qualifiedJava(target) {
+	switch {
+	case len(out) > 0:
+		return out
+	case qualifiedJava(target):
 		dotted := strings.ReplaceAll(target, fileindex.Separator, ".")
 		if key, ok := b.resolveJava(dotted); ok {
 			return []resolution{b.walk(key, nil)}
 		}
 		return []resolution{{key: b.external(target), kind: EdgeDirect, rule: "external"}}
+	case langcode.IsJavaLang(first):
+		return []resolution{{key: b.external(fileindex.Join(javaLang, target)), kind: EdgeDirect, rule: "java-lang"}}
 	}
 	return out
 }

@@ -40,4 +40,4 @@ results:
       - kind: unresolved-call
         site: main.js:5
   - target: x//y
-    status: not-found
+    status: no-such-target

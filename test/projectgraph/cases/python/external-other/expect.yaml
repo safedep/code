@@ -34,7 +34,7 @@ results:
         site: main.py:6
         reached: true
   - target: yaml//load
-    status: not-found
+    status: no-such-target
   - target: yaml//dump
     status: not-found
     call_sites:

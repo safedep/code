@@ -38,7 +38,7 @@ results:
       - caller: src/main/kotlin/com/shop/store/Store.kt//Store//save
         site: src/main/kotlin/com/shop/store/Store.kt:8
         reached: true
-  - target: System//getenv
+  - target: java//lang//System//getenv
     status: found
     path:
       - key: src/main/kotlin/com/shop/app/Main.kt//main
@@ -46,7 +46,7 @@ results:
         site: src/main/kotlin/com/shop/app/Main.kt:7
         kind: direct
         confidence: high
-      - key: System//getenv
+      - key: java//lang//System//getenv
         site: src/main/kotlin/com/shop/store/Store.kt:16
         kind: direct
         confidence: high

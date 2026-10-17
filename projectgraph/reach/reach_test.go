@@ -163,7 +163,7 @@ func TestReachNotFound(t *testing.T) {
 	assert.Equal(t, 3, dead.Searched.Nodes)
 
 	absent := results[1]
-	assert.Equal(t, NotFound, absent.Status)
+	assert.Equal(t, NoSuchTarget, absent.Status)
 	assert.Empty(t, absent.CallSites)
 	assert.NotNil(t, absent.CallSites)
 }
@@ -180,7 +180,7 @@ func TestReachUncertainties(t *testing.T) {
 		{name: "a record of the same method", extra: "unresolved handlers.py//parse 5 unknown-receiver load", target: "yaml//dump", status: NotFound, kinds: []UncertaintyKind{}},
 		{name: "a record of the target method", extra: "unresolved handlers.py//parse 5 unknown-receiver dump", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{UnresolvedCall}},
 		{name: "a record of the method of an unreached definition that reaches the target", extra: "unresolved handlers.py//parse 5 unknown-receiver f", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{UnresolvedCall}},
-		{name: "a record of the method of an unreached definition that does not reach the target", extra: "unresolved handlers.py//parse 5 unknown-receiver f", target: "yaml//safe_load", status: NotFound, kinds: []UncertaintyKind{}},
+		{name: "a record of the method of an unreached definition that does not reach the target", extra: "unresolved handlers.py//parse 5 unknown-receiver f", target: "yaml//safe_load", status: NoSuchTarget, kinds: []UncertaintyKind{}},
 		{name: "a record of the method of an external key that leads to the target", extra: "unresolved handlers.py//parse 5 unknown-receiver run\nedge kit//run npm:kit@1.0.0//index.js//run package\nedge npm:kit@1.0.0//index.js//run yaml//dump", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{UnresolvedCall}},
 		{name: "a computed name", extra: "unresolved handlers.py//parse 5 computed-name", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{UnresolvedCall}},
 		{name: "a computed name with a method", extra: "unresolved handlers.py//parse 5 computed-name getattr", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{UnresolvedCall}},
@@ -429,7 +429,7 @@ func TestReachLargeGraph(t *testing.T) {
 	for _, r := range results[:200] {
 		assert.Equal(t, Found, r.Status, r.Target)
 	}
-	assert.Equal(t, NotFound, results[200].Status)
+	assert.Equal(t, NoSuchTarget, results[200].Status)
 	assert.Equal(t, 100_200, results[200].Searched.Nodes)
 	if !raceEnabled {
 		assert.Less(t, elapsed, time.Second)
@@ -481,7 +481,7 @@ func TestReachDependencyCode(t *testing.T) {
 		{
 			name:   "a unit that no import names, whose code does not reach the target",
 			extra:  "entry - npm:kit@1.0.0\nedge npm:kit@1.0.0//k.js//close fs//unlink",
-			target: "fs//rename", status: NotFound, kinds: []UncertaintyKind{},
+			target: "fs//rename", status: NoSuchTarget, kinds: []UncertaintyKind{},
 		},
 		{
 			name:   "an entry into a unit with a failed file",

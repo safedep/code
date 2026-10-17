@@ -36,6 +36,6 @@ results:
     uncertainties:
       - kind: root-fallback
   - target: yaml//load
-    status: not-found
+    status: no-such-target
     uncertainties:
       - kind: root-fallback

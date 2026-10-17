@@ -130,6 +130,8 @@ var builtins = map[Code][]string{
 	}, javaBuiltins...),
 }
 
+// javaBuiltins are the public classes of java.lang, which a Java or a
+// Kotlin file names with no import.
 var javaBuiltins = []string{
 	"Object", "Class", "Enum", "String", "StringBuilder", "StringBuffer", "System", "Runtime",
 	"Thread", "ThreadGroup", "Throwable", "Exception", "Error", "Math", "StrictMath", "Number",
@@ -177,4 +179,18 @@ var builtinSets = func() map[Code]map[string]bool {
 // IsBuiltin reports whether the name is a builtin of the language.
 func IsBuiltin(c Code, name string) bool {
 	return builtinSets[c][name]
+}
+
+var javaLangSet = func() map[string]bool {
+	set := make(map[string]bool, len(javaBuiltins))
+	for _, name := range javaBuiltins {
+		set[name] = true
+	}
+	return set
+}()
+
+// IsJavaLang reports whether the name is a class of java.lang, which a
+// Java or a Kotlin file names with no import.
+func IsJavaLang(name string) bool {
+	return javaLangSet[name]
 }

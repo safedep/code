@@ -33,6 +33,10 @@ const (
 	// Uncertain is a target with no path and an uncertainty that the root
 	// fallback alone does not explain.
 	Uncertain Status = "uncertain"
+	// NoSuchTarget is a target that names no external node of the graph,
+	// with no uncertainty that could name it. A key in another form, as
+	// Thread//sleep for java//lang//Thread//sleep, gets it.
+	NoSuchTarget Status = "no-such-target"
 )
 
 type UncertaintyKind string
@@ -163,8 +167,11 @@ func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error
 		} else {
 			r.Status = NotFound
 			r.Uncertainties, r.SetAside, r.Searched.Uncertainties = unc.forTarget(t)
-			if len(r.Uncertainties) > 0 {
+			switch {
+			case len(r.Uncertainties) > 0:
 				r.Status = Uncertain
+			case len(targets[i]) == 0:
+				r.Status = NoSuchTarget
 			}
 			if len(testRoots) > 0 {
 				if tests == nil {

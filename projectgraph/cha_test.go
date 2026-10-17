@@ -420,7 +420,7 @@ func TestBuildJavaCallOnThisOfADependencyBase(t *testing.T) {
 	}
 	g, err := Build(context.Background(), []*fileindex.Index{ix}, Options{})
 	require.NoError(t, err)
-	assert.Contains(t, edgeStrings(g), "P.java//P//run -> Thread//interrupt member java.declared-type", "a call with no receiver runs on this")
+	assert.Contains(t, edgeStrings(g), "P.java//P//run -> java//lang//Thread//interrupt member java.declared-type", "a call with no receiver runs on this")
 	assert.NotContains(t, edgeStrings(g), "P.java//P//run -> Thread//ProcessBuilder member java.declared-type", "a new names a class, not a method of the base")
 }
 

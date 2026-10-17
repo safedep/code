@@ -35,7 +35,7 @@ unresolved:
     reason: no-definition
     method: apply
 results:
-  - target: Math//pow
+  - target: java//lang//Math//pow
     status: found
     path:
       - key: com/calc/Main.java//Main//main
@@ -43,7 +43,7 @@ results:
         site: com/calc/Main.java:6
         kind: cha
         confidence: medium
-      - key: Math//pow
+      - key: java//lang//Math//pow
         site: com/calc/Op.java:11
         kind: direct
         confidence: high
@@ -51,7 +51,7 @@ results:
       - caller: com/calc/Op.java//Op//POW//apply
         site: com/calc/Op.java:11
         reached: true
-  - target: Math//sqrt
+  - target: java//lang//Math//sqrt
     status: found
     path:
       - key: com/calc/Main.java//Main//main
@@ -59,7 +59,7 @@ results:
         site: com/calc/Main.java:8
         kind: member
         confidence: high
-      - key: Math//sqrt
+      - key: java//lang//Math//sqrt
         site: com/calc/Point.java:5
         kind: direct
         confidence: high

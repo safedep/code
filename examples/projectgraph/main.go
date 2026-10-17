@@ -335,6 +335,9 @@ func printResult(out io.Writer, r reach.Result) error {
 	for _, u := range r.Uncertainties {
 		lines = append(lines, fmt.Sprintf("  %s: %s %s", u.Kind, siteText(u.Site), u.Text))
 	}
+	if r.Status == reach.NoSuchTarget {
+		lines = append(lines, "  no node has the key: a target is the key form of the import, as os//exec//Command or java//lang//Thread//sleep")
+	}
 	if r.Status != reach.Found {
 		for _, c := range r.CallSites {
 			if !c.Reached {

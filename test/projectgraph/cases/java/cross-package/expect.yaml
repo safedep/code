@@ -43,7 +43,7 @@ results:
       - caller: src/main/java/com/shop/store/Store.java//Store//save
         site: src/main/java/com/shop/store/Store.java:11
         reached: true
-  - target: System//getenv
+  - target: java//lang//System//getenv
     status: found
     path:
       - key: src/main/java/com/shop/app/Main.java//Main//main
@@ -59,7 +59,7 @@ results:
         site: src/main/java/com/shop/store/Store.java:7
         kind: member
         confidence: high
-      - key: System//getenv
+      - key: java//lang//System//getenv
         site: src/main/java/com/shop/store/Codec.java:5
         kind: direct
         confidence: high

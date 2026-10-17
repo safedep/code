@@ -48,7 +48,7 @@ results:
       - caller: com/app/Task.java//Task//run
         site: com/app/Task.java:7
         reached: true
-  - target: Runtime//getRuntime
+  - target: java//lang//Runtime//getRuntime
     status: found
     path:
       - key: com/app/Startup.java//Startup
@@ -56,7 +56,7 @@ results:
         site: com/app/Startup.java:8
         kind: reference
         confidence: low
-      - key: Runtime//getRuntime
+      - key: java//lang//Runtime//getRuntime
         site: com/app/Startup.java:10
         kind: assignment
         confidence: high

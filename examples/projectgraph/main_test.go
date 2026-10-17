@@ -57,7 +57,7 @@ func TestExamplePrintsJSON(t *testing.T) {
 	require.NoError(t, json.Unmarshal(out, &results))
 	require.Len(t, results, 2)
 	assert.Equal(t, reach.Found, results[0].Status)
-	assert.Equal(t, reach.NotFound, results[1].Status)
+	assert.Equal(t, reach.NoSuchTarget, results[1].Status)
 }
 
 func TestExampleMergesAnOverlay(t *testing.T) {
@@ -91,7 +91,7 @@ func TestExampleFollowsAPathIntoDependencies(t *testing.T) {
 
 	out, err = exec.Command(bin, "-dir", dependencyCase, "-target", "child_process//execSync").CombinedOutput()
 	require.NoError(t, err, string(out))
-	assert.Equal(t, "child_process//execSync: not-found\n  searched 1 roots, 2 nodes, 1 edges\n", string(out), "with no -deps the path stops at the external key")
+	assert.Equal(t, "child_process//execSync: no-such-target\n  no node has the key: a target is the key form of the import, as os//exec//Command or java//lang//Thread//sleep\n  searched 1 roots, 2 nodes, 1 edges\n", string(out), "with no -deps the path stops at the external key")
 }
 
 func TestExamplePrintsTheSummaries(t *testing.T) {

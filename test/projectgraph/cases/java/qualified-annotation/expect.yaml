@@ -17,13 +17,13 @@ edges:
     confidence: low
     site: com/y/Poller.java:4
   - from: com/y/Poller.java//Poller//run
-    to: ProcessBuilder
+    to: java//lang//ProcessBuilder
     kind: direct
     confidence: high
     site: com/y/Poller.java:6
 no_edges:
   - from: com/y/Poller.java//Poller//run
-    to: Thread//ProcessBuilder
+    to: java//lang//Thread//ProcessBuilder
 unresolved: []
 results:
   - target: java//nio//file//Files//delete
@@ -38,7 +38,7 @@ results:
       - caller: com/y/Jobs.java//Jobs//tick
         site: com/y/Jobs.java:9
         reached: true
-  - target: ProcessBuilder//start
+  - target: java//lang//ProcessBuilder//start
     status: found
     path:
       - key: com/y/Main.java//Main//main
@@ -50,7 +50,7 @@ results:
         site: com/y/Poller.java:4
         kind: reference
         confidence: low
-      - key: ProcessBuilder//start
+      - key: java//lang//ProcessBuilder//start
         site: com/y/Poller.java:6
         kind: direct
         confidence: high

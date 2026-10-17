@@ -28,4 +28,4 @@ results:
         site: index.js:4
         reached: true
   - target: js-yaml//dump
-    status: not-found
+    status: no-such-target

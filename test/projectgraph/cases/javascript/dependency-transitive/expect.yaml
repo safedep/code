@@ -98,4 +98,4 @@ results:
         site: npm:lodash._reinterpolate@3.0.0//index.js:4
         reached: true
   - target: lodash//escape
-    status: not-found
+    status: no-such-target

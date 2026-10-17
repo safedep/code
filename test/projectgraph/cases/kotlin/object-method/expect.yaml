@@ -51,7 +51,7 @@ results:
     uncertainties:
       - kind: unresolved-call
         site: src/com/shop/Registry.kt:9
-  - target: System//exit
+  - target: java//lang//System//exit
     status: not-found
     call_sites:
       - caller: src/com/shop/Registry.kt//Service//unused

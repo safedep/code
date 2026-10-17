@@ -6,7 +6,7 @@ roots:
     rule: java.main
 edges:
   - from: src/com/shop/Tool.java//Tool//main
-    to: System//exit
+    to: java//lang//System//exit
     kind: direct
     confidence: high
     site: src/com/shop/Tool.java:6
@@ -16,11 +16,11 @@ unresolved:
     reason: unknown-receiver
     method: exec
 results:
-  - target: System//exit
+  - target: java//lang//System//exit
     status: found
     path:
       - key: src/com/shop/Tool.java//Tool//main
-      - key: System//exit
+      - key: java//lang//System//exit
         site: src/com/shop/Tool.java:6
         kind: direct
         confidence: high
@@ -39,3 +39,5 @@ results:
       - caller: src/com/shop/Report.java//Report//main
         site: src/com/shop/Report.java:7
         reached: false
+  - target: System//exit
+    status: no-such-target

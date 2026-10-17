@@ -57,7 +57,7 @@ unresolved:
     method: get
 results:
   - target: x//y
-    status: not-found
+    status: no-such-target
   - target: fs//rmSync
     status: uncertain
     call_sites:
