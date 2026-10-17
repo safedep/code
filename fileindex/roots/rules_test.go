@@ -3,6 +3,7 @@ package roots
 import (
 	"testing"
 
+	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,7 +17,10 @@ func TestDefaultRules(t *testing.T) {
 	}
 	assert.Equal(t, []string{
 		"go.main", "java.main", "python.main-guard", "python.main-guard-single-quote", "node.package-json",
-		"python.project-scripts", "python.setup-py", "procfile", "dockerfile", "test.files",
+		"python.project-scripts", "python.setup-py", "procfile", "dockerfile",
+		"python.flask.route", "python.fastapi.route", "python.django.urls", "python.click.command",
+		"python.click.subcommand", "python.typer.command", "node.express.route", "node.koa.route",
+		"node.commander.action", "node.next.route", "node.serverless.handler", "test.files",
 	}, ids)
 }
 
@@ -63,7 +67,9 @@ rules:
 	require.NoError(t, err)
 	require.Len(t, rules, 9)
 	assert.Equal(t, "App", rules[0].Match.Definition.Parent)
-	assert.Equal(t, 1, rules[3].Match.Call.Arg)
+	require.NotNil(t, rules[3].Match.Call.Arg)
+	assert.Equal(t, 1, *rules[3].Match.Call.Arg)
+	assert.Equal(t, Shapes{fileindex.ArgName}, rules[3].Match.Call.Shape)
 	assert.Equal(t, []string{"bin"}, rules[6].Match.Manifest.Fields)
 }
 
@@ -73,7 +79,7 @@ func TestParseErrorsNameTheRule(t *testing.T) {
 		yaml string
 		want string
 	}{
-		{name: "an unknown field", yaml: "{id: x.y, language: python, kind: main, match: {file_contains: a}, extra: 1}", want: `root rule "x.y": `},
+		{name: "an unknown field", yaml: "{id: x.y, language: python, kind: main, match: {file_contains: a}, extra: 1}", want: `root rule "x.y": unknown key "extra"`},
 		{name: "a bad type", yaml: "{id: x.y, language: python, kind: [main], match: {file_contains: a}}", want: `root rule "x.y": `},
 		{name: "an unknown kind", yaml: "{id: x.y, language: python, kind: route, match: {file_contains: a}}", want: `root rule "x.y": unknown kind "route"`},
 		{name: "an unknown language", yaml: "{id: x.y, language: cobol, kind: main, match: {file_contains: a}}", want: `root rule "x.y": unknown language "cobol"`},
@@ -82,7 +88,10 @@ func TestParseErrorsNameTheRule(t *testing.T) {
 		{name: "a bad glob", yaml: "{id: x.y, language: any, kind: framework, match: {path: ['a/[']}}", want: `root rule "x.y": glob`},
 		{name: "an unknown manifest", yaml: "{id: x.y, language: any, kind: manifest, match: {manifest: {file: Gemfile}}}", want: `unknown file "Gemfile"`},
 		{name: "an unknown manifest field", yaml: "{id: x.y, language: any, kind: manifest, match: {manifest: {file: package.json, fields: [scripts]}}}", want: `package.json has no field "scripts"`},
-		{name: "an unknown shape", yaml: "{id: x.y, language: any, kind: framework, match: {call: {callee: [a], shape: list}}}", want: `unknown shape "list"`},
+		{name: "an unknown shape", yaml: "{id: x.y, language: any, kind: framework, match: {call: {callee: [a], arg: 0, shape: [name, list]}}}", want: `unknown shape "list"`},
+		{name: "a shape with no arg", yaml: "{id: x.y, language: any, kind: framework, match: {call: {callee: [a], shape: name}}}", want: `root rule "x.y": call: a shape needs an arg`},
+		{name: "an unknown match key", yaml: "{id: x.y, language: python, kind: framework, match: {decorators: [\"@app.route\"]}}", want: `root rule "x.y": unknown key "decorators"`},
+		{name: "an unknown call key", yaml: "{id: x.y, language: python, kind: framework, match: {call: {callee: [a], receiver: [b]}}}", want: `root rule "x.y": unknown key "receiver"`},
 		{name: "a call with no callee", yaml: "{id: x.y, language: any, kind: framework, match: {call: {arg: 1}}}", want: `call: no callee`},
 		{name: "a definition with no name", yaml: "{id: x.y, language: any, kind: main, match: {definition: {parent: A}}}", want: `definition: no name`},
 		{name: "no id", yaml: "{language: any, kind: main, match: {test_file: true}}", want: `root rule #1: no id`},

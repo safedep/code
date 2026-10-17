@@ -138,7 +138,7 @@
     "make.js": "indexed"
   },
   "stats": {
-    "version": "3",
+    "version": "4",
     "files": 3,
     "nodes": 5,
     "edges": 4,

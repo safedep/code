@@ -1,0 +1,31 @@
+source: safedep:hand
+description: app holds typer.Typer(). The decorators @app.command and @app.callback resolve to methods of typer//Typer, so load and main are roots of the rule python.typer.command.
+roots:
+  - key: app.py//load
+    kind: framework
+    rule: python.typer.command
+    site: app.py:8
+  - key: app.py//main
+    kind: framework
+    rule: python.typer.command
+    site: app.py:13
+edges:
+  - from: app.py//load
+    to: yaml//load
+    kind: direct
+    confidence: high
+    site: app.py:9
+unresolved: []
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: app.py//load
+      - key: yaml//load
+        site: app.py:9
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: app.py//load
+        site: app.py:9
+        reached: true

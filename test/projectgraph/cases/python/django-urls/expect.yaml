@@ -1,0 +1,31 @@
+source: safedep:hand
+description: mysite/urls.py passes views.home and health to django.urls.path. The second argument is a member and a name, so each view is a root of the rule python.django.urls at the call of path.
+roots:
+  - key: mysite/views.py//health
+    kind: framework
+    rule: python.django.urls
+    site: mysite/urls.py:8
+  - key: mysite/views.py//home
+    kind: framework
+    rule: python.django.urls
+    site: mysite/urls.py:7
+edges:
+  - from: mysite/views.py//home
+    to: yaml//safe_load
+    kind: direct
+    confidence: high
+    site: mysite/views.py:5
+unresolved: []
+results:
+  - target: yaml//safe_load
+    status: found
+    path:
+      - key: mysite/views.py//home
+      - key: yaml//safe_load
+        site: mysite/views.py:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: mysite/views.py//home
+        site: mysite/views.py:5
+        reached: true

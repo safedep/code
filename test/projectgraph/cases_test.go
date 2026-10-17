@@ -49,6 +49,7 @@ type root struct {
 	Key  string `yaml:"key"`
 	Kind string `yaml:"kind"`
 	Rule string `yaml:"rule"`
+	Site string `yaml:"site,omitempty"`
 }
 
 type edge struct {
@@ -144,7 +145,7 @@ func runCase(t *testing.T, dir string, languages []core.Language) {
 	require.NoError(t, err)
 	assert.Empty(t, g.Problems)
 
-	assert.Equal(t, want.Roots, rootsOf(g), "roots")
+	assert.Equal(t, want.Roots, rootsOf(g, want.Roots), "roots")
 	assert.Subset(t, edgesOf(g), want.Edges, "edges")
 	for _, e := range g.Edges {
 		assert.NotContains(t, want.NoEdges, noEdge{From: e.From, To: e.To}, "edge at %s", site(e.Site))
@@ -166,10 +167,22 @@ func site(s projectgraph.Site) string {
 	return fmt.Sprintf("%s:%d", s.Path, s.Line)
 }
 
-func rootsOf(g *projectgraph.Graph) []root {
+// rootsOf returns the roots of the graph. A root has its site only when the
+// expectation names a site for it.
+func rootsOf(g *projectgraph.Graph, want []root) []root {
+	sited := map[root]bool{}
+	for _, w := range want {
+		if w.Site != "" {
+			sited[root{Key: w.Key, Kind: w.Kind, Rule: w.Rule}] = true
+		}
+	}
 	out := []root{}
 	for _, r := range g.Roots {
-		out = append(out, root{Key: r.Key, Kind: string(r.Kind), Rule: r.Rule})
+		got := root{Key: r.Key, Kind: string(r.Kind), Rule: r.Rule}
+		if sited[got] {
+			got.Site = site(r.Site)
+		}
+		out = append(out, got)
 	}
 	return out
 }

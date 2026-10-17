@@ -1,0 +1,41 @@
+source: safedep:hand
+description: app/api/config/route.ts is a route file of Next.js. The rule node.next.route makes its module top level and its export GET roots. unused is no export, so its call of yaml.dump is dead.
+roots:
+  - key: app/api/config/route.ts
+    kind: framework
+    rule: node.next.route
+    site: app/api/config/route.ts:1
+  - key: app/api/config/route.ts//GET
+    kind: framework
+    rule: node.next.route
+    site: app/api/config/route.ts:3
+edges:
+  - from: app/api/config/route.ts//GET
+    to: js-yaml//load
+    kind: direct
+    confidence: high
+    site: app/api/config/route.ts:4
+unresolved:
+  - caller: app/api/config/route.ts//GET
+    site: app/api/config/route.ts:4
+    reason: unknown-receiver
+    method: json
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: app/api/config/route.ts//GET
+      - key: js-yaml//load
+        site: app/api/config/route.ts:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: app/api/config/route.ts//GET
+        site: app/api/config/route.ts:4
+        reached: true
+  - target: js-yaml//dump
+    status: not-found
+    call_sites:
+      - caller: app/api/config/route.ts//unused
+        site: app/api/config/route.ts:8
+        reached: false

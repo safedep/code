@@ -56,6 +56,15 @@
     {
       "key": "app/users/route.ts",
       "kind": "framework",
+      "rule": "node.next.route",
+      "site": {
+        "path": "app/users/route.ts",
+        "line": 1
+      }
+    },
+    {
+      "key": "app/users/route.ts",
+      "kind": "framework",
       "rule": "routes",
       "site": {
         "path": "app/users/route.ts",
@@ -70,6 +79,24 @@
         "path": "src/handler.js",
         "line": 2
       }
+    },
+    {
+      "key": "src/handler.js//handle",
+      "kind": "framework",
+      "rule": "serverless",
+      "site": {
+        "path": "src/handler.js",
+        "line": 4
+      }
+    },
+    {
+      "key": "views.py//index",
+      "kind": "framework",
+      "rule": "flask",
+      "site": {
+        "path": "views.py",
+        "line": 2
+      }
     }
   ],
   "files": {
@@ -78,11 +105,11 @@
     "views.py": "indexed"
   },
   "stats": {
-    "version": "3",
+    "version": "4",
     "files": 3,
     "nodes": 7,
     "edges": 0,
     "unresolved": 0,
-    "roots": 2
+    "roots": 5
   }
 }

@@ -617,8 +617,11 @@ func TestBuildRoots(t *testing.T) {
 		{
 			name: "roots/extra-rules",
 			roots: []string{
+				"app/users/route.ts framework node.next.route",
 				"app/users/route.ts framework routes",
 				"src/handler.js//Handler//handle framework handlers",
+				"src/handler.js//handle framework serverless",
+				"views.py//index framework flask",
 			},
 		},
 	}

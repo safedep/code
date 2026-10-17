@@ -8,6 +8,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"regexp"
 	"slices"
 
 	"github.com/safedep/code/fileindex"
@@ -56,9 +57,8 @@ type Rule struct {
 	Match    Match  `yaml:"match"`
 }
 
-// Match holds one match key. Decorator, Annotation, Call and Export parse,
-// and they match nothing until the framework root rules of plan step 28
-// ship.
+// Match holds one match key. Annotation parses, and it matches nothing
+// until the index records the annotations of Java.
 type Match struct {
 	Definition   *DefinitionMatch `yaml:"definition,omitempty"`
 	Decorator    []string         `yaml:"decorator,omitempty"`
@@ -72,8 +72,8 @@ type Match struct {
 }
 
 // DefinitionMatch matches a definition by name and by the name of its
-// class. Static and InPackage match nothing until the index records them in
-// plan step 28.
+// class. Static and InPackage match nothing until the index records static
+// methods and package clauses for Java and Go.
 type DefinitionMatch struct {
 	Name      string `yaml:"name"`
 	Parent    string `yaml:"parent,omitempty"`
@@ -81,14 +81,37 @@ type DefinitionMatch struct {
 	InPackage string `yaml:"in_package,omitempty"`
 }
 
-// CallMatch matches a call by its callee and the shape of one argument. Arg
-// counts from 0, and -1 is the last argument.
+// CallMatch matches a call by the symbol key of its callee, as
+// django//urls//path, or by a suffix of the key, as //get. ReceiverFrom
+// names the keys that the receiver of the call comes from, as express for
+// app in app = express(), and a key under one of them matches too. Arg
+// picks the argument whose definition is the root. It counts from 0, and -1
+// is the last argument. Shape lists the shapes that the argument may have.
+// A call with no Arg is a decorator, and the root is the definition that it
+// decorates.
 type CallMatch struct {
-	Callee       []string           `yaml:"callee,omitempty"`
-	CalleeSuffix []string           `yaml:"callee_suffix,omitempty"`
-	ReceiverFrom []string           `yaml:"receiver_from,omitempty"`
-	Arg          int                `yaml:"arg,omitempty"`
-	Shape        fileindex.ArgShape `yaml:"shape,omitempty"`
+	Callee       []string `yaml:"callee,omitempty"`
+	CalleeSuffix []string `yaml:"callee_suffix,omitempty"`
+	ReceiverFrom []string `yaml:"receiver_from,omitempty"`
+	Arg          *int     `yaml:"arg,omitempty"`
+	Shape        Shapes   `yaml:"shape,omitempty"`
+}
+
+// Shapes is one argument shape or a list of them.
+type Shapes []fileindex.ArgShape
+
+// UnmarshalYAML reads a scalar as a list of one shape.
+func (s *Shapes) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind == yaml.ScalarNode {
+		*s = Shapes{fileindex.ArgShape(node.Value)}
+		return nil
+	}
+	var list []fileindex.ArgShape
+	if err := node.Decode(&list); err != nil {
+		return err
+	}
+	*s = list
+	return nil
 }
 
 // ExportMatch matches an exported name in a file of the paths.
@@ -153,8 +176,14 @@ func Parse(data []byte) ([]Rule, error) {
 	return rules, nil
 }
 
-// decodeRule decodes one rule with no unknown field. A yaml.Node decodes
-// with no check of the fields, so the rule goes through its own decoder.
+// unknownField matches the error of the yaml decoder for a key that the
+// type does not have.
+var unknownField = regexp.MustCompile(`field (\S+) not found in type`)
+
+// decodeRule decodes one rule with no unknown key. A yaml.Node decodes with
+// no check of the keys, so the rule goes through its own decoder. An
+// unknown key is an error that names the key, so a typo in a user rule
+// file does not silently match nothing.
 func decodeRule(node *yaml.Node) (Rule, error) {
 	data, err := yaml.Marshal(node)
 	if err != nil {
@@ -164,6 +193,14 @@ func decodeRule(node *yaml.Node) (Rule, error) {
 	dec.KnownFields(true)
 	var rule Rule
 	err = dec.Decode(&rule)
+	var typeErr *yaml.TypeError
+	if errors.As(err, &typeErr) {
+		for _, msg := range typeErr.Errors {
+			if m := unknownField.FindStringSubmatch(msg); m != nil {
+				return Rule{}, fmt.Errorf("unknown key %q", m[1])
+			}
+		}
+	}
 	return rule, err
 }
 
@@ -233,12 +270,18 @@ func (c *CallMatch) validate() error {
 	if len(c.Callee) == 0 && len(c.CalleeSuffix) == 0 {
 		return errors.New("call: no callee and no callee_suffix")
 	}
-	switch c.Shape {
-	case "", fileindex.ArgString, fileindex.ArgTemplate, fileindex.ArgName, fileindex.ArgMember,
-		fileindex.ArgLiteral, fileindex.ArgComputed, fileindex.ArgFunction:
-		return nil
+	if c.Arg == nil && len(c.Shape) > 0 {
+		return errors.New("call: a shape needs an arg")
 	}
-	return fmt.Errorf("call: unknown shape %q", c.Shape)
+	for _, shape := range c.Shape {
+		switch shape {
+		case fileindex.ArgString, fileindex.ArgTemplate, fileindex.ArgName, fileindex.ArgMember,
+			fileindex.ArgLiteral, fileindex.ArgComputed, fileindex.ArgFunction:
+		default:
+			return fmt.Errorf("call: unknown shape %q", shape)
+		}
+	}
+	return nil
 }
 
 func (m *ManifestMatch) validate() error {

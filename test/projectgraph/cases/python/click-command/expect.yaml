@@ -1,0 +1,39 @@
+source: safedep:hand
+description: "@click.group and @click.command mark cli and standalone by the text of the decorator. cli is a click group, so @cli.command() marks load by the rule python.click.subcommand. The link step does not know the value of cli.command, so the decorator call stays a record."
+roots:
+  - key: cli.py//cli
+    kind: framework
+    rule: python.click.command
+    site: cli.py:6
+  - key: cli.py//load
+    kind: framework
+    rule: python.click.subcommand
+    site: cli.py:11
+  - key: cli.py//standalone
+    kind: framework
+    rule: python.click.command
+    site: cli.py:16
+edges:
+  - from: cli.py//load
+    to: yaml//load
+    kind: direct
+    confidence: high
+    site: cli.py:12
+unresolved:
+  - caller: cli.py
+    site: cli.py:10
+    reason: unknown-receiver
+    method: command
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: cli.py//load
+      - key: yaml//load
+        site: cli.py:12
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: cli.py//load
+        site: cli.py:12
+        reached: true

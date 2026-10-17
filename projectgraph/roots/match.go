@@ -16,16 +16,24 @@ import (
 
 	"github.com/safedep/code/fileindex"
 	rules "github.com/safedep/code/fileindex/roots"
-	"github.com/safedep/code/internal/pathglob"
 	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/projectgraph/modules"
 )
 
-// Root is a key that a rule marks.
+// Root is a key that a rule marks. Site is the call that registers the
+// root, as app.get('/x', handler). It is zero for a root that the key
+// itself marks.
 type Root struct {
 	Key  string
 	Kind rules.Kind
 	Rule string
+	Site Site
+}
+
+// Site is a place in a file. Lines and columns are 1-based.
+type Site struct {
+	Path         string
+	Line, Column int
 }
 
 // Project is what the matcher reads.
@@ -38,18 +46,31 @@ type Project struct {
 	Files  *modules.Files
 	Python *modules.Python
 	JS     *modules.JavaScript
-	// Defined reports whether a key names a node of the graph.
+	// Defined reports whether a key names a first-party node of the graph.
 	Defined func(key string) bool
 	// Exports returns the keys of the names that a file exports.
 	Exports func(path string) []string
+	// Export returns the key of a name that a file exports.
+	Export func(path, name string) (string, bool)
+	// Resolve returns the keys that the per-file targets of a site in the
+	// caller resolve to, first-party or external.
+	Resolve func(ix *fileindex.Index, caller string, targets []string) []string
+	// ResolveName returns the key of a dotted name as a file writes it, as
+	// app.route. A name under a first-party definition that the link step
+	// does not know, as cli.command for a function cli, is its key under
+	// the definition.
+	ResolveName func(path, name string) (string, bool)
 }
 
 // Find returns the roots that the rules mark, sorted, and the manifests and
 // files that it could not read.
 func Find(p Project, rs []rules.Rule) ([]Root, []modules.Problem) {
-	f := &finder{Project: p, languages: map[string]langcode.Code{}, seen: map[Root]bool{}}
+	f := &finder{Project: p, languages: map[string]langcode.Code{}, seen: map[Root]bool{}, defs: map[string]fileindex.Definition{}}
 	for _, ix := range p.Indexes {
 		f.languages[ix.Path] = ix.Language
+		for _, def := range ix.Definitions {
+			f.defs[def.Key] = def
+		}
 	}
 	for _, r := range rs {
 		f.match(r)
@@ -63,17 +84,25 @@ func Find(p Project, rs []rules.Rule) ([]Root, []modules.Problem) {
 type finder struct {
 	Project
 	languages map[string]langcode.Code
+	defs      map[string]fileindex.Definition
 	roots     []Root
 	seen      map[Root]bool
 	problems  []modules.Problem
 }
 
 func (f *finder) add(r rules.Rule, key string) {
+	f.addAt(r, key, Site{})
+}
+
+// addAt marks a root at the site that registers it. A key that the rule
+// marks more than once keeps its first site.
+func (f *finder) addAt(r rules.Rule, key string, site Site) {
 	root := Root{Key: key, Kind: r.Kind, Rule: r.ID}
 	if f.seen[root] || !f.Defined(key) {
 		return
 	}
 	f.seen[root] = true
+	root.Site = site
 	f.roots = append(f.roots, root)
 }
 
@@ -93,11 +122,15 @@ func (f *finder) match(r rules.Rule) {
 	case m.FileContains != "":
 		f.matchFileContains(r)
 	case len(m.Path) > 0:
-		for _, ix := range f.applying(r) {
-			if pathglob.MatchAny(m.Path, ix.Path) {
-				f.add(r, ix.Path)
-			}
-		}
+		f.matchPath(r)
+	case len(m.Decorator) > 0:
+		f.matchDecorator(r)
+	case m.Call != nil && m.Call.Arg == nil:
+		f.matchDecoratorCall(r)
+	case m.Call != nil:
+		f.matchCall(r)
+	case m.Export != nil:
+		f.matchExport(r)
 	case m.TestFile:
 		f.matchTestFiles(r)
 	case m.Manifest != nil:
