@@ -39,7 +39,7 @@ var _ core.ParseTree = (*parseTree)(nil)
 // caller closes the parser.
 func NewParser(languages []core.Language, opts ...Option) (*parserWrapper, error) {
 	cfg := newConfig(opts)
-	fileLanguages, err := languagesByExtension(languages)
+	fileLanguages, err := LanguagesByExtension(languages)
 	if err != nil {
 		return nil, err
 	}
@@ -63,9 +63,9 @@ func NewParser(languages []core.Language, opts ...Option) (*parserWrapper, error
 	}, nil
 }
 
-// languagesByExtension returns the language that parses each extension. It
+// LanguagesByExtension returns the language that parses each extension. It
 // fails when two languages claim one extension.
-func languagesByExtension(languages []core.Language) (map[string]core.Language, error) {
+func LanguagesByExtension(languages []core.Language) (map[string]core.Language, error) {
 	byExtension := make(map[string]core.Language)
 	for _, language := range languages {
 		for _, ext := range language.Meta().SourceFileExtensions {

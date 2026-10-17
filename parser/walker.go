@@ -19,7 +19,7 @@ var _ core.TreeWalker = (*walkingParser)(nil)
 // NewWalkingParser creates a tree walker that parses each file of the source
 // walker. The options apply to the parser, as in NewParser.
 func NewWalkingParser(walker core.SourceWalker, languages []core.Language, opts ...Option) (*walkingParser, error) {
-	if _, err := languagesByExtension(languages); err != nil {
+	if _, err := LanguagesByExtension(languages); err != nil {
 		return nil, fmt.Errorf("failed to create parser: %w", err)
 	}
 

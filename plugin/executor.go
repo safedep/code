@@ -88,7 +88,7 @@ func (v *treeVisitor) VisitTree(ctx context.Context, tree core.ParseTree) error 
 			continue
 		}
 
-		if err := analyze(ctx, plugin, file, tree); err != nil {
+		if err := Analyze(ctx, plugin, file, tree); err != nil {
 			v.report.Failed = append(v.report.Failed, FileError{File: file.Name(), Stage: core.Stage(plugin.Name()), Err: err})
 			if ctxErr := ctx.Err(); ctxErr != nil {
 				return ctxErr
@@ -109,7 +109,9 @@ func (v *treeVisitor) VisitFileError(_ context.Context, file core.File, stage co
 	return nil
 }
 
-func analyze(ctx context.Context, plugin core.Plugin, file core.File, tree core.ParseTree) error {
+// Analyze runs one plugin on a file and its tree. A file plugin reads the
+// file, and a tree plugin reads the tree.
+func Analyze(ctx context.Context, plugin core.Plugin, file core.File, tree core.ParseTree) error {
 	if filePlugin, ok := plugin.(core.FilePlugin); ok {
 		if err := filePlugin.AnalyzeSource(ctx, file); err != nil {
 			return fmt.Errorf("failed to analyze source: %w", err)
