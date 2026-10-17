@@ -26,25 +26,6 @@ const (
 	maxBatchBytes = 64 << 20
 )
 
-// FileStatus is what a run of the indexer did with a file.
-type FileStatus string
-
-const (
-	// FileIndexed is a file that the run parsed and indexed.
-	FileIndexed FileStatus = "indexed"
-
-	// FileCached is a file whose index came from the store with no parse.
-	FileCached FileStatus = "cached"
-
-	// FileMissing is a file that the run did not index, because ctx was
-	// done before the run reached it or before its index was complete.
-	FileMissing FileStatus = "missing"
-
-	// FileFailed is a file that the run could not read, parse or index.
-	// The report holds the error.
-	FileFailed FileStatus = "failed"
-)
-
 // Options configure one run of an Indexer.
 type Options struct {
 	// Languages are the languages to index. The run reads only the files
@@ -66,7 +47,7 @@ type Result struct {
 
 	// Files holds the status of each file of the run by name. A file that
 	// no language parses has no status, and the report lists it as skipped.
-	Files map[string]FileStatus
+	Files map[string]fidx.FileStatus
 
 	// Report lists the files that the run parsed, skipped and failed.
 	Report *plugin.Report
@@ -119,13 +100,13 @@ func (ix *Indexer) Run(ctx context.Context, fsys core.ImportAwareFileSystem, opt
 	r := &run{
 		indexer: ix,
 		opts:    opts,
-		result:  &Result{Files: make(map[string]FileStatus, len(files)), Report: &plugin.Report{}},
+		result:  &Result{Files: make(map[string]fidx.FileStatus, len(files)), Report: &plugin.Report{}},
 	}
 	err = r.index(ctx, files, byExtension)
 	for _, file := range files {
 		_, done := r.result.Files[file.Name()]
 		if !done && !slices.Contains(r.result.Report.Skipped, file.Name()) {
-			r.result.Files[file.Name()] = FileMissing
+			r.result.Files[file.Name()] = fidx.FileMissing
 		}
 	}
 	slices.SortFunc(r.result.Indexes, func(a, b *fidx.Index) int { return cmp.Compare(a.Path, b.Path) })
@@ -225,7 +206,7 @@ func (r *run) flush(ctx context.Context, batch []pending) error {
 	var put []*fidx.Index
 	for _, p := range batch {
 		if ix, ok := stored[p.key]; ok && len(r.opts.Plugins) == 0 {
-			r.done(p.file, ix, FileCached)
+			r.done(p.file, ix, fidx.FileCached)
 			continue
 		}
 		if err := ctx.Err(); err != nil {
@@ -298,11 +279,11 @@ func (r *run) parse(ctx context.Context, p pending) *fidx.Index {
 		r.result.Files[p.file.Name()] = failure(ctx)
 		return nil
 	}
-	r.done(p.file, index, FileIndexed)
+	r.done(p.file, index, fidx.FileIndexed)
 	return index
 }
 
-func (r *run) done(file core.File, ix *fidx.Index, status FileStatus) {
+func (r *run) done(file core.File, ix *fidx.Index, status fidx.FileStatus) {
 	r.result.Files[file.Name()] = status
 	r.result.Indexes = append(r.result.Indexes, ix)
 }
@@ -314,11 +295,11 @@ func (r *run) fail(ctx context.Context, file core.File, stage core.Stage, err er
 
 // failure is the status of a file that failed. A failure after ctx is done
 // is a stop, so the file is missing.
-func failure(ctx context.Context) FileStatus {
+func failure(ctx context.Context) fidx.FileStatus {
 	if ctx.Err() != nil {
-		return FileMissing
+		return fidx.FileMissing
 	}
-	return FileFailed
+	return fidx.FileFailed
 }
 
 // fileTree is a tree that ParseBytes made, with the file that the run read,

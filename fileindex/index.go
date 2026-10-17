@@ -176,6 +176,8 @@ type Class struct {
 }
 
 // Call is one call site. Caller is the definition key that holds the site.
+// A JavaScript static field or static block runs when its class is defined,
+// so its calls have the caller of the class definition.
 // Callee is the callee as the call writes it. Targets are the per-file
 // resolutions of the callee: local keys, import namespaces or bare names. A
 // call with no target keeps a bare name in Callee. Receiver is the object of
@@ -218,6 +220,34 @@ type Truncation struct {
 	Kind      TruncationKind `json:"kind"`
 	Namespace string         `json:"namespace,omitempty"`
 	Line      int            `json:"line"`
+}
+
+// FileStatus is what the index step and the link step know about a file.
+type FileStatus string
+
+const (
+	// FileIndexed is a file that the index step parsed and indexed.
+	FileIndexed FileStatus = "indexed"
+
+	// FileCached is a file whose index came from a store with no parse.
+	FileCached FileStatus = "cached"
+
+	// FileMissing is a file that the index step did not index, because its
+	// deadline came before it reached the file or completed the index.
+	FileMissing FileStatus = "missing"
+
+	// FileFailed is a file that the index step could not read, parse or
+	// index.
+	FileFailed FileStatus = "failed"
+
+	// FileTruncated is a file whose index hit a limit or holds a parse
+	// error, so the index is not complete.
+	FileTruncated FileStatus = "truncated"
+)
+
+// Complete reports whether the file has an index that hit no limit.
+func (s FileStatus) Complete() bool {
+	return s == FileIndexed || s == FileCached
 }
 
 // Key identifies the stored index of a file. The index depends on the path,

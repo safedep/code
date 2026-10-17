@@ -30,7 +30,7 @@ import (
 // external.
 func graphOf(t *testing.T, spec string) *projectgraph.Graph {
 	t.Helper()
-	g := &projectgraph.Graph{Nodes: map[string]*projectgraph.Node{}, Files: map[string]projectgraph.FileStatus{}}
+	g := &projectgraph.Graph{Nodes: map[string]*projectgraph.Node{}, Files: map[string]fileindex.FileStatus{}}
 	node := func(key string) *projectgraph.Node {
 		if n := g.Nodes[key]; n != nil {
 			return n
@@ -39,7 +39,7 @@ func graphOf(t *testing.T, spec string) *projectgraph.Graph {
 		if unit := projectgraph.Unit(key); strings.HasSuffix(unit, ".py") || strings.HasSuffix(unit, ".js") {
 			n.Kind, n.Path, n.Line = projectgraph.NodeFunction, unit, 1
 			if _, ok := g.Files[unit]; !ok {
-				g.Files[unit] = projectgraph.FileIndexed
+				g.Files[unit] = fileindex.FileIndexed
 			}
 		}
 		g.Nodes[key] = n
@@ -83,7 +83,7 @@ func graphOf(t *testing.T, spec string) *projectgraph.Graph {
 			require.NoError(t, err)
 			n.Flags = append(n.Flags, fileindex.Flag{Kind: fileindex.FlagKind(f[2]), Line: l})
 		case "file":
-			g.Files[f[1]] = projectgraph.FileStatus(f[2])
+			g.Files[f[1]] = fileindex.FileStatus(f[2])
 		case "truncated":
 			g.Truncated = append(g.Truncated, projectgraph.Truncation{Kind: projectgraph.TruncationKind(f[1]), Key: arg(f, 2, "")})
 		case "fallback":
@@ -186,6 +186,7 @@ func TestReachUncertainties(t *testing.T) {
 		},
 		{name: "a missing file", extra: "file handlers.py missing", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{Budget}},
 		{name: "a truncated file", extra: "file handlers.py truncated", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{Budget}},
+		{name: "a failed file", extra: "file handlers.py failed", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{Budget}},
 		{name: "a parse error", extra: "flag handlers.py//parse parse-error 9", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{Budget}},
 		{name: "the edge limit", extra: "truncated edges", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{Budget}},
 		{name: "a re-export limit on a reached node", extra: "truncated export-hops handlers.py//parse", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{Budget}},
@@ -359,12 +360,12 @@ func TestReachBuiltGraph(t *testing.T) {
 // largeGraph returns a graph of n first-party nodes in layers of fan-out
 // edges, with one external target per 500 nodes.
 func largeGraph(n int) (*projectgraph.Graph, []string) {
-	g := &projectgraph.Graph{Nodes: make(map[string]*projectgraph.Node, n+n/500), Files: map[string]projectgraph.FileStatus{}}
+	g := &projectgraph.Graph{Nodes: make(map[string]*projectgraph.Node, n+n/500), Files: map[string]fileindex.FileStatus{}}
 	key := func(i int) string { return fmt.Sprintf("src/m%d.py//f%d", i/100, i) }
 	for i := range n {
 		k := key(i)
 		g.Nodes[k] = &projectgraph.Node{Key: k, Kind: projectgraph.NodeFunction, Path: projectgraph.Unit(k)}
-		g.Files[projectgraph.Unit(k)] = projectgraph.FileIndexed
+		g.Files[projectgraph.Unit(k)] = fileindex.FileIndexed
 	}
 	edge := func(from, to string, line int) {
 		g.Edges = append(g.Edges, projectgraph.Edge{

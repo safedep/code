@@ -1,6 +1,7 @@
 package fileindex
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"flag"
@@ -211,4 +212,60 @@ func indexSource(t *testing.T, code core.LanguageCode, name, source string) *fid
 	require.NoError(t, err)
 	require.NotNil(t, got)
 	return got
+}
+
+func TestFileIndexTypeOnlyImports(t *testing.T) {
+	source := strings.Join([]string{
+		"import type { A } from './a';",
+		"import { type B, c } from './b';",
+		"import typeof D from './d';",
+		"import e from './e';",
+		"export type { F } from './f';",
+		"export { type G, h } from './g';",
+	}, "\n") + "\n"
+	ix := indexSource(t, core.LanguageCodeTypescript, "main.ts", source)
+
+	kinds := map[string]fidx.ImportKind{}
+	for _, imp := range ix.Imports {
+		kinds[cmp.Or(imp.Item, imp.Alias)] = imp.Kind
+	}
+	assert.Equal(t, map[string]fidx.ImportKind{
+		"A": fidx.ImportTypeOnly,
+		"B": fidx.ImportTypeOnly,
+		"c": fidx.ImportStatic,
+		"D": fidx.ImportTypeOnly,
+		"e": fidx.ImportStatic,
+	}, kinds)
+	assert.Equal(t, []fidx.Export{{Name: "h", From: "./g", Item: "h", Line: 6}}, ix.Exports)
+}
+
+func TestFileIndexStaticClassCode(t *testing.T) {
+	source := strings.Join([]string{
+		"import { load } from 'js-yaml';",
+		"class A {",
+		"  static x = load('a');",
+		"  y = load('b');",
+		"  static { load('c'); }",
+		"  static f = () => load('d');",
+		"}",
+		"function make() {",
+		"  return class B { static z = load('e'); };",
+		"}",
+	}, "\n") + "\n"
+	for _, code := range []core.LanguageCode{core.LanguageCodeJavascript, core.LanguageCodeTypescript} {
+		t.Run(string(code), func(t *testing.T) {
+			ix := indexSource(t, code, "a.js", source)
+			callers := map[int]string{}
+			for _, call := range ix.Calls {
+				callers[call.Line] = call.Caller
+			}
+			assert.Equal(t, map[int]string{
+				3: "a.js",
+				4: "a.js//A",
+				5: "a.js",
+				6: "a.js//A",
+				9: "a.js//make",
+			}, callers)
+		})
+	}
 }

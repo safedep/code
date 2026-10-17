@@ -17,7 +17,7 @@
       "module": "./types",
       "item": "Options",
       "alias": "Options",
-      "kind": "static",
+      "kind": "type-only",
       "namespace": ".//types//Options"
     }
   ],

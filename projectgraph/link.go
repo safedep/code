@@ -29,8 +29,9 @@ type Options struct {
 	// SysPath lists more Python import roots, relative to the project root.
 	SysPath []string
 	// Files is the status of each file that the index step reports. A path
-	// with FileMissing and no index becomes a module node with that status.
-	Files map[string]FileStatus
+	// with no index and a status that is not complete, as missing or
+	// failed, becomes a module node with that status.
+	Files map[string]fileindex.FileStatus
 	// TestPaths marks the test files, next to Index.Test. A glob with no "/"
 	// matches one part of the path, as tests or test_*.py.
 	TestPaths []string
@@ -107,7 +108,7 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		opts: opts,
 		g: &Graph{
 			Nodes: map[string]*Node{},
-			Files: map[string]FileStatus{},
+			Files: map[string]fileindex.FileStatus{},
 		},
 		byPath:      make(map[string]*fileindex.Index, len(indexes)),
 		scopes:      make(map[string]*scope, len(indexes)),
@@ -132,7 +133,7 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		b.paths = append(b.paths, ix.Path)
 	}
 	for p, status := range opts.Files {
-		if _, ok := b.byPath[p]; !ok && status == FileMissing {
+		if _, ok := b.byPath[p]; !ok && !status.Complete() {
 			b.paths = append(b.paths, p)
 		}
 	}
@@ -157,7 +158,7 @@ func (b *builder) link(ctx context.Context) error {
 		}
 		ix := b.byPath[p]
 		if ix == nil {
-			b.g.Files[p] = FileMissing
+			b.g.Files[p] = b.opts.Files[p]
 			b.addNode(&Node{Key: p, Kind: NodeModule, Path: p, Test: b.test[p]})
 			continue
 		}
@@ -182,16 +183,16 @@ func (b *builder) link(ctx context.Context) error {
 	return nil
 }
 
-func (b *builder) status(ix *fileindex.Index) FileStatus {
+func (b *builder) status(ix *fileindex.Index) fileindex.FileStatus {
 	if len(ix.Truncated) > 0 || slices.ContainsFunc(ix.DynamicSites(), func(f fileindex.Flag) bool {
 		return f.Kind == fileindex.FlagParseError
 	}) {
-		return FileTruncated
+		return fileindex.FileTruncated
 	}
 	if s, ok := b.opts.Files[ix.Path]; ok {
 		return s
 	}
-	return FileIndexed
+	return fileindex.FileIndexed
 }
 
 func (b *builder) addDefinitions(ix *fileindex.Index) {
@@ -225,12 +226,35 @@ func (b *builder) addDefinitions(ix *fileindex.Index) {
 			Flags:    slices.Clone(def.Flags),
 		})
 	}
+	for _, def := range ix.Definitions {
+		if r := b.runner(def.Key); r != def.Key {
+			n, runner := b.g.Nodes[def.Key], b.g.Nodes[r]
+			runner.Flags, n.Flags = append(runner.Flags, n.Flags...), nil
+		}
+	}
+	for _, def := range ix.Definitions {
+		n := b.g.Nodes[def.Key]
+		slices.SortFunc(n.Flags, compareFlags)
+		n.Flags = slices.Compact(n.Flags)
+	}
 	slices.SortFunc(module.Flags, compareFlags)
 	module.Flags = slices.Compact(module.Flags)
 
 	for _, c := range ix.Classes {
 		b.classes[c.Key] = classRecord{ix: ix, class: c}
 	}
+}
+
+// runner returns the key of the definition whose run runs the code that the
+// key holds. A Python class body runs when the scope that defines the class
+// runs, so the calls and flags of the body belong to that scope. A call of
+// the class runs only the constructor.
+func (b *builder) runner(key string) string {
+	for b.kindOf(key) == NodeClass && b.byPath[Unit(key)].Language == langcode.Python {
+		segs := Segments(key)
+		key = Join(Unit(key), segs[:len(segs)-1]...)
+	}
+	return key
 }
 
 func nodeKind(k fileindex.DefKind) NodeKind {
@@ -288,7 +312,7 @@ func (b *builder) linkImports(ix *fileindex.Index) {
 		if !ok {
 			continue
 		}
-		from := sc.enclosing(imp.Line)
+		from := b.runner(sc.enclosing(imp.Line))
 		site := Site{Path: ix.Path, Line: imp.Line}
 		resolver := resolverName(ix.Language, "import", via)
 		if b.isModule(mod) {
@@ -360,7 +384,7 @@ func (b *builder) constructor(class string, depth int, seen map[string]bool) (st
 func (b *builder) copyUnresolved(ix *fileindex.Index) {
 	for _, u := range ix.Unresolved {
 		site := UnresolvedSite{
-			Caller:   u.Caller,
+			Caller:   b.runner(u.Caller),
 			Site:     Site{Path: ix.Path, Line: u.Line, Column: u.Column},
 			Text:     u.Text,
 			Receiver: u.Receiver,

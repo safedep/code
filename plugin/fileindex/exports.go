@@ -78,7 +78,12 @@ func (p *projection) reexport(name, from, item string, line int) {
 	p.ix.Exports = append(p.ix.Exports, fidx.Export{Name: name, From: from, Item: item, Line: line})
 }
 
+// addExportStatement adds the exports of an export statement. A TypeScript
+// export type exports no value, so it gives no export.
 func (p *projection) addExportStatement(statement *sitter.Node) {
+	if typeOnly(statement) {
+		return
+	}
 	line := lineOf(statement)
 	isDefault := false
 	for i := 0; i < int(statement.ChildCount()); i++ {
@@ -117,6 +122,9 @@ func (p *projection) addExportStatement(statement *sitter.Node) {
 		case "export_clause":
 			clause = true
 			for _, specifier := range ts.NamedChildren(child) {
+				if typeOnly(specifier) {
+					continue
+				}
 				local := p.text(specifier.ChildByFieldName("name"))
 				name := local
 				if alias := specifier.ChildByFieldName("alias"); alias != nil {

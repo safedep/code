@@ -23,9 +23,9 @@ var update = flag.Bool("update", false, "rewrite the golden graphs")
 
 // caseOptions is the options.json of a case.
 type caseOptions struct {
-	SysPath   []string              `json:"sys_path"`
-	Files     map[string]FileStatus `json:"files"`
-	TestPaths []string              `json:"test_paths"`
+	SysPath   []string                        `json:"sys_path"`
+	Files     map[string]fileindex.FileStatus `json:"files"`
+	TestPaths []string                        `json:"test_paths"`
 }
 
 // loadCase reads the indexes of a case under testdata, its options, its
@@ -252,8 +252,23 @@ func TestBuildPython(t *testing.T) {
 				"main.py -> handlers.py direct python.import",
 			},
 			check: func(t *testing.T, g *Graph) {
-				assert.Equal(t, FileMissing, g.Files["handlers.py"])
-				assert.Equal(t, FileCached, g.Files["main.py"])
+				assert.Equal(t, fileindex.FileMissing, g.Files["handlers.py"])
+				assert.Equal(t, fileindex.FileCached, g.Files["main.py"])
+			},
+		},
+		{
+			name: "python/class-body",
+			edges: []string{
+				"config.py -> yaml//load direct python.external",
+				"config.py -> yaml//dump direct python.external",
+				"config.py//Config -> config.py//Config//__init__ direct python.constructor",
+				"config.py//Config//__init__ -> yaml//safe_dump direct python.external",
+				"config.py//build -> yaml//safe_load direct python.external",
+			},
+			unresolved: []string{"config.py:6 config.py computed-name "},
+			check: func(t *testing.T, g *Graph) {
+				assert.Equal(t, []fileindex.Flag{{Kind: fileindex.FlagReflection, Line: 6}, {Kind: fileindex.FlagEval, Line: 7}}, g.Nodes["config.py"].Flags)
+				assert.Empty(t, g.Nodes["config.py//Config"].Flags)
 			},
 		},
 		{
@@ -265,6 +280,22 @@ func TestBuildPython(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestBuildUnindexedFile(t *testing.T) {
+	for _, status := range []fileindex.FileStatus{fileindex.FileMissing, fileindex.FileFailed} {
+		t.Run(string(status), func(t *testing.T) {
+			indexes, opts := loadCase(t, "python/missing-file")
+			opts.Files = map[string]fileindex.FileStatus{"main.py": fileindex.FileIndexed, "handlers.py": status}
+			g, err := Build(context.Background(), indexes, opts)
+			require.NoError(t, err)
+
+			assert.Equal(t, status, g.Files["handlers.py"])
+			require.Contains(t, g.Nodes, "handlers.py")
+			assert.Equal(t, NodeModule, g.Nodes["handlers.py"].Kind)
+			assert.Contains(t, edgeStrings(g), "main.py -> handlers.py direct python.import")
+		})
+	}
 }
 
 // chain returns n Python packages p0 to p(n-1), where each package

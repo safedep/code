@@ -166,6 +166,7 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 		if b.g.Nodes[from] == nil {
 			from = sc.enclosing(call.Line)
 		}
+		from = b.runner(from)
 		site := Site{Path: ix.Path, Line: call.Line, Column: call.Column}
 		for _, t := range targets {
 			r := b.resolveTarget(sc, call, t)
@@ -248,7 +249,7 @@ func (b *builder) walk(key string, names []string) resolution {
 	for i := 0; i < len(names); {
 		name := names[i]
 		switch kind := b.kindOf(r.key); {
-		case b.isMissing(r.key):
+		case b.unindexed(r.key):
 			return r
 		case isNamespacePackage(r.key) || kind == NodeModule:
 			key, fail := b.resolveName(r.key, name, 0)
@@ -589,8 +590,11 @@ func (b *builder) isMethod(key string) bool {
 	return k == NodeMethod || k == NodeConstructor
 }
 
-func (b *builder) isMissing(key string) bool {
-	return b.g.Files[key] == FileMissing && b.byPath[key] == nil
+// unindexed reports whether the key is a file that the index step reported
+// with no index.
+func (b *builder) unindexed(key string) bool {
+	status, ok := b.g.Files[key]
+	return ok && b.byPath[key] == nil && !status.Complete()
 }
 
 func (b *builder) bindsName(module, name string) bool {

@@ -79,18 +79,6 @@ func (c Confidence) Rank() int {
 	}
 }
 
-// FileStatus is what the build knows about a file. A missing file is one
-// that the index step did not reach. A truncated file hit a limit or holds
-// a parse error, so its index is not complete.
-type FileStatus string
-
-const (
-	FileIndexed   FileStatus = "indexed"
-	FileCached    FileStatus = "cached"
-	FileMissing   FileStatus = "missing"
-	FileTruncated FileStatus = "truncated"
-)
-
 // RootKind is the kind of a root, as the root rules name it.
 type RootKind = roots.Kind
 
@@ -191,14 +179,14 @@ type Stats struct {
 // Truncated are in a fixed order. Problems lists the manifests that the link
 // step could not read.
 type Graph struct {
-	Nodes      map[string]*Node      `json:"nodes"`
-	Edges      []Edge                `json:"edges"`
-	Unresolved []UnresolvedSite      `json:"unresolved"`
-	Roots      []Root                `json:"roots"`
-	Files      map[string]FileStatus `json:"files"`
-	Truncated  []Truncation          `json:"truncated,omitempty"`
-	Problems   []modules.Problem     `json:"problems,omitempty"`
-	Stats      Stats                 `json:"stats"`
+	Nodes      map[string]*Node                `json:"nodes"`
+	Edges      []Edge                          `json:"edges"`
+	Unresolved []UnresolvedSite                `json:"unresolved"`
+	Roots      []Root                          `json:"roots"`
+	Files      map[string]fileindex.FileStatus `json:"files"`
+	Truncated  []Truncation                    `json:"truncated,omitempty"`
+	Problems   []modules.Problem               `json:"problems,omitempty"`
+	Stats      Stats                           `json:"stats"`
 }
 
 // IsExternal reports whether the key names a node outside the project.

@@ -131,7 +131,7 @@ func (p *projection) addImports() {
 			Item:      imp.Item,
 			Alias:     imp.Alias,
 			Wildcard:  imp.Wildcard,
-			Kind:      p.importKind(imp.Position),
+			Kind:      p.importKind(imp),
 			Namespace: imp.Namespace,
 		})
 		if imp.Alias != "" {
@@ -141,17 +141,60 @@ func (p *projection) addImports() {
 }
 
 // importKind tells a static import from a dynamic import that a string
-// names, as await import('x').
-func (p *projection) importKind(module ast.NodePosition) fidx.ImportKind {
-	node := p.descendant(module)
-	for ; node != nil; node = node.Parent() {
-		if node.Type() == "call_expression" {
+// names, as await import('x'), and from a TypeScript import type.
+func (p *projection) importKind(imp callgraph.Import) fidx.ImportKind {
+	for node := p.descendant(imp.Position); node != nil; node = node.Parent() {
+		switch node.Type() {
+		case "call_expression":
 			if fn := node.ChildByFieldName("function"); fn != nil && fn.Type() == "import" {
 				return fidx.ImportDynamicString
 			}
+		case "import_statement":
+			if typeOnly(node) || imp.Item != "" && p.typeOnlySpecifier(node, imp.Item) {
+				return fidx.ImportTypeOnly
+			}
+			return fidx.ImportStatic
 		}
 	}
 	return fidx.ImportStatic
+}
+
+// typeOnly reports whether a TypeScript import, export or specifier binds
+// only a type, as import type { A } or import { type A }.
+func typeOnly(node *sitter.Node) bool {
+	return hasKeyword(node, "type", "typeof")
+}
+
+// hasKeyword reports whether one of the anonymous children of the node is
+// one of the words.
+func hasKeyword(node *sitter.Node, words ...string) bool {
+	for i := 0; i < int(node.ChildCount()); i++ {
+		if child := node.Child(i); !child.IsNamed() && slices.Contains(words, child.Type()) {
+			return true
+		}
+	}
+	return false
+}
+
+// typeOnlySpecifier reports whether the import statement imports the item
+// by a type-only specifier.
+func (p *projection) typeOnlySpecifier(statement *sitter.Node, item string) bool {
+	for _, clause := range ts.NamedChildren(statement) {
+		if clause.Type() != "import_clause" {
+			continue
+		}
+		for _, imports := range ts.NamedChildren(clause) {
+			if imports.Type() != "named_imports" {
+				continue
+			}
+			for _, specifier := range ts.NamedChildren(imports) {
+				if p.text(specifier.ChildByFieldName("name")) == item && typeOnly(specifier) {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 func (p *projection) addDefinitions() {
@@ -327,7 +370,7 @@ func (p *projection) addCalls() {
 				targets = p.rebind(key, ref.Method)
 			}
 			p.ix.Calls = append(p.ix.Calls, fidx.Call{
-				Caller:   key,
+				Caller:   p.caller(key, ref.Site),
 				Line:     int(ref.Site.StartLine),
 				Column:   int(ref.Site.StartColumn),
 				Callee:   ref.Text,
@@ -338,6 +381,31 @@ func (p *projection) addCalls() {
 			})
 		}
 	}
+}
+
+// caller returns the definition whose run runs the call site that the
+// definition key holds. A JavaScript static field or static block runs when
+// the class is defined, so its calls belong to the scope that defines the
+// class. A function value in a static field runs only when a call runs it.
+// A flag in a static block stays on the class.
+func (p *projection) caller(key string, site ast.NodePosition) string {
+	def, ok := p.defs[key]
+	if !ok || def.Kind != fidx.DefClass || !isECMAScript(p.ix.Language) {
+		return key
+	}
+	for node := p.descendant(site); node != nil && node.Type() != "class_body"; node = node.Parent() {
+		switch node.Type() {
+		case "arrow_function", "function_expression", "function", "generator_function":
+			return key
+		case "class_static_block":
+			return key[:strings.LastIndex(key, separator)]
+		case "field_definition", "public_field_definition":
+			if hasKeyword(node, "static") {
+				return key[:strings.LastIndex(key, separator)]
+			}
+		}
+	}
+	return key
 }
 
 // callKind maps the kind of a call graph edge to the kind of a call. An
@@ -406,7 +474,7 @@ func (p *projection) rebind(caller, name string) []string {
 func (p *projection) addUnresolved() {
 	for _, u := range p.cg.Unresolved() {
 		p.ix.Unresolved = append(p.ix.Unresolved, fidx.Unresolved{
-			Caller:   u.Caller,
+			Caller:   p.caller(u.Caller, u.Site),
 			Line:     int(u.Site.StartLine),
 			Column:   int(u.Site.StartColumn),
 			Text:     u.Text,

@@ -397,7 +397,7 @@ func (ix *index) uncertainties(s *search, maxDepth int) *found {
 		if n == nil || n.Kind == projectgraph.NodeExternal {
 			continue
 		}
-		if status := g.Files[n.Path]; !files[n.Path] && (status == projectgraph.FileMissing || status == projectgraph.FileTruncated) {
+		if status, ok := g.Files[n.Path]; ok && !files[n.Path] && !status.Complete() {
 			files[n.Path] = true
 			f.global = append(f.global, Uncertainty{Kind: Budget, Key: key, Site: projectgraph.Site{Path: n.Path}, Text: "the file is " + string(status)})
 		}

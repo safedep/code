@@ -72,8 +72,8 @@ func countingIndexer() (*Indexer, *int) {
 	}, &parses
 }
 
-func statuses(status FileStatus, names ...string) map[string]FileStatus {
-	files := map[string]FileStatus{}
+func statuses(status fidx.FileStatus, names ...string) map[string]fidx.FileStatus {
+	files := map[string]fidx.FileStatus{}
 	for _, name := range names {
 		files[name] = status
 	}
@@ -92,7 +92,7 @@ func TestIndexerWarmRunParsesNothing(t *testing.T) {
 	cold, err := indexer.Run(context.Background(), fsys, opts)
 	require.NoError(t, err)
 	assert.Equal(t, 4, *parses)
-	assert.Equal(t, statuses(FileIndexed, sourceNames...), cold.Files)
+	assert.Equal(t, statuses(fidx.FileIndexed, sourceNames...), cold.Files)
 	assert.Empty(t, cold.Report.Failed)
 	require.Len(t, cold.Indexes, 4)
 	for i, name := range sourceNames {
@@ -103,7 +103,7 @@ func TestIndexerWarmRunParsesNothing(t *testing.T) {
 	warm, err := indexer.Run(context.Background(), fsys, opts)
 	require.NoError(t, err)
 	assert.Zero(t, *parses)
-	assert.Equal(t, statuses(FileCached, sourceNames...), warm.Files)
+	assert.Equal(t, statuses(fidx.FileCached, sourceNames...), warm.Files)
 	assert.Equal(t, cold.Indexes, warm.Indexes)
 	assert.Empty(t, warm.Report.Visited)
 
@@ -113,8 +113,8 @@ func TestIndexerWarmRunParsesNothing(t *testing.T) {
 		changed, err := indexer.Run(context.Background(), fsys, opts)
 		require.NoError(t, err)
 		assert.Equal(t, 1, *parses)
-		assert.Equal(t, FileIndexed, changed.Files["main.js"])
-		assert.Equal(t, FileCached, changed.Files["tool.py"])
+		assert.Equal(t, fidx.FileIndexed, changed.Files["main.js"])
+		assert.Equal(t, fidx.FileCached, changed.Files["tool.py"])
 		assert.Len(t, changed.Indexes[2].Calls, 2)
 	})
 }
@@ -126,7 +126,7 @@ func TestIndexerWithNoStoreParsesEveryFile(t *testing.T) {
 	for range 2 {
 		result, err := indexer.Run(context.Background(), appFileSystem(t, dir), Options{Languages: projectLanguages(t)})
 		require.NoError(t, err)
-		assert.Equal(t, statuses(FileIndexed, sourceNames...), result.Files)
+		assert.Equal(t, statuses(fidx.FileIndexed, sourceNames...), result.Files)
 	}
 	assert.Equal(t, 8, *parses)
 }
@@ -152,7 +152,7 @@ func TestIndexerWithLocalDBStoreReadsTheStore(t *testing.T) {
 	assert.Equal(t, 4, coldParses)
 	warm, warmParses := run()
 	assert.Zero(t, warmParses)
-	assert.Equal(t, statuses(FileCached, sourceNames...), warm.Files)
+	assert.Equal(t, statuses(fidx.FileCached, sourceNames...), warm.Files)
 	assert.Equal(t, cold.Indexes, warm.Indexes)
 }
 
@@ -184,11 +184,11 @@ func TestIndexerStopsAfterTheDeadline(t *testing.T) {
 	})
 	require.ErrorIs(t, err, context.Canceled)
 
-	count := map[FileStatus]int{}
+	count := map[fidx.FileStatus]int{}
 	for _, status := range result.Files {
 		count[status]++
 	}
-	assert.Equal(t, map[FileStatus]int{FileIndexed: batchSize, FileMissing: 44}, count)
+	assert.Equal(t, map[fidx.FileStatus]int{fidx.FileIndexed: batchSize, fidx.FileMissing: 44}, count)
 	assert.Len(t, result.Indexes, batchSize)
 }
 
@@ -232,7 +232,7 @@ func TestIndexerRunsExtraPluginsOnEveryFile(t *testing.T) {
 	result, err := indexer.Run(context.Background(), fsys, opts)
 	require.NoError(t, err)
 	assert.ElementsMatch(t, sourceNames, extra.files)
-	assert.Equal(t, statuses(FileIndexed, sourceNames...), result.Files)
+	assert.Equal(t, statuses(fidx.FileIndexed, sourceNames...), result.Files)
 	for _, p := range extra.paths {
 		assert.True(t, filepath.IsAbs(p), "a plugin sees the path of the file, not %s", p)
 	}
@@ -259,7 +259,7 @@ func TestIndexerFailsAFileOverTheLimit(t *testing.T) {
 	var indexer Indexer
 	result, err := indexer.Run(context.Background(), appFileSystem(t, dir), Options{Languages: projectLanguages(t)})
 	require.NoError(t, err)
-	assert.Equal(t, map[string]FileStatus{"big.js": FileFailed, "small.js": FileIndexed}, result.Files)
+	assert.Equal(t, map[string]fidx.FileStatus{"big.js": fidx.FileFailed, "small.js": fidx.FileIndexed}, result.Files)
 	require.Len(t, result.Report.Failed, 1)
 	assert.Equal(t, core.StageParse, result.Report.Failed[0].Stage)
 	assert.ErrorIs(t, result.Report.Failed[0], parser.ErrInputTooLarge)
