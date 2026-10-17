@@ -370,13 +370,6 @@ func (p *projection) javaReferenceVisitor() visitor {
 		if last := node.NamedChild(int(node.NamedChildCount()) - 1); node.NamedChildCount() > 1 && last.Type() == "identifier" {
 			target = fidx.Join(target, p.text(last))
 		}
-		site := ast.GetNodePosition(node)
-		p.ix.References = append(p.ix.References, fidx.Reference{
-			Caller:  caller,
-			Line:    int(site.StartLine),
-			Column:  int(site.StartColumn),
-			Text:    p.text(node),
-			Targets: []string{target},
-		})
+		p.addReference(node, caller, []string{target})
 	}
 }

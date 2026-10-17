@@ -7,6 +7,7 @@ import (
 	"github.com/safedep/code/core"
 	fidx "github.com/safedep/code/fileindex"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFileIndexJava(t *testing.T) {
@@ -95,6 +96,22 @@ func TestFileIndexJavaStaticInitializer(t *testing.T) {
 	for _, def := range ix.Definitions {
 		assert.NotEqual(t, "A.java//B//<clinit>", def.Key, "a static field with no call runs no code")
 	}
+}
+
+func TestFileIndexJavaStaticFieldReference(t *testing.T) {
+	source := strings.Join([]string{
+		"class App {",
+		"  static final Runnable R = pick(App::run);",
+		"  static void run() {}",
+		"}",
+	}, "\n") + "\n"
+	ix := indexSource(t, core.LanguageCodeJava, "App.java", source)
+
+	require.Len(t, ix.References, 1)
+	assert.Equal(t, "App.java//App//<clinit>", ix.References[0].Caller, "a method reference in a static initializer runs when the class loads")
+	assert.Equal(t, []string{"App.java//App//run"}, ix.References[0].Targets)
+	require.Len(t, ix.Calls, 1)
+	assert.Equal(t, ix.Calls[0].Caller, ix.References[0].Caller, "the call and the reference of one initializer have one caller")
 }
 
 func TestFileIndexJavaRecordsAndEnumBodies(t *testing.T) {

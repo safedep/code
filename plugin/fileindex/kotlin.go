@@ -4,7 +4,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/safedep/code/core/ast"
 	fidx "github.com/safedep/code/fileindex"
 	"github.com/safedep/code/pkg/ts"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -295,14 +294,7 @@ func kotlinReferenceVisitor(p *projection) visitor {
 			}
 			target = fidx.Join(base, target)
 		}
-		site := ast.GetNodePosition(node)
-		p.ix.References = append(p.ix.References, fidx.Reference{
-			Caller:  caller,
-			Line:    int(site.StartLine),
-			Column:  int(site.StartColumn),
-			Text:    p.text(node),
-			Targets: []string{target},
-		})
+		p.addReference(node, caller, []string{target})
 	}
 }
 

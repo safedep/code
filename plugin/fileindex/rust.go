@@ -4,7 +4,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/safedep/code/core/ast"
 	fidx "github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/pkg/ts"
@@ -359,12 +358,5 @@ func (p *projection) addRustTypeReference(node, typ *sitter.Node) {
 			target = fidx.Join(imp.Namespace, nonEmpty(rest)...)
 		}
 	}
-	site := ast.GetNodePosition(typ)
-	p.ix.References = append(p.ix.References, fidx.Reference{
-		Caller:  p.caller(caller, site),
-		Line:    int(site.StartLine),
-		Column:  int(site.StartColumn),
-		Text:    p.text(typ),
-		Targets: []string{target},
-	})
+	p.addReference(typ, caller, []string{target})
 }

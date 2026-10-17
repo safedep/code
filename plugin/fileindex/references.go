@@ -2,6 +2,7 @@ package fileindex
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
@@ -191,13 +192,42 @@ func (p *projection) referenceVisitor() visitor {
 		}
 		caller := stack[len(stack)-1].key
 		for _, value := range syntax.unlist(values) {
-			ref, ok := p.reference(syntax, caller, value)
-			if k := (site{ref.Line, ref.Column, ref.Caller, ref.Text}); ok && !seen[k] {
+			target, ok := p.reference(syntax, caller, value)
+			if !ok {
+				continue
+			}
+			at := ast.GetNodePosition(value)
+			if k := (site{int(at.StartLine), int(at.StartColumn), caller, p.text(value)}); !seen[k] {
 				seen[k] = true
-				p.ix.References = append(p.ix.References, ref)
+				p.addReference(value, caller, p.targets([]string{target}))
 			}
 		}
 	}
+}
+
+// addReference adds a reference from the definition that runs the code at
+// the node to the targets. The caller is the definition that holds the
+// node, and a static initializer or a property function that the call
+// graph does not know takes it from there, as a call does. The text is
+// bounded as the text of a record is.
+func (p *projection) addReference(node *sitter.Node, caller string, targets []string) {
+	site := ast.GetNodePosition(node)
+	p.ix.References = append(p.ix.References, fidx.Reference{
+		Caller:  p.caller(caller, site),
+		Line:    int(site.StartLine),
+		Column:  int(site.StartColumn),
+		Text:    clipText(p.text(node)),
+		Targets: targets,
+	})
+}
+
+// clipText bounds the text of a record as the call graph does.
+func clipText(text string) string {
+	const maxText = 120
+	if len(text) <= maxText {
+		return text
+	}
+	return strings.ToValidUTF8(text[:maxText], "")
 }
 
 // unlist replaces each list of the values with the value that it holds.
@@ -223,25 +253,25 @@ func (syntax referenceSyntax) unlist(values []*sitter.Node) []*sitter.Node {
 	return out
 }
 
-// reference returns the reference of a value. The value is a name or a
-// member chain, and a definition, an import or the instance of a class
-// binds its first name.
-func (p *projection) reference(syntax referenceSyntax, caller string, value *sitter.Node) (fidx.Reference, bool) {
+// reference returns the per-file target of a value. The value is a name
+// or a member chain, and a definition, an import or the instance of a
+// class binds its first name.
+func (p *projection) reference(syntax referenceSyntax, caller string, value *sitter.Node) (string, bool) {
 	if value == nil || p.inExport(value) && syntax.identifiers[value.Type()] {
-		return fidx.Reference{}, false
+		return "", false
 	}
 	var names []string
 	root := value
 	for root != nil && root.Type() == syntax.member && len(names) < maxReferenceSegments {
 		property := root.ChildByFieldName(syntax.property)
 		if property == nil {
-			return fidx.Reference{}, false
+			return "", false
 		}
 		names = append(names, p.text(property))
 		root = root.ChildByFieldName(syntax.object)
 	}
 	if root == nil || !syntax.identifiers[root.Type()] && !syntax.instances[p.text(root)] {
-		return fidx.Reference{}, false
+		return "", false
 	}
 	slices.Reverse(names)
 
@@ -250,21 +280,14 @@ func (p *projection) reference(syntax referenceSyntax, caller string, value *sit
 	case !ok && syntax.rawNames && syntax.identifiers[root.Type()]:
 		unit = p.text(root)
 	case !ok:
-		return fidx.Reference{}, false
+		return "", false
 	}
 	// A Go parameter or local of a declared type holds a value of the
 	// type, and a value is no function.
 	if _, typed := p.typedScope(caller, p.text(root)); typed && len(names) == 0 {
-		return fidx.Reference{}, false
+		return "", false
 	}
-	site := ast.GetNodePosition(value)
-	return fidx.Reference{
-		Caller:  p.caller(caller, site),
-		Line:    int(site.StartLine),
-		Column:  int(site.StartColumn),
-		Text:    p.text(value),
-		Targets: p.targets([]string{fidx.Join(unit, names...)}),
-	}, true
+	return fidx.Join(unit, names...), true
 }
 
 // valueOf returns the per-file target of a name: the definition that the

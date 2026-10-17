@@ -3,7 +3,6 @@ package fileindex
 import (
 	"strings"
 
-	"github.com/safedep/code/core/ast"
 	fidx "github.com/safedep/code/fileindex"
 	"github.com/safedep/code/pkg/ts"
 	"github.com/safedep/code/plugin/callgraph"
@@ -282,12 +281,5 @@ func (p *projection) phpName(caller, name string) string {
 }
 
 func (p *projection) addPHPReference(node *sitter.Node, caller, target string) {
-	site := ast.GetNodePosition(node)
-	p.ix.References = append(p.ix.References, fidx.Reference{
-		Caller:  p.caller(caller, site),
-		Line:    int(site.StartLine),
-		Column:  int(site.StartColumn),
-		Text:    p.text(node),
-		Targets: []string{target},
-	})
+	p.addReference(node, caller, []string{target})
 }

@@ -79,8 +79,8 @@ func (p *projection) arguments(caller string, site ast.NodePosition) []fidx.Arg 
 		arg := fidx.Arg{Shape: p.shape(syntax, refs, node)}
 		switch arg.Shape {
 		case fidx.ArgName, fidx.ArgMember:
-			if ref, ok := p.reference(refs, caller, node); ok {
-				arg.Targets = ref.Targets
+			if target, ok := p.reference(refs, caller, node); ok {
+				arg.Targets = p.targets([]string{target})
 			}
 		case fidx.ArgFunction:
 			if key, ok := p.spans[spanOf(node)]; ok {

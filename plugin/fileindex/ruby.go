@@ -178,14 +178,7 @@ func (p *projection) addRubyReference(node, receiver *sitter.Node, name string) 
 		p.addRubyUnresolved(node, name)
 		return
 	}
-	site := ast.GetNodePosition(node)
-	p.ix.References = append(p.ix.References, fidx.Reference{
-		Caller:  p.caller(caller, site),
-		Line:    int(site.StartLine),
-		Column:  int(site.StartColumn),
-		Text:    p.text(node),
-		Targets: targets,
-	})
+	p.addReference(node, caller, targets)
 }
 
 // addRubyUnresolved adds the record of a call of the method of the name on
@@ -205,13 +198,4 @@ func (p *projection) addRubyUnresolved(node *sitter.Node, name string) {
 
 func symbolName(symbol string) string {
 	return strings.TrimPrefix(symbol, ":")
-}
-
-// clipText bounds the text of a record as the call graph does.
-func clipText(text string) string {
-	const maxText = 120
-	if len(text) <= maxText {
-		return text
-	}
-	return strings.ToValidUTF8(text[:maxText], "")
 }
