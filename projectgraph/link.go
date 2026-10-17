@@ -60,6 +60,7 @@ type builder struct {
 	paths  []string
 	files  *modules.Files
 	python *modules.Python
+	js     *modules.JavaScript
 	scopes map[string]*scope
 
 	edges       map[Edge]bool
@@ -117,7 +118,9 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 
 	b.files = modules.NewFiles(b.paths)
 	b.python = modules.NewPython(b.files, opts.Root, opts.SysPath)
+	b.js = modules.NewJavaScript(b.files, opts.Root)
 	b.problems = append(b.problems, b.python.Problems()...)
+	b.problems = append(b.problems, b.js.Problems()...)
 	return b, nil
 }
 
@@ -247,7 +250,8 @@ func (b *builder) addUnresolved(u UnresolvedSite) {
 }
 
 // linkImports adds an import edge from the definition that holds each
-// import to the module top level that it runs.
+// import, or the module of each re-export, to the module top level that it
+// runs.
 func (b *builder) linkImports(ix *fileindex.Index) {
 	sc := b.scopes[ix.Path]
 	for _, imp := range ix.Imports {
@@ -269,6 +273,15 @@ func (b *builder) linkImports(ix *fileindex.Index) {
 		}
 		if sub, ok := b.python.Submodule(mod, imp.Item); ok && b.isModule(sub) {
 			b.addEdge(Edge{From: from, To: sub, Site: site, Kind: EdgeImport, Resolver: resolverName(ix.Language, "import", "submodule")})
+		}
+	}
+	for _, ex := range ix.Exports {
+		if ex.From == "" {
+			continue
+		}
+		if mod, via, ok := b.resolveModule(ix, ex.From); ok && b.isModule(mod) {
+			site := Site{Path: ix.Path, Line: ex.Line}
+			b.addEdge(Edge{From: ix.Path, To: mod, Site: site, Kind: EdgeImport, Resolver: resolverName(ix.Language, "import", via)})
 		}
 	}
 }

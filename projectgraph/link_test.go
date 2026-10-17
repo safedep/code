@@ -347,3 +347,109 @@ func TestBuildRejectsBadInput(t *testing.T) {
 	_, err = Build(ctx, []*fileindex.Index{ix}, Options{})
 	assert.ErrorIs(t, err, context.Canceled)
 }
+
+func TestBuildJavaScript(t *testing.T) {
+	runLinkCases(t, []linkCase{
+		{
+			name: "javascript/esm-named-import",
+			edges: []string{
+				"src/main.js -> src/parser.js import javascript.import.relative",
+				"src/main.js -> src/parser.js//parse direct javascript.import",
+				"src/main.js -> src/util.js//fmt direct javascript.import",
+				"src/parser.js//parse -> js-yaml//load direct javascript.external",
+			},
+			unresolved: []string{"src/main.js:5 src/main.js dynamic-import "},
+			check: func(t *testing.T, g *Graph) {
+				assert.Equal(t, "src/locale/", g.Unresolved[0].ImportPrefix)
+			},
+		},
+		{
+			name: "javascript/commonjs-require",
+			edges: []string{
+				"main.js -> lib/index.js import javascript.import.relative",
+				"main.js -> lib/index.js//run direct javascript.import",
+				"main.js -> helper.js//helper direct javascript.import",
+			},
+		},
+		{
+			name: "javascript/default-import",
+			edges: []string{
+				"main.js -> log.js//log direct javascript.import",
+				"main.js -> make.js//make direct javascript.import",
+			},
+		},
+		{
+			name: "javascript/barrel-chain",
+			edges: []string{
+				"src/main.js -> src/api/index.js//parse direct javascript.import",
+				"src/api/index.js//parse -> src/core/index.js//parse export javascript.reexport",
+				"src/core/index.js//parse -> src/core/parse.js//doParse export javascript.reexport",
+				"src/api/index.js -> src/core/index.js import javascript.import.relative",
+				"src/core/index.js -> src/core/parse.js import javascript.import.relative",
+			},
+		},
+		{
+			name: "javascript/export-star",
+			edges: []string{
+				"main.js -> all.js//a direct javascript.import",
+				"all.js//a -> a.js//a export javascript.reexport-star",
+				"all.js//b -> b.js//b export javascript.reexport-star",
+				"all.js//ns -> c.js export javascript.reexport",
+				"main.js -> c.js//c direct javascript.import",
+			},
+		},
+		{
+			name: "javascript/workspaces",
+			edges: []string{
+				"packages/app/src/main.js -> packages/core/lib/index.js import javascript.import.main",
+				"packages/app/src/main.js -> packages/core/lib/index.js//start direct javascript.import",
+				"packages/app/src/main.js -> packages/core/util.js import javascript.import.subpath",
+				"packages/app/src/main.js -> packages/core/util.js//tidy direct javascript.import",
+				"packages/app/src/main.js -> lodash//template direct javascript.external",
+			},
+		},
+		{
+			name: "javascript/exports-conditions",
+			edges: []string{
+				"app/main.mjs -> lib/esm/index.mjs import javascript.import.exports-import",
+				"app/main.mjs -> lib/esm/index.mjs//x direct javascript.import",
+				"app/main.mjs -> lib/src/feature/y.js import javascript.import.exports-default",
+				"app/main.mjs -> lib/src/feature/y.js//y direct javascript.import",
+			},
+		},
+	})
+}
+
+func TestBuildTypeScript(t *testing.T) {
+	runLinkCases(t, []linkCase{
+		{
+			name: "typescript/tsconfig-paths",
+			edges: []string{
+				"src/main.ts -> src/app/server.ts import typescript.import.tsconfig-paths",
+				"src/main.ts -> src/app/server.ts//serve direct typescript.import",
+				"src/main.ts -> src/config.ts import typescript.import.tsconfig-baseurl",
+				"src/main.ts -> src/config.ts//cfg direct typescript.import",
+			},
+		},
+		{
+			name: "typescript/js-specifier",
+			edges: []string{
+				"src/main.ts -> src/util.ts import typescript.import.relative",
+				"src/main.ts -> src/util.ts//f direct typescript.import",
+			},
+		},
+		{
+			name: "typescript/type-only",
+			edges: []string{
+				"src/main.ts -> src/decl.d.ts import typescript.import.relative",
+				"src/main.ts -> src/decl.d.ts//decl direct typescript.import",
+			},
+			check: func(t *testing.T, g *Graph) {
+				for _, e := range g.Edges {
+					assert.NotEqual(t, "src/types.ts", e.To, "a type-only import makes no edge")
+					assert.NotEqual(t, "src/decl.d.ts", e.From, "a declaration file makes no call edge")
+				}
+			},
+		},
+	})
+}

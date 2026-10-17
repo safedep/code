@@ -1,0 +1,79 @@
+{
+  "nodes": {
+    "src/decl.d.ts": {
+      "key": "src/decl.d.ts",
+      "kind": "module",
+      "path": "src/decl.d.ts",
+      "line": 1,
+      "exported": true
+    },
+    "src/decl.d.ts//decl": {
+      "key": "src/decl.d.ts//decl",
+      "kind": "function",
+      "path": "src/decl.d.ts",
+      "line": 1,
+      "exported": true
+    },
+    "src/main.ts": {
+      "key": "src/main.ts",
+      "kind": "module",
+      "path": "src/main.ts",
+      "line": 1,
+      "exported": true
+    },
+    "src/types.ts": {
+      "key": "src/types.ts",
+      "kind": "module",
+      "path": "src/types.ts",
+      "line": 1,
+      "exported": true
+    },
+    "src/types.ts//Opts": {
+      "key": "src/types.ts//Opts",
+      "kind": "class",
+      "path": "src/types.ts",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "src/main.ts",
+      "to": "src/decl.d.ts",
+      "site": {
+        "path": "src/main.ts",
+        "line": 2
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "typescript.import.relative"
+    },
+    {
+      "from": "src/main.ts",
+      "to": "src/decl.d.ts//decl",
+      "site": {
+        "path": "src/main.ts",
+        "line": 3,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "typescript.import"
+    }
+  ],
+  "unresolved": [],
+  "roots": [],
+  "files": {
+    "src/decl.d.ts": "indexed",
+    "src/main.ts": "indexed",
+    "src/types.ts": "indexed"
+  },
+  "stats": {
+    "version": "1",
+    "files": 3,
+    "nodes": 5,
+    "edges": 2,
+    "unresolved": 0,
+    "roots": 0
+  }
+}

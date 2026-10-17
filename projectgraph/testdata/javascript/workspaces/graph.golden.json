@@ -1,0 +1,118 @@
+{
+  "nodes": {
+    "lodash//template": {
+      "key": "lodash//template",
+      "kind": "external"
+    },
+    "packages/app/src/main.js": {
+      "key": "packages/app/src/main.js",
+      "kind": "module",
+      "path": "packages/app/src/main.js",
+      "line": 1,
+      "exported": true
+    },
+    "packages/core/lib/index.js": {
+      "key": "packages/core/lib/index.js",
+      "kind": "module",
+      "path": "packages/core/lib/index.js",
+      "line": 1,
+      "exported": true
+    },
+    "packages/core/lib/index.js//start": {
+      "key": "packages/core/lib/index.js//start",
+      "kind": "function",
+      "path": "packages/core/lib/index.js",
+      "line": 1,
+      "exported": true
+    },
+    "packages/core/util.js": {
+      "key": "packages/core/util.js",
+      "kind": "module",
+      "path": "packages/core/util.js",
+      "line": 1,
+      "exported": true
+    },
+    "packages/core/util.js//tidy": {
+      "key": "packages/core/util.js//tidy",
+      "kind": "function",
+      "path": "packages/core/util.js",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "packages/app/src/main.js",
+      "to": "packages/core/lib/index.js",
+      "site": {
+        "path": "packages/app/src/main.js",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.main"
+    },
+    {
+      "from": "packages/app/src/main.js",
+      "to": "packages/core/util.js",
+      "site": {
+        "path": "packages/app/src/main.js",
+        "line": 2
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.subpath"
+    },
+    {
+      "from": "packages/app/src/main.js",
+      "to": "packages/core/lib/index.js//start",
+      "site": {
+        "path": "packages/app/src/main.js",
+        "line": 4,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.import"
+    },
+    {
+      "from": "packages/app/src/main.js",
+      "to": "packages/core/util.js//tidy",
+      "site": {
+        "path": "packages/app/src/main.js",
+        "line": 5,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.import"
+    },
+    {
+      "from": "packages/app/src/main.js",
+      "to": "lodash//template",
+      "site": {
+        "path": "packages/app/src/main.js",
+        "line": 6,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.external"
+    }
+  ],
+  "unresolved": [],
+  "roots": [],
+  "files": {
+    "packages/app/src/main.js": "indexed",
+    "packages/core/lib/index.js": "indexed",
+    "packages/core/util.js": "indexed"
+  },
+  "stats": {
+    "version": "1",
+    "files": 3,
+    "nodes": 6,
+    "edges": 5,
+    "unresolved": 0,
+    "roots": 0
+  }
+}

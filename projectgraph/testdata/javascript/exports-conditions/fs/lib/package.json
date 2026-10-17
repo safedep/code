@@ -1,0 +1,7 @@
+{
+  "name": "@acme/lib",
+  "exports": {
+    ".": {"types": "./index.d.ts", "import": "./esm/index.mjs", "require": "./cjs/index.cjs"},
+    "./feature/*": {"default": "./src/feature/*.js"}
+  }
+}

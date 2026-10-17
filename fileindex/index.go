@@ -30,6 +30,9 @@ const (
 	ImportStatic          ImportKind = "static"
 	ImportDynamicString   ImportKind = "dynamic-string"
 	ImportDynamicComputed ImportKind = "dynamic-computed"
+	// ImportTypeOnly is a TypeScript import type. It binds no value, so the
+	// link step makes no edge for it.
+	ImportTypeOnly ImportKind = "type-only"
 )
 
 type DefKind string
@@ -137,7 +140,10 @@ type Import struct {
 
 // Export is one export of the file. Name is "default" for a default export.
 // Target is a definition key of the file, and is empty for a re-export. A
-// re-export names its module in From and its item in Item, "*" for all.
+// re-export names its module in From and its item in Item, "*" for all, and
+// "" for the whole module. An export with no Target and no From gives on a
+// name that the file imports, and Item holds that local name when it is not
+// Name. The exports of a Python file are the names of its __all__.
 type Export struct {
 	Name   string `json:"name"`
 	Target string `json:"target"`
