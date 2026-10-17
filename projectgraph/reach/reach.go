@@ -604,6 +604,12 @@ func (ix *index) uncertainties(s *search, maxDepth int) *found {
 			f.global = append(f.global, units[unit]...)
 		}
 	}
+	// A record with no caller is a unit that no import names. Any search
+	// can enter it, so it counts for every search.
+	for _, r := range unresolved[""] {
+		enter(r.Unit)
+		f.byUnit = append(f.byUnit, Uncertainty{Kind: UnresolvedCall, Site: r.Site, Text: fmt.Sprintf("%s (%s)", r.Text, r.Reason), Unit: r.Unit})
+	}
 	for _, id := range s.order {
 		key := ix.keys[id]
 		n := g.Nodes[key]

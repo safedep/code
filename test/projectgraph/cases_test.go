@@ -24,6 +24,7 @@ import (
 	"github.com/safedep/code/fs"
 	"github.com/safedep/code/plugin/fileindex"
 	"github.com/safedep/code/projectgraph"
+	"github.com/safedep/code/projectgraph/modules"
 	"github.com/safedep/code/projectgraph/overlay"
 	"github.com/safedep/code/projectgraph/reach"
 	"github.com/safedep/code/projectgraph/store/memstore"
@@ -50,6 +51,7 @@ type expectation struct {
 	TestPaths    []string          `yaml:"test_paths,omitempty"`
 	MaxFileBytes int               `yaml:"max_file_bytes,omitempty"`
 	Failed       []string          `yaml:"failed,omitempty"`
+	Problems     []modules.Problem `yaml:"problems,omitempty"`
 	Roots        []root            `yaml:"roots"`
 	Edges        []edge            `yaml:"edges"`
 	NoEdges      []noEdge          `yaml:"no_edges,omitempty"`
@@ -180,7 +182,7 @@ func runCase(t *testing.T, dir string, languages []core.Language) {
 		Units:     roots,
 	})
 	require.NoError(t, err)
-	assert.Empty(t, g.Problems)
+	assert.Equal(t, want.Problems, g.Problems, "problems")
 	assert.Equal(t, want.Dropped, mergeOverlay(t, filepath.Join(dir, "overlay.json"), g), "dropped overlay edges")
 
 	assert.Equal(t, want.Roots, rootsOf(g, want.Roots), "roots")

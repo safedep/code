@@ -1,0 +1,39 @@
+source: safedep:hand
+description: >-
+  The unit PyYAML holds the package yaml, and no import of the project names it. Its package name gives no
+  module either, so the link step cannot tell which import would load the unit. It records a problem and
+  a record of the unit that no node holds, so every target that the code of the unit reaches is uncertain
+  in every search, and x.y stays not found.
+units:
+  venv/site-packages/yaml: pypi:PyYAML@6.0.1
+import_dirs:
+  - venv/site-packages
+problems:
+  - path: pypi:PyYAML@6.0.1
+    text: no import names the unit, and it gives no module for the package pyyaml
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: pypi:PyYAML@6.0.1//yaml/__init__.py//load
+    to: marshal//loads
+    kind: direct
+    confidence: high
+    site: pypi:PyYAML@6.0.1//yaml/__init__.py:5
+unresolved:
+  - caller: ""
+    site: pypi:PyYAML@6.0.1
+    reason: no-definition
+results:
+  - target: marshal//loads
+    status: uncertain
+    call_sites:
+      - caller: pypi:PyYAML@6.0.1//yaml/__init__.py//load
+        site: pypi:PyYAML@6.0.1//yaml/__init__.py:5
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: pypi:PyYAML@6.0.1
+  - target: x//y
+    status: not-found

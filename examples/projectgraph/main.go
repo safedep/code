@@ -6,7 +6,12 @@
 //
 // Each -deps dir=unit, as -deps node_modules/lodash=npm:lodash@4.17.21,
 // adds the code of a dependency to the graph, so a path goes on into the
-// package. With -summary it prints the summary of each such unit as JSON.
+// package. A -deps directory under an -import-dir, as
+// -import-dir venv/site-packages -deps venv/site-packages/yaml=pypi:PyYAML@6.0.1,
+// keeps its path under the import directory, as yaml/__init__.py. Any
+// other -deps directory is an import directory of its own, and a pypi
+// package given that way is its package. With -summary it prints the
+// summary of each such unit as JSON.
 package main
 
 import (
@@ -95,6 +100,7 @@ type config struct {
 	store        string
 	overlay      string
 	targets      stringList
+	importDirs   stringList
 	deps         depList
 	summary      bool
 	includeTests bool
@@ -109,6 +115,7 @@ func main() {
 	flag.StringVar(&cfg.overlay, "overlay", "", "JSON file of llm edges to merge into the graph")
 	flag.Var(&cfg.targets, "target", "external symbol to reach, as yaml//load (repeatable)")
 	flag.Var(cfg.deps, "deps", "directory of a dependency and its unit, as node_modules/lodash=npm:lodash@4.17.21 (repeatable)")
+	flag.Var(&cfg.importDirs, "import-dir", "directory that holds -deps directories, as venv/site-packages (repeatable)")
 	flag.BoolVar(&cfg.summary, "summary", false, "print the summary of each unit of -deps as JSON")
 	flag.BoolVar(&cfg.includeTests, "include-tests", false, "count the test files as roots")
 	flag.BoolVar(&cfg.json, "json", false, "print the reach results as JSON")
@@ -131,18 +138,34 @@ func run(ctx context.Context, cfg config, out io.Writer) (err error) {
 		return err
 	}
 	fsCfg := fs.LocalFileSystemConfig{AppDirectories: []string{root}, ImportUnits: map[string]string{}, ExcludePatterns: skipPatterns(root)}
+	var importDirs []string
+	for _, dir := range cfg.importDirs {
+		abs, err := filepath.Abs(dir)
+		if err != nil {
+			return err
+		}
+		importDirs = append(importDirs, abs)
+	}
 	units := map[string]iofs.FS{}
 	for dir, unit := range cfg.deps {
 		abs, err := filepath.Abs(dir)
 		if err != nil {
 			return err
 		}
-		fsCfg.ImportDirectories = append(fsCfg.ImportDirectories, abs)
+		importDir := abs
+		if i := slices.IndexFunc(importDirs, func(d string) bool { return within(d, abs) }); i >= 0 {
+			importDir = importDirs[i]
+		} else {
+			importDirs = append(importDirs, abs)
+		}
 		fsCfg.ImportUnits[abs] = unit
+		units[unit] = os.DirFS(importDir)
+	}
+	for _, dir := range importDirs {
+		fsCfg.ImportDirectories = append(fsCfg.ImportDirectories, dir)
 		// The patterns of root do not apply to the walk of a dependency,
 		// so the code that the dependency installs below it stays out.
-		fsCfg.ExcludePatterns = append(fsCfg.ExcludePatterns, installedPattern(abs))
-		units[unit] = os.DirFS(abs)
+		fsCfg.ExcludePatterns = append(fsCfg.ExcludePatterns, installedPattern(dir))
 	}
 	slices.Sort(fsCfg.ImportDirectories)
 	fsys, err := fs.NewLocalFileSystem(fsCfg)
@@ -267,6 +290,12 @@ func mergeOverlay(g *projectgraph.Graph, path string, warn io.Writer) error {
 		}
 	}
 	return nil
+}
+
+// within reports whether path is dir or a path below it.
+func within(dir, path string) bool {
+	rel, err := filepath.Rel(dir, path)
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 // sep matches a path separator of any platform.

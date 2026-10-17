@@ -93,13 +93,15 @@ func (k spaceResolver) FirstParty(spec string) bool {
 }
 
 // addSpaces makes the space of the project and the space of each unit that
-// has a file.
+// has a file. A pypi unit with an __init__.py at its root is its package
+// directory, and its root is the package of the name of the unit.
 func (b *builder) addSpaces() error {
 	byUnit := map[string][]string{"": nil}
 	for _, p := range b.paths {
 		unit, inner := fileindex.SplitUnit(p)
 		byUnit[unit] = append(byUnit[unit], inner)
 	}
+	b.hasProject = len(byUnit[""]) > 0
 	for _, name := range slices.Sorted(maps.Keys(byUnit)) {
 		sp := &space{unit: name, root: b.opts.Root, goPackages: map[string]*unit{}, resolvers: map[langcode.Code]modules.Resolver{}}
 		sysPath := b.opts.SysPath
@@ -112,6 +114,9 @@ func (b *builder) addSpaces() error {
 		}
 		sp.files = modules.NewFiles(byUnit[name])
 		sp.python = modules.NewPython(sp.files, sp.root, sysPath)
+		if sp.pkg.Ecosystem == pypi && sp.files.Has(pythonInit) {
+			sp.python.SetRootPackage(pythonImportName(sp.pkg.Name))
+		}
 		sp.js = modules.NewJavaScript(sp.files, sp.root)
 		b.addProblems(sp, sp.python.Problems())
 		b.addProblems(sp, sp.js.Problems())
@@ -120,6 +125,43 @@ func (b *builder) addSpaces() error {
 	}
 	b.project = b.spaces[""]
 	return nil
+}
+
+const (
+	pypi       = "pypi"
+	pythonInit = "__init__.py"
+)
+
+// pythonImportName returns the import name that the name of a pypi package
+// gives with no other knowledge: in lower case, with _ for - and for ., as
+// typing_extensions for typing-extensions. A package whose import name
+// differs, as yaml for PyYAML, needs its package directory under an
+// import directory.
+func pythonImportName(name string) string {
+	return strings.NewReplacer("-", "_", ".", "_").Replace(strings.ToLower(name))
+}
+
+// checkUnits records a problem and a record of each pypi unit that no
+// import names and that gives no module for its package name. The link
+// step cannot tell which import would load such a unit, so the record
+// holds for every search, and it makes uncertain every target that the
+// code of the unit reaches. A build with no project file, as a summary,
+// has no importer, so it skips the check.
+func (b *builder) checkUnits() {
+	if !b.hasProject {
+		return
+	}
+	for _, sp := range b.ordered {
+		if sp.unit == "" || sp.pkg.Ecosystem != pypi || b.named[sp.unit] {
+			continue
+		}
+		name := pythonImportName(sp.pkg.Name)
+		if slices.ContainsFunc(b.provide(sp, langcode.Python, name, modules.FormImport), func(pv provision) bool { return pv.module != "" }) {
+			continue
+		}
+		b.problems = append(b.problems, modules.Problem{Path: sp.unit, Text: "no import names the unit, and it gives no module for the package " + name})
+		b.addUnresolved(UnresolvedSite{Site: Site{Path: sp.unit}, Text: name, Reason: fileindex.UnresolvedNoDefinition, Unit: sp.unit})
+	}
 }
 
 // addProblems adds the problems of a resolver of the space, by key.
@@ -374,6 +416,7 @@ func (b *builder) linkProvision(key string, o origin, pv provision) {
 		fail(fileindex.UnresolvedNoDefinition)
 		return
 	}
+	b.named[pv.sp.unit] = true
 	names := o.names
 	if len(names) == 0 {
 		// The key of a whole module is the value of the module. Only the
@@ -476,7 +519,7 @@ func (b *builder) surface(sp *space) []surfaceSymbol {
 		if ix == nil || !sameUnit(p, sp.unit) || ix.Language != langcode.Python {
 			continue
 		}
-		if module, ok := pythonModuleName(sp.inner(p)); ok {
+		if module, ok := pythonModuleName(sp.inner(p), sp.python.RootPackage()); ok {
 			for _, name := range b.pythonPublicNames(ix) {
 				exported(ix, module, name)
 			}
@@ -524,19 +567,23 @@ func (b *builder) exportNames(p string, seen map[string]bool) []string {
 }
 
 // pythonModuleName returns the dotted name of a Python module of a package,
-// as requests.api for requests/api.py. A module with a part that starts with
-// an underscore is private, and a __main__ module is a script.
-func pythonModuleName(p string) (string, bool) {
+// as requests.api for requests/api.py, under the package that the file set
+// is, if any. A module with a part that starts with an underscore is
+// private, and a __main__ module is a script.
+func pythonModuleName(p, pkg string) (string, bool) {
 	rel, ok := strings.CutSuffix(p, ".py")
 	if !ok {
 		return "", false
 	}
 	rel = strings.TrimSuffix(strings.TrimSuffix(rel, "__init__"), "/")
-	if rel == "" {
-		return "", false
+	var parts []string
+	if pkg != "" {
+		parts = append(parts, pkg)
 	}
-	parts := strings.Split(rel, "/")
-	if slices.ContainsFunc(parts, func(part string) bool { return strings.HasPrefix(part, "_") }) {
+	if rel != "" {
+		parts = append(parts, strings.Split(rel, "/")...)
+	}
+	if len(parts) == 0 || slices.ContainsFunc(parts[len(parts)-len(strings.Split(rel, "/")):], func(part string) bool { return strings.HasPrefix(part, "_") }) {
 		return "", false
 	}
 	return strings.Join(parts, "."), true

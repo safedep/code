@@ -171,7 +171,9 @@ type Edge struct {
 // as a name that the package makes at run time, or a module that the
 // package does not have. The site of an external key has the key as its
 // caller and the unit as its site. The code that runs there is code of the
-// unit, so it can reach only what the code of the unit can reach.
+// unit, so it can reach only what the code of the unit can reach. A site
+// with no caller is a unit that no import names, and it holds for every
+// search.
 type UnresolvedSite struct {
 	Caller       string                     `json:"caller"`
 	Site         Site                       `json:"site"`

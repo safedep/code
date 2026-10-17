@@ -1,0 +1,63 @@
+source: safedep:hand
+description: >-
+  The unit of outer is its package directory, so its files are __init__.py and impl.py at the root of
+  the unit. The root of such a unit is the package, with the name of the unit. So import outer links the
+  module top level of the package, and outer.run links run, which __init__.py gives on from impl.py.
+units:
+  venv/site-packages/outer: pypi:outer@1.0.0
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: main.py
+    to: pypi:outer@1.0.0//__init__.py
+    kind: import
+    confidence: high
+    site: main.py:1
+  - from: main.py
+    to: outer//run
+    kind: direct
+    confidence: high
+    site: main.py:5
+  - from: outer//run
+    to: pypi:outer@1.0.0//__init__.py//run
+    kind: package
+    confidence: high
+    site: pypi:outer@1.0.0//__init__.py:1
+  - from: pypi:outer@1.0.0//__init__.py//run
+    to: pypi:outer@1.0.0//impl.py//run
+    kind: export
+    confidence: high
+    site: pypi:outer@1.0.0//__init__.py:1
+  - from: pypi:outer@1.0.0//impl.py//run
+    to: os//system
+    kind: direct
+    confidence: high
+    site: pypi:outer@1.0.0//impl.py:5
+unresolved: []
+results:
+  - target: os//system
+    status: found
+    path:
+      - key: main.py
+      - key: outer//run
+        site: main.py:5
+        kind: direct
+        confidence: high
+      - key: pypi:outer@1.0.0//__init__.py//run
+        site: pypi:outer@1.0.0//__init__.py:1
+        kind: package
+        confidence: high
+      - key: pypi:outer@1.0.0//impl.py//run
+        site: pypi:outer@1.0.0//__init__.py:1
+        kind: export
+        confidence: high
+      - key: os//system
+        site: pypi:outer@1.0.0//impl.py:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: pypi:outer@1.0.0//impl.py//run
+        site: pypi:outer@1.0.0//impl.py:5
+        reached: true

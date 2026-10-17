@@ -260,5 +260,8 @@ func TestBuildLinksAModuleOfAPythonNamespacePackage(t *testing.T) {
 	assert.Equal(t, []string{
 		"google//protobuf//parse -> pypi:protobuf@4.25.0//google/protobuf/__init__.py//parse package python.package.absolute",
 	}, edgesOfKind(g, EdgePackage))
-	assert.Empty(t, g.Unresolved, "a distribution that shares the namespace package and lacks the module does not miss it")
+	assert.Equal(t, []UnresolvedSite{
+		{Site: Site{Path: "pypi:google-auth@2.0.0"}, Text: "google_auth", Reason: fileindex.UnresolvedNoDefinition, Unit: "pypi:google-auth@2.0.0"},
+	}, g.Unresolved, "a distribution that shares the namespace package and lacks the module does not miss it, and the one that no import names is a record of its own")
+	assert.Equal(t, []modules.Problem{{Path: "pypi:google-auth@2.0.0", Text: "no import names the unit, and it gives no module for the package google_auth"}}, g.Problems)
 }

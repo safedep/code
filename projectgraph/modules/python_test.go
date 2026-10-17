@@ -103,3 +103,28 @@ func TestFilesHasName(t *testing.T) {
 		assert.False(t, f.HasName(name), name)
 	}
 }
+
+func TestPythonRootPackage(t *testing.T) {
+	p := NewPython(NewFiles([]string{"__init__.py", "impl.py", "sub/__init__.py"}), nil, nil)
+	p.SetRootPackage("outer")
+	assert.Equal(t, "outer", p.RootPackage())
+
+	tests := []struct {
+		module string
+		want   string
+		ok     bool
+	}{
+		{module: "outer", want: "__init__.py", ok: true},
+		{module: "outer.impl", want: "impl.py", ok: true},
+		{module: "outer.sub", want: "sub/__init__.py", ok: true},
+		{module: "outer.none"},
+		{module: "other"},
+	}
+	for _, tt := range tests {
+		got, ok := p.Absolute("", tt.module)
+		assert.Equal(t, tt.ok, ok, tt.module)
+		assert.Equal(t, tt.want, got, tt.module)
+	}
+	assert.True(t, p.FirstParty("outer.impl"))
+	assert.False(t, p.FirstParty("other"))
+}

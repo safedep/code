@@ -11,10 +11,13 @@ import (
 
 // Python resolves Python imports against the import roots of a project. A
 // module is a file path, or a directory path with a trailing "/" for a
-// namespace package, which has no file.
+// namespace package, which has no file. A file set that is one package,
+// as a unit of dependency code rooted at its package directory, has the
+// name of the package in pkg, and the name resolves to the root.
 type Python struct {
 	files    *Files
 	roots    []string
+	pkg      string
 	problems problems
 }
 
@@ -58,6 +61,14 @@ func NewPython(files *Files, root fs.FS, sysPath []string) *Python {
 // Roots returns the import roots in the order of the search.
 func (p *Python) Roots() []string { return p.roots }
 
+// SetRootPackage marks the file set as the package of the name. Its root
+// is the package directory, so the name resolves to the __init__.py at the
+// root, and a module under the name to a file at the root.
+func (p *Python) SetRootPackage(name string) { p.pkg = name }
+
+// RootPackage returns the name of the package that the file set is, or "".
+func (p *Python) RootPackage() string { return p.pkg }
+
 // Problems returns the manifests that the resolver could not read.
 func (p *Python) Problems() []Problem { return p.problems }
 
@@ -79,6 +90,12 @@ func (p *Python) Resolve(importer, module string) (string, bool) {
 // sys.path. A module file or a regular package in any root wins over a
 // namespace package.
 func (p *Python) Absolute(importer, module string) (string, bool) {
+	if first, rest, _ := strings.Cut(module, "."); p.pkg != "" && first == p.pkg {
+		if rest == "" {
+			return p.packageAt("")
+		}
+		module = rest
+	}
 	rel := strings.ReplaceAll(module, ".", "/")
 	roots := p.searchOrder(importer)
 	if dir := Dir(importer); !slices.Contains(roots, dir) {

@@ -27,6 +27,7 @@ This directory tests the index step, the link step and the reach query of
    | `test_paths` | Globs that mark test files, as `tests` or `*_test.py` |
    | `max_file_bytes` | The size limit of a file for the index step. A larger file fails |
    | `failed` | The whole set of files that the index step fails |
+   | `problems` | The whole set of problems of the link step, with `path` and `text`, as a manifest that it could not read or a unit that no import names |
    | `roots` | The whole set of roots, with `key`, `kind` and `rule`, and `site` when the case checks where a rule found the root |
    | `edges` | A subset of the edges, with `from`, `to`, `kind`, `confidence` and `site` |
    | `no_edges` | Pairs of `from` and `to` that no edge of the graph may join |

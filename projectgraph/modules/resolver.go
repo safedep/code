@@ -37,10 +37,11 @@ func (p *Python) Module(importer, spec string) (string, string, bool) {
 }
 
 // FirstParty reports whether a Python module is relative or starts with
-// the name of a file or a directory of the project.
+// the name of a file or a directory of the project, or with the name of
+// the package that the file set is.
 func (p *Python) FirstParty(spec string) bool {
 	first, _, _ := strings.Cut(spec, ".")
-	return strings.HasPrefix(spec, ".") || p.files.HasName(first)
+	return strings.HasPrefix(spec, ".") || p.files.HasName(first) || p.pkg != "" && first == p.pkg
 }
 
 // For returns the resolver of the JavaScript or the TypeScript importers.

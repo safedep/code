@@ -21,7 +21,7 @@ import (
 //	root <key> [kind]
 //	edge <from> <to> [kind] [line]
 //	unresolved <caller> <line> <reason> [method] [prefix]
-//	entry <external key> <unit>
+//	entry <external key or -> <unit>
 //	flag <key> <kind> <line>
 //	file <path> <status>
 //	truncated <kind> [key]
@@ -79,9 +79,12 @@ func graphOf(t *testing.T, spec string) *projectgraph.Graph {
 				Reason: fileindex.UnresolvedReason(f[3]), Method: strings.Trim(arg(f, 4, ""), "-"), ImportPrefix: arg(f, 5, ""),
 			})
 		case "entry":
-			node(f[1])
+			caller := strings.Trim(f[1], "-")
+			if caller != "" {
+				node(caller)
+			}
 			g.Unresolved = append(g.Unresolved, projectgraph.UnresolvedSite{
-				Caller: f[1], Site: projectgraph.Site{Path: f[2]}, Text: f[1], Reason: fileindex.UnresolvedNoDefinition, Unit: f[2],
+				Caller: caller, Site: projectgraph.Site{Path: f[2]}, Text: f[1], Reason: fileindex.UnresolvedNoDefinition, Unit: f[2],
 			})
 		case "flag":
 			n := node(f[1])
@@ -469,6 +472,16 @@ func TestReachDependencyCode(t *testing.T) {
 			extra: "edge main.py//run kit//load//close direct 4\nentry kit//load//close npm:kit@1.0.0\nedge npm:kit@1.0.0//k.js//close other//f\n" +
 				"edge other//f npm:other@1.0.0//o.js//f package",
 			target: "fs//rm", status: Uncertain, kinds: []UncertaintyKind{UnresolvedCall},
+		},
+		{
+			name:   "a unit that no import names, whose code reaches the target",
+			extra:  "entry - npm:kit@1.0.0\nedge npm:kit@1.0.0//k.js//close fs//unlink",
+			target: "fs//unlink", status: Uncertain, kinds: []UncertaintyKind{UnresolvedCall},
+		},
+		{
+			name:   "a unit that no import names, whose code does not reach the target",
+			extra:  "entry - npm:kit@1.0.0\nedge npm:kit@1.0.0//k.js//close fs//unlink",
+			target: "fs//rename", status: NotFound, kinds: []UncertaintyKind{},
 		},
 		{
 			name:   "an entry into a unit with a failed file",

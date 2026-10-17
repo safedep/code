@@ -95,9 +95,13 @@ type builder struct {
 	spaces  map[string]*space
 	ordered []*space
 	// origins holds the imports that each external key comes from, and
-	// linked the external keys that linkPackages read.
-	origins map[string][]origin
-	linked  map[string]bool
+	// linked the external keys that linkPackages read. named holds the
+	// units that an import of the project or of another unit names, and
+	// hasProject whether the build has a file of the project.
+	origins    map[string][]origin
+	linked     map[string]bool
+	named      map[string]bool
+	hasProject bool
 	// provisions holds the providers of each module by language family and
 	// form.
 	provisions map[provisionKey][]provision
@@ -216,6 +220,7 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		origins:     map[string][]origin{},
 		provisions:  map[provisionKey][]provision{},
 		linked:      map[string]bool{},
+		named:       map[string]bool{},
 		namespaces:  map[langcode.Code]*namespaces{},
 		loads:       map[string]bool{},
 		mros:        map[string][]string{},
@@ -329,6 +334,7 @@ func (b *builder) link(ctx context.Context) error {
 	if err := b.linkPackages(ctx); err != nil {
 		return err
 	}
+	b.checkUnits()
 	b.linkFields()
 	return nil
 }
@@ -531,6 +537,7 @@ func (b *builder) importedModules(ix *fileindex.Index, spec string, form modules
 			missing = append(missing, pv.sp.unit)
 			continue
 		}
+		b.named[pv.sp.unit] = true
 		mods = append(mods, moduleRef{key: pv.module, via: "package"})
 	}
 	return mods, missing
