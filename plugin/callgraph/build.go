@@ -99,10 +99,8 @@ func (cg *CallGraph) addImports(root *sitter.Node, imports []*ast.ImportNode) {
 }
 
 // resolveTargets fills the targets of each call once the assignment graph
-// is complete. The cache of resolve can hold a chain that a later
-// assignment extended, so it starts empty.
+// is complete.
 func (cg *CallGraph) resolveTargets() {
-	cg.assignmentGraph.resolveCache = make(map[string][]*assignmentNode)
 	for _, node := range cg.order {
 		for i := range node.CallsTo {
 			ref := &node.CallsTo[i]

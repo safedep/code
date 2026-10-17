@@ -3,7 +3,6 @@ package callgraph
 import (
 	"slices"
 
-	"github.com/safedep/dry/utils"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -27,9 +26,14 @@ func (an *assignmentNode) IsLiteralValue() bool {
 	return literalNodeTypes[an.kind]
 }
 
+// assignmentGraph maps each name to the names and namespaces that the file
+// assigns to it.
 type assignmentGraph struct {
-	Assignments  map[string]*assignmentNode   // Map of identifier to possible namespaces or other identifiers
-	resolveCache map[string][]*assignmentNode // Cache for resolve() results
+	Assignments map[string]*assignmentNode
+
+	// resolveCache holds the results of resolve. An edge can change the
+	// result of every name that reaches it, so a new edge empties the cache.
+	resolveCache map[string][]*assignmentNode
 
 	// truncations gets the record of the node limit. It can be nil.
 	truncations *truncations
@@ -60,10 +64,11 @@ func (ag *assignmentGraph) addNode(identifier string, treeNode *sitter.Node) *as
 
 	node := newAssignmentGraphNode(identifier, treeNode)
 	ag.Assignments[identifier] = node
+	delete(ag.resolveCache, identifier)
 	return node
 }
 
-// Add an assignment
+// addAssignment adds the edge from identifier to target.
 func (ag *assignmentGraph) addAssignment(identifier string, identifierTreeNode *sitter.Node, target string, targetTreeNode *sitter.Node) {
 	assignee := ag.addNode(identifier, identifierTreeNode)
 	assigned := ag.addNode(target, targetTreeNode)
@@ -73,74 +78,50 @@ func (ag *assignmentGraph) addAssignment(identifier string, identifierTreeNode *
 
 	if !slices.Contains(assignee.AssignedTo, target) {
 		assignee.AssignedTo = append(assignee.AssignedTo, target)
-		// Invalidate cache for this identifier since assignment changed
-		delete(ag.resolveCache, identifier)
+		clear(ag.resolveCache)
 	}
 	if !slices.Contains(assigned.AssignedBy, identifier) {
 		assigned.AssignedBy = append(assigned.AssignedBy, identifier)
 	}
 }
 
-// resolves an identifier to its assignment targets (leaf nodes of the DFS tree)
-// For example, if a = b, b = c, b = d, then resolving a will return {c, d}
-// Detects cycles and returns the node itself if a cycle is encountered
-// Results are cached to avoid recomputing expensive resolution chains
+// resolve returns the terminal values of identifier. After a = b, b = c
+// and b = d, a resolves to c and d. A name in a cycle is a terminal value.
 func (ag *assignmentGraph) resolve(identifier string) []*assignmentNode {
-	// Check cache first
 	if cached, exists := ag.resolveCache[identifier]; exists {
 		return cached
 	}
 
-	targets := utils.PtrTo([]*assignmentNode{})
-	visited := make(map[string]bool)
-	inProgress := make(map[string]bool) // Track nodes currently being processed
-	ag.resolveUtil(identifier, visited, inProgress, targets)
-
-	// Cache the result
-	ag.resolveCache[identifier] = *targets
-
-	return *targets
+	targets := []*assignmentNode{}
+	ag.resolveUtil(identifier, map[string]bool{}, map[string]bool{}, &targets)
+	ag.resolveCache[identifier] = targets
+	return targets
 }
 
-// Utility function to resolve the identifier to its targets recursively
-// Uses cycle detection: inProgress tracks nodes in current recursion path
-func (ag *assignmentGraph) resolveUtil(currentIdentifier string, visited map[string]bool, inProgress map[string]bool, targets *[]*assignmentNode) {
-	// Cycle detected: current node is already being processed in recursion stack
-	if inProgress[currentIdentifier] {
-		// Break the cycle by treating this as a leaf node
-		identifierNode, exists := ag.Assignments[currentIdentifier]
-		if exists {
-			*targets = append(*targets, identifierNode)
-		}
+// resolveUtil adds the terminal values of identifier to targets. inProgress
+// holds the names on the current path. A name that the path reaches again
+// closes a cycle, and it is a terminal value.
+func (ag *assignmentGraph) resolveUtil(identifier string, visited, inProgress map[string]bool, targets *[]*assignmentNode) {
+	node, exists := ag.Assignments[identifier]
+	switch {
+	case !exists:
+		return
+	case inProgress[identifier]:
+		*targets = append(*targets, node)
+		return
+	case visited[identifier]:
 		return
 	}
 
-	// Already fully processed in a different branch - skip to avoid duplicates
-	if visited[currentIdentifier] {
+	visited[identifier] = true
+	if len(node.AssignedTo) == 0 {
+		*targets = append(*targets, node)
 		return
 	}
 
-	// Mark as in progress before recursing
-	inProgress[currentIdentifier] = true
-	visited[currentIdentifier] = true
-
-	identifierNode, exists := ag.Assignments[currentIdentifier]
-	if !exists {
-		delete(inProgress, currentIdentifier)
-		return
+	inProgress[identifier] = true
+	for _, target := range node.AssignedTo {
+		ag.resolveUtil(target, visited, inProgress, targets)
 	}
-
-	// If the current identifier has no assignments, it's a leaf node
-	if len(identifierNode.AssignedTo) == 0 {
-		*targets = append(*targets, identifierNode)
-		delete(inProgress, currentIdentifier)
-		return
-	}
-
-	for _, targetIdentifier := range identifierNode.AssignedTo {
-		ag.resolveUtil(targetIdentifier, visited, inProgress, targets)
-	}
-
-	// Remove from in-progress after processing all children
-	delete(inProgress, currentIdentifier)
+	delete(inProgress, identifier)
 }
