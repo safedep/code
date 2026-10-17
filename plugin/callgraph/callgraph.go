@@ -6,7 +6,6 @@ import (
 	"io"
 	"maps"
 	"slices"
-	"strings"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
@@ -103,19 +102,24 @@ type CallGraph struct {
 // Dump writes the assignment graph and the call graph to w, in the order of
 // the keys. It leaves out the builtins that have no edge.
 func (cg *CallGraph) Dump(w io.Writer) error {
-	builtins := profileOf(cg.Language).builtinSet()
-	var out strings.Builder
+	builtins := cg.languageProfile().builtinSet()
 
-	out.WriteString("Assignment Graph:\n")
+	if _, err := io.WriteString(w, "Assignment Graph:\n"); err != nil {
+		return err
+	}
 	for _, namespace := range slices.Sorted(maps.Keys(cg.assignmentGraph.Assignments)) {
 		node := cg.assignmentGraph.Assignments[namespace]
 		if builtins[namespace] && len(node.AssignedTo) == 0 {
 			continue
 		}
-		fmt.Fprintf(&out, "  %s (->%d) => %v\n", namespace, len(node.AssignedBy), node.AssignedTo)
+		if _, err := fmt.Fprintf(w, "  %s (->%d) => %v\n", namespace, len(node.AssignedBy), node.AssignedTo); err != nil {
+			return err
+		}
 	}
 
-	out.WriteString("\nCall Graph:\n")
+	if _, err := io.WriteString(w, "\nCall Graph:\n"); err != nil {
+		return err
+	}
 	for _, namespace := range slices.Sorted(maps.Keys(cg.Nodes)) {
 		node := cg.Nodes[namespace]
 		if builtins[namespace] && len(node.CallsTo) == 0 {
@@ -125,11 +129,12 @@ func (cg *CallGraph) Dump(w io.Writer) error {
 		for i, ref := range node.CallsTo {
 			callees[i] = ref.CalleeNamespace
 		}
-		fmt.Fprintf(&out, "  %s (calls)=> %v\n", namespace, callees)
+		if _, err := fmt.Fprintf(w, "  %s (calls)=> %v\n", namespace, callees); err != nil {
+			return err
+		}
 	}
-	out.WriteString("\n")
 
-	_, err := io.WriteString(w, out.String())
+	_, err := io.WriteString(w, "\n")
 	return err
 }
 
@@ -146,32 +151,17 @@ type DfsResultItem struct {
 	Terminal  bool
 }
 
-func (dri DfsResultItem) ToString() string {
-	argNamespacesStr := ""
-	for _, arg := range dri.Arguments {
-		argNamespaces := make([]string, len(arg.Values))
-		for i, value := range arg.Values {
-			argNamespaces[i] = value.Namespace
-		}
-		argNamespacesStr += fmt.Sprintf("(%s), ", strings.Join(argNamespaces, ", "))
-	}
-
-	return fmt.Sprintf("Namespace: %s, Caller: %s, Depth: %d, Terminal: %t, Arguments: [%s]",
-		dri.Namespace, dri.Caller.Namespace, dri.Depth, dri.Terminal, argNamespacesStr)
-}
-
+// DFS walks the graph from the root and then from each reachable
+// definition that the walk from the root did not reach. A file often
+// exports its definitions and does not call them.
 func (cg *CallGraph) DFS() []DfsResultItem {
 	visited := make(map[string]bool)
 	var dfsResult []DfsResultItem
 	resultCount := 0
 
-	// Initially Interpret callgraph in its natural execution order starting from
-	// the file name which has reference for entrypoints (if any)
 	cg.dfsUtil(cg.FileName, cg.RootNode, CallReference{Arguments: []CallArgument{}}, visited, &dfsResult, 0, &resultCount)
 
-	// A file often exports its definitions and does not call them, so DFS
-	// starts again from each reachable definition of the profile.
-	reachable := profileOf(cg.Language).reachable
+	reachable := cg.languageProfile().reachable
 	for _, node := range cg.nodesInOrder() {
 		if resultCount >= maxDFSResultItems {
 			break
@@ -204,7 +194,6 @@ func (cg *CallGraph) nodesInOrder() []*CallGraphNode {
 
 // dfsUtil visits namespace, which call reaches from caller.
 func (cg *CallGraph) dfsUtil(namespace string, caller *CallGraphNode, call CallReference, visited map[string]bool, result *[]DfsResultItem, depth int, resultCount *int) {
-	// Check result count limit
 	if *resultCount >= maxDFSResultItems {
 		return
 	}
@@ -236,7 +225,6 @@ func (cg *CallGraph) dfsUtil(namespace string, caller *CallGraphNode, call CallR
 		return
 	}
 
-	// Mark the current node as visited and add it to the result
 	visited[namespace] = true
 	*result = append(*result, DfsResultItem{
 		Namespace: namespace,
@@ -252,7 +240,6 @@ func (cg *CallGraph) dfsUtil(namespace string, caller *CallGraphNode, call CallR
 
 	assignmentGraphNode, assignmentNodeExists := cg.assignmentGraph.Assignments[namespace]
 	if assignmentNodeExists {
-		// Recursively visit all the nodes assigned to the current node
 		for _, assigned := range assignmentGraphNode.AssignedTo {
 			if *resultCount >= maxDFSResultItems {
 				return
@@ -261,8 +248,6 @@ func (cg *CallGraph) dfsUtil(namespace string, caller *CallGraphNode, call CallR
 		}
 	}
 
-	// Recursively visit all the nodes called by the current node
-	// Any variable assignment would be ignored here, since it won't be in callgraph
 	if callgraphNodeExists {
 		for _, callRef := range callgraphNode.CallsTo {
 			if *resultCount >= maxDFSResultItems {

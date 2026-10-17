@@ -37,11 +37,28 @@ var javaProfile = languageProfile{
 		"type_identifier":            skippedProcessor,
 		"variable_declarator":        variableDeclaratorProcessor,
 	},
+	literals: map[string]bool{
+		"binary_integer_literal":         true,
+		"character_literal":              true,
+		"decimal_floating_point_literal": true,
+		"decimal_integer_literal":        true,
+		"false":                          true,
+		"hex_floating_point_literal":     true,
+		"hex_integer_literal":            true,
+		"octal_integer_literal":          true,
+		"string_literal":                 true,
+		"true":                           true,
+	},
+	ignored: map[string]bool{"import_declaration": true, "line_comment": true},
 	reachable: map[string]bool{
 		"program":            true,
 		"class_declaration":  true,
 		"method_declaration": true,
 	},
+	members: map[string]memberShape{
+		"method_invocation": {object: "object", name: "name"},
+	},
+	argumentList: "argument_list",
 }
 
 // scopedIdentifierProcessor gives the namespace of a qualified type name, as

@@ -74,7 +74,7 @@ func TestAssignmentGraphCycleDetection(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ag := newAssignmentGraph(nil)
+			ag := newAssignmentGraph(nil, nil)
 
 			// Build the assignment graph
 			for identifier, targets := range tt.assignments {
@@ -118,7 +118,7 @@ func TestAssignmentGraphCycleDetection(t *testing.T) {
 // TestAssignmentGraphInProgressCleanup specifically tests that inProgress map
 // doesn't have dangling entries that could cause issues
 func TestAssignmentGraphInProgressCleanup(t *testing.T) {
-	ag := newAssignmentGraph(nil)
+	ag := newAssignmentGraph(nil, nil)
 
 	// Create a complex cycle scenario
 	// A -> B -> C -> B (cycle)

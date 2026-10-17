@@ -37,14 +37,6 @@ func newCallGraphNode(namespace string, s syntax) *CallGraphNode {
 	}
 }
 
-func argumentOf(nodes []*assignmentNode) CallArgument {
-	values := make([]ArgumentValue, len(nodes))
-	for i, node := range nodes {
-		values[i] = ArgumentValue{Namespace: node.Namespace, Literal: node.IsLiteralValue()}
-	}
-	return CallArgument{Values: values}
-}
-
 func newCallGraph(fileName string, language core.LanguageCode) *CallGraph {
 	cg := &CallGraph{
 		FileName:          fileName,
@@ -53,7 +45,7 @@ func newCallGraph(fileName string, language core.LanguageCode) *CallGraph {
 		Nodes:             make(map[string]*CallGraphNode),
 		classConstructors: make(map[string]bool),
 	}
-	cg.assignmentGraph = *newAssignmentGraph(&cg.truncations)
+	cg.assignmentGraph = *newAssignmentGraph(&cg.truncations, cg.profile.literals)
 
 	for _, namespace := range cg.profile.builtins {
 		cg.assignmentGraph.addNode(namespace, nil)
@@ -78,13 +70,11 @@ func (cg *CallGraph) build(ctx context.Context, root *sitter.Node, imports []*as
 }
 
 func (cg *CallGraph) addImports(root *sitter.Node, imports []*ast.ImportNode) {
-	// Required to map identifiers to imported modules as assignments
-	// and register default calls for wildcard imports
 	importedIdentifiers, wildcardImports := parseImports(imports, cg.profile)
 
+	// A wildcard import can bind any name of its module, so the root calls
+	// the module//* namespace.
 	for _, wildcardImport := range wildcardImports {
-		// For wildcard imports, we add a call to importeditem//*
-		// assuming that anything under that namespace is posssibly used
 		cg.addEdge(cg.FileName, root, wildcardImport.NamespaceTreeNode, wildcardImport.Namespace, wildcardImport.NamespaceTreeNode, []CallArgument{})
 	}
 

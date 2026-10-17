@@ -36,6 +36,9 @@ func TestLanguageProfiles(t *testing.T) {
 			assert.NotEmpty(t, profile.separators)
 			assert.NotEmpty(t, profile.processors)
 			assert.NotEmpty(t, profile.reachable)
+			assert.NotEmpty(t, profile.literals)
+			assert.NotEmpty(t, profile.ignored)
+			assert.NotEmpty(t, profile.argumentList)
 			assert.Equal(t, tc.instanceKeyword, profile.instanceKeyword)
 			assert.Equal(t, tc.builtins, len(profile.builtins) > 0)
 
@@ -46,6 +49,16 @@ func TestLanguageProfiles(t *testing.T) {
 
 	assert.Equal(t, codes, NewCallGraphPlugin(nil).SupportedLanguages(), "the plugin supports exactly the registered codes")
 	assert.Len(t, profilesByCode, len(languageProfiles), "each code has one profile")
+}
+
+func TestOnlyTypeScriptFallsBackToOtherSignatures(t *testing.T) {
+	for _, profile := range languageProfiles {
+		want := core.LanguageCode("")
+		if profile.code == core.LanguageCodeTypescript {
+			want = core.LanguageCodeJavascript
+		}
+		assert.Equal(t, want, profile.signatureFallback, profile.code)
+	}
 }
 
 func TestProfileOfUnknownLanguageHasNoProcessors(t *testing.T) {

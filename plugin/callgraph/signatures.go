@@ -45,9 +45,8 @@ type SignatureMatcher struct {
 	targetSignatures []*callgraphv1.Signature
 }
 
-// Creates a new SignatureMatcher instance with the provided target signatures.
-// It validates the signatures using the ValidateSignatures function.
-// If the validation fails, it returns an error.
+// NewSignatureMatcher returns a matcher of the signatures. It fails when a
+// signature is not valid.
 func NewSignatureMatcher(targetSignatures []*callgraphv1.Signature) (*SignatureMatcher, error) {
 	validationErr := ValidateSignatures(targetSignatures)
 	if validationErr != nil {
@@ -61,6 +60,7 @@ func NewSignatureMatcher(targetSignatures []*callgraphv1.Signature) (*SignatureM
 
 func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResult, error) {
 	languageCode := cg.Language
+	profile := cg.languageProfile()
 
 	matcherResults := []SignatureMatchResult{}
 
@@ -78,15 +78,11 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 
 	for _, signature := range sm.targetSignatures {
 		languageSignature, exists := signature.Languages[string(languageCode)]
+		if !exists && profile.signatureFallback != "" {
+			languageSignature, exists = signature.Languages[string(profile.signatureFallback)]
+		}
 		if !exists {
-			// TypeScript falls back to JavaScript signatures since they share
-			// the same library ecosystem and call patterns
-			if languageCode == core.LanguageCodeTypescript {
-				languageSignature, exists = signature.Languages[string(core.LanguageCodeJavascript)]
-			}
-			if !exists {
-				continue
-			}
+			continue
 		}
 
 		matchedConditions := []MatchedCondition{}
@@ -100,8 +96,8 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 				Evidences: []MatchedEvidence{},
 			}
 
-			for _, item := range calls.lookup(profileOf(languageCode).moduleNamespace(condition.Value)) {
-				if !matchesArgumentConstraints(item, condition.Args, languageCode) {
+			for _, item := range calls.lookup(profile.moduleNamespace(condition.Value)) {
+				if !matchesArgumentConstraints(item, condition.Args, profile) {
 					continue
 				}
 				matchCondition.Evidences = append(matchCondition.Evidences, MatchedEvidence{
@@ -184,15 +180,13 @@ func calleeOf(item DfsResultItem) *CallGraphNode {
 func matchesArgumentConstraints(
 	dfsResultItem DfsResultItem,
 	requiredArgs []*callgraphv1.Signature_LanguageMatcher_SignatureCondition_Argument,
-	languageCode core.LanguageCode,
+	profile *languageProfile,
 ) bool {
 	if len(requiredArgs) == 0 {
 		return true // No conditions to match, so it matches by default
 	}
 
 	callArguments := dfsResultItem.Arguments
-
-	profile := profileOf(languageCode)
 
 	// Strictly all arguments must match their respective constraints
 	for _, requiredArg := range requiredArgs {

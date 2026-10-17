@@ -92,7 +92,7 @@ func (cg *CallGraph) truncate(kind TruncationKind, namespace string, node *sitte
 // one site more than once. The receiver and the method come from callee,
 // the function of the call.
 func (cg *CallGraph) addUnresolved(caller string, site, callee *sitter.Node, treeData []byte, reason UnresolvedReason) {
-	receiver, method := calleeParts(callee, treeData)
+	receiver, method := cg.profile.calleeParts(callee, treeData)
 	record := UnresolvedCall{
 		Caller:   caller,
 		Site:     ast.GetNodePosition(site),
@@ -112,34 +112,32 @@ func (cg *CallGraph) addUnresolved(caller string, site, callee *sitter.Node, tre
 }
 
 // calleeParts splits the function of a call into the source of its object
-// and the name of its member. The name is empty when the call computes it.
-func calleeParts(callee *sitter.Node, treeData []byte) (string, string) {
+// and the name of its member. A name with no member, as an identifier, has
+// no object. The name is empty when the call computes it.
+func (p *languageProfile) calleeParts(callee *sitter.Node, treeData []byte) (string, string) {
 	if callee == nil {
 		return "", ""
 	}
-	field := func(name string) string {
-		if node := callee.ChildByFieldName(name); node != nil {
-			return node.Content(treeData)
+	shape, ok := p.members[callee.Type()]
+	if !ok {
+		if callee.NamedChildCount() == 0 {
+			return "", callee.Content(treeData)
 		}
-		return ""
+		return "", ""
 	}
-	switch callee.Type() {
-	case "identifier", "import":
-		return "", callee.Content(treeData)
-	case "attribute":
-		return field("object"), field("attribute")
-	case "member_expression":
-		return field("object"), field("property")
-	case "selector_expression":
-		return field("operand"), field("field")
-	case "subscript":
-		name, _ := memberName(callee.ChildByFieldName("subscript"), treeData)
-		return field("value"), name
-	case "subscript_expression":
-		name, _ := memberName(callee.ChildByFieldName("index"), treeData)
-		return field("object"), name
+
+	var receiver, method string
+	if object := fieldChild(callee, shape.object); object != nil {
+		receiver = object.Content(treeData)
 	}
-	return "", ""
+	if name := fieldChild(callee, shape.name); name != nil {
+		if shape.index {
+			method, _ = p.memberName(name, treeData)
+		} else {
+			method = name.Content(treeData)
+		}
+	}
+	return receiver, method
 }
 
 // receiverTargets resolves an object to its values, at most
@@ -203,17 +201,17 @@ func namespacesOf(nodes []*assignmentNode) []string {
 
 // memberName returns the name that a string literal index gives, as x in
 // obj['x']. An index that computes the name gives none.
-func memberName(index *sitter.Node, treeData []byte) (string, bool) {
-	if !staticString(index) {
+func (p *languageProfile) memberName(index *sitter.Node, treeData []byte) (string, bool) {
+	if !p.staticString(index) {
 		return "", false
 	}
 	var name strings.Builder
 	for i := 0; i < int(index.NamedChildCount()); i++ {
 		child := index.NamedChild(i)
-		switch child.Type() {
-		case "string_fragment", "string_content":
+		switch {
+		case p.strings.fragments[child.Type()]:
 			name.WriteString(child.Content(treeData))
-		case "string_start", "string_end":
+		case p.strings.quotes[child.Type()]:
 		default:
 			return "", false
 		}
@@ -224,15 +222,13 @@ func memberName(index *sitter.Node, treeData []byte) (string, bool) {
 	return name.String(), true
 }
 
-// staticString reports that node is a string literal with no interpolation,
-// in Python or JavaScript.
-func staticString(node *sitter.Node) bool {
-	if node == nil || (node.Type() != "string" && node.Type() != "template_string") {
+// staticString reports that node is a string literal with no interpolation.
+func (p *languageProfile) staticString(node *sitter.Node) bool {
+	if node == nil || !p.strings.literals[node.Type()] {
 		return false
 	}
 	for i := 0; i < int(node.NamedChildCount()); i++ {
-		switch node.NamedChild(i).Type() {
-		case "interpolation", "template_substitution":
+		if p.strings.interpolations[node.NamedChild(i).Type()] {
 			return false
 		}
 	}

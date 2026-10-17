@@ -8,8 +8,9 @@ import (
 
 // goProfile has no instance keyword. A Go method names its receiver.
 var goProfile = languageProfile{
-	code:       core.LanguageCodeGo,
-	separators: []string{"/"},
+	code:               core.LanguageCodeGo,
+	separators:         []string{"/"},
+	rootCallsFunctions: true,
 	builtins: []string{
 		"panic", "recover", "make", "new", "len", "cap", "append", "copy", "delete", "close",
 		"complex", "real", "imag", "print", "println", "iota", "true", "false", "nil",
@@ -17,17 +18,34 @@ var goProfile = languageProfile{
 	processors: map[string]nodeProcessor{
 		"call_expression":      goCallExpressionProcessor,
 		"composite_literal":    skipResultsProcessor,
-		"function_declaration": goFunctionDeclarationProcessor,
+		"function_declaration": functionDefinitionProcessor,
 		"method_declaration":   goMethodDeclarationProcessor,
 		"slice_expression":     skipResultsProcessor,
 		"type_arguments":       skippedProcessor,
 		"type_identifier":      skippedProcessor,
 	},
+	literals: map[string]bool{
+		"false":                      true,
+		"float_literal":              true,
+		"imaginary_literal":          true,
+		"int_literal":                true,
+		"interpreted_string_literal": true,
+		"raw_string_literal":         true,
+		"rune_literal":               true,
+		"true":                       true,
+	},
+	ignored: map[string]bool{"comment": true, "import_declaration": true},
 	reachable: map[string]bool{
 		"function_declaration": true,
 		"method_declaration":   true,
 	},
-	transparent: map[string]bool{"parenthesized_expression": true},
+	transparent: map[string]childPosition{"parenthesized_expression": firstChild},
+	members: map[string]memberShape{
+		"selector_expression": {object: "operand", name: "field"},
+	},
+	argumentList:     "argument_list",
+	functionLiterals: map[string]bool{"func_literal": true},
+	valueRoots:       map[string]bool{"call_expression": true, "composite_literal": true},
 }
 
 // goCallExpressionProcessor adds the edges of a Go call, as os//WriteFile for
@@ -47,14 +65,14 @@ func goCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 	argumentsNode := callNode.ChildByFieldName("arguments")
 	callArguments := []CallArgument{}
 	if argumentsNode != nil {
-		callArguments = resolveGoCallArguments(argumentsNode, treeData, currentNamespace, callGraph, metadata)
+		callArguments = resolveCallArguments(argumentsNode, treeData, currentNamespace, callGraph, metadata)
 	}
 
 	function := callGraph.unwrap(functionNode)
 
 	// A chained call, as in ecdh.X25519().GenerateKey() or
 	// openai.NewClient(k).Chat.Completions.New(), calls the inner function too
-	if root := callGraph.unwrap(chainRoot(function, "selector_expression", "operand")); root != function && root != nil && goValueRoots[root.Type()] {
+	if root := callGraph.unwrap(chainRoot(function, "selector_expression", "operand")); root != function && root != nil && callGraph.profile.valueRoots[root.Type()] {
 		processNode(root, treeData, currentNamespace, callGraph, metadata)
 	}
 
@@ -66,15 +84,17 @@ func goCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 	case "selector_expression":
 		callees, reason = resolveGoSelectorExpression(function, treeData, currentNamespace, callGraph)
 	case "identifier":
-		callee, bound := resolveGoIdentifier(function.Content(treeData), currentNamespace, callGraph)
+		callee, bound := resolveIdentifier(function.Content(treeData), currentNamespace, callGraph)
 		callees, unbound = []string{callee}, !bound
-	case "func_literal":
-		// The body of an immediately called function runs in the caller, as
-		// in go func() { work() }()
-		processFunctionBody(function, treeData, currentNamespace, callGraph, metadata)
 	case "unary_expression":
 		// (*T)(p) converts p to a pointer type and calls nothing
 	default:
+		if callGraph.profile.functionLiterals[function.Type()] {
+			// The body of an immediately called function runs in the caller, as
+			// in go func() { work() }()
+			processFunctionBody(function, treeData, currentNamespace, callGraph, metadata)
+			break
+		}
 		processNode(function, treeData, currentNamespace, callGraph, metadata)
 		reason = UnresolvedComputedName
 	}
@@ -91,47 +111,6 @@ func goCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 	}
 
 	return result
-}
-
-// resolveGoCallArguments gives one CallArgument for each argument of a Go
-// call, with the terminal values of the argument.
-func resolveGoCallArguments(argumentsNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) []CallArgument {
-	if argumentsNode == nil {
-		return []CallArgument{}
-	}
-
-	if argumentsNode.Type() != "argument_list" {
-		log.Debugf("Expected argument_list node, got %s for %s", argumentsNode.Type(), argumentsNode.Content(treeData))
-		return []CallArgument{}
-	}
-
-	result := make([]CallArgument, 0, argumentsNode.NamedChildCount())
-
-	for i := 0; uint32(i) < argumentsNode.NamedChildCount(); i++ {
-		childNode := argumentsNode.NamedChild(i)
-		if childNode == nil {
-			continue
-		}
-
-		childProcessorResult := processNode(childNode, treeData, currentNamespace, callGraph, metadata)
-
-		resolvedTerminalAssignmentNodes := []*assignmentNode{}
-		for _, assignmentNode := range childProcessorResult.ImmediateAssignments {
-			resolvedNodes := callGraph.assignmentGraph.resolve(assignmentNode.Namespace)
-			resolvedTerminalAssignmentNodes = append(resolvedTerminalAssignmentNodes, resolvedNodes...)
-		}
-
-		result = append(result, argumentOf(resolvedTerminalAssignmentNodes))
-	}
-
-	return result
-}
-
-// goValueRoots are the Go nodes at the root of a selector chain that hold
-// calls of their own, as X25519() in ecdh.X25519().GenerateKey().
-var goValueRoots = map[string]bool{
-	"call_expression":   true,
-	"composite_literal": true,
 }
 
 // resolveGoSelectorExpression resolves Go selector expressions like pkg.Func
@@ -185,55 +164,10 @@ func goCalleeOf(callNode *sitter.Node, treeData []byte, currentNamespace string,
 	case "selector_expression":
 		return resolveGoSelectorExpression(function, treeData, currentNamespace, callGraph)
 	case "identifier":
-		callee, _ := resolveGoIdentifier(function.Content(treeData), currentNamespace, callGraph)
+		callee, _ := resolveIdentifier(function.Content(treeData), currentNamespace, callGraph)
 		return []string{callee}, ""
 	}
 	return nil, UnresolvedUnknownReceiver
-}
-
-// resolveGoIdentifier resolves an unqualified Go identifier. It reports
-// false for a name that the scope chain does not bind, and returns the name
-// in the current namespace.
-func resolveGoIdentifier(identifier string, currentNamespace string, callGraph *CallGraph) (string, bool) {
-	if assignmentNode, found := searchSymbolInScopeChain(identifier, currentNamespace, callGraph); found {
-		return assignmentNode.Namespace, true
-	}
-	return currentNamespace + namespaceSeparator + identifier, false
-}
-
-// goFunctionDeclarationProcessor processes a function in its own namespace.
-// The package namespace calls each function, so that DFS reaches the
-// functions of a library with no main.
-func goFunctionDeclarationProcessor(funcDefNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	if funcDefNode == nil {
-		return newProcessorResult()
-	}
-
-	functionNameNode := funcDefNode.ChildByFieldName("name")
-	if functionNameNode == nil {
-		log.Debugf("Go function declaration without name - %s", funcDefNode.Content(treeData))
-		return newProcessorResult()
-	}
-
-	funcName := functionNameNode.Content(treeData)
-	functionNamespace := currentNamespace + namespaceSeparator + funcName
-
-	if callGraph.addDefinition(functionNamespace, funcDefNode) {
-		log.Debugf("Register Go function definition for %s - %s", funcName, functionNamespace)
-	}
-	callGraph.addEdge(currentNamespace, nil, nil, functionNamespace, funcDefNode, []CallArgument{})
-
-	results := newProcessorResult()
-
-	functionBody := funcDefNode.ChildByFieldName("body")
-	if functionBody != nil {
-		metadata.insideFunction = true
-		result := processChildren(functionBody, treeData, functionNamespace, callGraph, metadata)
-		metadata.insideFunction = false
-		results.addResults(result)
-	}
-
-	return results
 }
 
 // goMethodDeclarationProcessor processes a method in the namespace of its
@@ -263,18 +197,7 @@ func goMethodDeclarationProcessor(methodDefNode *sitter.Node, treeData []byte, c
 	if callGraph.addDefinition(methodNamespace, methodDefNode) {
 		log.Debugf("Register Go method definition for %s on %s - %s", methodName, receiverType, methodNamespace)
 	}
-
-	results := newProcessorResult()
-
-	methodBody := methodDefNode.ChildByFieldName("body")
-	if methodBody != nil {
-		metadata.insideFunction = true
-		result := processChildren(methodBody, treeData, methodNamespace, callGraph, metadata)
-		metadata.insideFunction = false
-		results.addResults(result)
-	}
-
-	return results
+	return processFunctionBody(methodDefNode, treeData, methodNamespace, callGraph, metadata)
 }
 
 // extractGoReceiverType returns the type name of a receiver, as MyType for

@@ -22,10 +22,6 @@ func newAssignmentGraphNode(namespace string, treeNode *sitter.Node) *assignment
 	}
 }
 
-func (an *assignmentNode) IsLiteralValue() bool {
-	return literalNodeTypes[an.kind]
-}
-
 // assignmentGraph maps each name to the names and namespaces that the file
 // assigns to it.
 type assignmentGraph struct {
@@ -37,13 +33,25 @@ type assignmentGraph struct {
 
 	// truncations gets the record of the node limit. It can be nil.
 	truncations *truncations
+
+	// literals are the node types of a literal value in the language.
+	literals map[string]bool
 }
 
-func newAssignmentGraph(truncations *truncations) *assignmentGraph {
+func newAssignmentGraph(truncations *truncations, literals map[string]bool) *assignmentGraph {
 	return &assignmentGraph{
 		Assignments: make(map[string]*assignmentNode),
 		truncations: truncations,
+		literals:    literals,
 	}
+}
+
+func (ag *assignmentGraph) argumentOf(nodes []*assignmentNode) CallArgument {
+	values := make([]ArgumentValue, len(nodes))
+	for i, node := range nodes {
+		values[i] = ArgumentValue{Namespace: node.Namespace, Literal: ag.literals[node.kind]}
+	}
+	return CallArgument{Values: values}
 }
 
 // addNode adds a node for identifier, or returns the node that exists. Past

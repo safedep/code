@@ -12,19 +12,25 @@ import (
 // the TypeScript grammar has, as type_annotation, never comes from the
 // JavaScript grammar.
 
-var javascriptProfile = ecmascriptProfile(core.LanguageCodeJavascript)
+var javascriptProfile = ecmascriptProfile(core.LanguageCodeJavascript, "")
 
-var typescriptProfile = ecmascriptProfile(core.LanguageCodeTypescript)
+var typescriptProfile = ecmascriptProfile(core.LanguageCodeTypescript, core.LanguageCodeJavascript)
 
-func ecmascriptProfile(code core.LanguageCode) languageProfile {
+func ecmascriptProfile(code, signatureFallback core.LanguageCode) languageProfile {
 	return languageProfile{
 		code:              code,
 		separators:        []string{"/"},
 		instanceKeyword:   "this",
 		constructorMethod: "constructor",
 		defaultExport:     "default",
+		signatureFallback: signatureFallback,
 		builtins:          ecmascriptBuiltins,
 		processors:        ecmascriptProcessors,
+		literals: map[string]bool{
+			"false": true, "null": true, "number": true, "string": true, "true": true, "undefined": true,
+		},
+		collections: map[string]bool{"array": true, "object": true},
+		ignored:     map[string]bool{"comment": true, "import": true, "import_statement": true},
 		reachable: map[string]bool{
 			"program":                        true,
 			"class_declaration":              true,
@@ -35,13 +41,44 @@ func ecmascriptProfile(code core.LanguageCode) languageProfile {
 			"arrow_function":                 true,
 			"method_definition":              true,
 		},
-		transparent: map[string]bool{
-			"parenthesized_expression": true,
-			"await_expression":         true,
-			"sequence_expression":      true,
-			"non_null_expression":      true,
-			"as_expression":            true,
-			"satisfies_expression":     true,
+		transparent: map[string]childPosition{
+			"parenthesized_expression": firstChild,
+			"await_expression":         firstChild,
+			"sequence_expression":      lastChild,
+			"non_null_expression":      firstChild,
+			"as_expression":            firstChild,
+			"satisfies_expression":     firstChild,
+		},
+		members: map[string]memberShape{
+			"member_expression":    {object: "object", name: "property"},
+			"subscript_expression": {object: "object", name: "index", index: true},
+		},
+		strings: stringShape{
+			literals:       map[string]bool{"string": true, "template_string": true},
+			fragments:      map[string]bool{"string_fragment": true},
+			interpolations: map[string]bool{"template_substitution": true},
+		},
+		argumentList: "arguments",
+		functionLiterals: map[string]bool{
+			"function_expression": true,
+			"function":            true,
+			"arrow_function":      true,
+			"generator_function":  true,
+		},
+		valueRoots: map[string]bool{
+			"call_expression": true,
+			"new_expression":  true,
+			"array":           true,
+			"object":          true,
+			"template_string": true,
+		},
+		literalReceivers: map[string]string{
+			"string":          "String",
+			"template_string": "String",
+			"number":          "Number",
+			"array":           "Array",
+			"object":          "Object",
+			"regex":           "RegExp",
 		},
 	}
 }
@@ -64,10 +101,10 @@ var ecmascriptProcessors = map[string]nodeProcessor{
 	"assignment_expression":      assignmentProcessor,
 	"call_expression":            jsCallExpressionProcessor,
 	"class_declaration":          classDefinitionProcessor,
-	"function_declaration":       jsFunctionDeclarationProcessor,
+	"function_declaration":       functionDefinitionProcessor,
 	"lexical_declaration":        lexicalDeclarationProcessor,
 	"member_expression":          memberExpressionProcessor,
-	"method_definition":          methodDefinitionProcessor,
+	"method_definition":          functionDefinitionProcessor,
 	"new_expression":             jsNewExpressionProcessor,
 	"ternary_expression":         ternaryExpressionProcessor,
 	"variable_declarator":        variableDeclaratorProcessor,
@@ -93,17 +130,6 @@ var ecmascriptProcessors = map[string]nodeProcessor{
 	"type_identifier":            skippedProcessor,
 }
 
-// jsLiteralReceivers map a literal node to the builtin type of its value, so
-// that [1].map() calls Array//map.
-var jsLiteralReceivers = map[string]string{
-	"string":          "String",
-	"template_string": "String",
-	"number":          "Number",
-	"array":           "Array",
-	"object":          "Object",
-	"regex":           "RegExp",
-}
-
 // lexicalDeclarationProcessor processes each declarator of const, let or
 // var.
 func lexicalDeclarationProcessor(declarationNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
@@ -119,38 +145,6 @@ func lexicalDeclarationProcessor(declarationNode *sitter.Node, treeData []byte, 
 	}
 
 	return newProcessorResult()
-}
-
-// jsFunctionDeclarationProcessor processes a function in its own namespace.
-func jsFunctionDeclarationProcessor(funcDefNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	if funcDefNode == nil {
-		return newProcessorResult()
-	}
-
-	functionNameNode := funcDefNode.ChildByFieldName("name")
-	if functionNameNode == nil {
-		log.Debugf("JS function declaration without name - %s", funcDefNode.Content(treeData))
-		return newProcessorResult()
-	}
-
-	funcName := functionNameNode.Content(treeData)
-	functionNamespace := currentNamespace + namespaceSeparator + funcName
-
-	if callGraph.addDefinition(functionNamespace, funcDefNode) {
-		log.Debugf("Register JS function declaration for %s - %s", funcName, functionNamespace)
-	}
-
-	results := newProcessorResult()
-
-	functionBody := funcDefNode.ChildByFieldName("body")
-	if functionBody != nil {
-		metadata.insideFunction = true
-		result := processChildren(functionBody, treeData, functionNamespace, callGraph, metadata)
-		metadata.insideFunction = false
-		results.addResults(result)
-	}
-
-	return results
 }
 
 // jsCallExpressionProcessor adds the edges of a JavaScript call, as
@@ -187,9 +181,9 @@ func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 		callees, reason = resolveJSSubscript(function, treeData, currentNamespace, callGraph, 0)
 	case "identifier":
 		name := function.Content(treeData)
-		callee, bound := resolveJSIdentifier(name, currentNamespace, callGraph)
+		callee, bound := resolveIdentifier(name, currentNamespace, callGraph)
 		callees, unbound = []string{callee}, !bound
-		if name == "require" && !staticString(firstArgument(argumentsNode)) {
+		if name == "require" && !callGraph.profile.staticString(firstArgument(argumentsNode)) {
 			callGraph.addUnresolved(currentNamespace, callNode, function, treeData, UnresolvedDynamicImport)
 		}
 	case "import":
@@ -201,7 +195,7 @@ func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 	case "super":
 		callees = []string{"super"}
 	default:
-		if jsFunctions[function.Type()] {
+		if callGraph.profile.functionLiterals[function.Type()] {
 			// The body of an immediately invoked function runs in the caller
 			processFunctionBody(function, treeData, currentNamespace, callGraph, metadata)
 			break
@@ -231,7 +225,7 @@ func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 // reach, as in import("x").then(({ pipeline }) => pipeline()).
 func jsDynamicImport(argumentsNode *sitter.Node, treeData []byte, profile *languageProfile) (string, bool) {
 	module := firstArgument(argumentsNode)
-	if !staticString(module) {
+	if !profile.staticString(module) {
 		return "", false
 	}
 	name := strings.Trim(module.Content(treeData), "'\"`")
@@ -272,7 +266,7 @@ func resolveJSSubscript(subscriptNode *sitter.Node, treeData []byte, currentName
 		return nil, UnresolvedLimit
 	}
 
-	name, ok := memberName(subscriptNode.ChildByFieldName("index"), treeData)
+	name, ok := callGraph.profile.memberName(subscriptNode.ChildByFieldName("index"), treeData)
 	if !ok {
 		return nil, UnresolvedComputedName
 	}
@@ -289,7 +283,7 @@ func jsReceiverOf(object, member *sitter.Node, treeData []byte, currentNamespace
 	if object == nil {
 		return nil, UnresolvedUnknownReceiver
 	}
-	if builtin, ok := jsLiteralReceivers[object.Type()]; ok {
+	if builtin, ok := callGraph.profile.literalReceivers[object.Type()]; ok {
 		return []string{builtin}, ""
 	}
 
@@ -321,17 +315,6 @@ func jsReceiverOf(object, member *sitter.Node, treeData []byte, currentNamespace
 	return []string{objectName}, ""
 }
 
-// jsValueRoots are the JavaScript nodes at the root of a member chain that
-// hold calls of their own, as createHash('md5') in
-// crypto.createHash('md5').digest().
-var jsValueRoots = map[string]bool{
-	"call_expression": true,
-	"new_expression":  true,
-	"array":           true,
-	"object":          true,
-	"template_string": true,
-}
-
 // processJSChainRoot processes the root of the member chain of a callee. A
 // chained call, as in crypto.createHash('md5').digest(), calls the inner
 // function too.
@@ -343,17 +326,9 @@ func processJSChainRoot(callee *sitter.Node, treeData []byte, currentNamespace s
 		}
 		root = callGraph.unwrap(root.ChildByFieldName("object"))
 	}
-	if root != callee && root != nil && jsValueRoots[root.Type()] {
+	if root != callee && root != nil && callGraph.profile.valueRoots[root.Type()] {
 		processNode(root, treeData, currentNamespace, callGraph, metadata)
 	}
-}
-
-// jsFunctions are the JavaScript nodes of a function literal.
-var jsFunctions = map[string]bool{
-	"function_expression": true,
-	"function":            true,
-	"arrow_function":      true,
-	"generator_function":  true,
 }
 
 // jsValueOf returns the namespaces of the value of a call or an object
@@ -386,20 +361,10 @@ func jsValueOf(node *sitter.Node, treeData []byte, currentNamespace string, call
 				return namespacesOf(targets), ""
 			}
 		}
-		callee, _ := resolveJSIdentifier(target.Content(treeData), currentNamespace, callGraph)
+		callee, _ := resolveIdentifier(target.Content(treeData), currentNamespace, callGraph)
 		return []string{callee}, ""
 	}
 	return nil, UnresolvedUnknownReceiver
-}
-
-// resolveJSIdentifier resolves an unqualified JavaScript identifier. It
-// reports false for a name that the scope chain does not bind, and returns
-// the name in the current namespace.
-func resolveJSIdentifier(identifier string, currentNamespace string, callGraph *CallGraph) (string, bool) {
-	if assignmentNode, found := searchSymbolInScopeChain(identifier, currentNamespace, callGraph); found {
-		return assignmentNode.Namespace, true
-	}
-	return currentNamespace + namespaceSeparator + identifier, false
 }
 
 // memberExpressionProcessor gives the property of each value of the object.
@@ -479,44 +444,6 @@ func arrowFunctionProcessor(arrowNode *sitter.Node, treeData []byte, currentName
 	return results
 }
 
-// methodDefinitionProcessor processes a method in its own namespace. The
-// instance calls the method, and the class calls its constructor.
-func methodDefinitionProcessor(methodDefNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	if methodDefNode == nil {
-		return newProcessorResult()
-	}
-
-	methodNameNode := methodDefNode.ChildByFieldName("name")
-	if methodNameNode == nil {
-		log.Debugf("Method definition without name - %s", methodDefNode.Content(treeData))
-		return newProcessorResult()
-	}
-
-	methodName := methodNameNode.Content(treeData)
-	methodNamespace := currentNamespace + namespaceSeparator + methodName
-
-	if callGraph.addDefinition(methodNamespace, methodDefNode) {
-		log.Debugf("Register JavaScript method definition for %s - %s", methodName, methodNamespace)
-
-		if metadata.insideClass {
-			if keyword := callGraph.profile.instanceKeyword; keyword != "" {
-				instanceNamespace := currentNamespace + namespaceSeparator + keyword + namespaceSeparator + methodName
-				callGraph.addEdge(instanceNamespace, nil, nil, methodNamespace, methodDefNode, []CallArgument{})
-			}
-			if methodName == callGraph.profile.constructorMethod {
-				callGraph.addEdge(currentNamespace, nil, nil, methodNamespace, methodDefNode, []CallArgument{})
-			}
-		}
-	}
-
-	results := newProcessorResult()
-	if methodBody := methodDefNode.ChildByFieldName("body"); methodBody != nil {
-		metadata.insideFunction = true
-		results.addResults(processChildren(methodBody, treeData, methodNamespace, callGraph, metadata))
-	}
-	return results
-}
-
 // jsNewExpressionProcessor adds the edge of an object creation to the
 // class, as TestClass for new TestClass("test") and sqlite3//Database for
 // new sqlite3.Database(':memory:'). The value of the creation is the class.
@@ -551,7 +478,7 @@ func jsNewExpressionProcessor(newNode *sitter.Node, treeData []byte, currentName
 	case "subscript_expression":
 		constructors, reason = resolveJSSubscript(callee, treeData, currentNamespace, callGraph, 0)
 	case "identifier":
-		name, bound := resolveJSIdentifier(callee.Content(treeData), currentNamespace, callGraph)
+		name, bound := resolveIdentifier(callee.Content(treeData), currentNamespace, callGraph)
 		constructors, unbound = []string{name}, !bound
 	default:
 		processNode(callee, treeData, currentNamespace, callGraph, metadata)

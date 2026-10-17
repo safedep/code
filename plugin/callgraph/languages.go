@@ -10,6 +10,10 @@ var csharpProfile = shapedProfile(languageProfile{
 	code:            core.LanguageCodeCSharp,
 	separators:      []string{"."},
 	instanceKeyword: "this",
+	literals:        map[string]bool{"character_literal": true, "raw_string_literal": true, "string_literal": true, "true": true, "false": true},
+	ignored:         map[string]bool{"comment": true},
+	transparent:     map[string]childPosition{"parenthesized_expression": firstChild, "await_expression": firstChild},
+	argumentList:    "argument_list",
 	processors: map[string]nodeProcessor{
 		"enum_declaration": skipResultsProcessor,
 		"as_expression":    skippedProcessor,
@@ -41,12 +45,21 @@ var csharpProfile = shapedProfile(languageProfile{
 		"local_function_statement": {name: "name", body: "body", reachable: true},
 	},
 	skipped: []string{"using_directive", "attribute_list", "attribute"},
+	values:  map[string]string{"cast_expression": "value"},
 })
 
 var rustProfile = shapedProfile(languageProfile{
 	code:            core.LanguageCodeRust,
 	separators:      []string{"::", "."},
 	instanceKeyword: "self",
+	literals:        map[string]bool{"float_literal": true, "raw_string_literal": true, "string_literal": true, "true": true, "false": true},
+	ignored:         map[string]bool{"line_comment": true},
+	transparent: map[string]childPosition{
+		"parenthesized_expression": firstChild,
+		"try_expression":           firstChild,
+		"await_expression":         firstChild,
+	},
+	argumentList: "arguments",
 	processors: map[string]nodeProcessor{
 		"scoped_type_identifier": scopedIdentifierProcessor,
 		"type_arguments":         skippedProcessor,
@@ -71,6 +84,7 @@ var rustProfile = shapedProfile(languageProfile{
 		"mod_item":      {name: "name", body: "body"},
 	},
 	skipped:            []string{"use_declaration", "extern_crate_declaration", "attribute_item", "attribute", "token_tree"},
+	values:             map[string]string{"generic_function": "function", "type_cast_expression": "value"},
 	constructorMethods: []string{"new", "default"},
 })
 
@@ -78,6 +92,12 @@ var phpProfile = shapedProfile(languageProfile{
 	code:            core.LanguageCodePHP,
 	separators:      []string{"\\", "::", "->"},
 	instanceKeyword: "$this",
+	literals: map[string]bool{
+		"boolean": true, "encapsed_string": true, "float": true, "integer": true, "null": true, "string": true,
+	},
+	ignored:      map[string]bool{"comment": true},
+	transparent:  map[string]childPosition{"parenthesized_expression": firstChild},
+	argumentList: "arguments",
 	processors: map[string]nodeProcessor{
 		"arrow_function":   arrowFunctionProcessor,
 		"enum_declaration": skipResultsProcessor,
@@ -113,6 +133,7 @@ var phpProfile = shapedProfile(languageProfile{
 		"method_declaration":    {name: "name", body: "body", reachable: true},
 	},
 	skipped: []string{"namespace_use_declaration", "attribute"},
+	values:  map[string]string{"cast_expression": "value"},
 })
 
 var rubyProfile = shapedProfile(languageProfile{
@@ -120,6 +141,13 @@ var rubyProfile = shapedProfile(languageProfile{
 	separators:      []string{"::", "."},
 	instanceKeyword: "self",
 	reachable:       map[string]bool{"program": true},
+	literals: map[string]bool{
+		"character": true, "false": true, "float": true, "integer": true, "string": true, "true": true,
+	},
+	collections:  map[string]bool{"array": true},
+	ignored:      map[string]bool{"comment": true},
+	transparent:  map[string]childPosition{"parenthesized_statements": firstChild},
+	argumentList: "argument_list",
 }, syntaxShapes{
 	calls: map[string]callShape{
 		"call": {receiver: "receiver", name: "method", arguments: "arguments"},

@@ -51,28 +51,50 @@ var pythonProfile = languageProfile{
 		"function_definition": functionDefinitionProcessor,
 		"subscript":           skippedProcessor,
 	},
+	literals: map[string]bool{
+		"false": true, "float": true, "integer": true, "none": true, "string": true, "true": true,
+	},
+	collections: map[string]bool{"dictionary": true, "list": true, "set": true, "tuple": true},
+	ignored:     map[string]bool{"comment": true, "import_from_statement": true, "import_statement": true},
 	reachable: map[string]bool{
 		"module":              true,
 		"class_definition":    true,
 		"function_definition": true,
 	},
-	transparent: map[string]bool{"parenthesized_expression": true},
-}
-
-// pythonLiteralReceivers map a literal node to the builtin type of its
-// value, so that "a,b".split() calls str//split.
-var pythonLiteralReceivers = map[string]string{
-	"string":                   "str",
-	"concatenated_string":      "str",
-	"integer":                  "int",
-	"float":                    "float",
-	"list":                     "list",
-	"list_comprehension":       "list",
-	"dictionary":               "dict",
-	"dictionary_comprehension": "dict",
-	"set":                      "set",
-	"set_comprehension":        "set",
-	"tuple":                    "tuple",
+	transparent: map[string]childPosition{"parenthesized_expression": firstChild},
+	members: map[string]memberShape{
+		"attribute": {object: "object", name: "attribute"},
+		"subscript": {object: "value", name: "subscript", index: true},
+	},
+	memberAssignees: map[string]bool{"attribute": true},
+	strings: stringShape{
+		literals:       map[string]bool{"string": true},
+		fragments:      map[string]bool{"string_content": true},
+		quotes:         map[string]bool{"string_start": true, "string_end": true},
+		interpolations: map[string]bool{"interpolation": true},
+	},
+	argumentList:     "argument_list",
+	functionLiterals: map[string]bool{"lambda": true},
+	valueRoots: map[string]bool{
+		"call":       true,
+		"list":       true,
+		"dictionary": true,
+		"set":        true,
+		"tuple":      true,
+	},
+	literalReceivers: map[string]string{
+		"string":                   "str",
+		"concatenated_string":      "str",
+		"integer":                  "int",
+		"float":                    "float",
+		"list":                     "list",
+		"list_comprehension":       "list",
+		"dictionary":               "dict",
+		"dictionary_comprehension": "dict",
+		"set":                      "set",
+		"set_comprehension":        "set",
+		"tuple":                    "tuple",
+	},
 }
 
 // attributeProcessor gives the attribute of each value of its object, as
@@ -163,7 +185,7 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 
 	addEdge := func(callee string, calleeTreeNode *sitter.Node) {
 		callGraph.addEdge(currentNamespace, nil, functionCallNode, callee, calleeTreeNode, callArguments)
-		if callGraph.isPythonDynamicImport(callee) && !staticString(firstArgument(argumentsNode)) {
+		if callGraph.isPythonDynamicImport(callee) && !callGraph.profile.staticString(firstArgument(argumentsNode)) {
 			callGraph.addUnresolved(currentNamespace, functionCallNode.Parent(), function, treeData, UnresolvedDynamicImport)
 		}
 	}
@@ -183,18 +205,19 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 		ref.Unbound = true
 		callGraph.addCall(currentNamespace, nil, nil, ref)
 		return result
-	case "lambda":
-		// The body of an immediately called lambda runs in the caller
-		processNode(function, treeData, currentNamespace, callGraph, metadata)
-		return result
 	case "attribute", "subscript":
 		// A chained call, as in PasswordHasher().hash(), calls the inner
 		// function too, and the inner function is the base of the name
-		if root := callGraph.unwrap(chainRoot(function.ChildByFieldName("object"), "attribute", "object")); root != nil && pythonValueRoots[root.Type()] {
+		if root := callGraph.unwrap(chainRoot(function.ChildByFieldName("object"), "attribute", "object")); root != nil && callGraph.profile.valueRoots[root.Type()] {
 			processNode(root, treeData, currentNamespace, callGraph, metadata)
 		}
 		callees, reason = pythonValueOf(function, treeData, currentNamespace, callGraph, 0)
 	default:
+		if callGraph.profile.functionLiterals[function.Type()] {
+			// The body of an immediately called lambda runs in the caller
+			processFunctionBody(function, treeData, currentNamespace, callGraph, metadata)
+			return result
+		}
 		// The inner call is a call of its own, as getattr in getattr(o, n)()
 		processNode(function, treeData, currentNamespace, callGraph, metadata)
 		reason = UnresolvedComputedName
@@ -209,16 +232,6 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 	}
 
 	return result
-}
-
-// pythonValueRoots are the Python nodes at the root of a member chain that
-// hold calls of their own, as Config() in Config().load().
-var pythonValueRoots = map[string]bool{
-	"call":       true,
-	"list":       true,
-	"dictionary": true,
-	"set":        true,
-	"tuple":      true,
 }
 
 // pythonDynamicImports are the functions that import a module by a name
@@ -254,7 +267,7 @@ func pythonValueOf(node *sitter.Node, treeData []byte, currentNamespace string, 
 	if node == nil {
 		return nil, UnresolvedUnknownReceiver
 	}
-	if builtin, ok := pythonLiteralReceivers[node.Type()]; ok {
+	if builtin, ok := callGraph.profile.literalReceivers[node.Type()]; ok {
 		return []string{builtin}, ""
 	}
 

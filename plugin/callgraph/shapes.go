@@ -23,6 +23,10 @@ type syntaxShapes struct {
 	// skipped are node types with no calls below them, such as imports.
 	skipped []string
 
+	// values are the node types whose value is the expression in one field:
+	// the Rust turbofish, as in iter.collect::<Vec<_>>(), and a cast.
+	values map[string]string
+
 	// constructorMethods are methods that return a new instance of their
 	// receiver, as in OpenAI::Client.new. A variable that gets the result is
 	// an instance of the receiver.
@@ -43,13 +47,6 @@ type callShape struct {
 type creationShape struct {
 	typeField string
 	arguments string
-}
-
-// memberShape names the fields of a member access whose object can be a
-// call, as in client.chat().create.
-type memberShape struct {
-	object string
-	name   string
 }
 
 // assignmentShape names the fields of an assignment. An empty right field
@@ -108,8 +105,15 @@ func shapedProfile(profile languageProfile, shapes syntaxShapes) languageProfile
 		processors[nodeType] = skippedProcessor
 	}
 
+	members := maps.Clone(profile.members)
+	if members == nil {
+		members = map[string]memberShape{}
+	}
+	maps.Copy(members, shapes.members)
+
 	profile.processors = processors
 	profile.reachable = reachable
+	profile.members = members
 	return profile
 }
 
@@ -171,7 +175,7 @@ func (p *shapedProcessors) creation(node *sitter.Node, treeData []byte, currentN
 
 	argumentsNode := fieldChild(node, shape.arguments)
 	if shape.arguments == "" {
-		argumentsNode = childOfType(node, "arguments", "argument_list")
+		argumentsNode = childOfType(node, callGraph.profile.argumentList)
 	}
 
 	arguments := []CallArgument{}
@@ -255,10 +259,10 @@ func (p *shapedProcessors) resolve(node *sitter.Node, treeData []byte, currentNa
 		return firstValue(processNode(node, treeData, currentNamespace, callGraph, metadata))
 	}
 
-	if wrapperTypes[nodeType] && node.NamedChildCount() == 1 {
+	if position, ok := callGraph.profile.transparent[nodeType]; ok && position == firstChild && node.NamedChildCount() == 1 {
 		return p.resolve(node.NamedChild(0), treeData, currentNamespace, callGraph, metadata)
 	}
-	if field, ok := valueFields[nodeType]; ok {
+	if field, ok := p.shapes.values[nodeType]; ok {
 		if inner := node.ChildByFieldName(field); inner != nil {
 			return p.resolve(inner, treeData, currentNamespace, callGraph, metadata)
 		}
@@ -285,27 +289,9 @@ func (p *shapedProcessors) resolve(node *sitter.Node, treeData []byte, currentNa
 	return p.resolvePath(path, currentNamespace, callGraph)
 }
 
-// valueFields are the node types whose value is the expression in one
-// field: the Rust turbofish, as in iter.collect::<Vec<_>>(), and a cast.
-var valueFields = map[string]string{
-	"generic_function":     "function",
-	"cast_expression":      "value",
-	"type_cast_expression": "value",
-}
-
 // qualifiedPathPattern matches a name or a qualified name of a shaped
 // language, as in Client, OpenAI::Client, Http\Client or client?.Chat.
 var qualifiedPathPattern = regexp.MustCompile(`^[\p{L}_$@\\][\p{L}\p{N}_$@\\.:?!&]*$`)
-
-// wrapperTypes are the node types that have the value of their only inner
-// expression: parentheses, as in PHP (new Encoder())->encode(), and the
-// Rust ? and .await, as in Tensor::arange(0.0, n, &dev)?.unsqueeze(1).
-var wrapperTypes = map[string]bool{
-	"parenthesized_expression": true,
-	"parenthesized_statements": true,
-	"try_expression":           true,
-	"await_expression":         true,
-}
 
 // resolvePath returns the namespace of a qualified name. The first segment
 // resolves through the scope chain, so an imported alias or a variable

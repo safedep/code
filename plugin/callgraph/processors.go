@@ -1,7 +1,6 @@
 package callgraph
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/safedep/dry/log"
@@ -36,14 +35,6 @@ func newProcessorResult() processorResult {
 	}
 }
 
-func (pr *processorResult) ToString() string {
-	result := "Immediate Assignments:\n"
-	for _, assignment := range pr.ImmediateAssignments {
-		result += fmt.Sprintf("\t%s\n", assignment.Namespace)
-	}
-	return result
-}
-
 // addAssignments adds the nodes that exist. The assignment graph returns nil
 // past its node limit.
 func (pr *processorResult) addAssignments(nodes ...*assignmentNode) {
@@ -69,22 +60,25 @@ func processNode(node *sitter.Node, treeData []byte, currentNamespace string, ca
 		return newProcessorResult()
 	}
 
-	processor, ok := callGraph.profile.processors[node.Type()]
-	if !ok {
-		processor = neutralProcessor(node.Type())
-	}
-	return processor(node, treeData, currentNamespace, callGraph, metadata)
+	return callGraph.profile.processorOf(node)(node, treeData, currentNamespace, callGraph, metadata)
 }
 
-// neutralProcessor returns the processor of a node type that has one meaning
-// in every grammar, such as a literal, a comment or a statement.
-func neutralProcessor(nodeType string) nodeProcessor {
+// processorOf returns the processor of the type of node in the profile.
+// Past the processors of the profile come the literals, the collections and
+// the ignored nodes of the profile, and then the processors of the node
+// types that have one meaning in every grammar. A token, as a keyword or a
+// mark, holds no call.
+func (p *languageProfile) processorOf(node *sitter.Node) nodeProcessor {
+	nodeType := node.Type()
+	if processor, ok := p.processors[nodeType]; ok {
+		return processor
+	}
 	switch {
-	case literalNodeTypes[nodeType]:
+	case p.literals[nodeType]:
 		return literalValueProcessor
-	case initialisedDataStructures[nodeType]:
+	case p.collections[nodeType]:
 		return skipResultsProcessor
-	case ignoredNodeTypes[nodeType]:
+	case p.ignored[nodeType], !node.IsNamed():
 		return skippedProcessor
 	}
 	switch nodeType {
@@ -217,9 +211,9 @@ func classDefinitionProcessor(classDefNode *sitter.Node, treeData []byte, curren
 	return newProcessorResult()
 }
 
-// functionDefinitionProcessor processes a function in its own namespace. The
-// instance calls a method, the class calls its constructor method and the
-// root namespace calls the entry function of the language.
+// functionDefinitionProcessor processes a function or a method in its own
+// namespace. The instance calls a method, the class calls its constructor
+// method and the root namespace calls the entry function of the language.
 func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
 	if functionDefNode == nil {
 		return newProcessorResult()
@@ -237,7 +231,7 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 
 	// The edge from the root comes first, so the entry function gets no
 	// edge from the instance.
-	if profile.entryFunction != "" && funcName == profile.entryFunction {
+	if profile.rootCallsFunctions || (profile.entryFunction != "" && funcName == profile.entryFunction) {
 		callGraph.addEdge(resolveRootNamespaceQualifier(currentNamespace), nil, nil, functionNamespace, functionDefNode, []CallArgument{})
 	}
 
@@ -255,17 +249,12 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 		}
 	}
 
-	results := newProcessorResult()
-	if functionBody := functionDefNode.ChildByFieldName("body"); functionBody != nil {
-		metadata.insideFunction = true
-		results.addResults(processChildren(functionBody, treeData, functionNamespace, callGraph, metadata))
-	}
-	return results
+	return processFunctionBody(functionDefNode, treeData, functionNamespace, callGraph, metadata)
 }
 
 // assignmentProcessor assigns the values of the right side to the left
-// side. An attribute on the left, as in xyz.attr = 1, resolves to the
-// attribute of each value of its object, xyz//attr.
+// side. A member on the left, as in xyz.attr = 1, resolves to the member of
+// each value of its object, xyz//attr.
 func assignmentProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
 	if node == nil {
 		return newProcessorResult()
@@ -286,8 +275,8 @@ func assignmentProcessor(node *sitter.Node, treeData []byte, currentNamespace st
 	// A tuple on the left, as in a, b = 1, 2, is one name. The values do not
 	// go to their names.
 	assigneeNodes := []*assignmentNode{}
-	if leftNode.Type() == "attribute" {
-		assigneeNodes = attributeProcessor(leftNode, treeData, currentNamespace, callGraph, metadata).ImmediateAssignments
+	if callGraph.profile.memberAssignees[leftNode.Type()] {
+		assigneeNodes = processNode(leftNode, treeData, currentNamespace, callGraph, metadata).ImmediateAssignments
 	}
 
 	if len(assigneeNodes) == 0 {
@@ -351,8 +340,10 @@ func resolveCallArguments(argumentsListNode *sitter.Node, treeData []byte, curre
 		return []CallArgument{}
 	}
 
-	if argumentsListNode.Type() != "argument_list" && argumentsListNode.Type() != "arguments" {
-		log.Debugf("Expected argument_list or arguments node, got %s for %s", argumentsListNode.Type(), argumentsListNode.Content(treeData))
+	// The arguments of a Python call can be one generator, as in
+	// sum(x for x in y). The generator is no list of arguments.
+	if argumentsListNode.Type() != callGraph.profile.argumentList {
+		log.Debugf("Expected %s node, got %s for %s", callGraph.profile.argumentList, argumentsListNode.Type(), argumentsListNode.Content(treeData))
 		return []CallArgument{}
 	}
 
@@ -372,7 +363,7 @@ func resolveCallArguments(argumentsListNode *sitter.Node, treeData []byte, curre
 			resolvedTerminalAssignmentNodes = append(resolvedTerminalAssignmentNodes, resolvedNodes...)
 		}
 
-		result[i] = argumentOf(resolvedTerminalAssignmentNodes)
+		result[i] = callGraph.assignmentGraph.argumentOf(resolvedTerminalAssignmentNodes)
 	}
 
 	return result
@@ -443,9 +434,20 @@ func chainRoot(node *sitter.Node, memberType, objectField string) *sitter.Node {
 	return node
 }
 
-// processFunctionBody processes the body of a function literal in
-// namespace. The body of an arrow function can be one expression, as in
-// (k) => parseInt(k), and the expression is then a call of its own.
+// resolveIdentifier resolves a name through the scope chain. It reports
+// false for a name that the scope chain does not bind, and returns the name
+// in the current namespace.
+func resolveIdentifier(identifier string, currentNamespace string, callGraph *CallGraph) (string, bool) {
+	if assignmentNode, found := searchSymbolInScopeChain(identifier, currentNamespace, callGraph); found {
+		return assignmentNode.Namespace, true
+	}
+	return currentNamespace + namespaceSeparator + identifier, false
+}
+
+// processFunctionBody processes the body of a function in namespace. The
+// body of an arrow function can be one expression, as in (k) => parseInt(k),
+// and the expression is then a call of its own. A function in a method is
+// no method, so its body is not inside the class.
 func processFunctionBody(function *sitter.Node, treeData []byte, namespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
 	body := function.ChildByFieldName("body")
 	if body == nil {
@@ -453,8 +455,24 @@ func processFunctionBody(function *sitter.Node, treeData []byte, namespace strin
 	}
 
 	metadata.insideFunction = true
-	if body.Type() == "statement_block" {
-		return processChildren(body, treeData, namespace, callGraph, metadata)
-	}
+	metadata.insideClass = false
 	return processNode(body, treeData, namespace, callGraph, metadata)
+}
+
+// unwrap returns the node that gives the value of node, as fn for the
+// sequence in (0, fn)().
+func (cg *CallGraph) unwrap(node *sitter.Node) *sitter.Node {
+	transparent := cg.profile.transparent
+	for depth := 0; node != nil && node.NamedChildCount() > 0 && depth <= maxMemberExpressionDepth; depth++ {
+		position, ok := transparent[node.Type()]
+		if !ok {
+			break
+		}
+		if position == lastChild {
+			node = node.NamedChild(int(node.NamedChildCount()) - 1)
+			continue
+		}
+		node = node.NamedChild(0)
+	}
+	return node
 }

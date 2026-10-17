@@ -7,7 +7,8 @@ import (
 )
 
 // languageProfile is what the call graph knows of one language. Each
-// language file declares its profile, and languageProfiles lists them.
+// language file declares its profile, and languageProfiles lists them. The
+// shared processors read the node types of a grammar only from here.
 type languageProfile struct {
 	code core.LanguageCode
 
@@ -22,7 +23,10 @@ type languageProfile struct {
 	constructorMethod string
 
 	// entryFunction is the function that the root namespace calls, as main.
-	entryFunction string
+	// rootCallsFunctions makes the root namespace call every function, so
+	// that DFS reaches the functions of a Go library with no main.
+	entryFunction      string
+	rootCallsFunctions bool
 
 	// builtins are the functions and types that a file uses with no import.
 	builtins []string
@@ -31,12 +35,49 @@ type languageProfile struct {
 	// no processor here gets the processor of neutralProcessor.
 	processors map[string]nodeProcessor
 
+	// literals are the node types of a literal value. collections are the
+	// node types of a collection literal, whose items can hold calls but
+	// which is no value of a name. ignored are the named node types with no
+	// call below them, as an import or a comment.
+	literals    map[string]bool
+	collections map[string]bool
+	ignored     map[string]bool
+
 	// reachable are the node types of the definitions that DFS starts from,
 	// because a file often exports a definition and does not call it.
 	reachable map[string]bool
 
-	// transparent are the node types whose value is the value of one child.
-	transparent map[string]bool
+	// transparent are the node types whose value is the value of one named
+	// child, the first one or, for a sequence, the last one.
+	transparent map[string]childPosition
+
+	// members are the node types of a member access, as obj.method, and of
+	// a call that holds its receiver and its name, as a Java method
+	// invocation. They give the receiver and the method of a call.
+	members map[string]memberShape
+
+	// memberAssignees are the member node types that an assignment can
+	// assign to, as xyz.attr in Python. Their processor gives the assignee.
+	memberAssignees map[string]bool
+
+	// strings tells which nodes make a string literal.
+	strings stringShape
+
+	// argumentList is the node type of the arguments of a call.
+	argumentList string
+
+	// functionLiterals are the node types of a function with no name, as a
+	// lambda. A call of one runs its body in the caller.
+	functionLiterals map[string]bool
+
+	// valueRoots are the node types at the root of a member chain that hold
+	// calls of their own, as createHash('md5') in
+	// crypto.createHash('md5').digest().
+	valueRoots map[string]bool
+
+	// literalReceivers map a literal node type to the builtin type of its
+	// value, so that [1].map() calls Array//map.
+	literalReceivers map[string]string
 
 	// importBindsRoot marks a language where an import of a dotted module
 	// with no item and no alias binds its first segment, as os for import
@@ -47,9 +88,40 @@ type languageProfile struct {
 	// in import { default as y } from 'x'.
 	defaultExport string
 
+	// signatureFallback is the language whose signatures apply when a
+	// signature has none for this language. TypeScript uses the signatures
+	// of JavaScript, because the two share their libraries.
+	signatureFallback core.LanguageCode
+
 	// trimModule removes the part of an imported module name that names no
 	// namespace. It can be nil.
 	trimModule func(string) string
+}
+
+// childPosition picks the named child that gives the value of a node.
+type childPosition int
+
+const (
+	firstChild childPosition = iota
+	lastChild
+)
+
+// memberShape names the fields of a member access, as client.chat in
+// client.chat().create. An index shape holds the name as a string index, as
+// obj['x'].
+type memberShape struct {
+	object string
+	name   string
+	index  bool
+}
+
+// stringShape names the node types of a string literal and of its parts.
+// quotes are the named nodes of the quotes, as string_start in Python.
+type stringShape struct {
+	literals       map[string]bool
+	fragments      map[string]bool
+	quotes         map[string]bool
+	interpolations map[string]bool
 }
 
 // languageProfiles are the languages of the call graph, in a fixed order.
@@ -90,6 +162,16 @@ func profileOf(code core.LanguageCode) *languageProfile {
 		return profile
 	}
 	return &languageProfile{code: code}
+}
+
+// languageProfile returns the profile of the language of the graph. A
+// decoded graph gets its profile on the first call. The processors of the
+// build read cg.profile, because a profile holds the processors.
+func (cg *CallGraph) languageProfile() *languageProfile {
+	if cg.profile == nil {
+		cg.profile = profileOf(cg.Language)
+	}
+	return cg.profile
 }
 
 func (p *languageProfile) builtinSet() map[string]bool {
