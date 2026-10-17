@@ -1,8 +1,13 @@
 # Project graph report
 
-The first run of the benchmark and the public sets, on 2026-10-17, at the
-commit that adds this file. `README.md` says how to run them and what each
-metric means.
+Two runs of the benchmark and the public sets, both on 2026-10-17 on one
+machine. "Before" is the commit that adds this file (1848f7c). "After" is
+the commit that adds this second run, after the fixes of the adversarial
+review: the `name` and `reference` edges, the records for bare names and
+for imports that can be first-party, `super`, module variables, decorator
+closures and the budget rule for incomplete files. `README.md` says how to
+run them and what each metric means. The run of 10,000 files is from
+before only.
 
 ## Machine
 
@@ -26,15 +31,20 @@ from the generated project of 1,000 files. Times are per 1,000 files on the
 project of 1,000 files. Memory is the peak heap minus the heap before the
 step.
 
-| Language | Set | Precision, high and medium | Recall | Unresolved rate, set | Unresolved rate, synthetic | Index cold | Index warm | Link | Reach, 200 targets | Memory cold / warm / link / reach |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Python | pycg-micro | 0.735 (139/189) | 0.542 (143/264) | 0.204 (51/250) | 0.159 | 4.22 s | 0.31 s | 0.25 s | 31 ms | 71 / 42 / 41 / 6 MiB |
-| JavaScript | swarm-js | 0.618 (152/246) | 0.526 (152/289) | 0.189 (58/307) | 0.228 | 4.37 s | 0.34 s | 0.24 s | 32 ms | 80 / 43 / 35 / 7 MiB |
-| TypeScript | none | n/a | n/a | n/a | 0.125 | 7.02 s | 0.27 s | 0.20 s | 31 ms | 66 / 32 / 34 / 5 MiB |
+| Language | Run | Set | Precision, high and medium | Recall | Unresolved rate, set | Unresolved rate, synthetic | Index cold | Index warm | Link | Reach, 200 targets | Memory cold / warm / link / reach |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Python | before | pycg-micro | 0.735 (139/189) | 0.542 (143/264) | 0.204 (51/250) | 0.159 | 4.22 s | 0.31 s | 0.25 s | 31 ms | 71 / 42 / 41 / 6 MiB |
+| Python | after | pycg-micro | 0.940 (142/151) | 0.697 (184/264) | 0.344 (86/250) | 0.159 | 4.03 s | 0.30 s | 0.33 s | 33 ms | 77 / 43 / 50 / 6 MiB |
+| JavaScript | before | swarm-js | 0.618 (152/246) | 0.526 (152/289) | 0.189 (58/307) | 0.228 | 4.37 s | 0.34 s | 0.24 s | 32 ms | 80 / 43 / 35 / 7 MiB |
+| JavaScript | after | swarm-js | 0.821 (156/190) | 0.706 (204/289) | 0.358 (110/307) | 0.263 | 4.48 s | 0.26 s | 0.28 s | 36 ms | 77 / 41 / 43 / 8 MiB |
+| TypeScript | before | none | n/a | n/a | n/a | 0.125 | 7.02 s | 0.27 s | 0.20 s | 31 ms | 66 / 32 / 34 / 5 MiB |
+| TypeScript | after | none | n/a | n/a | n/a | 0.125 | 6.94 s | 0.28 s | 0.23 s | 24 ms | 66 / 35 / 35 / 5 MiB |
 
-Both languages with a set are below the precision gate of the design (0.95
-for `high` and `medium` edges). The section on the public sets names the
-cause.
+Python is now at 0.940, just under the precision gate of the design (0.95
+for `high` and `medium` edges). JavaScript is at 0.821. The section on the
+public sets names the causes. The unresolved rate of the sets went up,
+because a call of a bare name with no binding is now a record and not an
+external edge.
 
 ## Benchmark
 
@@ -54,6 +64,36 @@ step has no field types before step 27, so these stay unresolved by design.
 ### 1,000 files
 
 `-benchtime 1x`, one run per step.
+
+After:
+
+| Language | Step | Time | Base heap | Peak heap | Graph |
+| --- | --- | --- | --- | --- | --- |
+| Python | index-cold | 4.03 s | 27.2 MiB | 104.6 MiB | |
+| Python | index-cold-store | 4.14 s | 27.2 MiB | 103.7 MiB | |
+| Python | index-warm | 0.30 s | 27.2 MiB | 70.7 MiB | |
+| Python | link | 0.33 s | 27.2 MiB | 76.9 MiB | 48,566 edges, 113 roots, 6,585 unresolved |
+| Python | reach | 33 ms | 10.7 MiB | 17.1 MiB | 200 of 200 found |
+| JavaScript | index-cold | 4.48 s | 25.3 MiB | 102.6 MiB | |
+| JavaScript | index-cold-store | 4.84 s | 25.3 MiB | 103.3 MiB | |
+| JavaScript | index-warm | 0.26 s | 25.3 MiB | 66.2 MiB | |
+| JavaScript | link | 0.28 s | 25.3 MiB | 68.0 MiB | 38,307 edges, 39 roots, 9,443 unresolved |
+| JavaScript | reach | 36 ms | 9.9 MiB | 17.6 MiB | 200 of 200 found |
+| TypeScript | index-cold | 6.94 s | 21.1 MiB | 87.5 MiB | |
+| TypeScript | index-cold-store | 6.84 s | 21.1 MiB | 83.1 MiB | |
+| TypeScript | index-warm | 0.28 s | 21.1 MiB | 56.1 MiB | |
+| TypeScript | link | 0.23 s | 21.1 MiB | 56.4 MiB | 38,695 edges, 39 roots, 3,781 unresolved |
+| TypeScript | reach | 24 ms | 9.1 MiB | 13.8 MiB | 200 of 200 found |
+
+The index of a file is now 10.4 KiB (Python and JavaScript) and 9.1 KiB
+(TypeScript) as JSON. The graph has 7,948 more edges in Python, 2,850 in
+JavaScript and 8,185 in TypeScript, most of them `name` and `reference`
+edges, and the link step is 15% to 32% slower. The cold index step is
+inside the noise of one run. A back-to-back run of the JavaScript cold
+step gave 4.23 s before and 4.58 s after. TypeScript now finds 200 of 200
+targets.
+
+Before:
 
 | Language | Step | Time | Base heap | Peak heap | Graph |
 | --- | --- | --- | --- | --- | --- |
@@ -75,7 +115,7 @@ step has no field types before step 27, so these stay unresolved by design.
 
 ### 10,000 files
 
-One run of `PROJECTGRAPH_BENCH_FILES=10000`. The whole run took 9 min 12 s,
+Before only. One run of `PROJECTGRAPH_BENCH_FILES=10000`. The whole run took 9 min 12 s,
 so the scheduled job keeps 1,000 files as its default.
 
 | Language | Step | Time | Base heap | Peak heap | Graph |
@@ -102,7 +142,10 @@ run has a noise of about 8%. The store costs less than that.
 ### Against the budget table
 
 The budget table of the architecture asset, section 7, gives targets on 4
-cores. The measured index step uses one core.
+cores. The measured index step uses one core. The table holds the numbers
+from before. After, the link step of 1,000 files is 0.23 to 0.33 s, at the
+target of 0.3 s, and the other steps at 1,000 files keep their place
+against the targets.
 
 | Step | Target, 1,000 | Measured, 1,000 (Python / JavaScript / TypeScript) | Target, 10,000 | Measured, 10,000 | Inside the target |
 | --- | --- | --- | --- | --- | --- |
@@ -144,63 +187,85 @@ which has no license. The PyCG repository itself has 119 cases.
 
 ### Totals
 
-| Metric | pycg-micro | swarm-js |
-| --- | --- | --- |
-| Cases with the exact pairs | 0.378 (45/119) | 0.262 (33/126) |
-| Precision | 0.741 (143/193) | 0.618 (152/246) |
-| Precision, high and medium | 0.735 (139/189) | 0.618 (152/246) |
-| Recall | 0.542 (143/264) | 0.526 (152/289) |
-| Unresolved rate | 0.204 (51/250) | 0.189 (58/307) |
+| Metric | pycg-micro before | pycg-micro after | swarm-js before | swarm-js after |
+| --- | --- | --- | --- | --- |
+| Cases with the exact pairs | 0.378 (45/119) | 0.445 (53/119) | 0.262 (33/126) | 0.333 (42/126) |
+| Precision | 0.741 (143/193) | 0.694 (184/265) | 0.618 (152/246) | 0.664 (204/307) |
+| Precision, high and medium | 0.735 (139/189) | 0.940 (142/151) | 0.618 (152/246) | 0.821 (156/190) |
+| Recall | 0.542 (143/264) | 0.697 (184/264) | 0.526 (152/289) | 0.706 (204/289) |
+| Unresolved rate | 0.204 (51/250) | 0.344 (86/250) | 0.189 (58/307) | 0.358 (110/307) |
 
 ### Precision per edge kind
 
-| Kind | pycg-micro | swarm-js |
-| --- | --- | --- |
-| `direct` | 0.678 (99/146) | 0.569 (112/197) |
-| `member` | 0.938 (30/32) | 0.929 (26/28) |
-| `assignment` | 0.923 (12/13) | 0.667 (14/21) |
-| `wildcard` | 1.000 (4/4) | none |
+| Kind | pycg-micro before | pycg-micro after | swarm-js before | swarm-js after |
+| --- | --- | --- | --- | --- |
+| `direct` | 0.678 (99/146) | 0.934 (99/106) | 0.569 (112/197) | 0.810 (115/142) |
+| `member` | 0.938 (30/32) | 0.943 (33/35) | 0.929 (26/28) | 0.931 (27/29) |
+| `assignment` | 0.923 (12/13) | 1.000 (12/12) | 0.667 (14/21) | 0.737 (14/19) |
+| `wildcard` | 1.000 (4/4) | 1.000 (4/4) | none | none |
+| `name` | none | 0.400 (2/5) | none | 0.375 (3/8) |
+| `reference` | none | 0.405 (47/116) | none | 0.470 (62/132) |
 
 The sets make no `cha` or `field` edge, because the link step has no such
-edge before step 27.
+edge before step 27. A `reference` edge goes from the definition that holds
+the value, as `main` in `run(func)`. The sets name the function that calls
+the value, as `run`, so most `reference` pairs count as false. They are
+`low`, so the gate does not count them.
 
 ### Recall per callee
 
-| Callee | pycg-micro | swarm-js |
-| --- | --- | --- |
-| In the project | 0.531 (129/243) | 0.529 (147/278) |
-| External | 0.667 (6/9) | none |
-| Builtin | 0.667 (8/12) | 0.455 (5/11) |
+| Callee | pycg-micro before | pycg-micro after | swarm-js before | swarm-js after |
+| --- | --- | --- | --- | --- |
+| In the project | 0.531 (129/243) | 0.700 (170/243) | 0.529 (147/278) | 0.716 (199/278) |
+| External | 0.667 (6/9) | 0.667 (6/9) | none | none |
+| Builtin | 0.667 (8/12) | 0.667 (8/12) | 0.455 (5/11) | 0.455 (5/11) |
 
 ### Recall per category
 
-| Category | pycg-micro | swarm-js |
-| --- | --- | --- |
-| args | 0.500 (7/14) | 0.500 (11/22) |
-| arrays | | 0.412 (7/17) |
-| arrow_functions | | 0.357 (5/14) |
-| assignments | 0.133 (2/15) | 0.263 (5/19) |
-| builtins | 0.300 (3/10) | 0.077 (1/13) |
-| classes | 0.750 (39/52) | 0.720 (36/50) |
-| decorators | 0.591 (13/22) | 0.455 (10/22) |
-| dicts | 0.263 (5/19) | |
-| direct_calls | 0.400 (4/10) | 0.607 (17/28) |
-| dynamic | 0.000 (0/2) | 0.000 (0/2) |
-| exceptions | 0.000 (0/3) | 0.667 (2/3) |
-| external | 0.727 (8/11) | |
-| functions | 1.000 (4/4) | 1.000 (4/4) |
-| generators | 0.444 (8/18) | 0.429 (6/14) |
-| imports | 0.929 (13/14) | 0.958 (23/24) |
-| inheritance | | 0.600 (6/10) |
-| kwargs | 0.300 (3/10) | 0.333 (3/9) |
-| lambdas | 0.357 (5/14) | |
-| lists | 0.500 (8/16) | |
-| mixins | | 0.429 (3/7) |
-| mro | 0.722 (13/18) | |
-| objects | | 0.263 (5/19) |
-| returns | 0.667 (8/12) | 0.667 (8/12) |
+| Category | pycg-micro before | pycg-micro after | swarm-js before | swarm-js after |
+| --- | --- | --- | --- | --- |
+| args | 0.500 (7/14) | 0.500 (7/14) | 0.500 (11/22) | 0.636 (14/22) |
+| arrays | | | 0.412 (7/17) | 0.824 (14/17) |
+| arrow_functions | | | 0.357 (5/14) | 0.357 (5/14) |
+| assignments | 0.133 (2/15) | 1.000 (15/15) | 0.263 (5/19) | 1.000 (19/19) |
+| builtins | 0.300 (3/10) | 0.600 (6/10) | 0.077 (1/13) | 0.385 (5/13) |
+| classes | 0.750 (39/52) | 0.788 (41/52) | 0.720 (36/50) | 0.820 (41/50) |
+| decorators | 0.591 (13/22) | 0.636 (14/22) | 0.455 (10/22) | 0.545 (12/22) |
+| dicts | 0.263 (5/19) | 0.684 (13/19) | | |
+| direct_calls | 0.400 (4/10) | 0.500 (5/10) | 0.607 (17/28) | 0.714 (20/28) |
+| dynamic | 0.000 (0/2) | 0.000 (0/2) | 0.000 (0/2) | 0.000 (0/2) |
+| exceptions | 0.000 (0/3) | 0.333 (1/3) | 0.667 (2/3) | 0.667 (2/3) |
+| external | 0.727 (8/11) | 0.727 (8/11) | | |
+| functions | 1.000 (4/4) | 1.000 (4/4) | 1.000 (4/4) | 1.000 (4/4) |
+| generators | 0.444 (8/18) | 0.444 (8/18) | 0.429 (6/14) | 0.429 (6/14) |
+| imports | 0.929 (13/14) | 1.000 (14/14) | 0.958 (23/24) | 1.000 (24/24) |
+| inheritance | | | 0.600 (6/10) | 0.800 (8/10) |
+| kwargs | 0.300 (3/10) | 0.500 (5/10) | 0.333 (3/9) | 0.556 (5/9) |
+| lambdas | 0.357 (5/14) | 0.357 (5/14) | | |
+| lists | 0.500 (8/16) | 0.938 (15/16) | | |
+| mixins | | | 0.429 (3/7) | 0.571 (4/7) |
+| mro | 0.722 (13/18) | 0.833 (15/18) | | |
+| objects | | | 0.263 (5/19) | 0.684 (13/19) |
+| returns | 0.667 (8/12) | 0.667 (8/12) | 0.667 (8/12) | 0.667 (8/12) |
 
-### Why the numbers are low
+### Why the numbers are low, after
+
+- Python has 9 false pairs with a `high` or `medium` edge. 3 are calls of
+  a builtin, as `str.join` and `eval`, which the sets name by the type of
+  the receiver. The other 6 are single cases, as a decorator call and a
+  member of an external base.
+- JavaScript has 34 such pairs. 21 are calls of a builtin, as
+  `console.log`, `Object.assign`, `Array.map` and `Error`, which swarm-js
+  leaves out of the expected pairs or names by type. 11 are calls of a
+  variable that holds a function, and 2 are member calls.
+- Recall is still low where a function moves through a lambda, a
+  generator or an arrow function. A function that a call returns is a
+  `reference` from the function that returns it, and the sets want the
+  pair from the caller of the result.
+- The `name` and `reference` edges raise the recall and keep the gate
+  precision, because they are `low`. Their own precision is 0.38 to 0.47.
+
+### Why the numbers were low, before
 
 - Most false pairs are calls of a local variable or a parameter, as `a()`
   after `a = func`. The link step makes a `direct` edge from such a call to
