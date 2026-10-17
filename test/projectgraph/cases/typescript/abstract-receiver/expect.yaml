@@ -1,0 +1,43 @@
+source: safedep:hand
+description: run calls parse on a parameter of the abstract type Base. Strict extends Base and defines parse, which calls yaml.load. A name edge joins the call to Strict.parse.
+roots:
+  - key: src/main.ts
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.ts
+    to: src/main.ts//run
+    kind: direct
+    confidence: high
+    site: src/main.ts:7
+  - from: src/main.ts//run
+    to: src/parsers.ts//Strict//parse
+    kind: name
+    confidence: low
+    site: src/main.ts:4
+unresolved:
+  - caller: src/main.ts//run
+    site: src/main.ts:4
+    reason: unknown-receiver
+    method: parse
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/main.ts
+      - key: src/main.ts//run
+        site: src/main.ts:7
+        kind: direct
+        confidence: high
+      - key: src/parsers.ts//Strict//parse
+        site: src/main.ts:4
+        kind: name
+        confidence: low
+      - key: js-yaml//load
+        site: src/parsers.ts:9
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/parsers.ts//Strict//parse
+        site: src/parsers.ts:9
+        reached: true

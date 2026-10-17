@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/safedep/code/core"
+	"github.com/safedep/code/langcode"
 	"github.com/safedep/dry/log"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -15,12 +16,7 @@ var javaProfile = languageProfile{
 	separators:      []string{"."},
 	instanceKeyword: "this",
 	entryFunction:   "main",
-	builtins: []string{
-		"Object", "Class", "Enum", "String", "StringBuilder", "StringBuffer", "System", "Runtime",
-		"Thread", "ThreadGroup", "Throwable", "Exception", "Error", "Math", "StrictMath", "Number",
-		"Void", "Package", "Process", "ProcessBuilder", "SecurityManager", "Boolean", "Byte",
-		"Character", "Short", "Integer", "Long", "Float", "Double",
-	},
+	builtins:        langcode.Builtins(langcode.Java),
 	processors: map[string]nodeProcessor{
 		"assignment_expression":      assignmentProcessor,
 		"class_declaration":          classDefinitionProcessor,

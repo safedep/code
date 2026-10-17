@@ -68,6 +68,18 @@
       "resolver": "python.import"
     },
     {
+      "from": "main.py",
+      "to": "pkg/a.py//g",
+      "site": {
+        "path": "main.py",
+        "line": 3,
+        "column": 1
+      },
+      "kind": "name",
+      "confidence": "low",
+      "resolver": "python.name"
+    },
+    {
       "from": "pkg/__init__.py",
       "to": "pkg/a.py",
       "site": {
@@ -159,7 +171,7 @@
     "version": "2",
     "files": 3,
     "nodes": 6,
-    "edges": 4,
+    "edges": 5,
     "unresolved": 1,
     "roots": 5,
     "root_fallback": true

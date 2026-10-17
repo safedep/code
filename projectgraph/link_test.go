@@ -199,6 +199,7 @@ func TestBuildPython(t *testing.T) {
 			edges: []string{
 				"main.py -> pkg/__init__.py//f direct python.import",
 				"pkg/__init__.py//f -> pkg/a.py//f export python.reexport",
+				"main.py -> pkg/a.py//g name python.name",
 			},
 			unresolved: []string{"main.py:3 main.py no-definition g"},
 		},
@@ -272,7 +273,8 @@ func TestBuildPython(t *testing.T) {
 			},
 		},
 		{
-			name: "python/local-receiver",
+			name:  "python/local-receiver",
+			edges: []string{"main.py//read -> main.py//read name python.name"},
 			unresolved: []string{
 				"main.py:6 main.py//read unknown-receiver read",
 				"main.py:10 main.py//load_plugin dynamic-import import_module",
@@ -299,8 +301,9 @@ func TestBuildPython(t *testing.T) {
 			edges: []string{
 				"main.py -> util.py import python.import.absolute",
 				"main.py -> util.py//helper wildcard python.wildcard",
-				"main.py -> _private direct python.external",
+				"main.py -> util.py//_private name python.name",
 			},
+			unresolved: []string{"main.py:3 main.py unknown-receiver _private"},
 		},
 	})
 }
@@ -776,4 +779,55 @@ func TestBuildImportShapes(t *testing.T) {
 			assert.Equal(t, tt.unresolved, nonNil(unresolvedStrings(g)))
 		})
 	}
+}
+
+func TestBuildNameEdges(t *testing.T) {
+	fn := func(key string) fileindex.Definition {
+		return fileindex.Definition{Key: key, Kind: fileindex.DefFunction, Name: Last(key), StartLine: 1, EndLine: 1}
+	}
+	caller := &fileindex.Index{
+		Version: fileindex.Version, Path: "main.py", Language: langcode.Python,
+		Calls: []fileindex.Call{
+			{Caller: "main.py", Line: 2, Column: 1, Callee: "cb", Method: "cb", Kind: fileindex.CallCall},
+			{Caller: "main.py", Line: 3, Column: 1, Callee: "print", Targets: []string{"print"}, Method: "print", Kind: fileindex.CallCall},
+		},
+		Unresolved: []fileindex.Unresolved{
+			{Caller: "main.py", Line: 4, Column: 1, Text: "x.run", Receiver: "x", Method: "run", Reason: fileindex.UnresolvedUnknownReceiver},
+			{Caller: "main.py", Line: 5, Column: 1, Text: "y.get", Receiver: "y", Method: "get", Reason: fileindex.UnresolvedUnknownReceiver},
+			{Caller: "main.py", Line: 6, Column: 1, Text: "getattr(z, n)", Reason: fileindex.UnresolvedComputedName},
+		},
+	}
+	lib := &fileindex.Index{Version: fileindex.Version, Path: "lib.py", Language: langcode.Python,
+		Definitions: []fileindex.Definition{fn("lib.py//cb"), fn("lib.py//run")}}
+	tests := &fileindex.Index{Version: fileindex.Version, Path: "tests/test_lib.py", Language: langcode.Python, Test: true,
+		Definitions: []fileindex.Definition{fn("tests/test_lib.py//run")}}
+	js := &fileindex.Index{Version: fileindex.Version, Path: "web.js", Language: langcode.Javascript,
+		Definitions: []fileindex.Definition{fn("web.js//run")}}
+	many := &fileindex.Index{Version: fileindex.Version, Path: "many.py", Language: langcode.Python}
+	for i := range maxNameCandidates + 1 {
+		many.Definitions = append(many.Definitions, fn(fmt.Sprintf("many.py//C%d//get", i)))
+	}
+
+	g, err := Build(context.Background(), []*fileindex.Index{caller, lib, tests, js, many}, Options{})
+	require.NoError(t, err)
+
+	var names []string
+	for _, e := range g.Edges {
+		if e.Kind == EdgeName {
+			assert.Equal(t, ConfidenceLow, e.Confidence)
+			names = append(names, fmt.Sprintf("%s -> %s %s", e.From, e.To, e.Resolver))
+		}
+	}
+	assert.Equal(t, []string{
+		"main.py -> lib.py//cb python.name",
+		"main.py -> lib.py//run python.name",
+	}, names, "a test file and another language hold no candidate")
+	assert.Equal(t, []string{
+		"main.py:2 main.py unknown-receiver cb",
+		"main.py:4 main.py unknown-receiver run",
+		"main.py:5 main.py ambiguous ",
+		"main.py:6 main.py computed-name ",
+	}, unresolvedStrings(g), "a bare name with no binding is a record, and too many candidates make the site ambiguous")
+	assert.Contains(t, g.Nodes, "print", "a builtin stays external")
+	assert.NotContains(t, g.Nodes, "cb")
 }

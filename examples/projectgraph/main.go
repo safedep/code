@@ -188,11 +188,16 @@ func printResult(out io.Writer, r reach.Result) error {
 }
 
 // pathText writes a path as the call site of each hop and then the target,
-// as main.py:3 -> handlers.py:12 -> yaml//load.
+// as main.py:3 -> handlers.py:12 -> yaml//load. A hop with low confidence
+// names its edge kind, as main.py:3 (name), so a reader sees the weak hop.
 func pathText(hops []reach.Hop) string {
 	parts := make([]string, 0, len(hops))
 	for _, h := range hops[1:] {
-		parts = append(parts, siteText(h.Site))
+		part := siteText(h.Site)
+		if h.Confidence == projectgraph.ConfidenceLow {
+			part += " (" + string(h.EdgeKind) + ")"
+		}
+		parts = append(parts, part)
 	}
 	return strings.Join(append(parts, hops[len(hops)-1].Key), " -> ")
 }

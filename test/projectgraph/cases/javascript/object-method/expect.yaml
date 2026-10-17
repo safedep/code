@@ -1,0 +1,34 @@
+source: safedep:hand
+description: src/main.js calls the method run of an object literal through the name api. The index does not know the value of api, so a name edge joins the call to the method run.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.js
+    to: src/main.js//run
+    kind: name
+    confidence: low
+    site: src/main.js:9
+unresolved:
+  - caller: src/main.js
+    site: src/main.js:9
+    reason: unknown-receiver
+    method: run
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/main.js
+      - key: src/main.js//run
+        site: src/main.js:9
+        kind: name
+        confidence: low
+      - key: js-yaml//load
+        site: src/main.js:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.js//run
+        site: src/main.js:5
+        reached: true

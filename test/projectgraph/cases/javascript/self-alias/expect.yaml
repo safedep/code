@@ -1,0 +1,43 @@
+source: safedep:hand
+description: Handler.run copies this to self and calls self.handle. The index does not follow the copy, so a name edge joins the call to the method handle.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.js
+    to: src/main.js//Handler//run
+    kind: member
+    confidence: high
+    site: src/main.js:14
+  - from: src/main.js//Handler//run
+    to: src/main.js//Handler//handle
+    kind: name
+    confidence: low
+    site: src/main.js:10
+unresolved:
+  - caller: src/main.js//Handler//run
+    site: src/main.js:10
+    reason: unknown-receiver
+    method: handle
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/main.js
+      - key: src/main.js//Handler//run
+        site: src/main.js:14
+        kind: member
+        confidence: high
+      - key: src/main.js//Handler//handle
+        site: src/main.js:10
+        kind: name
+        confidence: low
+      - key: js-yaml//load
+        site: src/main.js:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.js//Handler//handle
+        site: src/main.js:5
+        reached: true

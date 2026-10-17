@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/safedep/code/projectgraph"
 	"github.com/safedep/code/projectgraph/reach"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -76,4 +77,13 @@ func TestSkipPatterns(t *testing.T) {
 	for _, tt := range tests {
 		assert.Equal(t, tt.skip, skipped(tt.path), tt.path)
 	}
+}
+
+func TestPathTextNamesAWeakHop(t *testing.T) {
+	hops := []reach.Hop{
+		{Key: "main.py"},
+		{Key: "app.py//Parser//parse", Site: projectgraph.Site{Path: "main.py", Line: 3}, EdgeKind: projectgraph.EdgeName, Confidence: projectgraph.ConfidenceLow},
+		{Key: "yaml//load", Site: projectgraph.Site{Path: "app.py", Line: 6}, EdgeKind: projectgraph.EdgeDirect, Confidence: projectgraph.ConfidenceHigh},
+	}
+	assert.Equal(t, "main.py:3 (name) -> app.py:6 -> yaml//load", pathText(hops))
 }

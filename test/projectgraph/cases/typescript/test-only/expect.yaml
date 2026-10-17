@@ -17,6 +17,18 @@ edges:
     site: src/config.spec.ts:5
 unresolved:
   - caller: src/config.spec.ts
+    site: src/config.spec.ts:3
+    reason: unknown-receiver
+    method: describe
+  - caller: src/config.spec.ts
+    site: src/config.spec.ts:4
+    reason: unknown-receiver
+    method: it
+  - caller: src/config.spec.ts
+    site: src/config.spec.ts:5
+    reason: unknown-receiver
+    method: expect
+  - caller: src/config.spec.ts
     site: src/config.spec.ts:5
     reason: no-definition
     method: toEqual

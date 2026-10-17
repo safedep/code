@@ -1,0 +1,4 @@
+{
+  "name": "object-method",
+  "bin": { "app": "src/main.js" }
+}

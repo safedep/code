@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/safedep/code/core"
+	"github.com/safedep/code/langcode"
 	"github.com/safedep/dry/log"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -24,7 +25,7 @@ func ecmascriptProfile(code, signatureFallback core.LanguageCode) languageProfil
 		constructorMethod: "constructor",
 		defaultExport:     "default",
 		signatureFallback: signatureFallback,
-		builtins:          ecmascriptBuiltins,
+		builtins:          langcode.Builtins(code),
 		processors:        ecmascriptProcessors,
 		literals: map[string]bool{
 			"false": true, "null": true, "number": true, "string": true, "true": true, "undefined": true,
@@ -81,17 +82,6 @@ func ecmascriptProfile(code, signatureFallback core.LanguageCode) languageProfil
 			"regex":           "RegExp",
 		},
 	}
-}
-
-var ecmascriptBuiltins = []string{
-	"console", "parseInt", "parseFloat", "isNaN", "isFinite", "setTimeout", "setInterval",
-	"clearTimeout", "clearInterval", "eval", "encodeURI", "decodeURI", "encodeURIComponent",
-	"decodeURIComponent", "Number", "String", "Boolean", "Array", "Object", "Function", "Date",
-	"Math", "RegExp", "JSON", "Promise", "Symbol", "BigInt", "Map", "Set", "WeakMap", "WeakSet",
-	"Reflect", "Proxy", "Intl", "undefined", "NaN", "Infinity", "process", "global",
-	"globalThis", "window", "document", "navigator", "Buffer", "module", "exports", "require",
-	"URL", "fetch", "Error", "TypeError", "AbortController", "TextEncoder", "TextDecoder",
-	"crypto",
 }
 
 // ecmascriptProcessors skip the type-level nodes of TypeScript, so a type

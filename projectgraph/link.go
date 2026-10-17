@@ -183,6 +183,7 @@ func (b *builder) link(ctx context.Context) error {
 		b.linkDecorators(ix)
 		b.copyUnresolved(ix)
 	}
+	b.linkNames()
 	return nil
 }
 

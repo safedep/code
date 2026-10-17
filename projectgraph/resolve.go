@@ -203,6 +203,20 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 				if unknown[[2]int{call.Line, call.Column}] {
 					continue
 				}
+				// A name that no builtin binds is a parameter or a local
+				// variable, as cb in def run(cb): cb(x). Its value is not
+				// known, so the call is a record and not an external.
+				if !langcode.IsBuiltin(ix.Language, Unit(r.key)) {
+					b.addUnresolved(UnresolvedSite{
+						Caller:   from,
+						Site:     site,
+						Text:     call.Callee,
+						Receiver: call.Receiver,
+						Method:   cmp.Or(call.Method, Last(r.key)),
+						Reason:   fileindex.UnresolvedUnknownReceiver,
+					})
+					continue
+				}
 				b.external(r.key)
 			}
 			switch {

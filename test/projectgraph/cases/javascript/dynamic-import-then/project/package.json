@@ -1,0 +1,4 @@
+{
+  "name": "dynamic-import-then",
+  "bin": { "app": "src/main.js" }
+}

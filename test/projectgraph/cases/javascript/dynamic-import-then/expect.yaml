@@ -1,0 +1,43 @@
+source: safedep:hand
+description: src/main.js imports ./parse.js by a dynamic import and calls parse on the module that the promise gives. The receiver m is a parameter, so a name edge joins the call to each first-party parse.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.js
+    to: src/parse.js
+    kind: import
+    confidence: high
+    site: src/main.js:1
+  - from: src/main.js
+    to: src/parse.js//parse
+    kind: name
+    confidence: low
+    site: src/main.js:1
+unresolved:
+  - caller: src/main.js
+    site: src/main.js:1
+    reason: unknown-receiver
+    method: then
+  - caller: src/main.js
+    site: src/main.js:1
+    reason: unknown-receiver
+    method: parse
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/main.js
+      - key: src/parse.js//parse
+        site: src/main.js:1
+        kind: name
+        confidence: low
+      - key: js-yaml//load
+        site: src/parse.js:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/parse.js//parse
+        site: src/parse.js:4
+        reached: true

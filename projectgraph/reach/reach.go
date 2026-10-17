@@ -424,7 +424,7 @@ func (ix *index) uncertainties(s *search, maxDepth int) *found {
 			switch {
 			case r.ImportPrefix != "":
 				f.prefixed = append(f.prefixed, prefixed{u: u, prefix: r.ImportPrefix})
-			case r.Method != "" && !reachesAny(r.Reason):
+			case r.Method != "" && !projectgraph.ReachesAny(r.Reason):
 				if _, ok := f.byMethod[r.Method]; !ok {
 					f.methods = append(f.methods, r.Method)
 				}
@@ -441,13 +441,6 @@ func (ix *index) uncertainties(s *search, maxDepth int) *found {
 		f.global = append(f.global, Uncertainty{Kind: Budget, Text: "the search stopped at the deadline"})
 	}
 	return f
-}
-
-// reachesAny reports whether an unresolved site of the reason can call any
-// target. A computed name or a computed module can name every target, even
-// when the site names the function that it calls, as import_module.
-func reachesAny(reason fileindex.UnresolvedReason) bool {
-	return reason == fileindex.UnresolvedComputedName || reason == fileindex.UnresolvedDynamicImport
 }
 
 // forTarget returns the uncertainties of a target, at most maxPerKind of

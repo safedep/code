@@ -2,6 +2,7 @@ package callgraph
 
 import (
 	"github.com/safedep/code/core"
+	"github.com/safedep/code/langcode"
 	"github.com/safedep/dry/log"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -11,10 +12,7 @@ var goProfile = languageProfile{
 	code:               core.LanguageCodeGo,
 	separators:         []string{"/"},
 	rootCallsFunctions: true,
-	builtins: []string{
-		"panic", "recover", "make", "new", "len", "cap", "append", "copy", "delete", "close",
-		"complex", "real", "imag", "print", "println", "iota", "true", "false", "nil",
-	},
+	builtins:           langcode.Builtins(langcode.Go),
 	processors: map[string]nodeProcessor{
 		"call_expression":      goCallExpressionProcessor,
 		"composite_literal":    skipResultsProcessor,

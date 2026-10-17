@@ -43,6 +43,9 @@ const (
 	EdgeField      EdgeKind = "field"
 	EdgeWildcard   EdgeKind = "wildcard"
 	EdgeLLM        EdgeKind = "llm"
+	// EdgeName joins the caller of a call with an unknown receiver to each
+	// first-party definition with the name of the called method.
+	EdgeName EdgeKind = "name"
 )
 
 // Confidence returns the confidence that an edge of the kind carries.
@@ -50,7 +53,7 @@ func (k EdgeKind) Confidence() Confidence {
 	switch k {
 	case EdgeCHA:
 		return ConfidenceMedium
-	case EdgeField, EdgeWildcard, EdgeLLM:
+	case EdgeField, EdgeWildcard, EdgeLLM, EdgeName:
 		return ConfidenceLow
 	default:
 		return ConfidenceHigh

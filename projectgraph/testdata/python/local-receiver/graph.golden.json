@@ -60,6 +60,18 @@
       "kind": "direct",
       "confidence": "high",
       "resolver": "python.external"
+    },
+    {
+      "from": "main.py//read",
+      "to": "main.py//read",
+      "site": {
+        "path": "main.py",
+        "line": 6,
+        "column": 16
+      },
+      "kind": "name",
+      "confidence": "low",
+      "resolver": "python.name"
     }
   ],
   "unresolved": [
@@ -136,7 +148,7 @@
     "version": "2",
     "files": 1,
     "nodes": 5,
-    "edges": 2,
+    "edges": 3,
     "unresolved": 3,
     "roots": 3,
     "root_fallback": true

@@ -17,6 +17,14 @@ edges:
     site: test/config.test.js:4
 unresolved:
   - caller: test/config.test.js
+    site: test/config.test.js:3
+    reason: unknown-receiver
+    method: test
+  - caller: test/config.test.js
+    site: test/config.test.js:4
+    reason: unknown-receiver
+    method: expect
+  - caller: test/config.test.js
     site: test/config.test.js:4
     reason: no-definition
     method: toEqual
