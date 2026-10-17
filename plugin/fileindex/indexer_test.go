@@ -2,12 +2,14 @@ package fileindex
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/safedep/code/core"
 	fidx "github.com/safedep/code/fileindex"
@@ -61,17 +63,6 @@ func projectLanguages(t *testing.T) []core.Language {
 	return languages(t, core.LanguageCodeJavascript, core.LanguageCodeTypescript, core.LanguageCodePython)
 }
 
-// countingIndexer returns an indexer that counts its parses.
-func countingIndexer() (*Indexer, *int) {
-	parses := 0
-	return &Indexer{
-		parse: func(ctx context.Context, language core.Language, data []byte, opts ...parser.Option) (core.ParseTree, error) {
-			parses++
-			return parser.ParseBytes(ctx, language, data, opts...)
-		},
-	}, &parses
-}
-
 func statuses(status fidx.FileStatus, names ...string) map[string]fidx.FileStatus {
 	files := map[string]fidx.FileStatus{}
 	for _, name := range names {
@@ -88,10 +79,10 @@ func TestIndexerWarmRunParsesNothing(t *testing.T) {
 	fsys := appFileSystem(t, dir)
 	opts := Options{Languages: projectLanguages(t), Store: memstore.New()}
 
-	indexer, parses := countingIndexer()
+	var indexer Indexer
 	cold, err := indexer.Run(context.Background(), fsys, opts)
 	require.NoError(t, err)
-	assert.Equal(t, 4, *parses)
+	assert.Equal(t, sourceNames, cold.Report.Visited)
 	assert.Equal(t, statuses(fidx.FileIndexed, sourceNames...), cold.Files)
 	assert.Empty(t, cold.Report.Failed)
 	require.Len(t, cold.Indexes, 4)
@@ -99,20 +90,17 @@ func TestIndexerWarmRunParsesNothing(t *testing.T) {
 		assert.Equal(t, name, cold.Indexes[i].Path)
 	}
 
-	*parses = 0
 	warm, err := indexer.Run(context.Background(), fsys, opts)
 	require.NoError(t, err)
-	assert.Zero(t, *parses)
 	assert.Equal(t, statuses(fidx.FileCached, sourceNames...), warm.Files)
 	assert.Equal(t, cold.Indexes, warm.Indexes)
 	assert.Empty(t, warm.Report.Visited)
 
 	t.Run("a changed file parses again", func(t *testing.T) {
 		writeFiles(t, dir, map[string]string{"main.js": "import { helper } from './lib/helper';\nhelper();\nhelper();\n"})
-		*parses = 0
 		changed, err := indexer.Run(context.Background(), fsys, opts)
 		require.NoError(t, err)
-		assert.Equal(t, 1, *parses)
+		assert.Equal(t, []string{"main.js"}, changed.Report.Visited)
 		assert.Equal(t, fidx.FileIndexed, changed.Files["main.js"])
 		assert.Equal(t, fidx.FileCached, changed.Files["tool.py"])
 		assert.Len(t, changed.Indexes[2].Calls, 2)
@@ -122,13 +110,13 @@ func TestIndexerWarmRunParsesNothing(t *testing.T) {
 func TestIndexerWithNoStoreParsesEveryFile(t *testing.T) {
 	dir := t.TempDir()
 	writeFiles(t, dir, projectFiles)
-	indexer, parses := countingIndexer()
+	var indexer Indexer
 	for range 2 {
 		result, err := indexer.Run(context.Background(), appFileSystem(t, dir), Options{Languages: projectLanguages(t)})
 		require.NoError(t, err)
 		assert.Equal(t, statuses(fidx.FileIndexed, sourceNames...), result.Files)
+		assert.Equal(t, sourceNames, result.Report.Visited)
 	}
-	assert.Equal(t, 8, *parses)
 }
 
 func TestIndexerWithLocalDBStoreReadsTheStore(t *testing.T) {
@@ -142,10 +130,10 @@ func TestIndexerWithLocalDBStoreReadsTheStore(t *testing.T) {
 		s, err := localdbstore.New(context.Background(), mgr)
 		require.NoError(t, err)
 
-		indexer, parses := countingIndexer()
+		var indexer Indexer
 		result, err := indexer.Run(context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s})
 		require.NoError(t, err)
-		return result, *parses
+		return result, len(result.Report.Visited)
 	}
 
 	cold, coldParses := run()
@@ -284,4 +272,123 @@ func TestIndexerNeedsALanguage(t *testing.T) {
 	var indexer Indexer
 	_, err := indexer.Run(context.Background(), appFileSystem(t, t.TempDir()), Options{})
 	assert.Error(t, err)
+}
+
+// output is the result of a run as text, so two runs compare byte for byte.
+func output(t *testing.T, r *Result) string {
+	t.Helper()
+	failed := make([]string, len(r.Report.Failed))
+	for i, f := range r.Report.Failed {
+		failed[i] = f.Error()
+	}
+	data, err := json.Marshal(map[string]any{
+		"indexes": r.Indexes,
+		"files":   r.Files,
+		"visited": r.Report.Visited,
+		"skipped": r.Report.Skipped,
+		"failed":  failed,
+	})
+	require.NoError(t, err)
+	return string(data)
+}
+
+// generatedProject writes more files than two batches, in two languages,
+// with imports across files, one file over the size limit and one file that
+// no language parses.
+func generatedProject(t *testing.T) string {
+	t.Helper()
+	files := map[string]string{
+		"big.js":    strings.Repeat("x", 4096) + "();\n",
+		"notes.txt": "not source\n",
+	}
+	for i := range batchSize + 300 {
+		next := (i + 1) % (batchSize + 300)
+		files[fmt.Sprintf("js/m%03d.js", i)] = fmt.Sprintf(
+			"import { f%d } from './m%03d';\nexport function f%d(x) {\n  return f%d(x.y) + g(x);\n}\nclass C%d { run() { this.go(); } }\n",
+			next, next, i, next, i)
+		files[fmt.Sprintf("py/m%03d.py", i)] = fmt.Sprintf(
+			"from .m%03d import f%d\n\ndef f%d(x):\n    return f%d(x.y) + g(x)\n\nclass C%d:\n    def run(self):\n        self.go()\n",
+			next, next, i, next, i)
+	}
+	dir := t.TempDir()
+	writeFiles(t, dir, files)
+	return dir
+}
+
+func TestIndexerGivesOneResultForAnyNumberOfWorkers(t *testing.T) {
+	fsys := appFileSystem(t, generatedProject(t))
+	run := func(workers int) (string, []string) {
+		extra := &recordingPlugin{}
+		var indexer Indexer
+		result, err := indexer.Run(context.Background(), fsys, Options{
+			Languages:    projectLanguages(t),
+			Plugins:      []core.Plugin{extra},
+			MaxFileBytes: 1024,
+			Workers:      workers,
+		})
+		require.NoError(t, err)
+		require.Len(t, result.Report.Failed, 1)
+		assert.Equal(t, result.Report.Visited, extra.files, "the extra plugins run in path order")
+		return output(t, result), extra.files
+	}
+
+	serial, serialFiles := run(1)
+	assert.Len(t, serialFiles, 2*(batchSize+300))
+	for _, workers := range []int{2, 4, 7} {
+		parallel, parallelFiles := run(workers)
+		assert.Equal(t, serial, parallel, "workers=%d", workers)
+		assert.Equal(t, serialFiles, parallelFiles, "workers=%d", workers)
+	}
+}
+
+// deadlineStore starts the deadline of the run when the run asks for the
+// first batch, just before the parse. A deadline on the whole run can land
+// before the parse on a slow machine.
+type deadlineStore struct {
+	store.Store
+	cancel  context.CancelFunc
+	after   time.Duration
+	started time.Time
+}
+
+func (s *deadlineStore) Get(ctx context.Context, keys []fidx.Key) (map[fidx.Key]*fidx.Index, error) {
+	if s.started.IsZero() {
+		s.started = time.Now()
+		time.AfterFunc(s.after, s.cancel)
+	}
+	return s.Store.Get(ctx, keys)
+}
+
+func TestIndexerCutsAParseAtTheDeadline(t *testing.T) {
+	dir := t.TempDir()
+	writeFiles(t, dir, map[string]string{
+		// The parse of this file takes more than a second.
+		"a_big.py": strings.Repeat("def f(a):\n    return g(a, b) + h[c]\n", 100000),
+		"b.py":     "def b():\n    pass\n",
+		"c.py":     "def c():\n    pass\n",
+	})
+
+	for _, workers := range []int{1, 4} {
+		t.Run(fmt.Sprintf("workers=%d", workers), func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			s := &deadlineStore{Store: memstore.New(), cancel: cancel, after: 100 * time.Millisecond}
+			var indexer Indexer
+			result, err := indexer.Run(ctx, appFileSystem(t, dir), Options{Languages: projectLanguages(t), Store: s, Workers: workers})
+			require.ErrorIs(t, err, context.Canceled)
+			assert.Less(t, time.Since(s.started), time.Second, "the deadline stops the parse")
+
+			assert.Equal(t, fidx.FileMissing, result.Files["a_big.py"])
+			require.NotEmpty(t, result.Report.Failed)
+			cut := result.Report.Failed[0]
+			assert.Equal(t, "a_big.py", cut.File)
+			assert.Equal(t, core.StageParse, cut.Stage)
+			assert.ErrorIs(t, cut, context.Canceled)
+			for _, ix := range result.Indexes {
+				assert.NotEqual(t, "a_big.py", ix.Path)
+				assert.Equal(t, fidx.FileIndexed, result.Files[ix.Path])
+			}
+			assert.Len(t, result.Files, 3)
+		})
+	}
 }

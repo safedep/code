@@ -47,6 +47,16 @@ func TestExamplePrintsJSON(t *testing.T) {
 	assert.Equal(t, reach.NotFound, results[1].Status)
 }
 
+func TestExampleGivesOneOutputForAnyNumberOfWorkers(t *testing.T) {
+	bin := buildExample(t)
+	run := func(workers string) string {
+		out, err := exec.Command(bin, "-dir", acceptanceCase, "-target", "yaml//load", "-json", "-workers", workers).Output()
+		require.NoError(t, err)
+		return string(out)
+	}
+	assert.Equal(t, run("1"), run("4"))
+}
+
 func TestSkipPatterns(t *testing.T) {
 	root := filepath.Join(string(filepath.Separator), "ci", "build", "app")
 	patterns := skipPatterns(root)

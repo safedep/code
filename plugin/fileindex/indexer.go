@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"runtime"
 	"slices"
 
 	"github.com/safedep/code/core"
@@ -42,6 +43,12 @@ type Options struct {
 	// MaxFileBytes is the size limit of a file. A larger file fails at the
 	// parse. Zero selects parser.DefaultMaxBytes.
 	MaxFileBytes int
+
+	// Workers is the number of files that the run parses and indexes at
+	// once. Zero selects runtime.GOMAXPROCS(0). The result does not depend
+	// on it. The extra plugins run on one goroutine in path order, so a
+	// plugin need not be safe for concurrent use.
+	Workers int
 }
 
 // Result is what one run of an Indexer did.
@@ -59,10 +66,7 @@ type Result struct {
 
 // Indexer indexes the files of a file system and keeps the indexes in a
 // store. The zero value is ready to use.
-type Indexer struct {
-	// parse parses one file. A test replaces it to count the parses.
-	parse func(ctx context.Context, language core.Language, data []byte, opts ...parser.Option) (core.ParseTree, error)
-}
+type Indexer struct{}
 
 // pending is a file that a run read and has not indexed yet.
 type pending struct {
@@ -72,11 +76,12 @@ type pending struct {
 	key      fidx.Key
 }
 
-// run is the state of one call of Run.
+// run is the state of one call of Run. Only the goroutine of Run changes
+// the result. The workers send each outcome back to it.
 type run struct {
-	indexer *Indexer
-	opts    Options
-	result  *Result
+	opts   Options
+	result *Result
+	pool   *pool
 }
 
 // Run indexes the app files of fsys. It reads each file once and asks the
@@ -88,7 +93,7 @@ type run struct {
 // missing, and returns the result so far with the error of ctx. Run fails
 // when two files of fsys have one name, as the same relative path under
 // two app roots, because the index keys a file by its name.
-func (ix *Indexer) Run(ctx context.Context, fsys core.ImportAwareFileSystem, opts Options) (*Result, error) {
+func (*Indexer) Run(ctx context.Context, fsys core.ImportAwareFileSystem, opts Options) (*Result, error) {
 	if len(opts.Languages) == 0 {
 		return nil, errors.New("no language to index")
 	}
@@ -102,10 +107,13 @@ func (ix *Indexer) Run(ctx context.Context, fsys core.ImportAwareFileSystem, opt
 	}
 
 	r := &run{
-		indexer: ix,
-		opts:    opts,
-		result:  &Result{Files: make(map[string]fidx.FileStatus, len(files)), Report: &plugin.Report{}},
+		opts:   opts,
+		result: &Result{Files: make(map[string]fidx.FileStatus, len(files)), Report: &plugin.Report{}},
 	}
+	if r.pool, err = newPool(ctx, opts.Languages, r.maxBytes(), cmp.Or(opts.Workers, runtime.GOMAXPROCS(0))); err != nil {
+		return nil, err
+	}
+	defer r.pool.close()
 	err = r.index(ctx, files, byExtension)
 	for _, file := range files {
 		_, done := r.result.Files[file.Name()]
@@ -211,20 +219,19 @@ func (r *run) flush(ctx context.Context, batch []pending) error {
 		return err
 	}
 
-	var put []*fidx.Index
+	var parse []pending
 	for _, p := range batch {
 		if ix, ok := stored[p.key]; ok && len(r.opts.Plugins) == 0 {
 			r.done(p.file, ix, fidx.FileCached)
 			continue
 		}
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		if ix := r.parse(ctx, p); ix != nil {
-			put = append(put, ix)
-		}
+		parse = append(parse, p)
 	}
 
+	put, err := r.parse(ctx, parse)
+	if err != nil {
+		return err
+	}
 	if r.opts.Store == nil || len(put) == 0 {
 		return nil
 	}
@@ -249,46 +256,53 @@ func (r *run) stored(ctx context.Context, batch []pending) (map[fidx.Key]*fidx.I
 	return stored, nil
 }
 
-// parse parses one file and runs the index plugin and the extra plugins on
-// its tree. It returns the index of the file, or nil when the file failed.
-func (r *run) parse(ctx context.Context, p pending) *fidx.Index {
-	parse := r.indexer.parse
-	if parse == nil {
-		parse = parser.ParseBytes
-	}
-	tree, err := parse(ctx, p.language, p.data, parser.WithFileName(p.file.Name()), parser.WithMaxBytes(r.maxBytes()))
-	if err != nil {
-		r.fail(ctx, p.file, core.StageParse, err)
-		return nil
-	}
-	tree = fileTree{ParseTree: tree, file: p.file}
-	defer tree.Close()
-
-	var index *fidx.Index
-	indexPlugin := NewFileIndexPlugin(func(_ context.Context, ix *fidx.Index) error {
-		index = ix
-		return nil
+// parse sends the files to the workers and takes the outcomes in the order
+// of the files, so the report and the extra plugins see the files in the
+// order of a run with one worker. It returns the new indexes in that order.
+func (r *run) parse(ctx context.Context, files []pending) ([]*fidx.Index, error) {
+	var put []*fidx.Index
+	r.pool.each(ctx, files, func(p pending, o outcome) {
+		if ix := r.collect(ctx, p, o); ix != nil {
+			put = append(put, ix)
+		}
 	})
+	return put, ctx.Err()
+}
+
+// collect records the outcome of one file, runs the extra plugins on its
+// tree and closes the tree. It returns the index of the file, or nil when
+// the file failed.
+func (r *run) collect(ctx context.Context, p pending, o outcome) *fidx.Index {
+	if o.err != nil {
+		r.fail(ctx, p.file, core.StageParse, o.err)
+		return nil
+	}
+	if o.tree == nil {
+		return nil
+	}
+	defer o.tree.Close()
 
 	report := r.result.Report
 	report.Visited = append(report.Visited, p.file.Name())
-	failed := false
-	for _, pl := range append([]core.Plugin{indexPlugin}, r.opts.Plugins...) {
+	failed := o.indexErr != nil
+	if failed {
+		report.Failed = append(report.Failed, plugin.FileError{File: p.file.Name(), Stage: o.stage, Err: o.indexErr})
+	}
+	for _, pl := range r.opts.Plugins {
 		if !slices.Contains(pl.SupportedLanguages(), p.language.Meta().Code) {
 			continue
 		}
-		if err := plugin.Analyze(ctx, pl, p.file, tree); err != nil {
+		if err := plugin.Analyze(ctx, pl, p.file, o.tree); err != nil {
 			report.Failed = append(report.Failed, plugin.FileError{File: p.file.Name(), Stage: core.Stage(pl.Name()), Err: err})
-			failed = failed || pl == indexPlugin
 		}
 	}
 
-	if index == nil || failed {
+	if o.index == nil || failed {
 		r.result.Files[p.file.Name()] = failure(ctx)
 		return nil
 	}
-	r.done(p.file, index, fidx.FileIndexed)
-	return index
+	r.done(p.file, o.index, fidx.FileIndexed)
+	return o.index
 }
 
 func (r *run) done(file core.File, ix *fidx.Index, status fidx.FileStatus) {
@@ -308,15 +322,4 @@ func failure(ctx context.Context) fidx.FileStatus {
 		return fidx.FileMissing
 	}
 	return fidx.FileFailed
-}
-
-// fileTree is a tree that ParseBytes made, with the file that the run read,
-// so a plugin sees the path of the file.
-type fileTree struct {
-	core.ParseTree
-	file core.File
-}
-
-func (t fileTree) File() (core.File, error) {
-	return t.file, nil
 }

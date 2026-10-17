@@ -13,7 +13,6 @@ import (
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/fs"
-	"github.com/safedep/code/lang"
 	"github.com/safedep/code/plugin/fileindex"
 	"github.com/safedep/code/projectgraph"
 	"github.com/safedep/code/projectgraph/reach"
@@ -110,13 +109,7 @@ func TestCases(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, dirs)
 
-	languages := make([]core.Language, 0, len(languageCodes))
-	for _, code := range languageCodes {
-		language, err := lang.GetLanguage(string(code))
-		require.NoError(t, err)
-		languages = append(languages, language)
-	}
-
+	languages := caseLanguages(t)
 	for _, dir := range dirs {
 		name := filepath.ToSlash(strings.TrimPrefix(dir, "cases"+string(filepath.Separator)))
 		t.Run(name, func(t *testing.T) {

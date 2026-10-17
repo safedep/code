@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/fs"
@@ -312,4 +313,51 @@ func TestNewWalkingParserChecksTheLanguages(t *testing.T) {
 	withJSX, withoutJSX := typescriptLanguages(t)
 	_, err := NewWalkingParser(filesWalker{}, []core.Language{withJSX, withoutJSX})
 	assert.ErrorContains(t, err, "two languages parse the extension")
+}
+
+func TestParseContentParsesTheGivenBytes(t *testing.T) {
+	python, err := lang.NewPythonLanguage()
+	require.NoError(t, err)
+	p, err := NewParser([]core.Language{python}, WithMaxBytes(8))
+	require.NoError(t, err)
+	t.Cleanup(p.Close)
+
+	f := &trackedFile{name: "app.py", content: "not read"}
+	tree, err := p.ParseContent(context.Background(), f, []byte("f()\n"))
+	require.NoError(t, err)
+	defer tree.Close()
+	data, err := tree.Data()
+	require.NoError(t, err)
+	assert.Equal(t, "f()\n", string(*data))
+	file, err := tree.File()
+	require.NoError(t, err)
+	assert.Same(t, f, file)
+	assert.False(t, f.closed, "ParseContent does not read the file")
+
+	_, err = p.ParseContent(context.Background(), f, []byte("f(1, 2, 3)\n"))
+	assert.ErrorIs(t, err, ErrInputTooLarge)
+	_, err = p.ParseContent(context.Background(), &trackedFile{name: "app.txt"}, nil)
+	assert.ErrorIs(t, err, core.ErrNoLanguage)
+}
+
+// A sitter parser resumes a parse that a deadline cut. The parser must
+// start the next file from its start.
+func TestParseAfterADeadlineParsesTheNextFile(t *testing.T) {
+	python, err := lang.NewPythonLanguage()
+	require.NoError(t, err)
+	p, err := NewParser([]core.Language{python}, WithMaxBytes(-1))
+	require.NoError(t, err)
+	t.Cleanup(p.Close)
+
+	big := []byte(strings.Repeat("def f(a):\n    return g(a, b) + h[c]\n", 100000))
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+	_, err = p.ParseContent(ctx, &trackedFile{name: "big.py"}, big)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+
+	tree, err := p.ParseContent(context.Background(), &trackedFile{name: "small.py"}, []byte("g()\n"))
+	require.NoError(t, err)
+	defer tree.Close()
+	root := tree.Tree().RootNode()
+	assert.Equal(t, "(module (expression_statement (call function: (identifier) arguments: (argument_list))))", root.String())
 }

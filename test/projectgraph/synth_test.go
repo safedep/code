@@ -9,9 +9,13 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"testing"
 	"unicode"
 
 	"github.com/safedep/code/core"
+	"github.com/safedep/code/lang"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // synthSeed fixes the generated projects, so two runs measure the same code.
@@ -1235,4 +1239,22 @@ func (p *synthProject) javaModule(m *synthModule, ext []externalPackage) string 
 	l.add(1, "void onEvent(Object v);")
 	l.add(0, "}")
 	return l.String()
+}
+
+// TestSynthGivesOneOutputForAnyNumberOfWorkers indexes and links a project
+// of more than two batches per language with one worker and with four.
+func TestSynthGivesOneOutputForAnyNumberOfWorkers(t *testing.T) {
+	for _, code := range languageCodes {
+		t.Run(string(code), func(t *testing.T) {
+			language, err := lang.GetLanguage(string(code))
+			require.NoError(t, err)
+			root := t.TempDir()
+			_, err = generate(code, 600).write(root)
+			require.NoError(t, err)
+
+			languages := []core.Language{language}
+			serial := indexAndLink(t, root, languages, benchTestPaths, 1)
+			assert.Equal(t, string(serial), string(indexAndLink(t, root, languages, benchTestPaths, 4)))
+		})
+	}
 }

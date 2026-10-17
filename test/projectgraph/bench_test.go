@@ -26,30 +26,48 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// benchFilesEnv lists the project sizes of the benchmark, as 1000,10000.
-const benchFilesEnv = "PROJECTGRAPH_BENCH_FILES"
+const (
+	// benchFilesEnv lists the project sizes of the benchmark, as 1000,10000.
+	benchFilesEnv = "PROJECTGRAPH_BENCH_FILES"
+
+	// benchWorkersEnv is the number of workers of the parallel index
+	// steps. The default is 4, the cores of the machine of the report.
+	benchWorkersEnv = "PROJECTGRAPH_BENCH_WORKERS"
+)
 
 var benchTestPaths = []string{"tests", "test_*.py", "*.test.js", "*.test.ts", "*_test.go", "*Test.java"}
 
 func benchSizes(b *testing.B) []int {
-	value := os.Getenv(benchFilesEnv)
+	return envInts(b, benchFilesEnv, 1000)
+}
+
+func benchWorkers(b *testing.B) int {
+	workers := envInts(b, benchWorkersEnv, 4)
+	require.Len(b, workers, 1, benchWorkersEnv)
+	return workers[0]
+}
+
+func envInts(b *testing.B, name string, fallback int) []int {
+	value := os.Getenv(name)
 	if value == "" {
-		return []int{1000}
+		return []int{fallback}
 	}
-	var sizes []int
+	var values []int
 	for _, field := range strings.Split(value, ",") {
 		n, err := strconv.Atoi(strings.TrimSpace(field))
-		require.NoError(b, err, benchFilesEnv)
-		sizes = append(sizes, n)
+		require.NoError(b, err, name)
+		values = append(values, n)
 	}
-	return sizes
+	return values
 }
 
 // BenchmarkProjectGraph measures each step on a generated project per
-// language and size. index-cold parses every file with no store.
+// language and size. index-cold parses every file with no store, once with
+// one worker and once with the workers of PROJECTGRAPH_BENCH_WORKERS.
 // index-cold-store parses every file and puts each index in an empty store.
 // index-warm finds every index in the store. link and reach run on the
 // indexes of the warm store. Each step reports the peak heap of its run.
+// The steps other than index-cold use the parallel workers.
 func BenchmarkProjectGraph(b *testing.B) {
 	for _, code := range languageCodes {
 		for _, files := range benchSizes(b) {
@@ -72,8 +90,9 @@ func benchProject(b *testing.B, code core.LanguageCode, files int) {
 	fsys, err := codefs.NewLocalFileSystem(codefs.LocalFileSystemConfig{AppDirectories: []string{root}})
 	require.NoError(b, err)
 
-	index := func(s store.Store) *fileindex.Result {
-		indexed, err := (&fileindex.Indexer{}).Run(ctx, fsys, fileindex.Options{Languages: languages, Store: s})
+	workers := benchWorkers(b)
+	index := func(s store.Store, workers int) *fileindex.Result {
+		indexed, err := (&fileindex.Indexer{}).Run(ctx, fsys, fileindex.Options{Languages: languages, Store: s, Workers: workers})
 		require.NoError(b, err)
 		require.Empty(b, indexed.Report.Failed)
 		require.Len(b, indexed.Indexes, written)
@@ -88,7 +107,7 @@ func benchProject(b *testing.B, code core.LanguageCode, files int) {
 	}
 
 	warm := newStore(b.TempDir())
-	indexed := index(warm)
+	indexed := index(warm, workers)
 	link := func() *projectgraph.Graph {
 		g, err := projectgraph.Build(ctx, indexed.Indexes, projectgraph.Options{
 			Root:      os.DirFS(root),
@@ -101,15 +120,17 @@ func benchProject(b *testing.B, code core.LanguageCode, files int) {
 	g := link()
 	targets := reachTargets(code)
 
-	b.Run("index-cold", func(b *testing.B) {
-		measure(b, written, func() { index(nil) })
-	})
+	for _, n := range []int{1, workers} {
+		b.Run("index-cold/workers="+strconv.Itoa(n), func(b *testing.B) {
+			measure(b, written, func() { index(nil, n) })
+		})
+	}
 	b.Run("index-cold-store", func(b *testing.B) {
-		measure(b, written, func() { index(newStore(b.TempDir())) })
+		measure(b, written, func() { index(newStore(b.TempDir()), workers) })
 	})
 	b.Run("index-warm", func(b *testing.B) {
 		measure(b, written, func() {
-			r := index(warm)
+			r := index(warm, workers)
 			require.Equal(b, written, count(r.Files, fidx.FileCached))
 		})
 		b.ReportMetric(jsonKiB(b, indexed.Indexes)/float64(written), "index-KiB/file")

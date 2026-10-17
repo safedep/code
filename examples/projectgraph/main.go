@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/safedep/code/core"
@@ -62,6 +63,7 @@ type config struct {
 	targets      stringList
 	includeTests bool
 	json         bool
+	workers      int
 }
 
 func main() {
@@ -71,6 +73,7 @@ func main() {
 	flag.Var(&cfg.targets, "target", "external symbol to reach, as yaml//load (repeatable)")
 	flag.BoolVar(&cfg.includeTests, "include-tests", false, "count the test files as roots")
 	flag.BoolVar(&cfg.json, "json", false, "print the reach results as JSON")
+	flag.IntVar(&cfg.workers, "workers", runtime.NumCPU(), "number of files to parse at once")
 	flag.Parse()
 
 	if cfg.dir == "" || len(cfg.targets) == 0 {
@@ -114,7 +117,7 @@ func run(ctx context.Context, cfg config, out io.Writer) (err error) {
 		}
 	}
 
-	indexed, err := (&fileindex.Indexer{}).Run(ctx, fsys, fileindex.Options{Languages: languages, Store: s})
+	indexed, err := (&fileindex.Indexer{}).Run(ctx, fsys, fileindex.Options{Languages: languages, Store: s, Workers: cfg.workers})
 	if err != nil {
 		return fmt.Errorf("failed to index %s: %w", root, err)
 	}

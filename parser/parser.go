@@ -105,31 +105,62 @@ func (p *parserWrapper) parse(ctx context.Context, file core.File) (core.ParseTr
 		return nil, core.StageRead, err
 	}
 
-	g, ok := p.byExtension[filepath.Ext(file.Name())]
-	if !ok {
-		return nil, core.StageParse, fmt.Errorf("%w: %s", core.ErrNoLanguage, file.Name())
+	g, err := p.grammarOf(file)
+	if err != nil {
+		return nil, core.StageParse, err
 	}
 
 	data, err := readAll(file, p.maxBytes)
 	if err != nil {
 		return nil, core.StageRead, err
 	}
+
+	tree, err := p.parseContent(ctx, g, file, data)
+	return tree, core.StageParse, err
+}
+
+// ParseContent parses data as the content of file, with the language of
+// the file extension. A caller that already read the file uses it, so the
+// file is not read again. The tree keeps data, so the caller must not
+// change data after the call.
+func (p *parserWrapper) ParseContent(ctx context.Context, file core.File, data []byte) (core.ParseTree, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	g, err := p.grammarOf(file)
+	if err != nil {
+		return nil, err
+	}
+	return p.parseContent(ctx, g, file, data)
+}
+
+func (p *parserWrapper) grammarOf(file core.File) (*grammar, error) {
+	g, ok := p.byExtension[filepath.Ext(file.Name())]
+	if !ok {
+		return nil, fmt.Errorf("%w: %s", core.ErrNoLanguage, file.Name())
+	}
+	return g, nil
+}
+
+func (p *parserWrapper) parseContent(ctx context.Context, g *grammar, file core.File, data []byte) (core.ParseTree, error) {
 	if p.maxBytes > 0 && len(data) > p.maxBytes {
-		return nil, core.StageParse, fmt.Errorf("%w: %s is over %d bytes", ErrInputTooLarge, file.Name(), p.maxBytes)
+		return nil, fmt.Errorf("%w: %s is over %d bytes", ErrInputTooLarge, file.Name(), p.maxBytes)
 	}
 
 	tree, err := g.parser.ParseCtx(ctx, nil, data)
 	if err != nil {
-		return nil, core.StageParse, fmt.Errorf("failed to parse file: %w", err)
+		// A sitter parser resumes a cancelled parse on its next call.
+		// The reset makes the next file parse from its start.
+		g.parser.Reset()
+		return nil, fmt.Errorf("failed to parse file: %w", err)
 	}
 
-	// We must guarantee that none of the pointers are nil
 	return &parseTree{
 		tree: tree,
 		data: &data,
 		file: file,
 		lang: g.language,
-	}, "", nil
+	}, nil
 }
 
 func (t *parseTree) Tree() *sitter.Tree {
