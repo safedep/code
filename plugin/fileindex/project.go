@@ -1,0 +1,453 @@
+package fileindex
+
+import (
+	"context"
+	"fmt"
+	"path"
+	"slices"
+	"strings"
+	"unicode"
+	"unicode/utf8"
+
+	"github.com/safedep/code/core"
+	"github.com/safedep/code/core/ast"
+	fidx "github.com/safedep/code/fileindex"
+	"github.com/safedep/code/plugin/callgraph"
+	sitter "github.com/smacker/go-tree-sitter"
+)
+
+const separator = "//"
+
+// maxInstanceHops bounds the walk from an instance key, as Parser//this//m,
+// through its synthetic edges to the method.
+const maxInstanceHops = 4
+
+// definitionKinds maps the tree-sitter type of a definition to its kind. A
+// function in a class becomes a method. The root of the file is the module.
+var definitionKinds = map[string]fidx.DefKind{
+	"class_declaration":              fidx.DefClass,
+	"abstract_class_declaration":     fidx.DefClass,
+	"class_definition":               fidx.DefClass,
+	"class":                          fidx.DefClass,
+	"module":                         fidx.DefClass,
+	"struct_declaration":             fidx.DefClass,
+	"record_declaration":             fidx.DefClass,
+	"trait_declaration":              fidx.DefClass,
+	"function_declaration":           fidx.DefFunction,
+	"generator_function_declaration": fidx.DefFunction,
+	"function_definition":            fidx.DefFunction,
+	"function_expression":            fidx.DefFunction,
+	"arrow_function":                 fidx.DefFunction,
+	"function_item":                  fidx.DefFunction,
+	"local_function_statement":       fidx.DefFunction,
+	"method_definition":              fidx.DefMethod,
+	"method_declaration":             fidx.DefMethod,
+	"method":                         fidx.DefMethod,
+	"singleton_method":               fidx.DefMethod,
+	"constructor_declaration":        fidx.DefConstructor,
+}
+
+// constructorNames name the method that makes an instance of a class.
+var constructorNames = map[core.LanguageCode]string{
+	core.LanguageCodePython:     "__init__",
+	core.LanguageCodeJavascript: "constructor",
+	core.LanguageCodeTypescript: "constructor",
+	core.LanguageCodePHP:        "__construct",
+	core.LanguageCodeRuby:       "initialize",
+}
+
+// projection projects the call graph of one tree into an index.
+type projection struct {
+	cg       *callgraph.CallGraph
+	tree     core.ParseTree
+	language core.Language
+	source   []byte
+	ix       *fidx.Index
+
+	// defs holds the definitions by key. syntax holds the tree node of each
+	// definition.
+	defs   map[string]*fidx.Definition
+	syntax map[string]*sitter.Node
+}
+
+// project builds the call graph of tree and projects it into an index.
+func project(ctx context.Context, tree core.ParseTree) (*fidx.Index, error) {
+	language, err := tree.Language()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get language: %w", err)
+	}
+	data, err := tree.Data()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tree data: %w", err)
+	}
+	cg, err := callgraph.Build(ctx, tree)
+	if err != nil {
+		return nil, err
+	}
+
+	p := &projection{
+		cg:       cg,
+		tree:     tree,
+		language: language,
+		source:   *data,
+		ix: &fidx.Index{
+			Version:     fidx.Version,
+			Path:        cg.FileName,
+			Language:    language.Meta().Code,
+			ContentHash: fidx.HashContent(*data),
+		},
+		defs:   map[string]*fidx.Definition{},
+		syntax: map[string]*sitter.Node{},
+	}
+
+	p.addImports()
+	p.addDefinitions()
+	if err := p.addClasses(ctx); err != nil {
+		return nil, err
+	}
+	p.addCalls()
+	p.addUnresolved()
+	p.addTruncations()
+
+	p.ix.Sort()
+	return p.ix, nil
+}
+
+func (p *projection) addImports() {
+	for _, imp := range p.cg.Imports {
+		p.ix.Imports = append(p.ix.Imports, fidx.Import{
+			Line:      int(imp.Position.StartLine),
+			Module:    imp.Module,
+			Item:      imp.Item,
+			Alias:     imp.Alias,
+			Wildcard:  imp.Wildcard,
+			Kind:      p.importKind(imp.Position),
+			Namespace: imp.Namespace,
+		})
+	}
+}
+
+// importKind tells a static import from a dynamic import that a string
+// names, as await import('x').
+func (p *projection) importKind(module ast.NodePosition) fidx.ImportKind {
+	node := p.descendant(module)
+	for ; node != nil; node = node.Parent() {
+		if node.Type() == "call_expression" {
+			if fn := node.ChildByFieldName("function"); fn != nil && fn.Type() == "import" {
+				return fidx.ImportDynamicString
+			}
+		}
+	}
+	return fidx.ImportStatic
+}
+
+func (p *projection) addDefinitions() {
+	file := p.cg.FileName
+	for key, node := range p.cg.Nodes {
+		kind, ok := definitionKinds[node.Kind]
+		switch {
+		case key == file:
+			kind = fidx.DefModule
+		case !ok || !strings.HasPrefix(key, file+separator):
+			continue
+		}
+
+		p.defs[key] = &fidx.Definition{
+			Key:       key,
+			Kind:      kind,
+			Name:      definitionName(key, file),
+			StartLine: int(node.Position.StartLine),
+			EndLine:   int(node.Position.EndLine),
+		}
+		p.syntax[key] = p.nodeAt(node.Position, node.Kind)
+	}
+
+	for _, def := range p.defs {
+		p.fillDefinition(def)
+	}
+	for _, def := range p.defs {
+		def.Exported = p.exported(def)
+		p.ix.Definitions = append(p.ix.Definitions, *def)
+	}
+}
+
+// definitionName returns the last segment of a key. The module is the base
+// name of the file with no extension, as parse for src/parse.py.
+func definitionName(key, file string) string {
+	if key == file {
+		base := path.Base(file)
+		return strings.TrimSuffix(base, path.Ext(base))
+	}
+	return key[strings.LastIndex(key, separator)+len(separator):]
+}
+
+// fillDefinition sets the parent class, the method kind and the decorators.
+func (p *projection) fillDefinition(def *fidx.Definition) {
+	if def.Kind == fidx.DefModule {
+		return
+	}
+	scope := def.Key[:strings.LastIndex(def.Key, separator)]
+	if parent, ok := p.defs[scope]; ok && parent.Kind == fidx.DefClass {
+		def.Parent = scope
+		if def.Kind == fidx.DefFunction {
+			def.Kind = fidx.DefMethod
+		}
+		if def.Kind == fidx.DefMethod && def.Name == constructorNames[p.ix.Language] {
+			def.Kind = fidx.DefConstructor
+		}
+	}
+	def.Decorators = p.decorators(p.syntax[def.Key])
+}
+
+// exported reports that the language rule makes the definition visible
+// outside the file. A Go name is exported when it starts with an upper case
+// letter. Elsewhere a top-level definition is exported, and a method is
+// exported with its class.
+func (p *projection) exported(def *fidx.Definition) bool {
+	switch {
+	case def.Kind == fidx.DefModule:
+		return true
+	case p.ix.Language == core.LanguageCodeGo:
+		r, _ := utf8.DecodeRuneInString(def.Name)
+		return unicode.IsUpper(r)
+	case def.Parent != "":
+		return p.exported(p.defs[def.Parent])
+	case p.ix.Language == core.LanguageCodeJavascript || p.ix.Language == core.LanguageCodeTypescript:
+		node := p.syntax[def.Key]
+		return node != nil && node.Parent() != nil && node.Parent().Type() == "export_statement"
+	default:
+		return def.Key == p.cg.FileName+separator+def.Name
+	}
+}
+
+// decorators returns the decorators of a definition as written, with no
+// arguments, as @app.route for @app.route("/").
+func (p *projection) decorators(node *sitter.Node) []string {
+	if node == nil {
+		return nil
+	}
+	var decorators []string
+	add := func(decorator *sitter.Node) {
+		if decorator.Type() != "decorator" || decorator.NamedChildCount() == 0 {
+			return
+		}
+		expression := decorator.NamedChild(0)
+		if fn := expression.ChildByFieldName("function"); fn != nil && strings.Contains(expression.Type(), "call") {
+			expression = fn
+		}
+		decorators = append(decorators, "@"+expression.Content(p.source))
+	}
+
+	if parent := node.Parent(); parent != nil && parent.Type() == "decorated_definition" {
+		for i := 0; i < int(parent.NamedChildCount()); i++ {
+			add(parent.NamedChild(i))
+		}
+	}
+	for i := 0; i < int(node.NamedChildCount()); i++ {
+		add(node.NamedChild(i))
+	}
+	return decorators
+}
+
+// addClasses adds each class definition with its methods and bases. The
+// bases come from the class resolver of the language, and from the class
+// heritage of a JavaScript class.
+func (p *projection) addClasses(ctx context.Context) error {
+	bases, err := p.classBases(ctx)
+	if err != nil {
+		return err
+	}
+
+	methods := map[string][]string{}
+	for key, def := range p.defs {
+		if def.Parent != "" {
+			methods[def.Parent] = append(methods[def.Parent], key)
+		}
+	}
+	for key, def := range p.defs {
+		if def.Kind != fidx.DefClass {
+			continue
+		}
+		class := fidx.Class{Key: key, Methods: methods[key]}
+		if node := p.syntax[key]; node != nil {
+			class.Bases = bases[node.StartByte()]
+		}
+		p.ix.Classes = append(p.ix.Classes, class)
+	}
+	return nil
+}
+
+// classBases returns the bases of each class by the start byte of the class
+// node.
+func (p *projection) classBases(ctx context.Context) (map[uint32][]string, error) {
+	bases := map[uint32][]string{}
+	resolvers, ok := p.language.Resolvers().(core.ObjectOrientedLanguageResolvers)
+	if !ok {
+		for _, node := range p.syntax {
+			if node != nil && node.Type() == "class_declaration" {
+				bases[node.StartByte()] = p.heritage(node)
+			}
+		}
+		return bases, nil
+	}
+
+	classes, err := resolvers.ResolveClasses(ctx, p.tree)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve classes: %w", err)
+	}
+	for _, class := range classes {
+		name := class.GetClassNameNode()
+		if name == nil || name.Parent() == nil || !class.HasInheritance() {
+			continue
+		}
+		bases[name.Parent().StartByte()] = class.BaseClasses()
+	}
+	return bases, nil
+}
+
+// heritage returns the bases that the class_heritage of a class names, as
+// Base in class A extends Base.
+func (p *projection) heritage(class *sitter.Node) []string {
+	var bases []string
+	for i := 0; i < int(class.NamedChildCount()); i++ {
+		child := class.NamedChild(i)
+		if child.Type() != "class_heritage" {
+			continue
+		}
+		for j := 0; j < int(child.NamedChildCount()); j++ {
+			bases = append(bases, child.NamedChild(j).Content(p.source))
+		}
+	}
+	return bases
+}
+
+func (p *projection) addCalls() {
+	for key, node := range p.cg.Nodes {
+		for _, ref := range node.CallsTo {
+			kind, ok := callKind(ref.Kind)
+			if !ok {
+				continue
+			}
+			targets := p.targets(ref.Targets)
+			if ref.Unbound {
+				targets = p.rebind(key, ref.Method)
+			}
+			p.ix.Calls = append(p.ix.Calls, fidx.Call{
+				Caller:   key,
+				Line:     int(ref.Site.StartLine),
+				Column:   int(ref.Site.StartColumn),
+				Callee:   ref.Text,
+				Targets:  targets,
+				Receiver: ref.Receiver,
+				Method:   ref.Method,
+				Kind:     kind,
+			})
+		}
+	}
+}
+
+// callKind maps the kind of a call graph edge to the kind of a call. An
+// edge that no call site makes has no call.
+func callKind(kind callgraph.CallKind) (fidx.CallKind, bool) {
+	switch kind {
+	case callgraph.CallCall:
+		return fidx.CallCall, true
+	case callgraph.CallNew:
+		return fidx.CallNew, true
+	case callgraph.CallImport:
+		return fidx.CallImport, true
+	default:
+		return "", false
+	}
+}
+
+// targets replaces an instance key, as Parser//this//parse, with the method
+// that its synthetic edge reaches, so a target is a definition key.
+func (p *projection) targets(targets []string) []string {
+	var resolved []string
+	for _, target := range targets {
+		resolved = append(resolved, p.throughInstance(target, 0)...)
+	}
+	slices.Sort(resolved)
+	return slices.Compact(resolved)
+}
+
+func (p *projection) throughInstance(target string, hops int) []string {
+	node, ok := p.cg.Nodes[target]
+	if !ok || node.Kind != "" || len(node.CallsTo) == 0 || hops >= maxInstanceHops {
+		return []string{target}
+	}
+	var methods []string
+	for _, ref := range node.CallsTo {
+		if ref.Kind != callgraph.CallSynthetic {
+			return []string{target}
+		}
+		methods = append(methods, p.throughInstance(ref.CalleeNamespace, hops+1)...)
+	}
+	return methods
+}
+
+// rebind binds a name that the scope chain of the build did not bind to a
+// definition of the file, as a function that the file declares after the
+// call. It looks from the scope of the caller out to the module, and skips
+// a class scope, as the languages do. A name with no definition has no
+// target.
+func (p *projection) rebind(caller, name string) []string {
+	if name == "" || !strings.HasPrefix(caller+separator, p.cg.FileName+separator) {
+		return nil
+	}
+	for scope := caller; ; {
+		if def, ok := p.defs[scope]; ok && (def.Kind != fidx.DefClass || scope == caller) {
+			if _, bound := p.defs[scope+separator+name]; bound {
+				return []string{scope + separator + name}
+			}
+		}
+		if scope == p.cg.FileName {
+			return nil
+		}
+		scope = scope[:strings.LastIndex(scope, separator)]
+	}
+}
+
+func (p *projection) addUnresolved() {
+	for _, u := range p.cg.Unresolved() {
+		p.ix.Unresolved = append(p.ix.Unresolved, fidx.Unresolved{
+			Caller:   u.Caller,
+			Line:     int(u.Site.StartLine),
+			Column:   int(u.Site.StartColumn),
+			Text:     u.Text,
+			Receiver: u.Receiver,
+			Method:   u.Method,
+			Reason:   fidx.UnresolvedReason(u.Reason),
+		})
+	}
+}
+
+func (p *projection) addTruncations() {
+	for _, t := range p.cg.Truncations() {
+		p.ix.Truncated = append(p.ix.Truncated, fidx.Truncation{
+			Kind:      fidx.TruncationKind(t.Kind),
+			Namespace: t.Namespace,
+			Line:      t.Line,
+		})
+	}
+}
+
+// descendant returns the smallest named node that spans position.
+func (p *projection) descendant(position ast.NodePosition) *sitter.Node {
+	start := sitter.Point{Row: position.StartLine - 1, Column: position.StartColumn - 1}
+	end := sitter.Point{Row: position.EndLine - 1, Column: position.EndColumn - 1}
+	return p.tree.Tree().RootNode().NamedDescendantForPointRange(start, end)
+}
+
+// nodeAt returns the node of type kind at position. A node of the same
+// range can wrap it, so the walk goes up to the node of the type.
+func (p *projection) nodeAt(position ast.NodePosition, kind string) *sitter.Node {
+	node := p.descendant(position)
+	for ; node != nil; node = node.Parent() {
+		if node.Type() == kind && node.StartByte() == position.StartByte {
+			return node
+		}
+	}
+	return nil
+}

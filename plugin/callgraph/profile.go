@@ -147,7 +147,8 @@ func indexProfiles(profiles []*languageProfile) map[core.LanguageCode]*languageP
 	return byCode
 }
 
-func supportedLanguages() []core.LanguageCode {
+// SupportedLanguages returns the languages that the call graph knows.
+func SupportedLanguages() []core.LanguageCode {
 	codes := make([]core.LanguageCode, len(languageProfiles))
 	for i, profile := range languageProfiles {
 		codes[i] = profile.code

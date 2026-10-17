@@ -1,0 +1,310 @@
+{
+  "version": "1",
+  "path": "app.ts",
+  "language": "typescript",
+  "content_hash": "d3908948ab8ec7b3adc898e0707ce74bb3a2d6393a724dfbeb67147840397234",
+  "imports": [
+    {
+      "line": 1,
+      "module": "fs",
+      "alias": "fs",
+      "kind": "static",
+      "namespace": "fs"
+    },
+    {
+      "line": 2,
+      "module": "fs/promises",
+      "item": "readFile",
+      "alias": "readFile",
+      "kind": "static",
+      "namespace": "fs//promises//readFile"
+    },
+    {
+      "line": 2,
+      "module": "fs/promises",
+      "item": "writeFile",
+      "alias": "write",
+      "kind": "static",
+      "namespace": "fs//promises//writeFile"
+    },
+    {
+      "line": 3,
+      "module": "path",
+      "alias": "path",
+      "kind": "static",
+      "namespace": "path"
+    },
+    {
+      "line": 4,
+      "module": "./polyfill",
+      "wildcard": true,
+      "kind": "static",
+      "namespace": ".//polyfill"
+    },
+    {
+      "line": 5,
+      "module": "js-yaml",
+      "alias": "yaml",
+      "kind": "static",
+      "namespace": "js-yaml"
+    },
+    {
+      "line": 5,
+      "module": "js-yaml",
+      "item": "load",
+      "alias": "load",
+      "kind": "static",
+      "namespace": "js-yaml//load"
+    },
+    {
+      "line": 6,
+      "module": "./types",
+      "item": "Options",
+      "alias": "Options",
+      "kind": "static",
+      "namespace": ".//types//Options"
+    },
+    {
+      "line": 7,
+      "module": "util",
+      "alias": "util",
+      "kind": "static",
+      "namespace": "util"
+    },
+    {
+      "line": 8,
+      "module": "./helper",
+      "item": "helper",
+      "alias": "helper",
+      "kind": "static",
+      "namespace": ".//helper//helper"
+    }
+  ],
+  "definitions": [
+    {
+      "key": "app.ts",
+      "kind": "module",
+      "name": "app",
+      "start_line": 1,
+      "end_line": 40,
+      "exported": true
+    },
+    {
+      "key": "app.ts//Parser",
+      "kind": "class",
+      "name": "Parser",
+      "start_line": 10,
+      "end_line": 20,
+      "exported": false
+    },
+    {
+      "key": "app.ts//Parser//constructor",
+      "kind": "constructor",
+      "name": "constructor",
+      "start_line": 11,
+      "end_line": 11,
+      "exported": false,
+      "parent": "app.ts//Parser"
+    },
+    {
+      "key": "app.ts//Parser//parse",
+      "kind": "method",
+      "name": "parse",
+      "start_line": 13,
+      "end_line": 15,
+      "exported": false,
+      "parent": "app.ts//Parser"
+    },
+    {
+      "key": "app.ts//Parser//render",
+      "kind": "method",
+      "name": "render",
+      "start_line": 17,
+      "end_line": 19,
+      "exported": false,
+      "parent": "app.ts//Parser"
+    },
+    {
+      "key": "app.ts//main",
+      "kind": "function",
+      "name": "main",
+      "start_line": 22,
+      "end_line": 35,
+      "exported": false
+    },
+    {
+      "key": "app.ts//main//nested",
+      "kind": "function",
+      "name": "nested",
+      "start_line": 23,
+      "end_line": 25,
+      "exported": false
+    },
+    {
+      "key": "app.ts//later",
+      "kind": "function",
+      "name": "later",
+      "start_line": 37,
+      "end_line": 37,
+      "exported": false
+    }
+  ],
+  "classes": [
+    {
+      "key": "app.ts//Parser",
+      "bases": [
+        "Base",
+        "Runnable"
+      ],
+      "methods": [
+        "app.ts//Parser//constructor",
+        "app.ts//Parser//parse",
+        "app.ts//Parser//render"
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "caller": "app.ts",
+      "line": 8,
+      "column": 20,
+      "callee": "require",
+      "targets": [
+        "require"
+      ],
+      "method": "require",
+      "kind": "call"
+    },
+    {
+      "caller": "app.ts//Parser//parse",
+      "line": 14,
+      "column": 12,
+      "callee": "helper",
+      "targets": [
+        ".//helper//helper"
+      ],
+      "method": "helper",
+      "kind": "call"
+    },
+    {
+      "caller": "app.ts//Parser//render",
+      "line": 18,
+      "column": 12,
+      "callee": "this.parse",
+      "targets": [
+        "app.ts//Parser//parse"
+      ],
+      "receiver": "this",
+      "method": "parse",
+      "kind": "call"
+    },
+    {
+      "caller": "app.ts//main//nested",
+      "line": 24,
+      "column": 12,
+      "callee": "path.join",
+      "targets": [
+        "path//join"
+      ],
+      "receiver": "path",
+      "method": "join",
+      "kind": "call"
+    },
+    {
+      "caller": "app.ts//main",
+      "line": 26,
+      "column": 3,
+      "callee": "nested",
+      "targets": [
+        "app.ts//main//nested"
+      ],
+      "method": "nested",
+      "kind": "call"
+    },
+    {
+      "caller": "app.ts//main",
+      "line": 27,
+      "column": 17,
+      "callee": "Parser",
+      "targets": [
+        "app.ts//Parser"
+      ],
+      "method": "Parser",
+      "kind": "new"
+    },
+    {
+      "caller": "app.ts//main",
+      "line": 28,
+      "column": 3,
+      "callee": "p.render",
+      "targets": [
+        "app.ts//Parser//render"
+      ],
+      "receiver": "p",
+      "method": "render",
+      "kind": "call"
+    },
+    {
+      "caller": "app.ts//main",
+      "line": 29,
+      "column": 3,
+      "callee": "load",
+      "targets": [
+        "js-yaml//load"
+      ],
+      "method": "load",
+      "kind": "call"
+    },
+    {
+      "caller": "app.ts//main",
+      "line": 30,
+      "column": 3,
+      "callee": "later",
+      "targets": [
+        "app.ts//later"
+      ],
+      "method": "later",
+      "kind": "call"
+    },
+    {
+      "caller": "app.ts//main",
+      "line": 31,
+      "column": 3,
+      "callee": "missing",
+      "method": "missing",
+      "kind": "call"
+    },
+    {
+      "caller": "app.ts//main",
+      "line": 34,
+      "column": 3,
+      "callee": "readFile",
+      "targets": [
+        "fs//promises//readFile"
+      ],
+      "method": "readFile",
+      "kind": "call"
+    },
+    {
+      "caller": "app.ts",
+      "line": 39,
+      "column": 1,
+      "callee": "main",
+      "targets": [
+        "app.ts//main"
+      ],
+      "method": "main",
+      "kind": "call"
+    }
+  ],
+  "unresolved": [
+    {
+      "caller": "app.ts//main",
+      "line": 33,
+      "column": 3,
+      "text": "(p as any)[name]",
+      "receiver": "(p as any)",
+      "reason": "computed-name"
+    }
+  ]
+}

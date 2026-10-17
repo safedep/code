@@ -29,7 +29,7 @@ func (p *callgraphPlugin) Name() string {
 }
 
 func (p *callgraphPlugin) SupportedLanguages() []core.LanguageCode {
-	return supportedLanguages()
+	return SupportedLanguages()
 }
 
 func (p *callgraphPlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) error {
