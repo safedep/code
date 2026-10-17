@@ -114,7 +114,7 @@ var ecmascriptProcessors = map[string]nodeProcessor{
 	"public_field_definition":    skipResultsProcessor,
 	"abstract_method_signature":  skippedProcessor,
 	"accessibility_modifier":     skippedProcessor,
-	"as_expression":              skippedProcessor,
+	"as_expression":              typeAssertionProcessor,
 	"class_heritage":             skippedProcessor,
 	"extends_clause":             skippedProcessor,
 	"extends_type_clause":        skippedProcessor,
@@ -123,7 +123,7 @@ var ecmascriptProcessors = map[string]nodeProcessor{
 	"override_modifier":          skippedProcessor,
 	"predefined_type":            skippedProcessor,
 	"readonly":                   skippedProcessor,
-	"satisfies_expression":       skippedProcessor,
+	"satisfies_expression":       typeAssertionProcessor,
 	"type_alias_declaration":     skippedProcessor,
 	"type_annotation":            skippedProcessor,
 	"type_arguments":             skippedProcessor,
@@ -371,6 +371,15 @@ func jsValueOf(node *sitter.Node, treeData []byte, currentNamespace string, call
 	return nil, UnresolvedUnknownReceiver
 }
 
+// typeAssertionProcessor gives the value of the expression of x as T and of
+// x satisfies T. The type holds no call.
+func typeAssertionProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if node == nil || node.NamedChildCount() == 0 {
+		return newProcessorResult()
+	}
+	return processNode(node.NamedChild(0), treeData, currentNamespace, callGraph, metadata)
+}
+
 // memberExpressionProcessor gives the property of each value of the object.
 // jsCallExpressionProcessor handles a called member.
 func memberExpressionProcessor(memberNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
@@ -384,6 +393,8 @@ func memberExpressionProcessor(memberNode *sitter.Node, treeData []byte, current
 	if objectNode == nil || propertyNode == nil {
 		return newProcessorResult()
 	}
+
+	processJSChainRoot(memberNode, treeData, currentNamespace, callGraph, metadata)
 
 	objectSymbol := objectNode.Content(treeData)
 	propertyName := propertyNode.Content(treeData)

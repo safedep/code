@@ -597,3 +597,40 @@ func TestImportsThatShareAnIdentifierKeepSourceOrder(t *testing.T) {
 		assert.Equal(t, uint32(2), bindings[0].namespaceNode.StartPoint().Row)
 	}
 }
+
+func TestCallUnderAMemberOrATypeKeepsItsEdge(t *testing.T) {
+	cases := []struct {
+		name     string
+		language core.Language
+		file     string
+		source   string
+		callee   string
+	}{
+		{"python attribute of a call", pythonLanguage(t), "a.py", "import requests\nrequests.get(u).text\n", "requests//get"},
+		{"python assigned attribute of a call", pythonLanguage(t), "a.py", "import requests\nx = requests.get(u).text\n", "requests//get"},
+		{"python subscript of a call", pythonLanguage(t), "a.py", "import requests\nx = requests.get(u)[0]\n", "requests//get"},
+		{"python call in a subscript", pythonLanguage(t), "a.py", "import yaml\nx = d[yaml.load(s)]\n", "yaml//load"},
+		{"python call under a subscript in a chain", pythonLanguage(t), "a.py", "import yaml\nyaml.load(s)[0].strip()\n", "yaml//load"},
+		{"javascript member of a call", javascriptLanguage(t), "a.js", "import axios from 'axios';\nconst x = axios.get(u).data;\n", "axios//get"},
+		{"typescript as expression", typescriptLanguage(t), "a.ts", "import yaml from 'js-yaml';\nconst c = yaml.load(t) as Config;\n", "js-yaml//load"},
+		{"typescript satisfies expression", typescriptLanguage(t), "a.ts", "import yaml from 'js-yaml';\nconst c = yaml.load(t) satisfies unknown;\n", "js-yaml//load"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cg := buildFromSource(t, tc.language, tc.file, tc.source)
+
+			assert.Contains(t, calleesOf(cg, tc.file), tc.callee)
+		})
+	}
+}
+
+func TestTypeAssertionGivesTheValueOfTheExpression(t *testing.T) {
+	cg := buildFromSource(t, typescriptLanguage(t), "a.ts", "import { run } from './run';\nconst f = run as () => void;\nf();\n")
+
+	var targets []string
+	for _, ref := range cg.Nodes["a.ts"].CallsTo {
+		targets = append(targets, ref.Targets...)
+	}
+	assert.Contains(t, targets, ".//run//run")
+}

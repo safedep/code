@@ -49,7 +49,7 @@ var pythonProfile = languageProfile{
 		"call":                callProcessor,
 		"class_definition":    classDefinitionProcessor,
 		"function_definition": functionDefinitionProcessor,
-		"subscript":           skippedProcessor,
+		"subscript":           skipResultsProcessor,
 	},
 	literals: map[string]bool{
 		"false": true, "float": true, "integer": true, "none": true, "string": true, "true": true,
@@ -103,6 +103,7 @@ func attributeProcessor(attributeNode *sitter.Node, treeData []byte, currentName
 	if attributeNode == nil {
 		return newProcessorResult()
 	}
+	processPythonChainRoot(attributeNode, treeData, currentNamespace, callGraph, metadata)
 
 	objectSymbol, attributeQualifierNamespace, err := dissectAttributeQualifier(attributeNode, treeData, currentNamespace, callGraph, metadata)
 	if err != nil {
@@ -122,6 +123,20 @@ func attributeProcessor(attributeNode *sitter.Node, treeData []byte, currentName
 	}
 
 	return result
+}
+
+// processPythonChainRoot processes the root of the attribute chain of a
+// member, as the call in PasswordHasher().hash or requests.get(url).text.
+// The root runs, so a call in it is a call of its own. A name root holds no
+// call.
+func processPythonChainRoot(member *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) {
+	if member.Type() != "attribute" {
+		return
+	}
+	root := callGraph.unwrap(chainRoot(member.ChildByFieldName("object"), "attribute", "object"))
+	if root != nil && root.Type() != "identifier" {
+		processNode(root, treeData, currentNamespace, callGraph, metadata)
+	}
 }
 
 // binaryOperatorProcessor gives the values of both operands.
@@ -206,11 +221,7 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 		callGraph.addCall(currentNamespace, nil, ref)
 		return result
 	case "attribute", "subscript":
-		// A chained call, as in PasswordHasher().hash(), calls the inner
-		// function too, and the inner function is the base of the name
-		if root := callGraph.unwrap(chainRoot(function.ChildByFieldName("object"), "attribute", "object")); root != nil && callGraph.profile.valueRoots[root.Type()] {
-			processNode(root, treeData, currentNamespace, callGraph, metadata)
-		}
+		processPythonChainRoot(function, treeData, currentNamespace, callGraph, metadata)
 		callees, reason = pythonValueOf(function, treeData, currentNamespace, callGraph, 0)
 	default:
 		if callGraph.profile.functionLiterals[function.Type()] {
