@@ -35,12 +35,12 @@ func newScope(ix *fileindex.Index) *scope {
 		if imp.Kind != fileindex.ImportStatic && imp.Kind != fileindex.ImportDynamicString {
 			continue
 		}
-		if imp.Wildcard {
-			if ix.Language == langcode.Python {
-				sc.stars = append(sc.stars, star{spec: imp.Module, line: imp.Line})
-			}
+		if imp.Wildcard && ix.Language == langcode.Python {
+			sc.stars = append(sc.stars, star{spec: imp.Module, line: imp.Line})
 			continue
 		}
+		// A JavaScript import for its side effect binds no name. Its
+		// namespace still names the module of a call on require('x').
 		sc.imports = append(sc.imports, imp)
 		if name := bindingName(ix.Language, imp); name != "" {
 			sc.bindings[name] = imp
@@ -112,12 +112,17 @@ func bindingName(lang langcode.Code, imp fileindex.Import) string {
 	return ""
 }
 
-// boundModule returns the module that the name of an import holds.
-func boundModule(lang langcode.Code, imp fileindex.Import) string {
-	if bindsRoot(lang, imp) {
-		return firstDotted(imp.Module)
+// importedModule returns the module that the name of an import holds, and
+// the names that lead from that module to the bound value. A Python import
+// a.b binds the package a. An import of an item binds the item.
+func importedModule(lang langcode.Code, imp fileindex.Import) (string, []string) {
+	switch {
+	case bindsRoot(lang, imp):
+		return firstDotted(imp.Module), nil
+	case imp.Item != "":
+		return imp.Module, []string{imp.Item}
 	}
-	return imp.Module
+	return imp.Module, nil
 }
 
 // bindsRoot reports whether a Python import a.b binds the root package a. A
@@ -147,6 +152,8 @@ type resolution struct {
 	// unbound marks a target that no definition and no import of the file
 	// binds, as print or console//log.
 	unbound bool
+	// target is the per-file target that the resolution came from.
+	target string
 }
 
 func (b *builder) linkCalls(ix *fileindex.Index) {
@@ -177,8 +184,7 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 		}
 		from = b.runner(from)
 		site := Site{Path: ix.Path, Line: call.Line, Column: call.Column}
-		for _, t := range targets {
-			r := b.resolveTarget(sc, call, t)
+		for _, r := range b.resolveTargets(sc, targets) {
 			if r.fail != nil {
 				b.addUnresolved(UnresolvedSite{
 					Caller:   from,
@@ -200,7 +206,7 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 				b.external(r.key)
 			}
 			switch {
-			case r.kind == EdgeDirect && isAssignment(sc, call, t):
+			case r.kind == EdgeDirect && isAssignment(sc, call, r.target):
 				r.kind, r.rule = EdgeAssignment, "assignment"
 			case r.kind == EdgeDirect && call.Receiver != "" && b.isMethod(r.key):
 				r.kind, r.rule = EdgeMember, "member"
@@ -210,35 +216,46 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 	}
 }
 
-func (b *builder) resolveTarget(sc *scope, call fileindex.Call, target string) resolution {
+// resolveTargets resolves the per-file targets of a site. Each resolution
+// keeps the target that it came from.
+func (b *builder) resolveTargets(sc *scope, targets []string) []resolution {
+	var out []resolution
+	for _, t := range targets {
+		for _, r := range b.resolveTarget(sc, t) {
+			r.target = t
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// resolveTarget resolves one per-file target. A bare name can resolve
+// through more than one wildcard import, so the result is a list.
+func (b *builder) resolveTarget(sc *scope, target string) []resolution {
 	ix := sc.ix
 	if HasKeyPrefix(target, ix.Path) {
-		return b.resolveLocal(target)
+		return []resolution{b.resolveLocal(target)}
 	}
 	if imp, rest, ok := sc.importFor(target); ok {
-		mod, _, found := b.resolveModule(ix, imp.Module)
+		module, lead := importedModule(ix.Language, imp)
+		mod, _, found := b.resolveModule(ix, module)
 		if !found {
-			return resolution{key: b.external(target), kind: EdgeDirect, rule: "external"}
+			return []resolution{{key: b.external(target), kind: EdgeDirect, rule: "external"}}
 		}
-		var names []string
-		switch {
-		case imp.Item != "":
-			names = append([]string{imp.Item}, rest...)
-		case len(rest) == 0 && isECMAScript(ix.Language):
+		names := append(lead, rest...)
+		if len(names) == 0 && isECMAScript(ix.Language) {
 			names = []string{"default"}
-		default:
-			names = rest
 		}
 		r := b.walk(mod, names)
 		r.rule = cmp.Or(r.rule, "import")
-		return r
+		return []resolution{r}
 	}
 	if !strings.Contains(target, Separator) {
-		if r, ok := b.wildcard(sc, target); ok {
-			return r
+		if rs := b.wildcard(sc, target); len(rs) > 0 {
+			return rs
 		}
 	}
-	return resolution{key: target, kind: EdgeDirect, rule: "external", unbound: true}
+	return []resolution{{key: target, kind: EdgeDirect, rule: "external", unbound: true}}
 }
 
 // resolveLocal resolves a key of the file. A key that names no node walks
@@ -420,14 +437,15 @@ func (b *builder) followExport(sc *scope, ex fileindex.Export, hops int) (string
 // followBinding resolves a name that the file imports and gives on.
 func (b *builder) followBinding(sc *scope, imp fileindex.Import, name string, hops int) (string, *failure) {
 	lang := sc.ix.Language
-	mod, _, ok := b.resolveModule(sc.ix, boundModule(lang, imp))
+	module, lead := importedModule(lang, imp)
+	mod, _, ok := b.resolveModule(sc.ix, module)
 	var key string
 	switch {
 	case !ok:
 		key = b.external(boundNamespace(lang, imp))
-	case imp.Item != "":
+	case len(lead) > 0:
 		var fail *failure
-		if key, fail = b.resolveName(mod, imp.Item, hops+1); fail != nil {
+		if key, fail = b.resolveName(mod, lead[0], hops+1); fail != nil {
 			return "", fail
 		}
 	case isECMAScript(lang):
@@ -467,21 +485,29 @@ func (b *builder) starVisible(module, name string) bool {
 	return !strings.HasPrefix(name, "_")
 }
 
-// wildcard resolves a bare name through the from m import * of the file.
-func (b *builder) wildcard(sc *scope, name string) (resolution, bool) {
+// wildcard resolves a bare name through the from m import * of the file. A
+// first-party module that defines the name wins. Else each external module
+// of a star can define the name, so each one gets a wildcard edge.
+func (b *builder) wildcard(sc *scope, name string) []resolution {
+	if sc.ix.Language != langcode.Python {
+		return nil
+	}
+	var external []resolution
 	for _, st := range sc.stars {
-		if sc.ix.Language != langcode.Python {
-			break
-		}
 		mod, _, ok := b.resolveModule(sc.ix, st.spec)
-		if !ok || !b.starVisible(mod, name) {
+		if !ok {
+			key := b.external(Join(namespaceOf(sc.ix.Language, st.spec), name))
+			external = append(external, resolution{key: key, kind: EdgeWildcard, rule: "wildcard-external"})
+			continue
+		}
+		if !b.starVisible(mod, name) {
 			continue
 		}
 		if key, fail := b.resolveName(mod, name, 0); fail == nil {
-			return resolution{key: key, kind: EdgeWildcard, rule: "wildcard"}, true
+			return []resolution{{key: key, kind: EdgeWildcard, rule: "wildcard"}}
 		}
 	}
-	return resolution{}, false
+	return external
 }
 
 func (b *builder) bind(sc *scope, name string, line int, target, rule string) string {
@@ -554,15 +580,12 @@ func (b *builder) resolveScopeName(sc *scope, text string) (string, bool) {
 		r = b.walk(local, segs[1:])
 	} else if imp, ok := sc.bindings[segs[0]]; ok {
 		lang := sc.ix.Language
-		mod, _, found := b.resolveModule(sc.ix, boundModule(lang, imp))
+		module, lead := importedModule(lang, imp)
+		mod, _, found := b.resolveModule(sc.ix, module)
 		if !found {
 			return Join(boundNamespace(lang, imp), segs[1:]...), true
 		}
-		names := segs[1:]
-		if imp.Item != "" {
-			names = append([]string{imp.Item}, names...)
-		}
-		r = b.walk(mod, names)
+		r = b.walk(mod, append(lead, segs[1:]...))
 	} else {
 		return "", false
 	}
@@ -595,6 +618,23 @@ func (b *builder) resolveModule(ix *fileindex.Index, spec string) (string, strin
 		return b.js.Resolve(ix.Path, spec, ix.Language == langcode.Typescript)
 	}
 	return "", "", false
+}
+
+// mayBeFirstParty reports whether a module that resolves to no file can be
+// a file of the project. A search path root, an alias or a build step can
+// resolve a relative module, a module whose first segment names a file or a
+// directory of the project, or any module of a language with no resolver.
+func (b *builder) mayBeFirstParty(lang langcode.Code, spec string) bool {
+	switch {
+	case lang != langcode.Python && !isECMAScript(lang):
+		return true
+	case strings.HasPrefix(spec, "."):
+		return true
+	case lang == langcode.Python:
+		return b.files.HasName(firstDotted(spec))
+	}
+	first, _, _ := strings.Cut(spec, "/")
+	return b.files.HasName(first)
 }
 
 func (b *builder) kindOf(key string) NodeKind {

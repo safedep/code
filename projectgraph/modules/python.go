@@ -74,11 +74,16 @@ func (p *Python) Resolve(importer, module string) (string, bool) {
 }
 
 // Absolute resolves a dotted module name against the roots. The roots that
-// hold the importer come first, the deepest first. A module file or a
-// regular package in any root wins over a namespace package.
+// hold the importer come first, the deepest first. The directory of the
+// importer comes last, because Python puts the directory of a script on
+// sys.path. A module file or a regular package in any root wins over a
+// namespace package.
 func (p *Python) Absolute(importer, module string) (string, bool) {
 	rel := strings.ReplaceAll(module, ".", "/")
 	roots := p.searchOrder(importer)
+	if dir := Dir(importer); !slices.Contains(roots, dir) {
+		roots = append(roots, dir)
+	}
 	for _, r := range roots {
 		base, ok := Join(r, rel)
 		if !ok {

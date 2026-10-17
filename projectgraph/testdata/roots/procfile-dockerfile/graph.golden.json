@@ -99,7 +99,7 @@
     "worker.py": "indexed"
   },
   "stats": {
-    "version": "1",
+    "version": "2",
     "files": 6,
     "nodes": 7,
     "edges": 0,

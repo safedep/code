@@ -1,0 +1,26 @@
+source: safedep:hand
+description: main.py imports every name of the external module yaml and calls load. The bare name can come from the star import, so the call gets a wildcard edge to yaml//load.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+edges:
+  - from: main.py
+    to: yaml//load
+    kind: wildcard
+    confidence: low
+    site: main.py:3
+unresolved: []
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: yaml//load
+        site: main.py:3
+        kind: wildcard
+        confidence: low
+    call_sites:
+      - caller: main.py
+        site: main.py:3
+        reached: true

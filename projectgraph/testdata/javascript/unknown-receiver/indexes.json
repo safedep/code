@@ -1,6 +1,6 @@
 [
   {
-    "version": "1",
+    "version": "2",
     "path": "main.js",
     "language": "javascript",
     "imports": [

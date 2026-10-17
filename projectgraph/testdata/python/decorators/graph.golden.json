@@ -172,7 +172,7 @@
     "app.py": "indexed"
   },
   "stats": {
-    "version": "1",
+    "version": "2",
     "files": 1,
     "nodes": 9,
     "edges": 3,

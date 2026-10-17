@@ -3,6 +3,8 @@ package fileindex
 import (
 	"cmp"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -92,6 +94,33 @@ func TestFileIndexGolden(t *testing.T) {
 			assertGolden(t, "testdata", ix)
 		})
 	}
+}
+
+// goldenVersion and goldenHash pin the golden files to fileindex.Version. A
+// change of a golden file is a change of a fill rule, and a store must not
+// serve an index of the old rules for it. So a change of the golden files
+// needs a new Version, and both constants change with it.
+const (
+	goldenVersion = "2"
+	goldenHash    = "ea53e26e7f5a1b3267309a4f34dd5d06ae8c8e638238690cccdadb32bc0f66d1"
+)
+
+func TestFileIndexGoldenHashFollowsVersion(t *testing.T) {
+	names, err := filepath.Glob(filepath.Join("testdata", "golden", "*.json"))
+	require.NoError(t, err)
+	require.NotEmpty(t, names)
+
+	sum := sha256.New()
+	for _, name := range names {
+		data, err := os.ReadFile(name)
+		require.NoError(t, err)
+		_, err = fmt.Fprintf(sum, "%s\n%d\n", filepath.Base(name), len(data))
+		require.NoError(t, err)
+		_, err = sum.Write(data)
+		require.NoError(t, err)
+	}
+	assert.Equal(t, goldenVersion, fidx.Version, "the golden files belong to another Version")
+	assert.Equal(t, goldenHash, hex.EncodeToString(sum.Sum(nil)), "the golden files changed: bump fileindex.Version, goldenVersion and goldenHash")
 }
 
 func TestFileIndexRecords(t *testing.T) {
@@ -268,4 +297,22 @@ func TestFileIndexStaticClassCode(t *testing.T) {
 			}, callers)
 		})
 	}
+}
+
+func TestFileIndexRequireCalls(t *testing.T) {
+	source := strings.Join([]string{
+		"const fs = require('fs');",
+		"require('js-yaml').load(fs.readFileSync('a'));",
+		"require(\"./parse\").parse.strict();",
+	}, "\n") + "\n"
+	ix := indexSource(t, core.LanguageCodeJavascript, "main.js", source)
+
+	targets := map[string][]string{}
+	for _, call := range ix.Calls {
+		targets[call.Callee] = call.Targets
+	}
+	assert.NotContains(t, targets, "require", "a require call is an import, not a call")
+	assert.Equal(t, []string{"js-yaml//load"}, targets["require('js-yaml').load"])
+	assert.Equal(t, []string{".//parse//parse//strict"}, targets["require(\"./parse\").parse.strict"])
+	assert.Equal(t, []string{"fs//readFileSync"}, targets["fs.readFileSync"])
 }

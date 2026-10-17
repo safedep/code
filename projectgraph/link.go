@@ -312,12 +312,17 @@ func (b *builder) linkImports(ix *fileindex.Index) {
 		if imp.Kind != fileindex.ImportStatic && imp.Kind != fileindex.ImportDynamicString {
 			continue
 		}
-		mod, via, ok := b.resolveModule(ix, imp.Module)
-		if !ok {
-			continue
-		}
 		from := b.runner(sc.enclosing(imp.Line))
 		site := Site{Path: ix.Path, Line: imp.Line}
+		mod, via, ok := b.resolveModule(ix, imp.Module)
+		if !ok {
+			// The record has no method, so it makes every target uncertain
+			// where the search reaches the import.
+			if b.mayBeFirstParty(ix.Language, imp.Module) {
+				b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: imp.Module, Reason: fileindex.UnresolvedNoDefinition})
+			}
+			continue
+		}
 		resolver := resolverName(ix.Language, "import", via)
 		if b.isModule(mod) {
 			b.addEdge(Edge{From: from, To: mod, Site: site, Kind: EdgeImport, Resolver: resolver})

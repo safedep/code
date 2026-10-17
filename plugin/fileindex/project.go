@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -365,10 +366,14 @@ func (p *projection) addCalls() {
 			if !ok {
 				continue
 			}
+			if p.isRequire(ref) {
+				continue
+			}
 			targets := p.targets(ref.Targets)
 			if ref.Unbound {
 				targets = p.rebind(key, ref.Method)
 			}
+			targets = p.throughRequire(ref.Receiver, targets)
 			p.ix.Calls = append(p.ix.Calls, fidx.Call{
 				Caller:   p.caller(key, ref.Site),
 				Line:     int(ref.Site.StartLine),
@@ -406,6 +411,38 @@ func (p *projection) caller(key string, site ast.NodePosition) string {
 		}
 	}
 	return key
+}
+
+// isRequire reports whether a call is a CommonJS require of the builtin
+// require. The import record of the call names the module, so the call
+// itself makes no call record.
+func (p *projection) isRequire(ref callgraph.CallReference) bool {
+	return isECMAScript(p.ix.Language) && ref.Text == "require" && slices.Equal(ref.Targets, []string{"require"})
+}
+
+// requireCall matches a receiver that starts with a require of a string, as
+// require('js-yaml') in require('js-yaml').load.
+var requireCall = regexp.MustCompile("^require\\(\\s*['\"`]([^'\"`]+)['\"`]\\s*\\)")
+
+// throughRequire gives a member of a require call the namespace of the
+// module, as js-yaml//load for require('js-yaml').load. The call graph keys
+// the member under require.
+func (p *projection) throughRequire(receiver string, targets []string) []string {
+	if !isECMAScript(p.ix.Language) {
+		return targets
+	}
+	m := requireCall.FindStringSubmatch(receiver)
+	if m == nil {
+		return targets
+	}
+	out := make([]string, 0, len(targets))
+	for _, t := range targets {
+		if rest, ok := strings.CutPrefix(t, "require"+separator); ok {
+			t = p.namespaceOf(m[1]) + separator + rest
+		}
+		out = append(out, t)
+	}
+	return out
 }
 
 // callKind maps the kind of a call graph edge to the kind of a call. An

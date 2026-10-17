@@ -27,13 +27,16 @@ import (
 	"github.com/safedep/dry/localdb"
 )
 
-// skippedDirs hold installed, vendored or built code, not the code of the
-// project.
-var skippedDirs = []string{
-	"node_modules", "bower_components", "vendor", "third_party", ".git", ".hg", ".svn",
-	"venv", ".venv", "env", ".tox", ".nox", "__pycache__", ".mypy_cache", ".pytest_cache",
-	"site-packages", "dist", "build", "out", "target", "coverage", ".next", ".nuxt",
+// installedDirs hold installed code or caches at any depth.
+var installedDirs = []string{
+	"node_modules", "bower_components", ".git", ".hg", ".svn", "venv", ".venv", ".tox", ".nox",
+	"__pycache__", ".mypy_cache", ".pytest_cache", "site-packages", ".next", ".nuxt",
 }
+
+// rootDirs hold vendored or built code at the project root. A package of the
+// project can have one of these names below the root, as src/build, and its
+// files are first-party.
+var rootDirs = []string{"vendor", "third_party", "env", "dist", "build", "out", "target", "coverage"}
 
 // testPaths mark the test files. A test file gives roots only with
 // -include-tests.
@@ -141,17 +144,24 @@ func run(ctx context.Context, cfg config, out io.Writer) (err error) {
 	return nil
 }
 
-// skipPatterns match the skipped directories below root, so a root under a
+// skipPatterns match the installed directories at any depth below root and
+// the vendored or built directories directly under root. A root under a
 // directory named build keeps its code.
 func skipPatterns(root string) []*regexp.Regexp {
-	names := make([]string, len(skippedDirs))
-	for i, name := range skippedDirs {
-		names[i] = regexp.QuoteMeta(name)
-	}
 	const sep = `[\\/]`
-	return []*regexp.Regexp{regexp.MustCompile(
-		`^` + regexp.QuoteMeta(root) + sep + `(?:.*` + sep + `)?(?:` + strings.Join(names, "|") + `)(?:` + sep + `|$)`,
-	)}
+	prefix := `^` + regexp.QuoteMeta(root) + sep
+	return []*regexp.Regexp{
+		regexp.MustCompile(prefix + `(?:.*` + sep + `)?` + alternation(installedDirs) + `(?:` + sep + `|$)`),
+		regexp.MustCompile(prefix + alternation(rootDirs) + `(?:` + sep + `|$)`),
+	}
+}
+
+func alternation(names []string) string {
+	quoted := make([]string, len(names))
+	for i, name := range names {
+		quoted[i] = regexp.QuoteMeta(name)
+	}
+	return `(?:` + strings.Join(quoted, "|") + `)`
 }
 
 func printResult(out io.Writer, r reach.Result) error {

@@ -6,6 +6,7 @@ package modules
 import (
 	"path"
 	"slices"
+	"strings"
 )
 
 // Files is the set of first-party files of a project and their directories.
@@ -13,19 +14,27 @@ import (
 type Files struct {
 	files map[string]bool
 	dirs  map[string]bool
+	names map[string]bool
 }
 
 // NewFiles returns the set of the paths.
 func NewFiles(paths []string) *Files {
-	f := &Files{files: make(map[string]bool, len(paths)), dirs: map[string]bool{"": true}}
+	f := &Files{files: make(map[string]bool, len(paths)), dirs: map[string]bool{"": true}, names: map[string]bool{}}
 	for _, p := range paths {
 		f.files[p] = true
+		base := path.Base(p)
+		f.names[strings.TrimSuffix(base, path.Ext(base))] = true
 		for d := Dir(p); !f.dirs[d]; d = Dir(d) {
 			f.dirs[d] = true
+			f.names[path.Base(d)] = true
 		}
 	}
 	return f
 }
+
+// HasName reports whether a file with no extension or a directory of the set
+// has the name, at any depth.
+func (f *Files) HasName(name string) bool { return f.names[name] }
 
 // Has reports whether the path is a file of the set.
 func (f *Files) Has(p string) bool { return f.files[p] }

@@ -1,0 +1,4 @@
+{
+  "name": "require-member",
+  "bin": { "app": "src/main.js" }
+}

@@ -1,0 +1,35 @@
+source: safedep:hand
+description: scripts/main.py runs as a script and imports helper from its own directory. Python puts the directory of a script on sys.path, so helper is scripts/helper.py.
+roots:
+  - key: scripts/main.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: scripts/main.py
+    to: scripts/helper.py
+    kind: import
+    confidence: high
+    site: scripts/main.py:1
+  - from: scripts/main.py
+    to: scripts/helper.py//run
+    kind: direct
+    confidence: high
+    site: scripts/main.py:4
+unresolved: []
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: scripts/main.py
+      - key: scripts/helper.py//run
+        site: scripts/main.py:4
+        kind: direct
+        confidence: high
+      - key: yaml//load
+        site: scripts/helper.py:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: scripts/helper.py//run
+        site: scripts/helper.py:5
+        reached: true

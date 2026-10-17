@@ -80,3 +80,26 @@ func TestJoin(t *testing.T) {
 	_, ok = Join("a", "../..")
 	assert.False(t, ok)
 }
+
+func TestPythonImporterDirectoryIsTheLastRoot(t *testing.T) {
+	p := NewPython(NewFiles([]string{"scripts/main.py", "scripts/helper.py", "helper.py"}), nil, nil)
+
+	got, ok := p.Resolve("scripts/main.py", "helper")
+	assert.True(t, ok)
+	assert.Equal(t, "helper.py", got, "a root of the project comes first")
+
+	p = NewPython(NewFiles([]string{"scripts/main.py", "scripts/util.py"}), nil, nil)
+	got, ok = p.Resolve("scripts/main.py", "util")
+	assert.True(t, ok)
+	assert.Equal(t, "scripts/util.py", got)
+}
+
+func TestFilesHasName(t *testing.T) {
+	f := NewFiles([]string{"src/app/conf/defaults.py", "lib/yaml_util.js"})
+	for _, name := range []string{"src", "app", "conf", "defaults", "lib", "yaml_util"} {
+		assert.True(t, f.HasName(name), name)
+	}
+	for _, name := range []string{"yaml", "defaults.py", ""} {
+		assert.False(t, f.HasName(name), name)
+	}
+}

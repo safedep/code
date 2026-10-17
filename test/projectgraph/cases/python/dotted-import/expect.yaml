@@ -1,0 +1,30 @@
+source: safedep:hand
+description: import pkg.loader binds pkg, so pkg.loader.go is the function go of pkg/loader.py.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+edges:
+  - from: main.py
+    to: pkg/loader.py//go
+    kind: direct
+    confidence: high
+    site: main.py:3
+unresolved: []
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: pkg/loader.py//go
+        site: main.py:3
+        kind: direct
+        confidence: high
+      - key: yaml//load
+        site: pkg/loader.py:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: pkg/loader.py//go
+        site: pkg/loader.py:5
+        reached: true

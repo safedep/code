@@ -684,3 +684,96 @@ func TestBuildImportBindings(t *testing.T) {
 	assert.Contains(t, edges, "app.py -> os//getcwd direct python.external", "import os.path binds os")
 	assert.Contains(t, edges, "pkg/__init__.py//os -> os export python.reexport")
 }
+
+func TestBuildImportShapes(t *testing.T) {
+	py := func(path string, imports []fileindex.Import, calls ...fileindex.Call) *fileindex.Index {
+		return &fileindex.Index{Version: fileindex.Version, Path: path, Language: langcode.Python, Imports: imports, Calls: calls}
+	}
+	def := func(ix *fileindex.Index, key string) *fileindex.Index {
+		ix.Definitions = append(ix.Definitions, fileindex.Definition{Key: key, Kind: fileindex.DefFunction, Name: Last(key), StartLine: 1, EndLine: 2, Exported: true})
+		return ix
+	}
+	call := func(caller, callee string, target string) fileindex.Call {
+		return fileindex.Call{Caller: caller, Line: 3, Column: 1, Callee: callee, Targets: []string{target}, Kind: fileindex.CallCall}
+	}
+	bare := func(caller, callee string) fileindex.Call {
+		return fileindex.Call{Caller: caller, Line: 3, Column: 1, Callee: callee, Method: callee, Kind: fileindex.CallCall}
+	}
+
+	tests := []struct {
+		name       string
+		indexes    []*fileindex.Index
+		edges      []string
+		unresolved []string
+	}{
+		{
+			name: "a dotted import binds its first package",
+			indexes: []*fileindex.Index{
+				py("main.py", []fileindex.Import{{Line: 1, Module: "pkg.loader", Alias: "pkg", Kind: fileindex.ImportStatic, Namespace: "pkg"}},
+					call("main.py", "pkg.loader.go", "pkg//loader//go")),
+				py("pkg/__init__.py", nil),
+				def(py("pkg/loader.py", nil), "pkg/loader.py//go"),
+			},
+			edges: []string{"main.py -> pkg/loader.py//go direct python.import"},
+		},
+		{
+			name: "a bare name can come from each external star",
+			indexes: []*fileindex.Index{
+				py("main.py", []fileindex.Import{
+					{Line: 1, Module: "yaml", Wildcard: true, Kind: fileindex.ImportStatic, Namespace: "yaml"},
+					{Line: 2, Module: "json", Wildcard: true, Kind: fileindex.ImportStatic, Namespace: "json"},
+				}, bare("main.py", "load")),
+			},
+			edges: []string{
+				"main.py -> yaml//load wildcard python.wildcard-external",
+				"main.py -> json//load wildcard python.wildcard-external",
+			},
+		},
+		{
+			name: "a module that names a first-party directory is a site that can reach any target",
+			indexes: []*fileindex.Index{
+				py("main.py", []fileindex.Import{
+					{Line: 1, Module: "conf.loader", Item: "go", Alias: "go", Kind: fileindex.ImportStatic, Namespace: "conf//loader//go"},
+					{Line: 2, Module: "yaml", Alias: "yaml", Kind: fileindex.ImportStatic, Namespace: "yaml"},
+				}),
+				py("conf/__init__.py", nil),
+			},
+			unresolved: []string{"main.py:1 main.py no-definition "},
+		},
+		{
+			name: "a language with no module resolver makes every import a site that can reach any target",
+			indexes: []*fileindex.Index{{
+				Version: fileindex.Version, Path: "main.go", Language: langcode.Go,
+				Imports: []fileindex.Import{{Line: 3, Module: "example.com/app/util", Alias: "util", Kind: fileindex.ImportStatic, Namespace: "example.com//app//util"}},
+			}},
+			unresolved: []string{"main.go:3 main.go no-definition "},
+		},
+		{
+			name: "a side-effect require names the module of a member call",
+			indexes: []*fileindex.Index{
+				{
+					Version: fileindex.Version, Path: "main.js", Language: langcode.Javascript,
+					Imports: []fileindex.Import{{Line: 3, Module: "./parse", Wildcard: true, Kind: fileindex.ImportStatic, Namespace: ".//parse"}},
+					Calls:   []fileindex.Call{call("main.js", "require('./parse').parse", ".//parse//parse")},
+				},
+				{
+					Version: fileindex.Version, Path: "parse.js", Language: langcode.Javascript,
+					Definitions: []fileindex.Definition{{Key: "parse.js//parse", Kind: fileindex.DefFunction, Name: "parse", StartLine: 1, EndLine: 1}},
+					Exports:     []fileindex.Export{{Name: "parse", Target: "parse.js//parse", Line: 2}},
+				},
+			},
+			edges: []string{"main.js -> parse.js//parse direct javascript.import"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g, err := Build(context.Background(), tt.indexes, Options{})
+			require.NoError(t, err)
+			edges := edgeStrings(g)
+			for _, e := range tt.edges {
+				assert.Contains(t, edges, e)
+			}
+			assert.Equal(t, tt.unresolved, nonNil(unresolvedStrings(g)))
+		})
+	}
+}

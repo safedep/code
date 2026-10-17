@@ -1,17 +1,17 @@
 [
   {
-    "version": "1", "path": "main.py", "language": "python",
+    "version": "2", "path": "main.py", "language": "python",
     "imports": [{"line": 1, "module": "a", "item": "x", "alias": "x", "kind": "static", "namespace": "a//x"}],
     "definitions": [{"key": "main.py", "kind": "module", "name": "main", "start_line": 1, "end_line": 2, "exported": true}],
     "calls": [{"caller": "main.py", "line": 2, "column": 1, "callee": "x", "targets": ["a//x"], "kind": "call"}]
   },
   {
-    "version": "1", "path": "a/__init__.py", "language": "python",
+    "version": "2", "path": "a/__init__.py", "language": "python",
     "imports": [{"line": 1, "module": "b", "item": "x", "alias": "x", "kind": "static", "namespace": "b//x"}],
     "definitions": [{"key": "a/__init__.py", "kind": "module", "name": "__init__", "start_line": 1, "end_line": 1, "exported": true}]
   },
   {
-    "version": "1", "path": "b/__init__.py", "language": "python",
+    "version": "2", "path": "b/__init__.py", "language": "python",
     "imports": [{"line": 1, "module": "a", "item": "x", "alias": "x", "kind": "static", "namespace": "a//x"}],
     "definitions": [{"key": "b/__init__.py", "kind": "module", "name": "__init__", "start_line": 1, "end_line": 1, "exported": true}]
   }
