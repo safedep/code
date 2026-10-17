@@ -1,6 +1,7 @@
 package lang
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/safedep/code/core"
@@ -30,7 +31,7 @@ const goWholeModuleImportQuery = `
 				path: (interpreted_string_literal) @module_name)))
 `
 
-func (r *goResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, error) {
+func (r *goResolvers) ResolveImports(ctx context.Context, tree core.ParseTree) ([]*ast.ImportNode, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
@@ -70,7 +71,7 @@ func (r *goResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, er
 		}),
 	}
 
-	err = ts.ExecuteQueries(tree, queryRequestItems)
+	err = ts.ExecuteQueries(ctx, tree, queryRequestItems)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +97,7 @@ const goMethodDefinitionQuery = `
 `
 
 // ResolveFunctions extracts function declarations from Go parse tree
-func (r *goResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
+func (r *goResolvers) ResolveFunctions(ctx context.Context, tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
@@ -106,13 +107,13 @@ func (r *goResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDecl
 	functionMap := make(map[string]*ast.FunctionDeclarationNode) // To avoid duplicates
 
 	// Extract regular function declarations
-	err = r.extractGoFunctions(data, tree, functionMap)
+	err = r.extractGoFunctions(ctx, data, tree, functionMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract Go functions: %w", err)
 	}
 
 	// Extract method declarations
-	err = r.extractGoMethods(data, tree, functionMap)
+	err = r.extractGoMethods(ctx, data, tree, functionMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract Go methods: %w", err)
 	}
@@ -127,7 +128,7 @@ func (r *goResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDecl
 
 // Helper methods for Go function extraction
 
-func (r *goResolvers) extractGoFunctions(data *[]byte, tree core.ParseTree,
+func (r *goResolvers) extractGoFunctions(ctx context.Context, data *[]byte, tree core.ParseTree,
 	functionMap map[string]*ast.FunctionDeclarationNode,
 ) error {
 	queryRequestItems := []ts.QueryItem{
@@ -187,10 +188,10 @@ func (r *goResolvers) extractGoFunctions(data *[]byte, tree core.ParseTree,
 		}),
 	}
 
-	return ts.ExecuteQueries(tree, queryRequestItems)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
-func (r *goResolvers) extractGoMethods(data *[]byte, tree core.ParseTree,
+func (r *goResolvers) extractGoMethods(ctx context.Context, data *[]byte, tree core.ParseTree,
 	functionMap map[string]*ast.FunctionDeclarationNode,
 ) error {
 	queryRequestItems := []ts.QueryItem{
@@ -266,7 +267,7 @@ func (r *goResolvers) extractGoMethods(data *[]byte, tree core.ParseTree,
 		}),
 	}
 
-	return ts.ExecuteQueries(tree, queryRequestItems)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
 // Helper methods for Go function processing

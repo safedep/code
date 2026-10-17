@@ -6,6 +6,7 @@ import (
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/pkg/helpers"
+	"github.com/safedep/code/pkg/ts"
 	"github.com/safedep/dry/log"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -83,7 +84,7 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 	log.Debugf("depsusage - Analyzing tree for language: %s, file: %s\n",
 		lang.Meta().Code, file.Name())
 
-	imports, err := lang.Resolvers().ResolveImports(tree)
+	imports, err := lang.Resolvers().ResolveImports(ctx, tree)
 	if err != nil {
 		return fmt.Errorf("failed to resolve imports: %w", err)
 	}
@@ -125,51 +126,26 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 
 	evidentNodeTypes := usageEvidentNodeTypesOf(lang.Meta().Code)
 
-	cursor := sitter.NewTreeCursor(tree.Tree().RootNode())
-	defer cursor.Close()
-
-	err = traverse(cursor, &treeLanguage, treeData, func(n *sitter.Node) error {
-		nodeType := n.Type()
-
-		if evidentNodeTypes[nodeType] {
+	// The walk collects the evidence and the callbacks run after it, because
+	// a visit cannot stop the walk with the error of a callback.
+	var evidences []*UsageEvidence
+	err = ts.Walk(ctx, tree.Tree().RootNode(), ts.WalkOptions{}, func(n *sitter.Node) bool {
+		if evidentNodeTypes[n.Type()] {
 			identifierKey := n.Content(*treeData)
-			identifiedItem, identifierKeyExists := moduleIdentifiers[identifierKey]
-			if identifierKeyExists {
-				evidence := newUsageEvidence(identifiedItem.PackageHint, identifiedItem.Module, identifiedItem.Item, identifiedItem.Alias, false, identifierKey, file.Name(), uint(n.StartPoint().Row)+1)
-				if err := p.usageCallback(ctx, evidence); err != nil {
-					return fmt.Errorf("failed to call usage callback: %w", err)
-				}
+			if identifiedItem, ok := moduleIdentifiers[identifierKey]; ok {
+				evidences = append(evidences, newUsageEvidence(identifiedItem.PackageHint, identifiedItem.Module, identifiedItem.Item, identifiedItem.Alias, false, identifierKey, file.Name(), uint(n.StartPoint().Row)+1))
 			}
 		}
-		return nil
+		return !isIgnoredNode(n, &treeLanguage, treeData)
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to walk the tree: %w", err)
+	}
+
+	for _, evidence := range evidences {
+		if err := p.usageCallback(ctx, evidence); err != nil {
+			return fmt.Errorf("failed to call usage callback: %w", err)
+		}
 	}
 	return nil
-}
-
-func traverse(cursor *sitter.TreeCursor, treeLanguage *core.Language, treeData *[]byte, visit func(node *sitter.Node) error) error {
-	for {
-		// Call the visit function for the current node
-		err := visit(cursor.CurrentNode())
-		if err != nil {
-			return err
-		}
-
-		if !isIgnoredNode(cursor.CurrentNode(), treeLanguage, treeData) {
-			// Try going to the first child
-			if cursor.GoToFirstChild() {
-				continue
-			}
-		}
-
-		// If no children, try the next sibling
-		for !cursor.GoToNextSibling() {
-			// If no siblings, go to the parent and repeat
-			if !cursor.GoToParent() {
-				return nil // Exit traversal if back at the root
-			}
-		}
-	}
 }

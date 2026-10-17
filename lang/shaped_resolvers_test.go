@@ -2,12 +2,14 @@ package lang_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/fs"
 	"github.com/safedep/code/lang"
 	"github.com/safedep/code/parser"
+	"github.com/safedep/code/pkg/ts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -102,7 +104,7 @@ func TestShapedLanguageResolvers(t *testing.T) {
 				tree, err := fileParser.Parse(context.Background(), f)
 				require.NoError(t, err)
 
-				imports, err := language.Resolvers().ResolveImports(tree)
+				imports, err := language.Resolvers().ResolveImports(t.Context(), tree)
 				require.NoError(t, err)
 
 				var found []string
@@ -111,7 +113,7 @@ func TestShapedLanguageResolvers(t *testing.T) {
 				}
 				assert.Equal(t, tc.imports, found)
 
-				functions, err := language.Resolvers().ResolveFunctions(tree)
+				functions, err := language.Resolvers().ResolveFunctions(t.Context(), tree)
 				require.NoError(t, err)
 
 				var names []string
@@ -124,4 +126,35 @@ func TestShapedLanguageResolvers(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestShapedResolversStopAtTheNodeLimit(t *testing.T) {
+	if testing.Short() {
+		t.Skip("parses a tree of over a million nodes")
+	}
+	ruby, err := lang.NewRubyLanguage()
+	require.NoError(t, err)
+	// Each line is a call node with a receiver, a dot and a method.
+	source := strings.Repeat("a.b\n", ts.DefaultMaxNodes/3)
+	tree, err := parser.ParseBytes(t.Context(), ruby, []byte(source))
+	require.NoError(t, err)
+	defer tree.Close()
+
+	_, err = ruby.Resolvers().ResolveFunctions(t.Context(), tree)
+	assert.ErrorIs(t, err, ts.ErrNodeLimit)
+}
+
+func TestShapedResolversStopWhenTheContextIsDone(t *testing.T) {
+	kotlin, err := lang.NewKotlinLanguage()
+	require.NoError(t, err)
+	tree, err := parser.ParseBytes(t.Context(), kotlin, []byte("import a.b\nfun f() {}\n"))
+	require.NoError(t, err)
+	defer tree.Close()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	_, err = kotlin.Resolvers().ResolveFunctions(ctx, tree)
+	assert.ErrorIs(t, err, context.Canceled)
+	_, err = kotlin.Resolvers().ResolveImports(ctx, tree)
+	assert.ErrorIs(t, err, context.Canceled)
 }

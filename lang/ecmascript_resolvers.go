@@ -1,6 +1,7 @@
 package lang
 
 import (
+	"context"
 	"fmt"
 	"slices"
 
@@ -157,7 +158,7 @@ const esSpecifiedItemImportQuery = `
 
 // resolveESImports resolves ES module imports and CommonJS require() calls.
 // This is the shared implementation used by both JavaScript and TypeScript resolvers.
-func resolveESImports(tree core.ParseTree) ([]*ast.ImportNode, error) {
+func resolveESImports(ctx context.Context, tree core.ParseTree) ([]*ast.ImportNode, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
@@ -315,7 +316,7 @@ func resolveESImports(tree core.ParseTree) ([]*ast.ImportNode, error) {
 		}),
 	}
 
-	err = ts.ExecuteQueries(tree, queryRequestItems)
+	err = ts.ExecuteQueries(ctx, tree, queryRequestItems)
 	if err != nil {
 		return nil, err
 	}
@@ -418,7 +419,7 @@ const esFunctionExpressionQuery = `
 
 // resolveESFunctions resolves function declarations from ES-family parse trees.
 // Handles regular functions, arrow functions, class methods, and function expressions.
-func resolveESFunctions(tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
+func resolveESFunctions(ctx context.Context, tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
@@ -427,22 +428,22 @@ func resolveESFunctions(tree core.ParseTree) ([]*ast.FunctionDeclarationNode, er
 	var functions []*ast.FunctionDeclarationNode
 	functionMap := make(map[string]*ast.FunctionDeclarationNode)
 
-	err = extractESFunctions(data, tree, functionMap)
+	err = extractESFunctions(ctx, data, tree, functionMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract functions: %w", err)
 	}
 
-	err = extractESArrowFunctions(data, tree, functionMap)
+	err = extractESArrowFunctions(ctx, data, tree, functionMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract arrow functions: %w", err)
 	}
 
-	err = extractESMethods(data, tree, functionMap)
+	err = extractESMethods(ctx, data, tree, functionMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract methods: %w", err)
 	}
 
-	err = extractESFunctionExpressions(data, tree, functionMap)
+	err = extractESFunctionExpressions(ctx, data, tree, functionMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract function expressions: %w", err)
 	}
@@ -454,7 +455,7 @@ func resolveESFunctions(tree core.ParseTree) ([]*ast.FunctionDeclarationNode, er
 	return functions, nil
 }
 
-func extractESFunctions(data *[]byte, tree core.ParseTree,
+func extractESFunctions(ctx context.Context, data *[]byte, tree core.ParseTree,
 	functionMap map[string]*ast.FunctionDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(esFunctionDefinitionQuery, func(m *sitter.QueryMatch) error {
@@ -517,10 +518,10 @@ func extractESFunctions(data *[]byte, tree core.ParseTree,
 		}),
 	}
 
-	return ts.ExecuteQueries(tree, queryRequestItems)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
-func extractESArrowFunctions(data *[]byte, tree core.ParseTree,
+func extractESArrowFunctions(ctx context.Context, data *[]byte, tree core.ParseTree,
 	functionMap map[string]*ast.FunctionDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(esArrowFunctionQuery, func(m *sitter.QueryMatch) error {
@@ -602,10 +603,10 @@ func extractESArrowFunctions(data *[]byte, tree core.ParseTree,
 		}),
 	}
 
-	return ts.ExecuteQueries(tree, queryRequestItems)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
-func extractESMethods(data *[]byte, tree core.ParseTree,
+func extractESMethods(ctx context.Context, data *[]byte, tree core.ParseTree,
 	functionMap map[string]*ast.FunctionDeclarationNode) error {
 	methodHandler := func(m *sitter.QueryMatch) error {
 		if len(m.Captures) < 3 {
@@ -692,7 +693,7 @@ func extractESMethods(data *[]byte, tree core.ParseTree,
 		ts.NewQueryItem(esMethodDefinitionQuery, methodHandler),
 	}
 
-	err := ts.ExecuteQueries(tree, queryRequestItems)
+	err := ts.ExecuteQueries(ctx, tree, queryRequestItems)
 	if err != nil {
 		return err
 	}
@@ -702,14 +703,14 @@ func extractESMethods(data *[]byte, tree core.ParseTree,
 		ts.NewQueryItem(esDecoratedMethodDefinitionQuery, methodHandler),
 	}
 
-	if err := ts.ExecuteQueries(tree, decoratorQueryItems); err != nil {
+	if err := ts.ExecuteQueries(ctx, tree, decoratorQueryItems); err != nil {
 		log.Debugf("skipped the decorator query: %v", err)
 	}
 
 	return nil
 }
 
-func extractESFunctionExpressions(data *[]byte, tree core.ParseTree,
+func extractESFunctionExpressions(ctx context.Context, data *[]byte, tree core.ParseTree,
 	functionMap map[string]*ast.FunctionDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(esFunctionExpressionQuery, func(m *sitter.QueryMatch) error {
@@ -777,7 +778,7 @@ func extractESFunctionExpressions(data *[]byte, tree core.ParseTree,
 		}),
 	}
 
-	return ts.ExecuteQueries(tree, queryRequestItems)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
 // --- Shared Helper Functions ---

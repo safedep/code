@@ -1,6 +1,7 @@
 package callgraph
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -101,6 +102,13 @@ type CallGraph struct {
 	languageCode      core.LanguageCode
 	nodeCount         int  // Track total nodes added
 	limitExceeded     bool // Flag to indicate if processing was truncated
+
+	// ctx stops processChildren when it is done. buildCallGraph sets it for
+	// the walk of the tree and clears it after, so the graph does not keep
+	// the context.
+	ctx     context.Context
+	visited int
+	ctxErr  error
 }
 
 func newCallGraph(fileName string, rootNode *sitter.Node, imports []*ast.ImportNode, tree core.ParseTree) (*CallGraph, error) {
@@ -149,6 +157,31 @@ func newCallGraph(fileName string, rootNode *sitter.Node, imports []*ast.ImportN
 	}
 
 	return cg, nil
+}
+
+// ctxCheckInterval is the number of nodes between two checks of the context.
+const ctxCheckInterval = 4096
+
+// stopped reports that the build must stop, because ctx is done. It checks
+// ctx every ctxCheckInterval nodes, so the check costs little per node.
+func (cg *CallGraph) stopped() bool {
+	if cg.ctxErr != nil {
+		return true
+	}
+	if cg.ctx == nil {
+		return false
+	}
+	cg.visited++
+	if cg.visited%ctxCheckInterval != 0 {
+		return false
+	}
+	if err := cg.ctx.Err(); err != nil {
+		log.Debugf("CallGraph build stopped for file %s: %v", cg.FileName, err)
+		cg.ctxErr = err
+		cg.limitExceeded = true
+		return true
+	}
+	return false
 }
 
 func (cg *CallGraph) addRootNode(treeNode *sitter.Node) {

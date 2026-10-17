@@ -78,7 +78,7 @@ func TestGoLanguageResolvers(t *testing.T) {
 			parseTree, err := fileParser.Parse(context.Background(), f)
 			assert.NoError(t, err)
 
-			imports, err := goLanguage.Resolvers().ResolveImports(parseTree)
+			imports, err := goLanguage.Resolvers().ResolveImports(t.Context(), parseTree)
 			assert.NoError(t, err)
 
 			expectedImports, ok := importExpectationsMapper[f.Name()]
@@ -115,7 +115,7 @@ func TestGoLanguageResolvers(t *testing.T) {
 			parseTree, err := fileParser.Parse(context.Background(), f)
 			assert.NoError(t, err)
 
-			functions, err := goLanguage.Resolvers().ResolveFunctions(parseTree)
+			functions, err := goLanguage.Resolvers().ResolveFunctions(t.Context(), parseTree)
 			assert.NoError(t, err)
 
 			expectedFunctions, ok := goFunctionExpectations[f.Name()]

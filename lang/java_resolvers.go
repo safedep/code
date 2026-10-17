@@ -1,6 +1,7 @@
 package lang
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/safedep/code/core"
@@ -84,7 +85,7 @@ const javaInheritanceQuery = `
 			(type_identifier) @parent_class_name))
 `
 
-func (r *javaResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, error) {
+func (r *javaResolvers) ResolveImports(ctx context.Context, tree core.ParseTree) ([]*ast.ImportNode, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
@@ -120,7 +121,7 @@ func (r *javaResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, 
 		}),
 	}
 
-	err = ts.ExecuteQueries(tree, queryRequestItems)
+	err = ts.ExecuteQueries(ctx, tree, queryRequestItems)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +143,7 @@ func (r *javaResolvers) resolveAliasNode(moduleNameNode *sitter.Node) *sitter.No
 }
 
 // ResolveClasses extracts class declarations from Java parse tree
-func (r *javaResolvers) ResolveClasses(tree core.ParseTree) ([]*ast.ClassDeclarationNode, error) {
+func (r *javaResolvers) ResolveClasses(ctx context.Context, tree core.ParseTree) ([]*ast.ClassDeclarationNode, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
@@ -152,25 +153,25 @@ func (r *javaResolvers) ResolveClasses(tree core.ParseTree) ([]*ast.ClassDeclara
 
 	// Step 1: Extract basic class definitions
 	classMap := make(map[string]*ast.ClassDeclarationNode)
-	err = r.extractClassDefinitions(data, tree, &classes, classMap)
+	err = r.extractClassDefinitions(ctx, data, tree, &classes, classMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract class definitions: %w", err)
 	}
 
 	// Step 2: Extract methods and constructors
-	err = r.extractClassMethods(data, tree, classMap)
+	err = r.extractClassMethods(ctx, data, tree, classMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract class methods: %w", err)
 	}
 
 	// Step 3: Extract fields
-	err = r.extractClassFields(data, tree, classMap)
+	err = r.extractClassFields(ctx, data, tree, classMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract class fields: %w", err)
 	}
 
 	// Step 4: Extract annotations with separate query
-	err = r.extractClassAnnotations(data, tree, classMap)
+	err = r.extractClassAnnotations(ctx, data, tree, classMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract class annotations: %w", err)
 	}
@@ -179,7 +180,7 @@ func (r *javaResolvers) ResolveClasses(tree core.ParseTree) ([]*ast.ClassDeclara
 }
 
 // ResolveInheritance builds inheritance graph from Java classes
-func (r *javaResolvers) ResolveInheritance(tree core.ParseTree) (*ast.InheritanceGraph, error) {
+func (r *javaResolvers) ResolveInheritance(ctx context.Context, tree core.ParseTree) (*ast.InheritanceGraph, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
@@ -219,7 +220,7 @@ func (r *javaResolvers) ResolveInheritance(tree core.ParseTree) (*ast.Inheritanc
 		}),
 	}
 
-	err = ts.ExecuteQueries(tree, queryRequestItems)
+	err = ts.ExecuteQueries(ctx, tree, queryRequestItems)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute inheritance queries: %w", err)
 	}
@@ -229,7 +230,7 @@ func (r *javaResolvers) ResolveInheritance(tree core.ParseTree) (*ast.Inheritanc
 
 // Helper methods for Java class extraction
 
-func (r *javaResolvers) extractClassDefinitions(data *[]byte, tree core.ParseTree,
+func (r *javaResolvers) extractClassDefinitions(ctx context.Context, data *[]byte, tree core.ParseTree,
 	classes *[]*ast.ClassDeclarationNode, classMap map[string]*ast.ClassDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(javaClassDefinitionQuery, func(m *sitter.QueryMatch) error {
@@ -302,10 +303,10 @@ func (r *javaResolvers) extractClassDefinitions(data *[]byte, tree core.ParseTre
 		}),
 	}
 
-	return ts.ExecuteQueries(tree, queryRequestItems)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
-func (r *javaResolvers) extractClassMethods(data *[]byte, tree core.ParseTree, classMap map[string]*ast.ClassDeclarationNode) error {
+func (r *javaResolvers) extractClassMethods(ctx context.Context, data *[]byte, tree core.ParseTree, classMap map[string]*ast.ClassDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(javaClassMethodQuery, func(m *sitter.QueryMatch) error {
 			var methodNameNode, methodDefNode *sitter.Node
@@ -358,10 +359,10 @@ func (r *javaResolvers) extractClassMethods(data *[]byte, tree core.ParseTree, c
 		}),
 	}
 
-	return ts.ExecuteQueries(tree, queryRequestItems)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
-func (r *javaResolvers) extractClassFields(data *[]byte, tree core.ParseTree, classMap map[string]*ast.ClassDeclarationNode) error {
+func (r *javaResolvers) extractClassFields(ctx context.Context, data *[]byte, tree core.ParseTree, classMap map[string]*ast.ClassDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(javaClassFieldQuery, func(m *sitter.QueryMatch) error {
 			var fieldDefNode *sitter.Node
@@ -391,10 +392,10 @@ func (r *javaResolvers) extractClassFields(data *[]byte, tree core.ParseTree, cl
 		}),
 	}
 
-	return ts.ExecuteQueries(tree, queryRequestItems)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
-func (r *javaResolvers) extractClassAnnotations(data *[]byte, tree core.ParseTree, classMap map[string]*ast.ClassDeclarationNode) error {
+func (r *javaResolvers) extractClassAnnotations(ctx context.Context, data *[]byte, tree core.ParseTree, classMap map[string]*ast.ClassDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(javaClassAnnotationQuery, func(m *sitter.QueryMatch) error {
 			var annotationNode *sitter.Node
@@ -418,7 +419,7 @@ func (r *javaResolvers) extractClassAnnotations(data *[]byte, tree core.ParseTre
 		}),
 	}
 
-	return ts.ExecuteQueries(tree, queryRequestItems)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
 // Helper methods
@@ -500,7 +501,7 @@ const javaFunctionAnnotationQuery = `
 `
 
 // ResolveFunctions extracts function declarations from Java parse tree
-func (r *javaResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
+func (r *javaResolvers) ResolveFunctions(ctx context.Context, tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
@@ -510,19 +511,19 @@ func (r *javaResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDe
 	functionMap := make(map[string]*ast.FunctionDeclarationNode) // To avoid duplicates and allow enhancement
 
 	// Extract method declarations
-	err = r.extractJavaFunctions(data, tree, functionMap)
+	err = r.extractJavaFunctions(ctx, data, tree, functionMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract Java functions: %w", err)
 	}
 
 	// Extract constructor declarations
-	err = r.extractJavaConstructors(data, tree, functionMap)
+	err = r.extractJavaConstructors(ctx, data, tree, functionMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract Java constructors: %w", err)
 	}
 
 	// Extract function annotations
-	err = r.extractJavaFunctionAnnotations(data, tree, functionMap)
+	err = r.extractJavaFunctionAnnotations(ctx, data, tree, functionMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract Java function annotations: %w", err)
 	}
@@ -537,7 +538,7 @@ func (r *javaResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDe
 
 // Helper methods for Java function extraction
 
-func (r *javaResolvers) extractJavaFunctions(data *[]byte, tree core.ParseTree,
+func (r *javaResolvers) extractJavaFunctions(ctx context.Context, data *[]byte, tree core.ParseTree,
 	functionMap map[string]*ast.FunctionDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(javaFunctionDefinitionQuery, func(m *sitter.QueryMatch) error {
@@ -611,10 +612,10 @@ func (r *javaResolvers) extractJavaFunctions(data *[]byte, tree core.ParseTree,
 		}),
 	}
 
-	return ts.ExecuteQueries(tree, queryRequestItems)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
-func (r *javaResolvers) extractJavaConstructors(data *[]byte, tree core.ParseTree,
+func (r *javaResolvers) extractJavaConstructors(ctx context.Context, data *[]byte, tree core.ParseTree,
 	functionMap map[string]*ast.FunctionDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(javaConstructorDefinitionQuery, func(m *sitter.QueryMatch) error {
@@ -675,10 +676,10 @@ func (r *javaResolvers) extractJavaConstructors(data *[]byte, tree core.ParseTre
 		}),
 	}
 
-	return ts.ExecuteQueries(tree, queryRequestItems)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
-func (r *javaResolvers) extractJavaFunctionAnnotations(data *[]byte, tree core.ParseTree,
+func (r *javaResolvers) extractJavaFunctionAnnotations(ctx context.Context, data *[]byte, tree core.ParseTree,
 	functionMap map[string]*ast.FunctionDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(javaFunctionAnnotationQuery, func(m *sitter.QueryMatch) error {
@@ -708,7 +709,7 @@ func (r *javaResolvers) extractJavaFunctionAnnotations(data *[]byte, tree core.P
 		}),
 	}
 
-	return ts.ExecuteQueries(tree, queryRequestItems)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
 // Helper methods for Java function processing

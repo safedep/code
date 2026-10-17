@@ -37,11 +37,11 @@ type sourceVisitor struct {
 	visitor core.TreeVisitor
 }
 
-func (v *sourceVisitor) VisitFile(f core.File) error {
-	parseTree, err := v.parser.Parse(context.Background(), f)
+func (v *sourceVisitor) VisitFile(ctx context.Context, f core.File) error {
+	parseTree, err := v.parser.Parse(ctx, f)
 	if err != nil {
 		return fmt.Errorf("failed to parse file: %w", err)
 	}
 
-	return v.visitor.VisitTree(parseTree)
+	return v.visitor.VisitTree(ctx, parseTree)
 }

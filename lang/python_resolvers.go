@@ -1,6 +1,7 @@
 package lang
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/safedep/code/core"
@@ -56,7 +57,7 @@ type pythonResolvers struct{}
 var _ core.LanguageResolvers = (*pythonResolvers)(nil)
 var _ core.ObjectOrientedLanguageResolvers = (*pythonResolvers)(nil)
 
-func (r *pythonResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, error) {
+func (r *pythonResolvers) ResolveImports(ctx context.Context, tree core.ParseTree) ([]*ast.ImportNode, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
@@ -90,7 +91,7 @@ func (r *pythonResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode
 		}),
 	}
 
-	err = ts.ExecuteQueries(tree, queryRequestItems)
+	err = ts.ExecuteQueries(ctx, tree, queryRequestItems)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +151,7 @@ const pyInheritanceQuery = `
 `
 
 // ResolveClasses extracts class declarations from the parse tree
-func (r *pythonResolvers) ResolveClasses(tree core.ParseTree) ([]*ast.ClassDeclarationNode, error) {
+func (r *pythonResolvers) ResolveClasses(ctx context.Context, tree core.ParseTree) ([]*ast.ClassDeclarationNode, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
@@ -160,25 +161,25 @@ func (r *pythonResolvers) ResolveClasses(tree core.ParseTree) ([]*ast.ClassDecla
 	classMap := make(map[string]*ast.ClassDeclarationNode) // To avoid duplicates and allow enhancement
 
 	// Extract basic class definitions
-	err = r.extractClassDefinitions(data, tree, classMap)
+	err = r.extractClassDefinitions(ctx, data, tree, classMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract class definitions: %w", err)
 	}
 
 	// Enhance classes with methods
-	err = r.extractClassMethods(data, tree, classMap)
+	err = r.extractClassMethods(ctx, data, tree, classMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract class methods: %w", err)
 	}
 
 	// Enhance classes with fields
-	err = r.extractClassFields(data, tree, classMap)
+	err = r.extractClassFields(ctx, data, tree, classMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract class fields: %w", err)
 	}
 
 	// Enhance classes with decorators
-	err = r.extractClassDecorators(data, tree, classMap)
+	err = r.extractClassDecorators(ctx, data, tree, classMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract class decorators: %w", err)
 	}
@@ -192,7 +193,7 @@ func (r *pythonResolvers) ResolveClasses(tree core.ParseTree) ([]*ast.ClassDecla
 }
 
 // ResolveInheritance constructs the inheritance graph from the parse tree
-func (r *pythonResolvers) ResolveInheritance(tree core.ParseTree) (*ast.InheritanceGraph, error) {
+func (r *pythonResolvers) ResolveInheritance(ctx context.Context, tree core.ParseTree) (*ast.InheritanceGraph, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
@@ -234,7 +235,7 @@ func (r *pythonResolvers) ResolveInheritance(tree core.ParseTree) (*ast.Inherita
 		}),
 	}
 
-	err = ts.ExecuteQueries(tree, queryRequestItems)
+	err = ts.ExecuteQueries(ctx, tree, queryRequestItems)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute inheritance queries: %w", err)
 	}
@@ -244,7 +245,7 @@ func (r *pythonResolvers) ResolveInheritance(tree core.ParseTree) (*ast.Inherita
 
 // Helper methods for class extraction
 
-func (r *pythonResolvers) extractClassDefinitions(data *[]byte, tree core.ParseTree,
+func (r *pythonResolvers) extractClassDefinitions(ctx context.Context, data *[]byte, tree core.ParseTree,
 	classMap map[string]*ast.ClassDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(pyClassDefinitionQuery, func(m *sitter.QueryMatch) error {
@@ -278,10 +279,10 @@ func (r *pythonResolvers) extractClassDefinitions(data *[]byte, tree core.ParseT
 		}),
 	}
 
-	return ts.ExecuteQueries(tree, queryRequestItems)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
-func (r *pythonResolvers) extractClassMethods(data *[]byte, tree core.ParseTree,
+func (r *pythonResolvers) extractClassMethods(ctx context.Context, data *[]byte, tree core.ParseTree,
 	classMap map[string]*ast.ClassDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(pyClassMethodQuery, func(m *sitter.QueryMatch) error {
@@ -324,10 +325,10 @@ func (r *pythonResolvers) extractClassMethods(data *[]byte, tree core.ParseTree,
 		}),
 	}
 
-	return ts.ExecuteQueries(tree, queryRequestItems)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
-func (r *pythonResolvers) extractClassFields(data *[]byte, tree core.ParseTree,
+func (r *pythonResolvers) extractClassFields(ctx context.Context, data *[]byte, tree core.ParseTree,
 	classMap map[string]*ast.ClassDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(pyClassFieldQuery, func(m *sitter.QueryMatch) error {
@@ -354,10 +355,10 @@ func (r *pythonResolvers) extractClassFields(data *[]byte, tree core.ParseTree,
 		}),
 	}
 
-	return ts.ExecuteQueries(tree, queryRequestItems)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
-func (r *pythonResolvers) extractClassDecorators(data *[]byte, tree core.ParseTree,
+func (r *pythonResolvers) extractClassDecorators(ctx context.Context, data *[]byte, tree core.ParseTree,
 	classMap map[string]*ast.ClassDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(pyClassDecoratorQuery, func(m *sitter.QueryMatch) error {
@@ -383,7 +384,7 @@ func (r *pythonResolvers) extractClassDecorators(data *[]byte, tree core.ParseTr
 		}),
 	}
 
-	return ts.ExecuteQueries(tree, queryRequestItems)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
 // Helper methods
@@ -428,7 +429,7 @@ const pyFunctionDecoratorQuery = `
 `
 
 // ResolveFunctions extracts function declarations from the parse tree
-func (r *pythonResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
+func (r *pythonResolvers) ResolveFunctions(ctx context.Context, tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
@@ -438,7 +439,7 @@ func (r *pythonResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.Function
 	functionMap := make(map[string]*ast.FunctionDeclarationNode) // To avoid duplicates and allow enhancement
 
 	// Extract basic function definitions
-	err = r.extractFunctionDefinitions(data, tree, functionMap)
+	err = r.extractFunctionDefinitions(ctx, data, tree, functionMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract function definitions: %w", err)
 	}
@@ -446,7 +447,7 @@ func (r *pythonResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.Function
 	// Async functions are now handled in the main function extraction
 
 	// Extract function decorators
-	err = r.extractFunctionDecorators(data, tree, functionMap)
+	err = r.extractFunctionDecorators(ctx, data, tree, functionMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract function decorators: %w", err)
 	}
@@ -466,7 +467,7 @@ func (r *pythonResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.Function
 
 // Helper methods for function extraction
 
-func (r *pythonResolvers) extractFunctionDefinitions(data *[]byte, tree core.ParseTree,
+func (r *pythonResolvers) extractFunctionDefinitions(ctx context.Context, data *[]byte, tree core.ParseTree,
 	functionMap map[string]*ast.FunctionDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(pyFunctionDefinitionQuery, func(m *sitter.QueryMatch) error {
@@ -544,10 +545,10 @@ func (r *pythonResolvers) extractFunctionDefinitions(data *[]byte, tree core.Par
 		}),
 	}
 
-	return ts.ExecuteQueries(tree, queryRequestItems)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
-func (r *pythonResolvers) extractFunctionDecorators(data *[]byte, tree core.ParseTree,
+func (r *pythonResolvers) extractFunctionDecorators(ctx context.Context, data *[]byte, tree core.ParseTree,
 	functionMap map[string]*ast.FunctionDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(pyFunctionDecoratorQuery, func(m *sitter.QueryMatch) error {
@@ -597,7 +598,7 @@ func (r *pythonResolvers) extractFunctionDecorators(data *[]byte, tree core.Pars
 		}),
 	}
 
-	return ts.ExecuteQueries(tree, queryRequestItems)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
 // Helper methods

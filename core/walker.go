@@ -3,11 +3,11 @@ package core
 import "context"
 
 type SourceVisitor interface {
-	VisitFile(File) error
+	VisitFile(context.Context, File) error
 }
 
 type TreeVisitor interface {
-	VisitTree(ParseTree) error
+	VisitTree(context.Context, ParseTree) error
 }
 
 type SourceWalker interface {

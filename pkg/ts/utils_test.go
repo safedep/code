@@ -17,7 +17,7 @@ const identifierQuery = `(identifier) @name`
 
 func countIdentifiers(t *testing.T, tree core.ParseTree) int {
 	count := 0
-	err := ts.ExecuteQueries(tree, []ts.QueryItem{
+	err := ts.ExecuteQueries(t.Context(), tree, []ts.QueryItem{
 		ts.NewQueryItem(identifierQuery, func(*sitter.QueryMatch) error {
 			count++
 			return nil
@@ -52,7 +52,7 @@ func TestExecuteQueriesReportsInvalidQuery(t *testing.T) {
 	require.NoError(t, err)
 
 	tree := parseString(t, language, "a")
-	err = ts.ExecuteQueries(tree, []ts.QueryItem{
+	err = ts.ExecuteQueries(t.Context(), tree, []ts.QueryItem{
 		ts.NewQueryItem(`(no_such_node) @x`, func(*sitter.QueryMatch) error { return nil }),
 	})
 	assert.Error(t, err)
@@ -98,7 +98,7 @@ func TestExecuteQueriesKeepsAQueryForEachGrammar(t *testing.T) {
 	strings := func(language core.Language, source string) int {
 		tree := parseString(t, language, source)
 		count := 0
-		require.NoError(t, ts.ExecuteQueries(tree, []ts.QueryItem{
+		require.NoError(t, ts.ExecuteQueries(t.Context(), tree, []ts.QueryItem{
 			ts.NewQueryItem(`(string) @s`, func(*sitter.QueryMatch) error {
 				count++
 				return nil
@@ -111,4 +111,22 @@ func TestExecuteQueriesKeepsAQueryForEachGrammar(t *testing.T) {
 	mixed := otherGrammar{base: python, grammar: typescript.Language()}
 	assert.Equal(t, 2, strings(mixed, "const a = 'x' + 'y'"),
 		"a query compiled for the Python grammar does not run on a TypeScript tree")
+}
+
+func TestExecuteQueriesStopsWhenTheContextIsDone(t *testing.T) {
+	language, err := lang.NewTypescriptLanguage()
+	require.NoError(t, err)
+	tree := parseString(t, language, "a")
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	called := false
+	err = ts.ExecuteQueries(ctx, tree, []ts.QueryItem{
+		ts.NewQueryItem(identifierQuery, func(*sitter.QueryMatch) error {
+			called = true
+			return nil
+		}),
+	})
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.False(t, called)
 }

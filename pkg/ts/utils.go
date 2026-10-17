@@ -1,6 +1,7 @@
 package ts
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -118,7 +119,8 @@ func NewQueryItem(query string, cb QueryMatchProcessor) QueryItem {
 // ExecuteQueries runs each query on the tree in order. It compiles a query
 // against the grammar of the tree. A query compiled against another grammar
 // matches the wrong nodes, because the node symbols of two grammars differ.
-func ExecuteQueries(tree core.ParseTree, queryItems []QueryItem) error {
+// It returns the error of ctx when ctx is done before a query.
+func ExecuteQueries(ctx context.Context, tree core.ParseTree, queryItems []QueryItem) error {
 	language, err := tree.Language()
 	if err != nil {
 		return fmt.Errorf("failed to get language from parse tree: %w", err)
@@ -129,6 +131,10 @@ func ExecuteQueries(tree core.ParseTree, queryItems []QueryItem) error {
 	}
 
 	for _, queryItem := range queryItems {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
 		q, err := compiledQuery(language, queryItem.query)
 		if err != nil {
 			return err

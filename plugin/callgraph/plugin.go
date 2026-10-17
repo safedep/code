@@ -64,7 +64,7 @@ func (p *callgraphPlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) 
 
 	log.Debugf("callgraph - Analyzing tree for language: %s, file: %s\n", lang.Meta().Code, file.Name())
 
-	cg, err := buildCallGraph(tree, lang, file.Name())
+	cg, err := buildCallGraph(ctx, tree, lang, file.Name())
 	if err != nil {
 		return fmt.Errorf("failed to build call graph: %w", err)
 	}
@@ -72,8 +72,10 @@ func (p *callgraphPlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) 
 	return p.callgraphCallback(ctx, cg)
 }
 
-// buildCallGraph builds a call graph from the syntax tree
-func buildCallGraph(tree core.ParseTree, lang core.Language, filePath string) (*CallGraph, error) {
+// buildCallGraph builds a call graph from the syntax tree. When ctx is done
+// during the walk of the tree, it returns the graph so far, with
+// LimitExceeded set.
+func buildCallGraph(ctx context.Context, tree core.ParseTree, lang core.Language, filePath string) (*CallGraph, error) {
 	astRootNode := tree.Tree().RootNode()
 
 	treeData, err := tree.Data()
@@ -81,7 +83,7 @@ func buildCallGraph(tree core.ParseTree, lang core.Language, filePath string) (*
 		return nil, fmt.Errorf("failed to get tree data: %w", err)
 	}
 
-	imports, err := lang.Resolvers().ResolveImports(tree)
+	imports, err := lang.Resolvers().ResolveImports(ctx, tree)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve imports: %w", err)
 	}
@@ -96,7 +98,9 @@ func buildCallGraph(tree core.ParseTree, lang core.Language, filePath string) (*
 		return nil, fmt.Errorf("failed to create call graph: %w", err)
 	}
 
+	callGraph.ctx = ctx
 	processChildren(astRootNode, *treeData, filePath, callGraph, processorMetadata{})
+	callGraph.ctx = nil
 
 	return callGraph, nil
 }
@@ -120,7 +124,7 @@ func processNode(node *sitter.Node, treeData []byte, currentNamespace string, ca
 }
 
 func processChildren(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	if node == nil {
+	if node == nil || callGraph.ctxErr != nil {
 		return newProcessorResult()
 	}
 
@@ -137,6 +141,9 @@ func processChildren(node *sitter.Node, treeData []byte, currentNamespace string
 	childMetadata.processingDepth++
 
 	for i := 0; i < int(node.ChildCount()); i++ {
+		if callGraph.stopped() {
+			break
+		}
 		result := processNode(node.Child(i), treeData, currentNamespace, callGraph, childMetadata)
 		childrenResults.addResults(result)
 	}

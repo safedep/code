@@ -1,6 +1,8 @@
 package core
 
 import (
+	"context"
+
 	"github.com/safedep/code/core/ast"
 	"github.com/safedep/code/langcode"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -12,11 +14,11 @@ import (
 type LanguageResolvers interface {
 	// ResolveImports returns a list of import statements
 	// identified from the parse tree
-	ResolveImports(tree ParseTree) ([]*ast.ImportNode, error)
+	ResolveImports(ctx context.Context, tree ParseTree) ([]*ast.ImportNode, error)
 
 	// ResolveFunctions returns a list of function declarations
 	// identified from the parse tree
-	ResolveFunctions(tree ParseTree) ([]*ast.FunctionDeclarationNode, error)
+	ResolveFunctions(ctx context.Context, tree ParseTree) ([]*ast.FunctionDeclarationNode, error)
 }
 
 // ObjectOrientedLanguageResolvers define the additional contract
@@ -32,11 +34,11 @@ type ObjectOrientedLanguageResolvers interface {
 
 	// ResolveClasses returns a list of class declarations
 	// identified from the parse tree
-	ResolveClasses(tree ParseTree) ([]*ast.ClassDeclarationNode, error)
+	ResolveClasses(ctx context.Context, tree ParseTree) ([]*ast.ClassDeclarationNode, error)
 
 	// ResolveInheritance returns the inheritance graph
 	// constructed from class definitions in the parse tree
-	ResolveInheritance(tree ParseTree) (*ast.InheritanceGraph, error)
+	ResolveInheritance(ctx context.Context, tree ParseTree) (*ast.InheritanceGraph, error)
 }
 
 // LanguageCode identifies a language. It is an alias of langcode.Code, so

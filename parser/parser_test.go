@@ -190,7 +190,7 @@ type errorRecorder struct {
 	hasError map[string]bool
 }
 
-func (r *errorRecorder) VisitTree(tree core.ParseTree) error {
+func (r *errorRecorder) VisitTree(_ context.Context, tree core.ParseTree) error {
 	file, err := tree.File()
 	if err != nil {
 		return err

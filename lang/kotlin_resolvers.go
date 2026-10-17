@@ -1,6 +1,7 @@
 package lang
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/safedep/code/core"
@@ -25,14 +26,14 @@ var kotlinFunctionShapes = map[string]functionShape{
 // ResolveImports returns one import for each import header, as in
 // import okhttp3.OkHttpClient or import kotlinx.coroutines.*. The last
 // segment of the name is the name in scope unless an alias renames it.
-func (r *kotlinResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, error) {
+func (r *kotlinResolvers) ResolveImports(ctx context.Context, tree core.ParseTree) ([]*ast.ImportNode, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
 	}
 
 	var imports []*ast.ImportNode
-	walkNamed(tree.Tree().RootNode(), func(node *sitter.Node) bool {
+	err = walkNamed(ctx, tree.Tree().RootNode(), func(node *sitter.Node) bool {
 		switch node.Type() {
 		case "source_file", "import_list":
 			return true
@@ -59,10 +60,13 @@ func (r *kotlinResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode
 		imports = append(imports, newModuleImport(data, module, nil, alias, false))
 		return false
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return imports, nil
 }
 
-func (r *kotlinResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
-	return resolveFunctionsByShape(tree, kotlinFunctionShapes)
+func (r *kotlinResolvers) ResolveFunctions(ctx context.Context, tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
+	return resolveFunctionsByShape(ctx, tree, kotlinFunctionShapes)
 }

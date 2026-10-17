@@ -22,10 +22,9 @@ var _ PluginExecutor = &treeWalkPluginExecutor{}
 
 type treeVisitor struct {
 	plugins []core.Plugin
-	ctx     context.Context
 }
 
-func (v *treeVisitor) VisitTree(tree core.ParseTree) error {
+func (v *treeVisitor) VisitTree(ctx context.Context, tree core.ParseTree) error {
 	for _, plugin := range v.plugins {
 		file, err := tree.File()
 		if err != nil {
@@ -38,13 +37,13 @@ func (v *treeVisitor) VisitTree(tree core.ParseTree) error {
 		}
 
 		if filePlugin, ok := plugin.(core.FilePlugin); ok {
-			if err := filePlugin.AnalyzeSource(v.ctx, file); err != nil {
+			if err := filePlugin.AnalyzeSource(ctx, file); err != nil {
 				return fmt.Errorf("failed to analyze source: %w", err)
 			}
 		}
 
 		if treePlugin, ok := plugin.(core.TreePlugin); ok {
-			if err := treePlugin.AnalyzeTree(v.ctx, tree); err != nil {
+			if err := treePlugin.AnalyzeTree(ctx, tree); err != nil {
 				return fmt.Errorf("failed to analyze tree: %w", err)
 			}
 		}
@@ -64,5 +63,5 @@ func NewTreeWalkPluginExecutor(walker core.TreeWalker, plugins []core.Plugin) (*
 }
 
 func (e *treeWalkPluginExecutor) Execute(ctx context.Context, fs core.ImportAwareFileSystem) error {
-	return e.walker.Walk(ctx, fs, &treeVisitor{plugins: e.plugins, ctx: ctx})
+	return e.walker.Walk(ctx, fs, &treeVisitor{plugins: e.plugins})
 }
