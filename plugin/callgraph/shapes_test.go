@@ -111,7 +111,9 @@ func TestShapedLanguageCalls(t *testing.T) {
 
 			executor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{NewCallGraphPlugin(callback)})
 			require.NoError(t, err)
-			require.NoError(t, executor.Execute(context.Background(), fileSystem))
+			report, err := executor.Execute(context.Background(), fileSystem)
+			require.NoError(t, err)
+			assert.Empty(t, report.Failed)
 
 			assert.Subset(t, calls, tc.calls)
 			for _, c := range calls {

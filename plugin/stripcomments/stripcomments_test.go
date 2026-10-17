@@ -52,8 +52,9 @@ func TestStripComments(t *testing.T) {
 			})
 			assert.NoError(t, err)
 
-			err = pluginExecutor.Execute(context.Background(), fileSystem)
+			report, err := pluginExecutor.Execute(context.Background(), fileSystem)
 			assert.NoError(t, err)
+			assert.Empty(t, report.Failed)
 
 			assert.Equal(t, 1, len(readers))
 
@@ -93,8 +94,9 @@ func benchmarkStripComments(b *testing.B) {
 	})
 	assert.NoError(b, err)
 
-	err = pluginExecutor.Execute(context.Background(), fileSystem)
+	report, err := pluginExecutor.Execute(context.Background(), fileSystem)
 	assert.NoError(b, err)
+	assert.Empty(b, report.Failed)
 }
 
 func BenchmarkStripComments(b *testing.B) {

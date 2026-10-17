@@ -886,8 +886,9 @@ func TestCallgraphPlugin(t *testing.T) {
 			})
 			assert.NoError(t, err)
 
-			err = pluginExecutor.Execute(context.Background(), fileSystem)
+			report, err := pluginExecutor.Execute(context.Background(), fileSystem)
 			assert.NoError(t, err)
+			assert.Empty(t, report.Failed)
 		})
 	}
 }

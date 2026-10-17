@@ -169,14 +169,14 @@ func (fs *localFileSystem) findFileInDir(ctx context.Context, dir, name string, 
 func (fs *localFileSystem) enumerateDir(ctx context.Context,
 	root string, isImport bool, callback func(core.File) error) error {
 	return filepath.WalkDir(root, func(path string, info os.DirEntry, err error) error {
-		if err != nil {
-			return fmt.Errorf("error walking %s: %w", path, err)
-		}
-
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("enumeration cancelled by context: %w", ctx.Err())
 		default:
+		}
+
+		if err != nil {
+			return skipUnreadable(root, path, info, err)
 		}
 
 		if fs.skipPattern(path) {
@@ -199,6 +199,21 @@ func (fs *localFileSystem) enumerateDir(ctx context.Context,
 		}
 		return callback(file)
 	})
+}
+
+// skipUnreadable skips an entry that the walk cannot read, with a warning.
+// One unreadable directory must not stop the walk of a whole project, as
+// with a bad link in isRegularFile. The root of the walk must be readable.
+func skipUnreadable(root, path string, entry os.DirEntry, err error) error {
+	if path == root {
+		return fmt.Errorf("error walking %s: %w", path, err)
+	}
+
+	log.Warnf("skipped %s: %v", path, err)
+	if entry != nil && entry.IsDir() {
+		return filepath.SkipDir
+	}
+	return nil
 }
 
 // isRegularFile reports a regular file, or a symbolic link to one. A

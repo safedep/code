@@ -8,7 +8,7 @@ import (
 )
 
 type walkingParser struct {
-	parser core.Parser
+	parser *parserWrapper
 	walker core.SourceWalker
 }
 
@@ -33,14 +33,20 @@ func (p *walkingParser) Walk(ctx context.Context, fs core.ImportAwareFileSystem,
 }
 
 type sourceVisitor struct {
-	parser  core.Parser
+	parser  *parserWrapper
 	visitor core.TreeVisitor
 }
 
 func (v *sourceVisitor) VisitFile(ctx context.Context, f core.File) error {
-	parseTree, err := v.parser.Parse(ctx, f)
+	parseTree, stage, err := v.parser.parse(ctx, f)
 	if err != nil {
-		return fmt.Errorf("failed to parse file: %w", err)
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return ctxErr
+		}
+		if errorVisitor, ok := v.visitor.(core.FileErrorVisitor); ok {
+			return errorVisitor.VisitFileError(ctx, f, stage, err)
+		}
+		return fmt.Errorf("failed to %s file %s: %w", stage, f.Name(), err)
 	}
 
 	return v.visitor.VisitTree(ctx, parseTree)

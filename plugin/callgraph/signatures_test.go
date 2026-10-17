@@ -952,10 +952,28 @@ func TestSignatureMatcher(t *testing.T) {
 			treeWalker, fileSystem, err := test.SetupBasicPluginContext(tc.FilePaths, []core.LanguageCode{tc.Language})
 			assert.NoError(t, err, "Failed to setup plugin context")
 
-			// Collect callgraphs
+			// The graph holds nodes of the tree, and the executor closes the
+			// tree after the callback, so the callback reads the nodes.
 			var capturedCallgraph *CallGraph
+			var matchResults []SignatureMatchResult
+			firstEvidence := map[string]EvidenceMetadata{}
 			callgraphCallback := func(ctx context.Context, cg *CallGraph) error {
 				capturedCallgraph = cg
+				var err error
+				matchResults, err = matcher.MatchSignatures(cg)
+				if err != nil {
+					return err
+				}
+
+				treeData, err := cg.Tree.Data()
+				if err != nil {
+					return err
+				}
+				for _, result := range matchResults {
+					if len(result.MatchedConditions) > 0 && len(result.MatchedConditions[0].Evidences) > 0 {
+						firstEvidence[result.MatchedSignature.Id] = result.MatchedConditions[0].Evidences[0].Metadata(treeData)
+					}
+				}
 				return nil
 			}
 
@@ -965,15 +983,12 @@ func TestSignatureMatcher(t *testing.T) {
 			})
 			assert.NoError(t, err, "Failed to create plugin executor")
 
-			err = pluginExecutor.Execute(context.Background(), fileSystem)
+			report, err := pluginExecutor.Execute(context.Background(), fileSystem)
 			assert.NoError(t, err, "Failed to execute plugin")
+			assert.Empty(t, report.Failed, "Failed to match signatures")
 
 			// Verify we captured a callgraph
 			assert.NotNil(t, capturedCallgraph, "Expected to capture a callgraph")
-
-			// Run signature matching
-			matchResults, err := matcher.MatchSignatures(capturedCallgraph)
-			assert.NoError(t, err, "Failed to match signatures")
 
 			// Create a map for easier assertion
 			matchedSignatureIds := make(map[string]SignatureMatchResult)
@@ -1009,11 +1024,7 @@ func TestSignatureMatcher(t *testing.T) {
 
 						// Verify callee namespace if specified
 						if expectation.CalleeContains != "" && totalEvidences > 0 {
-							evidence := matchResult.MatchedConditions[0].Evidences[0]
-							treeData, err := capturedCallgraph.Tree.Data()
-							assert.NoError(t, err)
-
-							metadata := evidence.Metadata(treeData)
+							metadata := firstEvidence[expectation.SignatureID]
 							assert.NotEmpty(t, metadata.CallerNamespace, "Expected caller namespace")
 							assert.NotEmpty(t, metadata.CalleeNamespace, "Expected callee namespace")
 							assert.Contains(t, metadata.CalleeNamespace, expectation.CalleeContains,

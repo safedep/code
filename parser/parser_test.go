@@ -207,3 +207,67 @@ func TestCloseTwice(t *testing.T) {
 		tree.Close()
 	})
 }
+
+// unreadableFile is a file whose reader fails.
+type unreadableFile struct{ trackedFile }
+
+func (f *unreadableFile) Reader() (io.ReadCloser, error) { return nil, errors.New("permission denied") }
+
+// filesWalker is a source walker that visits the given files.
+type filesWalker []core.File
+
+func (w filesWalker) Walk(ctx context.Context, _ core.ImportAwareFileSystem, visitor core.SourceVisitor) error {
+	for _, f := range w {
+		if err := visitor.VisitFile(ctx, f); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type fileErrorRecorder struct {
+	errorRecorder
+	stages map[string]core.Stage
+	errs   map[string]error
+}
+
+func (r *fileErrorRecorder) VisitFileError(_ context.Context, file core.File, stage core.Stage, err error) error {
+	r.stages[file.Name()] = stage
+	r.errs[file.Name()] = err
+	return nil
+}
+
+func TestWalkingParserReportsTheStageOfAFailure(t *testing.T) {
+	python, err := lang.NewPythonLanguage()
+	require.NoError(t, err)
+	files := filesWalker{
+		&unreadableFile{trackedFile{name: "locked.py"}},
+		&trackedFile{name: "notes.txt", content: "text"},
+		&trackedFile{name: "large.py", content: strings.Repeat("a = 1\n", 10)},
+		&trackedFile{name: "good.py", content: "import os\n"},
+	}
+
+	walker, err := NewWalkingParser(files, []core.Language{python}, WithMaxBytes(32))
+	require.NoError(t, err)
+	visitor := &fileErrorRecorder{
+		errorRecorder: errorRecorder{hasError: map[string]bool{}},
+		stages:        map[string]core.Stage{},
+		errs:          map[string]error{},
+	}
+	require.NoError(t, walker.Walk(t.Context(), nil, visitor))
+
+	assert.Equal(t, map[string]bool{"good.py": false}, visitor.hasError)
+	assert.Equal(t, map[string]core.Stage{
+		"locked.py": core.StageRead,
+		"notes.txt": core.StageParse,
+		"large.py":  core.StageParse,
+	}, visitor.stages)
+	assert.ErrorContains(t, visitor.errs["locked.py"], "permission denied")
+	assert.ErrorIs(t, visitor.errs["notes.txt"], core.ErrNoLanguage)
+	assert.ErrorIs(t, visitor.errs["large.py"], ErrInputTooLarge)
+
+	stopping, err := NewWalkingParser(files, []core.Language{python})
+	require.NoError(t, err)
+	err = stopping.Walk(t.Context(), nil, &errorRecorder{hasError: map[string]bool{}})
+	assert.ErrorContains(t, err, "failed to read file locked.py", "a visitor without VisitFileError stops the walk")
+}

@@ -55,3 +55,27 @@ func TestGetLanguage(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestLanguagesAreShared(t *testing.T) {
+	first, ok := ResolveLanguageFromPath("a.py")
+	assert.True(t, ok)
+	second, ok := ResolveLanguageFromPath("b/c.py")
+	assert.True(t, ok)
+	assert.Same(t, first, second)
+
+	byCode, err := GetLanguage(string(core.LanguageCodePython))
+	assert.NoError(t, err)
+	assert.Same(t, first, byCode)
+
+	all, err := AllLanguages()
+	assert.NoError(t, err)
+	again, err := AllLanguages()
+	assert.NoError(t, err)
+	assert.Equal(t, all, again, "the order is fixed")
+	assert.Contains(t, all, first)
+
+	all[0] = nil
+	again, err = AllLanguages()
+	assert.NoError(t, err)
+	assert.NotNil(t, again[0], "a caller cannot change the shared list")
+}

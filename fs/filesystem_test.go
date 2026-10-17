@@ -177,3 +177,36 @@ func TestLocalFileSystemSkipsLinksToNoFile(t *testing.T) {
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"app.js", "linked.js"}, files)
 }
+
+// fakeEntry is a directory entry of a walk.
+type fakeEntry struct {
+	os.DirEntry
+	dir bool
+}
+
+func (e fakeEntry) IsDir() bool { return e.dir }
+
+func TestSkipUnreadable(t *testing.T) {
+	errDenied := os.ErrPermission
+	cases := []struct {
+		name  string
+		path  string
+		entry os.DirEntry
+		want  error
+	}{
+		{name: "the root fails the walk", path: "root", entry: fakeEntry{dir: true}, want: errDenied},
+		{name: "a root that is not there fails the walk", path: "root", entry: nil, want: errDenied},
+		{name: "a directory is skipped", path: "root/locked", entry: fakeEntry{dir: true}, want: filepath.SkipDir},
+		{name: "a file is skipped", path: "root/locked.py", entry: fakeEntry{dir: false}, want: nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := skipUnreadable("root", tc.path, tc.entry, errDenied)
+			if tc.want == nil {
+				assert.NoError(t, err)
+				return
+			}
+			assert.ErrorIs(t, err, tc.want)
+		})
+	}
+}

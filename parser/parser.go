@@ -72,23 +72,32 @@ func NewParser(languages []core.Language, opts ...Option) (*parserWrapper, error
 // error that wraps core.ErrNoLanguage when no language parses the file, and
 // ErrInputTooLarge for a file over the size limit.
 func (p *parserWrapper) Parse(ctx context.Context, file core.File) (core.ParseTree, error) {
+	tree, _, err := p.parse(ctx, file)
+	return tree, err
+}
+
+// parse is Parse that also names the stage of a failure.
+func (p *parserWrapper) parse(ctx context.Context, file core.File) (core.ParseTree, core.Stage, error) {
 	if err := ctx.Err(); err != nil {
-		return nil, err
+		return nil, core.StageRead, err
 	}
 
 	g, ok := p.byExtension[filepath.Ext(file.Name())]
 	if !ok {
-		return nil, fmt.Errorf("%w: %s", core.ErrNoLanguage, file.Name())
+		return nil, core.StageParse, fmt.Errorf("%w: %s", core.ErrNoLanguage, file.Name())
 	}
 
 	data, err := readAll(file, p.maxBytes)
 	if err != nil {
-		return nil, err
+		return nil, core.StageRead, err
+	}
+	if p.maxBytes > 0 && len(data) > p.maxBytes {
+		return nil, core.StageParse, fmt.Errorf("%w: %s is over %d bytes", ErrInputTooLarge, file.Name(), p.maxBytes)
 	}
 
 	tree, err := g.parser.ParseCtx(ctx, nil, data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse file: %w", err)
+		return nil, core.StageParse, fmt.Errorf("failed to parse file: %w", err)
 	}
 
 	// We must guarantee that none of the pointers are nil
@@ -97,7 +106,7 @@ func (p *parserWrapper) Parse(ctx context.Context, file core.File) (core.ParseTr
 		data: &data,
 		file: file,
 		lang: g.language,
-	}, nil
+	}, "", nil
 }
 
 func (t *parseTree) Tree() *sitter.Tree {
@@ -122,7 +131,8 @@ func (t *parseTree) Close() {
 
 // readAll reads the file and closes its reader. An open reader keeps the
 // file in use, and on Windows a file in use cannot be deleted. It reads one
-// byte over maxBytes at most, so a large file does not fill the memory.
+// byte over maxBytes at most, so a large file does not fill the memory, and
+// the caller can see that the file is over the limit.
 func readAll(file core.File, maxBytes int) (data []byte, err error) {
 	r, err := file.Reader()
 	if err != nil {
@@ -141,9 +151,6 @@ func readAll(file core.File, maxBytes int) (data []byte, err error) {
 	data, err = io.ReadAll(src)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
-	}
-	if maxBytes > 0 && len(data) > maxBytes {
-		return nil, fmt.Errorf("%w: %s is over %d bytes", ErrInputTooLarge, file.Name(), maxBytes)
 	}
 	return data, nil
 }

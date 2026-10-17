@@ -9,6 +9,7 @@ import (
 	"github.com/safedep/code/pkg/test"
 	"github.com/safedep/code/plugin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type DepsTestcase struct {
@@ -172,8 +173,9 @@ func TestDepsusageEvidences(t *testing.T) {
 			})
 			assert.NoError(t, err)
 
-			err = pluginExecutor.Execute(context.Background(), fileSystem)
+			report, err := pluginExecutor.Execute(context.Background(), fileSystem)
 			assert.NoError(t, err)
+			assert.Empty(t, report.Failed)
 
 			assert.Equal(t, len(testcase.ExpectedEvicences), len(evidences))
 			for i, expectedEvidence := range testcase.ExpectedEvicences {
@@ -207,9 +209,9 @@ func TestAbortedDepsusage(t *testing.T) {
 			t.Fatalf("failed to create plugin executor: %v", err)
 		}
 
-		err = pluginExecutor.Execute(context.Background(), fileSystem)
-
-		assert.Error(t, err)
+		report, err := pluginExecutor.Execute(context.Background(), fileSystem)
+		require.NoError(t, err)
+		assertCallbackFailure(t, report)
 	})
 
 	t.Run("AbortExecutionForAstEvidence", func(t *testing.T) {
@@ -229,7 +231,19 @@ func TestAbortedDepsusage(t *testing.T) {
 		})
 		assert.NoError(t, err)
 
-		err = pluginExecutor.Execute(context.Background(), fileSystem)
-		assert.Error(t, err)
+		report, err := pluginExecutor.Execute(context.Background(), fileSystem)
+		require.NoError(t, err)
+		assertCallbackFailure(t, report)
 	})
+}
+
+// assertCallbackFailure checks that the error of a callback fails the file
+// at the stage of the plugin, and does not stop the walk.
+func assertCallbackFailure(t *testing.T, report *plugin.Report) {
+	require.Len(t, report.Failed, 1)
+	failure := report.Failed[0]
+	assert.Equal(t, "fixtures/testcases.py", failure.File)
+	assert.Equal(t, core.Stage("DependencyUsagePlugin"), failure.Stage)
+	assert.ErrorContains(t, failure, "aborting due to user err in callback")
+	assert.Equal(t, []string{"fixtures/testcases.py"}, report.Files)
 }

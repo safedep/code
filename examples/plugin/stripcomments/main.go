@@ -108,5 +108,13 @@ func run() error {
 		return fmt.Errorf("failed to create plugin executor: %w", err)
 	}
 
-	return pluginExecutor.Execute(context.Background(), fileSystem)
+	report, err := pluginExecutor.Execute(context.Background(), fileSystem)
+	if err != nil {
+		return fmt.Errorf("failed to execute plugins: %w", err)
+	}
+
+	for _, failure := range report.Failed {
+		log.Warnf("%v", failure)
+	}
+	return nil
 }
