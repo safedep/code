@@ -130,7 +130,7 @@ these.
 | `precision-high-medium` | The same, for the pairs with a `high` or `medium` edge |
 | `recall` | The share of `callgraph.json` pairs that the graph holds at any confidence |
 | `unresolved-rate` | The share of call sites that stay unresolved after the link step |
-| `kind=<kind>` | The precision of the pairs with an edge of that kind |
+| `kind=<kind>` | The precision of the pairs with an edge of that kind, and the share of the `callgraph.json` pairs that an edge of that kind finds |
 | `callee=<class>` | The recall of the pairs whose callee is in the project, external or a builtin |
 | `category=<category>` | The recall of the cases of one directory of the set, as `classes` |
 

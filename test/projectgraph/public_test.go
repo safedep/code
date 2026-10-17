@@ -78,8 +78,10 @@ func (r ratio) String() string {
 
 // score counts the pairs of a set. The category of a case is the first
 // directory of its name, as classes or imports. A pair of the graph can have edges of
-// more than one kind, and it counts once for each kind. A case is exact when
-// the pairs of its graph are the pairs of its callgraph.json.
+// more than one kind, and it counts once for each kind. The recall of a kind
+// is the share of the callgraph.json pairs that an edge of the kind finds.
+// A case is exact when the pairs of its graph are the pairs of its
+// callgraph.json.
 type score struct {
 	files      int
 	exact      ratio
@@ -88,12 +90,13 @@ type score struct {
 	recall     ratio
 	unresolved ratio
 	byKind     map[projectgraph.EdgeKind]*ratio
+	foundBy    map[projectgraph.EdgeKind]int
 	byClass    map[calleeClass]*ratio
 	byCategory map[string]*ratio
 }
 
 func newScore() *score {
-	return &score{byKind: map[projectgraph.EdgeKind]*ratio{}, byClass: map[calleeClass]*ratio{}, byCategory: map[string]*ratio{}}
+	return &score{byKind: map[projectgraph.EdgeKind]*ratio{}, foundBy: map[projectgraph.EdgeKind]int{}, byClass: map[calleeClass]*ratio{}, byCategory: map[string]*ratio{}}
 }
 
 func at[K comparable](m map[K]*ratio, k K) *ratio {
@@ -184,9 +187,12 @@ func scoreCase(ctx context.Context, t *testing.T, name, dir string, language cor
 	}
 	missed := 0
 	for pair := range expected {
-		_, hit := got[pair]
+		kinds, hit := got[pair]
 		if !hit {
 			missed++
+		}
+		for _, k := range kinds {
+			total.foundBy[k]++
 		}
 		total.recall.add(hit)
 		at(total.byClass, classify(pair.to, modules)).add(hit)
@@ -347,7 +353,8 @@ func (s *score) rows(set publicSet) []string {
 		fmt.Sprintf("  unresolved-rate=%s", s.unresolved),
 	}
 	for _, k := range slices.Sorted(maps.Keys(s.byKind)) {
-		rows = append(rows, fmt.Sprintf("  kind=%s precision=%s", k, s.byKind[k]))
+		found := ratio{hit: s.foundBy[k], all: s.recall.all}
+		rows = append(rows, fmt.Sprintf("  kind=%s precision=%s recall=%s", k, s.byKind[k], found))
 	}
 	for _, c := range []calleeClass{calleeProject, calleeExternal, calleeBuiltin} {
 		rows = append(rows, fmt.Sprintf("  callee=%s recall=%s", c, at(s.byClass, c)))
