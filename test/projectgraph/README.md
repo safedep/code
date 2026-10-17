@@ -30,11 +30,15 @@ This directory tests the index step, the link step and the reach query of
    | `no_edges` | Pairs of `from` and `to` that no edge of the graph may join |
    | `unresolved` | The whole set of unresolved sites, with `caller`, `site`, `reason` and `method` |
    | `truncated` | The whole set of truncation records of the link step, with `kind`, `key` and `site` |
-   | `results` | The reach result of each `target`, with `status`, `path`, `call_sites` and the uncertainties |
+   | `dropped` | The whole set of `overlay.json` edges that the merge drops, with `site`, `callee` and `reason` |
+   | `results` | The reach result of each `target`, with `status`, `path`, `call_sites` and the uncertainties. An `llm` hop of a path has its `resolver`, as `model m1, prompt v2` |
 
    A site is `path:line`. A key is a symbol key, as `pkg/loader.py//parse` or
    `yaml//load`.
-3. Run `go test ./test/projectgraph/ -run TestCases/<language>/<case> -count=1 -v`.
+3. Optional. Put an `overlay.json` next to `expect.yaml`. The test merges it
+   into the graph after the link step, as `projectgraph/overlay` reads it.
+   The package documentation of `projectgraph/overlay` gives the format.
+4. Run `go test ./test/projectgraph/ -run TestCases/<language>/<case> -count=1 -v`.
    A failure prints the difference between the graph and `expect.yaml`.
 
 Write the expectation from the source, not from the output of the graph. A

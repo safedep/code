@@ -1,0 +1,66 @@
+source: safedep:hand
+description: >-
+  dispatch calls a member of parsers by a computed name. The overlay resolves the site to
+  parsers.parse, so yaml.safe_load is found through an llm hop. The unresolved site stays, so
+  os.system stays uncertain. The merge drops an edge to a callee that the graph does not define
+  and an edge at a site that the link step resolved.
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: main.py//dispatch
+    to: parsers.py//parse
+    kind: llm
+    confidence: low
+    site: main.py:5
+  - from: parsers.py//parse
+    to: yaml//safe_load
+    kind: direct
+    confidence: high
+    site: parsers.py:5
+no_edges:
+  - from: main.py//dispatch
+    to: parsers.py//load
+  - from: main.py
+    to: parsers.py//parse
+unresolved:
+  - caller: main.py//dispatch
+    site: main.py:5
+    reason: computed-name
+dropped:
+  - site: main.py:5
+    callee: parsers.py//load
+    reason: undefined-callee
+  - site: main.py:9
+    callee: parsers.py//parse
+    reason: no-unresolved-site
+results:
+  - target: yaml//safe_load
+    status: found
+    path:
+      - key: main.py
+      - key: main.py//dispatch
+        site: main.py:9
+        kind: direct
+        confidence: high
+      - key: parsers.py//parse
+        site: main.py:5
+        kind: llm
+        confidence: low
+        resolver: model test-model-1, prompt v2
+      - key: yaml//safe_load
+        site: parsers.py:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: parsers.py//parse
+        site: parsers.py:5
+        reached: true
+  - target: os//system
+    status: uncertain
+    uncertainties:
+      - kind: dynamic-flag
+        site: main.py:5
+      - kind: unresolved-call
+        site: main.py:5

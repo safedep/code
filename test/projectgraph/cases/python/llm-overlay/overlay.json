@@ -1,0 +1,38 @@
+{
+  "version": "1",
+  "edges": [
+    {
+      "caller": "main.py//dispatch",
+      "site": {"path": "main.py", "line": 5, "column": 12},
+      "callee": "parsers.py//parse",
+      "kind": "llm",
+      "confidence": "low",
+      "model": "test-model-1",
+      "prompt_version": "v2",
+      "input_hash": "sha256:9a0c4be1",
+      "output": "parsers.parse"
+    },
+    {
+      "caller": "main.py//dispatch",
+      "site": {"path": "main.py", "line": 5, "column": 12},
+      "callee": "parsers.py//load",
+      "kind": "llm",
+      "confidence": "low",
+      "model": "test-model-1",
+      "prompt_version": "v2",
+      "input_hash": "sha256:9a0c4be1",
+      "output": "parsers.load"
+    },
+    {
+      "caller": "main.py",
+      "site": {"path": "main.py", "line": 9, "column": 5},
+      "callee": "parsers.py//parse",
+      "kind": "llm",
+      "confidence": "low",
+      "model": "test-model-1",
+      "prompt_version": "v2",
+      "input_hash": "sha256:51d2e7f0",
+      "output": "parsers.parse"
+    }
+  ]
+}

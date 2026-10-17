@@ -56,11 +56,14 @@ type Query struct {
 }
 
 // Hop is one step of a path. The first hop is the root and has no site.
+// Resolver names the rule of the edge into the hop, or the model and the
+// prompt of an llm edge.
 type Hop struct {
 	Key        string                  `json:"key"`
 	Site       projectgraph.Site       `json:"site"`
 	EdgeKind   projectgraph.EdgeKind   `json:"edge_kind,omitempty"`
 	Confidence projectgraph.Confidence `json:"confidence,omitempty"`
+	Resolver   string                  `json:"resolver,omitempty"`
 }
 
 // CallSite is a call of the target. Reached tells whether the search reached
@@ -328,7 +331,7 @@ func (ix *index) path(s *search, node int) []Hop {
 	var hops []Hop
 	for s.parent[node] >= 0 {
 		e := ix.g.Edges[s.parent[node]]
-		hops = append(hops, Hop{Key: e.To, Site: e.Site, EdgeKind: e.Kind, Confidence: e.Confidence})
+		hops = append(hops, Hop{Key: e.To, Site: e.Site, EdgeKind: e.Kind, Confidence: e.Confidence, Resolver: e.Resolver})
 		node = ix.id[e.From]
 	}
 	hops = append(hops, Hop{Key: ix.keys[node]})
