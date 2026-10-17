@@ -116,6 +116,8 @@ const (
 // lines and columns are 1-based. Sort puts every slice in its defined order,
 // so one file gives one JSON form. Package is the package clause of a Go
 // or a Java file. The files of one package share their top-level names.
+// Unit names the package of a file of dependency code, as
+// npm:lodash@4.17.21, and is empty for a file of the project.
 type Index struct {
 	Version     string        `json:"version"`
 	Path        string        `json:"path"`
@@ -123,6 +125,7 @@ type Index struct {
 	ContentHash string        `json:"content_hash"`
 	Test        bool          `json:"test,omitempty"`
 	Package     string        `json:"package,omitempty"`
+	Unit        string        `json:"unit,omitempty"`
 
 	Imports     []Import     `json:"imports,omitempty"`
 	Exports     []Export     `json:"exports,omitempty"`

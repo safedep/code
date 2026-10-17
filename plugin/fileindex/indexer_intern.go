@@ -62,6 +62,7 @@ func (t interner) index(ix *fidx.Index) {
 	intern(t, &ix.Language)
 	intern(t, &ix.ContentHash)
 	intern(t, &ix.Package)
+	intern(t, &ix.Unit)
 	for i := range ix.Imports {
 		imp := &ix.Imports[i]
 		intern(t, &imp.Module)

@@ -70,12 +70,14 @@ type familyName struct {
 // language family and name, in path order: the methods and the exported
 // functions for field edges, and the functions, methods, constructors and
 // classes for name edges. An object property or a property assignment that
-// holds a function is a method in the index.
+// holds a function is a method in the index. Only the files of the project
+// hold candidates. The code of a dependency has a definition for most
+// common names, and it would push a name over the cap.
 func (b *builder) definitionsByName() (fields, names map[familyName][]string) {
 	fields, names = map[familyName][]string{}, map[familyName][]string{}
 	for _, p := range b.paths {
 		ix := b.byPath[p]
-		if ix == nil || isDeclarationFile(p) {
+		if ix == nil || ix.Unit != "" || isDeclarationFile(p) {
 			continue
 		}
 		family := languageFamily(ix.Language)

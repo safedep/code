@@ -367,3 +367,23 @@ func TestBuildOverridesOfADependencyBase(t *testing.T) {
 	assert.Equal(t, []string{"w.py//W -> w.py//W//run reference python.override"}, edgesOfKind(g, EdgeReference),
 		"the dependency can call a method that no first-party base defines, and the constructor runs with the class")
 }
+
+func TestBuildFieldCandidatesComeFromTheProject(t *testing.T) {
+	dep := &fileindex.Index{Version: fileindex.Version, Path: "node_modules/lib/index.js", Language: langcode.Javascript, Unit: "npm:lib@1.0.0"}
+	for i := range 25 {
+		dep.Definitions = append(dep.Definitions, def(fileindex.DefMethod, fmt.Sprintf("node_modules/lib/index.js//o%d//get", i), i+1))
+	}
+	own := &fileindex.Index{
+		Version: fileindex.Version, Path: "store.js", Language: langcode.Javascript,
+		Definitions: []fileindex.Definition{def(fileindex.DefMethod, "store.js//cache//get", 1)},
+	}
+	main := &fileindex.Index{
+		Version: fileindex.Version, Path: "main.js", Language: langcode.Javascript,
+		Unresolved: []fileindex.Unresolved{{Caller: "main.js", Line: 1, Column: 1, Text: "o.get", Receiver: "o", Method: "get", Reason: fileindex.UnresolvedUnknownReceiver}},
+	}
+	g, err := Build(context.Background(), []*fileindex.Index{dep, own, main}, Options{})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"main.js -> store.js//cache//get field javascript.field"}, edgesOfKind(g, EdgeField),
+		"the definitions of a dependency are no candidates, so they make no site ambiguous")
+	assert.Equal(t, []string{"main.js:1 main.js unknown-receiver get"}, unresolvedStrings(g))
+}
