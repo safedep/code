@@ -886,7 +886,7 @@ func (b *builder) followExport(sc *scope, ex fileindex.Export, hops int) (string
 		var key string
 		switch {
 		case !ok:
-			key = b.external(joinNonEmpty(fileindex.Namespace(sc.ix.Language, ex.From), ex.Item))
+			key = b.external(fileindex.JoinNonEmpty(fileindex.Namespace(sc.ix.Language, ex.From), ex.Item))
 		case ex.Item == "":
 			key = mod
 		default:
@@ -1207,11 +1207,4 @@ func firstDotted(s string) string {
 
 func lastDotted(s string) string {
 	return s[strings.LastIndex(s, ".")+1:]
-}
-
-func joinNonEmpty(unit, segment string) string {
-	if segment == "" {
-		return unit
-	}
-	return fileindex.Join(unit, segment)
 }

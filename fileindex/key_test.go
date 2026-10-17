@@ -37,3 +37,11 @@ func TestAnonymous(t *testing.T) {
 	assert.True(t, IsAnonymous(Anonymous(3, 1)))
 	assert.False(t, IsAnonymous("handler"))
 }
+
+func TestJoinNonEmptyAndCompareBool(t *testing.T) {
+	assert.Equal(t, "lib", JoinNonEmpty("lib", ""))
+	assert.Equal(t, "lib//load", JoinNonEmpty("lib", "load"))
+	assert.Equal(t, -1, CompareBool(false, true))
+	assert.Equal(t, 0, CompareBool(true, true))
+	assert.Equal(t, 1, CompareBool(true, false))
+}

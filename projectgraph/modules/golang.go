@@ -108,7 +108,7 @@ func (g *Golang) importPath(dir string) (string, bool) {
 		if slices.ContainsFunc(strings.Split(rel, "/"), func(part string) bool { return slices.Contains(goIgnoredDirs, part) }) {
 			return "", false
 		}
-		return joinNonEmpty(m.path, rel), true
+		return path.Join(m.path, rel), true
 	}
 	return "", false
 }
@@ -128,11 +128,4 @@ func below(dir, base string) (string, bool) {
 
 func underPath(spec, prefix string) bool {
 	return spec == prefix || strings.HasPrefix(spec, prefix+"/")
-}
-
-func joinNonEmpty(a, b string) string {
-	if b == "" {
-		return a
-	}
-	return a + "/" + b
 }

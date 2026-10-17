@@ -421,7 +421,7 @@ func (ix *Index) Sort() {
 			cmp.Compare(a.Module, b.Module),
 			cmp.Compare(a.Item, b.Item),
 			cmp.Compare(a.Alias, b.Alias),
-			compareBool(a.Wildcard, b.Wildcard),
+			CompareBool(a.Wildcard, b.Wildcard),
 			cmp.Compare(a.Kind, b.Kind),
 			cmp.Compare(a.Namespace, b.Namespace),
 		)
@@ -501,7 +501,8 @@ func CompareFlags(a, b Flag) int {
 	return cmp.Or(cmp.Compare(a.Line, b.Line), cmp.Compare(a.Kind, b.Kind))
 }
 
-func compareBool(a, b bool) int {
+// CompareBool orders false before true.
+func CompareBool(a, b bool) int {
 	switch {
 	case a == b:
 		return 0

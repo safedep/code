@@ -82,7 +82,7 @@ func (b *builder) addGoUnits() {
 			names = append(names, name)
 		}
 		slices.SortFunc(names, func(x, y string) int {
-			return cmp.Or(compareBool(isGoTestPackage(x, byClause), isGoTestPackage(y, byClause)), len(byClause[y])-len(byClause[x]), cmp.Compare(x, y))
+			return cmp.Or(fileindex.CompareBool(isGoTestPackage(x, byClause), isGoTestPackage(y, byClause)), len(byClause[y])-len(byClause[x]), cmp.Compare(x, y))
 		})
 		for i, name := range names {
 			u := b.addUnit(goUnitKey(dir, name), byClause[name])
@@ -209,15 +209,4 @@ func (b *builder) twins(key string) []string {
 		return nil
 	}
 	return slices.DeleteFunc(slices.Clone(keys), func(k string) bool { return k == key })
-}
-
-func compareBool(a, b bool) int {
-	switch {
-	case a == b:
-		return 0
-	case a:
-		return 1
-	default:
-		return -1
-	}
 }

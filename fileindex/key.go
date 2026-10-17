@@ -18,6 +18,15 @@ func Join(unit string, segments ...string) string {
 	return unit + Separator + strings.Join(segments, Separator)
 }
 
+// JoinNonEmpty returns the key of the segment under the unit, or the unit
+// for an empty segment, as the whole module of a re-export with no item.
+func JoinNonEmpty(unit, segment string) string {
+	if segment == "" {
+		return unit
+	}
+	return Join(unit, segment)
+}
+
 // Unit returns the first part of a key: a file path or an import namespace.
 func Unit(key string) string {
 	unit, _, _ := strings.Cut(key, Separator)
