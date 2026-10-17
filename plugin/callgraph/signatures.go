@@ -1,9 +1,9 @@
 package callgraph
 
 import (
-	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -11,9 +11,7 @@ import (
 	"buf.build/go/protovalidate"
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
-	"github.com/safedep/dry/ds/trie"
 	"github.com/safedep/dry/log"
-	"github.com/safedep/dry/utils"
 )
 
 const (
@@ -66,28 +64,17 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 
 	matcherResults := []SignatureMatchResult{}
 
-	functionCallTrie := trie.NewTrie[[]DfsResultItem]()
-	functionCallResultItems := cg.DFS()
+	dfsResults := cg.DFS()
 
 	if cg.LimitExceeded() {
 		log.Warnf("CallGraph for %s was truncated by %v, signature matching may be incomplete", cg.FileName, cg.Truncations())
 	}
 
-	// Warn if DFS results are very large
-	if len(functionCallResultItems) > 50000 {
-		log.Warnf("Large DFS result set (%d items) for file %s, signature matching may be slow", len(functionCallResultItems), cg.FileName)
+	if len(dfsResults) > 50000 {
+		log.Warnf("Large DFS result set (%d items) for file %s, signature matching may be slow", len(dfsResults), cg.FileName)
 	}
 
-	for _, resultItem := range functionCallResultItems {
-		existingResultItem, exists := functionCallTrie.GetWord(resultItem.Namespace)
-		if !exists {
-			existingResultItem = utils.PtrTo(make([]DfsResultItem, 0))
-		}
-
-		*existingResultItem = append(*existingResultItem, resultItem)
-
-		functionCallTrie.Insert(resultItem.Namespace, existingResultItem)
-	}
+	calls := newCallIndex(dfsResults)
 
 	for _, signature := range sm.targetSignatures {
 		languageSignature, exists := signature.Languages[string(languageCode)]
@@ -104,51 +91,30 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 
 		matchedConditions := []MatchedCondition{}
 		for _, condition := range languageSignature.Conditions {
-			if condition.Type == "call" {
-				matchCondition := MatchedCondition{
-					Condition: condition,
-					Evidences: []MatchedEvidence{},
+			if condition.Type != "call" {
+				continue
+			}
+
+			matchCondition := MatchedCondition{
+				Condition: condition,
+				Evidences: []MatchedEvidence{},
+			}
+
+			for _, item := range calls.lookup(profileOf(languageCode).moduleNamespace(condition.Value)) {
+				if !matchesArgumentConstraints(item, condition.Args, languageCode) {
+					continue
 				}
+				matchCondition.Evidences = append(matchCondition.Evidences, MatchedEvidence{
+					Caller:    item.Caller,
+					Callee:    calleeOf(item),
+					Site:      item.Site,
+					Text:      item.Text,
+					Arguments: item.Arguments,
+				})
+			}
 
-				lookupNamespace := profileOf(languageCode).moduleNamespace(condition.Value)
-				lookupNamespace, isWildcardLookup := trimWildcardLookupNamespace(lookupNamespace)
-
-				var dfsResultItemsWithMatchedFunctionName []DfsResultItem
-
-				if isWildcardLookup {
-					// Look up any children of the namespace in the trie
-					lookupEntries := functionCallTrie.WordsWithPrefix(lookupNamespace + namespaceSeparator)
-					dfsResultItemsWithMatchedFunctionName = []DfsResultItem{}
-					for _, lookupEntry := range lookupEntries {
-						dfsResultItemsWithMatchedFunctionName = append(dfsResultItemsWithMatchedFunctionName, *lookupEntry.Value...)
-					}
-				} else {
-					// Lookup the exact namespace in the trie
-					lookupNode, nodeExists := functionCallTrie.GetWord(lookupNamespace)
-					if nodeExists && lookupNode != nil {
-						dfsResultItemsWithMatchedFunctionName = *lookupNode
-					}
-				}
-
-				for _, evidenceResultItem := range dfsResultItemsWithMatchedFunctionName {
-					if matchesArgumentConstraints(evidenceResultItem, condition.Args, languageCode) {
-						// If the arguments match the required constraints, we can add this evidence
-						matchCondition.Evidences = append(matchCondition.Evidences, MatchedEvidence{
-							Caller:    evidenceResultItem.Caller,
-							Callee:    calleeOf(evidenceResultItem),
-							Site:      evidenceResultItem.Site,
-							Text:      evidenceResultItem.Text,
-							Arguments: evidenceResultItem.Arguments,
-						})
-					} else {
-						// Skip this evidence if it doesn't match the argument constraints
-						continue
-					}
-				}
-
-				if len(matchCondition.Evidences) > 0 {
-					matchedConditions = append(matchedConditions, matchCondition)
-				}
+			if len(matchCondition.Evidences) > 0 {
+				matchedConditions = append(matchedConditions, matchCondition)
 			}
 		}
 
@@ -163,6 +129,42 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 	}
 
 	return matcherResults, nil
+}
+
+// callIndex holds the DFS results of a graph by namespace. The keys are
+// sorted, so a wildcard lookup gives its results in one order.
+type callIndex struct {
+	items map[string][]DfsResultItem
+	keys  []string
+}
+
+func newCallIndex(results []DfsResultItem) callIndex {
+	items := make(map[string][]DfsResultItem)
+	for _, item := range results {
+		items[item.Namespace] = append(items[item.Namespace], item)
+	}
+	return callIndex{items: items, keys: slices.Sorted(maps.Keys(items))}
+}
+
+// lookup returns the results of namespace. A namespace that ends in //*,
+// as os//*, gives the results of every namespace below it, in key order.
+// Only the last segment can be a wildcard.
+func (ci callIndex) lookup(namespace string) []DfsResultItem {
+	prefix, wildcard := strings.CutSuffix(namespace, namespaceSeparator+"*")
+	if !wildcard {
+		return ci.items[namespace]
+	}
+
+	prefix += namespaceSeparator
+	var items []DfsResultItem
+	start, _ := slices.BinarySearch(ci.keys, prefix)
+	for _, key := range ci.keys[start:] {
+		if !strings.HasPrefix(key, prefix) {
+			break
+		}
+		items = append(items, ci.items[key]...)
+	}
+	return items
 }
 
 // calleeOf returns the call graph node of a DFS result. A namespace that
@@ -240,18 +242,6 @@ func matchesArgumentConstraints(
 	}
 
 	return true
-}
-
-// Identifies if the namespace is a wildcard lookup and returns the namespace without the wildcard
-// qualifier and a boolean indicating if it was a wildcard lookup.
-// Note - We only support wildcard lookup qualifier at the end of the namespace.
-// eg. "foo//bar//*" is a valid wildcard lookup namespace, but "foo//*//bar" is not valid
-func trimWildcardLookupNamespace(namespace string) (string, bool) {
-	if strings.HasSuffix(namespace, "//*") {
-		// Remove the wildcard qualifier from the namespace
-		return strings.TrimSuffix(namespace, "//*"), true
-	}
-	return namespace, false
 }
 
 // Validates list of callgraphv1.Signature based on protovalidate specification

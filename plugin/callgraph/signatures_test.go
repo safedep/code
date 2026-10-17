@@ -2,6 +2,8 @@ package callgraph
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 
 	callgraphv1 "buf.build/gen/go/safedep/api/protocolbuffers/go/safedep/messages/code/callgraph/v1"
@@ -1059,4 +1061,34 @@ func TestCalleeOfKeepsTheNamespace(t *testing.T) {
 	assert.Same(t, node, calleeOf(DfsResultItem{Namespace: "openai//OpenAI", Node: node}))
 	assert.Equal(t, "crewai//flow//Flow", calleeOf(DfsResultItem{Namespace: "crewai//flow//Flow"}).Namespace)
 
+}
+
+func TestWildcardEvidenceHasOneOrder(t *testing.T) {
+	var source strings.Builder
+	source.WriteString("import os\n")
+	for c := 'a'; c <= 't'; c++ {
+		fmt.Fprintf(&source, "os.%c%c()\n", c, c)
+	}
+	cg := buildFromSource(t, pythonLanguage(t), "a.py", source.String())
+
+	matcher, err := NewSignatureMatcher([]*callgraphv1.Signature{callSignature("os.any", core.LanguageCodePython, MatchAny, "os.*")})
+	require.NoError(t, err)
+
+	calleesOfMatch := func() []string {
+		results, err := matcher.MatchSignatures(cg)
+		require.NoError(t, err)
+		require.Len(t, results, 1)
+		var callees []string
+		for _, evidence := range results[0].MatchedConditions[0].Evidences {
+			callees = append(callees, evidence.Callee.Namespace)
+		}
+		return callees
+	}
+
+	first := calleesOfMatch()
+	require.Len(t, first, 20)
+	assert.IsIncreasing(t, first)
+	for range 20 {
+		assert.Equal(t, first, calleesOfMatch())
+	}
 }
