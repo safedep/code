@@ -1,0 +1,40 @@
+source: safedep:hand
+description: src/main.ts imports @lib/loader. tsconfig.json extends tsconfig.base.json, which maps @lib/* to src/lib/*.
+roots:
+  - key: src/main.ts
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.ts
+    to: src/lib/loader.ts//load
+    kind: direct
+    confidence: high
+    site: src/main.ts:3
+  - from: src/lib/loader.ts//load
+    to: js-yaml//load
+    kind: direct
+    confidence: high
+    site: src/lib/loader.ts:4
+  - from: src/main.ts
+    to: src/lib/loader.ts
+    kind: import
+    confidence: high
+    site: src/main.ts:1
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/main.ts
+      - key: src/lib/loader.ts//load
+        site: src/main.ts:3
+        kind: direct
+        confidence: high
+      - key: js-yaml//load
+        site: src/lib/loader.ts:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/lib/loader.ts//load
+        site: src/lib/loader.ts:4
+        reached: true

@@ -1,0 +1,20 @@
+source: safedep:hand
+description: handlers.load_old calls yaml.load, and no root reaches load_old. main.py calls only handlers.parse.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+edges:
+  - from: handlers.py//load_old
+    to: yaml//load
+    kind: direct
+    confidence: high
+    site: handlers.py:13
+unresolved: []
+results:
+  - target: yaml//load
+    status: not-found
+    call_sites:
+      - caller: handlers.py//load_old
+        site: handlers.py:13
+        reached: false

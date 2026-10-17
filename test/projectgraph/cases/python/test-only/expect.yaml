@@ -1,0 +1,47 @@
+source: safedep:hand
+description: Only a test calls yaml.safe_load. The test roots count only with include_tests.
+test_paths:
+  - tests
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+  - key: tests/test_config.py
+    kind: test
+    rule: test.files
+  - key: tests/test_config.py//test_load
+    kind: test
+    rule: test.files
+edges:
+  - from: tests/test_config.py//test_load
+    to: yaml//safe_load
+    kind: direct
+    confidence: high
+    site: tests/test_config.py:5
+unresolved: []
+results:
+  - target: yaml//safe_load
+    status: not-found
+    test_path:
+      - key: tests/test_config.py//test_load
+      - key: yaml//safe_load
+        site: tests/test_config.py:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: tests/test_config.py//test_load
+        site: tests/test_config.py:5
+        reached: false
+  - target: yaml//safe_load
+    include_tests: true
+    status: found
+    path:
+      - key: tests/test_config.py//test_load
+      - key: yaml//safe_load
+        site: tests/test_config.py:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: tests/test_config.py//test_load
+        site: tests/test_config.py:5
+        reached: true

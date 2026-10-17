@@ -1,0 +1,48 @@
+source: safedep:hand
+description: Only a spec file calls yaml.load. The test roots count only with include_tests.
+test_paths:
+  - '*.spec.ts'
+roots:
+  - key: src/config.spec.ts
+    kind: test
+    rule: test.files
+  - key: src/main.ts
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/config.spec.ts
+    to: js-yaml//load
+    kind: direct
+    confidence: high
+    site: src/config.spec.ts:5
+unresolved:
+  - caller: src/config.spec.ts
+    site: src/config.spec.ts:5
+    reason: no-definition
+    method: toEqual
+results:
+  - target: js-yaml//load
+    status: not-found
+    test_path:
+      - key: src/config.spec.ts
+      - key: js-yaml//load
+        site: src/config.spec.ts:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/config.spec.ts
+        site: src/config.spec.ts:5
+        reached: false
+  - target: js-yaml//load
+    include_tests: true
+    status: found
+    path:
+      - key: src/config.spec.ts
+      - key: js-yaml//load
+        site: src/config.spec.ts:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/config.spec.ts
+        site: src/config.spec.ts:5
+        reached: true

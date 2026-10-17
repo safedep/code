@@ -1,0 +1,27 @@
+source: safedep:hand
+description: loadPlugin requires a module by a computed name. No target is certain, so the answer is uncertain.
+roots:
+  - key: index.js
+    kind: manifest
+    rule: node.package-json
+edges: []
+no_edges:
+  - from: index.js//loadPlugin
+    to: plugin//run
+unresolved:
+  - caller: index.js//loadPlugin
+    site: index.js:2
+    reason: dynamic-import
+    method: require
+  - caller: index.js//loadPlugin
+    site: index.js:3
+    reason: unknown-receiver
+    method: run
+results:
+  - target: js-yaml//load
+    status: uncertain
+    uncertainties:
+      - kind: dynamic-flag
+        site: index.js:2
+      - kind: unresolved-call
+        site: index.js:2

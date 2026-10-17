@@ -1,0 +1,4 @@
+{
+  "name": "paths-app",
+  "bin": "src/main.ts"
+}

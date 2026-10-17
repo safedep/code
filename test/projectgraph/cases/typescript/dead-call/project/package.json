@@ -1,0 +1,4 @@
+{
+  "name": "ts-dead",
+  "bin": "src/main.ts"
+}

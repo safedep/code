@@ -1,0 +1,4 @@
+{
+  "name": "ts-fetch",
+  "bin": "src/main.ts"
+}

@@ -1,0 +1,41 @@
+source: safedep:hand
+description: The acceptance case of the design. main.py calls handlers.parse, which calls yaml.load. A Procfile runs main.py.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+edges:
+  - from: main.py
+    to: handlers.py//parse
+    kind: direct
+    confidence: high
+    site: main.py:3
+  - from: handlers.py//parse
+    to: yaml//load
+    kind: direct
+    confidence: high
+    site: handlers.py:12
+unresolved:
+  - caller: handlers.py//read
+    site: handlers.py:8
+    reason: unknown-receiver
+    method: read
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: handlers.py//parse
+        site: main.py:3
+        kind: direct
+        confidence: high
+      - key: yaml//load
+        site: handlers.py:12
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: handlers.py//parse
+        site: handlers.py:12
+        reached: true
+  - target: yaml//dump
+    status: not-found

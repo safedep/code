@@ -1,0 +1,58 @@
+source: safedep:hand
+description: main.py imports parse from the package pkg. pkg/__init__.py re-exports parse from pkg/loader.py, which calls yaml.load.
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: main.py
+    to: main.py//main
+    kind: direct
+    confidence: high
+    site: main.py:9
+  - from: main.py//main
+    to: pkg/__init__.py//parse
+    kind: direct
+    confidence: high
+    site: main.py:5
+  - from: pkg/__init__.py//parse
+    to: pkg/loader.py//parse
+    kind: export
+    confidence: high
+    site: pkg/__init__.py:1
+  - from: pkg/loader.py//parse
+    to: yaml//load
+    kind: direct
+    confidence: high
+    site: pkg/loader.py:6
+  - from: pkg/__init__.py
+    to: pkg/loader.py
+    kind: import
+    confidence: high
+    site: pkg/__init__.py:1
+unresolved: []
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: main.py//main
+        site: main.py:9
+        kind: direct
+        confidence: high
+      - key: pkg/__init__.py//parse
+        site: main.py:5
+        kind: direct
+        confidence: high
+      - key: pkg/loader.py//parse
+        site: pkg/__init__.py:1
+        kind: export
+        confidence: high
+      - key: yaml//load
+        site: pkg/loader.py:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: pkg/loader.py//parse
+        site: pkg/loader.py:6
+        reached: true

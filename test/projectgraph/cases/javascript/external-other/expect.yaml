@@ -1,0 +1,47 @@
+source: safedep:hand
+description: index.js calls axios.get through fetchText. yaml.dump is in a function that no root reaches, and yaml.load is not called.
+roots:
+  - key: index.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: index.js
+    to: index.js//fetchText
+    kind: direct
+    confidence: high
+    site: index.js:12
+  - from: index.js//fetchText
+    to: axios//get
+    kind: direct
+    confidence: high
+    site: index.js:5
+unresolved:
+  - caller: index.js
+    site: index.js:12
+    reason: unknown-receiver
+    method: then
+results:
+  - target: axios//get
+    status: found
+    path:
+      - key: index.js
+      - key: index.js//fetchText
+        site: index.js:12
+        kind: direct
+        confidence: high
+      - key: axios//get
+        site: index.js:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: index.js//fetchText
+        site: index.js:5
+        reached: true
+  - target: js-yaml//load
+    status: not-found
+  - target: js-yaml//dump
+    status: not-found
+    call_sites:
+      - caller: index.js//dump
+        site: index.js:9
+        reached: false

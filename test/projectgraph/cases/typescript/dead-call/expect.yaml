@@ -1,0 +1,20 @@
+source: safedep:hand
+description: loadOld calls yaml.load, and no root reaches loadOld. src/main.ts calls only parse.
+roots:
+  - key: src/main.ts
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/handlers.ts//loadOld
+    to: js-yaml//load
+    kind: direct
+    confidence: high
+    site: src/handlers.ts:8
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: not-found
+    call_sites:
+      - caller: src/handlers.ts//loadOld
+        site: src/handlers.ts:8
+        reached: false

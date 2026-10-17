@@ -1,0 +1,43 @@
+source: safedep:hand
+description: src/cli.ts makes a Parser that the barrel src/index.ts gives on by export *, and calls its parse method. The export type of the barrel makes no edge.
+roots:
+  - key: src/cli.ts
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/cli.ts
+    to: src/parser.ts//Parser//parse
+    kind: member
+    confidence: high
+    site: src/cli.ts:4
+  - from: src/parser.ts//Parser//parse
+    to: js-yaml//load
+    kind: direct
+    confidence: high
+    site: src/parser.ts:5
+  - from: src/index.ts//Parser
+    to: src/parser.ts//Parser
+    kind: export
+    confidence: high
+    site: src/index.ts:1
+no_edges:
+  - from: src/index.ts
+    to: src/options.ts
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/cli.ts
+      - key: src/parser.ts//Parser//parse
+        site: src/cli.ts:4
+        kind: member
+        confidence: high
+      - key: js-yaml//load
+        site: src/parser.ts:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/parser.ts//Parser//parse
+        site: src/parser.ts:5
+        reached: true

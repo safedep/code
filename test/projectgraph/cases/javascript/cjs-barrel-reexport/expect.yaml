@@ -1,0 +1,44 @@
+source: safedep:hand
+description: index.js requires load from lib/index.js, which gives on the load that it requires from lib/loader.js.
+roots:
+  - key: index.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: index.js
+    to: lib/index.js//load
+    kind: direct
+    confidence: high
+    site: index.js:3
+  - from: lib/index.js//load
+    to: lib/loader.js//load
+    kind: export
+    confidence: high
+    site: lib/index.js:1
+  - from: lib/loader.js//load
+    to: js-yaml//load
+    kind: direct
+    confidence: high
+    site: lib/loader.js:4
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: index.js
+      - key: lib/index.js//load
+        site: index.js:3
+        kind: direct
+        confidence: high
+      - key: lib/loader.js//load
+        site: lib/index.js:1
+        kind: export
+        confidence: high
+      - key: js-yaml//load
+        site: lib/loader.js:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib/loader.js//load
+        site: lib/loader.js:4
+        reached: true

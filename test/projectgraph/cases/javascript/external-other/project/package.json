@@ -1,0 +1,4 @@
+{
+  "name": "fetch-app",
+  "bin": "index.js"
+}

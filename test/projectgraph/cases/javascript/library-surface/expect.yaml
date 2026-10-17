@@ -1,0 +1,31 @@
+source: safedep:hand
+description: A library whose package.json names index.js as main. The exports of the main entry are roots, so readConfig reaches yaml.load.
+roots:
+  - key: index.js
+    kind: manifest
+    rule: node.package-json
+  - key: index.js//readConfig
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: index.js//readConfig
+    to: js-yaml//load
+    kind: direct
+    confidence: high
+    site: index.js:4
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: index.js//readConfig
+      - key: js-yaml//load
+        site: index.js:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: index.js//readConfig
+        site: index.js:4
+        reached: true
+  - target: js-yaml//dump
+    status: not-found

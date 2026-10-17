@@ -1,0 +1,4 @@
+{
+  "name": "ts-tested",
+  "bin": "src/main.ts"
+}

@@ -1,0 +1,27 @@
+source: safedep:hand
+description: The main guard calls load_plugin, which imports a module by a computed name. No target is certain, so the answer is uncertain.
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges: []
+no_edges:
+  - from: main.py//load_plugin
+    to: importlib//import_module//run
+unresolved:
+  - caller: main.py//load_plugin
+    site: main.py:6
+    reason: dynamic-import
+    method: import_module
+  - caller: main.py//load_plugin
+    site: main.py:7
+    reason: unknown-receiver
+    method: run
+results:
+  - target: yaml//load
+    status: uncertain
+    uncertainties:
+      - kind: dynamic-flag
+        site: main.py:6
+      - kind: unresolved-call
+        site: main.py:6

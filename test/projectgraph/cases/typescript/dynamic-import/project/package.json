@@ -1,0 +1,4 @@
+{
+  "name": "ts-plugins",
+  "bin": "src/main.ts"
+}
