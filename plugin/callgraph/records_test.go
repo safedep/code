@@ -658,12 +658,24 @@ func TestPythonCallOfAnImportGivesTheImport(t *testing.T) {
 	}
 }
 
-func TestPythonCallOfALocalFunctionGivesNoValue(t *testing.T) {
-	cg := buildFromSource(t, pythonLanguage(t), "a.py", "def make():\n    pass\n\np = make()\np.go()\n")
-
-	var targets []string
-	for _, ref := range cg.Nodes["a.py"].CallsTo {
-		targets = append(targets, ref.Targets...)
+func TestPythonCallGivesNoValue(t *testing.T) {
+	cases := []struct {
+		name   string
+		source string
+		target string
+	}{
+		{"local function", "def make():\n    pass\n\np = make()\np.go()\n", "a.py//make//go"},
+		{"dynamic import", "import importlib\nm = importlib.import_module(n)\nm.run()\n", "importlib//import_module//run"},
 	}
-	assert.NotContains(t, targets, "a.py//make//go")
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cg := buildFromSource(t, pythonLanguage(t), "a.py", tc.source)
+
+			var targets []string
+			for _, ref := range cg.Nodes["a.py"].CallsTo {
+				targets = append(targets, ref.Targets...)
+			}
+			assert.NotContains(t, targets, tc.target)
+		})
+	}
 }

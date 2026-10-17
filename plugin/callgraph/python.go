@@ -193,11 +193,12 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 		case callGraph.classConstructors[classAssignmentNode.Namespace]:
 			result.ImmediateAssignments = append(result.ImmediateAssignments, classAssignmentNode)
 			log.Debugf("Class constructed - %s in fncall for %s\n", classAssignmentNode.Namespace, functionName)
-		case callGraph.imported(classAssignmentNode.Namespace):
+		case callGraph.imported(classAssignmentNode.Namespace) && !callGraph.isPythonDynamicImport(classAssignmentNode.Namespace):
 			// The file cannot tell an imported class from an imported
 			// function. The value of the call is the callee, as for new X()
 			// in JavaScript, so p.parse() in p = Parser() keeps the import
-			// and the link step can find the class and its method.
+			// and the link step can find the class and its method. A
+			// dynamic import gives a module that the call computes.
 			result.ImmediateAssignments = append(result.ImmediateAssignments, classAssignmentNode)
 		}
 	}
