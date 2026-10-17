@@ -1,34 +1,30 @@
 source: safedep:hand
-description: src/main.js calls the method run of an object literal through the name api. The index does not know the value of api, so a field edge joins the call to the method run.
+description: src/main.js calls the method run of an object literal through the name api. The method has the key api//run, as a function that the property run holds would have, so the call names it as a member of the object and needs no record.
 roots:
   - key: src/main.js
     kind: manifest
     rule: node.package-json
 edges:
   - from: src/main.js
-    to: src/main.js//run
-    kind: field
-    confidence: low
+    to: src/main.js//api//run
+    kind: member
+    confidence: high
     site: src/main.js:9
-unresolved:
-  - caller: src/main.js
-    site: src/main.js:9
-    reason: unknown-receiver
-    method: run
+unresolved: []
 results:
   - target: js-yaml//load
     status: found
     path:
       - key: src/main.js
-      - key: src/main.js//run
+      - key: src/main.js//api//run
         site: src/main.js:9
-        kind: field
-        confidence: low
+        kind: member
+        confidence: high
       - key: js-yaml//load
         site: src/main.js:5
         kind: direct
         confidence: high
     call_sites:
-      - caller: src/main.js//run
+      - caller: src/main.js//api//run
         site: src/main.js:5
         reached: true

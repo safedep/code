@@ -11,7 +11,7 @@ edges:
     confidence: low
     site: src/main.ts:6
   - from: src/main.ts//start
-    to: src/plain.ts//run
+    to: src/plain.ts//shell//run
     kind: field
     confidence: low
     site: src/main.ts:6
@@ -49,7 +49,7 @@ results:
         site: src/main.ts:9
         kind: direct
         confidence: high
-      - key: src/plain.ts//run
+      - key: src/plain.ts//shell//run
         site: src/main.ts:6
         kind: field
         confidence: low
@@ -58,6 +58,6 @@ results:
         kind: direct
         confidence: high
     call_sites:
-      - caller: src/plain.ts//run
+      - caller: src/plain.ts//shell//run
         site: src/plain.ts:6
         reached: true

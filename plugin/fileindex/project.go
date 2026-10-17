@@ -79,6 +79,9 @@ type projection struct {
 	bodies   map[span]string
 	exports  map[string]bool
 	bindings map[string]bool
+	// members holds the line and the column of each call that names a
+	// member of an object of the file.
+	members map[[2]uint32]bool
 
 	// exportStatements are the export statements and the CommonJS export
 	// assignments of the file.
@@ -117,6 +120,7 @@ func project(ctx context.Context, tree core.ParseTree) (*fidx.Index, error) {
 		bodies:   map[span]string{},
 		exports:  map[string]bool{},
 		bindings: map[string]bool{},
+		members:  map[[2]uint32]bool{},
 	}
 
 	switch {
@@ -491,6 +495,10 @@ func (p *projection) addCalls() {
 				}
 			}
 			targets = p.throughRequire(ref.Receiver, targets)
+			if local, ok := p.objectMember(key, targets); ok {
+				targets = local
+				p.members[[2]uint32{ref.Site.StartLine, ref.Site.StartColumn}] = true
+			}
 			p.ix.Calls = append(p.ix.Calls, fidx.Call{
 				Caller:   p.caller(key, ref.Site),
 				Line:     int(ref.Site.StartLine),
@@ -506,12 +514,33 @@ func (p *projection) addCalls() {
 	}
 }
 
+// objectMember returns the definition that a JavaScript call of a member of
+// an object of the file names, as api//run for api.run() after
+// const api = { run() {} }. The call graph keeps no value of an object
+// literal, so its target has no unit. Only a target whose whole key is a
+// definition changes.
+func (p *projection) objectMember(caller string, targets []string) ([]string, bool) {
+	if !p.ix.Language.IsECMAScript() || len(targets) != 1 || fidx.HasKeyPrefix(targets[0], p.cg.FileName) {
+		return nil, false
+	}
+	bound := p.rebind(caller, fidx.Unit(targets[0]))
+	if len(bound) != 1 || len(fidx.Segments(targets[0])) == 0 {
+		return nil, false
+	}
+	local := fidx.Join(bound[0], fidx.Segments(targets[0])...)
+	if def := p.defs[local]; def == nil || def.Kind != fidx.DefMethod && def.Kind != fidx.DefFunction {
+		return nil, false
+	}
+	return []string{local}, true
+}
+
 // caller returns the definition that runs the call site that the
 // definition key holds. A function that a JavaScript property or argument
 // holds, and the static initializer of a Java class, are definitions that
-// the call graph does not know, so they take the calls of their nodes. A JavaScript static field or static block runs when the class
-// is defined, so its calls belong to the scope that defines the class. A
-// function value in a static field runs only when a call runs it. A flag in
+// the call graph does not know, so they take the calls of their nodes. A
+// JavaScript static field or static block runs when the class is defined,
+// so its calls belong to the scope that defines the class. A function
+// value in a static field runs only when a call runs it. A flag in
 // a static block stays on the class.
 func (p *projection) caller(key string, site ast.NodePosition) string {
 	def, ok := p.defs[key]
@@ -644,6 +673,9 @@ func (p *projection) rebind(caller, name string) []string {
 
 func (p *projection) addUnresolved() {
 	for _, u := range p.cg.Unresolved() {
+		if p.members[[2]uint32{u.Site.StartLine, u.Site.StartColumn}] && u.Reason == callgraph.UnresolvedUnknownReceiver {
+			continue
+		}
 		p.ix.Unresolved = append(p.ix.Unresolved, fidx.Unresolved{
 			Caller:   p.caller(u.Caller, u.Site),
 			Line:     int(u.Site.StartLine),

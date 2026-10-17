@@ -98,7 +98,7 @@ func TestFileIndexPropertyFunctions(t *testing.T) {
 		callers[call.Callee] = call.Caller
 	}
 	assert.Equal(t, map[string]string{
-		"yaml.a": "a.js//run",
+		"yaml.a": "a.js//api//run",
 		"yaml.b": "a.js//api//go",
 		"yaml.c": "a.js//api//later",
 		"yaml.d": "a.js//load",
@@ -108,7 +108,7 @@ func TestFileIndexPropertyFunctions(t *testing.T) {
 		"yaml.h": "a.js//K//later",
 	}, callers)
 
-	for _, key := range []string{"a.js//api//go", "a.js//api//later", "a.js//load", "a.js//outer//o//inner"} {
+	for _, key := range []string{"a.js//api//run", "a.js//api//go", "a.js//api//later", "a.js//load", "a.js//outer//o//inner"} {
 		def := definitionOf(t, ix, key)
 		assert.Equal(t, fidx.DefMethod, def.Kind, key)
 		assert.Empty(t, def.Parent, key)
@@ -188,4 +188,30 @@ func TestFileIndexArrowInAnObjectOrAnArgument(t *testing.T) {
 	assert.Equal(t, "a.js//o//m", callers["yaml.x"])
 	assert.Equal(t, "a.js//<anonymous:2>", callers["yaml.y"])
 	assert.Equal(t, fidx.DefVariable, definitionOf(t, ix, "a.js//h").Kind)
+}
+
+func TestFileIndexObjectMembers(t *testing.T) {
+	source := strings.Join([]string{
+		"const api = { run(t) { yaml.a(t); }, go: function () { yaml.b(); } };",
+		"api.run('x');",
+		"api.go();",
+		"api.missing();",
+		"module.exports = { load(t) { yaml.c(t); } };",
+	}, "\n") + "\n"
+	ix := indexSource(t, core.LanguageCodeJavascript, "a.js", source)
+	targets := map[string][]string{}
+	for _, call := range ix.Calls {
+		targets[call.Callee] = call.Targets
+	}
+	assert.Equal(t, []string{"a.js//api//run"}, targets["api.run"], "a method and a property function of an object share one key rule")
+	assert.Equal(t, []string{"a.js//api//go"}, targets["api.go"])
+	assert.Equal(t, []string{"api//missing"}, targets["api.missing"])
+	var methods []string
+	for _, u := range ix.Unresolved {
+		methods = append(methods, u.Method)
+	}
+	assert.Contains(t, methods, "missing")
+	assert.NotContains(t, methods, "run", "a call of a member of an object of the file needs no record")
+	assert.NotContains(t, methods, "go")
+	assert.Contains(t, ix.Exports, fidx.Export{Name: "load", Target: "a.js//load", Line: 5})
 }

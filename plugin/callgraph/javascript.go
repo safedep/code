@@ -96,7 +96,7 @@ var ecmascriptProcessors = map[string]nodeProcessor{
 	"function_declaration":       functionDefinitionProcessor,
 	"lexical_declaration":        lexicalDeclarationProcessor,
 	"member_expression":          memberExpressionProcessor,
-	"method_definition":          functionDefinitionProcessor,
+	"method_definition":          jsMethodDefinitionProcessor,
 	"new_expression":             jsNewExpressionProcessor,
 	"ternary_expression":         ternaryExpressionProcessor,
 	"variable_declarator":        variableDeclaratorProcessor,
@@ -470,6 +470,74 @@ func arrowFunctionProcessor(arrowNode *sitter.Node, treeData []byte, currentName
 
 	results.addResults(processFunctionBody(arrowNode, treeData, arrowFunctionNamespace, callGraph, metadata))
 	return results
+}
+
+// maxObjectDepth bounds the walk from an object up to the names that hold
+// it, as a.b.c.
+const maxObjectDepth = 8
+
+// ObjectNames returns the names that lead to a JavaScript object, as [api]
+// for the object of const api = {} and [api, routes] for api.routes. The
+// module object of exports and module.exports, the prototype of a class
+// and this add no name, so exports.go is the go of the module and
+// A.prototype.go is the go of the class A. An object that no name holds,
+// as an argument, adds no name. A function that a property of the object
+// holds is keyed under these names, as api//go, in the call graph and in
+// the file index.
+func ObjectNames(object *sitter.Node, treeData []byte) []string {
+	return objectNames(object, treeData, 0)
+}
+
+func objectNames(object *sitter.Node, treeData []byte, depth int) []string {
+	if object == nil || depth > maxObjectDepth {
+		return nil
+	}
+	switch object.Type() {
+	case "identifier":
+		if name := object.Content(treeData); name != "exports" {
+			return []string{name}
+		}
+	case "member_expression":
+		if object.Content(treeData) == "module.exports" {
+			return nil
+		}
+		names := objectNames(object.ChildByFieldName("object"), treeData, depth+1)
+		if property := object.ChildByFieldName("property"); property != nil && property.Content(treeData) != "prototype" {
+			names = append(names, property.Content(treeData))
+		}
+		return names
+	case "object":
+		switch parent := object.Parent(); {
+		case parent == nil:
+		case parent.Type() == "variable_declarator":
+			if name := parent.ChildByFieldName("name"); name != nil && name.Type() == "identifier" {
+				return []string{name.Content(treeData)}
+			}
+		case parent.Type() == "pair":
+			if key := parent.ChildByFieldName("key"); key != nil {
+				return append(objectNames(parent.Parent(), treeData, depth+1), key.Content(treeData))
+			}
+		case parent.Type() == "assignment_expression":
+			return objectNames(parent.ChildByFieldName("left"), treeData, depth+1)
+		}
+	}
+	return nil
+}
+
+// jsMethodDefinitionProcessor processes a method of a class or of an object
+// literal. A method of an object is keyed under the names that hold the
+// object, as api//run in const api = { run() {} }, as a function that a
+// property holds is.
+func jsMethodDefinitionProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	if node == nil {
+		return newProcessorResult()
+	}
+	if parent := node.Parent(); parent != nil && parent.Type() == "object" {
+		for _, name := range ObjectNames(parent, treeData) {
+			currentNamespace += namespaceSeparator + name
+		}
+	}
+	return functionDefinitionProcessor(node, treeData, currentNamespace, callGraph, metadata)
 }
 
 // classExpressionProcessor processes a class expression, as the class in

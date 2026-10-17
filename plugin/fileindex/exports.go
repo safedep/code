@@ -223,6 +223,9 @@ func (p *projection) addModuleExports(value *sitter.Node, line int) {
 			switch property.Type() {
 			case "shorthand_property_identifier":
 				p.export(p.text(property), p.text(property), line)
+			case "method_definition":
+				name := p.text(property.ChildByFieldName("name"))
+				p.export(name, name, line)
 			case "pair":
 				name, v := p.text(property.ChildByFieldName("key")), property.ChildByFieldName("value")
 				switch {
