@@ -104,9 +104,9 @@ func goCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 	}
 
 	for _, callee := range callees {
-		ref := callGraph.reference(callee, functionNode, callArguments)
+		ref := callGraph.reference(callee, CallCall, functionNode, callArguments)
 		ref.Unbound = unbound
-		callGraph.addCall(currentNamespace, nil, nil, ref)
+		callGraph.addCall(currentNamespace, nil, ref)
 		log.Debugf("Go call: %s -> %s", currentNamespace, callee)
 	}
 

@@ -28,7 +28,7 @@ func buildAndClose(t *testing.T, language core.Language, name, source string) *C
 
 	tree, err := parser.ParseBytes(t.Context(), language, []byte(source), parser.WithFileName(name))
 	require.NoError(t, err)
-	cg, err := buildCallGraph(t.Context(), tree, language, name)
+	cg, err := Build(t.Context(), tree)
 	tree.Close()
 	require.NoError(t, err)
 	return cg
@@ -49,16 +49,21 @@ func TestGraphOutlivesTheTree(t *testing.T) {
 
 	assert.Contains(t, read.CallsTo, CallReference{
 		CalleeNamespace: "yaml//safe_load",
+		Kind:            CallCall,
 		Targets:         []string{"yaml//safe_load"},
 		Site:            ast.NodePosition{StartByte: 69, EndByte: 83, StartLine: 5, EndLine: 5, StartColumn: 12, EndColumn: 26},
 		Text:            "yaml.safe_load",
+		Receiver:        "yaml",
+		Method:          "safe_load",
 		Arguments:       []CallArgument{{Values: []ArgumentValue{}}},
 	})
 	assert.Contains(t, read.CallsTo, CallReference{
 		CalleeNamespace: "open",
+		Kind:            CallCall,
 		Targets:         []string{"open"},
 		Site:            ast.NodePosition{StartByte: 84, EndByte: 88, StartLine: 5, EndLine: 5, StartColumn: 27, EndColumn: 31},
 		Text:            "open",
+		Method:          "open",
 		Arguments: []CallArgument{
 			{Values: []ArgumentValue{{Namespace: "config.py//read//path"}}},
 			{Values: []ArgumentValue{{Namespace: `"r"`, Literal: true}}},
@@ -103,6 +108,7 @@ func TestGraphJSONRoundTrip(t *testing.T) {
 	assert.Equal(t, cg.Language, decoded.Language)
 	assert.Equal(t, cg.Nodes, decoded.Nodes, "a nil and an empty list of targets keep their form")
 	assert.Equal(t, cg.RootNode, decoded.RootNode)
+	assert.Equal(t, cg.Imports, decoded.Imports)
 
 	reached := func(items []DfsResultItem) []string {
 		var namespaces []string
@@ -322,4 +328,132 @@ func TestDottedPythonImportBindsTheFirstSegment(t *testing.T) {
 	assert.Equal(t, "os//path//join", call.CalleeNamespace)
 	assert.Equal(t, []string{"os//path//join"}, call.Targets)
 	assert.Empty(t, cg.Unresolved())
+}
+
+func TestCallKindAndReceiver(t *testing.T) {
+	type call struct {
+		caller, callee   string
+		kind             CallKind
+		receiver, method string
+		text             string
+	}
+	cases := []struct {
+		name     string
+		language core.Language
+		file     string
+		source   string
+		calls    []call
+	}{
+		{
+			name:     "javascript",
+			language: javascriptLanguage(t),
+			file:     "a.js",
+			source:   "import x from 'x';\nclass A { constructor() {} run() {} }\nx.a.b(1);\nnew A();\nimport('y');\n",
+			calls: []call{
+				{"a.js//A", "a.js//A//constructor", CallSynthetic, "", "", ""},
+				{"a.js//A//this//constructor", "a.js//A//constructor", CallSynthetic, "", "", ""},
+				{"a.js//A//this//run", "a.js//A//run", CallSynthetic, "", "", ""},
+				{"a.js", "x//a//b", CallCall, "x.a", "b", "x.a.b"},
+				{"a.js", "a.js//A", CallNew, "", "", "new A()"},
+				{"a.js", "y//*", CallImport, "", "import", "import"},
+			},
+		},
+		{
+			name:     "python",
+			language: pythonLanguage(t),
+			file:     "a.py",
+			source:   "from os import *\nimport yaml\nyaml.load(s)\n",
+			calls: []call{
+				{"a.py", "os//*", CallWildcardImport, "", "", "from os import *"},
+				{"a.py", "yaml//load", CallCall, "yaml", "load", "yaml.load"},
+			},
+		},
+		{
+			name:     "go",
+			language: goLanguage(t),
+			file:     "a.go",
+			source:   "package a\nimport \"os\"\nfunc f() { os.Exit(1) }\n",
+			calls: []call{
+				{"a.go", "a.go//f", CallSynthetic, "", "", ""},
+				{"a.go//f", "os//Exit", CallCall, "os", "Exit", "os.Exit"},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cg := buildAndClose(t, tc.language, tc.file, tc.source)
+
+			var calls []call
+			for _, node := range cg.order {
+				for _, ref := range node.CallsTo {
+					calls = append(calls, call{node.Namespace, ref.CalleeNamespace, ref.Kind, ref.Receiver, ref.Method, ref.Text})
+					if ref.Kind == CallSynthetic {
+						assert.Zero(t, ref.Site, "a synthetic edge has no site")
+					}
+				}
+			}
+			assert.ElementsMatch(t, tc.calls, calls)
+		})
+	}
+}
+
+func TestImportsInSourceOrder(t *testing.T) {
+	cases := []struct {
+		name     string
+		language core.Language
+		file     string
+		source   string
+		imports  []Import
+	}{
+		{
+			name:     "python",
+			language: pythonLanguage(t),
+			file:     "a.py",
+			source:   "from yaml import load as l\nimport os.path\nimport json as j\nfrom m import *\n",
+			imports: []Import{
+				{Module: "yaml", Item: "load", Alias: "l", Namespace: "yaml//load"},
+				{Module: "os.path", Alias: "os", Namespace: "os"},
+				{Module: "json", Alias: "j", Namespace: "json"},
+				{Module: "m", Namespace: "m", Wildcard: true},
+			},
+		},
+		{
+			name:     "javascript",
+			language: javascriptLanguage(t),
+			file:     "a.js",
+			source:   "import { default as y } from 'js-yaml';\nimport 'polyfill';\nconst { load: l } = require('./util');\n",
+			imports: []Import{
+				{Module: "js-yaml", Item: "default", Alias: "y", Namespace: "js-yaml"},
+				{Module: "polyfill", Namespace: "polyfill", Wildcard: true},
+				{Module: "./util", Item: "load", Alias: "l", Namespace: ".//util//load"},
+			},
+		},
+		{
+			name:     "go",
+			language: goLanguage(t),
+			file:     "a.go",
+			source:   "package a\nimport (\n\tj \"encoding/json\"\n\t\"github.com/golang-jwt/jwt/v5\"\n)\n",
+			imports: []Import{
+				{Module: "encoding/json", Alias: "j", Namespace: "encoding//json"},
+				{Module: "github.com/golang-jwt/jwt/v5", Alias: "jwt", Namespace: "github.com//golang-jwt//jwt//v5"},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cg := buildAndClose(t, tc.language, tc.file, tc.source)
+
+			require.Len(t, cg.Imports, len(tc.imports))
+			for i, imp := range cg.Imports {
+				assert.Positive(t, imp.Position.StartLine)
+				if i > 0 {
+					assert.Less(t, cg.Imports[i-1].Position.StartByte, imp.Position.StartByte, "source order")
+				}
+				imp.Position = ast.NodePosition{}
+				assert.Equal(t, tc.imports[i], imp)
+			}
+		})
+	}
 }

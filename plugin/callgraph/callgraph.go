@@ -37,10 +37,40 @@ type ArgumentValue struct {
 	Literal   bool
 }
 
+// CallKind tells what makes the edge of a call reference.
+type CallKind string
+
+const (
+	// CallCall is a call in the source, as f(x) or obj.m(x).
+	CallCall CallKind = "call"
+
+	// CallNew is an object creation, as new Client(x).
+	CallNew CallKind = "new"
+
+	// CallImport is a dynamic import of a module that a string names, as
+	// import('x'). The callee is x//*.
+	CallImport CallKind = "import"
+
+	// CallWildcardImport is the edge from the root to module//* for a
+	// wildcard import, as from os import *.
+	CallWildcardImport CallKind = "wildcard-import"
+
+	// CallSynthetic is an edge that no call in the source makes: from the
+	// instance to a method, from a class to its constructor method, and
+	// from the root to the entry function or to each Go function. It has
+	// no site.
+	CallSynthetic CallKind = "synthetic"
+)
+
+// CallReference is one edge of the call graph. Site is the position of the
+// expression that names the callee, and Text its source, at most
+// maxSiteText bytes.
 type CallReference struct {
 	// CalleeNamespace is the callee as the call writes it, as the local name
 	// load after import { load } from 'js-yaml'.
 	CalleeNamespace string
+
+	Kind CallKind
 
 	// Targets are the namespaces that the assignment graph resolves the
 	// callee to at the end of the build, sorted, as js-yaml//load for load.
@@ -48,10 +78,15 @@ type CallReference struct {
 	// the assignment graph does not know has no target.
 	Targets []string
 
-	// Site is the position of the expression that makes the call, and Text
-	// its source, at most maxSiteText bytes.
 	Site ast.NodePosition
 	Text string
+
+	// Receiver is the source of the object of a member call, as client in
+	// client.send(), at most maxSiteText bytes. Method is the called name,
+	// send. Receiver is empty for a bare call, and Method is empty when the
+	// call computes the name.
+	Receiver string
+	Method   string
 
 	Arguments []CallArgument
 
@@ -78,6 +113,9 @@ type CallGraph struct {
 	Language core.LanguageCode
 	Nodes    map[string]*CallGraphNode
 	RootNode *CallGraphNode
+
+	// Imports are the imports of the file, in source order.
+	Imports []Import
 
 	profile           *languageProfile
 	assignmentGraph   assignmentGraph

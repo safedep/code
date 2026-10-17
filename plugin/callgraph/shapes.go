@@ -157,7 +157,7 @@ func (p *shapedProcessors) call(node *sitter.Node, treeData []byte, currentNames
 		return newProcessorResult()
 	}
 
-	callGraph.addEdge(currentNamespace, nil, identifier, callee, nil, arguments)
+	callGraph.addEdge(currentNamespace, CallCall, identifier, callee, nil, arguments)
 	return p.valueResult(p.instanceOf(callee), callGraph)
 }
 
@@ -194,7 +194,7 @@ func (p *shapedProcessors) creation(node *sitter.Node, treeData []byte, currentN
 		return newProcessorResult()
 	}
 
-	callGraph.addEdge(currentNamespace, nil, typeNode, created, nil, arguments)
+	callGraph.addEdge(currentNamespace, CallNew, typeNode, created, nil, arguments)
 	return p.valueResult(created, callGraph)
 }
 

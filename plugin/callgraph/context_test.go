@@ -58,7 +58,7 @@ func TestLimitDeadlineStopsBuildCallGraph(t *testing.T) {
 	require.NoError(t, err)
 	defer tree.Close()
 
-	full, err := buildCallGraph(t.Context(), tree, python, "calls.py")
+	full, err := Build(t.Context(), tree)
 	require.NoError(t, err)
 	assert.Empty(t, full.Truncations())
 	assert.Len(t, full.RootNode.CallsTo, deadlineCalls)
@@ -117,6 +117,6 @@ func TestDoneContextStopsBuildCallGraphAtTheImports(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	_, err = buildCallGraph(ctx, tree, python, "a.py")
+	_, err = Build(ctx, tree)
 	assert.ErrorIs(t, err, context.Canceled)
 }

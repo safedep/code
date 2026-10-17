@@ -209,10 +209,14 @@ func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 		callGraph.addUnresolved(currentNamespace, functionNode, function, treeData, reason)
 	}
 
+	kind := CallCall
+	if function.Type() == "import" {
+		kind = CallImport
+	}
 	for _, callee := range callees {
-		ref := callGraph.reference(callee, functionNode, callArguments)
+		ref := callGraph.reference(callee, kind, functionNode, callArguments)
 		ref.Unbound = unbound
-		callGraph.addCall(currentNamespace, nil, nil, ref)
+		callGraph.addCall(currentNamespace, nil, ref)
 		log.Debugf("JS call: %s -> %s", currentNamespace, callee)
 	}
 
@@ -492,9 +496,9 @@ func jsNewExpressionProcessor(newNode *sitter.Node, treeData []byte, currentName
 	for _, constructor := range constructors {
 		log.Debugf("JS constructor resolved to %s", constructor)
 
-		ref := callGraph.reference(constructor, newNode, callArguments)
+		ref := callGraph.reference(constructor, CallNew, newNode, callArguments)
 		ref.Unbound = unbound
-		callGraph.addCall(currentNamespace, nil, nil, ref)
+		callGraph.addCall(currentNamespace, nil, ref)
 
 		if classAssignment, classResolved := searchSymbolInScopeChain(constructor, currentNamespace, callGraph); classResolved {
 			result.addAssignments(classAssignment)

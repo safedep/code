@@ -1,92 +1,104 @@
 package callgraph
 
 import (
+	"cmp"
+	"slices"
 	"strings"
 
 	"github.com/safedep/code/core/ast"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-// parsedImport is a name that an import binds and its namespace. In Python,
-// from os import listdir as listdirfn binds listdirfn to os//listdir.
-type parsedImport struct {
-	Identifier         string
-	IdentifierTreeNode *sitter.Node
-	Namespace          string
-	NamespaceTreeNode  *sitter.Node
-}
-type wildcardImport struct {
-	Namespace         string
-	NamespaceTreeNode *sitter.Node
+// Import is one import of a file. Module and Item are as the file writes
+// them. Alias is the name that the import binds in the file, as os for
+// import os.path in Python, and is empty when the import binds no name.
+// Namespace is the "//" form of what the import binds: the module, or the
+// item in the module. A wildcard import binds every name below Namespace.
+// Position is the position of the module name.
+type Import struct {
+	Module    string
+	Item      string
+	Alias     string
+	Namespace string
+	Wildcard  bool
+	Position  ast.NodePosition
 }
 
-// parseImports returns the imported identifiers and the wildcard imports, in
-// source order. A later import of an identifier replaces the earlier one, at
-// the place of the earlier one.
-func parseImports(imports []*ast.ImportNode, profile *languageProfile) ([]parsedImport, []wildcardImport) {
-	importedIdentifiers := []parsedImport{}
-	importedIndex := make(map[string]int)
-	wildcardImports := []wildcardImport{}
+// binding is a name that an import binds and its namespace. In Python,
+// from os import listdir as listdirfn binds listdirfn to os//listdir. A
+// wildcard binding has no identifier and the namespace module//*.
+type binding struct {
+	identifier     string
+	identifierNode *sitter.Node
+	namespace      string
+	namespaceNode  *sitter.Node
+}
 
-	bind := func(parsed parsedImport) {
-		if i, exists := importedIndex[parsed.Identifier]; exists {
-			importedIdentifiers[i] = parsed
+// parseImports returns the imports in source order, the names that they
+// bind and the wildcard bindings. A later import of a name replaces the
+// earlier binding, at the place of the earlier one.
+func parseImports(imports []*ast.ImportNode, profile *languageProfile) ([]Import, []binding, []binding) {
+	imports = slices.Clone(imports)
+	slices.SortStableFunc(imports, func(a, b *ast.ImportNode) int {
+		return cmp.Compare(a.GetModuleNameNode().StartByte(), b.GetModuleNameNode().StartByte())
+	})
+
+	records := make([]Import, 0, len(imports))
+	bindings := []binding{}
+	bound := make(map[string]int)
+	wildcards := []binding{}
+
+	bind := func(b binding) {
+		if i, exists := bound[b.identifier]; exists {
+			bindings[i] = b
 			return
 		}
-		importedIndex[parsed.Identifier] = len(importedIdentifiers)
-		importedIdentifiers = append(importedIdentifiers, parsed)
+		bound[b.identifier] = len(bindings)
+		bindings = append(bindings, b)
 	}
 
 	for _, imp := range imports {
+		moduleNode := imp.GetModuleNameNode()
 		moduleNamespace := profile.moduleNamespace(imp.ModuleName())
+		record := Import{
+			Module:    imp.ModuleName(),
+			Item:      imp.ModuleItem(),
+			Namespace: moduleNamespace,
+			Wildcard:  imp.IsWildcardImport(),
+			Position:  ast.GetNodePosition(moduleNode),
+		}
 
-		if imp.IsWildcardImport() {
-			wildcardImports = append(wildcardImports, wildcardImport{
-				Namespace:         moduleNamespace + namespaceSeparator + "*",
-				NamespaceTreeNode: imp.GetModuleNameNode().Parent(),
+		switch root, rootBound := profile.boundRoot(imp, moduleNamespace); {
+		case record.Wildcard:
+			wildcards = append(wildcards, binding{
+				namespace:     moduleNamespace + namespaceSeparator + "*",
+				namespaceNode: moduleNode.Parent(),
 			})
-			continue
-		}
-
-		if root, ok := profile.boundRoot(imp, moduleNamespace); ok {
+		case rootBound:
 			for _, namespace := range []string{moduleNamespace, root} {
-				bind(parsedImport{
-					Identifier:         namespace,
-					IdentifierTreeNode: imp.GetModuleNameNode(),
-					Namespace:          namespace,
-					NamespaceTreeNode:  imp.GetModuleNameNode().Parent(),
-				})
+				bind(binding{identifier: namespace, identifierNode: moduleNode, namespace: namespace, namespaceNode: moduleNode.Parent()})
 			}
-			continue
+			record.Alias, record.Namespace = root, root
+		default:
+			if item := imp.ModuleItem(); item != "" && item != profile.defaultExport {
+				record.Namespace = moduleNamespace + namespaceSeparator + profile.moduleNamespace(item)
+			}
+
+			b := binding{identifier: moduleNamespace, identifierNode: moduleNode, namespace: record.Namespace, namespaceNode: moduleNode.Parent()}
+			if alias := profile.lastSegment(imp.ModuleAlias()); alias != "" {
+				b.identifier, b.identifierNode = alias, imp.GetModuleAliasNode()
+				record.Alias = alias
+			} else if item := profile.lastSegment(imp.ModuleItem()); item != "" {
+				b.identifier, b.identifierNode = item, imp.GetModuleItemNode()
+				record.Alias = item
+			}
+			bind(b)
 		}
 
-		finalisedNamespace := moduleNamespace
-		if item := imp.ModuleItem(); item != "" && item != profile.defaultExport {
-			finalisedNamespace = moduleNamespace + namespaceSeparator + profile.moduleNamespace(item)
-		}
-
-		moduleItemIdentifierKey := profile.lastSegment(imp.ModuleItem())
-		moduleAliasIdentifierKey := profile.lastSegment(imp.ModuleAlias())
-
-		identifierKey := moduleNamespace
-		identifierTreeNode := imp.GetModuleNameNode()
-		if moduleAliasIdentifierKey != "" {
-			identifierKey = moduleAliasIdentifierKey
-			identifierTreeNode = imp.GetModuleAliasNode()
-		} else if moduleItemIdentifierKey != "" {
-			identifierKey = moduleItemIdentifierKey
-			identifierTreeNode = imp.GetModuleItemNode()
-		}
-
-		bind(parsedImport{
-			Identifier:         identifierKey,
-			IdentifierTreeNode: identifierTreeNode,
-			Namespace:          finalisedNamespace,
-			NamespaceTreeNode:  imp.GetModuleNameNode().Parent(),
-		})
+		records = append(records, record)
 	}
 
-	return importedIdentifiers, wildcardImports
+	return records, bindings, wildcards
 }
 
 // boundRoot returns the first segment of a dotted module that the import

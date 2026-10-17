@@ -49,7 +49,7 @@ func buildFromSource(t *testing.T, language core.Language, name, source string) 
 	require.NoError(t, err)
 	t.Cleanup(tree.Close)
 
-	cg, err := buildCallGraph(t.Context(), tree, language, name)
+	cg, err := Build(t.Context(), tree)
 	require.NoError(t, err)
 	return cg
 }
@@ -585,14 +585,15 @@ func TestImportsThatShareAnIdentifierKeepSourceOrder(t *testing.T) {
 	require.NoError(t, err)
 
 	for range 20 {
-		parsed, wildcards := parseImports(imports, profileOf(python.Meta().Code))
+		records, bindings, wildcards := parseImports(imports, profileOf(python.Meta().Code))
 		assert.Empty(t, wildcards)
+		assert.Len(t, records, 4)
 
 		var pairs []string
-		for _, imported := range parsed {
-			pairs = append(pairs, imported.Identifier+"="+imported.Namespace)
+		for _, b := range bindings {
+			pairs = append(pairs, b.identifier+"="+b.namespace)
 		}
 		assert.Equal(t, []string{"x=b", "c=c", "d=d"}, pairs, "the later import replaces the earlier one at its place")
-		assert.Equal(t, uint32(2), parsed[0].NamespaceTreeNode.StartPoint().Row)
+		assert.Equal(t, uint32(2), bindings[0].namespaceNode.StartPoint().Row)
 	}
 }

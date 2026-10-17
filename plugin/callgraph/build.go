@@ -64,25 +64,25 @@ func (cg *CallGraph) build(ctx context.Context, root *sitter.Node, imports []*as
 	}()
 
 	cg.addRootNode(root)
-	cg.addImports(root, imports)
+	cg.addImports(imports)
 	processChildren(root, source, cg.FileName, cg, processorMetadata{})
 	cg.resolveTargets()
 }
 
-func (cg *CallGraph) addImports(root *sitter.Node, imports []*ast.ImportNode) {
-	importedIdentifiers, wildcardImports := parseImports(imports, cg.profile)
+func (cg *CallGraph) addImports(imports []*ast.ImportNode) {
+	records, bindings, wildcards := parseImports(imports, cg.profile)
+	cg.Imports = records
 
 	// A wildcard import can bind any name of its module, so the root calls
 	// the module//* namespace.
-	for _, wildcardImport := range wildcardImports {
-		cg.addEdge(cg.FileName, root, wildcardImport.NamespaceTreeNode, wildcardImport.Namespace, wildcardImport.NamespaceTreeNode, []CallArgument{})
+	for _, wildcard := range wildcards {
+		cg.addEdge(cg.FileName, CallWildcardImport, wildcard.namespaceNode, wildcard.namespace, wildcard.namespaceNode, []CallArgument{})
 	}
 
-	for _, importedIdentifier := range importedIdentifiers {
-		cg.addNode(importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
-
-		if importedIdentifier.Identifier != importedIdentifier.Namespace {
-			cg.assignmentGraph.addAssignment(importedIdentifier.Identifier, importedIdentifier.IdentifierTreeNode, importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
+	for _, b := range bindings {
+		cg.addNode(b.namespace, b.namespaceNode)
+		if b.identifier != b.namespace {
+			cg.assignmentGraph.addAssignment(b.identifier, b.identifierNode, b.namespace, b.namespaceNode)
 		}
 	}
 }
@@ -175,26 +175,34 @@ func (cg *CallGraph) addCallGraphNode(identifier string, s syntax) *CallGraphNod
 	return node
 }
 
-// reference makes the reference of a call to callee from the expression at
-// site.
-func (cg *CallGraph) reference(callee string, site *sitter.Node, arguments []CallArgument) CallReference {
-	ref := CallReference{CalleeNamespace: callee, Arguments: arguments}
-	if site != nil {
-		ref.Site = ast.GetNodePosition(site)
-		ref.Text = clip(site.Content(cg.source))
+// reference makes the reference of a call of kind to callee. expression is
+// the node that names the callee.
+func (cg *CallGraph) reference(callee string, kind CallKind, expression *sitter.Node, arguments []CallArgument) CallReference {
+	ref := CallReference{CalleeNamespace: callee, Kind: kind, Arguments: arguments}
+	if expression != nil {
+		ref.Site = ast.GetNodePosition(expression)
+		ref.Text = clip(expression.Content(cg.source))
+		receiver, method := cg.profile.calleeParts(expression, cg.source)
+		ref.Receiver, ref.Method = clip(receiver), method
 	}
 	return ref
 }
 
-// addEdge adds an edge from one function to another
-func (cg *CallGraph) addEdge(caller string, callerTreeNode *sitter.Node, site *sitter.Node, callee string, calleeTreeNode *sitter.Node, arguments []CallArgument) {
-	cg.addCall(caller, callerTreeNode, calleeTreeNode, cg.reference(callee, site, arguments))
+// addEdge adds the edge of a call of kind from caller to callee.
+func (cg *CallGraph) addEdge(caller string, kind CallKind, expression *sitter.Node, callee string, calleeTreeNode *sitter.Node, arguments []CallArgument) {
+	cg.addCall(caller, calleeTreeNode, cg.reference(callee, kind, expression, arguments))
+}
+
+// addSyntheticEdge adds an edge that no call in the source makes, as the
+// edge from the instance to a method.
+func (cg *CallGraph) addSyntheticEdge(caller, callee string, calleeTreeNode *sitter.Node) {
+	cg.addCall(caller, calleeTreeNode, CallReference{CalleeNamespace: callee, Kind: CallSynthetic, Arguments: []CallArgument{}})
 }
 
 // addCall adds the edge of ref from caller. It adds no edge when the graph
 // has no room for the caller or the callee.
-func (cg *CallGraph) addCall(caller string, callerTreeNode, calleeTreeNode *sitter.Node, ref CallReference) {
-	callerNode := cg.addNode(caller, callerTreeNode)
+func (cg *CallGraph) addCall(caller string, calleeTreeNode *sitter.Node, ref CallReference) {
+	callerNode := cg.addNode(caller, nil)
 
 	// An unbound callee stays out of the assignment graph. Otherwise the
 	// scope chain finds the fallback key, and a second call to the name

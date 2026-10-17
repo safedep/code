@@ -232,7 +232,7 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 	// The edge from the root comes first, so the entry function gets no
 	// edge from the instance.
 	if profile.rootCallsFunctions || (profile.entryFunction != "" && funcName == profile.entryFunction) {
-		callGraph.addEdge(resolveRootNamespaceQualifier(currentNamespace), nil, nil, functionNamespace, functionDefNode, []CallArgument{})
+		callGraph.addSyntheticEdge(resolveRootNamespaceQualifier(currentNamespace), functionNamespace, functionDefNode)
 	}
 
 	if callGraph.addDefinition(functionNamespace, functionDefNode) {
@@ -241,10 +241,10 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 		if metadata.insideClass {
 			if keyword := profile.instanceKeyword; keyword != "" {
 				instanceNamespace := currentNamespace + namespaceSeparator + keyword + namespaceSeparator + funcName
-				callGraph.addEdge(instanceNamespace, nil, nil, functionNamespace, functionDefNode, []CallArgument{})
+				callGraph.addSyntheticEdge(instanceNamespace, functionNamespace, functionDefNode)
 			}
 			if profile.constructorMethod != "" && funcName == profile.constructorMethod {
-				callGraph.addEdge(currentNamespace, nil, nil, functionNamespace, functionDefNode, []CallArgument{})
+				callGraph.addSyntheticEdge(currentNamespace, functionNamespace, functionDefNode)
 			}
 		}
 	}

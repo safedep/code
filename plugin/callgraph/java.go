@@ -161,12 +161,12 @@ func objectCreationExpressionProcessor(objectCreationNode *sitter.Node, treeData
 		if classResolvedBySearch {
 			log.Debugf("Constructor %s searched (direct) & resolved to %s\n", constructedClassName, classNode.Namespace)
 
-			callGraph.addEdge(currentNamespace, nil, objectCreationNode, classNode.Namespace, nil, argsResult)
+			callGraph.addEdge(currentNamespace, CallNew, objectCreationNode, classNode.Namespace, nil, argsResult)
 			markClassAssignment(classNode)
 		} else if constructedClassNode.Type() == "scoped_type_identifier" {
 			scopedIdentifierResult := scopedIdentifierProcessor(constructedClassNode, treeData, currentNamespace, callGraph, metadata)
 			for _, scopedIdentifierAssignment := range scopedIdentifierResult.ImmediateAssignments {
-				callGraph.addEdge(currentNamespace, nil, objectCreationNode, scopedIdentifierAssignment.Namespace, nil, argsResult)
+				callGraph.addEdge(currentNamespace, CallNew, objectCreationNode, scopedIdentifierAssignment.Namespace, nil, argsResult)
 				markClassAssignment(scopedIdentifierAssignment)
 			}
 		}
@@ -261,7 +261,7 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 			}
 			for _, class := range classes {
 				callGraph.addEdge(
-					currentNamespace, nil, methodInvocationNode,
+					currentNamespace, CallCall, methodInvocationNode,
 					class+namespaceSeparator+calledMethod, methodInvocationNode,
 					argsResult,
 				)
@@ -309,7 +309,7 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 				calledNamespace = calledNamespace + namespaceSeparator + methodName
 			}
 			log.Debugf("Method invocation %s searched (object qualified) & resolved to - %s\n", methodName, calledNamespace)
-			callGraph.addEdge(currentNamespace, nil, methodInvocationNode, calledNamespace, methodInvocationNode, argsResult)
+			callGraph.addEdge(currentNamespace, CallCall, methodInvocationNode, calledNamespace, methodInvocationNode, argsResult)
 		}
 
 		return newProcessorResult()
@@ -319,7 +319,7 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 	if functionResolvedBySearch {
 		log.Debugf("Method invocation %s searched (direct) & resolved to %s\n", methodName, functionAssignmentNode.Namespace)
 		callGraph.addEdge(
-			currentNamespace, nil, methodInvocationNode,
+			currentNamespace, CallCall, methodInvocationNode,
 			functionAssignmentNode.Namespace, nil,
 			argsResult,
 		)

@@ -184,7 +184,7 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 	}
 
 	addEdge := func(callee string, calleeTreeNode *sitter.Node) {
-		callGraph.addEdge(currentNamespace, nil, functionCallNode, callee, calleeTreeNode, callArguments)
+		callGraph.addEdge(currentNamespace, CallCall, functionCallNode, callee, calleeTreeNode, callArguments)
 		if callGraph.isPythonDynamicImport(callee) && !callGraph.profile.staticString(firstArgument(argumentsNode)) {
 			callGraph.addUnresolved(currentNamespace, functionCallNode.Parent(), function, treeData, UnresolvedDynamicImport)
 		}
@@ -201,9 +201,9 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 			markClassAssignment(assignment)
 			return result
 		}
-		ref := callGraph.reference(functionName, functionCallNode, callArguments)
+		ref := callGraph.reference(functionName, CallCall, functionCallNode, callArguments)
 		ref.Unbound = true
-		callGraph.addCall(currentNamespace, nil, nil, ref)
+		callGraph.addCall(currentNamespace, nil, ref)
 		return result
 	case "attribute", "subscript":
 		// A chained call, as in PasswordHasher().hash(), calls the inner
