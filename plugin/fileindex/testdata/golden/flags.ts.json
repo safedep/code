@@ -1,5 +1,5 @@
 {
-  "version": "2",
+  "version": "3",
   "path": "flags.ts",
   "language": "typescript",
   "content_hash": "a84c4ad21735c1c250e33317463237749489ea1f220a93f97e2bea3f07b040c4",
@@ -105,6 +105,22 @@
           "line": 15
         }
       ]
+    },
+    {
+      "key": "flags.ts//run//readFile",
+      "kind": "method",
+      "name": "readFile",
+      "start_line": 14,
+      "end_line": 14,
+      "exported": false
+    },
+    {
+      "key": "flags.ts//run//writeFile",
+      "kind": "method",
+      "name": "writeFile",
+      "start_line": 15,
+      "end_line": 15,
+      "exported": false
     },
     {
       "key": "flags.ts//View",

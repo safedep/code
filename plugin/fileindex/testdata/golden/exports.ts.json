@@ -1,5 +1,5 @@
 {
-  "version": "2",
+  "version": "3",
   "path": "exports.ts",
   "language": "typescript",
   "content_hash": "bec31766778cf120994be72531c0cd11feccdd8ac3553d9b91cc06fd07e87747",
@@ -72,6 +72,11 @@
       "target": "",
       "from": "./ns",
       "line": 14
+    },
+    {
+      "name": "Shape",
+      "target": "exports.ts//Shape",
+      "line": 15
     }
   ],
   "definitions": [
@@ -89,7 +94,13 @@
       "name": "run",
       "start_line": 4,
       "end_line": 4,
-      "exported": true
+      "exported": true,
+      "params": [
+        {
+          "name": "opts",
+          "type": "Options"
+        }
+      ]
     },
     {
       "key": "exports.ts//make",
@@ -131,6 +142,14 @@
       "start_line": 10,
       "end_line": 10,
       "exported": true
+    },
+    {
+      "key": "exports.ts//Shape",
+      "kind": "interface",
+      "name": "Shape",
+      "start_line": 15,
+      "end_line": 15,
+      "exported": true
     }
   ],
   "classes": [
@@ -142,6 +161,9 @@
       "methods": [
         "exports.ts//Service//start"
       ]
+    },
+    {
+      "key": "exports.ts//Shape"
     }
   ],
   "calls": [

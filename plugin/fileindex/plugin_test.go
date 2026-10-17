@@ -101,8 +101,8 @@ func TestFileIndexGolden(t *testing.T) {
 // serve an index of the old rules for it. So a change of the golden files
 // needs a new Version, and both constants change with it.
 const (
-	goldenVersion = "2"
-	goldenHash    = "053994e26b00bcfc985678ab8460daf6d8eaf949bafa3fd562af551081950049"
+	goldenVersion = "3"
+	goldenHash    = "169038d941619b7b6a85c1fc0f09ced9f98fc4defae37446853ea701c9cecad8"
 )
 
 func TestFileIndexGoldenHashFollowsVersion(t *testing.T) {
@@ -292,7 +292,7 @@ func TestFileIndexStaticClassCode(t *testing.T) {
 				3: "a.js",
 				4: "a.js//A",
 				5: "a.js",
-				6: "a.js//A",
+				6: "a.js//A//f",
 				9: "a.js//make",
 			}, callers)
 		})

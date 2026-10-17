@@ -24,6 +24,9 @@ const (
 	NodeMethod      NodeKind = "method"
 	NodeConstructor NodeKind = "constructor"
 	NodeClass       NodeKind = "class"
+	// NodeInterface is a TypeScript interface. It has no code. A declared
+	// type names it, and the classes that implement it hold the methods.
+	NodeInterface NodeKind = "interface"
 	// NodeVariable is a name that the top level of a module assigns. A walk
 	// through it goes on to the value that it holds.
 	NodeVariable NodeKind = "variable"

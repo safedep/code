@@ -1,5 +1,5 @@
 {
-  "version": "2",
+  "version": "3",
   "path": "src/app.py",
   "language": "python",
   "content_hash": "a172cedcae47474b615c54d510a5d84a8dea3032e958587430b413538be3f333",
@@ -104,6 +104,20 @@
       "name": "helper",
       "start_line": 14,
       "end_line": 16,
+      "exported": false,
+      "params": [
+        {
+          "name": "p",
+          "type": "Parser"
+        }
+      ]
+    },
+    {
+      "key": "src/app.py//Shape",
+      "kind": "interface",
+      "name": "Shape",
+      "start_line": 20,
+      "end_line": 20,
       "exported": false
     }
   ],
@@ -117,6 +131,18 @@
       "methods": [
         "src/app.py//Parser//__init__",
         "src/app.py//Parser//parse"
+      ],
+      "fields": [
+        {
+          "name": "store",
+          "type": "ns.Store"
+        }
+      ]
+    },
+    {
+      "key": "src/app.py//Shape",
+      "bases": [
+        "Base"
       ]
     }
   ],

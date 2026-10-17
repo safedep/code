@@ -47,7 +47,7 @@ func (b *builder) markRoots() {
 		}
 		b.addRoot(ix.Path, RootLibrarySurface, string(RootLibrarySurface))
 		for _, def := range ix.Definitions {
-			if def.Exported && def.Key != ix.Path && def.Kind != fileindex.DefVariable {
+			if def.Exported && def.Key != ix.Path && def.Kind != fileindex.DefVariable && def.Kind != fileindex.DefInterface {
 				b.addRoot(def.Key, RootLibrarySurface, string(RootLibrarySurface))
 			}
 		}
@@ -61,7 +61,8 @@ func (b *builder) addRoot(key string, kind roots.Kind, rule string) {
 
 // exportKeys returns the keys of the names that a file exports. A name that
 // the file gives on from another file is an export node, so a path from the
-// root keeps the hop. An export * gives the names of its module.
+// root keeps the hop. An export * gives the names of its module. An
+// interface runs no code, so it is no root.
 func (b *builder) exportKeys(p string, seen map[string]bool) []string {
 	sc := b.scopes[p]
 	if sc == nil || seen[p] || len(seen) > b.opts.maxExportHops {
@@ -70,7 +71,7 @@ func (b *builder) exportKeys(p string, seen map[string]bool) []string {
 	seen[p] = true
 	var keys []string
 	for name := range sc.exports {
-		if key, fail := b.resolveName(p, name, 0); fail == nil {
+		if key, fail := b.resolveName(p, name, 0); fail == nil && b.kindOf(b.deref(key)) != NodeInterface {
 			keys = append(keys, key)
 		}
 	}

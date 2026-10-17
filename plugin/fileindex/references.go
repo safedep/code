@@ -91,17 +91,6 @@ func (p *projection) referenceVisitor() visitor {
 	if !ok {
 		return nil
 	}
-	type span struct {
-		start, end uint32
-		kind       string
-	}
-	defs := make(map[span]string, len(p.syntax))
-	for key, node := range p.syntax {
-		if node != nil {
-			defs[span{node.StartByte(), node.EndByte(), node.Type()}] = key
-		}
-	}
-
 	type open struct {
 		key string
 		end uint32
@@ -121,7 +110,7 @@ func (p *projection) referenceVisitor() visitor {
 			stack = stack[:len(stack)-1]
 		}
 		if _, definition := definitionKinds[kind]; definition {
-			if key, ok := defs[span{start, node.EndByte(), kind}]; ok {
+			if key, ok := p.spans[span{start, node.EndByte(), kind}]; ok {
 				stack = append(stack, open{key: key, end: node.EndByte()})
 			}
 		}

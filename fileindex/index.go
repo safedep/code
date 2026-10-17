@@ -19,7 +19,7 @@ import (
 // Version is the version of the index records and of the rules that fill
 // them. Bump it when a field, a kind, an order or a fill rule changes. A
 // store keys an index by Version, so the bump makes every older index miss.
-const Version = "2"
+const Version = "3"
 
 type ImportKind string
 
@@ -43,6 +43,9 @@ const (
 	// DefVariable is a name that the top level of a module assigns, as
 	// parser in parser = Parser(). Another file can import it.
 	DefVariable DefKind = "variable"
+	// DefInterface is a TypeScript interface. It has no code, but a
+	// declared type can name it and a class can implement it.
+	DefInterface DefKind = "interface"
 )
 
 type CallKind string
@@ -153,10 +156,13 @@ type Export struct {
 	Line   int    `json:"line"`
 }
 
-// Definition is one module, function, method, class, constructor or module
-// variable. Key is its symbol key, as src/a.py//Parser//parse. Parent is the
-// class key of a method. Decorators are as written, in source order. Values
-// are the per-file targets that a variable holds, as the targets of a Call.
+// Definition is one module, function, method, class, constructor, module
+// variable or interface. Key is its symbol key, as src/a.py//Parser//parse.
+// Parent is the class key of a method. A JavaScript function that an object
+// property or a property assignment holds is a method with no parent.
+// Decorators are as written, in source order. Values are the per-file
+// targets that a variable holds, as the targets of a Call. Params are the
+// parameters that declare the type of a class, in source order.
 type Definition struct {
 	Key        string   `json:"key"`
 	Kind       DefKind  `json:"kind"`
@@ -167,15 +173,27 @@ type Definition struct {
 	Parent     string   `json:"parent,omitempty"`
 	Decorators []string `json:"decorators,omitempty"`
 	Values     []string `json:"values,omitempty"`
+	Params     []Typed  `json:"params,omitempty"`
 	Flags      []Flag   `json:"flags,omitempty"`
 }
 
-// Class is one class of the file. Bases are as written, in source order,
-// and the link step resolves them. Methods are definition keys.
+// Class is one class or interface of the file. Bases are as written, in
+// source order, and the link step resolves them. Methods are definition
+// keys. Fields are the fields that declare the type of a class, in source
+// order.
 type Class struct {
 	Key     string   `json:"key"`
 	Bases   []string `json:"bases,omitempty"`
 	Methods []string `json:"methods,omitempty"`
+	Fields  []Typed  `json:"fields,omitempty"`
+}
+
+// Typed is a parameter or a field with the type that it declares, as parser
+// in run(parser: Parser). Type is the type name as written, with no type
+// arguments, as Parser or ns.Parser.
+type Typed struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
 }
 
 // Call is one call site. Caller is the definition key that holds the site.

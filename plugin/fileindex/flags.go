@@ -62,14 +62,15 @@ var dynamicSyntaxes = map[core.LanguageCode]dynamicSyntax{
 // visitor reads one node of a walk of the tree, with the type of the node.
 type visitor func(node *sitter.Node, kind string)
 
-// walkTree walks the tree once for the flags and the references of the
-// file. A walk costs about as much as the parse, so the passes share it.
+// walkTree walks the tree once for the property functions, the flags and
+// the references of the file. A walk costs about as much as the parse, so
+// the passes share it.
 func (p *projection) walkTree(ctx context.Context) {
 	root := p.tree.Tree().RootNode()
 	p.addParseErrors(ctx, root)
 
 	var visitors []visitor
-	for _, v := range []visitor{p.flagVisitor(), p.referenceVisitor()} {
+	for _, v := range []visitor{p.propertyVisitor(), p.flagVisitor(), p.referenceVisitor()} {
 		if v != nil {
 			visitors = append(visitors, v)
 		}
@@ -317,17 +318,7 @@ func (p *projection) flagAt(kind fidx.FlagKind, at uint32, line int) {
 		p.ix.Flags = append(p.ix.Flags, flag)
 	}
 
-	var inner *sitter.Node
-	key := ""
-	for k, node := range p.syntax {
-		if node == nil || at < node.StartByte() || at >= node.EndByte() {
-			continue
-		}
-		if inner == nil || node.EndByte()-node.StartByte() < inner.EndByte()-inner.StartByte() {
-			inner, key = node, k
-		}
-	}
-	if def, ok := p.defs[key]; ok && !slices.Contains(def.Flags, flag) {
+	if def, ok := p.defs[p.innermost(at)]; ok && !slices.Contains(def.Flags, flag) {
 		def.Flags = append(def.Flags, flag)
 	}
 }

@@ -1,5 +1,5 @@
 {
-  "version": "2",
+  "version": "3",
   "path": "app.ts",
   "language": "typescript",
   "content_hash": "d3908948ab8ec7b3adc898e0707ce74bb3a2d6393a724dfbeb67147840397234",
@@ -131,6 +131,12 @@
       "start_line": 22,
       "end_line": 35,
       "exported": false,
+      "params": [
+        {
+          "name": "opts",
+          "type": "Options"
+        }
+      ],
       "flags": [
         {
           "kind": "computed-attribute",

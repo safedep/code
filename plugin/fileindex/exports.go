@@ -143,8 +143,9 @@ func (p *projection) addExportStatement(statement *sitter.Node) {
 	}
 }
 
-// declaredNames returns the names that a declaration binds. A type, as an
-// interface, binds no value and gives no name.
+// declaredNames returns the names that a declaration binds. A type alias
+// binds no value and gives no name. An interface binds no value either, but
+// a declared type in another file can name it.
 func (p *projection) declaredNames(declaration *sitter.Node) []string {
 	switch declaration.Type() {
 	case "lexical_declaration", "variable_declaration":
@@ -155,7 +156,7 @@ func (p *projection) declaredNames(declaration *sitter.Node) []string {
 			}
 		}
 		return names
-	case "interface_declaration", "type_alias_declaration":
+	case "type_alias_declaration":
 		return nil
 	}
 	if name := declaration.ChildByFieldName("name"); name != nil {
@@ -191,14 +192,19 @@ func (p *projection) addExportAssignment(statement, assignment *sitter.Node) {
 			return
 		}
 		p.exportStatements = append(p.exportStatements, statement)
-		if right.Type() == "identifier" {
-			p.export(p.text(left.ChildByFieldName("property")), p.text(right), line)
+		name := p.text(left.ChildByFieldName("property"))
+		switch {
+		case right.Type() == "identifier":
+			p.export(name, p.text(right), line)
+		case functionValues[right.Type()]:
+			p.export(name, name, line)
 		}
 	}
 }
 
 // addModuleExports adds the exports of module.exports = value. A name is the
-// default export. An object exports each name of it.
+// default export. An object exports each name of it. A function that a
+// property holds is the definition of the property name.
 func (p *projection) addModuleExports(value *sitter.Node, line int) {
 	switch value.Type() {
 	case "identifier":
@@ -209,8 +215,13 @@ func (p *projection) addModuleExports(value *sitter.Node, line int) {
 			case "shorthand_property_identifier":
 				p.export(p.text(property), p.text(property), line)
 			case "pair":
-				if v := property.ChildByFieldName("value"); v != nil && v.Type() == "identifier" {
-					p.export(p.text(property.ChildByFieldName("key")), p.text(v), line)
+				name, v := p.text(property.ChildByFieldName("key")), property.ChildByFieldName("value")
+				switch {
+				case v == nil:
+				case v.Type() == "identifier":
+					p.export(name, p.text(v), line)
+				case functionValues[v.Type()]:
+					p.export(name, name, line)
 				}
 			}
 		}

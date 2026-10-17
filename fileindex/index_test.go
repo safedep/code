@@ -38,10 +38,12 @@ func fullIndex() *Index {
 				Parent: "src/app.py//Parser", Decorators: []string{"@cache", "@app.route"},
 				Flags: []Flag{{Kind: FlagEval, Line: 7}},
 			},
-			{Key: "src/app.py//helper", Kind: DefFunction, Name: "helper", StartLine: 14, EndLine: 16},
+			{Key: "src/app.py//helper", Kind: DefFunction, Name: "helper", StartLine: 14, EndLine: 16, Params: []Typed{{Name: "p", Type: "Parser"}}},
+			{Key: "src/app.py//Shape", Kind: DefInterface, Name: "Shape", StartLine: 20, EndLine: 20},
 		},
 		Classes: []Class{
-			{Key: "src/app.py//Parser", Bases: []string{"Base", "Mixin"}, Methods: []string{"src/app.py//Parser//__init__", "src/app.py//Parser//parse"}},
+			{Key: "src/app.py//Parser", Bases: []string{"Base", "Mixin"}, Methods: []string{"src/app.py//Parser//__init__", "src/app.py//Parser//parse"}, Fields: []Typed{{Name: "store", Type: "ns.Store"}}},
+			{Key: "src/app.py//Shape", Bases: []string{"Base"}},
 		},
 		Calls: []Call{
 			{Caller: "src/app.py//Parser//parse", Line: 7, Column: 9, Callee: "yaml.load", Targets: []string{"yaml//load"}, Receiver: "yaml", Method: "load", Kind: CallCall, Args: []ArgShape{ArgName, ArgLiteral}},

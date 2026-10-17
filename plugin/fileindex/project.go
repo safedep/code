@@ -63,12 +63,16 @@ type projection struct {
 	ix       *fidx.Index
 
 	// defs holds the definitions by key. syntax holds the tree node of each
-	// definition. exports holds the definition keys that an export names,
-	// and bindings the names that the imports bind.
-	defs     map[string]*fidx.Definition
-	syntax   map[string]*sitter.Node
-	exports  map[string]bool
-	bindings map[string]bool
+	// definition, and spans the key of each such node. properties holds the
+	// key of each function that a JavaScript property holds. exports holds
+	// the definition keys that an export names, and bindings the names that
+	// the imports bind.
+	defs       map[string]*fidx.Definition
+	syntax     map[string]*sitter.Node
+	spans      map[span]string
+	properties map[span]string
+	exports    map[string]bool
+	bindings   map[string]bool
 
 	// exportStatements are the export statements and the CommonJS export
 	// assignments of the file.
@@ -101,10 +105,12 @@ func project(ctx context.Context, tree core.ParseTree) (*fidx.Index, error) {
 			Language:    language.Meta().Code,
 			ContentHash: fidx.HashContent(*data),
 		},
-		defs:     map[string]*fidx.Definition{},
-		syntax:   map[string]*sitter.Node{},
-		exports:  map[string]bool{},
-		bindings: map[string]bool{},
+		defs:       map[string]*fidx.Definition{},
+		syntax:     map[string]*sitter.Node{},
+		spans:      map[span]string{},
+		properties: map[span]string{},
+		exports:    map[string]bool{},
+		bindings:   map[string]bool{},
 	}
 
 	p.addImports()
@@ -112,6 +118,7 @@ func project(ctx context.Context, tree core.ParseTree) (*fidx.Index, error) {
 	p.addExports()
 	p.addTruncations()
 	p.walkTree(ctx)
+	p.addDeclaredTypes()
 	if err := p.addClasses(ctx); err != nil {
 		return nil, err
 	}
@@ -218,8 +225,9 @@ func (p *projection) addDefinitions() {
 			StartLine: int(node.Position.StartLine),
 			EndLine:   int(node.Position.EndLine),
 		}
-		p.syntax[key] = p.nodeAt(node.Position, node.Kind)
+		p.addSyntax(key, p.nodeAt(node.Position, node.Kind))
 	}
+	p.addInterfaces()
 
 	for _, def := range p.defs {
 		p.fillDefinition(def)
@@ -353,14 +361,16 @@ func (p *projection) addClasses(ctx context.Context) error {
 		}
 	}
 	for key, def := range p.defs {
-		if def.Kind != fidx.DefClass {
-			continue
+		node := p.syntax[key]
+		switch {
+		case def.Kind == fidx.DefInterface:
+			p.ix.Classes = append(p.ix.Classes, fidx.Class{Key: key, Bases: p.interfaceBases(node)})
+		case def.Kind != fidx.DefClass:
+		case node == nil:
+			p.ix.Classes = append(p.ix.Classes, fidx.Class{Key: key, Methods: methods[key]})
+		default:
+			p.ix.Classes = append(p.ix.Classes, fidx.Class{Key: key, Bases: bases[node.StartByte()], Methods: methods[key], Fields: p.fields(node)})
 		}
-		class := fidx.Class{Key: key, Methods: methods[key]}
-		if node := p.syntax[key]; node != nil {
-			class.Bases = bases[node.StartByte()]
-		}
-		p.ix.Classes = append(p.ix.Classes, class)
 	}
 	return nil
 }
@@ -439,17 +449,35 @@ func (p *projection) addCalls() {
 }
 
 // caller returns the definition that runs the call site that the
-// definition key holds. A JavaScript static field or static block runs when
-// the class is defined, so its calls belong to the scope that defines the
-// class. A function value in a static field runs only when a call runs it.
-// A flag in a static block stays on the class.
+// definition key holds. A function that a JavaScript property holds is a
+// definition that the call graph does not know, so it takes the calls of
+// its body. A JavaScript static field or static block runs when the class
+// is defined, so its calls belong to the scope that defines the class. A
+// function value in a static field runs only when a call runs it. A flag in
+// a static block stays on the class.
 func (p *projection) caller(key string, site ast.NodePosition) string {
-	def, ok := p.defs[key]
-	if !ok || def.Kind != fidx.DefClass || !p.ix.Language.IsECMAScript() {
+	if !p.ix.Language.IsECMAScript() {
 		return key
 	}
-	for node := p.descendant(site); node != nil && node.Type() != "class_body"; node = node.Parent() {
+	def, ok := p.defs[key]
+	class := ok && def.Kind == fidx.DefClass
+	if !class && len(p.properties) == 0 {
+		return key
+	}
+	var own span
+	if node := p.syntax[key]; node != nil {
+		own = spanOf(node)
+	}
+	for node := p.descendant(site); node != nil && spanOf(node) != own; node = node.Parent() {
+		if property, ok := p.properties[spanOf(node)]; ok {
+			return property
+		}
+		if !class {
+			continue
+		}
 		switch node.Type() {
+		case "class_body":
+			return key
 		case "arrow_function", "function_expression", "function", "generator_function":
 			return key
 		case "class_static_block":

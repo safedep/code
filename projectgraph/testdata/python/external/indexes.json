@@ -1,6 +1,6 @@
 [
   {
-    "version": "2", "path": "main.py", "language": "python",
+    "version": "3", "path": "main.py", "language": "python",
     "imports": [
       {"line": 1, "module": "requests", "alias": "requests", "kind": "static", "namespace": "requests"},
       {"line": 2, "module": "yaml", "item": "load", "alias": "yl", "kind": "static", "namespace": "yaml//load"},
