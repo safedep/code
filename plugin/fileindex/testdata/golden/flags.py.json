@@ -1,8 +1,8 @@
 {
-  "version": "9",
+  "version": "10",
   "path": "flags.py",
   "language": "python",
-  "content_hash": "0df2980f5ffcb01bdb32d43a098370ee7fec526adc2dc44e1324a6143d653887",
+  "content_hash": "d3169e0c3c00508c3f9492866cf4db99ddd780d42dc9e4438558d1d4a22f2621",
   "imports": [
     {
       "line": 1,
@@ -43,8 +43,14 @@
       "kind": "module",
       "name": "flags",
       "start_line": 1,
-      "end_line": 33,
-      "exported": true
+      "end_line": 37,
+      "exported": true,
+      "flags": [
+        {
+          "kind": "module-getattr",
+          "line": 31
+        }
+      ]
     },
     {
       "key": "flags.py//load",
@@ -123,16 +129,24 @@
       ]
     },
     {
+      "key": "flags.py//__getattr__",
+      "kind": "function",
+      "name": "__getattr__",
+      "start_line": 31,
+      "end_line": 32,
+      "exported": true
+    },
+    {
       "key": "flags.py//broken",
       "kind": "function",
       "name": "broken",
-      "start_line": 31,
-      "end_line": 32,
+      "start_line": 35,
+      "end_line": 36,
       "exported": true,
       "flags": [
         {
           "kind": "parse-error",
-          "line": 31
+          "line": 35
         }
       ]
     }
@@ -259,6 +273,17 @@
       ]
     }
   ],
+  "references": [
+    {
+      "caller": "flags.py//__getattr__",
+      "line": 32,
+      "column": 12,
+      "text": "load",
+      "targets": [
+        "flags.py//load"
+      ]
+    }
+  ],
   "unresolved": [
     {
       "caller": "flags.py//load",
@@ -343,8 +368,12 @@
       "line": 21
     },
     {
-      "kind": "parse-error",
+      "kind": "module-getattr",
       "line": 31
+    },
+    {
+      "kind": "parse-error",
+      "line": 35
     }
   ]
 }

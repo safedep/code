@@ -28,7 +28,7 @@ import (
 //	fallback
 //
 // A key whose unit ends in .py or .js is first party, and any other key is
-// external.
+// external. A first-party key under tests/ is a test node.
 func graphOf(t *testing.T, spec string) *projectgraph.Graph {
 	t.Helper()
 	g := &projectgraph.Graph{Nodes: map[string]*projectgraph.Node{}, Files: map[string]fileindex.FileStatus{}}
@@ -38,7 +38,7 @@ func graphOf(t *testing.T, spec string) *projectgraph.Graph {
 		}
 		n := &projectgraph.Node{Key: key, Kind: projectgraph.NodeExternal}
 		if unit := fileindex.Unit(key); strings.HasSuffix(unit, ".py") || strings.HasSuffix(unit, ".js") {
-			n.Kind, n.Path, n.Line = projectgraph.NodeFunction, unit, 1
+			n.Kind, n.Path, n.Line, n.Test = projectgraph.NodeFunction, unit, 1, strings.HasPrefix(unit, "tests/")
 			if _, ok := g.Files[unit]; !ok {
 				g.Files[unit] = fileindex.FileIndexed
 			}
@@ -176,6 +176,9 @@ func TestReachUncertainties(t *testing.T) {
 	}{
 		{name: "a record of the same method", extra: "unresolved handlers.py//parse 5 unknown-receiver load", target: "yaml//dump", status: NotFound, kinds: []UncertaintyKind{}},
 		{name: "a record of the target method", extra: "unresolved handlers.py//parse 5 unknown-receiver dump", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{UnresolvedCall}},
+		{name: "a record of the method of an unreached definition that reaches the target", extra: "unresolved handlers.py//parse 5 unknown-receiver f", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{UnresolvedCall}},
+		{name: "a record of the method of an unreached definition that does not reach the target", extra: "unresolved handlers.py//parse 5 unknown-receiver f", target: "yaml//safe_load", status: NotFound, kinds: []UncertaintyKind{}},
+		{name: "a record of the method of an external key that leads to the target", extra: "unresolved handlers.py//parse 5 unknown-receiver run\nedge kit//run npm:kit@1.0.0//index.js//run package\nedge npm:kit@1.0.0//index.js//run yaml//dump", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{UnresolvedCall}},
 		{name: "a computed name", extra: "unresolved handlers.py//parse 5 computed-name", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{UnresolvedCall}},
 		{name: "a computed name with a method", extra: "unresolved handlers.py//parse 5 computed-name getattr", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{UnresolvedCall}},
 		{name: "a computed import by a named function", extra: "unresolved handlers.py//parse 5 dynamic-import import_module", target: "yaml//dump", status: Uncertain, kinds: []UncertaintyKind{UnresolvedCall}},
@@ -218,6 +221,18 @@ func TestReachUncertainties(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestReachMethodClosureSkipsTests(t *testing.T) {
+	g := graphOf(t, basic+`
+root tests/test_app.py test
+edge tests/test_app.py//f yaml//dump
+unresolved handlers.py//parse 5 unknown-receiver f
+`)
+	r := reachOne(t, g, Query{Targets: []string{"yaml//dump"}})
+	assert.Equal(t, NotFound, r.Status)
+	r = reachOne(t, g, Query{Targets: []string{"yaml//dump"}, IncludeTests: true})
+	assert.Equal(t, Uncertain, r.Status)
 }
 
 func TestReachCapsUncertaintiesPerKind(t *testing.T) {

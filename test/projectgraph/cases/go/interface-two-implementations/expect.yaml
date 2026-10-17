@@ -1,5 +1,5 @@
 source: safedep:hand
-description: run calls Write on a parameter of the interface type Sink. Every type of the project with a method Write of one parameter can hold the call, so cha edges go to File.Write and DB.Write. Log.Write takes no parameter, so it gets no edge. A type of a dependency can implement Sink too, so the site keeps a record.
+description: run calls Write on a parameter of the interface type Sink. Every type of the project with a method Write of one parameter can hold the call, so cha edges go to File.Write and DB.Write. Log.Write takes no parameter, so it gets no edge. A type of a dependency can implement Sink too, so the site keeps a record. The record has the method Write, and Log.Write reaches os.Exit, so os.Exit is uncertain.
 roots:
   - key: cmd/app/main.go
     kind: main
@@ -48,8 +48,11 @@ results:
         site: sink/db.go:11
         reached: true
   - target: os//Exit
-    status: not-found
+    status: uncertain
     call_sites:
       - caller: sink/db.go//Log//Write
         site: sink/db.go:18
         reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: cmd/app/main.go:10

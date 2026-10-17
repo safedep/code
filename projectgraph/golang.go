@@ -126,11 +126,13 @@ func (b *builder) linkInits(ix *fileindex.Index) {
 	b.addEdge(Edge{From: ix.Path, To: key, Site: Site{Path: ix.Path, Line: n.Line}, Kind: EdgeDirect, Resolver: resolverName(ix.Language, "init")})
 }
 
-// implementations returns the Go methods of the unit of the interface that a
-// call of a method of the interface can run: the methods with the name of the call
-// and a signature that takes its arguments, of a type that implements the
-// interface. One call as the only argument can give more values, so it
-// takes any arity.
+// implementations returns the Go methods that a call of a method of the
+// interface can run: the methods with the name of the call and a signature
+// that takes its arguments, of a type that implements the interface. A
+// value of an interface of the project can hold a type of any unit of
+// dependency code, as the value that a constructor of the unit returns. An
+// interface of a unit holds only the types of its unit. One call as the
+// only argument can give more values, so it takes any arity.
 func (b *builder) implementations(iface string, call fileindex.Call) []string {
 	if b.goMethods == nil {
 		b.goMethods = map[familyName][]string{}
@@ -147,14 +149,24 @@ func (b *builder) implementations(iface string, call fileindex.Call) []string {
 			}
 		}
 	}
+	units := []string{fileindex.PackageOf(iface)}
+	if units[0] == "" {
+		for _, sp := range b.ordered {
+			if sp.unit != "" {
+				units = append(units, sp.unit)
+			}
+		}
+	}
 	args := len(call.Args)
 	spread := args == 1 && call.Args[0].Shape == fileindex.ArgComputed
 	var out []string
-	for _, key := range b.goMethods[familyName{unit: fileindex.PackageOf(iface), name: call.Method}] {
-		def := b.defs[key]
-		takes := spread || def.Arity == args || def.Variadic && args >= def.Arity-1
-		if takes && b.implements(fileindex.Parent(key), iface) {
-			out = append(out, key)
+	for _, unit := range units {
+		for _, key := range b.goMethods[familyName{unit: unit, name: call.Method}] {
+			def := b.defs[key]
+			takes := spread || def.Arity == args || def.Variadic && args >= def.Arity-1
+			if takes && b.implements(fileindex.Parent(key), iface) {
+				out = append(out, key)
+			}
 		}
 	}
 	slices.Sort(out)

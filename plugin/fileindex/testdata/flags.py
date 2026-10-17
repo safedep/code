@@ -28,5 +28,9 @@ def plain():
     pass
 
 
+def __getattr__(name):
+    return load
+
+
 def broken(:
     pass

@@ -1,0 +1,56 @@
+source: safedep:hand
+description: >-
+  main calls anything on the module c, which has no definition of the name. The module defines __getattr__,
+  so the lookup runs __getattr__, and the call runs the value that it returns. The site gets an edge to
+  __getattr__ and a computed-name record. __getattr__ returns later, so a reference edge leads to later,
+  and later calls marshal.loads.
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: main.py
+    to: pkg/c.py//__getattr__
+    kind: direct
+    confidence: high
+    site: main.py:5
+  - from: pkg/c.py//__getattr__
+    to: pkg/c.py//later
+    kind: reference
+    confidence: low
+    site: pkg/c.py:9
+  - from: pkg/c.py//later
+    to: marshal//loads
+    kind: direct
+    confidence: high
+    site: pkg/c.py:5
+unresolved:
+  - caller: main.py
+    site: main.py:5
+    reason: computed-name
+results:
+  - target: marshal//loads
+    status: found
+    path:
+      - key: main.py
+      - key: pkg/c.py//__getattr__
+        site: main.py:5
+        kind: direct
+        confidence: high
+      - key: pkg/c.py//later
+        site: pkg/c.py:9
+        kind: reference
+        confidence: low
+      - key: marshal//loads
+        site: pkg/c.py:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: pkg/c.py//later
+        site: pkg/c.py:5
+        reached: true
+  - target: x//y
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: main.py:5

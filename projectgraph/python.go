@@ -17,6 +17,7 @@ var pythonProfile = profile{
 	relativePath:       pythonRelativePath,
 	instance:           []string{"self", "cls"},
 	objectBase:         "object",
+	moduleGetattr:      "__getattr__",
 	classBodyInDefiner: true,
 	c3:                 true,
 	openBases:          true,
@@ -64,6 +65,18 @@ func (b *builder) c3(class string) []string {
 			}
 		}
 	}
+}
+
+// moduleGetattr returns the function of a module that runs for a name that
+// the module does not define, when the module has one.
+func (b *builder) moduleGetattr(module string) (string, bool) {
+	name := b.profileAt(module).moduleGetattr
+	n := b.g.Nodes[module]
+	if name == "" || n == nil || !slices.ContainsFunc(n.Flags, func(f fileindex.Flag) bool { return f.Kind == fileindex.FlagModuleGetattr }) {
+		return "", false
+	}
+	key := fileindex.Join(module, name)
+	return key, b.kindOf(key) == NodeFunction
 }
 
 // starVisible reports whether an import of * from the module gives on the

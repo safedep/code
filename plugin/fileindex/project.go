@@ -145,6 +145,7 @@ func project(ctx context.Context, tree core.ParseTree) (*fidx.Index, error) {
 	}
 	p.addImports()
 	p.addDefinitions()
+	p.flagModuleGetattr()
 	p.addExports()
 	p.addTruncations()
 	p.addGoSignatures()

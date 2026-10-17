@@ -29,6 +29,10 @@ type resolution struct {
 	// unbound marks a target that no definition and no import of the file
 	// binds, as print or console//log.
 	unbound bool
+	// dynamic marks a resolution to code that computes the value, as the
+	// __getattr__ of a module. The value is not known, so the site also
+	// gets a computed-name record.
+	dynamic bool
 	// target is the per-file target that the resolution came from.
 	target string
 	// class is the class or interface whose method the walk looked up
@@ -97,6 +101,9 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 					Reason:   r.fail.reason,
 				})
 				continue
+			}
+			if r.dynamic {
+				b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: call.Callee, Receiver: call.Receiver, Reason: fileindex.UnresolvedComputedName})
 			}
 			if r.unbound {
 				// A call on an unknown receiver, as plugin.run(), has the
@@ -496,6 +503,10 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 					r.key = value
 					continue
 				}
+				if getter, ok := b.moduleGetattr(r.key); ok {
+					r.key, r.kind, r.rule, r.dynamic = getter, EdgeDirect, "module-getattr", true
+					return r
+				}
 				r.fail = fail
 				return r
 			}
@@ -658,7 +669,7 @@ func (b *builder) variableValue(key string) (string, bool) {
 		values = def.Values
 	}
 	for _, r := range b.resolveTargets(sc, fileindex.Unit(key), values) {
-		if r.fail != nil || r.unbound && !langcode.IsBuiltin(sc.ix.Language, fileindex.Unit(r.key)) {
+		if r.fail != nil || r.dynamic || r.unbound && !langcode.IsBuiltin(sc.ix.Language, fileindex.Unit(r.key)) {
 			return "", false
 		}
 		k := b.deref(r.key)
@@ -723,7 +734,7 @@ func (b *builder) resolveScopeName(sc *scope, text string) (string, bool) {
 	default:
 		return "", false
 	}
-	if r.fail != nil {
+	if r.fail != nil || r.dynamic {
 		return "", false
 	}
 	return b.deref(r.key), true

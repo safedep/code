@@ -1,6 +1,6 @@
 [
   {
-    "version": "9", "path": "main.py", "language": "python",
+    "version": "10", "path": "main.py", "language": "python",
     "imports": [
       {"line": 1, "module": "pkg", "item": "f", "alias": "f", "kind": "static", "namespace": "pkg//f"},
       {"line": 1, "module": "pkg", "item": "g", "alias": "g", "kind": "static", "namespace": "pkg//g"}
@@ -12,7 +12,7 @@
     ]
   },
   {
-    "version": "9", "path": "pkg/__init__.py", "language": "python",
+    "version": "10", "path": "pkg/__init__.py", "language": "python",
     "imports": [
       {"line": 1, "module": ".a", "item": "f", "alias": "f", "kind": "static", "namespace": "//a//f"},
       {"line": 1, "module": ".a", "item": "g", "alias": "g", "kind": "static", "namespace": "//a//g"}
@@ -21,7 +21,7 @@
     "definitions": [{"key": "pkg/__init__.py", "kind": "module", "name": "__init__", "start_line": 1, "end_line": 2, "exported": true}]
   },
   {
-    "version": "9", "path": "pkg/a.py", "language": "python",
+    "version": "10", "path": "pkg/a.py", "language": "python",
     "definitions": [
       {"key": "pkg/a.py", "kind": "module", "name": "a", "start_line": 1, "end_line": 4, "exported": true},
       {"key": "pkg/a.py//f", "kind": "function", "name": "f", "start_line": 1, "end_line": 2, "exported": true},

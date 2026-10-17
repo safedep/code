@@ -1,0 +1,1 @@
+{ "name": "app", "main": "main.js", "dependencies": { "plug": "1.0.0" } }

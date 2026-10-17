@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "index_version": "9",
-  "link_version": "9",
+  "index_version": "10",
+  "link_version": "10",
   "unit": "npm:lodash._reinterpolate@3.0.0",
   "symbols": [
     {

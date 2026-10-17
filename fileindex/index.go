@@ -19,7 +19,7 @@ import (
 // Version is the version of the index records and of the rules that fill
 // them. Bump it when a field, a kind, an order or a fill rule changes. A
 // store keys an index by Version, so the bump makes every older index miss.
-const Version = "9"
+const Version = "10"
 
 type ImportKind string
 
@@ -94,6 +94,10 @@ const (
 	// FlagInjection marks a value that a container sets, as a Java field
 	// with @Autowired. The declared type of the value narrows a call on it.
 	FlagInjection FlagKind = "injection"
+	// FlagModuleGetattr marks a Python module that defines __getattr__. A
+	// name of the module that no definition binds runs __getattr__, and
+	// the value that it returns is not known.
+	FlagModuleGetattr FlagKind = "module-getattr"
 )
 
 // TruncationKind names a limit that the index of a file hit. The kinds of

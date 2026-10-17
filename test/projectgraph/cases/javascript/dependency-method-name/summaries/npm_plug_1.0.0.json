@@ -1,0 +1,102 @@
+{
+  "version": "1",
+  "index_version": "10",
+  "link_version": "10",
+  "unit": "npm:plug@1.0.0",
+  "symbols": [
+    {
+      "key": "plug//Plug",
+      "definitions": [
+        "npm:plug@1.0.0//index.js//Plug"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "plug//Plug//run",
+      "definitions": [
+        "npm:plug@1.0.0//index.js//Plug//run"
+      ],
+      "reaches": [
+        {
+          "target": "fs//rmSync",
+          "path": [
+            {
+              "key": "plug//Plug//run",
+              "site": {
+                "path": ""
+              }
+            },
+            {
+              "key": "npm:plug@1.0.0//index.js//Plug//run",
+              "site": {
+                "path": "npm:plug@1.0.0//index.js",
+                "line": 4
+              },
+              "edge_kind": "package",
+              "confidence": "high",
+              "resolver": "javascript.package.main"
+            },
+            {
+              "key": "fs//rmSync",
+              "site": {
+                "path": "npm:plug@1.0.0//index.js",
+                "line": 5,
+                "column": 5
+              },
+              "edge_kind": "direct",
+              "confidence": "high",
+              "resolver": "javascript.external"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "plug//index//Plug",
+      "definitions": [
+        "npm:plug@1.0.0//index.js//Plug"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "plug//index//Plug//run",
+      "definitions": [
+        "npm:plug@1.0.0//index.js//Plug//run"
+      ],
+      "reaches": [
+        {
+          "target": "fs//rmSync",
+          "path": [
+            {
+              "key": "plug//index//Plug//run",
+              "site": {
+                "path": ""
+              }
+            },
+            {
+              "key": "npm:plug@1.0.0//index.js//Plug//run",
+              "site": {
+                "path": "npm:plug@1.0.0//index.js",
+                "line": 4
+              },
+              "edge_kind": "package",
+              "confidence": "high",
+              "resolver": "javascript.package.subpath"
+            },
+            {
+              "key": "fs//rmSync",
+              "site": {
+                "path": "npm:plug@1.0.0//index.js",
+                "line": 5,
+                "column": 5
+              },
+              "edge_kind": "direct",
+              "confidence": "high",
+              "resolver": "javascript.external"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

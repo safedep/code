@@ -144,7 +144,7 @@
     "pkg/loader.py": "indexed"
   },
   "stats": {
-    "version": "9",
+    "version": "10",
     "files": 3,
     "nodes": 6,
     "edges": 5,

@@ -59,7 +59,8 @@ func TestDynamicSites(t *testing.T) {
 			{Kind: fidx.FlagComputedAttribute, Line: 17},
 			{Kind: fidx.FlagMonkeyPatch, Line: 18},
 			{Kind: fidx.FlagDecoratorWrap, Line: 21},
-			{Kind: fidx.FlagParseError, Line: 31},
+			{Kind: fidx.FlagModuleGetattr, Line: 31},
+			{Kind: fidx.FlagParseError, Line: 35},
 		}},
 	}
 	for _, tc := range cases {
@@ -91,6 +92,11 @@ func TestFlagLandsOnTheEnclosingDefinition(t *testing.T) {
 	assert.Equal(t, []fidx.Flag{{Kind: fidx.FlagDecoratorWrap, Line: 21}}, flags["flags.py//index"])
 	assert.Empty(t, flags["flags.py//plain"])
 	assert.Contains(t, ix.Flags, fidx.Flag{Kind: fidx.FlagEval, Line: 13})
+
+	getattr := fidx.Flag{Kind: fidx.FlagModuleGetattr, Line: 31}
+	assert.Contains(t, flags["flags.py"], getattr, "a module __getattr__ flags the module")
+	assert.Empty(t, flags["flags.py//__getattr__"])
+	assert.Contains(t, ix.Flags, getattr)
 }
 
 func TestDynamicImportKinds(t *testing.T) {

@@ -1,5 +1,5 @@
 source: safedep:hand
-description: start calls Run on a parameter of the interface type Runner, which declares Run and Stop. Real has both methods, so it can hold the call. Script has Run with the arity of the call but no Stop, so it is no Runner and its Run gets no cha edge.
+description: start calls Run on a parameter of the interface type Runner, which declares Run and Stop. Real has both methods, so it can hold the call. Script has Run with the arity of the call but no Stop, so it is no Runner and its Run gets no cha edge. The site keeps a record with the method Run, and a definition named Run reaches exec.Command, so exec.Command is uncertain and not proved unreached.
 roots:
   - key: cmd/app/main.go
     kind: main
@@ -43,8 +43,11 @@ results:
         site: worker/worker.go:13
         reached: true
   - target: os//exec//Command
-    status: not-found
+    status: uncertain
     call_sites:
       - caller: worker/script.go//Script//Run
         site: worker/script.go:8
         reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: cmd/app/main.go:10

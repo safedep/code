@@ -146,7 +146,7 @@
     "src/app/tool.py": "indexed"
   },
   "stats": {
-    "version": "9",
+    "version": "10",
     "files": 5,
     "nodes": 10,
     "edges": 0,

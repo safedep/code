@@ -154,7 +154,7 @@
     "parser.js": "indexed"
   },
   "stats": {
-    "version": "9",
+    "version": "10",
     "files": 4,
     "nodes": 9,
     "edges": 3,

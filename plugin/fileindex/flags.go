@@ -27,6 +27,9 @@ type dynamicSyntax struct {
 	// call, as attr in getattr(obj, attr). A string there makes no flag.
 	// It is -1 for a language whose reflection calls name no member.
 	reflectionName int
+	// moduleGetattr names the function of a module that runs for a name
+	// that the module does not define, as __getattr__ of Python.
+	moduleGetattr string
 }
 
 var ecmascriptSyntax = dynamicSyntax{
@@ -56,7 +59,27 @@ var dynamicSyntaxes = map[core.LanguageCode]dynamicSyntax{
 		importers:      map[string]bool{"importlib.import_module": true, "import_module": true, "__import__": true},
 		reflection:     func(callee string) bool { return slices.Contains([]string{"getattr", "setattr", "delattr"}, callee) },
 		reflectionName: 1,
+		moduleGetattr:  "__getattr__",
 	},
+}
+
+// flagModuleGetattr marks a module that defines __getattr__. A name of the
+// module that no definition binds runs it, and the index does not know
+// the value that it returns. The flag lands on the module, so the link
+// step reads it where it looks a name up.
+func (p *projection) flagModuleGetattr() {
+	name := dynamicSyntaxes[p.ix.Language].moduleGetattr
+	if name == "" {
+		return
+	}
+	def, ok := p.defs[p.local(name)]
+	if !ok || def.Kind != fidx.DefFunction {
+		return
+	}
+	flag := fidx.Flag{Kind: fidx.FlagModuleGetattr, Line: def.StartLine}
+	p.ix.Flags = append(p.ix.Flags, flag)
+	module := p.defs[p.cg.FileName]
+	module.Flags = append(module.Flags, flag)
 }
 
 // visitor reads one node of a walk of the tree, with the type of the node.

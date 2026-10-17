@@ -47,8 +47,10 @@ const (
 )
 
 // Query asks for the targets, as external keys like yaml//load. A target
-// that ends in //* matches every external key under it. MaxDepth 0 selects
-// 64 hops.
+// is the key form of the import and the names under it: a Go import path
+// with // for /, as os//exec//Command, and a Java class under its package,
+// as java//lang//Thread//sleep. A target that ends in //* matches every
+// external key under it. MaxDepth 0 selects 64 hops.
 type Query struct {
 	Targets      []string
 	IncludeTests bool
@@ -76,11 +78,13 @@ type CallSite struct {
 
 // Uncertainty is a reason why no path is not a proof. Key is the node that
 // the search reached and that holds the reason. Method scopes an unresolved
-// call to the targets with that last segment, ImportPrefix scopes a
-// computed import to the targets under the prefix, and Unit scopes a call
-// into a package at no known definition to the targets that the code of
-// the package, and of each package that it calls, reaches. With none of
-// them, the uncertainty concerns every target.
+// call to the targets with that last segment, and to the targets that any
+// node with that last segment reaches, in the project or in any unit of
+// dependency code. ImportPrefix scopes a computed import to the targets
+// under the prefix, and Unit scopes a call into a package at no known
+// definition to the targets that the code of the package, and of each
+// package that it calls, reaches. With none of them, the uncertainty
+// concerns every target.
 type Uncertainty struct {
 	Kind         UncertaintyKind   `json:"kind"`
 	Key          string            `json:"key,omitempty"`
@@ -127,6 +131,7 @@ func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error
 		return nil, errors.New("an empty target")
 	}
 	ix := newIndex(g)
+	ix.includeTests = q.IncludeTests
 	depth := cmp.Or(q.MaxDepth, defaultMaxDepth)
 
 	targets := make([][]int, len(q.Targets))
@@ -235,7 +240,10 @@ func Explore(ctx context.Context, g *projectgraph.Graph, from []string, maxDepth
 
 // index is the graph with integer node ids, in key order, and the edges out
 // of each node. unitNodes holds the nodes of each unit of dependency code,
-// and closures what the code of each unit reaches. Both fill on first use.
+// and closures what the code of each unit reaches. byLast holds the nodes
+// by the last segment of their key, and methodClosures what the nodes of
+// each last segment reach. Each table fills on first use. includeTests
+// lets a node of a test file be a source of a method closure.
 type index struct {
 	g         *projectgraph.Graph
 	keys      []string
@@ -244,8 +252,12 @@ type index struct {
 	in        [][]int32
 	externals []int
 
-	unitNodes map[string][]int
-	closures  map[string][]bool
+	includeTests bool
+
+	unitNodes      map[string][]int
+	closures       map[string][]bool
+	byLast         map[string][]int
+	methodClosures map[string][]bool
 }
 
 func newIndex(g *projectgraph.Graph) *index {
@@ -302,38 +314,44 @@ func (ix *index) closure(unit string) []bool {
 			}
 		}
 	}
-	seen := make([]bool, len(ix.keys))
-	added := map[string]bool{}
-	var queue []int
-	add := func(u string) {
-		if added[u] {
-			return
+	entered := map[string]bool{}
+	seen := ix.reachable(ix.unitNodes[unit], func(id int) []int {
+		u := ix.unitOf(id)
+		if u == "" || entered[u] {
+			return nil
 		}
-		added[u] = true
-		for _, id := range ix.unitNodes[u] {
-			if !seen[id] {
-				seen[id] = true
-				queue = append(queue, id)
-			}
+		entered[u] = true
+		return ix.unitNodes[u]
+	})
+	ix.closures[unit] = seen
+	return seen
+}
+
+// reachable returns the nodes that a search from the sources reaches. The
+// search also takes the nodes that more gives for each node that it
+// reaches, as the other nodes of the unit of the node.
+func (ix *index) reachable(sources []int, more func(id int) []int) []bool {
+	seen := make([]bool, len(ix.keys))
+	var queue []int
+	add := func(id int) {
+		if !seen[id] {
+			seen[id] = true
+			queue = append(queue, id)
 		}
 	}
-	add(unit)
+	for _, id := range sources {
+		add(id)
+	}
 	for len(queue) > 0 {
 		id := queue[0]
 		queue = queue[1:]
+		for _, v := range more(id) {
+			add(v)
+		}
 		for _, e := range ix.out[id] {
-			v := ix.id[ix.g.Edges[e].To]
-			if seen[v] {
-				continue
-			}
-			seen[v] = true
-			queue = append(queue, v)
-			if u := ix.unitOf(v); u != "" {
-				add(u)
-			}
+			add(ix.id[ix.g.Edges[e].To])
 		}
 	}
-	ix.closures[unit] = seen
 	return seen
 }
 
@@ -341,6 +359,35 @@ func (ix *index) closure(unit string) []bool {
 // target.
 func (ix *index) unitReaches(unit, target string) bool {
 	c := ix.closure(unit)
+	return slices.ContainsFunc(ix.match(target), func(id int) bool { return c[id] })
+}
+
+// methodClosure returns the nodes that the nodes with the last segment
+// reach: the definitions of the name in the project and in each unit of
+// dependency code, and the external keys of the name, which can lead into
+// a unit. An unresolved call of the name can run any of them. A node of a
+// test file is a source only when the query includes the tests.
+func (ix *index) methodClosure(name string) []bool {
+	if c, ok := ix.methodClosures[name]; ok {
+		return c
+	}
+	if ix.byLast == nil {
+		ix.byLast, ix.methodClosures = map[string][]int{}, map[string][]bool{}
+		for id, key := range ix.keys {
+			if n := ix.g.Nodes[key]; n != nil && (ix.includeTests || !n.Test) {
+				ix.byLast[fileindex.Last(key)] = append(ix.byLast[fileindex.Last(key)], id)
+			}
+		}
+	}
+	seen := ix.reachable(ix.byLast[name], func(int) []int { return nil })
+	ix.methodClosures[name] = seen
+	return seen
+}
+
+// methodReaches reports whether a node with the last segment reaches a
+// node of the target.
+func (ix *index) methodReaches(name, target string) bool {
+	c := ix.methodClosure(name)
 	return slices.ContainsFunc(ix.match(target), func(id int) bool { return c[id] })
 }
 
@@ -497,20 +544,23 @@ type prefixed struct {
 
 // found collects the uncertainties of the nodes that a search reached, in
 // the order of the search. A record with a method name concerns only the
-// targets with that last segment, unless its reason can name any target.
+// targets with that last segment and the targets that a node with that
+// last segment reaches, unless its reason can name any target.
 type found struct {
 	global   []Uncertainty
 	byMethod map[string][]Uncertainty
 	methods  []string
 	prefixed []prefixed
 	byUnit   []Uncertainty
-	// reaches reports whether the code of a unit reaches a target.
-	reaches func(unit, target string) bool
+	// reaches reports whether the code of a unit reaches a target, and
+	// methodReaches whether a node with the last segment reaches one.
+	reaches       func(unit, target string) bool
+	methodReaches func(name, target string) bool
 }
 
 func (ix *index) uncertainties(s *search, maxDepth int) *found {
 	g := ix.g
-	f := &found{byMethod: map[string][]Uncertainty{}, reaches: ix.unitReaches}
+	f := &found{byMethod: map[string][]Uncertainty{}, reaches: ix.unitReaches, methodReaches: ix.methodReaches}
 
 	unresolved := map[string][]projectgraph.UnresolvedSite{}
 	prefixes := map[projectgraph.Site]string{}
@@ -570,10 +620,13 @@ func (ix *index) uncertainties(s *search, maxDepth int) *found {
 			site := projectgraph.Site{Path: n.Path, Line: fl.Line}
 			u := Uncertainty{Kind: DynamicFlag, Key: key, Site: site, Text: string(fl.Kind)}
 			switch {
-			case fl.Kind == fileindex.FlagInjection:
+			case fl.Kind == fileindex.FlagInjection, fl.Kind == fileindex.FlagModuleGetattr:
 				// The declared type of an injected value narrows the
 				// calls on it, and an external type of it leaves the
-				// call unresolved, so the flag adds no uncertainty.
+				// call unresolved. The link step resolves a name that a
+				// module with __getattr__ does not define to __getattr__
+				// with a computed-name record. So neither flag adds an
+				// uncertainty of its own.
 				continue
 			case fl.Kind == fileindex.FlagParseError:
 				u.Kind = Budget
@@ -622,12 +675,10 @@ func (ix *index) uncertainties(s *search, maxDepth int) *found {
 func (f *found) forTarget(target string) ([]Uncertainty, []Uncertainty, int) {
 	all := slices.Clone(f.global)
 	prefix, isWildcard := strings.CutSuffix(target, wildcard)
-	if isWildcard {
-		for _, m := range f.methods {
+	for _, m := range f.methods {
+		if isWildcard || m == fileindex.Last(target) || f.methodReaches(m, target) {
 			all = append(all, f.byMethod[m]...)
 		}
-	} else {
-		all = append(all, f.byMethod[fileindex.Last(target)]...)
 	}
 
 	for _, u := range f.byUnit {
