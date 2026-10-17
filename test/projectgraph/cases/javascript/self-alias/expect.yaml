@@ -1,5 +1,5 @@
 source: safedep:hand
-description: Handler.run copies this to self and calls self.handle. The index does not follow the copy, so a name edge joins the call to the method handle.
+description: Handler.run copies this to self and calls self.handle. The index does not follow the copy, so a field edge joins the call to the method handle.
 roots:
   - key: src/main.js
     kind: manifest
@@ -12,7 +12,7 @@ edges:
     site: src/main.js:14
   - from: src/main.js//Handler//run
     to: src/main.js//Handler//handle
-    kind: name
+    kind: field
     confidence: low
     site: src/main.js:10
 unresolved:
@@ -31,7 +31,7 @@ results:
         confidence: high
       - key: src/main.js//Handler//handle
         site: src/main.js:10
-        kind: name
+        kind: field
         confidence: low
       - key: js-yaml//load
         site: src/main.js:5

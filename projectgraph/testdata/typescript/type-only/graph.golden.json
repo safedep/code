@@ -97,7 +97,7 @@
     "src/types.ts": "indexed"
   },
   "stats": {
-    "version": "2",
+    "version": "3",
     "files": 3,
     "nodes": 5,
     "edges": 2,

@@ -1,0 +1,29 @@
+source: safedep:hand
+description: dispatch calls handle on the parameter handler, whose value the index does not know. 25 classes define handle. That is over the cap of 20, so the site gets no name edge and is ambiguous. An ambiguous site can call any target, so the reach result for yaml.load is uncertain.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+edges:
+  - from: main.py
+    to: main.py//dispatch
+    kind: direct
+    confidence: high
+    site: main.py:8
+no_edges:
+  - from: main.py//dispatch
+    to: handlers.py//H0//handle
+unresolved:
+  - caller: main.py//dispatch
+    site: main.py:5
+    reason: ambiguous
+results:
+  - target: yaml//load
+    status: uncertain
+    call_sites:
+      - caller: handlers.py//H0//handle
+        site: handlers.py:7
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.py:5

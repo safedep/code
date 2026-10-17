@@ -115,7 +115,7 @@
       "exported": false
     },
     {
-      "key": "flags.ts//run//writeFile",
+      "key": "flags.ts//run//fs//writeFile",
       "kind": "method",
       "name": "writeFile",
       "start_line": 15,

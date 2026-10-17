@@ -108,7 +108,7 @@
     "main.py": "indexed"
   },
   "stats": {
-    "version": "2",
+    "version": "3",
     "files": 1,
     "nodes": 5,
     "edges": 3,

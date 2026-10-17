@@ -1,0 +1,52 @@
+source: safedep:hand
+description: Step.run calls self.parse. The receiver self can hold an instance of any subclass of Step, so cha edges join the call to YamlStep.parse and to Mixin.parse, which the MRO of Mixed reads before YamlStep. YamlStep.parse calls yaml.load.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+edges:
+  - from: main.py
+    to: pipeline.py//Step//run
+    kind: member
+    confidence: high
+    site: main.py:3
+  - from: pipeline.py//Step//run
+    to: pipeline.py//Step//parse
+    kind: member
+    confidence: high
+    site: pipeline.py:6
+  - from: pipeline.py//Step//run
+    to: pipeline.py//YamlStep//parse
+    kind: cha
+    confidence: medium
+    site: pipeline.py:6
+  - from: pipeline.py//Step//run
+    to: pipeline.py//Mixin//parse
+    kind: cha
+    confidence: medium
+    site: pipeline.py:6
+no_edges:
+  - from: main.py
+    to: pipeline.py//YamlStep//parse
+unresolved: []
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: pipeline.py//Step//run
+        site: main.py:3
+        kind: member
+        confidence: high
+      - key: pipeline.py//YamlStep//parse
+        site: pipeline.py:6
+        kind: cha
+        confidence: medium
+      - key: yaml//load
+        site: pipeline.py:14
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: pipeline.py//YamlStep//parse
+        site: pipeline.py:14
+        reached: true

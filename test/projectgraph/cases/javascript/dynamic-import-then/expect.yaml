@@ -1,5 +1,5 @@
 source: safedep:hand
-description: src/main.js imports ./parse.js by a dynamic import and calls parse on the module that the promise gives. The receiver m is a parameter, so a name edge joins the call to each first-party parse.
+description: src/main.js imports ./parse.js by a dynamic import and calls parse on the module that the promise gives. The receiver m is a parameter, so a field edge joins the call to each first-party parse that a property holds. The exported function parse is a property of the module object.
 roots:
   - key: src/main.js
     kind: manifest
@@ -12,7 +12,7 @@ edges:
     site: src/main.js:1
   - from: src/main.js
     to: src/parse.js//parse
-    kind: name
+    kind: field
     confidence: low
     site: src/main.js:1
 unresolved:
@@ -31,7 +31,7 @@ results:
       - key: src/main.js
       - key: src/parse.js//parse
         site: src/main.js:1
-        kind: name
+        kind: field
         confidence: low
       - key: js-yaml//load
         site: src/parse.js:4

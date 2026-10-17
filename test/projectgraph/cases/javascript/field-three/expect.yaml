@@ -1,0 +1,51 @@
+source: safedep:hand
+description: run calls parse on the parameter parser, whose value the index does not know. Three properties of the project hold a function named parse, a class method, an object property and a property assignment, so a field edge joins the call to each. The function parse is no property, so it gets no field edge.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.js//run
+    to: src/parsers.js//YamlParser//parse
+    kind: field
+    confidence: low
+    site: src/main.js:4
+  - from: src/main.js//run
+    to: src/parsers.js//json//parse
+    kind: field
+    confidence: low
+    site: src/main.js:4
+  - from: src/main.js//run
+    to: src/parsers.js//plain//parse
+    kind: field
+    confidence: low
+    site: src/main.js:4
+no_edges:
+  - from: src/main.js//run
+    to: src/parsers.js//parse
+unresolved:
+  - caller: src/main.js//run
+    site: src/main.js:4
+    reason: unknown-receiver
+    method: parse
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/main.js
+      - key: src/main.js//run
+        site: src/main.js:7
+        kind: direct
+        confidence: high
+      - key: src/parsers.js//YamlParser//parse
+        site: src/main.js:4
+        kind: field
+        confidence: low
+      - key: js-yaml//load
+        site: src/parsers.js:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/parsers.js//YamlParser//parse
+        site: src/parsers.js:5
+        reached: true

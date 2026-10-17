@@ -1,0 +1,48 @@
+source: safedep:hand
+description: run calls load on the parameter loader, whose value the index does not know. Python has no field edge, so a name edge joins the call to each of the three definitions named load, the two methods and the function.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+edges:
+  - from: main.py//run
+    to: loaders.py//YamlLoader//load
+    kind: name
+    confidence: low
+    site: main.py:5
+  - from: main.py//run
+    to: loaders.py//JsonLoader//load
+    kind: name
+    confidence: low
+    site: main.py:5
+  - from: main.py//run
+    to: loaders.py//load
+    kind: name
+    confidence: low
+    site: main.py:5
+unresolved:
+  - caller: main.py//run
+    site: main.py:5
+    reason: unknown-receiver
+    method: load
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: main.py//run
+        site: main.py:8
+        kind: direct
+        confidence: high
+      - key: loaders.py//YamlLoader//load
+        site: main.py:5
+        kind: name
+        confidence: low
+      - key: yaml//load
+        site: loaders.py:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: loaders.py//YamlLoader//load
+        site: loaders.py:6
+        reached: true

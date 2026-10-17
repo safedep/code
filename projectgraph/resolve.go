@@ -11,8 +11,11 @@ import (
 
 // scope holds what one file binds at its top level.
 type scope struct {
-	ix         *fileindex.Index
-	bindings   map[string]fileindex.Import
+	ix       *fileindex.Index
+	bindings map[string]fileindex.Import
+	// types holds the names that a TypeScript import type binds. Only a
+	// declared type or a base class reads them.
+	types      map[string]fileindex.Import
 	imports    []fileindex.Import
 	exports    map[string][]fileindex.Export
 	stars      []star
@@ -29,9 +32,16 @@ func newScope(ix *fileindex.Index) *scope {
 	sc := &scope{
 		ix:       ix,
 		bindings: map[string]fileindex.Import{},
+		types:    map[string]fileindex.Import{},
 		exports:  map[string][]fileindex.Export{},
 	}
 	for _, imp := range ix.Imports {
+		if imp.Kind == fileindex.ImportTypeOnly {
+			if name := bindingName(ix.Language, imp); name != "" {
+				sc.types[name] = imp
+			}
+			continue
+		}
 		if imp.Kind != fileindex.ImportStatic && imp.Kind != fileindex.ImportDynamicString {
 			continue
 		}
@@ -154,6 +164,13 @@ type resolution struct {
 	unbound bool
 	// target is the per-file target that the resolution came from.
 	target string
+	// class is the class or interface whose method the walk looked up
+	// last. virtual marks a receiver that can hold an instance of any
+	// subclass of it: the instance keyword or a declared type. declared
+	// marks a receiver that a declared type narrowed.
+	class    string
+	virtual  bool
+	declared bool
 }
 
 func (b *builder) linkCalls(ix *fileindex.Index) {
@@ -185,6 +202,7 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 		from := b.runner(caller)
 		site := Site{Path: ix.Path, Line: call.Line, Column: call.Column}
 		for _, r := range b.resolveTargets(sc, caller, targets) {
+			b.linkCHA(call, r, from, site)
 			if r.fail != nil {
 				b.addUnresolved(UnresolvedSite{
 					Caller:   from,
@@ -225,8 +243,46 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			case r.kind == EdgeDirect && call.Receiver != "" && b.isMethod(r.key):
 				r.kind, r.rule = EdgeMember, "member"
 			}
+			if r.kind == EdgeMember && r.declared {
+				r.rule = "declared-type"
+			}
 			b.addEdge(Edge{From: from, To: r.key, Site: site, Kind: r.kind, Resolver: resolverName(ix.Language, r.rule)})
 		}
+	}
+}
+
+// linkCHA narrows the site of a method call whose receiver can hold an
+// instance of a subclass of a known class: the instance keyword or a
+// declared type. It adds a cha edge to the method of each subclass that the
+// call can run besides the resolution, also when the class itself has no
+// such method, as an abstract method. A narrowed site gets no field or name
+// edge, and its record comes from the link step.
+//
+// A receiver that a call of the class makes, as p = Parser(), holds an
+// instance of that class only, so it gets no cha edge.
+func (b *builder) linkCHA(call fileindex.Call, r resolution, from string, site Site) {
+	lang := b.byPath[site.Path].Language
+	class, virtual := r.class, r.virtual
+	if r.fail == nil && class == "" && isInstanceKeyword(lang, call.Receiver) && b.isMethod(r.key) {
+		if parent := fileindex.Parent(r.key); b.isType(parent) {
+			class, virtual = parent, true
+		}
+	}
+	switch {
+	case !virtual || class == "" || call.Method == "":
+		return
+	case r.fail != nil && r.fail.name != call.Method:
+		return
+	case r.fail == nil && fileindex.Last(r.key) != call.Method:
+		return
+	}
+	b.narrowed[site] = true
+	found := ""
+	if r.fail == nil {
+		found = r.key
+	}
+	for _, key := range b.overrides(class, call.Method, found) {
+		b.addEdge(Edge{From: from, To: key, Site: site, Kind: EdgeCHA, Resolver: resolverName(lang, "cha")})
 	}
 }
 
@@ -277,6 +333,13 @@ func (b *builder) resolveTarget(sc *scope, caller, target string) []resolution {
 	}
 	if fileindex.HasKeyPrefix(target, ix.Path) {
 		return []resolution{b.resolveLocal(target)}
+	}
+	if name, rest, ok := strings.Cut(target, fileindex.Separator); ok {
+		if class, ok := b.paramType(sc, caller, name); ok {
+			r := b.walk(class, strings.Split(rest, fileindex.Separator))
+			r.virtual, r.declared = true, true
+			return []resolution{r}
+		}
 	}
 	if imp, rest, ok := sc.importFor(target); ok {
 		module, lead := importedModule(ix.Language, imp)
@@ -333,7 +396,7 @@ func (b *builder) resolveSuper(caller string, names []string) resolution {
 		case len(names) == 0:
 			return resolution{key: base, kind: EdgeDirect, rule: "super"}
 		}
-		if key, fail := b.method(base, names[0], 0, map[string]bool{}); fail == nil {
+		if key, fail := b.method(base, names[0]); fail == nil {
 			r := b.walk(key, names[1:])
 			if r.kind == EdgeDirect && b.isMethod(r.key) {
 				r.kind = EdgeMember
@@ -400,15 +463,33 @@ func (b *builder) walk(key string, names []string) resolution {
 		case kind == NodeExport:
 			r.key = b.bindings[r.key]
 		case kind == NodeVariable:
+			// A function that a property of the object of the variable
+			// holds is a definition under the variable, as api//go.
+			if n := b.g.Nodes[fileindex.Join(r.key, name)]; n != nil {
+				r.key = n.Key
+				i++
+				continue
+			}
 			value, ok := b.variableValue(r.key)
 			if !ok {
 				r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
 				return r
 			}
 			r.key = value
-		case kind == NodeClass:
-			key, fail := b.method(r.key, name, 0, map[string]bool{})
+		case kind == NodeClass || kind == NodeInterface:
+			if isInstanceKeyword(b.byPath[fileindex.Unit(r.key)].Language, name) {
+				r.virtual = true
+				i++
+				continue
+			}
+			r.class = r.key
+			key, fail := b.method(r.key, name)
 			if fail != nil {
+				if field, ok := b.fieldType(r.key, name); ok && i+1 < len(names) {
+					r.key, r.virtual, r.declared = field, true, true
+					i++
+					continue
+				}
 				r.fail = fail
 				return r
 			}
@@ -670,37 +751,6 @@ func (b *builder) bind(sc *scope, name string, line int, target, rule string) st
 	return key
 }
 
-// method returns the method of a class or of its bases. A method that no
-// first-party class defines falls to the first external base.
-func (b *builder) method(class, name string, depth int, seen map[string]bool) (string, *failure) {
-	if n := b.g.Nodes[fileindex.Join(class, name)]; n != nil {
-		return n.Key, nil
-	}
-	if seen[class] || depth > b.opts.maxExportHops {
-		return "", noDefinition(name)
-	}
-	seen[class] = true
-	rec, ok := b.classes[class]
-	if !ok {
-		return "", noDefinition(name)
-	}
-	external := ""
-	for _, base := range b.bases(rec) {
-		switch {
-		case b.kindOf(base) == NodeClass:
-			if key, fail := b.method(base, name, depth+1, seen); fail == nil {
-				return key, nil
-			}
-		case external == "" && b.g.IsExternal(base):
-			external = fileindex.Join(base, name)
-		}
-	}
-	if external != "" {
-		return b.external(external), nil
-	}
-	return "", noDefinition(name)
-}
-
 // bases returns the keys of the bases of a class that the file scope
 // resolves. A builtin base, as object, resolves to nothing.
 func (b *builder) bases(rec classRecord) []string {
@@ -719,9 +769,13 @@ func (b *builder) bases(rec classRecord) []string {
 func (b *builder) resolveScopeName(sc *scope, text string) (string, bool) {
 	segs := strings.Split(text, ".")
 	var r resolution
+	imp, ok := sc.bindings[segs[0]]
+	if !ok {
+		imp, ok = sc.types[segs[0]]
+	}
 	if local := fileindex.Join(sc.ix.Path, segs[0]); b.g.Nodes[local] != nil {
 		r = b.walk(local, segs[1:])
-	} else if imp, ok := sc.bindings[segs[0]]; ok {
+	} else if ok {
 		lang := sc.ix.Language
 		module, lead := importedModule(lang, imp)
 		mod, _, found := b.resolveModule(sc.ix, module)

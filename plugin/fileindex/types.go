@@ -80,12 +80,13 @@ func (p *projection) interfaceBases(node *sitter.Node) []string {
 }
 
 // propertyVisitor adds each JavaScript function that an object property, a
-// property assignment or a class field holds, as go in { go() {} },
-// { go: function () {} }, api.go = () => {} or go = () => {} in a class.
-// The call graph names no such function, so its calls land on the scope
-// that holds it. The definition has the property name in that scope, and
-// it takes the calls of its body. A function value that already is a
-// definition, or a key that a definition already holds, adds nothing.
+// property assignment or a class field holds, as go in
+// api = { go: function () {} }, api.go = () => {} or go = () => {} in a
+// class. The call graph names no such function, so its calls land on the
+// scope that holds it. The definition has the names of the object and the
+// property in that scope, as api//go, and it takes the calls of its body. A
+// function value that already is a definition, or a key that a definition
+// already holds, adds nothing.
 //
 // The visitor runs before the others of the walk, and it sees a property
 // before the function of the property, so the flags and the references of
@@ -96,9 +97,11 @@ func (p *projection) propertyVisitor() visitor {
 	}
 	return func(node *sitter.Node, kind string) {
 		var name, value *sitter.Node
+		var holder []string
 		switch kind {
 		case "pair":
 			name, value = node.ChildByFieldName("key"), node.ChildByFieldName("value")
+			holder = p.objectNames(node.Parent(), 0)
 		case "public_field_definition", "field_definition":
 			name, value = node.ChildByFieldName("name"), node.ChildByFieldName("value")
 			if name == nil {
@@ -110,6 +113,7 @@ func (p *projection) propertyVisitor() visitor {
 				return
 			}
 			name, value = left.ChildByFieldName("property"), node.ChildByFieldName("right")
+			holder = p.objectNames(left.ChildByFieldName("object"), 0)
 		default:
 			return
 		}
@@ -124,7 +128,7 @@ func (p *projection) propertyVisitor() visitor {
 		default:
 			return
 		}
-		key := fidx.Join(p.innermost(value.StartByte()), p.text(name))
+		key := fidx.Join(p.innermost(value.StartByte()), append(holder, p.text(name))...)
 		if _, defined := p.defs[key]; defined {
 			return
 		}
@@ -140,6 +144,46 @@ func (p *projection) propertyVisitor() visitor {
 		p.properties[spanOf(value)] = key
 		p.fillDefinition(def)
 	}
+}
+
+// objectNames returns the names that lead to an object, as [api] for the
+// object of const api = {} and [api, routes] for api.routes. The module
+// object of exports and module.exports, the prototype of a class and this
+// add no name, so exports.go is the go of the module and A.prototype.go is
+// the go of the class A. An object that no name holds, as an argument, adds
+// no name.
+func (p *projection) objectNames(object *sitter.Node, depth int) []string {
+	if object == nil || depth > maxReferenceSegments {
+		return nil
+	}
+	switch object.Type() {
+	case "identifier":
+		if name := p.text(object); name != "exports" {
+			return []string{name}
+		}
+	case "member_expression":
+		if p.text(object) == "module.exports" {
+			return nil
+		}
+		names := p.objectNames(object.ChildByFieldName("object"), depth+1)
+		if property := p.text(object.ChildByFieldName("property")); property != "prototype" {
+			names = append(names, property)
+		}
+		return names
+	case "object":
+		switch parent := object.Parent(); {
+		case parent == nil:
+		case parent.Type() == "variable_declarator":
+			if name := parent.ChildByFieldName("name"); name != nil && name.Type() == "identifier" {
+				return []string{p.text(name)}
+			}
+		case parent.Type() == "pair":
+			return append(p.objectNames(parent.Parent(), depth+1), p.text(parent.ChildByFieldName("key")))
+		case parent.Type() == "assignment_expression":
+			return p.objectNames(parent.ChildByFieldName("left"), depth+1)
+		}
+	}
+	return nil
 }
 
 // innermost returns the key of the innermost definition that holds the

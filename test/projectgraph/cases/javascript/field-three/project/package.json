@@ -1,0 +1,4 @@
+{
+  "name": "field-three",
+  "bin": { "app": "src/main.js" }
+}

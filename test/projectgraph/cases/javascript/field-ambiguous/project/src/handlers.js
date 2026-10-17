@@ -1,0 +1,29 @@
+const yaml = require('js-yaml');
+
+const h0 = { handle: function (text) { return yaml.load(text); } };
+const h1 = { handle: function (text) { return text; } };
+const h2 = { handle: function (text) { return text; } };
+const h3 = { handle: function (text) { return text; } };
+const h4 = { handle: function (text) { return text; } };
+const h5 = { handle: function (text) { return text; } };
+const h6 = { handle: function (text) { return text; } };
+const h7 = { handle: function (text) { return text; } };
+const h8 = { handle: function (text) { return text; } };
+const h9 = { handle: function (text) { return text; } };
+const h10 = { handle: function (text) { return text; } };
+const h11 = { handle: function (text) { return text; } };
+const h12 = { handle: function (text) { return text; } };
+const h13 = { handle: function (text) { return text; } };
+const h14 = { handle: function (text) { return text; } };
+const h15 = { handle: function (text) { return text; } };
+const h16 = { handle: function (text) { return text; } };
+const h17 = { handle: function (text) { return text; } };
+const h18 = { handle: function (text) { return text; } };
+const h19 = { handle: function (text) { return text; } };
+const h20 = { handle: function (text) { return text; } };
+const h21 = { handle: function (text) { return text; } };
+const h22 = { handle: function (text) { return text; } };
+const h23 = { handle: function (text) { return text; } };
+const h24 = { handle: function (text) { return text; } };
+
+module.exports = [h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14, h15, h16, h17, h18, h19, h20, h21, h22, h23, h24];

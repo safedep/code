@@ -126,7 +126,7 @@
       ]
     },
     {
-      "key": "flags.js//run//readFile",
+      "key": "flags.js//run//fs//readFile",
       "kind": "method",
       "name": "readFile",
       "start_line": 16,

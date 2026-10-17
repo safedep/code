@@ -88,6 +88,21 @@ type builder struct {
 	// reading holds the variables whose value a walk reads now, so a cycle
 	// of variables across files stops.
 	reading map[string]bool
+	// params holds the typed parameters of each definition.
+	params map[string][]fileindex.Typed
+
+	mros     map[string][]string
+	children map[string][]string
+	// narrowed holds the call sites whose receiver a class narrowed. Such a
+	// site gets no field or name edge, and the link step owns its record.
+	narrowed map[Site]bool
+	// slots holds the edge of each caller, callee and site.
+	slots map[edgeSlot]Edge
+}
+
+type edgeSlot struct {
+	from, to string
+	site     Site
 }
 
 type classRecord struct {
@@ -127,6 +142,10 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		classes:     map[string]classRecord{},
 		variables:   map[string][]string{},
 		reading:     map[string]bool{},
+		params:      map[string][]fileindex.Typed{},
+		mros:        map[string][]string{},
+		narrowed:    map[Site]bool{},
+		slots:       map[edgeSlot]Edge{},
 		test:        map[string]bool{},
 		rules:       roots.Merge(roots.Default(), opts.Rules),
 	}
@@ -190,7 +209,7 @@ func (b *builder) link(ctx context.Context) error {
 		b.linkDecorators(ix)
 		b.copyUnresolved(ix)
 	}
-	b.linkNames()
+	b.linkFields()
 	return nil
 }
 
@@ -224,6 +243,9 @@ func (b *builder) addDefinitions(ix *fileindex.Index) {
 	for _, def := range ix.Definitions {
 		if def.Kind == fileindex.DefVariable {
 			b.variables[def.Key] = def.Values
+		}
+		if len(def.Params) > 0 {
+			b.params[def.Key] = def.Params
 		}
 		if def.Key == ix.Path {
 			module.Line = cmp.Or(def.StartLine, 1)
@@ -301,15 +323,23 @@ func (b *builder) external(key string) string {
 	return key
 }
 
+// addEdge adds an edge unless the caller already has an edge to the callee
+// at the site with a confidence at least as high. A higher one replaces it,
+// so a path through the site shows the best kind.
 func (b *builder) addEdge(e Edge) {
-	if b.edges[e] {
+	e.Confidence = e.Kind.Confidence()
+	slot := edgeSlot{from: e.From, to: e.To, site: e.Site}
+	old, ok := b.slots[slot]
+	switch {
+	case ok && old.Confidence.Rank() >= e.Confidence.Rank():
 		return
-	}
-	if len(b.edges) >= b.opts.maxEdges {
+	case ok:
+		delete(b.edges, old)
+	case len(b.edges) >= b.opts.maxEdges:
 		b.truncations[Truncation{Kind: TruncationEdges}] = true
 		return
 	}
-	e.Confidence = e.Kind.Confidence()
+	b.slots[slot] = e
 	b.edges[e] = true
 	b.linked[[2]string{e.From, e.To}] = true
 }
@@ -365,7 +395,7 @@ func (b *builder) linkImports(ix *fileindex.Index) {
 // node, through a re-export or not, so the constructor hangs off the class.
 func (b *builder) linkConstructors(ix *fileindex.Index) {
 	for _, c := range ix.Classes {
-		ctor, ok := b.constructor(c.Key, 0, map[string]bool{})
+		ctor, ok := b.constructor(c.Key)
 		if !ok {
 			continue
 		}
@@ -447,41 +477,18 @@ func (b *builder) definer(key string) string {
 	}
 }
 
-func (b *builder) constructor(class string, depth int, seen map[string]bool) (string, bool) {
-	if seen[class] || depth > b.opts.maxExportHops {
-		return "", false
-	}
-	seen[class] = true
-	rec, ok := b.classes[class]
-	if !ok {
-		return "", false
-	}
-	for _, m := range rec.class.Methods {
-		if n := b.g.Nodes[m]; n != nil && n.Kind == NodeConstructor {
-			return m, true
-		}
-	}
-	for _, base := range b.bases(rec) {
-		if b.kindOf(base) != NodeClass {
-			continue
-		}
-		if ctor, ok := b.constructor(base, depth+1, seen); ok {
-			return ctor, true
-		}
-	}
-	return "", false
-}
-
 func (b *builder) copyUnresolved(ix *fileindex.Index) {
 	for _, u := range ix.Unresolved {
 		// The link step resolves a call on super through the bases of the
-		// class, and it records a call that it cannot resolve.
-		if u.Receiver == superKeyword && ix.Language.IsECMAScript() {
+		// class, and the call on a narrowed receiver through the class. It
+		// records a call that it cannot resolve.
+		at := Site{Path: ix.Path, Line: u.Line, Column: u.Column}
+		if u.Receiver == superKeyword && ix.Language.IsECMAScript() || b.narrowed[at] {
 			continue
 		}
 		site := UnresolvedSite{
 			Caller:   b.runner(u.Caller),
-			Site:     Site{Path: ix.Path, Line: u.Line, Column: u.Column},
+			Site:     at,
 			Text:     u.Text,
 			Receiver: u.Receiver,
 			Method:   u.Method,

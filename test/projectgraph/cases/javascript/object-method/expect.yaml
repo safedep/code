@@ -1,5 +1,5 @@
 source: safedep:hand
-description: src/main.js calls the method run of an object literal through the name api. The index does not know the value of api, so a name edge joins the call to the method run.
+description: src/main.js calls the method run of an object literal through the name api. The index does not know the value of api, so a field edge joins the call to the method run.
 roots:
   - key: src/main.js
     kind: manifest
@@ -7,7 +7,7 @@ roots:
 edges:
   - from: src/main.js
     to: src/main.js//run
-    kind: name
+    kind: field
     confidence: low
     site: src/main.js:9
 unresolved:
@@ -22,7 +22,7 @@ results:
       - key: src/main.js
       - key: src/main.js//run
         site: src/main.js:9
-        kind: name
+        kind: field
         confidence: low
       - key: js-yaml//load
         site: src/main.js:5

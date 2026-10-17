@@ -89,6 +89,7 @@ func TestFileIndexPropertyFunctions(t *testing.T) {
 		"function outer() { const o = { inner: function () { yaml.e(); } }; }",
 		"class K { handle = () => { yaml.f(); }; }",
 		"module.exports.extra = function () { yaml.g(); };",
+		"K.prototype.later = function () { yaml.h(); };",
 	}, "\n") + "\n"
 	ix := indexSource(t, core.LanguageCodeJavascript, "a.js", source)
 
@@ -98,21 +99,23 @@ func TestFileIndexPropertyFunctions(t *testing.T) {
 	}
 	assert.Equal(t, map[string]string{
 		"yaml.a": "a.js//run",
-		"yaml.b": "a.js//go",
-		"yaml.c": "a.js//later",
+		"yaml.b": "a.js//api//go",
+		"yaml.c": "a.js//api//later",
 		"yaml.d": "a.js//load",
-		"yaml.e": "a.js//outer//inner",
+		"yaml.e": "a.js//outer//o//inner",
 		"yaml.f": "a.js//K//handle",
 		"yaml.g": "a.js//extra",
+		"yaml.h": "a.js//K//later",
 	}, callers)
 
-	for _, key := range []string{"a.js//go", "a.js//later", "a.js//load", "a.js//outer//inner"} {
+	for _, key := range []string{"a.js//api//go", "a.js//api//later", "a.js//load", "a.js//outer//o//inner"} {
 		def := definitionOf(t, ix, key)
 		assert.Equal(t, fidx.DefMethod, def.Kind, key)
 		assert.Empty(t, def.Parent, key)
 	}
 	assert.Equal(t, "a.js//K", definitionOf(t, ix, "a.js//K//handle").Parent)
+	assert.Equal(t, "a.js//K", definitionOf(t, ix, "a.js//K//later").Parent)
 	assert.True(t, definitionOf(t, ix, "a.js//load").Exported)
 	assert.True(t, definitionOf(t, ix, "a.js//extra").Exported)
-	assert.False(t, definitionOf(t, ix, "a.js//later").Exported)
+	assert.False(t, definitionOf(t, ix, "a.js//api//later").Exported)
 }
