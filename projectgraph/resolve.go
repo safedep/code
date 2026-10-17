@@ -359,10 +359,13 @@ func (b *builder) enclosingClass(key string) (string, bool) {
 }
 
 // resolveLocal resolves a key of the file. A key that names no node walks
-// from its longest prefix that does, as a method of a base class.
+// from its longest prefix that does, as a method of a base class. A
+// variable walks on to its value.
 func (b *builder) resolveLocal(target string) resolution {
 	if b.g.Nodes[target] != nil {
-		return resolution{key: target, kind: EdgeDirect, rule: "local"}
+		r := b.walk(target, nil)
+		r.rule = cmp.Or(r.rule, "local")
+		return r
 	}
 	unit, segs := fileindex.Unit(target), fileindex.Segments(target)
 	for i := len(segs) - 1; i > 0; i-- {

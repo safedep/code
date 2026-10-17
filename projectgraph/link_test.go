@@ -989,8 +989,10 @@ func TestBuildModuleVariables(t *testing.T) {
 			variable("app.py//parser", "app.py//Parser"),
 			variable("app.py//app", "flask//Flask"),
 			variable("app.py//either", "app.py//Parser", "flask//Flask"),
+			variable("app.py//unknown"),
 		},
 		Classes: []fileindex.Class{{Key: "app.py//Parser", Methods: []string{"app.py//Parser//parse"}}},
+		Calls:   []fileindex.Call{{Caller: "app.py", Line: 12, Column: 1, Callee: "unknown", Targets: []string{"app.py//unknown"}, Method: "unknown", Kind: fileindex.CallCall}},
 	}
 	call := func(line int, callee, target, method string) fileindex.Call {
 		return fileindex.Call{Caller: "main.py", Line: line, Column: 1, Callee: callee, Targets: []string{target}, Receiver: firstDotted(callee), Method: method, Kind: fileindex.CallCall}
@@ -1010,6 +1012,10 @@ func TestBuildModuleVariables(t *testing.T) {
 	edges := edgeStrings(g)
 	assert.Contains(t, edges, "main.py -> app.py//Parser//parse member python.member")
 	assert.Contains(t, edges, "main.py -> flask//Flask//run direct python.external")
-	assert.Equal(t, []string{"main.py:4 main.py unknown-receiver get"}, unresolvedStrings(g), "a variable with two values has no known value")
+	assert.Equal(t, []string{
+		"app.py:12 app.py unknown-receiver unknown",
+		"main.py:4 main.py unknown-receiver get",
+	}, unresolvedStrings(g), "a variable with no value or two values has no known value")
+	assert.NotContains(t, edges, "app.py -> app.py//unknown direct python.local")
 	assert.Equal(t, NodeVariable, g.Nodes["app.py//parser"].Kind)
 }
