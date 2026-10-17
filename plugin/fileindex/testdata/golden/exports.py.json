@@ -1,0 +1,106 @@
+{
+  "version": "1",
+  "path": "exports.py",
+  "language": "python",
+  "content_hash": "653115ddc22536763049e9209d4942bca5c6817b98bc01722879b69c04d8605b",
+  "imports": [
+    {
+      "line": 1,
+      "module": ".shared",
+      "item": "shared",
+      "alias": "shared",
+      "kind": "static",
+      "namespace": "//shared//shared"
+    },
+    {
+      "line": 2,
+      "module": "os",
+      "alias": "os",
+      "kind": "static",
+      "namespace": "os"
+    }
+  ],
+  "exports": [
+    {
+      "name": "CONSTANT",
+      "target": "exports.py//CONSTANT",
+      "line": 21
+    },
+    {
+      "name": "Service",
+      "target": "exports.py//Service",
+      "line": 21
+    },
+    {
+      "name": "run",
+      "target": "exports.py//run",
+      "line": 21
+    },
+    {
+      "name": "shared",
+      "target": "",
+      "line": 21
+    }
+  ],
+  "definitions": [
+    {
+      "key": "exports.py",
+      "kind": "module",
+      "name": "exports",
+      "start_line": 1,
+      "end_line": 24,
+      "exported": true
+    },
+    {
+      "key": "exports.py//run",
+      "kind": "function",
+      "name": "run",
+      "start_line": 5,
+      "end_line": 6,
+      "exported": true
+    },
+    {
+      "key": "exports.py//Service",
+      "kind": "class",
+      "name": "Service",
+      "start_line": 9,
+      "end_line": 14,
+      "exported": true
+    },
+    {
+      "key": "exports.py//Service//start",
+      "kind": "method",
+      "name": "start",
+      "start_line": 10,
+      "end_line": 11,
+      "exported": true,
+      "parent": "exports.py//Service"
+    },
+    {
+      "key": "exports.py//Service//_stop",
+      "kind": "method",
+      "name": "_stop",
+      "start_line": 13,
+      "end_line": 14,
+      "exported": true,
+      "parent": "exports.py//Service"
+    },
+    {
+      "key": "exports.py//_private",
+      "kind": "function",
+      "name": "_private",
+      "start_line": 17,
+      "end_line": 18,
+      "exported": true
+    }
+  ],
+  "classes": [
+    {
+      "key": "exports.py//Service",
+      "methods": [
+        "exports.py//Service//_stop",
+        "exports.py//Service//start"
+      ]
+    }
+  ]
+}

@@ -130,7 +130,13 @@
       "name": "main",
       "start_line": 22,
       "end_line": 35,
-      "exported": false
+      "exported": false,
+      "flags": [
+        {
+          "kind": "computed-attribute",
+          "line": 33
+        }
+      ]
     },
     {
       "key": "app.ts//main//nested",
@@ -305,6 +311,12 @@
       "text": "(p as any)[name]",
       "receiver": "(p as any)",
       "reason": "computed-name"
+    }
+  ],
+  "flags": [
+    {
+      "kind": "computed-attribute",
+      "line": 33
     }
   ]
 }

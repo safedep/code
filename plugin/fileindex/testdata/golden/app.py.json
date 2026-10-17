@@ -123,7 +123,13 @@
       "name": "main",
       "start_line": 23,
       "end_line": 35,
-      "exported": true
+      "exported": true,
+      "flags": [
+        {
+          "kind": "reflection",
+          "line": 34
+        }
+      ]
     },
     {
       "key": "app.py//main//nested",
@@ -298,6 +304,12 @@
       "column": 5,
       "text": "getattr(p, attr)",
       "reason": "computed-name"
+    }
+  ],
+  "flags": [
+    {
+      "kind": "reflection",
+      "line": 34
     }
   ]
 }

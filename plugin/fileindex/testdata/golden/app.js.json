@@ -122,7 +122,13 @@
       "name": "main",
       "start_line": 24,
       "end_line": 37,
-      "exported": false
+      "exported": false,
+      "flags": [
+        {
+          "kind": "computed-attribute",
+          "line": 35
+        }
+      ]
     },
     {
       "key": "app.js//main//nested",
@@ -318,6 +324,12 @@
       "text": "p[name]",
       "receiver": "p",
       "reason": "computed-name"
+    }
+  ],
+  "flags": [
+    {
+      "kind": "computed-attribute",
+      "line": 35
     }
   ]
 }

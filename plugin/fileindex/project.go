@@ -6,12 +6,11 @@ import (
 	"path"
 	"slices"
 	"strings"
-	"unicode"
-	"unicode/utf8"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
 	fidx "github.com/safedep/code/fileindex"
+	"github.com/safedep/code/pkg/ts"
 	"github.com/safedep/code/plugin/callgraph"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -65,9 +64,12 @@ type projection struct {
 	ix       *fidx.Index
 
 	// defs holds the definitions by key. syntax holds the tree node of each
-	// definition.
-	defs   map[string]*fidx.Definition
-	syntax map[string]*sitter.Node
+	// definition. exports holds the definition keys that an export names,
+	// and bindings the names that the imports bind.
+	defs     map[string]*fidx.Definition
+	syntax   map[string]*sitter.Node
+	exports  map[string]bool
+	bindings map[string]bool
 }
 
 // project builds the call graph of tree and projects it into an index.
@@ -96,18 +98,26 @@ func project(ctx context.Context, tree core.ParseTree) (*fidx.Index, error) {
 			Language:    language.Meta().Code,
 			ContentHash: fidx.HashContent(*data),
 		},
-		defs:   map[string]*fidx.Definition{},
-		syntax: map[string]*sitter.Node{},
+		defs:     map[string]*fidx.Definition{},
+		syntax:   map[string]*sitter.Node{},
+		exports:  map[string]bool{},
+		bindings: map[string]bool{},
 	}
 
 	p.addImports()
 	p.addDefinitions()
+	p.addExports()
+	p.addTruncations()
+	p.addFlags(ctx)
 	if err := p.addClasses(ctx); err != nil {
 		return nil, err
 	}
 	p.addCalls()
 	p.addUnresolved()
-	p.addTruncations()
+	for _, def := range p.defs {
+		def.Exported = p.exported(def)
+		p.ix.Definitions = append(p.ix.Definitions, *def)
+	}
 
 	p.ix.Sort()
 	return p.ix, nil
@@ -124,6 +134,9 @@ func (p *projection) addImports() {
 			Kind:      p.importKind(imp.Position),
 			Namespace: imp.Namespace,
 		})
+		if imp.Alias != "" {
+			p.bindings[imp.Alias] = true
+		}
 	}
 }
 
@@ -165,10 +178,6 @@ func (p *projection) addDefinitions() {
 	for _, def := range p.defs {
 		p.fillDefinition(def)
 	}
-	for _, def := range p.defs {
-		def.Exported = p.exported(def)
-		p.ix.Definitions = append(p.ix.Definitions, *def)
-	}
 }
 
 // definitionName returns the last segment of a key. The module is the base
@@ -199,52 +208,37 @@ func (p *projection) fillDefinition(def *fidx.Definition) {
 	def.Decorators = p.decorators(p.syntax[def.Key])
 }
 
-// exported reports that the language rule makes the definition visible
-// outside the file. A Go name is exported when it starts with an upper case
-// letter. Elsewhere a top-level definition is exported, and a method is
-// exported with its class.
-func (p *projection) exported(def *fidx.Definition) bool {
-	switch {
-	case def.Kind == fidx.DefModule:
-		return true
-	case p.ix.Language == core.LanguageCodeGo:
-		r, _ := utf8.DecodeRuneInString(def.Name)
-		return unicode.IsUpper(r)
-	case def.Parent != "":
-		return p.exported(p.defs[def.Parent])
-	case p.ix.Language == core.LanguageCodeJavascript || p.ix.Language == core.LanguageCodeTypescript:
-		node := p.syntax[def.Key]
-		return node != nil && node.Parent() != nil && node.Parent().Type() == "export_statement"
-	default:
-		return def.Key == p.cg.FileName+separator+def.Name
-	}
-}
-
 // decorators returns the decorators of a definition as written, with no
-// arguments, as @app.route for @app.route("/").
+// arguments, as @app.route for @app.route("/"). A Python decorated
+// definition and a JavaScript method hold their decorators. A TypeScript
+// class body holds the decorators of a method before the method.
 func (p *projection) decorators(node *sitter.Node) []string {
 	if node == nil {
 		return nil
 	}
+	var nodes []*sitter.Node
+	switch parent := node.Parent(); {
+	case parent == nil:
+	case parent.Type() == "decorated_definition":
+		nodes = ts.NamedChildren(parent)
+	case parent.Type() == "class_body":
+		for sibling := node.PrevNamedSibling(); sibling != nil && sibling.Type() == "decorator"; sibling = sibling.PrevNamedSibling() {
+			nodes = append(nodes, sibling)
+		}
+		slices.Reverse(nodes)
+	}
+	nodes = append(nodes, ts.NamedChildren(node)...)
+
 	var decorators []string
-	add := func(decorator *sitter.Node) {
+	for _, decorator := range nodes {
 		if decorator.Type() != "decorator" || decorator.NamedChildCount() == 0 {
-			return
+			continue
 		}
 		expression := decorator.NamedChild(0)
-		if fn := expression.ChildByFieldName("function"); fn != nil && strings.Contains(expression.Type(), "call") {
-			expression = fn
+		if callee := expression.ChildByFieldName("function"); callee != nil {
+			expression = callee
 		}
 		decorators = append(decorators, "@"+expression.Content(p.source))
-	}
-
-	if parent := node.Parent(); parent != nil && parent.Type() == "decorated_definition" {
-		for i := 0; i < int(parent.NamedChildCount()); i++ {
-			add(parent.NamedChild(i))
-		}
-	}
-	for i := 0; i < int(node.NamedChildCount()); i++ {
-		add(node.NamedChild(i))
 	}
 	return decorators
 }
@@ -425,12 +419,16 @@ func (p *projection) addUnresolved() {
 
 func (p *projection) addTruncations() {
 	for _, t := range p.cg.Truncations() {
-		p.ix.Truncated = append(p.ix.Truncated, fidx.Truncation{
-			Kind:      fidx.TruncationKind(t.Kind),
-			Namespace: t.Namespace,
-			Line:      t.Line,
-		})
+		p.truncate(fidx.TruncationKind(t.Kind), t.Namespace, t.Line)
 	}
+}
+
+// truncate records the first hit of a kind of limit.
+func (p *projection) truncate(kind fidx.TruncationKind, namespace string, line int) {
+	if slices.ContainsFunc(p.ix.Truncated, func(t fidx.Truncation) bool { return t.Kind == kind }) {
+		return
+	}
+	p.ix.Truncated = append(p.ix.Truncated, fidx.Truncation{Kind: kind, Namespace: namespace, Line: line})
 }
 
 // descendant returns the smallest named node that spans position.

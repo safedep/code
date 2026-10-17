@@ -75,6 +75,12 @@ func TestFileIndexGolden(t *testing.T) {
 		{"app.js", core.LanguageCodeJavascript},
 		{"app.ts", core.LanguageCodeTypescript},
 		{"app.py", core.LanguageCodePython},
+		{"exports.js", core.LanguageCodeJavascript},
+		{"exports.ts", core.LanguageCodeTypescript},
+		{"exports.py", core.LanguageCodePython},
+		{"flags.js", core.LanguageCodeJavascript},
+		{"flags.ts", core.LanguageCodeTypescript},
+		{"flags.py", core.LanguageCodePython},
 	}
 	for _, tc := range cases {
 		t.Run(tc.file, func(t *testing.T) {

@@ -1,0 +1,160 @@
+{
+  "version": "1",
+  "path": "exports.ts",
+  "language": "typescript",
+  "content_hash": "bec31766778cf120994be72531c0cd11feccdd8ac3553d9b91cc06fd07e87747",
+  "imports": [
+    {
+      "line": 1,
+      "module": "./shared",
+      "item": "shared",
+      "alias": "shared",
+      "kind": "static",
+      "namespace": ".//shared//shared"
+    },
+    {
+      "line": 2,
+      "module": "./types",
+      "item": "Options",
+      "alias": "Options",
+      "kind": "static",
+      "namespace": ".//types//Options"
+    }
+  ],
+  "exports": [
+    {
+      "name": "run",
+      "target": "exports.ts//run",
+      "line": 4
+    },
+    {
+      "name": "make",
+      "target": "exports.ts//make",
+      "line": 5
+    },
+    {
+      "name": "Service",
+      "target": "exports.ts//Service",
+      "line": 6
+    },
+    {
+      "name": "default",
+      "target": "exports.ts//Main",
+      "line": 9
+    },
+    {
+      "name": "again",
+      "target": "",
+      "item": "shared",
+      "line": 11
+    },
+    {
+      "name": "hidden",
+      "target": "exports.ts//hidden",
+      "line": 11
+    },
+    {
+      "name": "load",
+      "target": "",
+      "from": "./parser",
+      "item": "parse",
+      "line": 12
+    },
+    {
+      "name": "*",
+      "target": "",
+      "from": "./all",
+      "item": "*",
+      "line": 13
+    },
+    {
+      "name": "ns",
+      "target": "",
+      "from": "./ns",
+      "line": 14
+    }
+  ],
+  "definitions": [
+    {
+      "key": "exports.ts",
+      "kind": "module",
+      "name": "exports",
+      "start_line": 1,
+      "end_line": 17,
+      "exported": true
+    },
+    {
+      "key": "exports.ts//run",
+      "kind": "function",
+      "name": "run",
+      "start_line": 4,
+      "end_line": 4,
+      "exported": true
+    },
+    {
+      "key": "exports.ts//make",
+      "kind": "function",
+      "name": "make",
+      "start_line": 5,
+      "end_line": 5,
+      "exported": true
+    },
+    {
+      "key": "exports.ts//Service",
+      "kind": "class",
+      "name": "Service",
+      "start_line": 6,
+      "end_line": 8,
+      "exported": true
+    },
+    {
+      "key": "exports.ts//Service//start",
+      "kind": "method",
+      "name": "start",
+      "start_line": 7,
+      "end_line": 7,
+      "exported": true,
+      "parent": "exports.ts//Service"
+    },
+    {
+      "key": "exports.ts//Main",
+      "kind": "class",
+      "name": "Main",
+      "start_line": 9,
+      "end_line": 9,
+      "exported": true
+    },
+    {
+      "key": "exports.ts//hidden",
+      "kind": "function",
+      "name": "hidden",
+      "start_line": 10,
+      "end_line": 10,
+      "exported": true
+    }
+  ],
+  "classes": [
+    {
+      "key": "exports.ts//Main"
+    },
+    {
+      "key": "exports.ts//Service",
+      "methods": [
+        "exports.ts//Service//start"
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "caller": "exports.ts//make",
+      "line": 5,
+      "column": 33,
+      "callee": "run",
+      "targets": [
+        "exports.ts//run"
+      ],
+      "method": "run",
+      "kind": "call"
+    }
+  ]
+}

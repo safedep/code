@@ -1,0 +1,182 @@
+{
+  "version": "1",
+  "path": "exports.js",
+  "language": "javascript",
+  "content_hash": "765716b5977b05d7bbc4ef5e0192e196e0209400366036053df632d54fdb0f95",
+  "imports": [
+    {
+      "line": 1,
+      "module": "./shared",
+      "item": "shared",
+      "alias": "shared",
+      "kind": "static",
+      "namespace": ".//shared//shared"
+    },
+    {
+      "line": 2,
+      "module": "./def",
+      "alias": "def",
+      "kind": "static",
+      "namespace": ".//def"
+    }
+  ],
+  "exports": [
+    {
+      "name": "run",
+      "target": "exports.js//run",
+      "line": 4
+    },
+    {
+      "name": "make",
+      "target": "exports.js//make",
+      "line": 5
+    },
+    {
+      "name": "Service",
+      "target": "exports.js//Service",
+      "line": 6
+    },
+    {
+      "name": "default",
+      "target": "exports.js//main",
+      "line": 9
+    },
+    {
+      "name": "hidden",
+      "target": "exports.js//hidden",
+      "line": 12
+    },
+    {
+      "name": "other",
+      "target": "",
+      "item": "def",
+      "line": 12
+    },
+    {
+      "name": "renamed",
+      "target": "exports.js//local",
+      "line": 12
+    },
+    {
+      "name": "shared",
+      "target": "",
+      "line": 12
+    },
+    {
+      "name": "load",
+      "target": "",
+      "from": "./parser",
+      "item": "parse",
+      "line": 13
+    },
+    {
+      "name": "*",
+      "target": "",
+      "from": "./all",
+      "item": "*",
+      "line": 14
+    },
+    {
+      "name": "ns",
+      "target": "",
+      "from": "./ns",
+      "line": 15
+    },
+    {
+      "name": "default",
+      "target": "exports.js//hidden",
+      "line": 16
+    },
+    {
+      "name": "extra",
+      "target": "exports.js//run",
+      "line": 17
+    },
+    {
+      "name": "helper",
+      "target": "",
+      "item": "shared",
+      "line": 18
+    }
+  ],
+  "definitions": [
+    {
+      "key": "exports.js",
+      "kind": "module",
+      "name": "exports",
+      "start_line": 1,
+      "end_line": 20,
+      "exported": true
+    },
+    {
+      "key": "exports.js//run",
+      "kind": "function",
+      "name": "run",
+      "start_line": 4,
+      "end_line": 4,
+      "exported": true
+    },
+    {
+      "key": "exports.js//make",
+      "kind": "function",
+      "name": "make",
+      "start_line": 5,
+      "end_line": 5,
+      "exported": true
+    },
+    {
+      "key": "exports.js//Service",
+      "kind": "class",
+      "name": "Service",
+      "start_line": 6,
+      "end_line": 8,
+      "exported": true
+    },
+    {
+      "key": "exports.js//Service//start",
+      "kind": "method",
+      "name": "start",
+      "start_line": 7,
+      "end_line": 7,
+      "exported": true,
+      "parent": "exports.js//Service"
+    },
+    {
+      "key": "exports.js//main",
+      "kind": "function",
+      "name": "main",
+      "start_line": 9,
+      "end_line": 9,
+      "exported": true
+    },
+    {
+      "key": "exports.js//hidden",
+      "kind": "function",
+      "name": "hidden",
+      "start_line": 10,
+      "end_line": 10,
+      "exported": true
+    }
+  ],
+  "classes": [
+    {
+      "key": "exports.js//Service",
+      "methods": [
+        "exports.js//Service//start"
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "caller": "exports.js//make",
+      "line": 5,
+      "column": 27,
+      "callee": "run",
+      "targets": [
+        "exports.js//run"
+      ],
+      "method": "run",
+      "kind": "call"
+    }
+  ]
+}
