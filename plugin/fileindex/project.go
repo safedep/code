@@ -124,6 +124,7 @@ func project(ctx context.Context, tree core.ParseTree) (*fidx.Index, error) {
 			Path:        cg.FileName,
 			Language:    language.Meta().Code,
 			ContentHash: fidx.HashContent(*data),
+			Unit:        unitOf(cg.FileName),
 		},
 		defs:     map[string]*fidx.Definition{},
 		syntax:   map[string]*sitter.Node{},
@@ -165,6 +166,12 @@ func project(ctx context.Context, tree core.ParseTree) (*fidx.Index, error) {
 
 	p.ix.Sort()
 	return p.ix, nil
+}
+
+// unitOf returns the package unit of the name of a file of dependency code.
+func unitOf(name string) string {
+	unit, _ := fidx.SplitUnit(name)
+	return unit
 }
 
 func (p *projection) addImports() {

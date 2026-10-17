@@ -97,7 +97,7 @@ func (b *builder) method(class, name string) (string, *failure) {
 		return key, nil
 	}
 	if base, ok := b.externalBase(class); ok {
-		return b.external(fileindex.Join(base, name)), nil
+		return b.deriveExternal(base, []string{name}), nil
 	}
 	return "", noDefinition(name)
 }
@@ -264,7 +264,8 @@ func (b *builder) subclasses(class string) []string {
 
 // overrides returns the first-party methods that a call of the method on
 // an instance of the class can run besides found: for each subclass, the
-// method that its MRO gives. This is class hierarchy analysis. A Go type
+// method that its MRO gives. An open class of another unit gives no
+// method, as a field candidate of another unit does not. This is class hierarchy analysis. A Go type
 // implements an interface with no declaration, so a Go interface gets the
 // methods of the project with the name and the arity of the call whose
 // type implements the interface.
@@ -281,7 +282,7 @@ func (b *builder) overrides(class string, call fileindex.Call, found string) []s
 	}
 	family := languageFamily(b.languageOf(class))
 	for _, open := range b.openClasses() {
-		if languageFamily(b.languageOf(open)) != family {
+		if languageFamily(b.languageOf(open)) != family || !sameUnit(open, class) {
 			continue
 		}
 		if key, ok := b.ownMethod(open, call.Method); ok && key != found && b.isMethod(key) && !slices.Contains(out, key) {

@@ -17,7 +17,7 @@ import (
 var kotlinProfile = profile{
 	code:            langcode.Kotlin,
 	family:          langcode.Java,
-	resolver:        func(b *builder) modules.Resolver { return namespaceResolver{b, langcode.Java} },
+	resolver:        func(b *builder, _ *space) modules.Resolver { return namespaceResolver{b, langcode.Java} },
 	link:            (*builder).linkKotlin,
 	implicitMethods: kotlinOperators,
 	qualified:       (*builder).resolveJava,

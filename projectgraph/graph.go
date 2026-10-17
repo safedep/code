@@ -17,7 +17,7 @@ import (
 // Version is the version of the link rules. Bump it when a rule that makes a
 // node, an edge, a root or an unresolved site changes, so a diff of two
 // reports shows the change.
-const Version = "8"
+const Version = "9"
 
 type NodeKind string
 
@@ -59,6 +59,11 @@ const (
 	// an import that it uses as a value. The code that gets the value can
 	// call it.
 	EdgeReference EdgeKind = "reference"
+	// EdgePackage joins an external key, as lodash//template, to the
+	// definition that a unit of dependency code gives for it. It is no
+	// call. It marks where a path leaves the code of its caller and goes
+	// on into a package.
+	EdgePackage EdgeKind = "package"
 )
 
 // outranks reports whether an edge of the kind replaces an edge of the old
@@ -162,6 +167,11 @@ type Edge struct {
 // UnresolvedSite is a call site that neither the index nor the link step
 // resolved. ImportPrefix is the key form of the static prefix of a computed
 // import, so the reach query can set aside a site that cannot name a target.
+// Unit names the package unit that a site enters at no known definition,
+// as a name that the package makes at run time, or a module that the
+// package does not have. The site of an external key has the key as its
+// caller and the unit as its site. The code that runs there is code of the
+// unit, so it can reach only what the code of the unit can reach.
 type UnresolvedSite struct {
 	Caller       string                     `json:"caller"`
 	Site         Site                       `json:"site"`
@@ -170,6 +180,7 @@ type UnresolvedSite struct {
 	Method       string                     `json:"method,omitempty"`
 	Reason       fileindex.UnresolvedReason `json:"reason"`
 	ImportPrefix string                     `json:"import_prefix,omitempty"`
+	Unit         string                     `json:"unit,omitempty"`
 }
 
 // Root is a node that runs with no caller in the graph. Rule is the id of the

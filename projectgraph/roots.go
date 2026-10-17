@@ -12,11 +12,12 @@ import (
 // markRoots adds the roots that the rules mark. With no root of kind main,
 // manifest or framework, every exported definition and every module top
 // level of a file that is not a test becomes a root of kind
-// library-surface.
+// library-surface. Dependency code runs only when the project calls it, so
+// it holds no root.
 func (b *builder) markRoots() {
 	indexes := make([]*fileindex.Index, 0, len(b.byPath))
 	for _, p := range b.paths {
-		if ix := b.byPath[p]; ix != nil {
+		if ix := b.byPath[p]; ix != nil && ix.Unit == "" {
 			indexes = append(indexes, ix)
 		}
 	}
@@ -24,9 +25,9 @@ func (b *builder) markRoots() {
 		Indexes:     indexes,
 		IsTest:      func(p string) bool { return b.test[p] },
 		Root:        b.opts.Root,
-		Files:       b.files,
-		Python:      b.python,
-		JS:          b.js,
+		Files:       b.project.files,
+		Python:      b.project.python,
+		JS:          b.project.js,
 		Defined:     func(key string) bool { return b.g.Nodes[key] != nil && b.kindOf(key) != NodeExternal },
 		Exports:     func(p string) []string { return b.exportKeys(p, map[string]bool{}) },
 		Export:      b.exportKey,

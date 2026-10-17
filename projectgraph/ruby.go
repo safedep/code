@@ -17,7 +17,7 @@ import (
 var rubyProfile = profile{
 	code:               langcode.Ruby,
 	family:             langcode.Ruby,
-	resolver:           func(b *builder) modules.Resolver { return rubyResolver{b} },
+	resolver:           func(b *builder, _ *space) modules.Resolver { return rubyResolver{b} },
 	units:              func(b *builder) { b.addLanguageUnit(langcode.Ruby) },
 	aliases:            (*builder).joinReopenedClasses,
 	link:               (*builder).linkImplicitMethods,
@@ -110,13 +110,13 @@ type rubyResolver struct{ b *builder }
 func (r rubyResolver) Module(importer, spec string) (string, string, bool) {
 	file := strings.TrimSuffix(spec, ".rb") + ".rb"
 	if strings.HasPrefix(spec, ".") {
-		if p, ok := modules.Join(modules.Dir(importer), file); ok && r.b.files.Has(p) {
+		if p, ok := modules.Join(modules.Dir(importer), file); ok && r.b.project.files.Has(p) {
 			return p, "relative", true
 		}
 		return "", "", false
 	}
 	for _, dir := range r.b.rubyLibs() {
-		if p, ok := modules.Join(dir, file); ok && r.b.files.Has(p) {
+		if p, ok := modules.Join(dir, file); ok && r.b.project.files.Has(p) {
 			return p, "lib", true
 		}
 	}
@@ -127,7 +127,7 @@ func (r rubyResolver) Module(importer, spec string) (string, string, bool) {
 // of a file or a directory of a lib directory of the project.
 func (r rubyResolver) FirstParty(spec string) bool {
 	first, _, _ := strings.Cut(spec, "/")
-	return strings.HasPrefix(spec, ".") || r.b.files.HasName(strings.TrimSuffix(first, ".rb"))
+	return strings.HasPrefix(spec, ".") || r.b.project.files.HasName(strings.TrimSuffix(first, ".rb"))
 }
 
 // rubyLibs returns the directories that a require reads, as Bundler and a
@@ -135,7 +135,7 @@ func (r rubyResolver) FirstParty(spec string) bool {
 func (b *builder) rubyLibs() []string {
 	if b.rubyLoadPath == nil {
 		b.rubyLoadPath = []string{}
-		for _, d := range b.files.Dirs() {
+		for _, d := range b.project.files.Dirs() {
 			if path.Base(d) == "lib" {
 				b.rubyLoadPath = append(b.rubyLoadPath, d)
 			}

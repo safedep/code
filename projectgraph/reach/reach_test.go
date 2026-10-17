@@ -21,6 +21,7 @@ import (
 //	root <key> [kind]
 //	edge <from> <to> [kind] [line]
 //	unresolved <caller> <line> <reason> [method] [prefix]
+//	entry <external key> <unit>
 //	flag <key> <kind> <line>
 //	file <path> <status>
 //	truncated <kind> [key]
@@ -76,6 +77,11 @@ func graphOf(t *testing.T, spec string) *projectgraph.Graph {
 			g.Unresolved = append(g.Unresolved, projectgraph.UnresolvedSite{
 				Caller: f[1], Site: projectgraph.Site{Path: n.Path, Line: l}, Text: "call",
 				Reason: fileindex.UnresolvedReason(f[3]), Method: strings.Trim(arg(f, 4, ""), "-"), ImportPrefix: arg(f, 5, ""),
+			})
+		case "entry":
+			node(f[1])
+			g.Unresolved = append(g.Unresolved, projectgraph.UnresolvedSite{
+				Caller: f[1], Site: projectgraph.Site{Path: f[2]}, Text: f[1], Reason: fileindex.UnresolvedNoDefinition, Unit: f[2],
 			})
 		case "flag":
 			n := node(f[1])
@@ -411,4 +417,81 @@ func TestReachLargeGraph(t *testing.T) {
 		assert.Less(t, elapsed, time.Second)
 	}
 	t.Logf("reach of %d targets over %d nodes and %d edges: %s", len(targets), len(g.Nodes), len(g.Edges), elapsed)
+}
+
+const dependencies = `
+root main.py//run
+edge main.py//run lodash//template direct 3
+edge lodash//template npm:lodash@4.17.21//t.js//template package
+edge npm:lodash@4.17.21//t.js//template child_process//exec direct 2
+edge npm:lodash@4.17.21//t.js//template npm:lodash@4.17.21//u.js//helper direct 3
+edge npm:other@1.0.0//o.js//f fs//rm direct 2
+`
+
+func TestReachDependencyCode(t *testing.T) {
+	tests := []struct {
+		name   string
+		extra  string
+		target string
+		status Status
+		kinds  []UncertaintyKind
+	}{
+		{name: "a path through a package", target: "child_process//exec", status: Found, kinds: []UncertaintyKind{}},
+		{name: "a failed file of a unit that the search enters", extra: "file npm:lodash@4.17.21//big.js failed", target: "fs//rm", status: Uncertain, kinds: []UncertaintyKind{Budget}},
+		{name: "a failed file of a unit that the search does not enter", extra: "file npm:other@1.0.0//big.js failed", target: "fs//rm", status: NotFound, kinds: []UncertaintyKind{}},
+		{
+			name:   "an entry into a unit whose code reaches the target",
+			extra:  "edge main.py//run kit//load//close direct 4\nentry kit//load//close npm:kit@1.0.0\nedge npm:kit@1.0.0//k.js//close fs//unlink",
+			target: "fs//unlink", status: Uncertain, kinds: []UncertaintyKind{UnresolvedCall},
+		},
+		{
+			name:   "an entry into a unit whose code does not reach the target",
+			extra:  "edge main.py//run kit//load//close direct 4\nentry kit//load//close npm:kit@1.0.0\nedge npm:kit@1.0.0//k.js//close fs//unlink",
+			target: "fs//rm", status: NotFound, kinds: []UncertaintyKind{},
+		},
+		{
+			name: "an entry into a unit whose code calls a unit that reaches the target",
+			extra: "edge main.py//run kit//load//close direct 4\nentry kit//load//close npm:kit@1.0.0\nedge npm:kit@1.0.0//k.js//close other//f\n" +
+				"edge other//f npm:other@1.0.0//o.js//f package",
+			target: "fs//rm", status: Uncertain, kinds: []UncertaintyKind{UnresolvedCall},
+		},
+		{
+			name:   "an entry into a unit with a failed file",
+			extra:  "edge main.py//run kit//load//close direct 4\nentry kit//load//close npm:kit@1.0.0\nfile npm:kit@1.0.0//big.js failed",
+			target: "fs//rm", status: Uncertain, kinds: []UncertaintyKind{Budget},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := reachOne(t, graphOf(t, dependencies+tt.extra), Query{Targets: []string{tt.target}})
+			assert.Equal(t, tt.status, r.Status)
+			assert.Equal(t, tt.kinds, kinds(r.Uncertainties))
+		})
+	}
+}
+
+func TestExplore(t *testing.T) {
+	g := graphOf(t, `
+edge kit//run npm:kit@1.0.0//k.js//run package
+edge npm:kit@1.0.0//k.js//run fs//rm direct 2
+edge npm:kit@1.0.0//k.js//run npm:kit@1.0.0//k.js//helper direct 3
+edge npm:kit@1.0.0//k.js//helper child_process//exec direct 6
+unresolved npm:kit@1.0.0//k.js//helper 7 unknown-receiver send
+unresolved npm:kit@1.0.0//k.js//helper 8 computed-name
+edge npm:kit@1.0.0//k.js//dead os//exit direct 9
+`)
+	e, err := Explore(context.Background(), g, []string{"kit//run"}, 0)
+	require.NoError(t, err)
+	require.Len(t, e.Reached, 2)
+	assert.Equal(t, "child_process//exec", e.Reached[0].Target)
+	assert.Equal(t, []string{"kit//run", "npm:kit@1.0.0//k.js//run", "npm:kit@1.0.0//k.js//helper", "child_process//exec"}, pathKeys(e.Reached[0].Path))
+	assert.Equal(t, "fs//rm", e.Reached[1].Target)
+	assert.Equal(t, []UncertaintyKind{UnresolvedCall, UnresolvedCall}, kinds(e.Uncertainties))
+	assert.Empty(t, e.Uncertainties[0].Method, "a record that concerns every target comes first")
+	assert.Equal(t, "send", e.Uncertainties[1].Method)
+
+	_, err = Explore(context.Background(), g, []string{"kit//nope"}, 0)
+	assert.ErrorContains(t, err, "no node kit//nope")
+	_, err = Explore(context.Background(), g, []string{"kit//run"}, -1)
+	assert.Error(t, err)
 }

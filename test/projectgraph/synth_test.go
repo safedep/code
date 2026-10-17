@@ -1415,8 +1415,8 @@ func TestSynthGivesOneOutputForAnyNumberOfWorkers(t *testing.T) {
 			require.NoError(t, err)
 
 			languages := []core.Language{language}
-			serial := indexAndLink(t, root, languages, benchTestPaths, 1)
-			assert.Equal(t, string(serial), string(indexAndLink(t, root, languages, benchTestPaths, 4)))
+			serial := indexAndLink(t, root, expectation{}, languages, benchTestPaths, 1)
+			assert.Equal(t, string(serial), string(indexAndLink(t, root, expectation{}, languages, benchTestPaths, 4)))
 		})
 	}
 }

@@ -17,7 +17,7 @@ import (
 var rustProfile = profile{
 	code:              langcode.Rust,
 	family:            langcode.Rust,
-	resolver:          func(b *builder) modules.Resolver { return rustResolver{b} },
+	resolver:          func(b *builder, _ *space) modules.Resolver { return rustResolver{b} },
 	units:             (*builder).addRustUnits,
 	aliases:           (*builder).joinImplBlocks,
 	link:              (*builder).linkRust,
@@ -76,7 +76,7 @@ var rustRoots = map[string]bool{"std": true, "core": true, "alloc": true}
 // addRustUnits makes each Rust file the unit of its module, in the table of
 // the module paths.
 func (b *builder) addRustUnits() {
-	b.cargo = modules.NewCargo(b.files, b.opts.Root)
+	b.cargo = modules.NewCargo(b.project.files, b.opts.Root)
 	b.problems = append(b.problems, b.cargo.Problems()...)
 	b.rustModules = map[string]string{}
 	files := map[string][]string{}
@@ -192,7 +192,7 @@ func (r rustResolver) FirstParty(spec string) bool {
 	case rustRoots[first]:
 		return false
 	}
-	return r.b.cargo.Has(first) || r.b.files.HasName(first)
+	return r.b.cargo.Has(first) || r.b.project.files.HasName(first)
 }
 
 // rustScopeFallback resolves a path that no use and no item of the module

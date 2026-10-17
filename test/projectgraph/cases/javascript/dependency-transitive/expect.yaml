@@ -1,0 +1,101 @@
+source: safedep:hand
+description: >-
+  The bin entry calls template of lodash, a dependency under node_modules. The exports field of lodash
+  gives lodash.js, which re-exports template from template.js. template calls the default export of
+  lodash._reinterpolate, a dependency of lodash, and that function calls child_process.execSync. The path
+  to execSync goes through both packages, and each package edge leaves the external key of the call on the
+  path. The import of the default export runs the module top level of the package and does not call the
+  function. No root reaches escape, so its unresolved site makes no target uncertain.
+units:
+  node_modules/lodash: npm:lodash@4.17.21
+  node_modules/lodash._reinterpolate: npm:lodash._reinterpolate@3.0.0
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.js
+    to: npm:lodash@4.17.21//lodash.js
+    kind: import
+    confidence: high
+    site: src/main.js:1
+  - from: src/main.js
+    to: lodash//template
+    kind: direct
+    confidence: high
+    site: src/main.js:3
+  - from: lodash//template
+    to: npm:lodash@4.17.21//lodash.js//template
+    kind: package
+    confidence: high
+    site: npm:lodash@4.17.21//lodash.js:1
+  - from: npm:lodash@4.17.21//lodash.js//template
+    to: npm:lodash@4.17.21//template.js//template
+    kind: export
+    confidence: high
+    site: npm:lodash@4.17.21//lodash.js:1
+  - from: npm:lodash@4.17.21//template.js
+    to: npm:lodash._reinterpolate@3.0.0//index.js
+    kind: import
+    confidence: high
+    site: npm:lodash@4.17.21//template.js:1
+  - from: npm:lodash@4.17.21//template.js//template
+    to: lodash._reinterpolate
+    kind: direct
+    confidence: high
+    site: npm:lodash@4.17.21//template.js:4
+  - from: lodash._reinterpolate
+    to: npm:lodash._reinterpolate@3.0.0//index.js//reinterpolate
+    kind: package
+    confidence: high
+    site: npm:lodash._reinterpolate@3.0.0//index.js:3
+  - from: npm:lodash._reinterpolate@3.0.0//index.js//reinterpolate
+    to: child_process//execSync
+    kind: direct
+    confidence: high
+    site: npm:lodash._reinterpolate@3.0.0//index.js:4
+no_edges:
+  - from: npm:lodash@4.17.21//template.js
+    to: npm:lodash._reinterpolate@3.0.0//index.js//reinterpolate
+  - from: lodash._reinterpolate
+    to: npm:lodash._reinterpolate@3.0.0//index.js
+unresolved:
+  - caller: npm:lodash@4.17.21//escape.js//escape
+    site: npm:lodash@4.17.21//escape.js:2
+    reason: unknown-receiver
+    method: replace
+results:
+  - target: child_process//execSync
+    status: found
+    path:
+      - key: src/main.js
+      - key: lodash//template
+        site: src/main.js:3
+        kind: direct
+        confidence: high
+      - key: npm:lodash@4.17.21//lodash.js//template
+        site: npm:lodash@4.17.21//lodash.js:1
+        kind: package
+        confidence: high
+      - key: npm:lodash@4.17.21//template.js//template
+        site: npm:lodash@4.17.21//lodash.js:1
+        kind: export
+        confidence: high
+      - key: lodash._reinterpolate
+        site: npm:lodash@4.17.21//template.js:4
+        kind: direct
+        confidence: high
+      - key: npm:lodash._reinterpolate@3.0.0//index.js//reinterpolate
+        site: npm:lodash._reinterpolate@3.0.0//index.js:3
+        kind: package
+        confidence: high
+      - key: child_process//execSync
+        site: npm:lodash._reinterpolate@3.0.0//index.js:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: npm:lodash._reinterpolate@3.0.0//index.js//reinterpolate
+        site: npm:lodash._reinterpolate@3.0.0//index.js:4
+        reached: true
+  - target: lodash//escape
+    status: not-found

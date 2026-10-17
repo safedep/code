@@ -12,7 +12,7 @@ import (
 var javaProfile = profile{
 	code:            langcode.Java,
 	family:          langcode.Java,
-	resolver:        func(b *builder) modules.Resolver { return namespaceResolver{b, langcode.Java} },
+	resolver:        func(b *builder, _ *space) modules.Resolver { return namespaceResolver{b, langcode.Java} },
 	units:           (*builder).addJavaUnits,
 	link:            (*builder).linkClassInits,
 	qualified:       (*builder).resolveJava,

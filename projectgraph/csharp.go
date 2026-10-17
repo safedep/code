@@ -17,7 +17,7 @@ import (
 var csharpProfile = profile{
 	code:              langcode.CSharp,
 	family:            langcode.CSharp,
-	resolver:          func(b *builder) modules.Resolver { return namespaceResolver{b, langcode.CSharp} },
+	resolver:          func(b *builder, _ *space) modules.Resolver { return namespaceResolver{b, langcode.CSharp} },
 	units:             func(b *builder) { b.addNamespaceUnits(langcode.CSharp, ".", langcode.CSharp) },
 	aliases:           (*builder).joinPartialClasses,
 	link:              (*builder).linkCSharp,

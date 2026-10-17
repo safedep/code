@@ -144,7 +144,7 @@
     "lib/src/feature/y.js": "indexed"
   },
   "stats": {
-    "version": "8",
+    "version": "9",
     "files": 4,
     "nodes": 7,
     "edges": 4,

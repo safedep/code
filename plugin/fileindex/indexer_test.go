@@ -392,3 +392,56 @@ func TestIndexerCutsAParseAtTheDeadline(t *testing.T) {
 		})
 	}
 }
+
+func TestIndexerIndexesTheImportDirectories(t *testing.T) {
+	const unit = "npm:lodash@4.17.21"
+	pkg := map[string]string{
+		"index.js":    "export { template } from './template';\n",
+		"template.js": "export function template() { return 1; }\n",
+	}
+	project := func() (string, core.ImportAwareFileSystem) {
+		dir := t.TempDir()
+		writeFiles(t, dir, map[string]string{
+			"index.js":                    "import { template } from 'lodash';\ntemplate();\n",
+			"node_modules/lodash/x.txt":   "not source\n",
+			"node_modules/other/index.js": "export const other = 1;\n",
+		})
+		writeFiles(t, filepath.Join(dir, "node_modules", "lodash"), pkg)
+		lodash, other := filepath.Join(dir, "node_modules", "lodash"), filepath.Join(dir, "node_modules", "other")
+		fsys, err := fs.NewLocalFileSystem(fs.LocalFileSystemConfig{
+			AppDirectories:    []string{dir},
+			ImportDirectories: []string{lodash, other},
+			ImportUnits:       map[string]string{lodash: unit},
+		})
+		require.NoError(t, err)
+		return dir, fsys
+	}
+
+	_, fsys := project()
+	s := memstore.New()
+	result, err := (&Indexer{}).Run(context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s})
+	require.NoError(t, err)
+	assert.Equal(t, statuses(fidx.FileIndexed, "index.js"), result.Files, "the run reads no import file unless the caller asks")
+	assert.Empty(t, result.Dependencies)
+
+	result, err = (&Indexer{}).Run(context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Imports: true})
+	require.NoError(t, err)
+	assert.Equal(t, map[string]fidx.FileStatus{"index.js": fidx.FileCached}, result.Files)
+	assert.Equal(t, statuses(fidx.FileIndexed, unit+"//index.js", unit+"//template.js"), result.Dependencies)
+	assert.Equal(t, map[string]fidx.FileStatus{"index.js": fidx.FileCached, unit + "//index.js": fidx.FileIndexed, unit + "//template.js": fidx.FileIndexed}, result.Statuses())
+	assert.Contains(t, result.Report.Skipped, "index.js", "an import file with no unit has no key")
+
+	byPath := map[string]*fidx.Index{}
+	for _, ix := range result.Indexes {
+		byPath[ix.Path] = ix
+	}
+	require.Len(t, byPath, 3, "a file of the package and a file of the project with one relative path do not collide")
+	assert.Empty(t, byPath["index.js"].Unit)
+	assert.Equal(t, unit, byPath[unit+"//template.js"].Unit)
+	assert.Equal(t, unit+"//template.js//template", byPath[unit+"//template.js"].Definitions[1].Key)
+
+	_, fsys = project()
+	result, err = (&Indexer{}).Run(context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Imports: true})
+	require.NoError(t, err)
+	assert.Equal(t, statuses(fidx.FileCached, unit+"//index.js", unit+"//template.js"), result.Dependencies, "a second project with the package version reads its indexes from the store")
+}

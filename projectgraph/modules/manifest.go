@@ -90,6 +90,23 @@ func (p *PackageJSON) ExportFiles() []string {
 	return sortedKeys(set)
 }
 
+// exportSubpaths returns the subpaths of the exports field with no
+// pattern, sorted. An exports field with no subpath keys, as a string or a
+// map of conditions, exports ".".
+func (p *PackageJSON) exportSubpaths() []string {
+	var m map[string]any
+	if json.Unmarshal(p.Exports, &m) != nil || !hasSubpathKeys(m) {
+		return []string{"."}
+	}
+	set := map[string]bool{}
+	for k := range m {
+		if strings.HasPrefix(k, ".") && !strings.Contains(k, "*") {
+			set[k] = true
+		}
+	}
+	return sortedKeys(set)
+}
+
 // workspaceGlobs returns the workspaces field, an array or an object with a
 // packages array.
 func (p *PackageJSON) workspaceGlobs() []string {

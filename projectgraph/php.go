@@ -14,7 +14,7 @@ import (
 var phpProfile = profile{
 	code:              langcode.PHP,
 	family:            langcode.PHP,
-	resolver:          func(b *builder) modules.Resolver { return phpResolver{b} },
+	resolver:          func(b *builder, _ *space) modules.Resolver { return phpResolver{b} },
 	units:             (*builder).addPHPUnits,
 	link:              (*builder).linkPHP,
 	qualified:         func(b *builder, name string) (string, bool) { return b.resolveQualified(langcode.PHP, name) },
@@ -42,7 +42,7 @@ var phpMagic = map[string]bool{
 
 func (b *builder) addPHPUnits() {
 	b.addNamespaceUnits(langcode.PHP, `\`, langcode.PHP)
-	b.composer = modules.NewComposer(b.files, b.opts.Root)
+	b.composer = modules.NewComposer(b.project.files, b.opts.Root)
 	b.problems = append(b.problems, b.composer.Problems()...)
 }
 
@@ -60,7 +60,7 @@ type phpResolver struct{ b *builder }
 func (r phpResolver) Module(importer, spec string) (string, string, bool) {
 	if phpPath(spec) {
 		for _, base := range []string{modules.Dir(importer), ""} {
-			if p, ok := modules.Join(base, spec); ok && r.b.files.Has(p) {
+			if p, ok := modules.Join(base, spec); ok && r.b.project.files.Has(p) {
 				return p, "path", true
 			}
 			if strings.HasPrefix(spec, ".") {
@@ -73,7 +73,7 @@ func (r phpResolver) Module(importer, spec string) (string, string, bool) {
 		return key, "class", true
 	}
 	for _, file := range r.b.composer.Files(spec) {
-		if !r.b.files.Has(file) {
+		if !r.b.project.files.Has(file) {
 			continue
 		}
 		if class := fileindex.Join(file, lastName(spec)); r.b.isType(class) {

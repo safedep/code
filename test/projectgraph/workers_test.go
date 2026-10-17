@@ -16,20 +16,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// indexAndLink indexes the project with the given workers, links it and
-// returns the result of both steps as JSON, so two runs compare byte for
-// byte.
-func indexAndLink(t testing.TB, project string, languages []core.Language, testPaths []string, workers int) []byte {
+// indexAndLink indexes the project and the units of dependency code of the
+// expectation with the given workers, links it and returns the result of
+// both steps as JSON, so two runs compare byte for byte.
+func indexAndLink(t testing.TB, project string, want expectation, languages []core.Language, testPaths []string, workers int) []byte {
 	t.Helper()
 	ctx := context.Background()
-	fsys, err := fs.NewLocalFileSystem(fs.LocalFileSystemConfig{AppDirectories: []string{project}})
+	cfg, roots := fileSystemConfig(project, want)
+	fsys, err := fs.NewLocalFileSystem(cfg)
 	require.NoError(t, err)
-	indexed, err := (&fileindex.Indexer{}).Run(ctx, fsys, fileindex.Options{Languages: languages, Workers: workers})
+	indexed, err := (&fileindex.Indexer{}).Run(ctx, fsys, fileindex.Options{Languages: languages, Workers: workers, Imports: len(want.Units) > 0})
 	require.NoError(t, err)
 	g, err := projectgraph.Build(ctx, indexed.Indexes, projectgraph.Options{
 		Root:      os.DirFS(project),
-		Files:     indexed.Files,
+		Files:     indexed.Statuses(),
 		TestPaths: testPaths,
+		Units:     roots,
 	})
 	require.NoError(t, err)
 
@@ -39,7 +41,7 @@ func indexAndLink(t testing.TB, project string, languages []core.Language, testP
 	}
 	data, err := json.Marshal(map[string]any{
 		"indexes": indexed.Indexes,
-		"files":   indexed.Files,
+		"files":   indexed.Statuses(),
 		"visited": indexed.Report.Visited,
 		"skipped": indexed.Report.Skipped,
 		"failed":  failed,
@@ -68,8 +70,9 @@ func TestCasesGiveOneOutputForAnyNumberOfWorkers(t *testing.T) {
 	languages := caseLanguages(t)
 	for _, dir := range dirs {
 		t.Run(filepath.ToSlash(filepath.Dir(dir)), func(t *testing.T) {
-			serial := indexAndLink(t, dir, languages, nil, 1)
-			assert.Equal(t, string(serial), string(indexAndLink(t, dir, languages, nil, 4)))
+			want := readExpectation(t, filepath.Dir(dir))
+			serial := indexAndLink(t, dir, want, languages, nil, 1)
+			assert.Equal(t, string(serial), string(indexAndLink(t, dir, want, languages, nil, 4)))
 		})
 	}
 }

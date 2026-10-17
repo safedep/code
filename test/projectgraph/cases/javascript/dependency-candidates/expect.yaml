@@ -1,0 +1,69 @@
+source: safedep:hand
+description: >-
+  read calls get on a parameter, so the call gets field edges. Its candidates come from the project only,
+  as the get of the cache object, and never from the dependency store-kit. load of store-kit calls get on
+  a local value, and its candidates come from its own unit only, as the get of Store. The value that load
+  returns is not known, so the call box.close() enters store-kit at no known definition. That record
+  concerns only the targets that the code of store-kit reaches, so fs.rmSync, which Store.close calls, is
+  uncertain and x//y is not found.
+units:
+  node_modules/store-kit: npm:store-kit@1.0.0
+roots:
+  - key: main.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: main.js
+    to: store-kit//load
+    kind: direct
+    confidence: high
+    site: main.js:7
+  - from: store-kit//load
+    to: npm:store-kit@1.0.0//index.js//load
+    kind: package
+    confidence: high
+    site: npm:store-kit@1.0.0//index.js:3
+  - from: main.js//read
+    to: cache.js//cache//get
+    kind: field
+    confidence: low
+    site: main.js:4
+  - from: npm:store-kit@1.0.0//index.js//load
+    to: npm:store-kit@1.0.0//index.js//Store//get
+    kind: field
+    confidence: low
+    site: npm:store-kit@1.0.0//index.js:5
+  - from: main.js
+    to: store-kit//load//close
+    kind: direct
+    confidence: high
+    site: main.js:9
+no_edges:
+  - from: main.js//read
+    to: npm:store-kit@1.0.0//index.js//Store//get
+  - from: npm:store-kit@1.0.0//index.js//load
+    to: cache.js//cache//get
+unresolved:
+  - caller: main.js//read
+    site: main.js:4
+    reason: unknown-receiver
+    method: get
+  - caller: store-kit//load//close
+    site: npm:store-kit@1.0.0
+    reason: unknown-receiver
+  - caller: npm:store-kit@1.0.0//index.js//load
+    site: npm:store-kit@1.0.0//index.js:5
+    reason: unknown-receiver
+    method: get
+results:
+  - target: x//y
+    status: not-found
+  - target: fs//rmSync
+    status: uncertain
+    call_sites:
+      - caller: npm:store-kit@1.0.0//index.js//Store//close
+        site: npm:store-kit@1.0.0//index.js:18
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: npm:store-kit@1.0.0

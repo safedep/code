@@ -87,11 +87,40 @@ func (j *JavaScript) Resolve(importer, spec string, typescript bool) (string, st
 			}
 		}
 	}
-	name, sub := splitPackage(spec)
+	name, sub := SplitPackage(spec)
 	if pj := j.packages[name]; pj != nil {
 		return j.Entry(pj, sub, typescript)
 	}
 	return "", "", false
+}
+
+// Package returns the file of a subpath of the package at the root of the
+// file set, as "." or "./fp", and how the resolver found it. A root with no
+// package.json gives its index file and its files by path. The root of a
+// unit of dependency code is the directory of the package.
+func (j *JavaScript) Package(sub string, typescript bool) (string, string, bool) {
+	pj := j.manifests[""]
+	if pj == nil {
+		pj = &PackageJSON{}
+	}
+	return j.Entry(pj, sub, typescript)
+}
+
+// Subpaths returns the subpaths that the package at the root of the file
+// set exports, sorted: the keys of its exports field with no pattern. A
+// package with no exports field exports "." and each file by its path
+// with no extension, as "./lib/template".
+func (j *JavaScript) Subpaths() []string {
+	if pj := j.manifests[""]; pj != nil && len(pj.Exports) > 0 && string(pj.Exports) != "null" {
+		return pj.exportSubpaths()
+	}
+	set := map[string]bool{".": true}
+	for p := range j.files.files {
+		if ext := path.Ext(p); slices.Contains(tsExtensions, ext) && ext != ".json" && !strings.HasSuffix(p, ".d.ts") {
+			set["./"+strings.TrimSuffix(p, ext)] = true
+		}
+	}
+	return sortedKeys(set)
 }
 
 // Entry returns the file of a subpath of a package, as "." or "./utils".
@@ -306,9 +335,9 @@ func isRelative(spec string) bool {
 	return spec == "." || spec == ".." || strings.HasPrefix(spec, "./") || strings.HasPrefix(spec, "../")
 }
 
-// splitPackage splits a bare import into its package name and the subpath,
+// SplitPackage splits a bare import into its package name and the subpath,
 // as "@scope/name" and "./utils".
-func splitPackage(spec string) (string, string) {
+func SplitPackage(spec string) (string, string) {
 	n := 2
 	if strings.HasPrefix(spec, "@") {
 		n = 3

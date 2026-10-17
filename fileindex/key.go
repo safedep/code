@@ -1,8 +1,10 @@
 package fileindex
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/safedep/code/langcode"
 )
@@ -27,37 +29,144 @@ func JoinNonEmpty(unit, segment string) string {
 	return Join(unit, segment)
 }
 
-// Unit returns the first part of a key: a file path or an import namespace.
+// Unit returns the first part of a key: a file path, an import namespace,
+// or the package unit and the path of a file of dependency code, as
+// npm:lodash@4.17.21//template.js.
 func Unit(key string) string {
-	unit, _, _ := strings.Cut(key, Separator)
+	unit, _ := cutUnit(key)
 	return unit
 }
 
 // Segments returns the parts of a key after its unit.
 func Segments(key string) []string {
-	_, rest, ok := strings.Cut(key, Separator)
-	if !ok {
+	_, rest := cutUnit(key)
+	if rest == "" {
 		return nil
 	}
 	return strings.Split(rest, Separator)
 }
 
+// cutUnit returns the unit of a key and the segments after it, as one
+// string.
+func cutUnit(key string) (string, string) {
+	first, rest, ok := strings.Cut(key, Separator)
+	if !ok {
+		return key, ""
+	}
+	if IsPackageUnit(first) {
+		path, after, _ := strings.Cut(rest, Separator)
+		return first + Separator + path, after
+	}
+	return first, rest
+}
+
 // Last returns the last segment of a key, or the unit of a key with no
 // segment.
 func Last(key string) string {
-	if i := strings.LastIndex(key, Separator); i >= 0 {
-		return key[i+len(Separator):]
+	unit, rest := cutUnit(key)
+	if rest == "" {
+		return unit
 	}
-	return key
+	if i := strings.LastIndex(rest, Separator); i >= 0 {
+		return rest[i+len(Separator):]
+	}
+	return rest
 }
 
 // Parent returns the key with no last segment, or the key itself when it
 // has no segment.
 func Parent(key string) string {
-	if i := strings.LastIndex(key, Separator); i >= 0 {
-		return key[:i]
+	unit, rest := cutUnit(key)
+	if rest == "" {
+		return unit
 	}
-	return key
+	if i := strings.LastIndex(rest, Separator); i >= 0 {
+		return unit + Separator + rest[:i]
+	}
+	return unit
+}
+
+// PackageUnit names one version of one package of dependency code, as
+// npm:lodash@4.17.21, pypi:requests@2.31.0 or, for a Go module, as
+// "go:github.com/google/uuid@v1.6.0". The name of an npm package can have
+// a scope, as npm:@babel/core@7.24.0.
+type PackageUnit struct {
+	Ecosystem string
+	Name      string
+	Version   string
+}
+
+// String returns the unit as a key writes it.
+func (u PackageUnit) String() string {
+	return u.Ecosystem + ":" + u.Name + "@" + u.Version
+}
+
+// ParseUnit reads a package unit, as npm:lodash@4.17.21. The ecosystem is a
+// lower-case word. The name has no "//" and no space. The version follows
+// the last "@" and has no "/".
+func ParseUnit(s string) (PackageUnit, error) {
+	eco, rest, ok := strings.Cut(s, ":")
+	at := strings.LastIndex(rest, "@")
+	if !ok || !isEcosystem(eco) || at <= 0 {
+		return PackageUnit{}, fmt.Errorf("unit %q is not ecosystem:name@version", s)
+	}
+	u := PackageUnit{Ecosystem: eco, Name: rest[:at], Version: rest[at+1:]}
+	switch {
+	case strings.HasPrefix(u.Name, ":") || strings.Contains(u.Name, Separator) || strings.ContainsFunc(u.Name, unicode.IsSpace):
+		return PackageUnit{}, fmt.Errorf("unit %q has a bad name", s)
+	case u.Version == "" || strings.ContainsAny(u.Version, "/@") || strings.ContainsFunc(u.Version, unicode.IsSpace):
+		return PackageUnit{}, fmt.Errorf("unit %q has a bad version", s)
+	}
+	return u, nil
+}
+
+// IsPackageUnit reports whether s is a package unit, as ParseUnit reads it.
+// A path of the project or an import namespace is not one, unless a file at
+// the root of the project has a name of that form.
+func IsPackageUnit(s string) bool {
+	if !strings.Contains(s, "@") || !strings.Contains(s, ":") {
+		return false
+	}
+	_, err := ParseUnit(s)
+	return err == nil
+}
+
+func isEcosystem(s string) bool {
+	if s == "" || s[0] < 'a' || s[0] > 'z' {
+		return false
+	}
+	return !strings.ContainsFunc(s, func(r rune) bool { return (r < 'a' || r > 'z') && (r < '0' || r > '9') })
+}
+
+// UnitPath returns the path of a file of a package unit, as
+// npm:lodash@4.17.21//template.js. A file of the project has no unit, and
+// its path stays as it is.
+func UnitPath(unit, path string) string {
+	if unit == "" {
+		return path
+	}
+	return unit + Separator + path
+}
+
+// SplitUnit returns the package unit of a path of dependency code and the
+// path inside the package, as UnitPath joins them. A path of the project
+// has no unit.
+func SplitUnit(path string) (string, string) {
+	if first, rest, ok := strings.Cut(path, Separator); ok && IsPackageUnit(first) {
+		return first, rest
+	}
+	return "", path
+}
+
+// PackageOf returns the package unit of a key of dependency code, as
+// npm:lodash@4.17.21 for npm:lodash@4.17.21//template.js//template, and ""
+// for any other key.
+func PackageOf(key string) string {
+	unit, _ := SplitUnit(key)
+	if unit == "" && IsPackageUnit(key) {
+		return key
+	}
+	return unit
 }
 
 // HasKeyPrefix reports whether key is prefix or a key under prefix.

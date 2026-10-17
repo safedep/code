@@ -1,0 +1,537 @@
+package projectgraph
+
+import (
+	"cmp"
+	"context"
+	"io/fs"
+	"maps"
+	"slices"
+	"strings"
+	"unicode"
+	"unicode/utf8"
+
+	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/langcode"
+	"github.com/safedep/code/projectgraph/modules"
+)
+
+// space is the module resolution of the project or of one package unit of
+// dependency code. The link step treats each unit as a project of its own:
+// its paths are the paths inside the package, and its manifests are under
+// the root that Options.Units gives it.
+type space struct {
+	unit string
+	pkg  fileindex.PackageUnit
+	root fs.FS
+
+	files  *modules.Files
+	python *modules.Python
+	js     *modules.JavaScript
+	golang *modules.Golang
+	// goPackages holds the package that an import of each directory names.
+	goPackages map[string]*unit
+	resolvers  map[langcode.Code]modules.Resolver
+}
+
+// key returns the key of a path of the space.
+func (sp *space) key(p string) string {
+	return fileindex.UnitPath(sp.unit, p)
+}
+
+// inner returns the path of a key of the space inside its unit.
+func (sp *space) inner(key string) string {
+	if sp.unit == "" {
+		return key
+	}
+	return strings.TrimPrefix(key, sp.unit+fileindex.Separator)
+}
+
+// keyed returns a resolver that takes and gives the keys of the space,
+// around a resolver of its paths.
+func (sp *space) keyed(r modules.Resolver) modules.Resolver {
+	if sp.unit == "" {
+		return r
+	}
+	return spaceResolver{sp: sp, r: r}
+}
+
+type spaceResolver struct {
+	sp *space
+	r  modules.Resolver
+}
+
+func (k spaceResolver) Module(importer, spec string) (string, string, bool) {
+	mod, via, ok := k.r.Module(k.sp.inner(importer), spec)
+	if !ok {
+		return "", "", false
+	}
+	return k.sp.key(mod), via, true
+}
+
+func (k spaceResolver) FirstParty(spec string) bool {
+	return k.r.FirstParty(spec)
+}
+
+// addSpaces makes the space of the project and the space of each unit that
+// has a file.
+func (b *builder) addSpaces() error {
+	byUnit := map[string][]string{"": nil}
+	for _, p := range b.paths {
+		unit, inner := fileindex.SplitUnit(p)
+		byUnit[unit] = append(byUnit[unit], inner)
+	}
+	for _, name := range slices.Sorted(maps.Keys(byUnit)) {
+		sp := &space{unit: name, root: b.opts.Root, goPackages: map[string]*unit{}, resolvers: map[langcode.Code]modules.Resolver{}}
+		sysPath := b.opts.SysPath
+		if name != "" {
+			pkg, err := fileindex.ParseUnit(name)
+			if err != nil {
+				return err
+			}
+			sp.pkg, sp.root, sysPath = pkg, b.opts.Units[name], nil
+		}
+		sp.files = modules.NewFiles(byUnit[name])
+		sp.python = modules.NewPython(sp.files, sp.root, sysPath)
+		sp.js = modules.NewJavaScript(sp.files, sp.root)
+		b.addProblems(sp, sp.python.Problems())
+		b.addProblems(sp, sp.js.Problems())
+		b.spaces[name] = sp
+		b.ordered = append(b.ordered, sp)
+	}
+	b.project = b.spaces[""]
+	return nil
+}
+
+// addProblems adds the problems of a resolver of the space, by key.
+func (b *builder) addProblems(sp *space, problems []modules.Problem) {
+	for _, p := range problems {
+		p.Path = sp.key(p.Path)
+		b.problems = append(b.problems, p)
+	}
+}
+
+// spaceOf returns the space of a key: the space of its unit, or the space
+// of the project.
+func (b *builder) spaceOf(key string) *space {
+	if sp := b.spaces[fileindex.PackageOf(key)]; sp != nil {
+		return sp
+	}
+	return b.project
+}
+
+// sameUnit reports whether two keys are of one unit, or both of the
+// project.
+func sameUnit(a, b string) bool {
+	return fileindex.PackageOf(a) == fileindex.PackageOf(b)
+}
+
+// submodule returns the Python module of the name under a package module.
+func (b *builder) submodule(module, name string) (string, bool) {
+	sp := b.spaceOf(module)
+	sub, ok := sp.python.Submodule(sp.inner(module), name)
+	if !ok {
+		return "", false
+	}
+	return sp.key(sub), true
+}
+
+// origin is an import that an external key comes from: the language and the
+// unit of the importer, the module as the import writes it, and the names
+// from the module to the key.
+type origin struct {
+	lang   langcode.Code
+	unit   string
+	module string
+	names  []string
+}
+
+func (o origin) equal(other origin) bool {
+	return o.lang == other.lang && o.unit == other.unit && o.module == other.module && slices.Equal(o.names, other.names)
+}
+
+// importedExternal returns the external node of a key that an import of the
+// file gives, and records the import as its origin.
+func (b *builder) importedExternal(ix *fileindex.Index, key, module string, names []string) string {
+	b.recordOrigin(ix, key, module, names)
+	return b.external(key)
+}
+
+// recordOrigin records an import as an origin of the key. A graph with no
+// unit of dependency code links no external key, so it records nothing.
+func (b *builder) recordOrigin(ix *fileindex.Index, key, module string, names []string) {
+	if len(b.spaces) < 2 {
+		return
+	}
+	o := origin{lang: ix.Language, unit: ix.Unit, module: module, names: slices.Clone(names)}
+	if !slices.ContainsFunc(b.origins[key], o.equal) {
+		b.origins[key] = append(b.origins[key], o)
+	}
+}
+
+// deriveExternal returns the external node of the names under an external
+// key. The origins of the key, with the names after their own, are the
+// origins of the new key.
+func (b *builder) deriveExternal(parent string, names []string) string {
+	key := b.external(fileindex.Join(parent, names...))
+	for _, o := range b.origins[parent] {
+		o.names = append(slices.Clone(o.names), names...)
+		if !slices.ContainsFunc(b.origins[key], o.equal) {
+			b.origins[key] = append(b.origins[key], o)
+		}
+	}
+	return key
+}
+
+// provision is the module of a unit that gives the module of an origin. An
+// empty module is a unit that gives the package but not the module, as a
+// subpath that the package does not have.
+type provision struct {
+	sp     *space
+	module string
+	via    string
+}
+
+// providers returns the modules of the units that give the module of an
+// origin, in the order of the units. A unit gives the module when its
+// package has the name of the import: the npm name for JavaScript, the
+// module path for Go, and the top-level package for Python. The answer
+// depends only on the family and the module, so the builder keeps it.
+func (b *builder) providers(o origin) []provision {
+	family := languageFamily(o.lang)
+	k := [2]string{string(family), o.module}
+	if out, ok := b.provisions[k]; ok {
+		return out
+	}
+	var out []provision
+	for _, sp := range b.ordered {
+		if sp.unit == "" {
+			continue
+		}
+		if pv, ok := b.provide(sp, family, o.module); ok {
+			out = append(out, pv)
+		}
+	}
+	switch family {
+	case langcode.Go:
+		// The longest module path holds the package, as the go command
+		// takes it for nested modules.
+		longest := 0
+		for _, pv := range out {
+			longest = max(longest, len(pv.sp.pkg.Name))
+		}
+		out = slices.DeleteFunc(out, func(pv provision) bool { return len(pv.sp.pkg.Name) < longest })
+	case langcode.Python:
+		// The distributions of one namespace package, as google, share
+		// its top-level directory. Only one of them gives a module under
+		// it, so the others do not miss the module.
+		if slices.ContainsFunc(out, func(pv provision) bool { return pv.module != "" }) {
+			out = slices.DeleteFunc(out, func(pv provision) bool { return pv.module == "" })
+		}
+	}
+	b.provisions[k] = out
+	return out
+}
+
+func (b *builder) provide(sp *space, family langcode.Code, module string) (provision, bool) {
+	switch family {
+	case langcode.Javascript:
+		name, sub := modules.SplitPackage(module)
+		if sp.pkg.Ecosystem != "npm" || sp.pkg.Name != name || strings.HasPrefix(module, ".") {
+			return provision{}, false
+		}
+		file, via, ok := packageFile(sp, sub)
+		if !ok {
+			return provision{sp: sp}, true
+		}
+		return provision{sp: sp, module: sp.key(file), via: via}, true
+	case langcode.Python:
+		if strings.HasPrefix(module, ".") {
+			return provision{}, false
+		}
+		if _, ok := sp.python.Absolute("", firstDotted(module)); !ok {
+			return provision{}, false
+		}
+		mod, ok := sp.python.Absolute("", module)
+		if !ok {
+			return provision{sp: sp}, true
+		}
+		return provision{sp: sp, module: sp.key(mod), via: "absolute"}, true
+	case langcode.Go:
+		rel, ok := strings.CutPrefix(module, sp.pkg.Name)
+		if sp.pkg.Ecosystem != "go" || !ok || rel != "" && !strings.HasPrefix(rel, "/") {
+			return provision{}, false
+		}
+		dir, ok := sp.golang.Resolve(module)
+		if !ok {
+			dir = strings.TrimPrefix(rel, "/")
+		}
+		if u := sp.goPackages[dir]; u != nil {
+			return provision{sp: sp, module: u.key, via: "module"}, true
+		}
+		return provision{sp: sp}, true
+	}
+	return provision{}, false
+}
+
+// packageFile returns the file of a subpath of the npm package of a unit.
+// A package runs its JavaScript, so a JavaScript file wins over a
+// TypeScript declaration of the same path, as index.js over index.d.ts. A
+// package with TypeScript sources only gives a TypeScript file.
+func packageFile(sp *space, sub string) (string, string, bool) {
+	if file, via, ok := sp.js.Package(sub, false); ok {
+		return file, via, true
+	}
+	return sp.js.Package(sub, true)
+}
+
+// linkPackages adds a package edge from each external key that an import
+// gives to the definition of each unit that gives it, as from lodash//template
+// to npm:lodash@4.17.21//template.js//template. The external node stays,
+// because a symbol record names it, and the path goes on into the package.
+// A walk into a package can reach more external keys, so the step runs
+// until it reads no new one.
+//
+// A unit that gives the package and not the name, as a name that the
+// package makes at run time, is a record of the unit on the external node.
+// Any code of the unit can run there.
+func (b *builder) linkPackages(ctx context.Context) error {
+	if len(b.spaces) < 2 {
+		return nil
+	}
+	for {
+		var keys []string
+		for k := range b.origins {
+			if !b.linked[k] && b.kindOf(k) == NodeExternal {
+				keys = append(keys, k)
+			}
+		}
+		if len(keys) == 0 {
+			return nil
+		}
+		slices.Sort(keys)
+		for _, k := range keys {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			b.linked[k] = true
+			for _, o := range b.origins[k] {
+				for _, pv := range b.providers(o) {
+					b.linkProvision(k, o, pv)
+				}
+			}
+		}
+	}
+}
+
+func (b *builder) linkProvision(key string, o origin, pv provision) {
+	resolver := resolverName(o.lang, "package", cmp.Or(pv.via, "name"))
+	fail := func(reason fileindex.UnresolvedReason) {
+		b.addUnresolved(UnresolvedSite{Caller: key, Site: Site{Path: pv.sp.unit}, Text: key, Reason: reason, Unit: pv.sp.unit})
+	}
+	if pv.module == "" {
+		fail(fileindex.UnresolvedNoDefinition)
+		return
+	}
+	names := o.names
+	if len(names) == 0 {
+		// The key of a whole module is the value of the module. Only the
+		// default export of JavaScript gives that value code, and an
+		// import edge runs the module top level.
+		def := profileOf(o.lang).defaultExport
+		if def == "" {
+			return
+		}
+		names = []string{def}
+	}
+	r := b.walk(pv.module, names)
+	if r.fail != nil {
+		fail(r.fail.reason)
+		return
+	}
+	n := b.g.Nodes[r.key]
+	if r.key == key || n == nil {
+		return
+	}
+	b.addEdge(Edge{From: key, To: r.key, Site: Site{Path: cmp.Or(n.Path, pv.sp.unit), Line: n.Line}, Kind: EdgePackage, Resolver: resolver})
+}
+
+// addSurfaces links an external node to each exported symbol of each unit,
+// as an import of the package by its name would write it.
+func (b *builder) addSurfaces() {
+	for _, sp := range b.ordered {
+		if sp.unit == "" {
+			continue
+		}
+		for _, s := range b.surface(sp) {
+			if !slices.ContainsFunc(b.origins[s.key], s.origin.equal) {
+				b.origins[s.key] = append(b.origins[s.key], s.origin)
+			}
+			b.external(s.key)
+		}
+	}
+}
+
+type surfaceSymbol struct {
+	key    string
+	origin origin
+}
+
+// surface returns the exported symbols of a unit with the import that names
+// each one: the names that each subpath of an npm package exports, the
+// public names of each public Python module, and the exported names and
+// methods of each Go package that is not internal. A class that a
+// JavaScript or a Python module exports gives its public methods too, as
+// kit//Store//close.
+func (b *builder) surface(sp *space) []surfaceSymbol {
+	var out []surfaceSymbol
+	add := func(lang langcode.Code, module string, names ...string) {
+		key := fileindex.Join(fileindex.Namespace(lang, module), names...)
+		out = append(out, surfaceSymbol{key: key, origin: origin{lang: lang, unit: sp.unit, module: module, names: names}})
+	}
+	// exported adds the name of the module and the methods of the class
+	// that the name holds. The default export of JavaScript is the value
+	// of the module, so its key has no name.
+	exported := func(ix *fileindex.Index, module, name string) {
+		var names []string
+		if name != profileOf(ix.Language).defaultExport {
+			names = []string{name}
+		}
+		add(ix.Language, module, names...)
+		key, fail := b.resolveName(ix.Path, name, 0)
+		rec, ok := b.classes[b.deref(key)]
+		if fail != nil || !ok {
+			return
+		}
+		for _, m := range rec.class.Methods {
+			if b.kindOf(m) == NodeMethod && !strings.HasPrefix(fileindex.Last(m), "_") {
+				add(ix.Language, module, append(slices.Clone(names), fileindex.Last(m))...)
+			}
+		}
+	}
+	if sp.pkg.Ecosystem == "npm" {
+		for _, sub := range sp.js.Subpaths() {
+			file, _, ok := packageFile(sp, sub)
+			ix := b.byPath[sp.key(file)]
+			if !ok || ix == nil {
+				continue
+			}
+			for _, name := range b.exportNames(ix.Path, map[string]bool{}) {
+				exported(ix, sp.pkg.Name+strings.TrimPrefix(sub, "."), name)
+			}
+		}
+	}
+	for _, p := range b.paths {
+		ix := b.byPath[p]
+		if ix == nil || !sameUnit(p, sp.unit) || ix.Language != langcode.Python {
+			continue
+		}
+		if module, ok := pythonModuleName(sp.inner(p)); ok {
+			for _, name := range b.pythonPublicNames(ix) {
+				exported(ix, module, name)
+			}
+		}
+	}
+	for _, dir := range slices.Sorted(maps.Keys(sp.goPackages)) {
+		importPath, ok := b.goImportPath(sp, dir)
+		if !ok {
+			continue
+		}
+		for _, p := range sp.goPackages[dir].files {
+			if strings.HasSuffix(p, "_test.go") || b.byPath[p] == nil {
+				continue
+			}
+			for _, def := range b.byPath[p].Definitions {
+				segs := fileindex.Segments(def.Key)
+				switch {
+				case len(segs) == 1 && isGoExported(segs[0]):
+					add(langcode.Go, importPath, segs[0])
+				case len(segs) == 2 && def.Kind == fileindex.DefMethod && isGoExported(segs[0]) && isGoExported(segs[1]):
+					add(langcode.Go, importPath, segs...)
+				}
+			}
+		}
+	}
+	return out
+}
+
+// exportNames returns the names that a JavaScript file exports, with the
+// names of its export * from.
+func (b *builder) exportNames(p string, seen map[string]bool) []string {
+	sc := b.scopes[p]
+	if sc == nil || seen[p] || len(seen) > b.opts.maxExportHops {
+		return nil
+	}
+	seen[p] = true
+	names := slices.Collect(maps.Keys(sc.exports))
+	for _, st := range sc.stars {
+		if mod, _, ok := b.resolveModule(sc.ix, st.spec); ok {
+			names = append(names, slices.DeleteFunc(b.exportNames(mod, seen), func(n string) bool { return n == sc.profile.defaultExport })...)
+		}
+	}
+	slices.Sort(names)
+	return slices.Compact(names)
+}
+
+// pythonModuleName returns the dotted name of a Python module of a package,
+// as requests.api for requests/api.py. A module with a part that starts with
+// an underscore is private, and a __main__ module is a script.
+func pythonModuleName(p string) (string, bool) {
+	rel, ok := strings.CutSuffix(p, ".py")
+	if !ok {
+		return "", false
+	}
+	rel = strings.TrimSuffix(strings.TrimSuffix(rel, "__init__"), "/")
+	if rel == "" {
+		return "", false
+	}
+	parts := strings.Split(rel, "/")
+	if slices.ContainsFunc(parts, func(part string) bool { return strings.HasPrefix(part, "_") }) {
+		return "", false
+	}
+	return strings.Join(parts, "."), true
+}
+
+// pythonPublicNames returns the names of __all__ of a module, or else its
+// top-level definitions and the names that it imports from its own
+// package, with no leading underscore.
+func (b *builder) pythonPublicNames(ix *fileindex.Index) []string {
+	sc := b.scopes[ix.Path]
+	if sc.hasExports {
+		return slices.Sorted(maps.Keys(sc.exports))
+	}
+	set := map[string]bool{}
+	for _, def := range ix.Definitions {
+		if segs := fileindex.Segments(def.Key); len(segs) == 1 {
+			set[segs[0]] = true
+		}
+	}
+	for name, imp := range sc.bindings {
+		module, _ := importedModule(ix.Language, imp)
+		if _, _, ok := b.resolveModule(ix, module); ok {
+			set[name] = true
+		}
+	}
+	return slices.DeleteFunc(slices.Sorted(maps.Keys(set)), func(n string) bool { return strings.HasPrefix(n, "_") })
+}
+
+// goImportPath returns the import path of a Go package of a unit. A package
+// under an internal directory and a main package have no importer outside
+// the module.
+func (b *builder) goImportPath(sp *space, dir string) (string, bool) {
+	u := sp.goPackages[dir]
+	if slices.Contains(strings.Split(dir, "/"), "internal") || slices.ContainsFunc(u.files, func(p string) bool {
+		ix := b.byPath[p]
+		return ix != nil && ix.Package == "main"
+	}) {
+		return "", false
+	}
+	if p, ok := sp.golang.ImportPath(dir); ok {
+		return p, true
+	}
+	return strings.TrimSuffix(sp.pkg.Name+"/"+dir, "/"), true
+}
+
+func isGoExported(name string) bool {
+	r, _ := utf8.DecodeRuneInString(name)
+	return unicode.IsUpper(r)
+}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/safedep/code/projectgraph"
 	"github.com/safedep/code/projectgraph/reach"
+	"github.com/safedep/code/projectgraph/summary"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -16,7 +17,15 @@ import (
 const (
 	acceptanceCase = "../../test/projectgraph/cases/python/helper-module/project"
 	overlayCase    = "../../test/projectgraph/cases/python/llm-overlay"
+	dependencyCase = "../../test/projectgraph/cases/javascript/dependency-transitive/project"
 )
+
+// dependencyFlags name the two packages of the dependency case.
+var dependencyFlags = []string{
+	"-dir", dependencyCase,
+	"-deps", dependencyCase + "/node_modules/lodash=npm:lodash@4.17.21",
+	"-deps", dependencyCase + "/node_modules/lodash._reinterpolate=npm:lodash._reinterpolate@3.0.0",
+}
 
 func buildExample(t *testing.T) string {
 	t.Helper()
@@ -71,6 +80,45 @@ func TestExampleGivesOneOutputForAnyNumberOfWorkers(t *testing.T) {
 		return string(out)
 	}
 	assert.Equal(t, run("1"), run("4"))
+}
+
+func TestExampleFollowsAPathIntoDependencies(t *testing.T) {
+	bin := buildExample(t)
+	out, err := exec.Command(bin, append(dependencyFlags, "-target", "child_process//execSync")...).CombinedOutput()
+	require.NoError(t, err, string(out))
+	assert.Equal(t, "child_process//execSync: found\n  src/main.js:3 -> npm:lodash@4.17.21//lodash.js:1 (package) -> npm:lodash@4.17.21//lodash.js:1 -> "+
+		"npm:lodash@4.17.21//template.js:4 -> npm:lodash._reinterpolate@3.0.0//index.js:3 (package) -> npm:lodash._reinterpolate@3.0.0//index.js:4 -> child_process//execSync\n", string(out))
+
+	out, err = exec.Command(bin, "-dir", dependencyCase, "-target", "child_process//execSync").CombinedOutput()
+	require.NoError(t, err, string(out))
+	assert.Equal(t, "child_process//execSync: not-found\n  searched 1 roots, 2 nodes, 1 edges\n", string(out), "with no -deps the path stops at the external key")
+}
+
+func TestExamplePrintsTheSummaries(t *testing.T) {
+	bin := buildExample(t)
+	run := func(workers string) string {
+		out, err := exec.Command(bin, append(dependencyFlags, "-summary", "-workers", workers)...).Output()
+		require.NoError(t, err)
+		return string(out)
+	}
+	out := run("1")
+	assert.Equal(t, out, run("4"))
+
+	var summaries []summary.Summary
+	require.NoError(t, json.Unmarshal([]byte(out), &summaries))
+	require.Len(t, summaries, 2)
+	assert.Equal(t, "npm:lodash._reinterpolate@3.0.0", summaries[0].Unit)
+	assert.Equal(t, "npm:lodash@4.17.21", summaries[1].Unit)
+	assert.Equal(t, "lodash//template", summaries[1].Symbols[1].Key)
+	assert.Equal(t, "lodash._reinterpolate", summaries[1].Symbols[1].Reaches[0].Target)
+}
+
+func TestDependencyFlag(t *testing.T) {
+	deps := depList{}
+	require.NoError(t, deps.Set("node_modules/lodash=npm:lodash@4.17.21"))
+	assert.Equal(t, "node_modules/lodash=npm:lodash@4.17.21", deps.String())
+	assert.Error(t, deps.Set("node_modules/lodash"))
+	assert.Error(t, deps.Set("=npm:lodash@4.17.21"))
 }
 
 func TestSkipPatterns(t *testing.T) {

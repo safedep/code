@@ -16,6 +16,7 @@ import (
 
 	"github.com/safedep/code/core"
 	fidx "github.com/safedep/code/fileindex"
+	"github.com/safedep/code/fs"
 	"github.com/safedep/code/lang"
 	"github.com/safedep/code/parser"
 	"github.com/safedep/code/pkg/test"
@@ -108,8 +109,8 @@ func TestFileIndexGolden(t *testing.T) {
 // serve an index of the old rules for it. So a change of the golden files
 // needs a new Version, and both constants change with it.
 const (
-	goldenVersion = "8"
-	goldenHash    = "3784e1d64398978363d5cc6a2af54a8cb3d570919bf0a57b4a39e8bb559e0ee4"
+	goldenVersion = "9"
+	goldenHash    = "49de85cfd24f5225e5193a1f016a9b679e2a4d4f3a2f057d5686d147cae3ae88"
 )
 
 func TestFileIndexGoldenHashFollowsVersion(t *testing.T) {
@@ -367,4 +368,56 @@ func TestFileIndexModuleVariables(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+// TestFileIndexOfDependencyCode indexes the golden files as the files of a
+// package unit. Each index has the records of the golden file, with the unit
+// first in each key, because the shape of the index does not change for
+// dependency code.
+func TestFileIndexOfDependencyCode(t *testing.T) {
+	const unit = "pypi:fixture@1.0.0"
+	fsys, err := fs.NewLocalFileSystem(fs.LocalFileSystemConfig{
+		ImportDirectories: []string{"testdata"},
+		ImportUnits:       map[string]string{"testdata": unit},
+	})
+	require.NoError(t, err)
+	result, err := (&Indexer{}).Run(context.Background(), fsys, Options{Languages: allLanguages(t), Imports: true, Workers: 2})
+	require.NoError(t, err)
+	assert.Empty(t, result.Files)
+
+	golden, err := filepath.Glob(filepath.Join("testdata", "golden", "*.json"))
+	require.NoError(t, err)
+	require.Len(t, result.Indexes, len(golden))
+	for _, ix := range result.Indexes {
+		_, name := fidx.SplitUnit(ix.Path)
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, unit, ix.Unit)
+			assert.Equal(t, fidx.FileIndexed, result.Dependencies[ix.Path])
+			for _, def := range ix.Definitions {
+				assert.Equal(t, ix.Path, fidx.Unit(def.Key))
+			}
+
+			got, err := json.MarshalIndent(ix, "", "  ")
+			require.NoError(t, err)
+			text := strings.ReplaceAll(string(got), unit+fidx.Separator, "")
+			text = strings.Replace(text, "  \"unit\": \""+unit+"\",\n", "", 1)
+			want, err := os.ReadFile(filepath.Join("testdata", "golden", name+".json"))
+			require.NoError(t, err)
+			assert.Equal(t, string(want), text+"\n")
+		})
+	}
+}
+
+func allLanguages(t *testing.T) []core.Language {
+	t.Helper()
+	var languages []core.Language
+	for _, code := range []core.LanguageCode{
+		core.LanguageCodeJava, core.LanguageCodeKotlin, core.LanguageCodeCSharp, core.LanguageCodePHP, core.LanguageCodeRuby,
+		core.LanguageCodeRust, core.LanguageCodeGo, core.LanguageCodeJavascript, core.LanguageCodeTypescript, core.LanguageCodePython,
+	} {
+		language, err := lang.GetLanguage(string(code))
+		require.NoError(t, err)
+		languages = append(languages, language)
+	}
+	return languages
 }

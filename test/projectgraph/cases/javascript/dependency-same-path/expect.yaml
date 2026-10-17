@@ -1,0 +1,75 @@
+source: safedep:hand
+description: >-
+  The project and its dependency util-kit both have index.js and lib/util.js, and both define format. The
+  unit at the start of each key of the dependency keeps the files and the definitions apart. The project
+  calls its own format and render of util-kit. render calls the format of util-kit, which calls
+  fs.writeFileSync. The call of format in the project does not reach the format of the dependency.
+units:
+  node_modules/util-kit: npm:util-kit@1.0.0
+roots:
+  - key: index.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: index.js
+    to: lib/util.js//format
+    kind: direct
+    confidence: high
+    site: index.js:4
+  - from: index.js
+    to: util-kit//render
+    kind: direct
+    confidence: high
+    site: index.js:4
+  - from: util-kit//render
+    to: npm:util-kit@1.0.0//index.js//render
+    kind: package
+    confidence: high
+    site: npm:util-kit@1.0.0//index.js:3
+  - from: npm:util-kit@1.0.0//index.js//render
+    to: npm:util-kit@1.0.0//lib/util.js//format
+    kind: direct
+    confidence: high
+    site: npm:util-kit@1.0.0//index.js:4
+  - from: npm:util-kit@1.0.0//lib/util.js//format
+    to: fs//writeFileSync
+    kind: direct
+    confidence: high
+    site: npm:util-kit@1.0.0//lib/util.js:4
+no_edges:
+  - from: index.js
+    to: npm:util-kit@1.0.0//lib/util.js//format
+  - from: npm:util-kit@1.0.0//index.js//render
+    to: lib/util.js//format
+  - from: lib/util.js//format
+    to: fs//writeFileSync
+unresolved:
+  - caller: lib/util.js//format
+    site: lib/util.js:2
+    reason: unknown-receiver
+    method: trim
+results:
+  - target: fs//writeFileSync
+    status: found
+    path:
+      - key: index.js
+      - key: util-kit//render
+        site: index.js:4
+        kind: direct
+        confidence: high
+      - key: npm:util-kit@1.0.0//index.js//render
+        site: npm:util-kit@1.0.0//index.js:3
+        kind: package
+        confidence: high
+      - key: npm:util-kit@1.0.0//lib/util.js//format
+        site: npm:util-kit@1.0.0//index.js:4
+        kind: direct
+        confidence: high
+      - key: fs//writeFileSync
+        site: npm:util-kit@1.0.0//lib/util.js:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: npm:util-kit@1.0.0//lib/util.js//format
+        site: npm:util-kit@1.0.0//lib/util.js:4
+        reached: true

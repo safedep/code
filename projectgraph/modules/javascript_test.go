@@ -203,7 +203,7 @@ func TestSplitPackage(t *testing.T) {
 		{"@acme/core/util", "@acme/core", "./util"},
 	}
 	for _, tt := range tests {
-		name, sub := splitPackage(tt.spec)
+		name, sub := SplitPackage(tt.spec)
 		assert.Equal(t, tt.name, name)
 		assert.Equal(t, tt.sub, sub)
 	}

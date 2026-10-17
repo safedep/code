@@ -42,7 +42,7 @@ func (b *builder) linkFields() {
 		// candidate in most files of a large project.
 		var candidates []string
 		for _, name := range append([]string{u.Method}, profileOf(ix.Language).methodAliases[u.Method]...) {
-			for _, key := range byName[familyName{family: family, name: name}] {
+			for _, key := range byName[familyName{unit: ix.Unit, family: family, name: name}] {
 				if len(candidates) > maxNameCandidates {
 					break
 				}
@@ -63,28 +63,34 @@ func (b *builder) linkFields() {
 	}
 }
 
+// familyName is a name of a language family in the project or in one unit
+// of dependency code.
 type familyName struct {
+	unit   string
 	family langcode.Code
 	name   string
 }
 
-// definitionsByName returns the keys of the definitions of the project by
-// language family and name, in path order: the methods and the exported
-// functions for field edges, and the functions, methods, constructors and
-// classes for name edges. An object property or a property assignment that
-// holds a function is a method in the index. Only the files of the project
-// hold candidates. The code of a dependency has a definition for most
-// common names, and it would push a name over the cap.
+// definitionsByName returns the keys of the definitions of the project and
+// of each unit by unit, language family and name, in path order: the
+// methods and the exported functions for field edges, and the functions,
+// methods, constructors and classes for name edges. An object property or a
+// property assignment that holds a function is a method in the index. A
+// call takes candidates only from its own unit, or from the project. The
+// code of a dependency has a definition for most common names, and it would
+// push a name of the project over the cap. A call of a dependency that runs
+// a method of a value of the project, as an object that the project passes,
+// gets no candidate. The graph had that gap before it read dependency code.
 func (b *builder) definitionsByName() (fields, names map[familyName][]string) {
 	fields, names = map[familyName][]string{}, map[familyName][]string{}
 	for _, p := range b.paths {
 		ix := b.byPath[p]
-		if ix == nil || ix.Unit != "" || isDeclarationFile(p) {
+		if ix == nil || isDeclarationFile(p) {
 			continue
 		}
 		family := languageFamily(ix.Language)
 		for _, def := range ix.Definitions {
-			k := familyName{family: family, name: def.Name}
+			k := familyName{unit: ix.Unit, family: family, name: def.Name}
 			switch def.Kind {
 			case fileindex.DefMethod:
 				fields[k] = append(fields[k], def.Key)

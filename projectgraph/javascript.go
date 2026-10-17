@@ -15,7 +15,8 @@ func ecmascriptProfile(code langcode.Code, typescript bool) profile {
 	return profile{
 		code:            code,
 		family:          langcode.Javascript,
-		resolver:        func(b *builder) modules.Resolver { return b.js.For(typescript) },
+		resolver:        func(_ *builder, sp *space) modules.Resolver { return sp.keyed(sp.js.For(typescript)) },
+		dependencyCode:  true,
 		instance:        []string{"this"},
 		superCalls:      true,
 		defaultExport:   "default",

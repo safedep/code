@@ -255,11 +255,11 @@ func (b *builder) resolveTarget(sc *scope, caller, target string) []resolution {
 	}
 	if imp, rest, ok := sc.importFor(target); ok {
 		module, lead := importedModule(ix.Language, imp)
+		names := append(lead, rest...)
 		mod, _, found := b.resolveModule(ix, module)
 		if !found {
-			return []resolution{{key: b.external(target), kind: EdgeDirect, rule: "external"}}
+			return []resolution{{key: b.importedExternal(ix, target, module, names), kind: EdgeDirect, rule: "external"}}
 		}
-		names := append(lead, rest...)
 		if len(names) == 0 && sc.profile.defaultExport != "" {
 			names = []string{sc.profile.defaultExport}
 		}
@@ -399,7 +399,7 @@ func (b *builder) resolveSuper(caller string, names []string) resolution {
 		}
 		switch {
 		case b.kindOf(base) != NodeClass:
-			return resolution{key: b.external(fileindex.Join(base, names...)), kind: EdgeDirect, rule: "super"}
+			return resolution{key: b.deriveExternal(base, names), kind: EdgeDirect, rule: "super"}
 		case len(names) == 0:
 			return resolution{key: base, kind: EdgeDirect, rule: "super"}
 		}
@@ -574,7 +574,7 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 				r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
 				return r
 			case external && last:
-				r.key, r.kind, r.rule = b.external(fileindex.Join(base, name)), EdgeMember, "member"
+				r.key, r.kind, r.rule = b.deriveExternal(base, []string{name}), EdgeMember, "member"
 				i++
 			case external:
 				r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
@@ -584,7 +584,7 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 				return r
 			}
 		case kind == NodeExternal || kind == "" && b.g.IsExternal(r.key):
-			r.key = b.external(fileindex.Join(r.key, names[i:]...))
+			r.key = b.deriveExternal(r.key, names[i:])
 			r.rule = cmp.Or(r.rule, "external")
 			return r
 		case kind == NodeFunction || kind == NodeMethod || kind == NodeConstructor:
@@ -711,7 +711,9 @@ func (b *builder) resolveScopeName(sc *scope, text string) (string, bool) {
 		module, lead := importedModule(lang, imp)
 		mod, _, found := b.resolveModule(sc.ix, module)
 		if !found {
-			return fileindex.Join(boundNamespace(lang, imp), segs[1:]...), true
+			key := fileindex.Join(boundNamespace(lang, imp), segs[1:]...)
+			b.recordOrigin(sc.ix, key, module, append(lead, segs[1:]...))
+			return key, true
 		}
 		r = b.walk(mod, append(lead, segs[1:]...))
 	case len(scoped) > 0:
@@ -741,8 +743,10 @@ func (b *builder) resolveNameIn(sc *scope, from, text string) (string, bool) {
 	return b.resolveScopeName(sc, text)
 }
 
+// resolveModule resolves a module that a file imports in the space of the
+// file: its project, or its unit of dependency code.
 func (b *builder) resolveModule(ix *fileindex.Index, spec string) (string, string, bool) {
-	r := b.resolvers[ix.Language]
+	r := b.spaceOf(ix.Path).resolvers[ix.Language]
 	if spec == "" || r == nil {
 		return "", "", false
 	}
@@ -750,13 +754,14 @@ func (b *builder) resolveModule(ix *fileindex.Index, spec string) (string, strin
 }
 
 // mayBeFirstParty reports whether a module that resolves to no file can be
-// a file of the project. A search path root, an alias or a build step can
-// resolve a relative module, a module whose first segment names a file or a
-// directory of the project, or any module of a language with no resolver.
-// A Go import path under the path of a module of the project, or a Java
-// name under a package of the project, names a file of the project.
-func (b *builder) mayBeFirstParty(lang langcode.Code, spec string) bool {
-	r := b.resolvers[lang]
+// a file of the project or the unit of the file. A search path root, an
+// alias or a build step can resolve a relative module, a module whose first
+// segment names a file or a directory of the project, or any module of a
+// language with no resolver. A Go import path under the path of a module of
+// the project, or a Java name under a package of the project, names a file
+// of the project.
+func (b *builder) mayBeFirstParty(ix *fileindex.Index, spec string) bool {
+	r := b.spaceOf(ix.Path).resolvers[ix.Language]
 	return r == nil || r.FirstParty(spec)
 }
 

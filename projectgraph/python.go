@@ -12,7 +12,8 @@ import (
 var pythonProfile = profile{
 	code:               langcode.Python,
 	family:             langcode.Python,
-	resolver:           func(b *builder) modules.Resolver { return b.python },
+	resolver:           func(_ *builder, sp *space) modules.Resolver { return sp.keyed(sp.python) },
+	dependencyCode:     true,
 	relativePath:       pythonRelativePath,
 	instance:           []string{"self", "cls"},
 	objectBase:         "object",
@@ -90,7 +91,7 @@ func (b *builder) wildcard(sc *scope, name string) []resolution {
 	for _, st := range sc.stars {
 		mod, _, ok := b.resolveModule(sc.ix, st.spec)
 		if !ok {
-			key := b.external(fileindex.Join(fileindex.Namespace(sc.ix.Language, st.spec), name))
+			key := b.importedExternal(sc.ix, fileindex.Join(fileindex.Namespace(sc.ix.Language, st.spec), name), st.spec, []string{name})
 			external = append(external, resolution{key: key, kind: EdgeWildcard, rule: "wildcard-external"})
 			continue
 		}

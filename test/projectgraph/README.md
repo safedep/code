@@ -22,6 +22,8 @@ This directory tests the index step, the link step and the reach query of
    | --- | --- |
    | `source` | The source of the labels, as `safedep:hand`. The test fails when it is empty |
    | `description` | Free text |
+   | `units` | The package unit of each directory of dependency code in the project, as `node_modules/lodash: npm:lodash@4.17.21`. The index step reads these directories as import directories, and the link step links each unit as a project of its own |
+   | `import_dirs` | The import directories that hold the `units`, as `venv/site-packages`. Without it, each directory of `units` is its own import directory |
    | `test_paths` | Globs that mark test files, as `tests` or `*_test.py` |
    | `max_file_bytes` | The size limit of a file for the index step. A larger file fails |
    | `failed` | The whole set of files that the index step fails |
@@ -38,7 +40,11 @@ This directory tests the index step, the link step and the reach query of
 3. Optional. Put an `overlay.json` next to `expect.yaml`. The test merges it
    into the graph after the link step, as `projectgraph/overlay` reads it.
    The package documentation of `projectgraph/overlay` gives the format.
-4. Run `go test ./test/projectgraph/ -run TestCases/<language>/<case> -count=1 -v`.
+4. A case with `units` has the summary of each unit under `summaries/`, one
+   JSON file per unit, as `summaries/npm_lodash_4.17.21.json`. The test
+   compares the summary of each unit with its file. Run the test with
+   `-update` to write the files, and read each one before you commit it.
+5. Run `go test ./test/projectgraph/ -run TestCases/<language>/<case> -count=1 -v`.
    A failure prints the difference between the graph and `expect.yaml`.
 
 Write the expectation from the source, not from the output of the graph. A

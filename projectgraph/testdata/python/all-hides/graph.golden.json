@@ -168,7 +168,7 @@
     "pkg/a.py": "indexed"
   },
   "stats": {
-    "version": "8",
+    "version": "9",
     "files": 3,
     "nodes": 6,
     "edges": 5,

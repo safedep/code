@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"path"
 	"runtime"
 	"slices"
@@ -49,6 +50,13 @@ type Options struct {
 	// on it. The extra plugins run on one goroutine in path order, so a
 	// plugin need not be safe for concurrent use.
 	Workers int
+
+	// Imports indexes the files of the import directories of the file
+	// system too. The run indexes only an import file whose name holds a
+	// package unit, as fs.LocalFileSystemConfig.ImportUnits gives it,
+	// because a key of dependency code needs its unit. The report lists
+	// any other import file as skipped.
+	Imports bool
 }
 
 // Result is what one run of an Indexer did.
@@ -56,12 +64,36 @@ type Result struct {
 	// Indexes are the complete indexes of the run, in path order.
 	Indexes []*fidx.Index
 
-	// Files holds the status of each file of the run by name. A file that
-	// no language parses has no status, and the report lists it as skipped.
+	// Files holds the status of each file of the project by name. A file
+	// that no language parses has no status, and the report lists it as
+	// skipped.
 	Files map[string]fidx.FileStatus
+
+	// Dependencies holds the status of each file of dependency code by
+	// name, as Files does for the project. A failed or a missing file of a
+	// package makes only the paths through that package uncertain, so the
+	// two sets stay apart.
+	Dependencies map[string]fidx.FileStatus
 
 	// Report lists the files that the run parsed, skipped and failed.
 	Report *plugin.Report
+}
+
+// Statuses returns the status of each file of the run, of the project and
+// of dependency code, as projectgraph.Options.Files takes them.
+func (r *Result) Statuses() map[string]fidx.FileStatus {
+	out := make(map[string]fidx.FileStatus, len(r.Files)+len(r.Dependencies))
+	maps.Copy(out, r.Files)
+	maps.Copy(out, r.Dependencies)
+	return out
+}
+
+// statuses returns the map of the status of a file of the name.
+func (r *Result) statuses(name string) map[string]fidx.FileStatus {
+	if unit, _ := fidx.SplitUnit(name); unit != "" {
+		return r.Dependencies
+	}
+	return r.Files
 }
 
 // Indexer indexes the files of a file system and keeps the indexes in a
@@ -85,10 +117,10 @@ type run struct {
 	strs   interner
 }
 
-// Run indexes the app files of fsys. It reads each file once and asks the
-// store for the index of its bytes. A hit with no extra plugin needs no
-// parse. Each new index goes to the store. A file that fails does not stop
-// the run.
+// Run indexes the app files of fsys, and its import files with
+// Options.Imports. It reads each file once and asks the store for the index
+// of its bytes. A hit with no extra plugin needs no parse. Each new index
+// goes to the store. A file that fails does not stop the run.
 //
 // When ctx is done, Run stops, marks each file that it did not index as
 // missing, and returns the result so far with the error of ctx. Run fails
@@ -102,15 +134,19 @@ func (*Indexer) Run(ctx context.Context, fsys core.ImportAwareFileSystem, opts O
 	if err != nil {
 		return nil, err
 	}
-	files, err := enumerate(ctx, fsys, opts.Languages)
+	files, skipped, err := enumerate(ctx, fsys, opts)
 	if err != nil {
 		return nil, err
 	}
 
 	r := &run{
-		opts:   opts,
-		result: &Result{Files: make(map[string]fidx.FileStatus, len(files)), Report: &plugin.Report{}},
-		strs:   interner{},
+		opts: opts,
+		result: &Result{
+			Files:        make(map[string]fidx.FileStatus, len(files)),
+			Dependencies: map[string]fidx.FileStatus{},
+			Report:       &plugin.Report{Skipped: skipped},
+		},
+		strs: interner{},
 	}
 	if r.pool, err = newPool(ctx, opts.Languages, r.maxBytes(), cmp.Or(opts.Workers, runtime.GOMAXPROCS(0))); err != nil {
 		return nil, err
@@ -118,35 +154,41 @@ func (*Indexer) Run(ctx context.Context, fsys core.ImportAwareFileSystem, opts O
 	defer r.pool.close()
 	err = r.index(ctx, files, byExtension)
 	for _, file := range files {
-		_, done := r.result.Files[file.Name()]
+		statuses := r.result.statuses(file.Name())
+		_, done := statuses[file.Name()]
 		if !done && !slices.Contains(r.result.Report.Skipped, file.Name()) {
-			r.result.Files[file.Name()] = fidx.FileMissing
+			statuses[file.Name()] = fidx.FileMissing
 		}
 	}
 	slices.SortFunc(r.result.Indexes, func(a, b *fidx.Index) int { return cmp.Compare(a.Path, b.Path) })
 	return r.result, err
 }
 
-// enumerate returns the app files that one of the languages parses. It
-// fails at the second file of a name.
-func enumerate(ctx context.Context, fsys core.ImportAwareFileSystem, languages []core.Language) ([]core.File, error) {
-	walker, err := fs.NewSourceWalker(fs.SourceWalkerConfig{}, languages)
+// enumerate returns the files that one of the languages parses, and the
+// import files with no unit. It fails at the second file of a name.
+func enumerate(ctx context.Context, fsys core.ImportAwareFileSystem, opts Options) ([]core.File, []string, error) {
+	walker, err := fs.NewSourceWalker(fs.SourceWalkerConfig{IncludeImports: opts.Imports}, opts.Languages)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	collector := &fileCollector{byName: map[string]core.File{}}
 	if err := walker.Walk(ctx, fsys, collector); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return collector.files, nil
+	return collector.files, collector.noUnit, nil
 }
 
 type fileCollector struct {
 	files  []core.File
 	byName map[string]core.File
+	noUnit []string
 }
 
 func (c *fileCollector) VisitFile(_ context.Context, file core.File) error {
+	if unit, _ := fidx.SplitUnit(file.Name()); file.IsImport() && unit == "" {
+		c.noUnit = append(c.noUnit, file.Name())
+		return nil
+	}
 	if other, ok := c.byName[file.Name()]; ok {
 		return fmt.Errorf("two files have the name %s, %s and %s: index one app root at a time", file.Name(), other.Path(), file.Path())
 	}
@@ -300,7 +342,7 @@ func (r *run) collect(ctx context.Context, p pending, o outcome) *fidx.Index {
 	}
 
 	if o.index == nil || failed {
-		r.result.Files[p.file.Name()] = failure(ctx)
+		r.result.statuses(p.file.Name())[p.file.Name()] = failure(ctx)
 		return nil
 	}
 	r.done(p.file, o.index, fidx.FileIndexed)
@@ -309,13 +351,13 @@ func (r *run) collect(ctx context.Context, p pending, o outcome) *fidx.Index {
 
 func (r *run) done(file core.File, ix *fidx.Index, status fidx.FileStatus) {
 	r.strs.index(ix)
-	r.result.Files[file.Name()] = status
+	r.result.statuses(file.Name())[file.Name()] = status
 	r.result.Indexes = append(r.result.Indexes, ix)
 }
 
 func (r *run) fail(ctx context.Context, file core.File, stage core.Stage, err error) {
 	r.result.Report.Failed = append(r.result.Report.Failed, plugin.FileError{File: file.Name(), Stage: stage, Err: err})
-	r.result.Files[file.Name()] = failure(ctx)
+	r.result.statuses(file.Name())[file.Name()] = failure(ctx)
 }
 
 // failure is the status of a file that failed. A failure after ctx is done

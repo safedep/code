@@ -75,12 +75,20 @@ type CallSite struct {
 }
 
 // Uncertainty is a reason why no path is not a proof. Key is the node that
-// the search reached and that holds the reason.
+// the search reached and that holds the reason. Method scopes an unresolved
+// call to the targets with that last segment, ImportPrefix scopes a
+// computed import to the targets under the prefix, and Unit scopes a call
+// into a package at no known definition to the targets that the code of
+// the package, and of each package that it calls, reaches. With none of
+// them, the uncertainty concerns every target.
 type Uncertainty struct {
-	Kind UncertaintyKind   `json:"kind"`
-	Key  string            `json:"key,omitempty"`
-	Site projectgraph.Site `json:"site"`
-	Text string            `json:"text"`
+	Kind         UncertaintyKind   `json:"kind"`
+	Key          string            `json:"key,omitempty"`
+	Site         projectgraph.Site `json:"site"`
+	Text         string            `json:"text"`
+	Method       string            `json:"method,omitempty"`
+	ImportPrefix string            `json:"import_prefix,omitempty"`
+	Unit         string            `json:"unit,omitempty"`
 }
 
 // Searched is what the search did. Uncertainties counts every uncertainty
@@ -171,8 +179,63 @@ func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error
 	return results, nil
 }
 
+// Exploration is what a search from some nodes reaches. Reached holds each
+// external node that the search reaches, in key order, with its shortest
+// path. Uncertainties holds each uncertainty of the search with no cap, in
+// the order of the search: first the ones that concern every target, then
+// the ones that a Method, an ImportPrefix or a Unit scopes.
+type Exploration struct {
+	Reached       []Reached     `json:"reached"`
+	Uncertainties []Uncertainty `json:"uncertainties,omitempty"`
+}
+
+// Reached is an external node that a search reaches, with the path to it.
+type Reached struct {
+	Target string `json:"target"`
+	Path   []Hop  `json:"path"`
+}
+
+// Explore searches the graph from the nodes of the keys in place of its
+// roots, as from the exported symbols of a package. MaxDepth 0 selects 64
+// hops.
+func Explore(ctx context.Context, g *projectgraph.Graph, from []string, maxDepth int) (*Exploration, error) {
+	if maxDepth < 0 {
+		return nil, fmt.Errorf("max depth %d is negative", maxDepth)
+	}
+	ix := newIndex(g)
+	sources := make([]int, 0, len(from))
+	for _, key := range from {
+		id, ok := ix.id[key]
+		if !ok {
+			return nil, fmt.Errorf("no node %s", key)
+		}
+		sources = append(sources, id)
+	}
+	slices.Sort(sources)
+	depth := cmp.Or(maxDepth, defaultMaxDepth)
+	s := ix.search(ctx, slices.Compact(sources), depth, nil)
+
+	e := &Exploration{Reached: []Reached{}}
+	for _, id := range ix.externals {
+		if s.dist[id] >= 0 && !slices.Contains(sources, id) {
+			e.Reached = append(e.Reached, Reached{Target: ix.keys[id], Path: ix.path(s, id)})
+		}
+	}
+	f := ix.uncertainties(s, depth)
+	e.Uncertainties = slices.Clone(f.global)
+	for _, m := range f.methods {
+		e.Uncertainties = append(e.Uncertainties, f.byMethod[m]...)
+	}
+	for _, p := range f.prefixed {
+		e.Uncertainties = append(e.Uncertainties, p.u)
+	}
+	e.Uncertainties = append(e.Uncertainties, f.byUnit...)
+	return e, nil
+}
+
 // index is the graph with integer node ids, in key order, and the edges out
-// of each node.
+// of each node. unitNodes holds the nodes of each unit of dependency code,
+// and closures what the code of each unit reaches. Both fill on first use.
 type index struct {
 	g         *projectgraph.Graph
 	keys      []string
@@ -180,6 +243,9 @@ type index struct {
 	out       [][]int32
 	in        [][]int32
 	externals []int
+
+	unitNodes map[string][]int
+	closures  map[string][]bool
 }
 
 func newIndex(g *projectgraph.Graph) *index {
@@ -210,6 +276,72 @@ func newIndex(g *projectgraph.Graph) *index {
 		ix.in[to] = append(ix.in[to], int32(i))
 	}
 	return ix
+}
+
+// unitOf returns the unit of dependency code of a node, or "".
+func (ix *index) unitOf(id int) string {
+	if n := ix.g.Nodes[ix.keys[id]]; n != nil {
+		return fileindex.PackageOf(n.Path)
+	}
+	return ""
+}
+
+// closure returns the nodes that the code of a unit reaches, and the code
+// of each unit that a node of it reaches. A value of the project that the
+// code of a unit calls comes to it on an edge, as a reference, so the
+// search from the project reaches that value already.
+func (ix *index) closure(unit string) []bool {
+	if c, ok := ix.closures[unit]; ok {
+		return c
+	}
+	if ix.unitNodes == nil {
+		ix.unitNodes, ix.closures = map[string][]int{}, map[string][]bool{}
+		for id := range ix.keys {
+			if u := ix.unitOf(id); u != "" {
+				ix.unitNodes[u] = append(ix.unitNodes[u], id)
+			}
+		}
+	}
+	seen := make([]bool, len(ix.keys))
+	added := map[string]bool{}
+	var queue []int
+	add := func(u string) {
+		if added[u] {
+			return
+		}
+		added[u] = true
+		for _, id := range ix.unitNodes[u] {
+			if !seen[id] {
+				seen[id] = true
+				queue = append(queue, id)
+			}
+		}
+	}
+	add(unit)
+	for len(queue) > 0 {
+		id := queue[0]
+		queue = queue[1:]
+		for _, e := range ix.out[id] {
+			v := ix.id[ix.g.Edges[e].To]
+			if seen[v] {
+				continue
+			}
+			seen[v] = true
+			queue = append(queue, v)
+			if u := ix.unitOf(v); u != "" {
+				add(u)
+			}
+		}
+	}
+	ix.closures[unit] = seen
+	return seen
+}
+
+// unitReaches reports whether the code of a unit reaches a node of the
+// target.
+func (ix *index) unitReaches(unit, target string) bool {
+	c := ix.closure(unit)
+	return slices.ContainsFunc(ix.match(target), func(id int) bool { return c[id] })
 }
 
 // match returns the external nodes of a target, by id.
@@ -272,7 +404,7 @@ func (ix *index) search(ctx context.Context, sources []int, maxDepth int, target
 			s.stopped = true
 			return s
 		}
-		if s.allFound(targets) {
+		if len(targets) > 0 && s.allFound(targets) {
 			return s
 		}
 		if depth == maxDepth {
@@ -371,11 +503,14 @@ type found struct {
 	byMethod map[string][]Uncertainty
 	methods  []string
 	prefixed []prefixed
+	byUnit   []Uncertainty
+	// reaches reports whether the code of a unit reaches a target.
+	reaches func(unit, target string) bool
 }
 
 func (ix *index) uncertainties(s *search, maxDepth int) *found {
 	g := ix.g
-	f := &found{byMethod: map[string][]Uncertainty{}}
+	f := &found{byMethod: map[string][]Uncertainty{}, reaches: ix.unitReaches}
 
 	unresolved := map[string][]projectgraph.UnresolvedSite{}
 	prefixes := map[projectgraph.Site]string{}
@@ -394,19 +529,38 @@ func (ix *index) uncertainties(s *search, maxDepth int) *found {
 		}
 	}
 
-	// A file with no complete index can hold a root or a caller that the
-	// graph does not know, so it counts where the search does not reach it.
+	// A file of the project with no complete index can hold a root or a
+	// caller that the graph does not know, so it counts where the search
+	// does not reach it. A file of dependency code holds no root, and its
+	// code runs only when a call enters its package. So it counts only for
+	// a search that reaches a node of its unit.
+	units := map[string][]Uncertainty{}
 	for _, p := range slices.Sorted(maps.Keys(g.Files)) {
-		if status := g.Files[p]; !status.Complete() {
-			f.global = append(f.global, Uncertainty{Kind: Budget, Key: p, Site: projectgraph.Site{Path: p}, Text: "the file is " + string(status)})
+		status := g.Files[p]
+		if status.Complete() {
+			continue
+		}
+		u := Uncertainty{Kind: Budget, Key: p, Site: projectgraph.Site{Path: p}, Text: "the file is " + string(status)}
+		if unit := fileindex.PackageOf(p); unit != "" {
+			units[unit] = append(units[unit], u)
+		} else {
+			f.global = append(f.global, u)
+		}
+	}
+	entered := map[string]bool{}
+	enter := func(unit string) {
+		if unit != "" && !entered[unit] {
+			entered[unit] = true
+			f.global = append(f.global, units[unit]...)
 		}
 	}
 	for _, id := range s.order {
 		key := ix.keys[id]
 		n := g.Nodes[key]
-		if n == nil || n.Kind == projectgraph.NodeExternal {
+		if n == nil {
 			continue
 		}
+		enter(fileindex.PackageOf(n.Path))
 		for _, t := range truncated[key] {
 			site := t.Site
 			site.Path = cmp.Or(site.Path, n.Path)
@@ -425,17 +579,25 @@ func (ix *index) uncertainties(s *search, maxDepth int) *found {
 				u.Kind = Budget
 				f.global = append(f.global, u)
 			case fl.Kind == fileindex.FlagComputedImport && prefixes[site] != "":
+				u.ImportPrefix = prefixes[site]
 				f.prefixed = append(f.prefixed, prefixed{u: u, prefix: prefixes[site]})
 			default:
 				f.global = append(f.global, u)
 			}
 		}
 		for _, r := range unresolved[key] {
+			enter(fileindex.PackageOf(r.Site.Path))
+			enter(r.Unit)
 			u := Uncertainty{Kind: UnresolvedCall, Key: key, Site: r.Site, Text: fmt.Sprintf("%s (%s)", r.Text, r.Reason)}
 			switch {
+			case r.Unit != "":
+				u.Unit = r.Unit
+				f.byUnit = append(f.byUnit, u)
 			case r.ImportPrefix != "":
+				u.ImportPrefix = r.ImportPrefix
 				f.prefixed = append(f.prefixed, prefixed{u: u, prefix: r.ImportPrefix})
 			case r.Method != "" && !projectgraph.ReachesAny(r.Reason):
+				u.Method = r.Method
 				if _, ok := f.byMethod[r.Method]; !ok {
 					f.methods = append(f.methods, r.Method)
 				}
@@ -466,6 +628,12 @@ func (f *found) forTarget(target string) ([]Uncertainty, []Uncertainty, int) {
 		}
 	} else {
 		all = append(all, f.byMethod[fileindex.Last(target)]...)
+	}
+
+	for _, u := range f.byUnit {
+		if f.reaches(u.Unit, target) {
+			all = append(all, u)
+		}
 	}
 
 	var setAside []Uncertainty

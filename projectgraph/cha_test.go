@@ -339,10 +339,16 @@ func TestBuildOpenClassesTakeCHAEdges(t *testing.T) {
 		},
 		Calls: []fileindex.Call{{Caller: "a.js//App//start", Line: 7, Column: 5, Callee: "this.load", Targets: []string{"a.js//App//this//load"}, Receiver: "this", Method: "load", Kind: fileindex.CallCall}},
 	}
-	g, err := Build(context.Background(), []*fileindex.Index{ix}, Options{})
+	const mix = "npm:mix@1.0.0//m.js//mix//<anonymous:1>"
+	dep := &fileindex.Index{
+		Version: fileindex.Version, Path: "npm:mix@1.0.0//m.js", Language: langcode.Javascript, Unit: "npm:mix@1.0.0",
+		Definitions: []fileindex.Definition{def(fileindex.DefFunction, "npm:mix@1.0.0//m.js//mix", 1), def(fileindex.DefClass, mix, 1), def(fileindex.DefMethod, mix+"//load", 2)},
+		Classes:     []fileindex.Class{{Key: mix, Bases: []string{"B"}, Methods: []string{mix + "//load"}}},
+	}
+	g, err := Build(context.Background(), []*fileindex.Index{ix, dep}, Options{})
 	require.NoError(t, err)
 	assert.Equal(t, []string{"a.js//App//start -> a.js//mix//<anonymous:1>//load cha javascript.cha"}, edgesOfKind(g, EdgeCHA),
-		"a class whose base is a parameter can extend any class, and a builtin base names a class")
+		"a class whose base is a parameter can extend any class of its own unit, and a builtin base names a class")
 }
 
 func TestBuildOverridesOfADependencyBase(t *testing.T) {
@@ -370,24 +376,35 @@ func TestBuildOverridesOfADependencyBase(t *testing.T) {
 	}, edgesOfKind(g, EdgeReference), "the dependency can call each method of an instance, and the constructor runs with the class")
 }
 
-func TestBuildFieldCandidatesComeFromTheProject(t *testing.T) {
-	dep := &fileindex.Index{Version: fileindex.Version, Path: "node_modules/lib/index.js", Language: langcode.Javascript, Unit: "npm:lib@1.0.0"}
+func TestBuildFieldCandidatesComeFromTheUnitOfTheCaller(t *testing.T) {
+	unresolved := func(caller string) []fileindex.Unresolved {
+		return []fileindex.Unresolved{{Caller: caller, Line: 1, Column: 1, Text: "o.get", Receiver: "o", Method: "get", Reason: fileindex.UnresolvedUnknownReceiver}}
+	}
+	dep := &fileindex.Index{Version: fileindex.Version, Path: "npm:lib@1.0.0//index.js", Language: langcode.Javascript, Unit: "npm:lib@1.0.0"}
 	for i := range 25 {
-		dep.Definitions = append(dep.Definitions, def(fileindex.DefMethod, fmt.Sprintf("node_modules/lib/index.js//o%d//get", i), i+1))
+		dep.Definitions = append(dep.Definitions, def(fileindex.DefMethod, fmt.Sprintf("npm:lib@1.0.0//index.js//o%d//get", i), i+1))
+	}
+	other := &fileindex.Index{
+		Version: fileindex.Version, Path: "npm:other@2.0.0//index.js", Language: langcode.Javascript, Unit: "npm:other@2.0.0",
+		Definitions: []fileindex.Definition{def(fileindex.DefMethod, "npm:other@2.0.0//index.js//box//get", 1)},
+		Unresolved:  unresolved("npm:other@2.0.0//index.js"),
 	}
 	own := &fileindex.Index{
 		Version: fileindex.Version, Path: "store.js", Language: langcode.Javascript,
 		Definitions: []fileindex.Definition{def(fileindex.DefMethod, "store.js//cache//get", 1)},
 	}
-	main := &fileindex.Index{
-		Version: fileindex.Version, Path: "main.js", Language: langcode.Javascript,
-		Unresolved: []fileindex.Unresolved{{Caller: "main.js", Line: 1, Column: 1, Text: "o.get", Receiver: "o", Method: "get", Reason: fileindex.UnresolvedUnknownReceiver}},
-	}
-	g, err := Build(context.Background(), []*fileindex.Index{dep, own, main}, Options{})
+	main := &fileindex.Index{Version: fileindex.Version, Path: "main.js", Language: langcode.Javascript, Unresolved: unresolved("main.js")}
+	g, err := Build(context.Background(), []*fileindex.Index{dep, other, own, main}, Options{})
 	require.NoError(t, err)
-	assert.Equal(t, []string{"main.js -> store.js//cache//get field javascript.field"}, edgesOfKind(g, EdgeField),
-		"the definitions of a dependency are no candidates, so they make no site ambiguous")
-	assert.Equal(t, []string{"main.js:1 main.js unknown-receiver get"}, unresolvedStrings(g))
+	assert.Equal(t, []string{
+		"main.js -> store.js//cache//get field javascript.field",
+		"npm:other@2.0.0//index.js -> npm:other@2.0.0//index.js//box//get field javascript.field",
+	}, edgesOfKind(g, EdgeField),
+		"a project call takes no candidate of a dependency, and a dependency call takes candidates only from its own unit")
+	assert.Equal(t, []string{
+		"main.js:1 main.js unknown-receiver get",
+		"npm:other@2.0.0//index.js:1 npm:other@2.0.0//index.js unknown-receiver get",
+	}, unresolvedStrings(g))
 }
 
 func TestBuildJavaCallOnThisOfADependencyBase(t *testing.T) {

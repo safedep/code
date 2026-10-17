@@ -8,7 +8,10 @@ import (
 type File interface {
 	// Name is the path of the file relative to the root that enumerated
 	// it, with / as the separator. For a root that is itself a file, Name
-	// is the base name of the file.
+	// is the base name of the file. A file of dependency code with a
+	// package unit has the unit and "//" first, as
+	// npm:lodash@4.17.21//template.js, so its name differs from the name
+	// of each file of the project.
 	Name() string
 
 	// Path is the path that Reader opens, as the file system knows it.

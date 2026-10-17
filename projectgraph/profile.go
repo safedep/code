@@ -17,8 +17,12 @@ type profile struct {
 	// TypeScript with JavaScript.
 	family langcode.Code
 
-	// resolver returns the module resolver of the language for a build.
-	resolver func(b *builder) modules.Resolver
+	// resolver returns the module resolver of the language for one space
+	// of a build: the project, or a unit of dependency code.
+	resolver func(b *builder, sp *space) modules.Resolver
+	// dependencyCode marks a language whose files of dependency code the
+	// link step links, each unit in a space of its own.
+	dependencyCode bool
 	// units groups the files of the language into units, as Go packages.
 	units func(b *builder)
 	// aliases joins the definitions of one class, as the partial classes

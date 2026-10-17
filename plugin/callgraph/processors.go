@@ -241,7 +241,7 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 	// The edge from the root comes first, so the entry function gets no
 	// edge from the instance.
 	if profile.rootCallsFunctions || (profile.entryFunction != "" && funcName == profile.entryFunction) {
-		callGraph.addSyntheticEdge(resolveRootNamespaceQualifier(currentNamespace), functionNamespace, functionDefNode)
+		callGraph.addSyntheticEdge(callGraph.FileName, functionNamespace, functionDefNode)
 	}
 
 	if callGraph.addDefinition(functionNamespace, functionDefNode) {

@@ -318,3 +318,72 @@ func TestEnumerateGoesOnPastAnUnreadableDirectory(t *testing.T) {
 	_, err = enumerate(dir)
 	assert.ErrorIs(t, err, iofs.ErrPermission, "the root of the walk must be readable")
 }
+
+func TestImportUnits(t *testing.T) {
+	dir := t.TempDir()
+	write := func(parts ...string) string {
+		p := filepath.Join(append([]string{dir}, parts...)...)
+		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o700))
+		require.NoError(t, os.WriteFile(p, []byte("x\n"), 0o600))
+		return p
+	}
+	write("index.js")
+	write("node_modules", "lodash", "template.js")
+	write("node_modules", "lodash", "node_modules", "inner", "index.js")
+	write("node_modules", "lodash", "node_modules", "other", "index.js")
+	write("node_modules", "other", "index.js")
+	write("site-packages", "requests", "api.py")
+	write("site-packages", "six.py")
+
+	lodash := filepath.Join(dir, "node_modules", "lodash")
+	inner := filepath.Join(lodash, "node_modules", "inner")
+	sitePackages := filepath.Join(dir, "site-packages")
+	fs, err := NewLocalFileSystem(LocalFileSystemConfig{
+		AppDirectories:    []string{dir},
+		ImportDirectories: []string{lodash, inner, sitePackages},
+		ImportUnits: map[string]string{
+			lodash:                                  "npm:lodash@4.17.21",
+			inner:                                   "npm:inner@1.0.0",
+			filepath.Join(sitePackages, "requests"): "pypi:requests@2.31.0",
+		},
+		ExcludePatterns: []*regexp.Regexp{regexp.MustCompile(`[\\/]node_modules[\\/]`), regexp.MustCompile(`[\\/]site-packages[\\/]`)},
+	})
+	require.NoError(t, err)
+
+	names := func(enumerate func(context.Context, func(core.File) error) error) []string {
+		var out []string
+		require.NoError(t, enumerate(context.Background(), func(f core.File) error {
+			out = append(out, f.Name())
+			return nil
+		}))
+		return out
+	}
+	assert.ElementsMatch(t, []string{"index.js"}, names(fs.EnumerateApp))
+	assert.ElementsMatch(t, []string{
+		"npm:lodash@4.17.21//template.js",
+		"npm:lodash@4.17.21//node_modules/other/index.js",
+		"npm:inner@1.0.0//index.js",
+		"pypi:requests@2.31.0//requests/api.py",
+		"six.py",
+	}, names(fs.EnumerateImports), "a pattern for the walk of a project does not drop a named import directory")
+
+	file, err := fs.Find(context.Background(), "pypi:requests@2.31.0//requests/api.py")
+	require.NoError(t, err)
+	assert.True(t, file.IsImport())
+	assert.Equal(t, filepath.Join(sitePackages, "requests", "api.py"), file.Path())
+	_, err = fs.Find(context.Background(), "npm:lodash@1.0.0//template.js")
+	assert.Error(t, err, "the unit of a name must match")
+
+	for _, tc := range []struct {
+		name  string
+		units map[string]string
+	}{
+		{name: "a unit with no version", units: map[string]string{lodash: "npm:lodash"}},
+		{name: "a unit outside the import directories", units: map[string]string{filepath.Join(dir, "node_modules", "other"): "npm:other@1.0.0"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := NewLocalFileSystem(LocalFileSystemConfig{ImportDirectories: []string{lodash}, ImportUnits: tc.units})
+			assert.Error(t, err)
+		})
+	}
+}

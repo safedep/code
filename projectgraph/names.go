@@ -34,7 +34,7 @@ func (b *builder) resolveName(module, name string, hops int) (string, *failure) 
 
 func (b *builder) lookupName(module, name string, hops int) (string, *failure) {
 	if isNamespacePackage(module) {
-		if sub, ok := b.python.Submodule(module, name); ok {
+		if sub, ok := b.submodule(module, name); ok {
 			return sub, nil
 		}
 		return "", noDefinition(name)
@@ -77,7 +77,7 @@ func (b *builder) lookupName(module, name string, hops int) (string, *failure) {
 		}
 	}
 	if moduleNames {
-		if sub, ok := b.python.Submodule(module, name); ok {
+		if sub, ok := b.submodule(module, name); ok {
 			return sub, nil
 		}
 	}
@@ -99,7 +99,11 @@ func (b *builder) followExport(sc *scope, ex fileindex.Export, hops int) (string
 		var key string
 		switch {
 		case !ok:
-			key = b.external(fileindex.JoinNonEmpty(fileindex.Namespace(sc.ix.Language, ex.From), ex.Item))
+			var names []string
+			if ex.Item != "" {
+				names = []string{ex.Item}
+			}
+			key = b.importedExternal(sc.ix, fileindex.JoinNonEmpty(fileindex.Namespace(sc.ix.Language, ex.From), ex.Item), ex.From, names)
 		case ex.Item == "":
 			key = mod
 		default:
@@ -125,7 +129,7 @@ func (b *builder) followBinding(sc *scope, imp fileindex.Import, name string, ho
 	var key string
 	switch {
 	case !ok:
-		key = b.external(boundNamespace(lang, imp))
+		key = b.importedExternal(sc.ix, boundNamespace(lang, imp), module, lead)
 	case len(lead) > 0:
 		var fail *failure
 		if key, fail = b.resolveName(mod, lead[0], hops+1); fail != nil {

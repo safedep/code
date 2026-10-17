@@ -1,0 +1,150 @@
+{
+  "version": "1",
+  "index_version": "9",
+  "link_version": "9",
+  "unit": "npm:util-kit@1.0.0",
+  "symbols": [
+    {
+      "key": "util-kit//index//render",
+      "definitions": [
+        "npm:util-kit@1.0.0//index.js//render"
+      ],
+      "reaches": [
+        {
+          "target": "fs//writeFileSync",
+          "path": [
+            {
+              "key": "util-kit//index//render",
+              "site": {
+                "path": ""
+              }
+            },
+            {
+              "key": "npm:util-kit@1.0.0//index.js//render",
+              "site": {
+                "path": "npm:util-kit@1.0.0//index.js",
+                "line": 3
+              },
+              "edge_kind": "package",
+              "confidence": "high",
+              "resolver": "javascript.package.subpath"
+            },
+            {
+              "key": "npm:util-kit@1.0.0//lib/util.js//format",
+              "site": {
+                "path": "npm:util-kit@1.0.0//index.js",
+                "line": 4,
+                "column": 10
+              },
+              "edge_kind": "direct",
+              "confidence": "high",
+              "resolver": "javascript.import"
+            },
+            {
+              "key": "fs//writeFileSync",
+              "site": {
+                "path": "npm:util-kit@1.0.0//lib/util.js",
+                "line": 4,
+                "column": 3
+              },
+              "edge_kind": "direct",
+              "confidence": "high",
+              "resolver": "javascript.external"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "util-kit//lib//util//format",
+      "definitions": [
+        "npm:util-kit@1.0.0//lib/util.js//format"
+      ],
+      "reaches": [
+        {
+          "target": "fs//writeFileSync",
+          "path": [
+            {
+              "key": "util-kit//lib//util//format",
+              "site": {
+                "path": ""
+              }
+            },
+            {
+              "key": "npm:util-kit@1.0.0//lib/util.js//format",
+              "site": {
+                "path": "npm:util-kit@1.0.0//lib/util.js",
+                "line": 3
+              },
+              "edge_kind": "package",
+              "confidence": "high",
+              "resolver": "javascript.package.subpath"
+            },
+            {
+              "key": "fs//writeFileSync",
+              "site": {
+                "path": "npm:util-kit@1.0.0//lib/util.js",
+                "line": 4,
+                "column": 3
+              },
+              "edge_kind": "direct",
+              "confidence": "high",
+              "resolver": "javascript.external"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "util-kit//render",
+      "definitions": [
+        "npm:util-kit@1.0.0//index.js//render"
+      ],
+      "reaches": [
+        {
+          "target": "fs//writeFileSync",
+          "path": [
+            {
+              "key": "util-kit//render",
+              "site": {
+                "path": ""
+              }
+            },
+            {
+              "key": "npm:util-kit@1.0.0//index.js//render",
+              "site": {
+                "path": "npm:util-kit@1.0.0//index.js",
+                "line": 3
+              },
+              "edge_kind": "package",
+              "confidence": "high",
+              "resolver": "javascript.package.main"
+            },
+            {
+              "key": "npm:util-kit@1.0.0//lib/util.js//format",
+              "site": {
+                "path": "npm:util-kit@1.0.0//index.js",
+                "line": 4,
+                "column": 10
+              },
+              "edge_kind": "direct",
+              "confidence": "high",
+              "resolver": "javascript.import"
+            },
+            {
+              "key": "fs//writeFileSync",
+              "site": {
+                "path": "npm:util-kit@1.0.0//lib/util.js",
+                "line": 4,
+                "column": 3
+              },
+              "edge_kind": "direct",
+              "confidence": "high",
+              "resolver": "javascript.external"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

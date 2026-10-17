@@ -59,7 +59,7 @@ func NewGolang(files *Files, root fs.FS, dirs []string) *Golang {
 	// The deepest module holds a directory, so it comes first.
 	slices.SortFunc(g.modules, func(a, b goModule) int { return len(b.dir) - len(a.dir) })
 	for _, d := range dirs {
-		if p, ok := g.importPath(d); ok {
+		if p, ok := g.ImportPath(d); ok {
 			if _, dup := g.byPath[p]; !dup {
 				g.byPath[p] = d
 			}
@@ -99,7 +99,9 @@ func (g *Golang) FirstParty(spec string) bool {
 	}
 }
 
-func (g *Golang) importPath(dir string) (string, bool) {
+// ImportPath returns the import path of a directory, by the go.mod of the
+// nearest module.
+func (g *Golang) ImportPath(dir string) (string, bool) {
 	for _, m := range g.modules {
 		rel, ok := below(dir, m.dir)
 		if !ok {

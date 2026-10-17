@@ -1,47 +1,62 @@
 // Package projectgraph runs the hand-written cases end to end: the source
 // files of each case go through the indexer, the link step, the merge of an
 // optional overlay.json and the reach query, and the result must match the
-// expect.yaml of the case.
+// expect.yaml of the case. The summary of each unit of dependency code of a
+// case must match its golden file under summaries/.
 package projectgraph
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
+	iofs "io/fs"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/safedep/code/core"
+	fidx "github.com/safedep/code/fileindex"
 	"github.com/safedep/code/fs"
 	"github.com/safedep/code/plugin/fileindex"
 	"github.com/safedep/code/projectgraph"
 	"github.com/safedep/code/projectgraph/overlay"
 	"github.com/safedep/code/projectgraph/reach"
 	"github.com/safedep/code/projectgraph/store/memstore"
+	"github.com/safedep/code/projectgraph/summary"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
+var update = flag.Bool("update", false, "write the golden summaries of the cases")
+
 // expectation is the expect.yaml of a case. A site is path:line. Roots,
 // unresolved sites and the fields of a result are the whole set. Edges are a
 // subset of the edges of the graph, and no edge of the graph goes from a
-// key of NoEdges to its to key.
+// key of NoEdges to its to key. Units names the package unit of each
+// directory of dependency code, relative to the project. ImportDirs are the
+// import directories that hold them, and they default to the directories of
+// Units.
 type expectation struct {
-	Source       string       `yaml:"source"`
-	Description  string       `yaml:"description"`
-	TestPaths    []string     `yaml:"test_paths,omitempty"`
-	MaxFileBytes int          `yaml:"max_file_bytes,omitempty"`
-	Failed       []string     `yaml:"failed,omitempty"`
-	Roots        []root       `yaml:"roots"`
-	Edges        []edge       `yaml:"edges"`
-	NoEdges      []noEdge     `yaml:"no_edges,omitempty"`
-	Unresolved   []unresolved `yaml:"unresolved"`
-	Truncated    []truncation `yaml:"truncated,omitempty"`
-	Dropped      []dropped    `yaml:"dropped,omitempty"`
-	Results      []result     `yaml:"results"`
+	Source       string            `yaml:"source"`
+	Description  string            `yaml:"description"`
+	Units        map[string]string `yaml:"units,omitempty"`
+	ImportDirs   []string          `yaml:"import_dirs,omitempty"`
+	TestPaths    []string          `yaml:"test_paths,omitempty"`
+	MaxFileBytes int               `yaml:"max_file_bytes,omitempty"`
+	Failed       []string          `yaml:"failed,omitempty"`
+	Roots        []root            `yaml:"roots"`
+	Edges        []edge            `yaml:"edges"`
+	NoEdges      []noEdge          `yaml:"no_edges,omitempty"`
+	Unresolved   []unresolved      `yaml:"unresolved"`
+	Truncated    []truncation      `yaml:"truncated,omitempty"`
+	Dropped      []dropped         `yaml:"dropped,omitempty"`
+	Results      []result          `yaml:"results"`
 }
 
 // dropped is an edge of the overlay.json of a case that the merge drops.
@@ -132,18 +147,25 @@ func TestCases(t *testing.T) {
 	}
 }
 
-func runCase(t *testing.T, dir string, languages []core.Language) {
+func readExpectation(t testing.TB, dir string) expectation {
+	t.Helper()
 	data, err := os.ReadFile(filepath.Join(dir, "expect.yaml"))
 	require.NoError(t, err)
 	var want expectation
 	require.NoError(t, yaml.Unmarshal(data, &want))
 	require.NotEmpty(t, want.Source, "expect.yaml names the source of its labels")
+	return want
+}
+
+func runCase(t *testing.T, dir string, languages []core.Language) {
+	want := readExpectation(t, dir)
 
 	project := filepath.Join(dir, "project")
-	fsys, err := fs.NewLocalFileSystem(fs.LocalFileSystemConfig{AppDirectories: []string{project}})
+	cfg, roots := fileSystemConfig(project, want)
+	fsys, err := fs.NewLocalFileSystem(cfg)
 	require.NoError(t, err)
 	ctx := context.Background()
-	indexed, err := (&fileindex.Indexer{}).Run(ctx, fsys, fileindex.Options{Languages: languages, Store: memstore.New(), MaxFileBytes: want.MaxFileBytes})
+	indexed, err := (&fileindex.Indexer{}).Run(ctx, fsys, fileindex.Options{Languages: languages, Store: memstore.New(), MaxFileBytes: want.MaxFileBytes, Imports: len(want.Units) > 0})
 	require.NoError(t, err)
 	var failed []string
 	for _, f := range indexed.Report.Failed {
@@ -153,8 +175,9 @@ func runCase(t *testing.T, dir string, languages []core.Language) {
 
 	g, err := projectgraph.Build(ctx, indexed.Indexes, projectgraph.Options{
 		Root:      os.DirFS(project),
-		Files:     indexed.Files,
+		Files:     indexed.Statuses(),
 		TestPaths: want.TestPaths,
+		Units:     roots,
 	})
 	require.NoError(t, err)
 	assert.Empty(t, g.Problems)
@@ -174,6 +197,64 @@ func runCase(t *testing.T, dir string, languages []core.Language) {
 		require.Len(t, results, 1)
 		assert.Equal(t, w, resultOf(w, results[0]), "result for %s", w.Target)
 	}
+	for _, unit := range slices.Sorted(maps.Values(want.Units)) {
+		checkSummary(t, filepath.Join(dir, "summaries"), unit, indexed, roots)
+	}
+}
+
+// fileSystemConfig returns the file system of a case, and the root of the
+// files of each unit: the import directory that holds the unit.
+func fileSystemConfig(project string, want expectation) (fs.LocalFileSystemConfig, map[string]iofs.FS) {
+	cfg := fs.LocalFileSystemConfig{AppDirectories: []string{project}, ImportUnits: map[string]string{}}
+	importDirs := want.ImportDirs
+	if len(importDirs) == 0 {
+		importDirs = slices.Sorted(maps.Keys(want.Units))
+	}
+	for _, d := range importDirs {
+		cfg.ImportDirectories = append(cfg.ImportDirectories, filepath.Join(project, d))
+	}
+	roots := map[string]iofs.FS{}
+	for d, unit := range want.Units {
+		cfg.ImportUnits[filepath.Join(project, d)] = unit
+		for _, imp := range importDirs {
+			if d == imp || strings.HasPrefix(d, imp+"/") {
+				roots[unit] = os.DirFS(filepath.Join(project, imp))
+			}
+		}
+	}
+	return cfg, roots
+}
+
+// checkSummary compares the summary of one unit with its golden file. The
+// flag -update writes the golden file.
+func checkSummary(t *testing.T, dir, unit string, indexed *fileindex.Result, roots map[string]iofs.FS) {
+	t.Helper()
+	var indexes []*fidx.Index
+	for _, ix := range indexed.Indexes {
+		if ix.Unit == unit {
+			indexes = append(indexes, ix)
+		}
+	}
+	files := map[string]fidx.FileStatus{}
+	for p, status := range indexed.Dependencies {
+		if fidx.PackageOf(p) == unit {
+			files[p] = status
+		}
+	}
+	s, err := summary.Summarize(context.Background(), indexes, projectgraph.Options{Files: files, Units: map[string]iofs.FS{unit: roots[unit]}})
+	require.NoError(t, err)
+	got, err := json.MarshalIndent(s, "", "  ")
+	require.NoError(t, err)
+	got = append(got, '\n')
+
+	golden := filepath.Join(dir, strings.NewReplacer(":", "_", "/", "_", "@", "_").Replace(unit)+".json")
+	if *update {
+		require.NoError(t, os.MkdirAll(dir, 0o755))
+		require.NoError(t, os.WriteFile(golden, got, 0o644))
+	}
+	want, err := os.ReadFile(golden)
+	require.NoError(t, err, "the summary of %s has no golden file: run with -update", unit)
+	assert.Equal(t, string(want), string(got), "summary of %s", unit)
 }
 
 // mergeOverlay merges the overlay at path, when the case has one, and returns

@@ -74,7 +74,7 @@
     "tool/main.py": "indexed"
   },
   "stats": {
-    "version": "8",
+    "version": "9",
     "files": 2,
     "nodes": 4,
     "edges": 0,

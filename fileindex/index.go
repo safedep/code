@@ -19,7 +19,7 @@ import (
 // Version is the version of the index records and of the rules that fill
 // them. Bump it when a field, a kind, an order or a fill rule changes. A
 // store keys an index by Version, so the bump makes every older index miss.
-const Version = "8"
+const Version = "9"
 
 type ImportKind string
 
@@ -116,8 +116,13 @@ const (
 // lines and columns are 1-based. Sort puts every slice in its defined order,
 // so one file gives one JSON form. Package is the package clause of a Go
 // or a Java file. The files of one package share their top-level names.
+//
 // Unit names the package of a file of dependency code, as
-// npm:lodash@4.17.21, and is empty for a file of the project.
+// npm:lodash@4.17.21, and is empty for a file of the project. The Path of
+// such a file is its UnitPath, as npm:lodash@4.17.21//template.js, so each
+// key of the file starts with the unit. The path inside the package does
+// not depend on the project, so the index of one package version is the
+// same in every project.
 type Index struct {
 	Version     string        `json:"version"`
 	Path        string        `json:"path"`
@@ -330,7 +335,9 @@ func (s FileStatus) Complete() bool {
 
 // Key identifies the stored index of a file. The index depends on the path,
 // because its definition keys and its test mark hold the path. Two files with
-// the same bytes at two paths have two keys.
+// the same bytes at two paths have two keys. The Path of a file of
+// dependency code holds its unit, so two projects that install one package
+// version share its indexes.
 type Key struct {
 	Path           string
 	ContentHash    string

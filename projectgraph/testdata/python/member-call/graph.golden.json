@@ -258,7 +258,7 @@
     "parser.py": "indexed"
   },
   "stats": {
-    "version": "8",
+    "version": "9",
     "files": 3,
     "nodes": 9,
     "edges": 10,

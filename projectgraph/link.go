@@ -37,6 +37,17 @@ type Options struct {
 	TestPaths []string
 	// Rules go over the embedded root rules by id.
 	Rules []roots.Rule
+	// Units holds the files of each package unit of dependency code, by
+	// unit, as Root holds the files of the project. The root of each one is
+	// the directory that the paths inside the package start from, as
+	// node_modules/lodash for npm:lodash@4.17.21//template.js. A unit with
+	// no entry reads no manifest.
+	Units map[string]fs.FS
+	// Surface links an external node to each exported symbol of each unit
+	// of dependency code, as an import of the package by its name would. A
+	// search can then start from the symbols of a package, as a summary of
+	// the package does.
+	Surface bool
 
 	maxEdges      int
 	maxExportHops int
@@ -45,6 +56,12 @@ type Options struct {
 // Build links the indexes of one project into a graph. Every index must have
 // the Version of this build, and no two indexes may share a path. The graph
 // does not depend on the order of the indexes.
+//
+// An index with a Unit is a file of dependency code. The link step resolves
+// the imports of a unit inside the unit, as a project of its own. An import
+// that no file of its own project or unit gives stays an external node, as
+// lodash//template, and a package edge joins that node to the definition of
+// each unit that gives it. Dependency code holds no root.
 func Build(ctx context.Context, indexes []*fileindex.Index, opts Options) (*Graph, error) {
 	start := time.Now()
 	b, err := newBuilder(indexes, opts)
@@ -67,12 +84,22 @@ type builder struct {
 	g      *Graph
 	byPath map[string]*fileindex.Index
 	paths  []string
-	files  *modules.Files
-	python *modules.Python
-	js     *modules.JavaScript
 	scopes map[string]*scope
 	test   map[string]bool
 	rules  []roots.Rule
+
+	// project is the space of the project, spaces holds the space of the
+	// project and of each unit by unit, and ordered holds them in the
+	// order of their units, the project first.
+	project *space
+	spaces  map[string]*space
+	ordered []*space
+	// origins holds the imports that each external key comes from, and
+	// linked the external keys that linkPackages read.
+	origins map[string][]origin
+	linked  map[string]bool
+	// provisions holds the providers of each module by language family.
+	provisions map[[2]string][]provision
 
 	edges       *edgeSet
 	unresolved  map[UnresolvedSite]bool
@@ -89,7 +116,6 @@ type builder struct {
 	// of variables across files stops.
 	reading map[string]bool
 
-	golang *modules.Golang
 	// composer holds the autoload maps of PHP.
 	composer *modules.Composer
 	// groupMembers holds the members of each group of aliases by its first
@@ -109,12 +135,8 @@ type builder struct {
 	// constants holds the Ruby classes and modules by constant path, as
 	// Shop::Loader.
 	constants map[string][]string
-	// resolvers holds the module resolver of each language.
-	resolvers map[langcode.Code]modules.Resolver
 	units     map[string]*unit
 	unitOf    map[string]*unit
-	// goPackages holds the package that an import of each directory names.
-	goPackages map[string]*unit
 	// namespaces holds the table of the units of each language family whose
 	// files declare a package or a namespace.
 	namespaces map[langcode.Code]*namespaces
@@ -138,8 +160,8 @@ type builder struct {
 	// structural holds the narrowed calls whose type an object of another
 	// class can satisfy, so they keep their field edges.
 	structural map[siteCall]bool
-	// goMethods holds the Go methods of the project by name.
-	goMethods map[string][]string
+	// goMethods holds the Go methods of each package unit by name.
+	goMethods map[familyName][]string
 	// implemented holds whether a Go type implements an interface.
 	implemented map[[2]string]bool
 	// loads holds whether the module top level of each file runs code.
@@ -189,7 +211,10 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		reading:     map[string]bool{},
 		units:       map[string]*unit{},
 		unitOf:      map[string]*unit{},
-		goPackages:  map[string]*unit{},
+		spaces:      map[string]*space{},
+		origins:     map[string][]origin{},
+		provisions:  map[[2]string][]provision{},
+		linked:      map[string]bool{},
 		namespaces:  map[langcode.Code]*namespaces{},
 		loads:       map[string]bool{},
 		mros:        map[string][]string{},
@@ -197,44 +222,55 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		narrowed:    map[Site][]string{},
 		structural:  map[siteCall]bool{},
 		implemented: map[[2]string]bool{},
-		resolvers:   map[langcode.Code]modules.Resolver{},
 		test:        map[string]bool{},
 		rules:       roots.Merge(roots.Default(), opts.Rules),
 	}
+	skipped := map[modules.Problem]bool{}
 	for _, ix := range indexes {
 		if ix.Version != fileindex.Version {
 			return nil, fmt.Errorf("index of %s has version %q, want %q", ix.Path, ix.Version, fileindex.Version)
 		}
+		if unit, _ := fileindex.SplitUnit(ix.Path); unit != ix.Unit {
+			return nil, fmt.Errorf("index of %s has the unit %q, and its path names the unit %q", ix.Path, ix.Unit, unit)
+		}
 		if _, dup := b.byPath[ix.Path]; dup {
 			return nil, fmt.Errorf("two indexes for the path %s", ix.Path)
+		}
+		// The tables of a language with no space per unit, as the class
+		// table of Java, would join the classes of the project and of its
+		// dependencies, and a call of the project would skip the external
+		// key that a symbol record names.
+		if ix.Unit != "" && !profileOf(ix.Language).dependencyCode {
+			skipped[modules.Problem{Path: ix.Unit, Text: fmt.Sprintf("the link step does not link the %s code of a dependency", ix.Language)}] = true
+			continue
 		}
 		b.byPath[ix.Path] = ix
 		b.paths = append(b.paths, ix.Path)
 	}
+	b.problems = append(b.problems, sortedKeys(skipped, compareProblems)...)
 	for p, status := range opts.Files {
 		if _, ok := b.byPath[p]; !ok && !status.Complete() {
 			b.paths = append(b.paths, p)
 		}
 	}
 	slices.Sort(b.paths)
+	if err := b.addSpaces(); err != nil {
+		return nil, err
+	}
 	for _, p := range b.paths {
 		ix := b.byPath[p]
-		b.test[p] = ix != nil && ix.Test || pathglob.MatchAny(opts.TestPaths, p)
+		b.test[p] = ix != nil && ix.Test || pathglob.MatchAny(opts.TestPaths, b.spaceOf(p).inner(p))
 	}
-
-	b.files = modules.NewFiles(b.paths)
-	b.python = modules.NewPython(b.files, opts.Root, opts.SysPath)
-	b.js = modules.NewJavaScript(b.files, opts.Root)
-	b.problems = append(b.problems, b.python.Problems()...)
-	b.problems = append(b.problems, b.js.Problems()...)
 	for _, p := range profiles {
 		if p.units != nil {
 			p.units(b)
 		}
 	}
-	for _, p := range profiles {
-		if p.resolver != nil {
-			b.resolvers[p.code] = p.resolver(b)
+	for _, sp := range b.ordered {
+		for _, p := range profiles {
+			if p.resolver != nil && (sp == b.project || p.dependencyCode) {
+				sp.resolvers[p.code] = p.resolver(b, sp)
+			}
 		}
 	}
 	return b, nil
@@ -285,6 +321,12 @@ func (b *builder) link(ctx context.Context) error {
 		b.linkReferences(ix)
 		b.linkDecorators(ix)
 		b.copyUnresolved(ix)
+	}
+	if b.opts.Surface {
+		b.addSurfaces()
+	}
+	if err := b.linkPackages(ctx); err != nil {
+		return err
 	}
 	b.linkFields()
 	return nil
@@ -428,35 +470,68 @@ func (b *builder) linkImports(ix *fileindex.Index) {
 		}
 		from := b.runner(sc.enclosing(imp.Line))
 		site := Site{Path: ix.Path, Line: imp.Line}
-		mod, via, ok := b.resolveModule(ix, imp.Module)
-		if !ok {
-			// The record has no method, so it makes every target uncertain
-			// where the search reaches the import.
-			if b.mayBeFirstParty(ix.Language, imp.Module) {
-				b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: imp.Module, Reason: fileindex.UnresolvedNoDefinition})
+		mods, missing := b.importedModules(ix, imp.Module)
+		for _, unit := range missing {
+			b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: imp.Module, Reason: fileindex.UnresolvedNoDefinition, Unit: unit})
+		}
+		// The record has no method, so it makes every target uncertain
+		// where the search reaches the import.
+		if len(mods) == 0 && len(missing) == 0 && b.mayBeFirstParty(ix, imp.Module) {
+			b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: imp.Module, Reason: fileindex.UnresolvedNoDefinition})
+		}
+		for _, m := range mods {
+			for _, to := range b.moduleFiles(m.key) {
+				b.addEdge(Edge{From: from, To: to, Site: site, Kind: EdgeImport, Resolver: resolverName(ix.Language, "import", m.via)})
 			}
-			continue
-		}
-		resolver := resolverName(ix.Language, "import", via)
-		for _, to := range b.moduleFiles(mod) {
-			b.addEdge(Edge{From: from, To: to, Site: site, Kind: EdgeImport, Resolver: resolver})
-		}
-		if !profileOf(ix.Language).moduleNames || imp.Item == "" || b.bindsName(mod, imp.Item) {
-			continue
-		}
-		if sub, ok := b.python.Submodule(mod, imp.Item); ok && b.isModule(sub) {
-			b.addEdge(Edge{From: from, To: sub, Site: site, Kind: EdgeImport, Resolver: resolverName(ix.Language, "import", "submodule")})
+			if !profileOf(ix.Language).moduleNames || imp.Item == "" || b.bindsName(m.key, imp.Item) {
+				continue
+			}
+			if sub, ok := b.submodule(m.key, imp.Item); ok && b.isModule(sub) {
+				b.addEdge(Edge{From: from, To: sub, Site: site, Kind: EdgeImport, Resolver: resolverName(ix.Language, "import", "submodule")})
+			}
 		}
 	}
 	for _, ex := range ix.Exports {
 		if ex.From == "" {
 			continue
 		}
-		if mod, via, ok := b.resolveModule(ix, ex.From); ok && b.isModule(mod) {
-			site := Site{Path: ix.Path, Line: ex.Line}
-			b.addEdge(Edge{From: ix.Path, To: mod, Site: site, Kind: EdgeImport, Resolver: resolverName(ix.Language, "import", via)})
+		mods, _ := b.importedModules(ix, ex.From)
+		for _, m := range mods {
+			if b.isModule(m.key) {
+				site := Site{Path: ix.Path, Line: ex.Line}
+				b.addEdge(Edge{From: ix.Path, To: m.key, Site: site, Kind: EdgeImport, Resolver: resolverName(ix.Language, "import", m.via)})
+			}
 		}
 	}
+}
+
+// moduleRef is a module that an import names, and how the link step found
+// it.
+type moduleRef struct{ key, via string }
+
+// importedModules returns the modules whose top level an import of the
+// spec runs: the module of the space of the file, or else the module of
+// each unit of dependency code that gives the package. A package edge does
+// not stand for an import, because the external key of a JavaScript module
+// is also the key of its default export, and the import does not call it.
+// missing holds each unit that gives the package and not the module.
+func (b *builder) importedModules(ix *fileindex.Index, spec string) ([]moduleRef, []string) {
+	if mod, via, ok := b.resolveModule(ix, spec); ok {
+		return []moduleRef{{key: mod, via: via}}, nil
+	}
+	if len(b.spaces) < 2 {
+		return nil, nil
+	}
+	var mods []moduleRef
+	var missing []string
+	for _, pv := range b.providers(origin{lang: ix.Language, unit: ix.Unit, module: spec}) {
+		if pv.module == "" {
+			missing = append(missing, pv.sp.unit)
+			continue
+		}
+		mods = append(mods, moduleRef{key: pv.module, via: "package"})
+	}
+	return mods, missing
 }
 
 // moduleFiles returns the module top levels that an import of the module
@@ -701,14 +776,15 @@ func (b *builder) importPrefix(ix *fileindex.Index, line int) string {
 				trailing = trailing || strings.HasSuffix(spec, ".")
 				spec = relative(spec)
 			}
-			p, ok := modules.Join(modules.Dir(ix.Path), spec)
+			sp := b.spaceOf(ix.Path)
+			p, ok := modules.Join(modules.Dir(sp.inner(ix.Path)), spec)
 			if !ok {
 				return ""
 			}
 			if trailing {
 				p += "/"
 			}
-			return p
+			return sp.key(p)
 		}
 		return fileindex.Namespace(ix.Language, spec)
 	}
@@ -761,7 +837,12 @@ func compareUnresolved(a, b UnresolvedSite) int {
 		cmp.Compare(a.Method, b.Method),
 		cmp.Compare(a.Reason, b.Reason),
 		cmp.Compare(a.ImportPrefix, b.ImportPrefix),
+		cmp.Compare(a.Unit, b.Unit),
 	)
+}
+
+func compareProblems(a, b modules.Problem) int {
+	return cmp.Or(cmp.Compare(a.Path, b.Path), cmp.Compare(a.Text, b.Text))
 }
 
 func compareTruncations(a, b Truncation) int {

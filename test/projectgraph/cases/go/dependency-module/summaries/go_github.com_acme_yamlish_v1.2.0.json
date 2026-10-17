@@ -1,0 +1,66 @@
+{
+  "version": "1",
+  "index_version": "9",
+  "link_version": "9",
+  "unit": "go:github.com/acme/yamlish@v1.2.0",
+  "symbols": [
+    {
+      "key": "github.com//acme//yamlish//Dump",
+      "definitions": [
+        "go:github.com/acme/yamlish@v1.2.0//load.go//Dump"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "github.com//acme//yamlish//Load",
+      "definitions": [
+        "go:github.com/acme/yamlish@v1.2.0//load.go//Load"
+      ],
+      "reaches": [
+        {
+          "target": "gopkg.in//yaml.v3//Unmarshal",
+          "path": [
+            {
+              "key": "github.com//acme//yamlish//Load",
+              "site": {
+                "path": ""
+              }
+            },
+            {
+              "key": "go:github.com/acme/yamlish@v1.2.0//load.go//Load",
+              "site": {
+                "path": "go:github.com/acme/yamlish@v1.2.0//load.go",
+                "line": 3
+              },
+              "edge_kind": "package",
+              "confidence": "high",
+              "resolver": "go.package.module"
+            },
+            {
+              "key": "go:github.com/acme/yamlish@v1.2.0//decode.go//decode",
+              "site": {
+                "path": "go:github.com/acme/yamlish@v1.2.0//load.go",
+                "line": 5,
+                "column": 9
+              },
+              "edge_kind": "direct",
+              "confidence": "high",
+              "resolver": "go.package"
+            },
+            {
+              "key": "gopkg.in//yaml.v3//Unmarshal",
+              "site": {
+                "path": "go:github.com/acme/yamlish@v1.2.0//decode.go",
+                "line": 6,
+                "column": 9
+              },
+              "edge_kind": "direct",
+              "confidence": "high",
+              "resolver": "go.external"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
