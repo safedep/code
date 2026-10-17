@@ -55,7 +55,7 @@ jobs:
           check-latest: true
 
       - name: Build CGO-free Packages
-        run: go build ./langcode/
+        run: go build ./langcode/ ./lang/grammar/ ./fileindex/...
 
       - name: Test CGO-free Packages
-        run: go test -count=1 ./langcode/
+        run: go test -count=1 ./langcode/ ./lang/grammar/ ./fileindex/...

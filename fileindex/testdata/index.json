@@ -1,0 +1,303 @@
+{
+  "version": "1",
+  "path": "src/app.py",
+  "language": "python",
+  "content_hash": "a172cedcae47474b615c54d510a5d84a8dea3032e958587430b413538be3f333",
+  "test": true,
+  "imports": [
+    {
+      "line": 1,
+      "module": "yaml",
+      "kind": "static",
+      "namespace": "yaml"
+    },
+    {
+      "line": 2,
+      "module": ".utils",
+      "item": "load",
+      "alias": "ld",
+      "kind": "static",
+      "namespace": "utils//load"
+    },
+    {
+      "line": 3,
+      "module": "os.path",
+      "wildcard": true,
+      "kind": "static",
+      "namespace": "os//path"
+    },
+    {
+      "line": 9,
+      "module": "plugins",
+      "kind": "dynamic-string",
+      "namespace": "plugins"
+    },
+    {
+      "line": 10,
+      "module": "",
+      "kind": "dynamic-computed",
+      "namespace": ""
+    }
+  ],
+  "exports": [
+    {
+      "name": "Parser",
+      "target": "src/app.py//Parser",
+      "line": 4
+    },
+    {
+      "name": "*",
+      "target": "",
+      "from": ".utils",
+      "item": "*",
+      "line": 12
+    }
+  ],
+  "definitions": [
+    {
+      "key": "src/app.py",
+      "kind": "module",
+      "name": "app",
+      "start_line": 1,
+      "end_line": 20,
+      "exported": true
+    },
+    {
+      "key": "src/app.py//Parser",
+      "kind": "class",
+      "name": "Parser",
+      "start_line": 4,
+      "end_line": 8,
+      "exported": true
+    },
+    {
+      "key": "src/app.py//Parser//__init__",
+      "kind": "constructor",
+      "name": "__init__",
+      "start_line": 5,
+      "end_line": 5,
+      "exported": true,
+      "parent": "src/app.py//Parser"
+    },
+    {
+      "key": "src/app.py//Parser//parse",
+      "kind": "method",
+      "name": "parse",
+      "start_line": 6,
+      "end_line": 8,
+      "exported": true,
+      "parent": "src/app.py//Parser",
+      "decorators": [
+        "@cache",
+        "@app.route"
+      ],
+      "flags": [
+        {
+          "kind": "eval",
+          "line": 7
+        }
+      ]
+    },
+    {
+      "key": "src/app.py//helper",
+      "kind": "function",
+      "name": "helper",
+      "start_line": 14,
+      "end_line": 16,
+      "exported": false
+    }
+  ],
+  "classes": [
+    {
+      "key": "src/app.py//Parser",
+      "bases": [
+        "Base",
+        "Mixin"
+      ],
+      "methods": [
+        "src/app.py//Parser//__init__",
+        "src/app.py//Parser//parse"
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "caller": "src/app.py//Parser//parse",
+      "line": 6,
+      "column": 5,
+      "callee": "cache",
+      "targets": [
+        "cache"
+      ],
+      "kind": "decorator"
+    },
+    {
+      "caller": "src/app.py//Parser//parse",
+      "line": 7,
+      "column": 9,
+      "callee": "yaml.load",
+      "targets": [
+        "yaml//load"
+      ],
+      "receiver": "yaml",
+      "method": "load",
+      "kind": "call",
+      "args": [
+        "name",
+        "literal"
+      ]
+    },
+    {
+      "caller": "src/app.py",
+      "line": 9,
+      "column": 1,
+      "callee": "import_module",
+      "targets": [
+        "plugins"
+      ],
+      "kind": "import",
+      "args": [
+        "string"
+      ]
+    },
+    {
+      "caller": "src/app.py",
+      "line": 11,
+      "column": 1,
+      "callee": "Parser",
+      "targets": [
+        "src/app.py//Parser"
+      ],
+      "kind": "new"
+    },
+    {
+      "caller": "src/app.py",
+      "line": 13,
+      "column": 1,
+      "callee": "helper",
+      "targets": [
+        "src/app.py//helper"
+      ],
+      "kind": "call",
+      "args": [
+        "string",
+        "template",
+        "member",
+        "computed",
+        "function"
+      ]
+    }
+  ],
+  "unresolved": [
+    {
+      "caller": "src/app.py",
+      "line": 10,
+      "column": 1,
+      "text": "import_module(name)",
+      "reason": "dynamic-import"
+    },
+    {
+      "caller": "src/app.py//helper",
+      "line": 15,
+      "column": 5,
+      "text": "getattr(obj, name)",
+      "reason": "computed-name"
+    },
+    {
+      "caller": "src/app.py//helper",
+      "line": 16,
+      "column": 5,
+      "text": "client.send",
+      "receiver": "client",
+      "method": "send",
+      "reason": "unknown-receiver"
+    },
+    {
+      "caller": "src/app.py",
+      "line": 17,
+      "column": 1,
+      "text": "missing",
+      "method": "missing",
+      "reason": "no-definition"
+    },
+    {
+      "caller": "src/app.py",
+      "line": 18,
+      "column": 1,
+      "text": "a.b",
+      "receiver": "a",
+      "method": "b",
+      "reason": "ambiguous"
+    },
+    {
+      "caller": "src/app.py",
+      "line": 19,
+      "column": 1,
+      "text": "x.y",
+      "receiver": "x",
+      "method": "y",
+      "reason": "limit"
+    }
+  ],
+  "flags": [
+    {
+      "kind": "decorator-wrap",
+      "line": 6
+    },
+    {
+      "kind": "computed-import",
+      "line": 10
+    },
+    {
+      "kind": "computed-attribute",
+      "line": 15
+    },
+    {
+      "kind": "reflection",
+      "line": 15
+    },
+    {
+      "kind": "monkey-patch",
+      "line": 18
+    },
+    {
+      "kind": "parse-error",
+      "line": 20
+    }
+  ],
+  "truncated": [
+    {
+      "kind": "assignment-nodes",
+      "line": 15
+    },
+    {
+      "kind": "attribute-depth",
+      "line": 16
+    },
+    {
+      "kind": "deadline",
+      "line": 19
+    },
+    {
+      "kind": "depth",
+      "line": 16
+    },
+    {
+      "kind": "dfs-results",
+      "line": 0
+    },
+    {
+      "kind": "member-depth",
+      "line": 16
+    },
+    {
+      "kind": "nodes",
+      "namespace": "src/app.py//helper",
+      "line": 15
+    },
+    {
+      "kind": "polymorphic",
+      "line": 17
+    }
+  ]
+}
