@@ -115,10 +115,14 @@ type LocalFileSystemConfig struct {
 
 type localFileSystem struct {
 	config LocalFileSystemConfig
+
+	// walkDir walks a directory tree as filepath.WalkDir does. A test sets
+	// a walk that cannot read a directory, because root reads every one.
+	walkDir func(root string, fn iofs.WalkDirFunc) error
 }
 
 func NewLocalFileSystem(config LocalFileSystemConfig) (core.ImportAwareFileSystem, error) {
-	return &localFileSystem{config: config}, nil
+	return &localFileSystem{config: config, walkDir: filepath.WalkDir}, nil
 }
 
 func (fs *localFileSystem) Find(ctx context.Context, name string) (core.File, error) {
@@ -183,7 +187,7 @@ func (fs *localFileSystem) findFileInDir(ctx context.Context, dir, name string, 
 
 func (fs *localFileSystem) enumerateDir(ctx context.Context,
 	root string, isImport bool, callback func(core.File) error) error {
-	return filepath.WalkDir(root, func(path string, info os.DirEntry, err error) error {
+	return fs.walkDir(root, func(path string, info os.DirEntry, err error) error {
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("enumeration cancelled by context: %w", ctx.Err())

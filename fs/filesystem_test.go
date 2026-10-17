@@ -2,6 +2,8 @@ package fs
 
 import (
 	"context"
+	"fmt"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -269,4 +271,50 @@ func TestSkipUnreadable(t *testing.T) {
 			assert.ErrorIs(t, err, tc.want)
 		})
 	}
+}
+
+// lockedWalk walks as filepath.WalkDir does, but it cannot read the
+// directory locked. A directory with no permissions does that for a user
+// that is not root.
+func lockedWalk(locked string) func(string, iofs.WalkDirFunc) error {
+	return func(root string, fn iofs.WalkDirFunc) error {
+		return filepath.WalkDir(root, func(path string, entry iofs.DirEntry, err error) error {
+			if path != locked || err != nil {
+				return fn(path, entry, err)
+			}
+			if err := fn(path, entry, nil); err != nil {
+				return err
+			}
+			return fn(path, entry, fmt.Errorf("open %s: %w", path, iofs.ErrPermission))
+		})
+	}
+}
+
+func TestEnumerateGoesOnPastAnUnreadableDirectory(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"a/a.py", "b/b.py", "c.py"} {
+		path := filepath.Join(dir, name)
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
+		require.NoError(t, os.WriteFile(path, []byte("import os\n"), 0o600))
+	}
+
+	enumerate := func(locked string) ([]string, error) {
+		fsys, err := NewLocalFileSystem(LocalFileSystemConfig{AppDirectories: []string{dir}})
+		require.NoError(t, err)
+		fsys.(*localFileSystem).walkDir = lockedWalk(locked)
+
+		var names []string
+		err = fsys.EnumerateApp(context.Background(), func(f core.File) error {
+			names = append(names, filepath.ToSlash(f.Name()))
+			return nil
+		})
+		return names, err
+	}
+
+	names, err := enumerate(filepath.Join(dir, "b"))
+	require.NoError(t, err)
+	assert.Equal(t, []string{"a/a.py", "c.py"}, names)
+
+	_, err = enumerate(dir)
+	assert.ErrorIs(t, err, iofs.ErrPermission, "the root of the walk must be readable")
 }

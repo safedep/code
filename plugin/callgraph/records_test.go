@@ -79,6 +79,7 @@ func TestLimitNodesStopsTheGraphWithNoPanic(t *testing.T) {
 	for i := range 60_000 {
 		fmt.Fprintf(&source, "def f%d():\n    print()\n", i)
 	}
+	source.WriteString("f1()\nf59999()\n")
 
 	cg := buildFromSource(t, pythonLanguage(t), "big.py", source.String())
 
@@ -87,6 +88,10 @@ func TestLimitNodesStopsTheGraphWithNoPanic(t *testing.T) {
 	assert.Len(t, cg.Nodes, maxCallGraphNodes)
 	assert.Positive(t, cg.Truncations()[0].Line)
 	assert.NotEmpty(t, cg.DFS())
+
+	callees := calleesOf(cg, "big.py")
+	assert.Contains(t, callees, "big.py//f1", "an edge between two nodes that exist gets in past the limit")
+	assert.NotContains(t, callees, "big.py//f59999", "an edge to a node past the limit stays out")
 }
 
 func TestLimitAssignmentNodesAddsNothing(t *testing.T) {
@@ -553,5 +558,41 @@ require("os");
 				assert.False(t, ref.Unbound, ref.CalleeNamespace)
 			}
 		})
+	}
+}
+
+func TestUnresolvedRecordsAreDeduplicated(t *testing.T) {
+	// The chain root client.get() is a call of its own, and the outer call
+	// resolves it again as its receiver. Both reach one site.
+	cg := buildFromSource(t, javascriptLanguage(t), "a.js", "function handle(client) { client.get().send(); }\n")
+
+	assert.Equal(t, []UnresolvedCall{{
+		Caller:   "a.js//handle",
+		Site:     cg.Unresolved()[0].Site,
+		Text:     "client.get",
+		Receiver: "client",
+		Method:   "get",
+		Reason:   UnresolvedUnknownReceiver,
+	}}, cg.Unresolved())
+}
+
+func TestImportsThatShareAnIdentifierKeepSourceOrder(t *testing.T) {
+	python := pythonLanguage(t)
+	tree, err := parser.ParseBytes(t.Context(), python, []byte("import a as x\nimport c\nimport b as x\nimport d\n"))
+	require.NoError(t, err)
+	t.Cleanup(tree.Close)
+	imports, err := python.Resolvers().ResolveImports(t.Context(), tree)
+	require.NoError(t, err)
+
+	for range 20 {
+		parsed, wildcards := parseImports(imports, python)
+		assert.Empty(t, wildcards)
+
+		var pairs []string
+		for _, imported := range parsed {
+			pairs = append(pairs, imported.Identifier+"="+imported.Namespace)
+		}
+		assert.Equal(t, []string{"x=b", "c=c", "d=d"}, pairs, "the later import replaces the earlier one at its place")
+		assert.Equal(t, uint32(2), parsed[0].NamespaceTreeNode.StartPoint().Row)
 	}
 }

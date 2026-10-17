@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -189,19 +190,51 @@ func TestExecuteSkipsAFileThatNoLanguageParses(t *testing.T) {
 	assert.Empty(t, report.Failed)
 }
 
-func TestExecuteGoesOnPastAnUnreadableDirectory(t *testing.T) {
-	dir := writeFiles(t, map[string]string{"a/a.py": "import os\n", "b/b.py": "import os\n", "c.py": "import os\n"})
-	locked := filepath.Join(dir, "b")
-	require.NoError(t, os.Chmod(locked, 0))
-	t.Cleanup(func() { require.NoError(t, os.Chmod(locked, 0o700)) })
-	if _, err := os.ReadDir(locked); err == nil {
-		t.Skip("this user reads a directory with no permissions, as root does")
+// unreadableFile is a file whose reader fails.
+type unreadableFile struct{ name string }
+
+var errDenied = errors.New("permission denied")
+
+func (f unreadableFile) Name() string                   { return f.name }
+func (f unreadableFile) Path() string                   { return f.name }
+func (f unreadableFile) IsApp() bool                    { return true }
+func (f unreadableFile) IsImport() bool                 { return false }
+func (f unreadableFile) Reader() (io.ReadCloser, error) { return nil, errDenied }
+
+// filesWalker is a source walker that visits the given files.
+type filesWalker []core.File
+
+func (w filesWalker) Walk(ctx context.Context, _ core.ImportAwareFileSystem, visitor core.SourceVisitor) error {
+	for _, f := range w {
+		if err := visitor.VisitFile(ctx, f); err != nil {
+			return err
+		}
 	}
+	return nil
+}
+
+func TestExecuteGoesOnPastAFileThatDoesNotRead(t *testing.T) {
+	python, err := lang.NewPythonLanguage()
+	require.NoError(t, err)
+	files := filesWalker{
+		unreadableFile{name: "a.py"},
+		fs.NewFileFromReader(strings.NewReader("import os\n"), "b.py", false),
+	}
+	treeWalker, err := parser.NewWalkingParser(files, []core.Language{python})
+	require.NoError(t, err)
 
 	var names []string
-	report := execute(t, dir, []core.Plugin{fileNames(&names)})
-	assert.Equal(t, []string{"a.py", "c.py"}, names)
-	assert.Empty(t, report.Failed)
+	executor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{fileNames(&names)})
+	require.NoError(t, err)
+
+	report, err := executor.Execute(t.Context(), nil)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"b.py"}, names)
+	assert.Equal(t, []string{"b.py"}, report.Files)
+	require.Len(t, report.Failed, 1)
+	assert.Equal(t, "a.py", report.Failed[0].File)
+	assert.Equal(t, core.StageRead, report.Failed[0].Stage)
+	assert.ErrorIs(t, report.Failed[0], errDenied)
 }
 
 // closeRecorder is a tree that records Close.
