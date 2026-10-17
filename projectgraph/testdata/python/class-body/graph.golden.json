@@ -224,7 +224,7 @@
     "config.py": "indexed"
   },
   "stats": {
-    "version": "4",
+    "version": "5",
     "files": 1,
     "nodes": 12,
     "edges": 7,

@@ -18,6 +18,7 @@ func fullIndex() *Index {
 		Language:    langcode.Python,
 		ContentHash: HashContent([]byte("app")),
 		Test:        true,
+		Package:     "app",
 		Imports: []Import{
 			{Line: 1, Module: "yaml", Kind: ImportStatic, Namespace: "yaml"},
 			{Line: 2, Module: ".utils", Item: "load", Alias: "ld", Kind: ImportStatic, Namespace: "utils//load"},
@@ -38,7 +39,11 @@ func fullIndex() *Index {
 				Parent: "src/app.py//Parser", Decorators: []string{"@cache", "@app.route"},
 				Flags: []Flag{{Kind: FlagEval, Line: 7}},
 			},
-			{Key: "src/app.py//helper", Kind: DefFunction, Name: "helper", StartLine: 14, EndLine: 16, Params: []Typed{{Name: "p", Type: "Parser"}}},
+			{
+				Key: "src/app.py//helper", Kind: DefFunction, Name: "helper", StartLine: 14, EndLine: 16,
+				Params: []Typed{{Name: "p", Type: "Parser"}}, Locals: []Typed{{Name: "q", Type: "NewParser", Result: true}},
+				Arity: 2, Variadic: true, Returns: "Parser",
+			},
 			{Key: "src/app.py//Shape", Kind: DefInterface, Name: "Shape", StartLine: 20, EndLine: 20},
 		},
 		Classes: []Class{

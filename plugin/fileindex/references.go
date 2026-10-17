@@ -28,6 +28,10 @@ type referenceSyntax struct {
 	// bases maps the type of a class to the field that names its bases, as
 	// the argument list of class A(Base). A base is no value.
 	bases map[string]string
+	// lists hold values with no name of their own, as the expression list
+	// of a, b := f, g. The last child of each list holds the value, so the
+	// key of a keyed element is no value.
+	lists map[string]bool
 }
 
 var referenceSyntaxes = map[core.LanguageCode]referenceSyntax{
@@ -57,6 +61,21 @@ var referenceSyntaxes = map[core.LanguageCode]referenceSyntax{
 	},
 	core.LanguageCodeJavascript: ecmascriptReferences,
 	core.LanguageCodeTypescript: ecmascriptReferences,
+	core.LanguageCodeGo: {
+		holders: map[string]string{
+			"argument_list":         "",
+			"short_var_declaration": "right",
+			"assignment_statement":  "right",
+			"var_spec":              "value",
+			"return_statement":      "",
+			"literal_value":         "",
+		},
+		member:      "selector_expression",
+		object:      "operand",
+		property:    "field",
+		identifiers: map[string]bool{"identifier": true},
+		lists:       map[string]bool{"expression_list": true, "literal_element": true, "keyed_element": true},
+	},
 }
 
 var ecmascriptReferences = referenceSyntax{
@@ -131,7 +150,7 @@ func (p *projection) referenceVisitor() visitor {
 			values = []*sitter.Node{node.ChildByFieldName(field)}
 		}
 		caller := stack[len(stack)-1].key
-		for _, value := range values {
+		for _, value := range syntax.unlist(values) {
 			ref, ok := p.reference(syntax, caller, value)
 			if k := (site{ref.Line, ref.Column, ref.Caller, ref.Text}); ok && !seen[k] {
 				seen[k] = true
@@ -139,6 +158,29 @@ func (p *projection) referenceVisitor() visitor {
 			}
 		}
 	}
+}
+
+// unlist replaces each list of the values with the value that it holds.
+func (syntax referenceSyntax) unlist(values []*sitter.Node) []*sitter.Node {
+	var out []*sitter.Node
+	for _, value := range values {
+		for depth := 0; value != nil && syntax.lists[value.Type()] && depth < maxReferenceSegments; depth++ {
+			children := ts.NamedChildren(value)
+			if value.Type() == "expression_list" {
+				out = append(out, syntax.unlist(children)...)
+				value = nil
+				break
+			}
+			value = nil
+			if len(children) > 0 {
+				value = children[len(children)-1]
+			}
+		}
+		if value != nil {
+			out = append(out, value)
+		}
+	}
+	return out
 }
 
 // reference returns the reference of a value. The value is a name or a
@@ -167,6 +209,11 @@ func (p *projection) reference(syntax referenceSyntax, caller string, value *sit
 	if !ok {
 		return fidx.Reference{}, false
 	}
+	// A Go parameter or local of a declared type holds a value of the
+	// type, and a value is no function.
+	if _, typed := p.typedScope(caller, p.text(root)); typed && len(names) == 0 {
+		return fidx.Reference{}, false
+	}
 	site := ast.GetNodePosition(value)
 	return fidx.Reference{
 		Caller:  p.caller(caller, site),
@@ -179,7 +226,9 @@ func (p *projection) reference(syntax referenceSyntax, caller string, value *sit
 
 // valueOf returns the per-file target of a name: the definition that the
 // scope chain binds, the namespace of an import, or the class of self or
-// this. A local variable or a parameter has no target.
+// this. A typed parameter or local variable of a Go function is a name
+// under the function, as the call graph keys it. Any other local variable
+// or parameter has no target.
 func (p *projection) valueOf(syntax referenceSyntax, caller, name string) (string, bool) {
 	if syntax.instances[name] {
 		for scope := caller; scope != p.cg.FileName; scope = fidx.Parent(scope) {
@@ -191,6 +240,9 @@ func (p *projection) valueOf(syntax referenceSyntax, caller, name string) (strin
 	}
 	if targets := p.rebind(caller, name); len(targets) > 0 {
 		return targets[0], true
+	}
+	if scope, ok := p.typedScope(caller, name); ok {
+		return fidx.Join(scope, name), true
 	}
 	for _, imp := range p.ix.Imports {
 		if imp.Alias == name && imp.Namespace != "" && imp.Kind != fidx.ImportTypeOnly {

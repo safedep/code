@@ -82,7 +82,7 @@
     "src/util.ts": "indexed"
   },
   "stats": {
-    "version": "4",
+    "version": "5",
     "files": 2,
     "nodes": 3,
     "edges": 2,

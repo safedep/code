@@ -20,6 +20,7 @@ func spanOf(node *sitter.Node) span {
 
 // functionValues are the node types of a function that an expression holds.
 var functionValues = map[string]bool{
+	"func_literal":        true,
 	"function_expression": true,
 	"function":            true,
 	"arrow_function":      true,
@@ -63,8 +64,12 @@ func (p *projection) addInterfaces() {
 	}
 }
 
-// interfaceBases returns the interfaces that an interface extends.
+// interfaceBases returns the interfaces that an interface extends or, in
+// Go, embeds.
 func (p *projection) interfaceBases(node *sitter.Node) []string {
+	if p.isGo() {
+		return p.goBases(node)
+	}
 	var bases []string
 	for _, child := range ts.NamedChildren(node) {
 		if child.Type() != "extends_type_clause" {
@@ -250,10 +255,14 @@ func (p *projection) typedParam(param *sitter.Node) (fidx.Typed, bool) {
 	return fidx.Typed{Name: p.text(pattern), Type: name}, name != ""
 }
 
-// fields returns the fields of a TypeScript class that declare a type name:
-// the instance fields of the class body and the parameter properties of the
-// constructor.
+// fields returns the fields of a class that declare a type name. A
+// TypeScript class has the instance fields of the class body and the
+// parameter properties of the constructor. A Go struct has its named
+// fields.
 func (p *projection) fields(class *sitter.Node) []fidx.Typed {
+	if p.isGo() {
+		return p.goFields(class)
+	}
 	body := class.ChildByFieldName("body")
 	if body == nil || p.ix.Language != core.LanguageCodeTypescript {
 		return nil

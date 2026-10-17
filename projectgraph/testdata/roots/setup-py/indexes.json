@@ -1,6 +1,6 @@
 [
   {
-    "version": "4",
+    "version": "5",
     "path": "tool/main.py",
     "language": "python",
     "definitions": [
@@ -23,7 +23,7 @@
     ]
   },
   {
-    "version": "4",
+    "version": "5",
     "path": "tool/admin.py",
     "language": "python",
     "definitions": [

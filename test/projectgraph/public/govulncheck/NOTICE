@@ -1,0 +1,14 @@
+govulncheck test data
+
+Source: https://go.googlesource.com/vuln, directory cmd/govulncheck/testdata
+Commit: e672cbe8fbc8c76e28fcb6db0efd9ce354e0dac5 (2026-10-10)
+Copyright 2009 The Go Authors.
+License: BSD 3-Clause, in the file LICENSE next to this file.
+
+modules/ holds the source modules common/modules/vuln, multientry, replace
+and vendored and stdlib/modules/stdlib, with no change to the files. SafeDep
+left out the binaries vuln_dont_run_me and old_dont_run_me. testfiles/
+holds the five test scripts of source mode with JSON output:
+common/testfiles/source-call/source_call_json.ct, source_multientry_json.ct,
+source_replace_json.ct, source_vendored_json.ct and
+stdlib/testfiles/stdlib/source_stdlib_json.ct, with no change.

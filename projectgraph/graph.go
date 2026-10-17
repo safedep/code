@@ -14,7 +14,7 @@ import (
 // Version is the version of the link rules. Bump it when a rule that makes a
 // node, an edge, a root or an unresolved site changes, so a diff of two
 // reports shows the change.
-const Version = "4"
+const Version = "5"
 
 type NodeKind string
 
@@ -112,6 +112,10 @@ const (
 	// TruncationExportHops marks a name whose chain of re-exports is longer
 	// than the hop limit.
 	TruncationExportHops TruncationKind = "export-hops"
+	// TruncationPackageClauses marks a Go file whose package clause is not
+	// the clause of the package of its directory. The link step does not
+	// read build tags, so an import of the directory does not reach it.
+	TruncationPackageClauses TruncationKind = "package-clauses"
 )
 
 // Site is a place in a first-party file. Lines and columns are 1-based, and

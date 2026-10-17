@@ -108,6 +108,9 @@ func (b *builder) method(class, name string) (string, *failure) {
 		if n := b.g.Nodes[fileindex.Join(c, name)]; n != nil {
 			return n.Key, nil
 		}
+		if key, ok := b.member(c, name); ok {
+			return key, nil
+		}
 	}
 	for _, c := range order {
 		rec, ok := b.classes[c]
@@ -171,14 +174,51 @@ func (b *builder) subclasses(class string) []string {
 	return out
 }
 
-// overrides returns the first-party methods that a call of the method name
-// on an instance of the class can run besides found: for each subclass, the
-// method that its MRO gives. This is class hierarchy analysis.
-func (b *builder) overrides(class, name, found string) []string {
+// overrides returns the first-party methods that a call of the method on
+// an instance of the class can run besides found: for each subclass, the
+// method that its MRO gives. This is class hierarchy analysis. A Go type
+// implements an interface with no declaration, so a Go interface gets
+// every method of the project with the name and the arity of the call.
+func (b *builder) overrides(class string, call fileindex.Call, found string) []string {
+	if b.languageOf(class) == langcode.Go {
+		return b.implementations(call)
+	}
 	var out []string
 	for _, sub := range b.subclasses(class) {
-		key, fail := b.method(sub, name)
+		key, fail := b.method(sub, call.Method)
 		if fail == nil && key != found && b.isMethod(key) && !slices.Contains(out, key) {
+			out = append(out, key)
+		}
+	}
+	slices.Sort(out)
+	return out
+}
+
+// implementations returns the Go methods of the project that a call of an
+// interface method can run: the methods of a type with the name of the call
+// and a signature that takes its arguments. One call as the only argument
+// can give more values, so it takes any arity.
+func (b *builder) implementations(call fileindex.Call) []string {
+	if b.goMethods == nil {
+		b.goMethods = map[string][]string{}
+		for _, p := range b.paths {
+			ix := b.byPath[p]
+			if ix == nil || ix.Language != langcode.Go {
+				continue
+			}
+			for _, def := range ix.Definitions {
+				if def.Kind == fileindex.DefMethod && len(fileindex.Segments(def.Key)) == 2 {
+					b.goMethods[def.Name] = append(b.goMethods[def.Name], def.Key)
+				}
+			}
+		}
+	}
+	args := len(call.Args)
+	spread := args == 1 && call.Args[0].Shape == fileindex.ArgComputed
+	var out []string
+	for _, key := range b.goMethods[call.Method] {
+		def := b.defs[key]
+		if spread || def.Arity == args || def.Variadic && args >= def.Arity-1 {
 			out = append(out, key)
 		}
 	}

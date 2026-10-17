@@ -275,6 +275,12 @@ func (p *projection) stringPrefix(node *sitter.Node) (string, bool) {
 		return "", false
 	}
 	switch node.Type() {
+	case "interpreted_string_literal", "raw_string_literal":
+		text := p.text(node)
+		if len(text) < 2 {
+			return "", false
+		}
+		return text[1 : len(text)-1], true
 	case "string", "template_string":
 		var prefix strings.Builder
 		for _, part := range ts.NamedChildren(node) {

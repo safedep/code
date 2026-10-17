@@ -29,6 +29,7 @@ This directory tests the index step, the link step and the reach query of
    | `edges` | A subset of the edges, with `from`, `to`, `kind`, `confidence` and `site` |
    | `no_edges` | Pairs of `from` and `to` that no edge of the graph may join |
    | `unresolved` | The whole set of unresolved sites, with `caller`, `site`, `reason` and `method` |
+   | `truncated` | The whole set of truncation records of the link step, with `kind`, `key` and `site` |
    | `results` | The reach result of each `target`, with `status`, `path`, `call_sites` and the uncertainties |
 
    A site is `path:line`. A key is a symbol key, as `pkg/loader.py//parse` or
@@ -52,6 +53,7 @@ to a file path to write the block to that file.
 | --- | --- | --- |
 | `pycg-micro` | Python | `public/pycg-micro/`, a copy of the PyCG micro-benchmark under Apache-2.0. `NOTICE` names the commit |
 | `swarm-js` | JavaScript | The SWARM-JS snippets of SWARM-CG. SWARM-CG has no license, so this repository has no copy |
+| `govulncheck` | Go | `public/govulncheck/`, the source modules and the JSON test scripts of govulncheck under BSD-3-Clause. `NOTICE` names the commit |
 
 To score SWARM-JS, fetch it at the pinned commit and point the test at it:
 
@@ -72,6 +74,16 @@ maps each call edge of the graph to a pair of names:
   the class, as `main.A.__init__`. A class with no constructor makes no pair.
 - An edge to a re-exported name goes on through the export hops.
 - `import` and `export` edges make no pair, because they are not calls.
+
+The govulncheck set has call stacks and no `callgraph.json`, so
+`TestGovulncheckTraces` scores it on its own. For each stack it asks the
+reach query for the first function of a dependency on the stack and
+compares the path with the functions of the module on the stack. Set
+`PROJECTGRAPH_GOVULNCHECK_REPORT` to a file path to write its numbers.
+
+```bash
+go test -tags projectgraph -run TestGovulncheckTraces -count=1 -v ./test/projectgraph/
+```
 
 Set `PROJECTGRAPH_PUBLIC_DUMP` to a case name, as `classes/self_call`, or to
 `all`, to log the edges, the extra pairs and the missed pairs of the case.

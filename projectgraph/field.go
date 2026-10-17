@@ -84,8 +84,14 @@ func (b *builder) definitionsByName() (fields, names map[familyName][]string) {
 					fields[k] = append(fields[k], def.Key)
 				}
 				names[k] = append(names[k], def.Key)
-			case fileindex.DefConstructor, fileindex.DefClass:
+			case fileindex.DefConstructor:
 				names[k] = append(names[k], def.Key)
+			case fileindex.DefClass:
+				// A call of a Go type name is a conversion and runs no
+				// code.
+				if ix.Language != langcode.Go {
+					names[k] = append(names[k], def.Key)
+				}
 			}
 		}
 	}

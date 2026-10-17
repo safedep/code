@@ -19,7 +19,7 @@ import (
 // Version is the version of the index records and of the rules that fill
 // them. Bump it when a field, a kind, an order or a fill rule changes. A
 // store keys an index by Version, so the bump makes every older index miss.
-const Version = "4"
+const Version = "5"
 
 type ImportKind string
 
@@ -35,15 +35,16 @@ const (
 type DefKind string
 
 const (
-	DefModule      DefKind = "module"
-	DefFunction    DefKind = "function"
-	DefMethod      DefKind = "method"
+	DefModule   DefKind = "module"
+	DefFunction DefKind = "function"
+	DefMethod   DefKind = "method"
+	// DefClass is a class, or a named type of Go that is not an interface.
 	DefClass       DefKind = "class"
 	DefConstructor DefKind = "constructor"
 	// DefVariable is a name that the top level of a module assigns, as
 	// parser in parser = Parser(). Another file can import it.
 	DefVariable DefKind = "variable"
-	// DefInterface is a TypeScript interface. It has no code, but a
+	// DefInterface is a TypeScript or Go interface. It has no code, but a
 	// declared type can name it and a class can implement it.
 	DefInterface DefKind = "interface"
 )
@@ -110,13 +111,15 @@ const (
 // Index is what the link step needs from one file. Path is relative to the
 // project root, with "/". ContentHash is the HashContent of the bytes. All
 // lines and columns are 1-based. Sort puts every slice in its defined order,
-// so one file gives one JSON form.
+// so one file gives one JSON form. Package is the package clause of a Go
+// file. The files of one package share their top-level names.
 type Index struct {
 	Version     string        `json:"version"`
 	Path        string        `json:"path"`
 	Language    langcode.Code `json:"language"`
 	ContentHash string        `json:"content_hash"`
 	Test        bool          `json:"test,omitempty"`
+	Package     string        `json:"package,omitempty"`
 
 	Imports     []Import     `json:"imports,omitempty"`
 	Exports     []Export     `json:"exports,omitempty"`
@@ -162,7 +165,13 @@ type Export struct {
 // property or a property assignment holds is a method with no parent.
 // Decorators are as written, in source order. Values are the per-file
 // targets that a variable holds, as the targets of a Call. Params are the
-// parameters that declare the type of a class, in source order.
+// parameters that declare the type of a class, in source order. A Go
+// method has its receiver first. Locals are the local variables of a Go
+// function whose type the source declares or constructs.
+//
+// Arity, Variadic and Returns hold the signature of a Go function or
+// method: the count of its parameters, a last parameter of the form ...T,
+// and the type name of its first result.
 type Definition struct {
 	Key        string   `json:"key"`
 	Kind       DefKind  `json:"kind"`
@@ -174,6 +183,10 @@ type Definition struct {
 	Decorators []string `json:"decorators,omitempty"`
 	Values     []string `json:"values,omitempty"`
 	Params     []Typed  `json:"params,omitempty"`
+	Locals     []Typed  `json:"locals,omitempty"`
+	Arity      int      `json:"arity,omitempty"`
+	Variadic   bool     `json:"variadic,omitempty"`
+	Returns    string   `json:"returns,omitempty"`
 	Flags      []Flag   `json:"flags,omitempty"`
 }
 
@@ -188,12 +201,15 @@ type Class struct {
 	Fields  []Typed  `json:"fields,omitempty"`
 }
 
-// Typed is a parameter or a field with the type that it declares, as parser
-// in run(parser: Parser). Type is the type name as written, with no type
-// arguments, as Parser or ns.Parser.
+// Typed is a parameter, a field or a local variable with the type that it
+// declares, as parser in run(parser: Parser). Type is the type name as
+// written, with no type arguments and no pointer, as Parser or ns.Parser.
+// Result marks a name that holds the first result of a call. Type then
+// names the function, as NewParser in p := NewParser().
 type Typed struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
+	Name   string `json:"name"`
+	Type   string `json:"type"`
+	Result bool   `json:"result,omitempty"`
 }
 
 // Call is one call site. Caller is the definition key that holds the site.

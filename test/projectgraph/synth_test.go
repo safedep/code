@@ -83,6 +83,28 @@ var synthExternals = map[core.LanguageCode][]externalPackage{
 
 func init() {
 	synthExternals[core.LanguageCodeTypescript] = synthExternals[core.LanguageCodeJavascript]
+	synthExternals[core.LanguageCodeGo] = []externalPackage{
+		{"github.com/spf13/cobra", []string{"OnInitialize", "MarkFlagRequired", "ExactArgs", "MinimumNArgs", "NoArgs", "ArbitraryArgs", "CheckErr", "AddTemplateFunc", "Eq", "Gt"}},
+		{"github.com/spf13/viper", []string{"Get", "GetString", "GetInt", "GetBool", "Set", "SetDefault", "ReadInConfig", "AutomaticEnv", "BindEnv", "Unmarshal"}},
+		{"gopkg.in/yaml.v3", []string{"Marshal", "Unmarshal", "NewDecoder", "NewEncoder", "Node", "Kind", "Style", "TypeError", "IsZeroer", "Marshaler"}},
+		{"github.com/gin-gonic/gin", []string{"New", "Default", "SetMode", "Mode", "Logger", "Recovery", "BasicAuth", "WrapF", "WrapH", "Bind"}},
+		{"github.com/sirupsen/logrus", []string{"Info", "Warn", "Error", "Debug", "WithField", "WithFields", "SetLevel", "SetFormatter", "New", "StandardLogger"}},
+		{"go.uber.org/zap", []string{"NewProduction", "NewDevelopment", "NewExample", "L", "S", "ReplaceGlobals", "String", "Int", "Error", "Any"}},
+		{"github.com/gorilla/mux", []string{"NewRouter", "Vars", "CurrentRoute", "SetURLVars", "MiddlewareFunc", "CORSMethodMiddleware", "ErrMethodMismatch", "ErrNotFound", "SkipRouter", "RouteMatch"}},
+		{"github.com/google/uuid", []string{"New", "NewString", "Parse", "MustParse", "NewRandom", "NewSHA1", "NewMD5", "SetRand", "EnableRandPool", "Validate"}},
+		{"github.com/pkg/errors", []string{"New", "Errorf", "Wrap", "Wrapf", "WithMessage", "WithStack", "Cause", "Is", "As", "Unwrap"}},
+		{"github.com/stretchr/objx", []string{"New", "MustFromJSON", "FromJSON", "FromURLQuery", "MSI", "Nil", "MustFromBase64", "FromBase64", "MustFromSignedBase64", "FromSignedBase64"}},
+		{"golang.org/x/crypto/bcrypt", []string{"GenerateFromPassword", "CompareHashAndPassword", "Cost", "ErrMismatchedHashAndPassword", "ErrHashTooShort", "MinCost", "MaxCost", "DefaultCost", "InvalidCostError", "HashVersionTooNewError"}},
+		{"golang.org/x/net/html", []string{"Parse", "ParseFragment", "Render", "EscapeString", "UnescapeString", "NewTokenizer", "NewTokenizerFragment", "ParseWithOptions", "ParseOptionEnableScripting", "ErrBufferExceeded"}},
+		{"github.com/golang-jwt/jwt/v5", []string{"Parse", "ParseWithClaims", "NewWithClaims", "New", "GetSigningMethod", "RegisterSigningMethod", "NewParser", "WithValidMethods", "WithLeeway", "NewNumericDate"}},
+		{"github.com/go-redis/redis/v8", []string{"NewClient", "NewClusterClient", "NewFailoverClient", "NewRing", "NewUniversalClient", "ParseURL", "SetLogger", "NewScript", "NewSliceCmd", "NewStringCmd"}},
+		{"github.com/lib/pq", []string{"Open", "NewConnector", "Array", "CopyIn", "CopyInSchema", "QuoteIdentifier", "QuoteLiteral", "ParseURL", "NewListener", "EnableInfinityTs"}},
+		{"github.com/aws/aws-sdk-go/aws", []string{"String", "StringValue", "Int64", "Int64Value", "Bool", "BoolValue", "NewConfig", "Time", "TimeValue", "Float64"}},
+		{"google.golang.org/grpc", []string{"Dial", "DialContext", "NewServer", "WithInsecure", "WithBlock", "WithTimeout", "UnaryInterceptor", "Creds", "MaxRecvMsgSize", "WithDefaultCallOptions"}},
+		{"github.com/prometheus/client_golang/prometheus", []string{"NewCounter", "NewGauge", "NewHistogram", "NewSummary", "MustRegister", "Register", "NewCounterVec", "NewGaugeVec", "NewRegistry", "Unregister"}},
+		{"github.com/hashicorp/go-multierror", []string{"Append", "Flatten", "Prefix", "ListFormatFunc", "Group", "ErrorFormatFunc", "Error", "WrappedErrors", "ErrorOrNil", "Len"}},
+		{"github.com/mitchellh/mapstructure", []string{"Decode", "DecodeMetadata", "WeakDecode", "WeakDecodeMetadata", "NewDecoder", "ComposeDecodeHookFunc", "StringToSliceHookFunc", "StringToTimeDurationHookFunc", "RecursiveStructToMapHookFunc", "TextUnmarshallerHookFunc"}},
+	}
 }
 
 // reachTargets are the keys of every external function of a language.
@@ -90,7 +112,7 @@ func reachTargets(language core.LanguageCode) []string {
 	var targets []string
 	for _, p := range synthExternals[language] {
 		for _, f := range p.funcs {
-			targets = append(targets, p.name+"//"+f)
+			targets = append(targets, strings.ReplaceAll(p.name, "/", "//")+"//"+f)
 		}
 	}
 	return targets
@@ -133,6 +155,7 @@ var entryFiles = map[core.LanguageCode]int{
 	core.LanguageCodePython:     1,
 	core.LanguageCodeJavascript: 1,
 	core.LanguageCodeTypescript: 2,
+	core.LanguageCodeGo:         1,
 }
 
 // generate makes the shape of a project with files source files: the
@@ -226,6 +249,8 @@ func (p *synthProject) write(dir string) (int, error) {
 		p.renderJavaScript(files)
 	case core.LanguageCodeTypescript:
 		p.renderTypeScript(files)
+	case core.LanguageCodeGo:
+		p.renderGo(files)
 	default:
 		return 0, fmt.Errorf("no template for %s", p.language)
 	}
@@ -238,7 +263,7 @@ func (p *synthProject) write(dir string) (int, error) {
 		if err := os.WriteFile(file, []byte(text), 0o644); err != nil {
 			return 0, err
 		}
-		if ext := filepath.Ext(name); ext == ".py" || ext == ".js" || ext == ".ts" {
+		if ext := filepath.Ext(name); ext == ".py" || ext == ".js" || ext == ".ts" || ext == ".go" {
 			sources++
 		}
 	}
@@ -808,4 +833,209 @@ func packageJSON(ext []externalPackage, main string) string {
 	}
 	return fmt.Sprintf("{\n  \"name\": \"bench-app\",\n  \"version\": \"1.0.0\",\n  \"main\": %q,\n  \"bin\": { \"bench-app\": %q },\n  \"dependencies\": {\n%s\n  }\n}\n",
 		main, main, strings.Join(deps, ",\n"))
+}
+
+// goModulePath is the module path of the generated Go project.
+const goModulePath = "bench.example/app"
+
+func (p *synthProject) renderGo(files map[string]string) {
+	ext := synthExternals[core.LanguageCodeGo]
+	for _, pkg := range p.packages {
+		for _, m := range pkg {
+			files[fmt.Sprintf("%s/%s.go", p.pkgName(m.pkg), p.modName(m))] = p.goModule(m, ext)
+		}
+		first, last := pkg[0], pkg[len(pkg)-1]
+		files[fmt.Sprintf("%s/%s.go", p.pkgName(first.pkg), p.pkgName(first.pkg))] = fmt.Sprintf(
+			"// Package %s holds the %s modules.\npackage %s\n\n// Run runs the first module.\nfunc Run(argv []string) any {\n\treturn Run%02d(argv)\n}\n",
+			p.pkgName(first.pkg), synthNouns[first.methods[0][1]], p.pkgName(first.pkg), first.idx)
+
+		var test lines
+		test.add(0, "package %s", p.pkgName(last.pkg))
+		test.add(0, "")
+		test.add(0, "import \"testing\"")
+		test.add(0, "")
+		test.add(0, "func TestRun%02d(t *testing.T) {", last.idx)
+		test.add(1, "if Run%02d([]string{\"input.yaml\"}) == nil {", last.idx)
+		test.add(2, "t.Fatal(\"no result\")")
+		test.add(1, "}")
+		test.add(1, "_ = %s(1)", goHelper(last, 0))
+		test.add(0, "}")
+		files[fmt.Sprintf("%s/%s_test.go", p.pkgName(last.pkg), p.modName(last))] = test.String()
+	}
+
+	var main lines
+	main.add(0, "package main")
+	main.add(0, "")
+	main.add(0, "import (")
+	main.add(1, "\"os\"")
+	main.add(0, "")
+	for _, pkg := range p.packages {
+		main.add(1, "%q", goModulePath+"/"+p.pkgName(pkg[0].pkg))
+	}
+	main.add(0, ")")
+	main.add(0, "")
+	main.add(0, "func main() {")
+	for _, pkg := range p.packages {
+		main.add(1, "%s.Run(os.Args[1:])", p.pkgName(pkg[0].pkg))
+	}
+	main.add(0, "}")
+	files["cmd/app/main.go"] = main.String()
+
+	var mod lines
+	mod.add(0, "module %s", goModulePath)
+	mod.add(0, "")
+	mod.add(0, "go 1.22")
+	mod.add(0, "")
+	mod.add(0, "require (")
+	for _, e := range ext {
+		mod.add(1, "%s v1.0.0", e.name)
+	}
+	mod.add(0, ")")
+	files["go.mod"] = mod.String()
+}
+
+// goClass and goHelper add the index of the module to the names, because
+// the modules of a package share one namespace in Go.
+func goClass(m *synthModule) string { return fmt.Sprintf("%s%02d", m.class, m.idx) }
+
+func goHelper(m *synthModule, i int) string {
+	return fmt.Sprintf("%s%02d", title(camel(m.helpers[i])), m.idx)
+}
+
+func goMethod(w [2]int) string { return title(camel(w)) }
+
+func (p *synthProject) goModule(m *synthModule, ext []externalPackage) string {
+	var l lines
+	l.add(0, "package %s", p.pkgName(m.pkg))
+	l.add(0, "")
+	l.add(0, "import (")
+	l.add(1, "\"fmt\"")
+	if m.dynamic == dynamicAttribute {
+		l.add(1, "\"reflect\"")
+	}
+	if m.dynamic == dynamicImport {
+		l.add(1, "\"plugin\"")
+	}
+	l.add(0, "")
+	imported := map[string]string{}
+	for _, e := range m.externals {
+		pkg := ext[e.pkg]
+		if _, ok := imported[pkg.name]; ok {
+			continue
+		}
+		alias := fmt.Sprintf("ext%d", len(imported))
+		imported[pkg.name] = alias
+		l.add(1, "%s %q", alias, pkg.name)
+	}
+	// A dependency in the package of the module needs no import.
+	dep := func(i int) string {
+		if p.modules[m.deps[i]].pkg == m.pkg {
+			return ""
+		}
+		return fmt.Sprintf("dep%d.", i)
+	}
+	for i, d := range m.deps {
+		if dep(i) != "" {
+			l.add(1, "dep%d %q", i, goModulePath+"/"+p.pkgName(p.modules[d].pkg))
+		}
+	}
+	l.add(0, ")")
+	l.add(0, "")
+	call := func(e externalCall) string {
+		return imported[ext[e.pkg].name] + "." + ext[e.pkg].funcs[e.fn]
+	}
+
+	class := goClass(m)
+	l.add(0, "// Notifier gets each result of %s.", class)
+	l.add(0, "type Notifier%02d interface {", m.idx)
+	l.add(1, "Notify(v any)")
+	l.add(0, "}")
+	l.add(0, "")
+	l.add(0, "// %s keeps the state of one %s.", class, synthNouns[m.methods[0][1]])
+	l.add(0, "type %s struct {", class)
+	l.add(1, "config map[string]string")
+	if len(m.deps) > 0 {
+		l.add(1, "store  *%s%s", dep(0), goClass(p.modules[m.deps[0]]))
+	}
+	l.add(1, "items  []Notifier%02d", m.idx)
+	l.add(0, "}")
+	l.add(0, "")
+	l.add(0, "func New%s(config map[string]string) *%s {", class, class)
+	l.add(1, "s := &%s{config: config}", class)
+	if len(m.deps) > 0 {
+		l.add(1, "s.store = %sNew%s(config)", dep(0), goClass(p.modules[m.deps[0]]))
+	}
+	l.add(1, "return s")
+	l.add(0, "}")
+	for i, w := range m.methods {
+		l.add(0, "")
+		if i == len(m.methods)-1 {
+			l.add(0, "func (s *%s) %s() int {", class, goMethod(w))
+			l.add(1, "return len(s.items)")
+			l.add(0, "}")
+			continue
+		}
+		l.add(0, "func (s *%s) %s(value any) any {", class, goMethod(w))
+		l.add(1, "data := %s(value)", goHelper(m, i%len(m.helpers)))
+		if i == 0 {
+			l.add(1, "data = %s(data)", call(m.externals[0]))
+		}
+		if i == 1 && len(m.deps) > 0 {
+			l.add(1, "data = s.store.%s(data)", goMethod(p.modules[m.deps[0]].methods[0]))
+		}
+		if i == 1 && m.dynamic == dynamicAttribute {
+			l.add(1, "reflect.ValueOf(s).MethodByName(s.config[\"handler\"]).Call(nil)")
+		}
+		if i+1 < len(m.methods)-1 {
+			l.add(1, "data = s.%s(data)", goMethod(m.methods[i+1]))
+		}
+		l.add(1, "for _, item := range s.items {")
+		l.add(2, "item.Notify(data)")
+		l.add(1, "}")
+		l.add(1, "return data")
+		l.add(0, "}")
+	}
+	l.add(0, "")
+
+	for i := range m.helpers {
+		l.add(0, "func %s(value any) map[string]any {", goHelper(m, i))
+		l.add(1, "if value == nil {")
+		l.add(2, "panic(\"%s needs a value\")", goHelper(m, i))
+		l.add(1, "}")
+		switch {
+		case i+1 < len(m.helpers):
+			l.add(1, "value = %s(value)", goHelper(m, i+1))
+		case m.sibling >= 0:
+			l.add(1, "value = %s(value)", goHelper(p.modules[m.sibling], 0))
+		}
+		if i < len(m.externals) && i > 0 {
+			l.add(1, "value = %s(value)", call(m.externals[i]))
+		}
+		if i < len(m.deps) {
+			l.add(1, "value = %s%s(value)", dep(i), goHelper(p.modules[m.deps[i]], 0))
+		}
+		l.add(1, "return map[string]any{%q: value, \"size\": len(fmt.Sprint(value))}", synthNouns[m.helpers[i][1]])
+		l.add(0, "}")
+		l.add(0, "")
+	}
+
+	l.add(0, "func Run%02d(argv []string) any {", m.idx)
+	l.add(1, "service := New%s(map[string]string{\"name\": %q})", class, p.modName(m))
+	if m.sibling >= 0 {
+		sib := p.modules[m.sibling]
+		l.add(1, "peer := New%s(nil)", goClass(sib))
+		l.add(1, "peer.%s(argv)", goMethod(sib.methods[0]))
+	}
+	for i, d := range m.deps {
+		l.add(1, "%sRun%02d(argv)", dep(i), p.modules[d].idx)
+	}
+	if m.dynamic == dynamicImport {
+		l.add(1, "if p, err := plugin.Open(argv[0]); err == nil {")
+		l.add(2, "run, _ := p.Lookup(\"Run\")")
+		l.add(2, "run.(func([]string))(argv)")
+		l.add(1, "}")
+	}
+	l.add(1, "return service.%s(argv)", goMethod(m.methods[0]))
+	l.add(0, "}")
+	return l.String()
 }

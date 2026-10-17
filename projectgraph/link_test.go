@@ -710,6 +710,7 @@ func TestBuildImportShapes(t *testing.T) {
 
 	tests := []struct {
 		name       string
+		root       fstest.MapFS
 		indexes    []*fileindex.Index
 		edges      []string
 		unresolved []string
@@ -751,10 +752,40 @@ func TestBuildImportShapes(t *testing.T) {
 		{
 			name: "a language with no module resolver makes every import a site that can reach any target",
 			indexes: []*fileindex.Index{{
-				Version: fileindex.Version, Path: "main.go", Language: langcode.Go,
-				Imports: []fileindex.Import{{Line: 3, Module: "example.com/app/util", Alias: "util", Kind: fileindex.ImportStatic, Namespace: "example.com//app//util"}},
+				Version: fileindex.Version, Path: "main.rb", Language: langcode.Ruby,
+				Imports: []fileindex.Import{{Line: 3, Module: "app/util", Kind: fileindex.ImportStatic, Namespace: "app//util"}},
+			}},
+			unresolved: []string{"main.rb:3 main.rb no-definition "},
+		},
+		{
+			name: "a Go import under the module path that names no package can reach any target",
+			root: fstest.MapFS{"go.mod": {Data: []byte("module example.com/app\n")}},
+			indexes: []*fileindex.Index{{
+				Version: fileindex.Version, Path: "main.go", Language: langcode.Go, Package: "main",
+				Imports: []fileindex.Import{
+					{Line: 3, Module: "example.com/app/util", Alias: "util", Kind: fileindex.ImportStatic, Namespace: "example.com//app//util"},
+					{Line: 4, Module: "fmt", Alias: "fmt", Kind: fileindex.ImportStatic, Namespace: "fmt"},
+				},
 			}},
 			unresolved: []string{"main.go:3 main.go no-definition "},
+		},
+		{
+			name: "a Go import runs each file of the package that has an init",
+			root: fstest.MapFS{"go.mod": {Data: []byte("module example.com/app\n")}},
+			indexes: []*fileindex.Index{
+				{
+					Version: fileindex.Version, Path: "main.go", Language: langcode.Go, Package: "main",
+					Imports: []fileindex.Import{{Line: 3, Module: "example.com/app/util", Alias: "util", Kind: fileindex.ImportStatic, Namespace: "example.com//app//util"}},
+					Calls:   []fileindex.Call{call("main.go", "util.Load", "example.com//app//util//Load")},
+				},
+				def(&fileindex.Index{Version: fileindex.Version, Path: "util/a.go", Language: langcode.Go, Package: "util"}, "util/a.go//init"),
+				def(&fileindex.Index{Version: fileindex.Version, Path: "util/b.go", Language: langcode.Go, Package: "util"}, "util/b.go//Load"),
+			},
+			edges: []string{
+				"main.go -> util/a.go import go.import.module",
+				"util/a.go -> util/a.go//init direct go.init",
+				"main.go -> util/b.go//Load direct go.import",
+			},
 		},
 		{
 			name: "a side-effect require names the module of a member call",
@@ -775,7 +806,7 @@ func TestBuildImportShapes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g, err := Build(context.Background(), tt.indexes, Options{})
+			g, err := Build(context.Background(), tt.indexes, Options{Root: tt.root})
 			require.NoError(t, err)
 			edges := edgeStrings(g)
 			for _, e := range tt.edges {

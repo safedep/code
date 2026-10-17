@@ -148,17 +148,25 @@ func (f *finder) applying(r rules.Rule) []*fileindex.Index {
 	return out
 }
 
-// matchDefinition marks a definition by its name and the name of its class.
-// No index records a static method or a package clause yet, so a match on
-// either marks nothing.
+// matchDefinition marks a definition by its name, the name of its class,
+// and the package clause of its file. A match in a package marks only a
+// top-level function, as func main in package main of Go. No index records
+// a static method yet, so a match on it marks nothing.
 func (f *finder) matchDefinition(r rules.Rule) {
 	m := r.Match.Definition
-	if m.Static || m.InPackage != "" {
+	if m.Static {
 		return
 	}
 	for _, ix := range f.applying(r) {
+		if m.InPackage != "" && ix.Package != m.InPackage {
+			continue
+		}
 		for _, def := range ix.Definitions {
-			if def.Name == m.Name && (m.Parent == "" || fileindex.Last(def.Parent) == m.Parent) {
+			switch {
+			case def.Name != m.Name:
+			case m.Parent != "" && fileindex.Last(def.Parent) != m.Parent:
+			case m.InPackage != "" && (def.Kind != fileindex.DefFunction || len(fileindex.Segments(def.Key)) != 1):
+			default:
 				f.add(r, def.Key)
 			}
 		}

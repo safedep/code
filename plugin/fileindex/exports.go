@@ -31,19 +31,19 @@ func (p *projection) addExports() {
 // exported reports that the rule of the language makes the definition
 // visible outside the file. A JavaScript or TypeScript definition is
 // exported when an export names it. A Go name is exported when it starts
-// with an upper case letter. Elsewhere a top-level definition is exported.
-// A method is exported with its class.
+// with an upper case letter, a method too. Elsewhere a top-level definition
+// is exported, and a method is exported with its class.
 func (p *projection) exported(def *fidx.Definition) bool {
 	switch {
 	case def.Kind == fidx.DefModule:
 		return true
+	case p.ix.Language == core.LanguageCodeGo:
+		r, _ := utf8.DecodeRuneInString(def.Name)
+		return unicode.IsUpper(r)
 	case def.Parent != "":
 		return p.exported(p.defs[def.Parent])
 	case p.ix.Language.IsECMAScript():
 		return p.exports[def.Key]
-	case p.ix.Language == core.LanguageCodeGo:
-		r, _ := utf8.DecodeRuneInString(def.Name)
-		return unicode.IsUpper(r)
 	default:
 		return def.Key == p.local(def.Name)
 	}

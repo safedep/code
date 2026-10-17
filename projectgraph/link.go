@@ -80,16 +80,21 @@ type builder struct {
 	truncations map[Truncation]bool
 	problems    []modules.Problem
 
-	names     map[nameKey]resolution
-	visiting  map[nameKey]bool
-	bindings  map[string]string
-	classes   map[string]classRecord
-	variables map[string][]string
+	names    map[nameKey]resolution
+	visiting map[nameKey]bool
+	bindings map[string]string
+	classes  map[string]classRecord
+	// defs holds the definition records by key.
+	defs map[string]*fileindex.Definition
 	// reading holds the variables whose value a walk reads now, so a cycle
 	// of variables across files stops.
 	reading map[string]bool
-	// params holds the typed parameters of each definition.
-	params map[string][]fileindex.Typed
+
+	golang *modules.Golang
+	units  map[string]*unit
+	unitOf map[string]*unit
+	// goPackages holds the package that an import of each directory names.
+	goPackages map[string]*unit
 
 	mros     map[string][]string
 	children map[string][]string
@@ -98,6 +103,10 @@ type builder struct {
 	narrowed map[Site]bool
 	// slots holds the edge of each caller, callee and site.
 	slots map[edgeSlot]Edge
+	// goMethods holds the Go methods of the project by name.
+	goMethods map[string][]string
+	// loads holds whether the module top level of each file runs code.
+	loads map[string]bool
 }
 
 type edgeSlot struct {
@@ -140,9 +149,12 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		visiting:    map[nameKey]bool{},
 		bindings:    map[string]string{},
 		classes:     map[string]classRecord{},
-		variables:   map[string][]string{},
+		defs:        map[string]*fileindex.Definition{},
 		reading:     map[string]bool{},
-		params:      map[string][]fileindex.Typed{},
+		units:       map[string]*unit{},
+		unitOf:      map[string]*unit{},
+		goPackages:  map[string]*unit{},
+		loads:       map[string]bool{},
 		mros:        map[string][]string{},
 		narrowed:    map[Site]bool{},
 		slots:       map[edgeSlot]Edge{},
@@ -175,6 +187,7 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 	b.js = modules.NewJavaScript(b.files, opts.Root)
 	b.problems = append(b.problems, b.python.Problems()...)
 	b.problems = append(b.problems, b.js.Problems()...)
+	b.addGoUnits()
 	return b, nil
 }
 
@@ -203,6 +216,7 @@ func (b *builder) link(ctx context.Context) error {
 			continue
 		}
 		b.linkImports(ix)
+		b.linkInits(ix)
 		b.linkConstructors(ix)
 		b.linkCalls(ix)
 		b.linkReferences(ix)
@@ -240,13 +254,9 @@ func (b *builder) addDefinitions(ix *fileindex.Index) {
 	}
 	b.addNode(module)
 
-	for _, def := range ix.Definitions {
-		if def.Kind == fileindex.DefVariable {
-			b.variables[def.Key] = def.Values
-		}
-		if len(def.Params) > 0 {
-			b.params[def.Key] = def.Params
-		}
+	for i := range ix.Definitions {
+		def := &ix.Definitions[i]
+		b.defs[def.Key] = def
 		if def.Key == ix.Path {
 			module.Line = cmp.Or(def.StartLine, 1)
 			module.Flags = append(module.Flags, def.Flags...)
@@ -369,8 +379,8 @@ func (b *builder) linkImports(ix *fileindex.Index) {
 			continue
 		}
 		resolver := resolverName(ix.Language, "import", via)
-		if b.isModule(mod) {
-			b.addEdge(Edge{From: from, To: mod, Site: site, Kind: EdgeImport, Resolver: resolver})
+		for _, to := range b.moduleFiles(mod) {
+			b.addEdge(Edge{From: from, To: to, Site: site, Kind: EdgeImport, Resolver: resolver})
 		}
 		if ix.Language != langcode.Python || imp.Item == "" || b.bindsName(mod, imp.Item) {
 			continue
@@ -388,6 +398,59 @@ func (b *builder) linkImports(ix *fileindex.Index) {
 			b.addEdge(Edge{From: ix.Path, To: mod, Site: site, Kind: EdgeImport, Resolver: resolverName(ix.Language, "import", via)})
 		}
 	}
+}
+
+// moduleFiles returns the module top levels that an import of the module
+// runs: the module, or each file of a unit that runs code when the program
+// loads it, as a Go file with an init function or a package variable that
+// a call sets. A Go package can have hundreds of files, and an edge to each
+// file with no such code adds nothing to a path.
+func (b *builder) moduleFiles(mod string) []string {
+	if u := b.units[mod]; u != nil {
+		return slices.DeleteFunc(slices.Clone(u.files), func(p string) bool { return !b.runsAtLoad(b.byPath[p]) })
+	}
+	if b.isModule(mod) {
+		return []string{mod}
+	}
+	return nil
+}
+
+// runsAtLoad reports whether the module top level of a file runs code: an
+// init function, a call, a reference, an unresolved site, a flag, or an
+// import of a package of the project that runs code at load.
+func (b *builder) runsAtLoad(ix *fileindex.Index) bool {
+	if runs, ok := b.loads[ix.Path]; ok {
+		return runs
+	}
+	// The mark stops a cycle of imports.
+	b.loads[ix.Path] = false
+	atTop := func(caller string) bool { return caller == ix.Path }
+	runs := b.kindOf(fileindex.Join(ix.Path, "init")) == NodeFunction ||
+		slices.ContainsFunc(ix.Calls, func(c fileindex.Call) bool { return atTop(c.Caller) && c.Kind != fileindex.CallImport }) ||
+		slices.ContainsFunc(ix.References, func(r fileindex.Reference) bool { return atTop(r.Caller) }) ||
+		slices.ContainsFunc(ix.Unresolved, func(u fileindex.Unresolved) bool { return atTop(u.Caller) }) ||
+		len(b.g.Nodes[ix.Path].Flags) > 0 ||
+		slices.ContainsFunc(ix.Imports, func(imp fileindex.Import) bool {
+			mod, _, ok := b.resolveModule(ix, imp.Module)
+			return ok && len(b.moduleFiles(mod)) > 0
+		})
+	b.loads[ix.Path] = runs
+	return runs
+}
+
+// linkInits adds an edge from the module top level of a Go file to each
+// init function of the file, because the program runs it when it loads
+// the package.
+func (b *builder) linkInits(ix *fileindex.Index) {
+	if ix.Language != langcode.Go {
+		return
+	}
+	key := fileindex.Join(ix.Path, "init")
+	if b.kindOf(key) != NodeFunction {
+		return
+	}
+	n := b.g.Nodes[key]
+	b.addEdge(Edge{From: ix.Path, To: key, Site: Site{Path: ix.Path, Line: n.Line}, Kind: EdgeDirect, Resolver: resolverName(ix.Language, "init")})
 }
 
 // linkConstructors adds an edge from each class to the constructor that

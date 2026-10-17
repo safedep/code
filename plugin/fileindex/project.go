@@ -113,10 +113,14 @@ func project(ctx context.Context, tree core.ParseTree) (*fidx.Index, error) {
 		bindings:   map[string]bool{},
 	}
 
+	if p.isGo() {
+		p.ix.Package = p.goPackage()
+	}
 	p.addImports()
 	p.addDefinitions()
 	p.addExports()
 	p.addTruncations()
+	p.addGoSignatures()
 	p.walkTree(ctx)
 	p.addDeclaredTypes()
 	if err := p.addClasses(ctx); err != nil {
@@ -228,6 +232,7 @@ func (p *projection) addDefinitions() {
 		p.addSyntax(key, p.nodeAt(node.Position, node.Kind))
 	}
 	p.addInterfaces()
+	p.addGoTypes()
 
 	for _, def := range p.defs {
 		p.fillDefinition(def)
@@ -382,8 +387,12 @@ func (p *projection) classBases(ctx context.Context) (map[uint32][]string, error
 	resolvers, ok := p.language.Resolvers().(core.ObjectOrientedLanguageResolvers)
 	if !ok {
 		for _, node := range p.syntax {
-			if node != nil && node.Type() == "class_declaration" {
+			switch {
+			case node == nil:
+			case node.Type() == "class_declaration":
 				bases[node.StartByte()] = p.heritage(node)
+			case p.isGo():
+				bases[node.StartByte()] = p.goBases(node)
 			}
 		}
 		return bases, nil

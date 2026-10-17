@@ -154,7 +154,7 @@
     "pkg/sub/b.py": "indexed"
   },
   "stats": {
-    "version": "4",
+    "version": "5",
     "files": 3,
     "nodes": 6,
     "edges": 4,

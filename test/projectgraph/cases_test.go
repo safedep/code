@@ -37,7 +37,14 @@ type expectation struct {
 	Edges        []edge       `yaml:"edges"`
 	NoEdges      []noEdge     `yaml:"no_edges,omitempty"`
 	Unresolved   []unresolved `yaml:"unresolved"`
+	Truncated    []truncation `yaml:"truncated,omitempty"`
 	Results      []result     `yaml:"results"`
+}
+
+type truncation struct {
+	Kind string `yaml:"kind"`
+	Key  string `yaml:"key,omitempty"`
+	Site string `yaml:"site"`
 }
 
 type noEdge struct {
@@ -96,7 +103,7 @@ type uncertainty struct {
 	Site string `yaml:"site,omitempty"`
 }
 
-var languageCodes = []core.LanguageCode{core.LanguageCodePython, core.LanguageCodeJavascript, core.LanguageCodeTypescript}
+var languageCodes = []core.LanguageCode{core.LanguageCodePython, core.LanguageCodeJavascript, core.LanguageCodeTypescript, core.LanguageCodeGo}
 
 func TestCases(t *testing.T) {
 	dirs, err := filepath.Glob(filepath.Join("cases", "*", "*"))
@@ -151,6 +158,7 @@ func runCase(t *testing.T, dir string, languages []core.Language) {
 		assert.NotContains(t, want.NoEdges, noEdge{From: e.From, To: e.To}, "edge at %s", site(e.Site))
 	}
 	assert.Equal(t, want.Unresolved, unresolvedOf(g), "unresolved sites")
+	assert.Equal(t, want.Truncated, truncationsOf(g), "truncations")
 
 	for _, w := range want.Results {
 		results, err := reach.Reach(ctx, g, reach.Query{Targets: []string{w.Target}, IncludeTests: w.IncludeTests})
@@ -199,6 +207,14 @@ func unresolvedOf(g *projectgraph.Graph) []unresolved {
 	out := []unresolved{}
 	for _, u := range g.Unresolved {
 		out = append(out, unresolved{Caller: u.Caller, Site: site(u.Site), Reason: string(u.Reason), Method: u.Method})
+	}
+	return out
+}
+
+func truncationsOf(g *projectgraph.Graph) []truncation {
+	var out []truncation
+	for _, t := range g.Truncated {
+		out = append(out, truncation{Kind: string(t.Kind), Key: t.Key, Site: site(t.Site)})
 	}
 	return out
 }

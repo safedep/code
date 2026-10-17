@@ -72,8 +72,9 @@ type Match struct {
 }
 
 // DefinitionMatch matches a definition by name and by the name of its
-// class. Static and InPackage match nothing until the index records static
-// methods and package clauses for Java and Go.
+// class. InPackage names the package clause of the file, as main for Go.
+// Static matches nothing until the index records the static methods of
+// Java.
 type DefinitionMatch struct {
 	Name      string `yaml:"name"`
 	Parent    string `yaml:"parent,omitempty"`

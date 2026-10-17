@@ -29,7 +29,7 @@ import (
 // benchFilesEnv lists the project sizes of the benchmark, as 1000,10000.
 const benchFilesEnv = "PROJECTGRAPH_BENCH_FILES"
 
-var benchTestPaths = []string{"tests", "test_*.py", "*.test.js", "*.test.ts"}
+var benchTestPaths = []string{"tests", "test_*.py", "*.test.js", "*.test.ts", "*_test.go"}
 
 func benchSizes(b *testing.B) []int {
 	value := os.Getenv(benchFilesEnv)

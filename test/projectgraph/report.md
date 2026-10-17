@@ -42,10 +42,19 @@ step.
 | Python | step 27 | pycg-micro | 0.954 (145/152) | 0.708 (187/264) | 0.340 (85/250) | 0.159 | 4.15 s | 0.33 s | 0.40 s | 37 ms | 81 / 45 / 56 / 6 MiB |
 | JavaScript | step 27 | swarm-js | 0.821 (156/190) | 0.706 (204/289) | 0.358 (110/307) | 0.263 | 4.80 s | 0.29 s | 0.35 s | 29 ms | 73 / 41 / 49 / 8 MiB |
 | TypeScript | step 27 | none | n/a | n/a | n/a | 0.094 | 7.38 s | 0.33 s | 0.34 s | 27 ms | 68 / 34 / 49 / 4 MiB |
+| Go | step 29 | govulncheck | n/a | 1.000 (9/9) stacks | n/a | 0.082 | 3.78 s | 0.30 s | 0.32 s | 31 ms | 89 / 42 / 52 / 4 MiB |
 
 Python is now at 0.940, just under the precision gate of the design (0.95
 for `high` and `medium` edges). After step 27 it is 0.954, and its recall is
 0.708. JavaScript stays at 0.821 and 0.706.
+
+The Go row comes from step 29. The govulncheck set gives call stacks and
+no call graph, so it has no precision of edges. Its recall is the share of
+the stacks that the reach query finds, and the section on the public sets
+has the other numbers. The synthetic Go project of 1,000 files has 32,015
+edges and 2,860 unresolved sites, and the reach query finds 199 of 200
+targets. Most unresolved sites are calls on a loop variable of an interface
+type, as `item.Notify(data)`, which the template has in every method.
 
 The step 27 rows come from one more run of the benchmark at 1,000 files.
 The declared types of TypeScript narrow the calls on a typed field, as
@@ -195,9 +204,37 @@ What the numbers say:
 | --- | --- | --- | --- | --- | --- |
 | pycg-micro | Python | github.com/vitsalis/PyCG `micro-benchmark/snippets` at 8d5dc408 | 119 | 160 | Apache-2.0, committed in `public/pycg-micro/` |
 | swarm-js | JavaScript | github.com/secure-software-engineering/SWARM-CG `benchmarks/javascript/swarm_js` at 5929c0a3 | 126 | 171 | None. Fetched by `scripts/fetch_swarm_js.sh`, not committed |
+| govulncheck | Go | go.googlesource.com/vuln `cmd/govulncheck/testdata` at e672cbe8 | 5 modules, 9 stacks | 10 | BSD-3-Clause, committed in `public/govulncheck/` |
 
 The design names 126 PyCG cases. That is the `pycg_extended` set of SWARM-CG,
 which has no license. The PyCG repository itself has 119 cases.
+
+### govulncheck, step 29
+
+`TestGovulncheckTraces` reads the JSON output of the five test scripts of
+govulncheck in source mode. Each finding at the level of a symbol has a
+stack from the entry of the program to the vulnerable symbol. The runner
+takes the first function of a dependency on the stack, asks the reach
+query for it, and compares the path with the functions of the module on the
+stack. It also asks for each vulnerable symbol that govulncheck reports as
+not called.
+
+| Metric | Value |
+| --- | --- |
+| Stacks that the reach query finds | 1.000 (9/9) |
+| Paths that end at the call site of the stack | 1.000 (7/7). The script of the standard library leaves out the lines |
+| Paths with the functions of the stack, in order | 1.000 (9/9) |
+| Symbols that govulncheck does not reach and the graph finds | 0.000 (0/63) |
+
+At the commit before step 29 the same runner gives 0.333 (3/9) found and
+0.000 (0/9) stacks. The other six were uncertain, because every import of
+a Go file was a record that can reach any target, and `go.main` matched
+nothing. Two stacks needed fixes of the per-file graph: a call on a composite literal, as
+`gjson.Result{}.Get("")`, and a call of a generic function with type
+arguments, as `work[string]("golang")`, which the grammar parses as a
+conversion. The set is small, and its stacks go from `main` to a
+dependency in at most three first-party calls. It does not measure the
+`cha` edges of interfaces.
 
 ### Totals
 

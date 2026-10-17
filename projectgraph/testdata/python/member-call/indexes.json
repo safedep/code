@@ -1,6 +1,6 @@
 [
   {
-    "version": "4", "path": "main.py", "language": "python",
+    "version": "5", "path": "main.py", "language": "python",
     "imports": [{"line": 1, "module": "parser", "item": "Parser", "alias": "Parser", "kind": "static", "namespace": "parser//Parser"}],
     "definitions": [{"key": "main.py", "kind": "module", "name": "main", "start_line": 1, "end_line": 4, "exported": true}],
     "calls": [
@@ -10,7 +10,7 @@
     ]
   },
   {
-    "version": "4", "path": "parser.py", "language": "python",
+    "version": "5", "path": "parser.py", "language": "python",
     "imports": [{"line": 1, "module": "base", "item": "Base", "alias": "Base", "kind": "static", "namespace": "base//Base"}],
     "definitions": [
       {"key": "parser.py", "kind": "module", "name": "parser", "start_line": 1, "end_line": 7, "exported": true},
@@ -22,7 +22,7 @@
     "calls": [{"caller": "parser.py//Parser//parse", "line": 6, "column": 9, "callee": "self.helper", "targets": ["parser.py//Parser//helper"], "receiver": "self", "method": "helper", "kind": "call"}]
   },
   {
-    "version": "4", "path": "base.py", "language": "python",
+    "version": "5", "path": "base.py", "language": "python",
     "imports": [{"line": 1, "module": "io", "alias": "io", "kind": "static", "namespace": "io"}],
     "definitions": [
       {"key": "base.py", "kind": "module", "name": "base", "start_line": 1, "end_line": 4, "exported": true},

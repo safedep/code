@@ -225,7 +225,7 @@
     "parser.py": "indexed"
   },
   "stats": {
-    "version": "4",
+    "version": "5",
     "files": 3,
     "nodes": 9,
     "edges": 7,

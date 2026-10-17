@@ -99,7 +99,7 @@
     "services/api/src/api/core.py": "indexed"
   },
   "stats": {
-    "version": "4",
+    "version": "5",
     "files": 3,
     "nodes": 4,
     "edges": 2,

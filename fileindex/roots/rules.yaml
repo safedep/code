@@ -1,6 +1,6 @@
 # Root rules of the project graph. A rule marks the definitions or the
-# module top levels that run with no caller in the graph. The Go and Java
-# rules match nothing until the index records packages and static methods.
+# module top levels that run with no caller in the graph. The Java rules
+# match nothing until the index records static methods and annotations.
 # A callee is a symbol key as the graph writes it, as django//urls//path for
 # path of django.urls.
 version: 1

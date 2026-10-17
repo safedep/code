@@ -15,10 +15,13 @@ type scope struct {
 	bindings map[string]fileindex.Import
 	// types holds the names that a TypeScript import type binds. Only a
 	// declared type or a base class reads them.
-	types      map[string]fileindex.Import
-	imports    []fileindex.Import
-	exports    map[string][]fileindex.Export
-	stars      []star
+	types   map[string]fileindex.Import
+	imports []fileindex.Import
+	exports map[string][]fileindex.Export
+	stars   []star
+	// dots are the Go dot imports, which put the names of a package in
+	// the scope of the file.
+	dots       []fileindex.Import
 	hasExports bool
 }
 
@@ -48,6 +51,9 @@ func newScope(ix *fileindex.Index) *scope {
 		if imp.Wildcard && ix.Language == langcode.Python {
 			sc.stars = append(sc.stars, star{spec: imp.Module, line: imp.Line})
 			continue
+		}
+		if imp.Wildcard && ix.Language == langcode.Go {
+			sc.dots = append(sc.dots, imp)
 		}
 		// A JavaScript import for its side effect binds no name. Its
 		// namespace still names the module of a call on require('x').
@@ -203,6 +209,12 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 		site := Site{Path: ix.Path, Line: call.Line, Column: call.Column}
 		for _, r := range b.resolveTargets(sc, caller, targets) {
 			b.linkCHA(call, r, from, site)
+			// A declared type gives the class of the receiver, so the
+			// link step owns the record of the site and no name edge
+			// goes from it.
+			if r.declared && (r.fail == nil || r.fail.name == call.Method) {
+				b.narrowed[site] = true
+			}
 			if r.fail != nil {
 				b.addUnresolved(UnresolvedSite{
 					Caller:   from,
@@ -269,7 +281,7 @@ func (b *builder) linkCHA(call fileindex.Call, r resolution, from string, site S
 		}
 	}
 	switch {
-	case !virtual || class == "" || call.Method == "":
+	case !virtual || class == "" || call.Method == "" || !b.dispatches(lang, class):
 		return
 	case r.fail != nil && r.fail.name != call.Method:
 		return
@@ -281,7 +293,7 @@ func (b *builder) linkCHA(call fileindex.Call, r resolution, from string, site S
 	if r.fail == nil {
 		found = r.key
 	}
-	for _, key := range b.overrides(class, call.Method, found) {
+	for _, key := range b.overrides(class, call, found) {
 		b.addEdge(Edge{From: from, To: key, Site: site, Kind: EdgeCHA, Resolver: resolverName(lang, "cha")})
 	}
 }
@@ -299,7 +311,9 @@ func (b *builder) linkReferences(ix *fileindex.Index) {
 		from := b.runner(ref.Caller)
 		site := Site{Path: ix.Path, Line: ref.Line, Column: ref.Column}
 		for _, r := range b.resolveTargets(sc, ref.Caller, ref.Targets) {
-			if r.fail != nil || r.unbound {
+			// A Go value of a named type is no function, so passing it
+			// on calls nothing.
+			if r.fail != nil || r.unbound || ix.Language == langcode.Go && b.isType(r.key) {
 				continue
 			}
 			b.addEdge(Edge{From: from, To: r.key, Site: site, Kind: EdgeReference, Resolver: resolverName(ix.Language, "reference")})
@@ -308,13 +322,21 @@ func (b *builder) linkReferences(ix *fileindex.Index) {
 }
 
 // resolveTargets resolves the per-file targets of a site. Each resolution
-// keeps the target that it came from.
+// keeps the target that it came from. A name that two files of a unit
+// define resolves to both.
 func (b *builder) resolveTargets(sc *scope, caller string, targets []string) []resolution {
 	var out []resolution
 	for _, t := range targets {
 		for _, r := range b.resolveTarget(sc, caller, t) {
 			r.target = t
 			out = append(out, r)
+			if r.fail != nil {
+				continue
+			}
+			for _, twin := range b.twins(r.key) {
+				r.key = twin
+				out = append(out, r)
+			}
 		}
 	}
 	return out
@@ -332,13 +354,11 @@ func (b *builder) resolveTarget(sc *scope, caller, target string) []resolution {
 		return []resolution{b.resolveSuper(caller, strings.Split(rest, fileindex.Separator))}
 	}
 	if fileindex.HasKeyPrefix(target, ix.Path) {
-		return []resolution{b.resolveLocal(target)}
+		return []resolution{b.resolveLocal(sc, caller, target)}
 	}
 	if name, rest, ok := strings.Cut(target, fileindex.Separator); ok {
-		if class, ok := b.paramType(sc, caller, name); ok {
-			r := b.walk(class, strings.Split(rest, fileindex.Separator))
-			r.virtual, r.declared = true, true
-			return []resolution{r}
+		if class, ok := b.typedName(sc, caller, name); ok {
+			return []resolution{b.walkTyped(class, strings.Split(rest, fileindex.Separator))}
 		}
 	}
 	if imp, rest, ok := sc.importFor(target); ok {
@@ -355,12 +375,69 @@ func (b *builder) resolveTarget(sc *scope, caller, target string) []resolution {
 		r.rule = cmp.Or(r.rule, "import")
 		return []resolution{r}
 	}
-	if !strings.Contains(target, fileindex.Separator) {
-		if rs := b.wildcard(sc, target); len(rs) > 0 {
+	if rs := b.resolveScope(sc, target); len(rs) > 0 {
+		return rs
+	}
+	return []resolution{{key: target, kind: EdgeDirect, rule: "external", unbound: true}}
+}
+
+// resolveScope resolves a target whose first name the file does not bind:
+// a name of another file of the unit, then a name of a wildcard import.
+func (b *builder) resolveScope(sc *scope, target string) []resolution {
+	first, rest := splitKey(target)
+	var out []resolution
+	for _, key := range b.unitNames(sc.ix.Path, first) {
+		r := b.walk(key, rest)
+		r.rule = cmp.Or(r.rule, "package")
+		out = append(out, r)
+	}
+	if len(out) > 0 {
+		return out
+	}
+	if len(rest) == 0 {
+		if rs := b.wildcard(sc, first); len(rs) > 0 {
 			return rs
 		}
 	}
-	return []resolution{{key: target, kind: EdgeDirect, rule: "external", unbound: true}}
+	for _, key := range b.dotImported(sc, first) {
+		r := b.walk(key, rest)
+		if r.kind == EdgeDirect {
+			r.kind = EdgeWildcard
+		}
+		r.rule = cmp.Or(r.rule, "dot-import")
+		out = append(out, r)
+	}
+	return out
+}
+
+// dotImported returns the definitions of the name in the packages that the
+// file imports with a Go dot import.
+func (b *builder) dotImported(sc *scope, name string) []string {
+	var keys []string
+	for _, imp := range sc.dots {
+		if mod, _, ok := b.resolveModule(sc.ix, imp.Module); ok {
+			if u := b.units[mod]; u != nil {
+				keys = append(keys, u.names[name]...)
+			}
+		}
+	}
+	return keys
+}
+
+// walkTyped resolves the names on a receiver of a declared type.
+func (b *builder) walkTyped(class string, names []string) resolution {
+	r := b.walk(class, names)
+	r.virtual, r.declared = true, true
+	return r
+}
+
+// splitKey returns the first segment of a key and the segments after it.
+func splitKey(key string) (string, []string) {
+	first, rest, ok := strings.Cut(key, fileindex.Separator)
+	if !ok {
+		return first, nil
+	}
+	return first, strings.Split(rest, fileindex.Separator)
 }
 
 // superKeyword is the receiver of a call of a method of the base class, as
@@ -423,8 +500,10 @@ func (b *builder) enclosingClass(key string) (string, bool) {
 
 // resolveLocal resolves a key of the file. A key that names no node walks
 // from its longest prefix that does, as a method of a base class. A
-// variable walks on to its value.
-func (b *builder) resolveLocal(target string) resolution {
+// variable walks on to its value. A name under a function that holds the
+// caller is a parameter or a local variable of the function, and its
+// declared type gives its class.
+func (b *builder) resolveLocal(sc *scope, caller, target string) resolution {
 	if b.g.Nodes[target] != nil {
 		r := b.walk(target, nil)
 		r.rule = cmp.Or(r.rule, "local")
@@ -432,11 +511,19 @@ func (b *builder) resolveLocal(target string) resolution {
 	}
 	unit, segs := fileindex.Unit(target), fileindex.Segments(target)
 	for i := len(segs) - 1; i > 0; i-- {
-		if prefix := fileindex.Join(unit, segs[:i]...); b.g.Nodes[prefix] != nil {
-			r := b.walk(prefix, segs[i:])
-			r.rule = cmp.Or(r.rule, "local")
-			return r
+		prefix := fileindex.Join(unit, segs[:i]...)
+		if b.g.Nodes[prefix] == nil {
+			continue
 		}
+		r := b.walk(prefix, segs[i:])
+		if fileindex.HasKeyPrefix(caller, prefix) && b.isFunction(prefix) {
+			r = resolution{fail: &failure{reason: fileindex.UnresolvedUnknownReceiver, name: segs[i]}}
+			if class, ok := b.typedName(sc, prefix, segs[i]); ok {
+				r = b.walkTyped(class, segs[i+1:])
+			}
+		}
+		r.rule = cmp.Or(r.rule, "local")
+		return r
 	}
 	r := b.walk(unit, segs)
 	r.rule = cmp.Or(r.rule, "local")
@@ -450,6 +537,14 @@ func (b *builder) walk(key string, names []string) resolution {
 	for i := 0; i < len(names); {
 		name := names[i]
 		switch kind := b.kindOf(r.key); {
+		case b.units[r.key] != nil:
+			keys := b.units[r.key].names[name]
+			if len(keys) == 0 {
+				r.fail = noDefinition(name)
+				return r
+			}
+			r.key = keys[0]
+			i++
 		case b.unindexed(r.key):
 			return r
 		case isNamespacePackage(r.key) || kind == NodeModule:
@@ -486,7 +581,7 @@ func (b *builder) walk(key string, names []string) resolution {
 			key, fail := b.method(r.key, name)
 			if fail != nil {
 				if field, ok := b.fieldType(r.key, name); ok && i+1 < len(names) {
-					r.key, r.virtual, r.declared = field, true, true
+					r.key, r.class, r.virtual, r.declared = field, "", true, true
 					i++
 					continue
 				}
@@ -495,13 +590,19 @@ func (b *builder) walk(key string, names []string) resolution {
 			}
 			r.key, r.kind, r.rule = key, EdgeMember, "member"
 			i++
-		case kind == NodeExternal:
+		case kind == NodeExternal || kind == "" && b.g.IsExternal(r.key):
 			r.key = b.external(fileindex.Join(r.key, names[i:]...))
 			r.rule = cmp.Or(r.rule, "external")
 			return r
 		case kind == NodeFunction || kind == NodeMethod || kind == NodeConstructor:
-			// The name is a local variable or a parameter of the function,
-			// and the index does not know its value.
+			// A Go call of the function gives a value of its first result,
+			// as New().Run(). Else the name is a local variable or a
+			// parameter of the function, and the index does not know its
+			// value.
+			if class, ok := b.resultType(r.key); ok {
+				r.key, r.virtual, r.declared = class, true, true
+				continue
+			}
 			r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
 			return r
 		default:
@@ -509,8 +610,11 @@ func (b *builder) walk(key string, names []string) resolution {
 			return r
 		}
 	}
-	if isNamespacePackage(r.key) {
+	switch {
+	case isNamespacePackage(r.key):
 		r.fail = noDefinition(fileindex.Last(strings.TrimSuffix(r.key, "/")))
+	case b.units[r.key] != nil:
+		r.fail = noDefinition(fileindex.Last(r.key))
 	}
 	if b.kindOf(r.key) == NodeVariable {
 		value, ok := b.variableValue(r.key)
@@ -535,7 +639,11 @@ func (b *builder) variableValue(key string) (string, bool) {
 
 	sc := b.scopes[fileindex.Unit(key)]
 	value := ""
-	for _, r := range b.resolveTargets(sc, fileindex.Unit(key), b.variables[key]) {
+	var values []string
+	if def := b.defs[key]; def != nil && def.Kind == fileindex.DefVariable {
+		values = def.Values
+	}
+	for _, r := range b.resolveTargets(sc, fileindex.Unit(key), values) {
 		if r.fail != nil || r.unbound && !langcode.IsBuiltin(sc.ix.Language, fileindex.Unit(r.key)) {
 			return "", false
 		}
@@ -773,9 +881,11 @@ func (b *builder) resolveScopeName(sc *scope, text string) (string, bool) {
 	if !ok {
 		imp, ok = sc.types[segs[0]]
 	}
-	if local := fileindex.Join(sc.ix.Path, segs[0]); b.g.Nodes[local] != nil {
+	local := fileindex.Join(sc.ix.Path, segs[0])
+	switch scoped := append(b.unitNames(sc.ix.Path, segs[0]), b.dotImported(sc, segs[0])...); {
+	case b.g.Nodes[local] != nil:
 		r = b.walk(local, segs[1:])
-	} else if ok {
+	case ok:
 		lang := sc.ix.Language
 		module, lead := importedModule(lang, imp)
 		mod, _, found := b.resolveModule(sc.ix, module)
@@ -783,7 +893,9 @@ func (b *builder) resolveScopeName(sc *scope, text string) (string, bool) {
 			return fileindex.Join(boundNamespace(lang, imp), segs[1:]...), true
 		}
 		r = b.walk(mod, append(lead, segs[1:]...))
-	} else {
+	case len(scoped) > 0:
+		r = b.walk(scoped[0], segs[1:])
+	default:
 		return "", false
 	}
 	if r.fail != nil {
@@ -813,6 +925,10 @@ func (b *builder) resolveModule(ix *fileindex.Index, spec string) (string, strin
 		return mod, via, ok
 	case langcode.Javascript, langcode.Typescript:
 		return b.js.Resolve(ix.Path, spec, ix.Language == langcode.Typescript)
+	case langcode.Go:
+		if dir, ok := b.golang.Resolve(spec); ok {
+			return b.goPackages[dir].key, "module", true
+		}
 	}
 	return "", "", false
 }
@@ -821,8 +937,12 @@ func (b *builder) resolveModule(ix *fileindex.Index, spec string) (string, strin
 // a file of the project. A search path root, an alias or a build step can
 // resolve a relative module, a module whose first segment names a file or a
 // directory of the project, or any module of a language with no resolver.
+// A Go import path under the path of a module of the project names a
+// package of the project.
 func (b *builder) mayBeFirstParty(lang langcode.Code, spec string) bool {
 	switch {
+	case lang == langcode.Go:
+		return b.golang.FirstParty(spec)
 	case lang != langcode.Python && !lang.IsECMAScript():
 		return true
 	case strings.HasPrefix(spec, "."):
@@ -843,6 +963,12 @@ func (b *builder) kindOf(key string) NodeKind {
 
 func (b *builder) isModule(key string) bool {
 	return b.kindOf(key) == NodeModule
+}
+
+// isFunction reports whether the key names a function, a method or a
+// constructor, whose body is a scope.
+func (b *builder) isFunction(key string) bool {
+	return b.kindOf(key) == NodeFunction || b.isMethod(key)
 }
 
 func (b *builder) isMethod(key string) bool {

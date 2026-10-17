@@ -521,3 +521,46 @@ func TestSiteIsTheCalleeExpression(t *testing.T) {
 		})
 	}
 }
+
+func TestGoMethodKeyNamesTheReceiverType(t *testing.T) {
+	cases := []struct {
+		name, receiver, key string
+	}{
+		{"value", "s S", "a.go//S//M"},
+		{"pointer", "s *S", "a.go//S//M"},
+		{"generic", "s S[T]", "a.go//S//M"},
+		{"generic pointer", "s *S[K, V]", "a.go//S//M"},
+		{"no name", "*S", "a.go//S//M"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cg := buildAndClose(t, goLanguage(t), "a.go", "package a\nfunc ("+tc.receiver+") M() {}\n")
+			require.Contains(t, cg.Nodes, tc.key)
+			assert.Equal(t, "method_declaration", cg.Nodes[tc.key].Kind)
+		})
+	}
+}
+
+func TestGoCallsOnTypedValues(t *testing.T) {
+	cases := []struct {
+		name, source, callee string
+	}{
+		{"composite literal", "T{}.M()", "T//M"},
+		{"pointer to a composite literal", "(&T{}).M()", "T//M"},
+		{"composite literal of an import", "store.T{}.M()", "example.com//store//T//M"},
+		{"type assertion", "x.(*T).M()", "T//M"},
+		{"generic function", "work[string](x)", "work"},
+		{"generic function of an import", "store.Do[int, string](x)", "example.com//store//Do"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			source := "package a\nimport \"example.com/store\"\nfunc f() {\n" + tc.source + "\n}\n"
+			cg := buildAndClose(t, goLanguage(t), "a.go", source)
+			var callees []string
+			for _, ref := range cg.Nodes["a.go//f"].CallsTo {
+				callees = append(callees, ref.CalleeNamespace)
+			}
+			assert.Contains(t, callees, tc.callee)
+		})
+	}
+}

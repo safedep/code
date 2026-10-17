@@ -56,7 +56,7 @@
     "tool/main.py": "indexed"
   },
   "stats": {
-    "version": "4",
+    "version": "5",
     "files": 2,
     "nodes": 4,
     "edges": 0,

@@ -25,6 +25,12 @@ var ecmascriptArguments = argumentSyntax{
 }
 
 var argumentSyntaxes = map[core.LanguageCode]argumentSyntax{
+	core.LanguageCodeGo: {
+		calls:    map[string]string{"call_expression": "function"},
+		skipped:  map[string]bool{"comment": true},
+		strings:  map[string]bool{"interpreted_string_literal": true, "raw_string_literal": true},
+		literals: map[string]bool{"int_literal": true, "float_literal": true, "imaginary_literal": true, "rune_literal": true, "true": true, "false": true, "nil": true, "composite_literal": true},
+	},
 	core.LanguageCodeJavascript: ecmascriptArguments,
 	core.LanguageCodeTypescript: ecmascriptArguments,
 	core.LanguageCodePython: {

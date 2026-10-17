@@ -1,22 +1,50 @@
 package projectgraph
 
 import (
+	"strings"
+
 	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/langcode"
 )
 
-// paramType returns the class or interface that the declared type of a
-// parameter names. The parameter belongs to the caller or to a function
-// that holds the caller, as the parameter of a method in an arrow function
-// of the method.
-func (b *builder) paramType(sc *scope, caller, name string) (string, bool) {
-	for key := caller; fileindex.HasKeyPrefix(key, sc.ix.Path) && key != sc.ix.Path; key = fileindex.Parent(key) {
-		for _, p := range b.params[key] {
-			if p.Name == name {
-				return b.resolveType(sc, p.Type)
+// typedName returns the class or interface that the declared type of a
+// parameter or a typed local variable of the name names. The name belongs
+// to the scope or to a function that holds the scope, as the parameter of a
+// method in an arrow function of the method. A Go local that holds the
+// result of a call has the type of the first result of the function.
+func (b *builder) typedName(sc *scope, scopeKey, name string) (string, bool) {
+	for key := scopeKey; fileindex.HasKeyPrefix(key, sc.ix.Path) && key != sc.ix.Path; key = fileindex.Parent(key) {
+		def := b.defs[key]
+		if def == nil {
+			continue
+		}
+		for _, typed := range [][]fileindex.Typed{def.Params, def.Locals} {
+			for _, t := range typed {
+				if t.Name != name {
+					continue
+				}
+				if !t.Result {
+					return b.resolveType(sc, t.Type)
+				}
+				fn, ok := b.resolveScopeName(sc, t.Type)
+				if !ok {
+					return "", false
+				}
+				return b.resultType(fn)
 			}
 		}
 	}
 	return "", false
+}
+
+// resultType returns the class or interface that the first result of a Go
+// function names.
+func (b *builder) resultType(fn string) (string, bool) {
+	def := b.defs[fn]
+	if def == nil || def.Returns == "" {
+		return "", false
+	}
+	return b.resolveType(b.scopes[fileindex.Unit(fn)], def.Returns)
 }
 
 // fieldType returns the class or interface that the declared type of a
@@ -37,11 +65,40 @@ func (b *builder) fieldType(class, name string) (string, bool) {
 }
 
 // resolveType resolves a type name as written in the file to a first-party
-// class or interface. A type of a dependency narrows nothing.
+// class or interface. A type of a dependency narrows nothing, as an
+// instance of a project class can extend it. A Go value holds its declared
+// type or, through an interface, a type of the project, so a Go type of a
+// dependency gives the external key of its methods.
 func (b *builder) resolveType(sc *scope, text string) (string, bool) {
-	key, ok := b.resolveScopeName(sc, text)
-	if !ok || !b.isType(key) {
+	if sc == nil {
 		return "", false
 	}
-	return key, true
+	key, ok := b.resolveScopeName(sc, text)
+	switch {
+	case !ok:
+		return "", false
+	case b.isType(key):
+		return key, true
+	case sc.ix.Language == langcode.Go && b.kindOf(key) == "" && b.g.IsExternal(key) && strings.Contains(key, fileindex.Separator):
+		return key, true
+	}
+	return "", false
+}
+
+// dispatches reports whether a receiver of the declared type can hold an
+// instance of another type, so a call on it in a file of the language can
+// run the method of that type. A Go value of a named type that is not an
+// interface holds that type only.
+func (b *builder) dispatches(lang langcode.Code, class string) bool {
+	if lang == langcode.Go {
+		return b.kindOf(class) == NodeInterface
+	}
+	return true
+}
+
+func (b *builder) languageOf(key string) langcode.Code {
+	if ix := b.byPath[fileindex.Unit(key)]; ix != nil {
+		return ix.Language
+	}
+	return ""
 }
