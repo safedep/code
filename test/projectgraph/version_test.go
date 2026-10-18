@@ -24,6 +24,7 @@ import (
 var graphHashes = map[string]string{
 	"10/10": "fa32ae11c72bdf01c93d4b7afe3564b1d59b2436306e3b3503f01fc4c308e5aa",
 	"11/10": "421c6441093c8f82e4db8a2342884b5e42faf360951985d3600d99c96202625b",
+	"11/11": "f1ca89f1bacfe4e79fd1814b75f87d2c48a44151746f871b56cd1fde20c49562",
 }
 
 // resultHashes records the hash of the reach results of every case for
@@ -31,6 +32,7 @@ var graphHashes = map[string]string{
 // reach.Version. A result changes with a rule of any of the three steps.
 var resultHashes = map[string]string{
 	"11/10/1": "4beb6248ef1b8dc3572939a41d1aea11c6504f5007a5f24fd1261db026708186",
+	"11/11/1": "4beb6248ef1b8dc3572939a41d1aea11c6504f5007a5f24fd1261db026708186",
 }
 
 // summaryHashes records the hash of the golden summaries of the cases for
@@ -40,6 +42,7 @@ var summaryHashes = map[string]string{
 	"10/10/1": "69c0f5f2082a61a0aceb28b1da7bffb4f662c31f35c6b5913a249c7b43410d25",
 	"11/10/1": "f3c6c7e7f2390a0c8ec81ab6673b6b8a02cadf95e0ca36dc963d57b72834589c",
 	"11/10/2": "8047cc4e4d95ce6744993a20c7f4224a78b2d3531c2e31415f371b16608f19a5",
+	"11/11/2": "c0aeb7f515b2c546fd6b355663d5a7bb446c7f6bdfb9ab3ef343dd252e4302bf",
 }
 
 func TestGraphHashFollowsVersion(t *testing.T) {

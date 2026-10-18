@@ -190,10 +190,10 @@ func (j *JavaScript) File(base string, typescript bool) (string, bool) {
 	return j.index(base, typescript)
 }
 
+// withExtension tries the TypeScript source of a .js path before the path
+// itself for a TypeScript importer, as tsc does. A tree that holds app.ts
+// and its emitted app.js then links to app.ts.
 func (j *JavaScript) withExtension(base string, typescript bool) (string, bool) {
-	if j.files.Has(base) {
-		return base, true
-	}
 	exts := jsExtensions
 	if typescript {
 		exts = tsExtensions
@@ -203,6 +203,9 @@ func (j *JavaScript) withExtension(base string, typescript bool) (string, bool) 
 				return p, true
 			}
 		}
+	}
+	if j.files.Has(base) {
+		return base, true
 	}
 	for _, ext := range exts {
 		if j.files.Has(base + ext) {
