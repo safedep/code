@@ -149,7 +149,7 @@ func main() {
 	cfg := config{deps: depList{}}
 	flag.StringVar(&cfg.dir, "dir", "", "directory of the project")
 	flag.StringVar(&cfg.store, "store", "", "directory of the localdb file that keeps the file indexes")
-	flag.StringVar(&cfg.overlay, "overlay", "", "JSON file of llm edges to merge into the graph")
+	flag.StringVar(&cfg.overlay, "overlay", "", "JSON file of llm edges to merge into the graph: edges that a model proposed for unresolved call sites, as the Overlay section of docs/projectgraph.md describes")
 	flag.Var(&cfg.targets, "target", "external symbol to reach, as yaml//load (repeatable)")
 	flag.Var(&cfg.sources, "source", "entry point of the project to search from, as app/server.py:main, src/api.ts:Router.handle or a key as app/server.py//main (repeatable)")
 	flag.BoolVar(&cfg.sourcesOnly, "sources-only", false, "search from the -source entry points alone, not from the roots that the rules mark")

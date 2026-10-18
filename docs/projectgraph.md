@@ -21,6 +21,10 @@ each in a store.
 The index step is the only one that parses source. It needs CGO. The other
 steps read records and build with `CGO_ENABLED=0`.
 
+An [overlay](#overlay) is an optional step between the link step and the
+reach query. It merges edges that a model proposed for the call sites
+that the link step could not resolve.
+
 `examples/projectgraph` runs all five from the command line.
 
 ## Index
@@ -114,19 +118,70 @@ order of the indexes.
 | `MaxEdges` | The cap of the edges. Past it the step adds no edge and records a truncation. Zero selects 5,000,000 |
 | `MaxExportHops` | The cap of a walk through re-exports and bases. Zero selects 10 |
 
-Each edge has a kind and a confidence. A `direct`, `import`, `export`,
-`member`, `assignment` or `package` edge is `high`. A `cha` edge, from a
-call on an instance to the override of a subclass, is `medium`. A `field`,
-`name`, `reference`, `wildcard` or `llm` edge is `low`. The graph keeps one
-edge per caller, callee and site, the one of the highest confidence.
+### Edge kinds
+
+Each edge has a kind and a confidence. The kind says what made the edge,
+and the confidence, from `projectgraph.EdgeKind.Confidence`, says how
+sure the link step is that the code of the caller runs the callee. A
+path shows the kind of each hop of low confidence, so a reader sees the
+weak hop. The graph keeps one edge per caller, callee and site, the one
+of the highest confidence.
+
+| Kind | What makes it | Example | Confidence |
+| --- | --- | --- | --- |
+| `direct` | A call whose callee the link step resolves to one definition: a function by its name, a name that an import binds, or a constructor | `handlers.parse(path)` in `main.py` gives `main.py -> handlers.py//parse` | `high` |
+| `import` | A module top level and the module that it imports. The import runs the top level of the module | `import handlers` gives `main.py -> handlers.py` | `high` |
+| `export` | A re-exported name and the definition that it stands for, through a chain of re-exports | `from .loader import parse` in `pkg/__init__.py` gives `pkg/__init__.py//parse -> pkg/loader.py//parse` | `high` |
+| `member` | A call of a method on a receiver whose class the link step knows, as `self`, an instance that a constructor made, or a value of a declared type | `self.read(path)` in `Parser.parse` gives `handlers.py//Parser//parse -> handlers.py//Parser//read` | `high` |
+| `assignment` | A call of a name that an assignment binds to a function | `load = yaml.load` then `load(f)` gives `main.py -> yaml//load` | `high` |
+| `package` | An external key and the definition that a unit of dependency code gives for it. It is no call. It marks where a path leaves the project and goes on into a package | `lodash//template -> npm:lodash@4.17.21//template.js//template` | `high` |
+| `cha` | A call of a method on an instance whose static class has subclasses, to the override of each subclass, by class hierarchy analysis. A `reference` edge with the rule `override` joins the class to each override | `shape.area()` with `Circle(Shape)` gives `main.py//draw -> shapes.py//Circle//area` | `medium` |
+| `field` | A JavaScript or TypeScript member call whose receiver the link step does not know, to each first-party method, object property or property assignment of the name, as the field-based rule of ACG | `req.parse()` gives `src/app.js//handle -> src/parsers.js//parse` | `low` |
+| `name` | A call whose receiver the link step does not know, in any other language, to each first-party function, method, constructor or class of the name | `obj.parse()` in Python gives `main.py//run -> handlers.py//Parser//parse` | `low` |
+| `wildcard` | A name that a wildcard import can bring in, to the definition of the name in the module, or to the external key | `from handlers import *` then `parse()` gives `main.py -> handlers.py//parse` | `low` |
+| `reference` | A definition that uses a function, a method, a class or an import as a value, to that value. The code that gets the value can call it | `run(process)` with `from tasks import process, run` gives `main.py -> tasks.py//process`, and `run` can call it | `low` |
+| `llm` | An edge of an overlay file. A model proposed it for an unresolved site, and no code of this module calls a model. See [Overlay](#overlay) | `main.py//dispatch -> parsers.py//parse` with the resolver `model m1, prompt v2` | `low` |
 
 A call that the link step cannot resolve is an unresolved site with a
 reason: `computed-name`, `dynamic-import`, `unknown-receiver`,
 `no-definition`, `ambiguous` or `limit`. The site keeps the method name of
 the call, so the reach query can tell which targets it concerns.
 
-`overlay.Merge` adds the edges of a file of `llm` edges to a built graph.
-It never removes an unresolved site.
+## Overlay
+
+An overlay is a file of `llm` edges that resolve unresolved sites of a
+built graph. No code of this module calls a model. A person writes the
+file, or a data-plane job asks a model for the callee of each unresolved
+site and writes what it answers. A reviewer removes an edge by editing
+the file.
+
+The file is JSON with a `version`, now `overlay.Version` = `1`, and a
+list of `edges`. Each edge names the unresolved site by its `caller` and
+its `site`, and the `callee`, a node key that the graph holds, first
+party or external. Its `kind` is `llm`, its `confidence` is `low`, and it
+carries the `model`, the `prompt_version`, the `input_hash` of the prompt
+input and the raw `output` of the model, so a reader can audit the edge.
+The package documentation of `projectgraph/overlay` gives the full form.
+
+```go
+f, err := overlay.ReadFile("overlay.json")
+report, err := overlay.Merge(g, f)
+```
+
+`overlay.ReadFile` decodes and validates the file. An unknown field, a
+second object in the file, a version other than `1`, or an edge with a
+confidence other than `low` is an error, so a file of another format or
+a model output that holds two objects never merges in part.
+
+`overlay.Merge` adds the edges to the graph with `Graph.AddEdge`, with
+the resolver `model <model>, prompt <prompt_version>`, so a path through
+the edge names them. It drops an edge whose callee is no node of the
+graph (`undefined-callee`), and an edge whose caller and site match no
+unresolved site (`no-unresolved-site`), and lists each one in
+`Report.Diagnostics`. The unresolved sites stay in the graph. So an
+overlay edge can turn a target that no path reaches into `found`, but it
+never removes an uncertainty, and so it never turns `uncertain` into
+`not-found`.
 
 ## Roots
 
