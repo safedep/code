@@ -166,6 +166,11 @@ func main() {
 		flag.Usage()
 		os.Exit(2)
 	}
+	if cfg.sourcesOnly && len(cfg.sources) == 0 {
+		fmt.Fprintln(os.Stderr, "projectgraph needs a -source with -sources-only")
+		flag.Usage()
+		os.Exit(2)
+	}
 	if err := run(context.Background(), cfg, os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -261,7 +266,7 @@ func printReach(ctx context.Context, cfg config, out io.Writer, root string, ind
 	if err != nil {
 		return fmt.Errorf("failed to link %s: %w", root, err)
 	}
-	if err := warnGraph(os.Stderr, g); err != nil {
+	if err := warnGraph(os.Stderr, g, cfg.sourcesOnly); err != nil {
 		return err
 	}
 	if cfg.overlay != "" {
@@ -333,8 +338,9 @@ func warnIndex(warn io.Writer, indexed *indexer.Result) error {
 }
 
 // warnGraph writes the problems and the truncations of the link step to
-// warn, and says what to do when no root rule matched.
-func warnGraph(warn io.Writer, g *projectgraph.Graph) error {
+// warn, and says what to do when no root rule matched. A search from the
+// sources alone does not use the fallback roots, so it gets no such advice.
+func warnGraph(warn io.Writer, g *projectgraph.Graph, sourcesOnly bool) error {
 	for _, p := range g.Problems {
 		if _, err := fmt.Fprintf(warn, "problem: %s: %s\n", p.Path, p.Text); err != nil {
 			return err
@@ -345,7 +351,7 @@ func warnGraph(warn io.Writer, g *projectgraph.Graph) error {
 			return err
 		}
 	}
-	if g.Stats.RootFallback {
+	if g.Stats.RootFallback && !sourcesOnly {
 		if _, err := fmt.Fprintln(warn, "no root rule matched: every exported symbol is a root. Add a manifest entry, as a package.json bin or a pyproject.toml script, or a main guard, or pass -include-tests"); err != nil {
 			return err
 		}

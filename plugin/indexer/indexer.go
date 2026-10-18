@@ -139,6 +139,8 @@ func New(opts Options) (*Indexer, error) {
 	if err != nil {
 		return nil, err
 	}
+	opts.Languages = slices.Clone(opts.Languages)
+	opts.Plugins = slices.Clone(opts.Plugins)
 	opts.MaxFileBytes = cmp.Or(opts.MaxFileBytes, parser.DefaultMaxBytes)
 	opts.Workers = cmp.Or(opts.Workers, runtime.GOMAXPROCS(0))
 	return &Indexer{opts: opts, byExtension: byExtension}, nil

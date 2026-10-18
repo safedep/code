@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/safedep/code/projectgraph"
 	"github.com/safedep/code/projectgraph/reach"
 	"github.com/safedep/code/projectgraph/summary"
 	"github.com/stretchr/testify/assert"
@@ -154,6 +155,25 @@ func TestExampleSearchesFromASource(t *testing.T) {
 	_, err = cmd.Output()
 	require.Error(t, err)
 	assert.Contains(t, stderr.String(), "unknown source: no node has the key handlers.py//load_odl")
+
+	cmd = exec.Command(bin, "-dir", deadCallCase, "-sources-only", "-target", "yaml//load")
+	stderr.Reset()
+	cmd.Stderr = &stderr
+	_, err = cmd.Output()
+	var exit *exec.ExitError
+	require.ErrorAs(t, err, &exit)
+	assert.Equal(t, 2, exit.ExitCode())
+	assert.Contains(t, stderr.String(), "projectgraph needs a -source with -sources-only")
+}
+
+func TestWarnGraphSkipsTheFallbackAdviceForSourcesOnly(t *testing.T) {
+	g := &projectgraph.Graph{Stats: projectgraph.Stats{RootFallback: true}}
+	var warn strings.Builder
+	require.NoError(t, warnGraph(&warn, g, false))
+	assert.Contains(t, warn.String(), "no root rule matched")
+	warn.Reset()
+	require.NoError(t, warnGraph(&warn, g, true))
+	assert.Empty(t, warn.String())
 }
 
 func TestDependencyFlag(t *testing.T) {

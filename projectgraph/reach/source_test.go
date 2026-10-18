@@ -170,3 +170,9 @@ func TestReachRejectsAnUndefinedSourceMode(t *testing.T) {
 	_, err := Reach(context.Background(), g, Query{Targets: targetsOf(t, "yaml//load"), SourceMode: SourcesOnly + 1})
 	assert.ErrorContains(t, err, "source mode 2 is not SourcesAndRoots or SourcesOnly")
 }
+
+func TestReachRejectsSourcesOnlyWithNoSource(t *testing.T) {
+	g := graphOf(t, sourced)
+	_, err := Reach(context.Background(), g, Query{Targets: targetsOf(t, "yaml//load"), SourceMode: SourcesOnly})
+	assert.ErrorContains(t, err, "source mode SourcesOnly needs at least one source")
+}

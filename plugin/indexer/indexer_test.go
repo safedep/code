@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -463,4 +464,10 @@ func TestNewValidatesTheOptions(t *testing.T) {
 	assert.Equal(t, parser.DefaultMaxBytes, ix.opts.MaxFileBytes, "the default size limit")
 	assert.Positive(t, ix.opts.Workers, "the default number of workers")
 	assert.NotEmpty(t, ix.byExtension)
+
+	caller := slices.Clone(languages)
+	ix, err = New(Options{Languages: caller})
+	require.NoError(t, err)
+	caller[0] = nil
+	assert.Equal(t, languages, ix.opts.Languages, "a change of the caller's slice after New does not reach the indexer")
 }

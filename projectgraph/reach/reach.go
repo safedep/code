@@ -209,6 +209,9 @@ func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error
 	if q.SourceMode != SourcesAndRoots && q.SourceMode != SourcesOnly {
 		return nil, fmt.Errorf("source mode %d is not SourcesAndRoots or SourcesOnly", q.SourceMode)
 	}
+	if q.SourceMode == SourcesOnly && len(q.Sources) == 0 {
+		return nil, errors.New("source mode SourcesOnly needs at least one source")
+	}
 	a := newAdjacency(g)
 	a.includeTests = q.IncludeTests
 	depth := cmp.Or(q.MaxDepth, defaultMaxDepth)
