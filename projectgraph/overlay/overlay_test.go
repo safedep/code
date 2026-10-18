@@ -123,7 +123,7 @@ func TestReadRejectsABadFile(t *testing.T) {
 			"kind": %q, "confidence": %q, "model": "m1", "prompt_version": "v2", "input_hash": "h", "output": "g"}]}`, version, kind, confidence)
 	}
 
-	f, err := Read(strings.NewReader(file(Version, "llm", "low")))
+	f, err := Read(strings.NewReader(file(Version, "llm", "low") + "\n"))
 	require.NoError(t, err)
 	assert.Equal(t, "model m1, prompt v2", f.Edges[0].Resolver())
 	_, err = Read(strings.NewReader(file(Version, "name", "low")))
@@ -140,6 +140,8 @@ func TestReadRejectsABadFile(t *testing.T) {
 		{"no site", `{"version": "1", "edges": [{"caller": "a.py//f", "callee": "a.py//g", "kind": "llm", "confidence": "low"}]}`, "no site"},
 		{"unknown field", `{"version": "1", "edges": [], "candidates": []}`, "unknown field"},
 		{"not JSON", `version: 1`, "failed to decode"},
+		{"second object", file(Version, "llm", "low") + file(Version, "llm", "low"), "data follows the overlay object"},
+		{"trailing text", file(Version, "llm", "low") + " and more", "data follows the overlay object"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

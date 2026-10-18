@@ -99,13 +99,18 @@ func (f *File) Validate() error {
 }
 
 // Read decodes and validates an overlay. An unknown field is an error, so a
-// file of another format version does not merge in part.
+// file of another format version does not merge in part. Data after the
+// overlay object is an error for the same reason: a model output that holds
+// two objects does not merge only the first.
 func Read(r io.Reader) (*File, error) {
 	decoder := json.NewDecoder(r)
 	decoder.DisallowUnknownFields()
 	var f File
 	if err := decoder.Decode(&f); err != nil {
 		return nil, fmt.Errorf("failed to decode the overlay: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		return nil, errors.New("failed to decode the overlay: data follows the overlay object")
 	}
 	if err := f.Validate(); err != nil {
 		return nil, err
