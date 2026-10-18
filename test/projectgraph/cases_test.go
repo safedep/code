@@ -182,7 +182,6 @@ func caseGraph(t testing.TB, dir string, languages []core.Language) (expectation
 
 func runCase(t *testing.T, dir string, languages []core.Language) {
 	want, indexed, g, roots := caseGraph(t, dir, languages)
-	ctx := context.Background()
 	var failed []string
 	for _, f := range indexed.Report.Failed {
 		failed = append(failed, f.File)
@@ -203,18 +202,29 @@ func runCase(t *testing.T, dir string, languages []core.Language) {
 	assert.Equal(t, want.Unresolved, unresolvedOf(g), "unresolved sites")
 	assert.Equal(t, want.Truncated, truncationsOf(g), "truncations")
 
-	var results []reach.Result
-	for _, w := range want.Results {
-		got, err := reach.Reach(ctx, g, reach.Query{Targets: []string{w.Target}, IncludeTests: w.IncludeTests})
-		require.NoError(t, err)
-		require.Len(t, got, 1)
-		assert.Equal(t, w, resultOf(w, got[0]), "result for %s", w.Target)
-		results = append(results, got...)
+	results := caseResults(t, g, want)
+	for i, w := range want.Results {
+		assert.Equal(t, w, resultOf(w, results[i]), "result for %s", w.Target)
 	}
 	dumpCase(t, dir, g, results)
 	for _, unit := range slices.Sorted(maps.Values(want.Units)) {
 		checkSummary(t, filepath.Join(dir, "summaries"), unit, indexed, roots)
 	}
+}
+
+// caseResults runs the reach query of each result of the expectation, one
+// target per query, and returns the results in the order of the
+// expectation.
+func caseResults(t testing.TB, g *projectgraph.Graph, want expectation) []reach.Result {
+	t.Helper()
+	var results []reach.Result
+	for _, w := range want.Results {
+		got, err := reach.Reach(context.Background(), g, reach.Query{Targets: []string{w.Target}, IncludeTests: w.IncludeTests})
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		results = append(results, got...)
+	}
+	return results
 }
 
 // fileSystemConfig returns the file system of a case, and the root of the

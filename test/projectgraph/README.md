@@ -13,8 +13,9 @@ This directory tests the index step, the link step and the reach query of
 `report.md` holds the numbers of the last run that a person committed.
 
 `version_test.go` records the hash of the graphs of every case for each
-pair of `fileindex.Version` and `projectgraph.Version`, and the hash of the
-golden summaries for each triple with `summary.Version`. A change of a
+pair of `fileindex.Version` and `projectgraph.Version`, the hash of the
+reach results of every case for each triple with `reach.Version`, and the
+hash of the golden summaries for each triple with `summary.Version`. A change of a
 graph or a summary fails the test until the Version that owns the rule is
 bumped and a row is added. The job `projectgraph-sets` of
 `.github/workflows/ci.yml` runs the committed public sets on every pull
