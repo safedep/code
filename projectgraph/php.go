@@ -18,6 +18,7 @@ var phpProfile = profile{
 	link:              (*builder).linkPHP,
 	qualified:         func(b *builder, name string) (string, bool) { return b.resolveQualified(langcode.PHP, name) },
 	scopeFallback:     (*builder).phpScopeFallback,
+	dependencies:      func(b *builder) ([]string, []modules.Problem) { return b.phpState().composer.Dependencies(), nil },
 	instance:          []string{"$this", "static"},
 	lateStatic:        "static",
 	superCalls:        true,

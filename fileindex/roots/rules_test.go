@@ -101,7 +101,6 @@ func TestParseErrorsNameTheRule(t *testing.T) {
 		{name: "no id", yaml: "{language: any, kind: main, match: {test_file: true}}", want: `root rule #1: no id`},
 		{name: "an unknown root", yaml: "{id: x.y, language: python, kind: framework, match: {call: {callee: [a], root: caller}}}", want: `call: unknown root "caller"`},
 		{name: "a root receiver with an arg", yaml: "{id: x.y, language: python, kind: framework, match: {call: {callee: [a], arg: 0, root: receiver}}}", want: `call: a root receiver takes no arg`},
-		{name: "requires with no manifest", yaml: "{id: x.y, language: go, kind: main, requires: [gin], match: {test_file: true}}", want: `requires: the language "go" has no manifest of dependencies`},
 		{name: "requires an empty name", yaml: "{id: x.y, language: python, kind: main, requires: [''], match: {test_file: true}}", want: `requires: an empty package name`},
 	}
 	for _, tt := range tests {
@@ -133,4 +132,11 @@ func TestApplies(t *testing.T) {
 	assert.True(t, Rule{Language: "java"}.Applies(langcode.Kotlin))
 	assert.False(t, Rule{Language: "kotlin"}.Applies(langcode.Java))
 	assert.False(t, Rule{Language: "python"}.Applies(langcode.Javascript))
+}
+
+func TestMatchKey(t *testing.T) {
+	assert.Equal(t, MatchCall, Match{Call: &CallMatch{}}.Key())
+	assert.Equal(t, MatchTestFile, Match{TestFile: true}.Key())
+	assert.Empty(t, Match{}.Key(), "no key")
+	assert.Empty(t, Match{TestFile: true, MainGuard: true}.Key(), "two keys")
 }

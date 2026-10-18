@@ -7,6 +7,8 @@ import (
 
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/fileindex/roots"
+	"github.com/safedep/code/langcode"
+	"github.com/safedep/code/projectgraph/modules"
 	"github.com/safedep/code/projectgraph/rootmatch"
 )
 
@@ -23,13 +25,19 @@ func (b *builder) markRoots(ctx context.Context) error {
 		}
 	}
 	found, problems, err := rootmatch.Find(ctx, rootmatch.Project{
-		Indexes:     indexes,
-		IsTest:      func(p string) bool { return b.test[p] },
-		Root:        b.opts.Root,
-		Files:       b.project.files,
-		Python:      b.project.python,
-		JS:          b.project.js,
-		Composer:    b.phpState().composer,
+		Indexes:  indexes,
+		IsTest:   func(p string) bool { return b.test[p] },
+		Root:     b.opts.Root,
+		Files:    b.project.files,
+		Python:   b.project.python,
+		JS:       b.project.js,
+		Composer: b.phpState().composer,
+		Dependencies: func(lang langcode.Code) ([]string, []modules.Problem) {
+			if deps := profileOf(lang.Family()).dependencies; deps != nil {
+				return deps(b)
+			}
+			return nil, nil
+		},
 		Defined:     func(key string) bool { return b.g.Nodes[key] != nil && b.kindOf(key) != NodeExternal },
 		Exports:     func(p string) []string { return b.exportKeys(p, map[string]bool{}) },
 		Export:      b.exportKey,

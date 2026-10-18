@@ -18,6 +18,7 @@ var pythonProfile = profile{
 	provide:            pythonProvide,
 	narrowProviders:    pythonNarrowProviders,
 	surface:            pythonSurface,
+	dependencies:       pythonDependencies,
 	instance:           []string{"self", "cls"},
 	objectBase:         "object",
 	literals:           map[string]bool{"None": true, "True": true, "False": true, "Ellipsis": true, "NotImplemented": true},
@@ -35,6 +36,12 @@ var pythonProfile = profile{
 func pythonRelativePath(spec string) string {
 	rest := strings.TrimLeft(spec, ".")
 	return "./" + strings.Repeat("../", len(spec)-len(rest)-1) + strings.ReplaceAll(rest, ".", "/")
+}
+
+// pythonDependencies returns the requirements of the Python manifests of
+// the project.
+func pythonDependencies(b *builder) ([]string, []modules.Problem) {
+	return modules.PythonDependencies(b.opts.Root, b.project.files.Dirs())
 }
 
 // pythonProvide returns the module of a pypi unit that an absolute import

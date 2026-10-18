@@ -22,10 +22,11 @@ var goIgnoredDirs = []string{"vendor", "testdata"}
 // files, and its import path is the path of the nearest module and the
 // directory below it.
 type Golang struct {
-	modules  []goModule
-	byPath   map[string]string
-	dirs     map[string]bool
-	problems problems
+	modules      []goModule
+	byPath       map[string]string
+	dirs         map[string]bool
+	dependencies []string
+	problems     problems
 }
 
 type goModule struct{ dir, path string }
@@ -55,6 +56,13 @@ func NewGolang(files *Files, root fs.FS, dirs []string) *Golang {
 		} else {
 			g.problems.add(name, errNoModule)
 		}
+		if f, err := modfile.ParseLax(name, data, nil); err == nil {
+			for _, r := range f.Require {
+				if !slices.Contains(g.dependencies, r.Mod.Path) {
+					g.dependencies = append(g.dependencies, r.Mod.Path)
+				}
+			}
+		}
 	}
 	// The deepest module holds a directory, so it comes first.
 	slices.SortFunc(g.modules, func(a, b goModule) int { return len(b.dir) - len(a.dir) })
@@ -70,6 +78,9 @@ func NewGolang(files *Files, root fs.FS, dirs []string) *Golang {
 
 // Problems returns the go.mod files that the resolver could not read.
 func (g *Golang) Problems() []Problem { return g.problems }
+
+// Dependencies returns the module paths that the go.mod files require.
+func (g *Golang) Dependencies() []string { return g.dependencies }
 
 // Resolve returns the directory of the package that an import path names.
 func (g *Golang) Resolve(spec string) (string, bool) {

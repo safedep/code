@@ -22,6 +22,7 @@ var goProfile = profile{
 	provide:            goProvide,
 	narrowProviders:    goNarrowProviders,
 	surface:            goSurface,
+	dependencies:       func(b *builder) ([]string, []modules.Problem) { return b.project.golang.Dependencies(), nil },
 	implicitInterfaces: true,
 	typeConversions:    true,
 	scopeWildcards:     true,

@@ -30,8 +30,19 @@ func ecmascriptProfile(code langcode.Code, typescript bool) profile {
 	if !typescript {
 		p.provide = javascriptProvide
 		p.surface = javascriptSurface
+		p.dependencies = javascriptDependencies
 	}
 	return p
+}
+
+// javascriptDependencies returns the packages that the package.json files
+// of the project depend on.
+func javascriptDependencies(b *builder) ([]string, []modules.Problem) {
+	var names []string
+	for _, pj := range b.project.js.Packages() {
+		names = append(names, pj.DependencyNames()...)
+	}
+	return names, nil
 }
 
 // javascriptProvide returns the files of an npm unit that an import of a

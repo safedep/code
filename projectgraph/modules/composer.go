@@ -16,9 +16,10 @@ import (
 // map names the file of a class that has no index, and tells which
 // namespaces are first-party.
 type Composer struct {
-	prefixes []psr4
-	bins     []string
-	problems problems
+	prefixes     []psr4
+	bins         []string
+	dependencies []string
+	problems     problems
 }
 
 type psr4 struct {
@@ -27,9 +28,11 @@ type psr4 struct {
 }
 
 type composerJSON struct {
-	Autoload    composerAutoload `json:"autoload"`
-	AutoloadDev composerAutoload `json:"autoload-dev"`
-	Bin         json.RawMessage  `json:"bin"`
+	Autoload    composerAutoload           `json:"autoload"`
+	AutoloadDev composerAutoload           `json:"autoload-dev"`
+	Bin         json.RawMessage            `json:"bin"`
+	Require     map[string]json.RawMessage `json:"require"`
+	RequireDev  map[string]json.RawMessage `json:"require-dev"`
 }
 
 type composerAutoload struct {
@@ -64,6 +67,13 @@ func NewComposer(files *Files, root fs.FS) *Composer {
 				c.bins = append(c.bins, p)
 			}
 		}
+		for _, deps := range []map[string]json.RawMessage{manifest.Require, manifest.RequireDev} {
+			for _, name := range sortedKeys(keysOf(deps)) {
+				if !slices.Contains(c.dependencies, name) {
+					c.dependencies = append(c.dependencies, name)
+				}
+			}
+		}
 	}
 	// The longest prefix holds a name, so it comes first.
 	slices.SortStableFunc(c.prefixes, func(a, b psr4) int { return cmp.Compare(len(b.prefix), len(a.prefix)) })
@@ -87,6 +97,10 @@ func (c *Composer) Problems() []Problem { return c.problems }
 
 // Bins returns the scripts that the bin fields name.
 func (c *Composer) Bins() []string { return c.bins }
+
+// Dependencies returns the packages that the manifests require, as written.
+// A platform requirement, as php or ext-json, counts as one.
+func (c *Composer) Dependencies() []string { return c.dependencies }
 
 // Files returns the files that the PSR-4 map gives to a qualified class
 // name, as app/Http/Kernel.php for App\Http\Kernel under App\ => app/.

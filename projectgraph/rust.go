@@ -21,6 +21,7 @@ var rustProfile = profile{
 	aliases:           (*builder).joinImplBlocks,
 	link:              (*builder).linkRust,
 	scopeFallback:     (*builder).rustScopeFallback,
+	dependencies:      func(b *builder) ([]string, []modules.Problem) { return b.rustState().cargo.Dependencies(), nil },
 	instance:          []string{"self"},
 	superModule:       true,
 	unitImports:       true,

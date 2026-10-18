@@ -49,6 +49,10 @@ type Project struct {
 	// Composer holds the autoload maps and the bin scripts of PHP. A nil
 	// Composer names no script.
 	Composer *modules.Composer
+	// Dependencies returns the packages that the manifests of the project
+	// declare for the ecosystem of a language, and the manifests that it
+	// could not read. A nil Dependencies declares none.
+	Dependencies func(lang langcode.Code) ([]string, []modules.Problem)
 	// Defined reports whether a key names a first-party node of the graph.
 	Defined func(key string) bool
 	// Exports returns the keys of the names that a file exports.
@@ -135,32 +139,39 @@ func (f *finder) addFile(r rules.Rule, file string) {
 	}
 }
 
+// matchers run the rules of each match key.
+var matchers = map[rules.MatchKey]func(f *finder, r rules.Rule){
+	rules.MatchDefinition: (*finder).matchDefinition,
+	rules.MatchMainGuard:  (*finder).matchMainGuard,
+	rules.MatchPath:       (*finder).matchPath,
+	rules.MatchDecorator:  (*finder).matchDecorator,
+	rules.MatchAnnotation: (*finder).matchDecorator,
+	rules.MatchCall:       (*finder).matchCallRule,
+	rules.MatchExport:     (*finder).matchExport,
+	rules.MatchTestFile:   (*finder).matchTestFiles,
+	rules.MatchManifest:   (*finder).matchManifest,
+}
+
 func (f *finder) match(r rules.Rule) {
 	if !f.requires(r) {
 		return
 	}
-	m := r.Match
-	switch {
-	case m.Definition != nil:
-		f.matchDefinition(r)
-	case m.MainGuard:
-		f.matchMainGuard(r)
-	case len(m.Path) > 0:
-		f.matchPath(r)
-	case len(m.Decorator) > 0 || len(m.Annotation) > 0:
-		f.matchDecorator(r)
-	case m.Call != nil && m.Call.Root == rules.RootReceiver:
+	if run := matchers[r.Match.Key()]; run != nil {
+		run(f, r)
+	}
+}
+
+// matchCallRule runs a call rule: a rule with a root receiver marks the
+// receiver, a rule with no arg is a decorator, and any other marks an
+// argument.
+func (f *finder) matchCallRule(r rules.Rule) {
+	switch m := r.Match.Call; {
+	case m.Root == rules.RootReceiver:
 		f.matchReceiver(r)
-	case m.Call != nil && m.Call.Arg == nil:
+	case m.Arg == nil:
 		f.matchDecoratorCall(r)
-	case m.Call != nil:
+	default:
 		f.matchCall(r)
-	case m.Export != nil:
-		f.matchExport(r)
-	case m.TestFile:
-		f.matchTestFiles(r)
-	case m.Manifest != nil:
-		f.matchManifest(r)
 	}
 }
 

@@ -53,16 +53,77 @@ var manifestFields = map[string][]string{
 // Rule marks the roots of one kind. Language is a langcode or AnyLanguage.
 // A javascript rule also matches typescript files, and a java rule kotlin
 // files. Requires names the packages of the framework of the rule, as
-// next. A javascript rule then applies only when a package.json of the
-// project depends on one of them, and a python rule when a pyproject.toml,
-// a setup.py, a Pipfile or a requirements file does. A project whose
-// manifests declare no dependency gives no evidence, so the rule applies.
+// next. The rule then applies only when a manifest of the project depends
+// on one of them: a package.json, a pyproject.toml, a setup.py, a Pipfile,
+// a requirements file, a go.mod, a composer.json or a Cargo.toml. A project
+// whose manifests declare no dependency gives no evidence, so the rule
+// applies.
 type Rule struct {
 	ID       string   `yaml:"id"`
 	Language string   `yaml:"language"`
 	Kind     Kind     `yaml:"kind"`
 	Requires []string `yaml:"requires,omitempty"`
 	Match    Match    `yaml:"match"`
+}
+
+// MatchKey names one key of a Match.
+type MatchKey string
+
+const (
+	MatchDefinition MatchKey = "definition"
+	MatchDecorator  MatchKey = "decorator"
+	MatchAnnotation MatchKey = "annotation"
+	MatchCall       MatchKey = "call"
+	MatchExport     MatchKey = "export"
+	MatchPath       MatchKey = "path"
+	MatchManifest   MatchKey = "manifest"
+	MatchMainGuard  MatchKey = "main_guard"
+	MatchTestFile   MatchKey = "test_file"
+)
+
+// matchKeys lists the keys of a Match: whether a match sets the key, and
+// the check of its value. A new key adds a field to Match, a row here and
+// a matcher in the root finder.
+var matchKeys = []struct {
+	key      MatchKey
+	isSet    func(m Match) bool
+	validate func(m Match) error
+}{
+	{MatchDefinition, func(m Match) bool { return m.Definition != nil }, func(m Match) error {
+		if m.Definition.Name == "" {
+			return errors.New("definition: no name")
+		}
+		return nil
+	}},
+	{MatchDecorator, func(m Match) bool { return len(m.Decorator) > 0 }, nil},
+	{MatchAnnotation, func(m Match) bool { return len(m.Annotation) > 0 }, nil},
+	{MatchCall, func(m Match) bool { return m.Call != nil }, func(m Match) error { return m.Call.validate() }},
+	{MatchExport, func(m Match) bool { return m.Export != nil }, func(m Match) error {
+		if len(m.Export.Names) == 0 {
+			return errors.New("export: no names")
+		}
+		return validateGlobs(m.Export.Path)
+	}},
+	{MatchPath, func(m Match) bool { return len(m.Path) > 0 }, func(m Match) error { return validateGlobs(m.Path) }},
+	{MatchManifest, func(m Match) bool { return m.Manifest != nil }, func(m Match) error { return m.Manifest.validate() }},
+	{MatchMainGuard, func(m Match) bool { return m.MainGuard }, nil},
+	{MatchTestFile, func(m Match) bool { return m.TestFile }, nil},
+}
+
+// Key returns the one key that the match sets, or "" when it sets none or
+// more than one.
+func (m Match) Key() MatchKey {
+	var key MatchKey
+	for _, k := range matchKeys {
+		if !k.isSet(m) {
+			continue
+		}
+		if key != "" {
+			return ""
+		}
+		key = k.key
+	}
+	return key
 }
 
 // Match holds one match key. Decorator lists the names of the decorators as
@@ -244,9 +305,6 @@ func (r Rule) Validate() error {
 	default:
 		return fmt.Errorf("unknown kind %q", r.Kind)
 	}
-	if len(r.Requires) > 0 && r.Language != string(langcode.Javascript) && r.Language != string(langcode.Python) {
-		return fmt.Errorf("requires: the language %q has no manifest of dependencies", r.Language)
-	}
 	if slices.Contains(r.Requires, "") {
 		return errors.New("requires: an empty package name")
 	}
@@ -255,38 +313,20 @@ func (r Rule) Validate() error {
 
 func (m Match) validate() error {
 	keys := 0
-	count := func(set bool) {
-		if set {
+	for _, k := range matchKeys {
+		if k.isSet(m) {
 			keys++
 		}
 	}
-	count(m.Definition != nil)
-	count(len(m.Decorator) > 0)
-	count(len(m.Annotation) > 0)
-	count(m.Call != nil)
-	count(m.Export != nil)
-	count(len(m.Path) > 0)
-	count(m.Manifest != nil)
-	count(m.MainGuard)
-	count(m.TestFile)
 	if keys != 1 {
 		return fmt.Errorf("the match has %d keys, want 1", keys)
 	}
-
-	switch {
-	case m.Definition != nil && m.Definition.Name == "":
-		return errors.New("definition: no name")
-	case m.Call != nil:
-		return m.Call.validate()
-	case m.Export != nil:
-		if len(m.Export.Names) == 0 {
-			return errors.New("export: no names")
+	for _, k := range matchKeys {
+		if k.isSet(m) && k.validate != nil {
+			return k.validate(m)
 		}
-		return validateGlobs(m.Export.Path)
-	case m.Manifest != nil:
-		return m.Manifest.validate()
 	}
-	return validateGlobs(m.Path)
+	return nil
 }
 
 func (c *CallMatch) validate() error {

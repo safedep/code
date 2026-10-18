@@ -47,6 +47,10 @@ type profile struct {
 	// surface adds the exported symbols of a unit of dependency code with
 	// the import that names each one. The profile of the family holds it.
 	surface func(s *surfacer)
+	// dependencies returns the packages that the manifests of the project
+	// declare for the ecosystem of the family, and the manifests that the
+	// reader could not read. The profile of the family holds it.
+	dependencies func(b *builder) ([]string, []modules.Problem)
 
 	// instance names the receiver that holds the instance in a method. A
 	// call on it can reach the method of any subclass.

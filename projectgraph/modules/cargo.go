@@ -13,8 +13,9 @@ import (
 // the directory of its manifest and the name that a path of another crate
 // writes, as serde_json for the package serde-json.
 type Cargo struct {
-	crates   []Crate
-	problems problems
+	crates       []Crate
+	dependencies []string
+	problems     problems
 }
 
 // Crate is one package of a Cargo.toml.
@@ -43,6 +44,11 @@ func NewCargo(files *Files, root fs.FS) *Cargo {
 		if crate := cargoCrate(data); crate != "" {
 			c.crates = append(c.crates, Crate{Dir: d, Name: strings.ReplaceAll(crate, "-", "_")})
 		}
+		for _, pair := range ScanTOML(data) {
+			if name, ok := cargoDependency(pair); ok && !slices.Contains(c.dependencies, name) {
+				c.dependencies = append(c.dependencies, name)
+			}
+		}
 	}
 	// The deepest manifest holds a file, so it comes first.
 	slices.SortStableFunc(c.crates, func(a, b Crate) int { return cmp.Compare(len(b.Dir), len(a.Dir)) })
@@ -66,6 +72,9 @@ func cargoCrate(data []byte) string {
 
 // Problems returns the Cargo.toml files that the reader could not read.
 func (c *Cargo) Problems() []Problem { return c.problems }
+
+// Dependencies returns the crates that the manifests depend on, as written.
+func (c *Cargo) Dependencies() []string { return c.dependencies }
 
 // Crate returns the crate of the deepest Cargo.toml that holds the file.
 func (c *Cargo) Crate(file string) (Crate, bool) {
