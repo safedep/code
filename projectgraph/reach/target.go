@@ -95,13 +95,14 @@ func (t Target) hasMethod(method string) bool {
 }
 
 // mayImport reports whether a computed import with a static prefix can load
-// the module of the target.
+// the module of the target. A prefix longer than the module of a wildcard
+// must continue at a separator, so yamlx// does not load yaml//*.
 func (t Target) mayImport(importPrefix string) bool {
 	if strings.HasPrefix(t.key, importPrefix) {
 		return true
 	}
-	prefix, ok := t.wildcard()
-	return ok && strings.HasPrefix(importPrefix, prefix)
+	module, ok := t.wildcard()
+	return ok && strings.HasPrefix(importPrefix, module+fileindex.Separator)
 }
 
 func (t Target) MarshalText() ([]byte, error) { return []byte(t.key), nil }
