@@ -272,34 +272,52 @@ func camel(w [2]int) string { return synthVerbs[w[0]] + title(synthNouns[w[1]]) 
 // projects.
 var synthSources = []string{".py", ".js", ".ts", ".go", ".java", ".kt", ".cs", ".php", ".rb", ".rs"}
 
+// renderer writes the files of one language: path names the file of a
+// module, module gives its source, pkg writes the barrel file and the test
+// file of a package, and entries writes the entry files and the manifests.
+type renderer struct {
+	path    func(p *synthProject, m *synthModule) string
+	module  func(p *synthProject, m *synthModule, ext []externalPackage) string
+	pkg     func(p *synthProject, pkg []*synthModule, ext []externalPackage, files map[string]string)
+	entries func(p *synthProject, ext []externalPackage, files map[string]string)
+}
+
+var renderers = map[core.LanguageCode]renderer{
+	core.LanguageCodePython:     {path: (*synthProject).pythonPath, module: (*synthProject).pythonModule, pkg: noExternals((*synthProject).pythonPackageFiles), entries: (*synthProject).pythonEntries},
+	core.LanguageCodeJavascript: {path: (*synthProject).javaScriptPath, module: (*synthProject).javaScriptModule, pkg: noExternals((*synthProject).javaScriptPackageFiles), entries: (*synthProject).javaScriptEntries},
+	core.LanguageCodeTypescript: {path: (*synthProject).typeScriptPath, module: (*synthProject).typeScriptModule, pkg: noExternals((*synthProject).typeScriptPackageFiles), entries: (*synthProject).typeScriptEntries},
+	core.LanguageCodeGo:         {path: (*synthProject).goPath, module: (*synthProject).goModule, pkg: noExternals((*synthProject).goPackageFiles), entries: (*synthProject).goEntries},
+	core.LanguageCodeJava:       {path: (*synthProject).javaPath, module: (*synthProject).javaModule, pkg: noExternals((*synthProject).javaPackageFiles), entries: (*synthProject).javaEntries},
+	core.LanguageCodeKotlin:     {path: (*synthProject).kotlinPath, module: (*synthProject).kotlinModule, pkg: noExternals((*synthProject).kotlinPackageFiles), entries: (*synthProject).kotlinEntries},
+	core.LanguageCodeCSharp:     {path: (*synthProject).csharpPath, module: (*synthProject).csharpModule, pkg: noExternals((*synthProject).csharpPackageFiles), entries: (*synthProject).csharpEntries},
+	core.LanguageCodePHP:        {path: (*synthProject).phpPath, module: (*synthProject).phpModule, pkg: noExternals((*synthProject).phpPackageFiles), entries: (*synthProject).phpEntries},
+	core.LanguageCodeRuby:       {path: (*synthProject).rubyPath, module: (*synthProject).rubyModule, pkg: noExternals((*synthProject).rubyPackageFiles), entries: (*synthProject).rubyEntries},
+	core.LanguageCodeRust:       {path: (*synthProject).rustPath, module: (*synthProject).rustModule, pkg: noExternals((*synthProject).rustPackageFiles), entries: (*synthProject).rustEntries},
+}
+
+// noExternals adapts a package writer that reads no external package.
+func noExternals(write func(p *synthProject, pkg []*synthModule, files map[string]string)) func(p *synthProject, pkg []*synthModule, ext []externalPackage, files map[string]string) {
+	return func(p *synthProject, pkg []*synthModule, _ []externalPackage, files map[string]string) {
+		write(p, pkg, files)
+	}
+}
+
 // write renders the project into dir and returns the number of source
 // files.
 func (p *synthProject) write(dir string) (int, error) {
-	files := map[string]string{}
-	switch p.language {
-	case core.LanguageCodePython:
-		p.renderPython(files)
-	case core.LanguageCodeJavascript:
-		p.renderJavaScript(files)
-	case core.LanguageCodeTypescript:
-		p.renderTypeScript(files)
-	case core.LanguageCodeGo:
-		p.renderGo(files)
-	case core.LanguageCodeJava:
-		p.renderJava(files)
-	case core.LanguageCodeKotlin:
-		p.renderKotlin(files)
-	case core.LanguageCodeCSharp:
-		p.renderCSharp(files)
-	case core.LanguageCodePHP:
-		p.renderPHP(files)
-	case core.LanguageCodeRuby:
-		p.renderRuby(files)
-	case core.LanguageCodeRust:
-		p.renderRust(files)
-	default:
+	r, ok := renderers[p.language]
+	if !ok {
 		return 0, fmt.Errorf("no template for %s", p.language)
 	}
+	ext := synthExternals[p.language]
+	files := map[string]string{}
+	for _, pkg := range p.packages {
+		for _, m := range pkg {
+			files[r.path(p, m)] = r.module(p, m, ext)
+		}
+		r.pkg(p, pkg, ext, files)
+	}
+	r.entries(p, ext, files)
 	sources := 0
 	for name, text := range files {
 		file := filepath.Join(dir, filepath.FromSlash(name))
@@ -331,35 +349,38 @@ func (l *lines) add(indent int, format string, args ...any) {
 
 func (l *lines) String() string { return l.b.String() }
 
-func (p *synthProject) renderPython(files map[string]string) {
-	ext := synthExternals[core.LanguageCodePython]
-	for _, pkg := range p.packages {
-		for _, m := range pkg {
-			files[fmt.Sprintf("%s/%s.py", p.pkgName(m.pkg), p.modName(m))] = p.pythonModule(m, ext)
-		}
-		var init lines
-		first := pkg[0]
-		init.add(0, "from .%s import %s, run", p.modName(first), first.class)
-		init.add(0, "")
-		init.add(0, "__all__ = [%q, \"run\"]", first.class)
-		files[p.pkgName(first.pkg)+"/__init__.py"] = init.String()
+func (p *synthProject) pythonPath(m *synthModule) string {
+	return fmt.Sprintf("%s/%s.py", p.pkgName(m.pkg), p.modName(m))
+}
 
-		var test lines
-		last := pkg[len(pkg)-1]
-		test.add(0, "import pytest")
-		test.add(0, "")
-		test.add(0, "from %s import %s", p.pkgName(last.pkg), p.modName(last))
-		test.add(0, "")
-		test.add(0, "")
-		test.add(0, "def test_run():")
-		test.add(1, "assert %s.run([\"input.yaml\"]) is not None", p.modName(last))
-		test.add(0, "")
-		test.add(0, "")
-		test.add(0, "@pytest.mark.parametrize(\"value\", [1, 2, 3])")
-		test.add(0, "def test_%s(value):", snake(last.helpers[0]))
-		test.add(1, "assert %s.%s(value)", p.modName(last), snake(last.helpers[0]))
-		files[fmt.Sprintf("tests/test_%s.py", p.pkgName(last.pkg))] = test.String()
-	}
+// pythonPackageFiles writes the barrel file and the test file of a package.
+func (p *synthProject) pythonPackageFiles(pkg []*synthModule, files map[string]string) {
+	var init lines
+	first := pkg[0]
+	init.add(0, "from .%s import %s, run", p.modName(first), first.class)
+	init.add(0, "")
+	init.add(0, "__all__ = [%q, \"run\"]", first.class)
+	files[p.pkgName(first.pkg)+"/__init__.py"] = init.String()
+
+	var test lines
+	last := pkg[len(pkg)-1]
+	test.add(0, "import pytest")
+	test.add(0, "")
+	test.add(0, "from %s import %s", p.pkgName(last.pkg), p.modName(last))
+	test.add(0, "")
+	test.add(0, "")
+	test.add(0, "def test_run():")
+	test.add(1, "assert %s.run([\"input.yaml\"]) is not None", p.modName(last))
+	test.add(0, "")
+	test.add(0, "")
+	test.add(0, "@pytest.mark.parametrize(\"value\", [1, 2, 3])")
+	test.add(0, "def test_%s(value):", snake(last.helpers[0]))
+	test.add(1, "assert %s.%s(value)", p.modName(last), snake(last.helpers[0]))
+	files[fmt.Sprintf("tests/test_%s.py", p.pkgName(last.pkg))] = test.String()
+}
+
+// pythonEntries writes the entry files and the manifests of the project.
+func (p *synthProject) pythonEntries(ext []externalPackage, files map[string]string) {
 
 	var main lines
 	main.add(0, "import sys")
@@ -519,35 +540,38 @@ func (p *synthProject) pythonModule(m *synthModule, ext []externalPackage) strin
 	return l.String()
 }
 
-func (p *synthProject) renderJavaScript(files map[string]string) {
-	ext := synthExternals[core.LanguageCodeJavascript]
-	for _, pkg := range p.packages {
-		for _, m := range pkg {
-			files[fmt.Sprintf("src/%s/%s.js", p.pkgName(m.pkg), p.modName(m))] = p.javaScriptModule(m, ext)
-		}
-		first, last := pkg[0], pkg[len(pkg)-1]
-		var index lines
-		index.add(0, "'use strict';")
-		index.add(0, "")
-		index.add(0, "const { %s, run } = require('./%s');", first.class, p.modName(first))
-		index.add(0, "")
-		index.add(0, "module.exports = { %s, run };", first.class)
-		files[fmt.Sprintf("src/%s/index.js", p.pkgName(first.pkg))] = index.String()
+func (p *synthProject) javaScriptPath(m *synthModule) string {
+	return fmt.Sprintf("src/%s/%s.js", p.pkgName(m.pkg), p.modName(m))
+}
 
-		var test lines
-		test.add(0, "const assert = require('assert');")
-		test.add(0, "const { run, %s } = require('./%s');", camel(last.helpers[0]), p.modName(last))
-		test.add(0, "")
-		test.add(0, "describe('%s', () => {", p.modName(last))
-		test.add(1, "it('runs', () => {")
-		test.add(2, "assert.ok(run(['input.yaml']));")
-		test.add(1, "});")
-		test.add(1, "it('%s', () => {", camel(last.helpers[0]))
-		test.add(2, "assert.ok(%s(1));", camel(last.helpers[0]))
-		test.add(1, "});")
-		test.add(0, "});")
-		files[fmt.Sprintf("src/%s/%s.test.js", p.pkgName(last.pkg), p.modName(last))] = test.String()
-	}
+// javaScriptPackageFiles writes the barrel file and the test file of a package.
+func (p *synthProject) javaScriptPackageFiles(pkg []*synthModule, files map[string]string) {
+	first, last := pkg[0], pkg[len(pkg)-1]
+	var index lines
+	index.add(0, "'use strict';")
+	index.add(0, "")
+	index.add(0, "const { %s, run } = require('./%s');", first.class, p.modName(first))
+	index.add(0, "")
+	index.add(0, "module.exports = { %s, run };", first.class)
+	files[fmt.Sprintf("src/%s/index.js", p.pkgName(first.pkg))] = index.String()
+
+	var test lines
+	test.add(0, "const assert = require('assert');")
+	test.add(0, "const { run, %s } = require('./%s');", camel(last.helpers[0]), p.modName(last))
+	test.add(0, "")
+	test.add(0, "describe('%s', () => {", p.modName(last))
+	test.add(1, "it('runs', () => {")
+	test.add(2, "assert.ok(run(['input.yaml']));")
+	test.add(1, "});")
+	test.add(1, "it('%s', () => {", camel(last.helpers[0]))
+	test.add(2, "assert.ok(%s(1));", camel(last.helpers[0]))
+	test.add(1, "});")
+	test.add(0, "});")
+	files[fmt.Sprintf("src/%s/%s.test.js", p.pkgName(last.pkg), p.modName(last))] = test.String()
+}
+
+// javaScriptEntries writes the entry files and the manifests of the project.
+func (p *synthProject) javaScriptEntries(ext []externalPackage, files map[string]string) {
 
 	var main lines
 	main.add(0, "#!/usr/bin/env node")
@@ -701,30 +725,33 @@ func (p *synthProject) javaScriptModule(m *synthModule, ext []externalPackage) s
 	return l.String()
 }
 
-func (p *synthProject) renderTypeScript(files map[string]string) {
-	ext := synthExternals[core.LanguageCodeTypescript]
-	for _, pkg := range p.packages {
-		for _, m := range pkg {
-			files[fmt.Sprintf("src/%s/%s.ts", p.pkgName(m.pkg), p.modName(m))] = p.typeScriptModule(m, ext)
-		}
-		first, last := pkg[0], pkg[len(pkg)-1]
-		files[fmt.Sprintf("src/%s/index.ts", p.pkgName(first.pkg))] = fmt.Sprintf("export { %s, run } from './%s';\nexport * as %s from './%s';\n",
-			first.class, p.modName(first), p.modName(last), p.modName(last))
+func (p *synthProject) typeScriptPath(m *synthModule) string {
+	return fmt.Sprintf("src/%s/%s.ts", p.pkgName(m.pkg), p.modName(m))
+}
 
-		var test lines
-		test.add(0, "import { describe, expect, it } from 'vitest';")
-		test.add(0, "import { run, %s } from './%s';", camel(last.helpers[0]), p.modName(last))
-		test.add(0, "")
-		test.add(0, "describe('%s', () => {", p.modName(last))
-		test.add(1, "it('runs', async () => {")
-		test.add(2, "expect(await run(['input.yaml'])).toBeDefined();")
-		test.add(1, "});")
-		test.add(1, "it('%s', () => {", camel(last.helpers[0]))
-		test.add(2, "expect(%s('1')).toBeTruthy();", camel(last.helpers[0]))
-		test.add(1, "});")
-		test.add(0, "});")
-		files[fmt.Sprintf("src/%s/%s.test.ts", p.pkgName(last.pkg), p.modName(last))] = test.String()
-	}
+// typeScriptPackageFiles writes the barrel file and the test file of a package.
+func (p *synthProject) typeScriptPackageFiles(pkg []*synthModule, files map[string]string) {
+	first, last := pkg[0], pkg[len(pkg)-1]
+	files[fmt.Sprintf("src/%s/index.ts", p.pkgName(first.pkg))] = fmt.Sprintf("export { %s, run } from './%s';\nexport * as %s from './%s';\n",
+		first.class, p.modName(first), p.modName(last), p.modName(last))
+
+	var test lines
+	test.add(0, "import { describe, expect, it } from 'vitest';")
+	test.add(0, "import { run, %s } from './%s';", camel(last.helpers[0]), p.modName(last))
+	test.add(0, "")
+	test.add(0, "describe('%s', () => {", p.modName(last))
+	test.add(1, "it('runs', async () => {")
+	test.add(2, "expect(await run(['input.yaml'])).toBeDefined();")
+	test.add(1, "});")
+	test.add(1, "it('%s', () => {", camel(last.helpers[0]))
+	test.add(2, "expect(%s('1')).toBeTruthy();", camel(last.helpers[0]))
+	test.add(1, "});")
+	test.add(0, "});")
+	files[fmt.Sprintf("src/%s/%s.test.ts", p.pkgName(last.pkg), p.modName(last))] = test.String()
+}
+
+// typeScriptEntries writes the entry files and the manifests of the project.
+func (p *synthProject) typeScriptEntries(ext []externalPackage, files map[string]string) {
 
 	var main lines
 	for _, pkg := range p.packages {
@@ -884,30 +911,33 @@ func packageJSON(ext []externalPackage, main string) string {
 // goModulePath is the module path of the generated Go project.
 const goModulePath = "bench.example/app"
 
-func (p *synthProject) renderGo(files map[string]string) {
-	ext := synthExternals[core.LanguageCodeGo]
-	for _, pkg := range p.packages {
-		for _, m := range pkg {
-			files[fmt.Sprintf("%s/%s.go", p.pkgName(m.pkg), p.modName(m))] = p.goModule(m, ext)
-		}
-		first, last := pkg[0], pkg[len(pkg)-1]
-		files[fmt.Sprintf("%s/%s.go", p.pkgName(first.pkg), p.pkgName(first.pkg))] = fmt.Sprintf(
-			"// Package %s holds the %s modules.\npackage %s\n\n// Run runs the first module.\nfunc Run(argv []string) any {\n\treturn Run%02d(argv)\n}\n",
-			p.pkgName(first.pkg), synthNouns[first.methods[0][1]], p.pkgName(first.pkg), first.idx)
+func (p *synthProject) goPath(m *synthModule) string {
+	return fmt.Sprintf("%s/%s.go", p.pkgName(m.pkg), p.modName(m))
+}
 
-		var test lines
-		test.add(0, "package %s", p.pkgName(last.pkg))
-		test.add(0, "")
-		test.add(0, "import \"testing\"")
-		test.add(0, "")
-		test.add(0, "func TestRun%02d(t *testing.T) {", last.idx)
-		test.add(1, "if Run%02d([]string{\"input.yaml\"}) == nil {", last.idx)
-		test.add(2, "t.Fatal(\"no result\")")
-		test.add(1, "}")
-		test.add(1, "_ = %s(1)", goHelper(last, 0))
-		test.add(0, "}")
-		files[fmt.Sprintf("%s/%s_test.go", p.pkgName(last.pkg), p.modName(last))] = test.String()
-	}
+// goPackageFiles writes the barrel file and the test file of a package.
+func (p *synthProject) goPackageFiles(pkg []*synthModule, files map[string]string) {
+	first, last := pkg[0], pkg[len(pkg)-1]
+	files[fmt.Sprintf("%s/%s.go", p.pkgName(first.pkg), p.pkgName(first.pkg))] = fmt.Sprintf(
+		"// Package %s holds the %s modules.\npackage %s\n\n// Run runs the first module.\nfunc Run(argv []string) any {\n\treturn Run%02d(argv)\n}\n",
+		p.pkgName(first.pkg), synthNouns[first.methods[0][1]], p.pkgName(first.pkg), first.idx)
+
+	var test lines
+	test.add(0, "package %s", p.pkgName(last.pkg))
+	test.add(0, "")
+	test.add(0, "import \"testing\"")
+	test.add(0, "")
+	test.add(0, "func TestRun%02d(t *testing.T) {", last.idx)
+	test.add(1, "if Run%02d([]string{\"input.yaml\"}) == nil {", last.idx)
+	test.add(2, "t.Fatal(\"no result\")")
+	test.add(1, "}")
+	test.add(1, "_ = %s(1)", goHelper(last, 0))
+	test.add(0, "}")
+	files[fmt.Sprintf("%s/%s_test.go", p.pkgName(last.pkg), p.modName(last))] = test.String()
+}
+
+// goEntries writes the entry files and the manifests of the project.
+func (p *synthProject) goEntries(ext []externalPackage, files map[string]string) {
 
 	var main lines
 	main.add(0, "package main")
@@ -1099,31 +1129,34 @@ func javaHelper(m *synthModule, i int) string {
 	return fmt.Sprintf("%s%02d", camel(m.helpers[i]), m.idx)
 }
 
-func (p *synthProject) renderJava(files map[string]string) {
-	ext := synthExternals[core.LanguageCodeJava]
-	for _, pkg := range p.packages {
-		for _, m := range pkg {
-			files[fmt.Sprintf("%s%s/%s.java", javaRoot, p.pkgName(m.pkg), javaClassName(m))] = p.javaModule(m, ext)
-		}
-		first, last := pkg[0], pkg[len(pkg)-1]
-		files[fmt.Sprintf("%s%s/Package.java", javaRoot, p.pkgName(first.pkg))] = fmt.Sprintf(
-			"package %s;\n\npublic final class Package {\n    public static Object run(String[] argv) {\n        return %s.run%02d(argv);\n    }\n}\n",
-			p.javaPackage(first.pkg), javaClassName(first), first.idx)
+func (p *synthProject) javaPath(m *synthModule) string {
+	return fmt.Sprintf("%s%s/%s.java", javaRoot, p.pkgName(m.pkg), javaClassName(m))
+}
 
-		var test lines
-		test.add(0, "package %s;", p.javaPackage(last.pkg))
-		test.add(0, "")
-		test.add(0, "import org.junit.jupiter.api.Test;")
-		test.add(0, "")
-		test.add(0, "class %sTest {", javaClassName(last))
-		test.add(1, "@Test")
-		test.add(1, "void runs() {")
-		test.add(2, "%s.run%02d(new String[] {\"input.yaml\"});", javaClassName(last), last.idx)
-		test.add(2, "%s.%s(1);", javaClassName(last), javaHelper(last, 0))
-		test.add(1, "}")
-		test.add(0, "}")
-		files[fmt.Sprintf("src/test/java/bench/%s/%sTest.java", p.pkgName(last.pkg), javaClassName(last))] = test.String()
-	}
+// javaPackageFiles writes the barrel file and the test file of a package.
+func (p *synthProject) javaPackageFiles(pkg []*synthModule, files map[string]string) {
+	first, last := pkg[0], pkg[len(pkg)-1]
+	files[fmt.Sprintf("%s%s/Package.java", javaRoot, p.pkgName(first.pkg))] = fmt.Sprintf(
+		"package %s;\n\npublic final class Package {\n    public static Object run(String[] argv) {\n        return %s.run%02d(argv);\n    }\n}\n",
+		p.javaPackage(first.pkg), javaClassName(first), first.idx)
+
+	var test lines
+	test.add(0, "package %s;", p.javaPackage(last.pkg))
+	test.add(0, "")
+	test.add(0, "import org.junit.jupiter.api.Test;")
+	test.add(0, "")
+	test.add(0, "class %sTest {", javaClassName(last))
+	test.add(1, "@Test")
+	test.add(1, "void runs() {")
+	test.add(2, "%s.run%02d(new String[] {\"input.yaml\"});", javaClassName(last), last.idx)
+	test.add(2, "%s.%s(1);", javaClassName(last), javaHelper(last, 0))
+	test.add(1, "}")
+	test.add(0, "}")
+	files[fmt.Sprintf("src/test/java/bench/%s/%sTest.java", p.pkgName(last.pkg), javaClassName(last))] = test.String()
+}
+
+// javaEntries writes the entry files and the manifests of the project.
+func (p *synthProject) javaEntries(ext []externalPackage, files map[string]string) {
 
 	var main lines
 	main.add(0, "package bench;")
@@ -1261,34 +1294,37 @@ func (p *synthProject) javaModule(m *synthModule, ext []externalPackage) string 
 // kotlinRoot holds the sources of the generated Kotlin project.
 const kotlinRoot = "src/main/kotlin/bench/"
 
-// renderKotlin writes the modules as Java does, with the static members in
+// kotlinPath, kotlinPackageFiles and kotlinEntries write the modules as Java does, with the static members in
 // a companion object, the listener calls in a lambda and an extension
 // function per module.
-func (p *synthProject) renderKotlin(files map[string]string) {
-	ext := synthExternals[core.LanguageCodeKotlin]
-	for _, pkg := range p.packages {
-		for _, m := range pkg {
-			files[fmt.Sprintf("%s%s/%s.kt", kotlinRoot, p.pkgName(m.pkg), javaClassName(m))] = p.kotlinModule(m, ext)
-		}
-		first, last := pkg[0], pkg[len(pkg)-1]
-		files[fmt.Sprintf("%s%s/Package.kt", kotlinRoot, p.pkgName(first.pkg))] = fmt.Sprintf(
-			"package %s\n\nobject Package {\n    fun run(argv: Array<String>): Any? = %s.run%02d(argv)\n}\n",
-			p.javaPackage(first.pkg), javaClassName(first), first.idx)
+func (p *synthProject) kotlinPath(m *synthModule) string {
+	return fmt.Sprintf("%s%s/%s.kt", kotlinRoot, p.pkgName(m.pkg), javaClassName(m))
+}
 
-		var test lines
-		test.add(0, "package %s", p.javaPackage(last.pkg))
-		test.add(0, "")
-		test.add(0, "import org.junit.jupiter.api.Test")
-		test.add(0, "")
-		test.add(0, "class %sTest {", javaClassName(last))
-		test.add(1, "@Test")
-		test.add(1, "fun runs() {")
-		test.add(2, "%s.run%02d(arrayOf(\"input.yaml\"))", javaClassName(last), last.idx)
-		test.add(2, "%s.%s(1)", javaClassName(last), javaHelper(last, 0))
-		test.add(1, "}")
-		test.add(0, "}")
-		files[fmt.Sprintf("src/test/kotlin/bench/%s/%sTest.kt", p.pkgName(last.pkg), javaClassName(last))] = test.String()
-	}
+// kotlinPackageFiles writes the barrel file and the test file of a package.
+func (p *synthProject) kotlinPackageFiles(pkg []*synthModule, files map[string]string) {
+	first, last := pkg[0], pkg[len(pkg)-1]
+	files[fmt.Sprintf("%s%s/Package.kt", kotlinRoot, p.pkgName(first.pkg))] = fmt.Sprintf(
+		"package %s\n\nobject Package {\n    fun run(argv: Array<String>): Any? = %s.run%02d(argv)\n}\n",
+		p.javaPackage(first.pkg), javaClassName(first), first.idx)
+
+	var test lines
+	test.add(0, "package %s", p.javaPackage(last.pkg))
+	test.add(0, "")
+	test.add(0, "import org.junit.jupiter.api.Test")
+	test.add(0, "")
+	test.add(0, "class %sTest {", javaClassName(last))
+	test.add(1, "@Test")
+	test.add(1, "fun runs() {")
+	test.add(2, "%s.run%02d(arrayOf(\"input.yaml\"))", javaClassName(last), last.idx)
+	test.add(2, "%s.%s(1)", javaClassName(last), javaHelper(last, 0))
+	test.add(1, "}")
+	test.add(0, "}")
+	files[fmt.Sprintf("src/test/kotlin/bench/%s/%sTest.kt", p.pkgName(last.pkg), javaClassName(last))] = test.String()
+}
+
+// kotlinEntries writes the entry files and the manifests of the project.
+func (p *synthProject) kotlinEntries(ext []externalPackage, files map[string]string) {
 
 	var main lines
 	main.add(0, "package bench")

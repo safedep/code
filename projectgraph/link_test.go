@@ -14,6 +14,7 @@ import (
 
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/fileindex/roots"
+	"github.com/safedep/code/internal/testutil"
 	"github.com/safedep/code/langcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -88,17 +89,7 @@ func buildCase(t *testing.T, name string) *Graph {
 // the case. The -update flag rewrites the file.
 func checkGolden(t *testing.T, name string, g *Graph) {
 	t.Helper()
-	got, err := json.MarshalIndent(g, "", "  ")
-	require.NoError(t, err)
-	got = append(got, '\n')
-
-	golden := filepath.Join("testdata", name, "graph.golden.json")
-	if *update {
-		require.NoError(t, os.WriteFile(golden, got, 0o644))
-	}
-	want, err := os.ReadFile(golden)
-	require.NoError(t, err)
-	assert.Equal(t, string(want), string(got))
+	testutil.AssertGolden(t, filepath.Join("testdata", name, "graph.golden.json"), *update, g)
 }
 
 func edgeStrings(g *Graph) []string {

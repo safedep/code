@@ -157,11 +157,9 @@ func scoreCase(ctx context.Context, t *testing.T, name, dir string, language cor
 
 	fsys, err := codefs.NewLocalFileSystem(codefs.LocalFileSystemConfig{AppDirectories: []string{dir}})
 	require.NoError(t, err)
-	indexed, err := (&indexer.Indexer{}).Run(ctx, fsys, indexer.Options{Languages: []core.Language{language}})
-	require.NoError(t, err, name)
+	indexed := indexProject(t, fsys, indexer.Options{Languages: []core.Language{language}})
 	assert.Empty(t, indexed.Report.Failed, name)
-	g, err := projectgraph.Build(ctx, indexed.Indexes, projectgraph.Options{Root: os.DirFS(dir), Files: indexed.Files})
-	require.NoError(t, err, name)
+	g := linkProject(t, dir, indexed, projectgraph.Options{})
 
 	got := graphPairs(g, importedUnits(indexed.Indexes))
 	if d := os.Getenv("PROJECTGRAPH_PUBLIC_DUMP"); d == name || d == "all" {

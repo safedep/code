@@ -127,13 +127,13 @@ func Analyze(ctx context.Context, plugin core.Plugin, file core.File, tree core.
 	return nil
 }
 
-// NewTreeWalkPluginExecutor creates a simple plugin executor using a tree walker.
-// It just makes it easy to execute plugins suitable for ParseTree and File
-func NewTreeWalkPluginExecutor(walker core.TreeWalker, plugins []core.Plugin) (*treeWalkPluginExecutor, error) {
+// NewTreeWalkPluginExecutor returns an executor that walks the file system
+// with the walker and runs the plugins on each tree.
+func NewTreeWalkPluginExecutor(walker core.TreeWalker, plugins []core.Plugin) PluginExecutor {
 	return &treeWalkPluginExecutor{
 		walker:  walker,
 		plugins: plugins,
-	}, nil
+	}
 }
 
 func (e *treeWalkPluginExecutor) Execute(ctx context.Context, fs core.ImportAwareFileSystem) (*Report, error) {

@@ -69,8 +69,9 @@ var rustProfile = shapedProfile(languageProfile{
 // helper(2) in println!("{}", helper(2)). The grammar keeps the arguments of
 // a macro as tokens. A path before a group in parentheses is a call of the
 // path, and a type name before a group in braces makes an instance of the
-// type, as Pretty {} in println!("{}", Pretty {}). A name after a dot is a method call on a receiver that the tokens
-// do not type, so it stays a record.
+// type, as Pretty {} in println!("{}", Pretty {}). A name after a dot is a
+// method call on a receiver that the tokens do not type, so it stays a
+// record.
 func rustTokenTreeProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
 	tokens := make([]*sitter.Node, 0, node.ChildCount())
 	for i := range int(node.ChildCount()) {

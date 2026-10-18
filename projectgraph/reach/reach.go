@@ -133,13 +133,13 @@ func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error
 	if slices.Contains(q.Targets, "") {
 		return nil, errors.New("an empty target")
 	}
-	ix := newIndex(g)
-	ix.includeTests = q.IncludeTests
+	a := newAdjacency(g)
+	a.includeTests = q.IncludeTests
 	depth := cmp.Or(q.MaxDepth, defaultMaxDepth)
 
 	targets := make([][]int, len(q.Targets))
 	for i, t := range q.Targets {
-		targets[i] = ix.match(t)
+		targets[i] = a.match(t)
 	}
 
 	var rootSet, testRoots []projectgraph.Root
@@ -150,19 +150,19 @@ func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error
 			rootSet = append(rootSet, r)
 		}
 	}
-	s := ix.search(ctx, ix.ids(rootSet), depth, targets)
-	unc := ix.uncertainties(s, depth)
+	s := a.search(ctx, a.ids(rootSet), depth, targets)
+	unc := a.uncertainties(s, depth)
 
 	var tests *search
 	results := make([]Result, len(q.Targets))
 	for i, t := range q.Targets {
 		r := Result{
 			Target:    t,
-			CallSites: ix.callSites(targets[i], s),
+			CallSites: a.callSites(targets[i], s),
 			Searched:  Searched{Roots: rootSet, Nodes: len(s.order), Edges: s.edges, DepthCut: s.depthCut, Stopped: s.stopped},
 		}
 		if node, ok := s.nearest(targets[i]); ok {
-			r.Status, r.Path = Found, ix.path(s, node)
+			r.Status, r.Path = Found, a.path(s, node)
 		} else {
 			r.Status = NotFound
 			r.Uncertainties, r.SetAside, r.Searched.Uncertainties = unc.forTarget(t)
@@ -174,10 +174,10 @@ func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error
 			}
 			if len(testRoots) > 0 {
 				if tests == nil {
-					tests = ix.search(ctx, ix.ids(g.Roots), depth, targets)
+					tests = a.search(ctx, a.ids(g.Roots), depth, targets)
 				}
 				if node, ok := tests.nearest(targets[i]); ok {
-					r.TestPath = ix.path(tests, node)
+					r.TestPath = a.path(tests, node)
 				}
 			}
 		}
@@ -213,16 +213,16 @@ func Explore(ctx context.Context, g *projectgraph.Graph, from []string, maxDepth
 	return NewExplorer(g).Explore(ctx, from, maxDepth)
 }
 
-// Explorer searches one graph from any nodes. It builds the index of the
-// graph once, so a summary of a package with many symbols pays the index
-// once and not once per symbol.
+// Explorer searches one graph from any nodes. It builds the adjacency of
+// the graph once, so a summary of a package with many symbols pays it once
+// and not once per symbol.
 type Explorer struct {
-	ix *index
+	a *adjacency
 }
 
-// NewExplorer indexes the graph for the searches of an Explorer.
+// NewExplorer builds the adjacency of the graph for the searches of an Explorer.
 func NewExplorer(g *projectgraph.Graph) *Explorer {
-	return &Explorer{ix: newIndex(g)}
+	return &Explorer{a: newAdjacency(g)}
 }
 
 // Explore searches from the nodes of the keys, as Explore does.
@@ -230,10 +230,10 @@ func (x *Explorer) Explore(ctx context.Context, from []string, maxDepth int) (*E
 	if maxDepth < 0 {
 		return nil, fmt.Errorf("max depth %d is negative", maxDepth)
 	}
-	ix := x.ix
+	a := x.a
 	sources := make([]int, 0, len(from))
 	for _, key := range from {
-		id, ok := ix.id[key]
+		id, ok := a.id[key]
 		if !ok {
 			return nil, fmt.Errorf("no node %s", key)
 		}
@@ -241,15 +241,15 @@ func (x *Explorer) Explore(ctx context.Context, from []string, maxDepth int) (*E
 	}
 	slices.Sort(sources)
 	depth := cmp.Or(maxDepth, defaultMaxDepth)
-	s := ix.search(ctx, slices.Compact(sources), depth, nil)
+	s := a.search(ctx, slices.Compact(sources), depth, nil)
 
 	e := &Exploration{Reached: []Reached{}}
-	for _, id := range ix.externals {
+	for _, id := range a.externals {
 		if s.dist[id] >= 0 && !slices.Contains(sources, id) {
-			e.Reached = append(e.Reached, Reached{Target: ix.keys[id], Path: ix.path(s, id)})
+			e.Reached = append(e.Reached, Reached{Target: a.keys[id], Path: a.path(s, id)})
 		}
 	}
-	f := ix.uncertainties(s, depth)
+	f := a.uncertainties(s, depth)
 	e.Uncertainties = slices.Clone(f.global)
 	for _, m := range f.methods {
 		e.Uncertainties = append(e.Uncertainties, f.byMethod[m]...)
@@ -261,13 +261,13 @@ func (x *Explorer) Explore(ctx context.Context, from []string, maxDepth int) (*E
 	return e, nil
 }
 
-// index is the graph with integer node ids, in key order, and the edges out
+// adjacency is the graph with integer node ids, in key order, and the edges out
 // of each node. unitNodes holds the nodes of each unit of dependency code,
 // and closures what the code of each unit reaches. byLast holds the nodes
 // by the last segment of their key, and methodClosures what the nodes of
 // each last segment reach. Each table fills on first use. includeTests
 // lets a node of a test file be a source of a method closure.
-type index struct {
+type adjacency struct {
 	g         *projectgraph.Graph
 	keys      []string
 	id        map[string]int
@@ -283,7 +283,7 @@ type index struct {
 	methodClosures map[string][]bool
 }
 
-func newIndex(g *projectgraph.Graph) *index {
+func newAdjacency(g *projectgraph.Graph) *adjacency {
 	keys := make([]string, 0, len(g.Nodes))
 	for k := range g.Nodes {
 		keys = append(keys, k)
@@ -298,24 +298,24 @@ func newIndex(g *projectgraph.Graph) *index {
 	slices.Sort(keys)
 	keys = slices.Compact(keys)
 
-	ix := &index{g: g, keys: keys, id: make(map[string]int, len(keys)), out: make([][]int32, len(keys)), in: make([][]int32, len(keys))}
+	a := &adjacency{g: g, keys: keys, id: make(map[string]int, len(keys)), out: make([][]int32, len(keys)), in: make([][]int32, len(keys))}
 	for i, k := range keys {
-		ix.id[k] = i
+		a.id[k] = i
 		if n := g.Nodes[k]; n != nil && n.Kind == projectgraph.NodeExternal {
-			ix.externals = append(ix.externals, i)
+			a.externals = append(a.externals, i)
 		}
 	}
 	for i, e := range g.Edges {
-		from, to := ix.id[e.From], ix.id[e.To]
-		ix.out[from] = append(ix.out[from], int32(i))
-		ix.in[to] = append(ix.in[to], int32(i))
+		from, to := a.id[e.From], a.id[e.To]
+		a.out[from] = append(a.out[from], int32(i))
+		a.in[to] = append(a.in[to], int32(i))
 	}
-	return ix
+	return a
 }
 
 // unitOf returns the unit of dependency code of a node, or "".
-func (ix *index) unitOf(id int) string {
-	if n := ix.g.Nodes[ix.keys[id]]; n != nil {
+func (a *adjacency) unitOf(id int) string {
+	if n := a.g.Nodes[a.keys[id]]; n != nil {
 		return fileindex.PackageOf(n.Path)
 	}
 	return ""
@@ -325,36 +325,36 @@ func (ix *index) unitOf(id int) string {
 // of each unit that a node of it reaches. A value of the project that the
 // code of a unit calls comes to it on an edge, as a reference, so the
 // search from the project reaches that value already.
-func (ix *index) closure(unit string) []bool {
-	if c, ok := ix.closures[unit]; ok {
+func (a *adjacency) closure(unit string) []bool {
+	if c, ok := a.closures[unit]; ok {
 		return c
 	}
-	if ix.unitNodes == nil {
-		ix.unitNodes, ix.closures = map[string][]int{}, map[string][]bool{}
-		for id := range ix.keys {
-			if u := ix.unitOf(id); u != "" {
-				ix.unitNodes[u] = append(ix.unitNodes[u], id)
+	if a.unitNodes == nil {
+		a.unitNodes, a.closures = map[string][]int{}, map[string][]bool{}
+		for id := range a.keys {
+			if u := a.unitOf(id); u != "" {
+				a.unitNodes[u] = append(a.unitNodes[u], id)
 			}
 		}
 	}
 	entered := map[string]bool{}
-	seen := ix.reachable(ix.unitNodes[unit], func(id int) []int {
-		u := ix.unitOf(id)
+	seen := a.reachable(a.unitNodes[unit], func(id int) []int {
+		u := a.unitOf(id)
 		if u == "" || entered[u] {
 			return nil
 		}
 		entered[u] = true
-		return ix.unitNodes[u]
+		return a.unitNodes[u]
 	})
-	ix.closures[unit] = seen
+	a.closures[unit] = seen
 	return seen
 }
 
 // reachable returns the nodes that a search from the sources reaches. The
 // search also takes the nodes that more gives for each node that it
 // reaches, as the other nodes of the unit of the node.
-func (ix *index) reachable(sources []int, more func(id int) []int) []bool {
-	seen := make([]bool, len(ix.keys))
+func (a *adjacency) reachable(sources []int, more func(id int) []int) []bool {
+	seen := make([]bool, len(a.keys))
 	var queue []int
 	add := func(id int) {
 		if !seen[id] {
@@ -371,8 +371,8 @@ func (ix *index) reachable(sources []int, more func(id int) []int) []bool {
 		for _, v := range more(id) {
 			add(v)
 		}
-		for _, e := range ix.out[id] {
-			add(ix.id[ix.g.Edges[e].To])
+		for _, e := range a.out[id] {
+			add(a.id[a.g.Edges[e].To])
 		}
 	}
 	return seen
@@ -380,9 +380,9 @@ func (ix *index) reachable(sources []int, more func(id int) []int) []bool {
 
 // unitReaches reports whether the code of a unit reaches a node of the
 // target.
-func (ix *index) unitReaches(unit, target string) bool {
-	c := ix.closure(unit)
-	return slices.ContainsFunc(ix.match(target), func(id int) bool { return c[id] })
+func (a *adjacency) unitReaches(unit, target string) bool {
+	c := a.closure(unit)
+	return slices.ContainsFunc(a.match(target), func(id int) bool { return c[id] })
 }
 
 // methodClosure returns the nodes that the nodes with the last segment
@@ -390,52 +390,52 @@ func (ix *index) unitReaches(unit, target string) bool {
 // dependency code, and the external keys of the name, which can lead into
 // a unit. An unresolved call of the name can run any of them. A node of a
 // test file is a source only when the query includes the tests.
-func (ix *index) methodClosure(name string) []bool {
-	if c, ok := ix.methodClosures[name]; ok {
+func (a *adjacency) methodClosure(name string) []bool {
+	if c, ok := a.methodClosures[name]; ok {
 		return c
 	}
-	if ix.byLast == nil {
-		ix.byLast, ix.methodClosures = map[string][]int{}, map[string][]bool{}
-		for id, key := range ix.keys {
-			if n := ix.g.Nodes[key]; n != nil && (ix.includeTests || !n.Test) {
-				ix.byLast[fileindex.Last(key)] = append(ix.byLast[fileindex.Last(key)], id)
+	if a.byLast == nil {
+		a.byLast, a.methodClosures = map[string][]int{}, map[string][]bool{}
+		for id, key := range a.keys {
+			if n := a.g.Nodes[key]; n != nil && (a.includeTests || !n.Test) {
+				a.byLast[fileindex.Last(key)] = append(a.byLast[fileindex.Last(key)], id)
 			}
 		}
 	}
-	seen := ix.reachable(ix.byLast[name], func(int) []int { return nil })
-	ix.methodClosures[name] = seen
+	seen := a.reachable(a.byLast[name], func(int) []int { return nil })
+	a.methodClosures[name] = seen
 	return seen
 }
 
 // methodReaches reports whether a node with the last segment reaches a
 // node of the target.
-func (ix *index) methodReaches(name, target string) bool {
-	c := ix.methodClosure(name)
-	return slices.ContainsFunc(ix.match(target), func(id int) bool { return c[id] })
+func (a *adjacency) methodReaches(name, target string) bool {
+	c := a.methodClosure(name)
+	return slices.ContainsFunc(a.match(target), func(id int) bool { return c[id] })
 }
 
 // match returns the external nodes of a target, by id.
-func (ix *index) match(target string) []int {
+func (a *adjacency) match(target string) []int {
 	prefix, ok := strings.CutSuffix(target, "*")
 	if ok && strings.HasSuffix(prefix, fileindex.Separator) {
 		var ids []int
-		for _, id := range ix.externals {
-			if strings.HasPrefix(ix.keys[id], prefix) {
+		for _, id := range a.externals {
+			if strings.HasPrefix(a.keys[id], prefix) {
 				ids = append(ids, id)
 			}
 		}
 		return ids
 	}
-	if n := ix.g.Nodes[target]; n != nil && n.Kind == projectgraph.NodeExternal {
-		return []int{ix.id[target]}
+	if n := a.g.Nodes[target]; n != nil && n.Kind == projectgraph.NodeExternal {
+		return []int{a.id[target]}
 	}
 	return nil
 }
 
-func (ix *index) ids(roots []projectgraph.Root) []int {
+func (a *adjacency) ids(roots []projectgraph.Root) []int {
 	ids := make([]int, 0, len(roots))
 	for _, r := range roots {
-		if id, ok := ix.id[r.Key]; ok {
+		if id, ok := a.id[r.Key]; ok {
 			ids = append(ids, id)
 		}
 	}
@@ -456,8 +456,8 @@ type search struct {
 	stopped  bool
 }
 
-func (ix *index) search(ctx context.Context, sources []int, maxDepth int, targets [][]int) *search {
-	n := len(ix.keys)
+func (a *adjacency) search(ctx context.Context, sources []int, maxDepth int, targets [][]int) *search {
+	n := len(a.keys)
 	s := &search{dist: make([]int32, n), best: make([]int8, n), parent: make([]int32, n)}
 	for i := range s.dist {
 		s.dist[i], s.parent[i] = -1, -1
@@ -479,16 +479,16 @@ func (ix *index) search(ctx context.Context, sources []int, maxDepth int, target
 		}
 		if depth == maxDepth {
 			s.depthCut = slices.ContainsFunc(frontier, func(u int) bool {
-				return slices.ContainsFunc(ix.out[u], func(e int32) bool { return s.dist[ix.id[ix.g.Edges[e].To]] < 0 })
+				return slices.ContainsFunc(a.out[u], func(e int32) bool { return s.dist[a.id[a.g.Edges[e].To]] < 0 })
 			})
 			return s
 		}
 		var next []int
 		for _, u := range frontier {
-			for _, e := range ix.out[u] {
+			for _, e := range a.out[u] {
 				s.edges++
-				edge := &ix.g.Edges[e]
-				v := ix.id[edge.To]
+				edge := &a.g.Edges[e]
+				v := a.id[edge.To]
 				rank := min(s.best[u], int8(edge.Confidence.Rank()))
 				switch {
 				case s.dist[v] < 0:
@@ -529,24 +529,24 @@ func (s *search) nearest(ids []int) (int, bool) {
 	return best, found
 }
 
-func (ix *index) path(s *search, node int) []Hop {
+func (a *adjacency) path(s *search, node int) []Hop {
 	var hops []Hop
 	for s.parent[node] >= 0 {
-		e := ix.g.Edges[s.parent[node]]
+		e := a.g.Edges[s.parent[node]]
 		hops = append(hops, Hop{Key: e.To, Site: e.Site, EdgeKind: e.Kind, Confidence: e.Confidence, Resolver: e.Resolver})
-		node = ix.id[e.From]
+		node = a.id[e.From]
 	}
-	hops = append(hops, Hop{Key: ix.keys[node]})
+	hops = append(hops, Hop{Key: a.keys[node]})
 	slices.Reverse(hops)
 	return hops
 }
 
-func (ix *index) callSites(ids []int, s *search) []CallSite {
+func (a *adjacency) callSites(ids []int, s *search) []CallSite {
 	sites := []CallSite{}
 	for _, id := range ids {
-		for _, i := range ix.in[id] {
-			e := &ix.g.Edges[i]
-			sites = append(sites, CallSite{Caller: e.From, Site: e.Site, Reached: s.dist[ix.id[e.From]] >= 0})
+		for _, i := range a.in[id] {
+			e := &a.g.Edges[i]
+			sites = append(sites, CallSite{Caller: e.From, Site: e.Site, Reached: s.dist[a.id[e.From]] >= 0})
 		}
 	}
 	slices.SortFunc(sites, func(a, b CallSite) int {

@@ -113,35 +113,40 @@ func externalRef(pkg externalPackage, sep string) (string, string) {
 
 func pascal(w [2]int) string { return title(camel(w)) }
 
-// renderCSharp writes the modules as Java does, with one namespace per
-// package, properties and a static Package class per namespace.
-func (p *synthProject) renderCSharp(files map[string]string) {
-	ext := synthExternals[core.LanguageCodeCSharp]
-	ns := func(pkg int) string { return "Bench." + title(p.pkgName(pkg)) }
-	for _, pkg := range p.packages {
-		for _, m := range pkg {
-			files[fmt.Sprintf("src/%s/%s.cs", title(p.pkgName(m.pkg)), javaClassName(m))] = p.csharpModule(m, ext, ns)
-		}
-		first, last := pkg[0], pkg[len(pkg)-1]
-		files[fmt.Sprintf("src/%s/Package.cs", title(p.pkgName(first.pkg)))] = fmt.Sprintf(
-			"namespace %s;\n\npublic static class Package\n{\n    public static object Run(string[] argv) => %s.Run%02d(argv);\n}\n",
-			ns(first.pkg), javaClassName(first), first.idx)
+// csharpNamespace returns the namespace of a package.
+func (p *synthProject) csharpNamespace(pkg int) string { return "Bench." + title(p.pkgName(pkg)) }
 
-		var test lines
-		test.add(0, "using Xunit;")
-		test.add(0, "using %s;", ns(last.pkg))
-		test.add(0, "")
-		test.add(0, "public class %sTests", javaClassName(last))
-		test.add(0, "{")
-		test.add(1, "[Fact]")
-		test.add(1, "public void Runs()")
-		test.add(1, "{")
-		test.add(2, "%s.Run%02d(new[] { \"input.yaml\" });", javaClassName(last), last.idx)
-		test.add(2, "%s.%s(1);", javaClassName(last), title(javaHelper(last, 0)))
-		test.add(1, "}")
-		test.add(0, "}")
-		files[fmt.Sprintf("tests/%s/%sTests.cs", title(p.pkgName(last.pkg)), javaClassName(last))] = test.String()
-	}
+// csharpPath, csharpPackageFiles and csharpEntries write the modules as Java does, with one namespace per
+// package, properties and a static Package class per namespace.
+func (p *synthProject) csharpPath(m *synthModule) string {
+	return fmt.Sprintf("src/%s/%s.cs", title(p.pkgName(m.pkg)), javaClassName(m))
+}
+
+// csharpPackageFiles writes the barrel file and the test file of a package.
+func (p *synthProject) csharpPackageFiles(pkg []*synthModule, files map[string]string) {
+	first, last := pkg[0], pkg[len(pkg)-1]
+	files[fmt.Sprintf("src/%s/Package.cs", title(p.pkgName(first.pkg)))] = fmt.Sprintf(
+		"namespace %s;\n\npublic static class Package\n{\n    public static object Run(string[] argv) => %s.Run%02d(argv);\n}\n",
+		p.csharpNamespace(first.pkg), javaClassName(first), first.idx)
+
+	var test lines
+	test.add(0, "using Xunit;")
+	test.add(0, "using %s;", p.csharpNamespace(last.pkg))
+	test.add(0, "")
+	test.add(0, "public class %sTests", javaClassName(last))
+	test.add(0, "{")
+	test.add(1, "[Fact]")
+	test.add(1, "public void Runs()")
+	test.add(1, "{")
+	test.add(2, "%s.Run%02d(new[] { \"input.yaml\" });", javaClassName(last), last.idx)
+	test.add(2, "%s.%s(1);", javaClassName(last), title(javaHelper(last, 0)))
+	test.add(1, "}")
+	test.add(0, "}")
+	files[fmt.Sprintf("tests/%s/%sTests.cs", title(p.pkgName(last.pkg)), javaClassName(last))] = test.String()
+}
+
+// csharpEntries writes the entry files and the manifests of the project.
+func (p *synthProject) csharpEntries(ext []externalPackage, files map[string]string) {
 
 	var main lines
 	main.add(0, "public static class Program")
@@ -149,14 +154,14 @@ func (p *synthProject) renderCSharp(files map[string]string) {
 	main.add(1, "public static void Main(string[] args)")
 	main.add(1, "{")
 	for _, pkg := range p.packages {
-		main.add(2, "%s.Package.Run(args);", ns(pkg[0].pkg))
+		main.add(2, "%s.Package.Run(args);", p.csharpNamespace(pkg[0].pkg))
 	}
 	main.add(1, "}")
 	main.add(0, "}")
 	files["src/Program.cs"] = main.String()
 }
 
-func (p *synthProject) csharpModule(m *synthModule, ext []externalPackage, ns func(int) string) string {
+func (p *synthProject) csharpModule(m *synthModule, ext []externalPackage) string {
 	var l lines
 	l.add(0, "using System;")
 	l.add(0, "using System.Collections.Generic;")
@@ -172,11 +177,11 @@ func (p *synthProject) csharpModule(m *synthModule, ext []externalPackage, ns fu
 	}
 	for _, d := range m.deps {
 		if dep := p.modules[d]; dep.pkg != m.pkg {
-			l.add(0, "using %s;", ns(dep.pkg))
+			l.add(0, "using %s;", p.csharpNamespace(dep.pkg))
 		}
 	}
 	l.add(0, "")
-	l.add(0, "namespace %s;", ns(m.pkg))
+	l.add(0, "namespace %s;", p.csharpNamespace(m.pkg))
 	l.add(0, "")
 	call := func(e externalCall) string {
 		return imported[ext[e.pkg].name] + "." + ext[e.pkg].funcs[e.fn]
@@ -273,36 +278,41 @@ func (p *synthProject) csharpModule(m *synthModule, ext []externalPackage, ns fu
 	return l.String()
 }
 
-// renderPHP writes the modules as Java does, with one namespace per
-// package under a PSR-4 prefix and a script under bin.
-func (p *synthProject) renderPHP(files map[string]string) {
-	ext := synthExternals[core.LanguageCodePHP]
-	ns := func(pkg int) string { return `Bench\` + title(p.pkgName(pkg)) }
-	for _, pkg := range p.packages {
-		for _, m := range pkg {
-			files[fmt.Sprintf("src/%s/%s.php", title(p.pkgName(m.pkg)), javaClassName(m))] = p.phpModule(m, ext, ns)
-		}
-		first, last := pkg[0], pkg[len(pkg)-1]
-		files[fmt.Sprintf("src/%s/Package.php", title(p.pkgName(first.pkg)))] = fmt.Sprintf(
-			"<?php\n\nnamespace %s;\n\nfinal class Package\n{\n    public static function run(array $argv)\n    {\n        return %s::run%02d($argv);\n    }\n}\n",
-			ns(first.pkg), javaClassName(first), first.idx)
+// phpNamespace returns the namespace of a package.
+func (p *synthProject) phpNamespace(pkg int) string { return `Bench\` + title(p.pkgName(pkg)) }
 
-		var test lines
-		test.add(0, "<?php")
-		test.add(0, "")
-		test.add(0, "use PHPUnit\\Framework\\TestCase;")
-		test.add(0, "use %s\\%s;", ns(last.pkg), javaClassName(last))
-		test.add(0, "")
-		test.add(0, "final class %sTest extends TestCase", javaClassName(last))
-		test.add(0, "{")
-		test.add(1, "public function testRuns(): void")
-		test.add(1, "{")
-		test.add(2, "%s::run%02d(['input.yaml']);", javaClassName(last), last.idx)
-		test.add(2, "%s::%s(1);", javaClassName(last), javaHelper(last, 0))
-		test.add(1, "}")
-		test.add(0, "}")
-		files[fmt.Sprintf("tests/%s/%sTest.php", title(p.pkgName(last.pkg)), javaClassName(last))] = test.String()
-	}
+// phpPath, phpPackageFiles and phpEntries write the modules as Java does, with one namespace per
+// package under a PSR-4 prefix and a script under bin.
+func (p *synthProject) phpPath(m *synthModule) string {
+	return fmt.Sprintf("src/%s/%s.php", title(p.pkgName(m.pkg)), javaClassName(m))
+}
+
+// phpPackageFiles writes the barrel file and the test file of a package.
+func (p *synthProject) phpPackageFiles(pkg []*synthModule, files map[string]string) {
+	first, last := pkg[0], pkg[len(pkg)-1]
+	files[fmt.Sprintf("src/%s/Package.php", title(p.pkgName(first.pkg)))] = fmt.Sprintf(
+		"<?php\n\nnamespace %s;\n\nfinal class Package\n{\n    public static function run(array $argv)\n    {\n        return %s::run%02d($argv);\n    }\n}\n",
+		p.phpNamespace(first.pkg), javaClassName(first), first.idx)
+
+	var test lines
+	test.add(0, "<?php")
+	test.add(0, "")
+	test.add(0, "use PHPUnit\\Framework\\TestCase;")
+	test.add(0, "use %s\\%s;", p.phpNamespace(last.pkg), javaClassName(last))
+	test.add(0, "")
+	test.add(0, "final class %sTest extends TestCase", javaClassName(last))
+	test.add(0, "{")
+	test.add(1, "public function testRuns(): void")
+	test.add(1, "{")
+	test.add(2, "%s::run%02d(['input.yaml']);", javaClassName(last), last.idx)
+	test.add(2, "%s::%s(1);", javaClassName(last), javaHelper(last, 0))
+	test.add(1, "}")
+	test.add(0, "}")
+	files[fmt.Sprintf("tests/%s/%sTest.php", title(p.pkgName(last.pkg)), javaClassName(last))] = test.String()
+}
+
+// phpEntries writes the entry files and the manifests of the project.
+func (p *synthProject) phpEntries(ext []externalPackage, files map[string]string) {
 
 	var main lines
 	main.add(0, "<?php")
@@ -310,17 +320,17 @@ func (p *synthProject) renderPHP(files map[string]string) {
 	main.add(0, "require __DIR__ . '/../vendor/autoload.php';")
 	main.add(0, "")
 	for _, pkg := range p.packages {
-		main.add(0, "\\%s\\Package::run($argv);", ns(pkg[0].pkg))
+		main.add(0, "\\%s\\Package::run($argv);", p.phpNamespace(pkg[0].pkg))
 	}
 	files["bin/app.php"] = main.String()
 	files["composer.json"] = "{\n    \"name\": \"bench/app\",\n    \"autoload\": {\"psr-4\": {\"Bench\\\\\": \"src/\"}},\n    \"bin\": [\"bin/app.php\"]\n}\n"
 }
 
-func (p *synthProject) phpModule(m *synthModule, ext []externalPackage, ns func(int) string) string {
+func (p *synthProject) phpModule(m *synthModule, ext []externalPackage) string {
 	var l lines
 	l.add(0, "<?php")
 	l.add(0, "")
-	l.add(0, "namespace %s;", ns(m.pkg))
+	l.add(0, "namespace %s;", p.phpNamespace(m.pkg))
 	l.add(0, "")
 	imported := map[string]string{}
 	for _, e := range m.externals {
@@ -334,7 +344,7 @@ func (p *synthProject) phpModule(m *synthModule, ext []externalPackage, ns func(
 	}
 	for _, d := range m.deps {
 		if dep := p.modules[d]; dep.pkg != m.pkg {
-			l.add(0, "use %s\\%s;", ns(dep.pkg), javaClassName(dep))
+			l.add(0, "use %s\\%s;", p.phpNamespace(dep.pkg), javaClassName(dep))
 		}
 	}
 	l.add(0, "")
@@ -437,41 +447,44 @@ func (p *synthProject) phpModule(m *synthModule, ext []externalPackage, ns func(
 	return l.String()
 }
 
-// renderRuby writes the modules of a gem: one module per package under
+// rubyPath, rubyPackageFiles and rubyEntries write the modules of a gem: one module per package under
 // lib/bench, a require_relative per dependency and a script under exe.
-func (p *synthProject) renderRuby(files map[string]string) {
-	ext := synthExternals[core.LanguageCodeRuby]
-	for _, pkg := range p.packages {
-		for _, m := range pkg {
-			files[fmt.Sprintf("lib/bench/%s/%s.rb", p.pkgName(m.pkg), p.modName(m))] = p.rubyModule(m, ext)
-		}
-		first, last := pkg[0], pkg[len(pkg)-1]
-		var barrel lines
-		for _, m := range pkg {
-			barrel.add(0, "require_relative '%s/%s'", p.pkgName(m.pkg), p.modName(m))
-		}
-		barrel.add(0, "")
-		barrel.add(0, "module Bench")
-		barrel.add(1, "module %s", title(p.pkgName(first.pkg)))
-		barrel.add(2, "def self.run(argv)")
-		barrel.add(3, "%s.run%02d(argv)", javaClassName(first), first.idx)
-		barrel.add(2, "end")
-		barrel.add(1, "end")
-		barrel.add(0, "end")
-		files[fmt.Sprintf("lib/bench/%s.rb", p.pkgName(first.pkg))] = barrel.String()
+func (p *synthProject) rubyPath(m *synthModule) string {
+	return fmt.Sprintf("lib/bench/%s/%s.rb", p.pkgName(m.pkg), p.modName(m))
+}
 
-		var test lines
-		test.add(0, "require 'minitest/autorun'")
-		test.add(0, "require_relative '../lib/bench/%s'", p.pkgName(last.pkg))
-		test.add(0, "")
-		test.add(0, "class %sTest < Minitest::Test", javaClassName(last))
-		test.add(1, "def test_runs")
-		test.add(2, "Bench::%s::%s.run%02d(['input.yaml'])", title(p.pkgName(last.pkg)), javaClassName(last), last.idx)
-		test.add(2, "Bench::%s::%s.%s(1)", title(p.pkgName(last.pkg)), javaClassName(last), snake(last.helpers[0]))
-		test.add(1, "end")
-		test.add(0, "end")
-		files[fmt.Sprintf("test/%s_test.rb", p.pkgName(last.pkg))] = test.String()
+// rubyPackageFiles writes the barrel file and the test file of a package.
+func (p *synthProject) rubyPackageFiles(pkg []*synthModule, files map[string]string) {
+	first, last := pkg[0], pkg[len(pkg)-1]
+	var barrel lines
+	for _, m := range pkg {
+		barrel.add(0, "require_relative '%s/%s'", p.pkgName(m.pkg), p.modName(m))
 	}
+	barrel.add(0, "")
+	barrel.add(0, "module Bench")
+	barrel.add(1, "module %s", title(p.pkgName(first.pkg)))
+	barrel.add(2, "def self.run(argv)")
+	barrel.add(3, "%s.run%02d(argv)", javaClassName(first), first.idx)
+	barrel.add(2, "end")
+	barrel.add(1, "end")
+	barrel.add(0, "end")
+	files[fmt.Sprintf("lib/bench/%s.rb", p.pkgName(first.pkg))] = barrel.String()
+
+	var test lines
+	test.add(0, "require 'minitest/autorun'")
+	test.add(0, "require_relative '../lib/bench/%s'", p.pkgName(last.pkg))
+	test.add(0, "")
+	test.add(0, "class %sTest < Minitest::Test", javaClassName(last))
+	test.add(1, "def test_runs")
+	test.add(2, "Bench::%s::%s.run%02d(['input.yaml'])", title(p.pkgName(last.pkg)), javaClassName(last), last.idx)
+	test.add(2, "Bench::%s::%s.%s(1)", title(p.pkgName(last.pkg)), javaClassName(last), snake(last.helpers[0]))
+	test.add(1, "end")
+	test.add(0, "end")
+	files[fmt.Sprintf("test/%s_test.rb", p.pkgName(last.pkg))] = test.String()
+}
+
+// rubyEntries writes the entry files and the manifests of the project.
+func (p *synthProject) rubyEntries(ext []externalPackage, files map[string]string) {
 
 	var main lines
 	for _, pkg := range p.packages {
@@ -586,33 +599,38 @@ func (p *synthProject) rubyModule(m *synthModule, ext []externalPackage) string 
 	return l.String()
 }
 
-// renderRust writes the modules of a binary crate: one module directory per
+// rustPath, rustPackageFiles and rustEntries write the modules of a binary crate: one module directory per
 // package, whose mod.rs declares its modules, and a test file per package.
-func (p *synthProject) renderRust(files map[string]string) {
-	ext := synthExternals[core.LanguageCodeRust]
-	for _, pkg := range p.packages {
-		var barrel lines
-		for _, m := range pkg {
-			files[fmt.Sprintf("src/%s/%s.rs", p.pkgName(m.pkg), p.modName(m))] = p.rustModule(m, ext)
-			barrel.add(0, "pub mod %s;", p.modName(m))
-		}
-		first, last := pkg[0], pkg[len(pkg)-1]
-		barrel.add(0, "")
-		barrel.add(0, "pub fn run(argv: &[String]) -> String {")
-		barrel.add(1, "%s::run%02d(argv)", p.modName(first), first.idx)
-		barrel.add(0, "}")
-		files[fmt.Sprintf("src/%s/mod.rs", p.pkgName(first.pkg))] = barrel.String()
+func (p *synthProject) rustPath(m *synthModule) string {
+	return fmt.Sprintf("src/%s/%s.rs", p.pkgName(m.pkg), p.modName(m))
+}
 
-		var test lines
-		test.add(0, "use bench::%s::%s;", p.pkgName(last.pkg), p.modName(last))
-		test.add(0, "")
-		test.add(0, "#[test]")
-		test.add(0, "fn runs() {")
-		test.add(1, "%s::run%02d(&[String::from(\"input.yaml\")]);", p.modName(last), last.idx)
-		test.add(1, "%s::%s%02d(\"1\");", p.modName(last), snake(last.helpers[0]), last.idx)
-		test.add(0, "}")
-		files[fmt.Sprintf("tests/%s.rs", p.pkgName(last.pkg))] = test.String()
+// rustPackageFiles writes the barrel file and the test file of a package.
+func (p *synthProject) rustPackageFiles(pkg []*synthModule, files map[string]string) {
+	var barrel lines
+	for _, m := range pkg {
+		barrel.add(0, "pub mod %s;", p.modName(m))
 	}
+	first, last := pkg[0], pkg[len(pkg)-1]
+	barrel.add(0, "")
+	barrel.add(0, "pub fn run(argv: &[String]) -> String {")
+	barrel.add(1, "%s::run%02d(argv)", p.modName(first), first.idx)
+	barrel.add(0, "}")
+	files[fmt.Sprintf("src/%s/mod.rs", p.pkgName(first.pkg))] = barrel.String()
+
+	var test lines
+	test.add(0, "use bench::%s::%s;", p.pkgName(last.pkg), p.modName(last))
+	test.add(0, "")
+	test.add(0, "#[test]")
+	test.add(0, "fn runs() {")
+	test.add(1, "%s::run%02d(&[String::from(\"input.yaml\")]);", p.modName(last), last.idx)
+	test.add(1, "%s::%s%02d(\"1\");", p.modName(last), snake(last.helpers[0]), last.idx)
+	test.add(0, "}")
+	files[fmt.Sprintf("tests/%s.rs", p.pkgName(last.pkg))] = test.String()
+}
+
+// rustEntries writes the entry files and the manifests of the project.
+func (p *synthProject) rustEntries(ext []externalPackage, files map[string]string) {
 
 	var main lines
 	for _, pkg := range p.packages {

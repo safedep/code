@@ -9,11 +9,6 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-type sitterQueryExecutor struct {
-	lang   *sitter.Language
-	source []byte
-}
-
 type queryMatchWrapper struct {
 	cursor *sitter.QueryCursor
 	source []byte
@@ -41,22 +36,6 @@ func (m *queryMatchWrapper) ForEach(cb func(*sitter.QueryMatch) error) error {
 	}
 
 	return nil
-}
-
-func NewQueryExecutor(lang *sitter.Language, source []byte) *sitterQueryExecutor {
-	return &sitterQueryExecutor{
-		lang:   lang,
-		source: source,
-	}
-}
-
-func (e *sitterQueryExecutor) Execute(node *sitter.Node, query string) (*queryMatchWrapper, error) {
-	q, err := sitter.NewQuery([]byte(query), e.lang)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create query: %w", err)
-	}
-
-	return execute(q, node, e.source), nil
 }
 
 func execute(q *sitter.Query, node *sitter.Node, source []byte) *queryMatchWrapper {

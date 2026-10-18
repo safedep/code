@@ -93,8 +93,7 @@ func benchProject(b *testing.B, code core.LanguageCode, files int) {
 	coldWorkers := envInts(b, benchWorkersEnv, 1, 4)
 	workers := coldWorkers[len(coldWorkers)-1]
 	index := func(s store.Store, workers int) *indexer.Result {
-		indexed, err := (&indexer.Indexer{}).Run(ctx, fsys, indexer.Options{Languages: languages, Store: s, Workers: workers})
-		require.NoError(b, err)
+		indexed := indexProject(b, fsys, indexer.Options{Languages: languages, Store: s, Workers: workers})
 		require.Empty(b, indexed.Report.Failed)
 		require.Len(b, indexed.Indexes, written)
 		return indexed
@@ -110,13 +109,7 @@ func benchProject(b *testing.B, code core.LanguageCode, files int) {
 	warm := newStore(b.TempDir())
 	indexed := index(warm, workers)
 	link := func() *projectgraph.Graph {
-		g, err := projectgraph.Build(ctx, indexed.Indexes, projectgraph.Options{
-			Root:      os.DirFS(root),
-			Files:     indexed.Files,
-			TestPaths: benchTestPaths,
-		})
-		require.NoError(b, err)
-		return g
+		return linkProject(b, root, indexed, projectgraph.Options{TestPaths: benchTestPaths})
 	}
 	g := link()
 	targets := reachTargets(code)
@@ -320,12 +313,7 @@ func TestDegradesAtHalfTheColdTime(t *testing.T) {
 			targets := reachTargets(code)
 
 			search := func(indexed *indexer.Result) []reach.Result {
-				g, err := projectgraph.Build(context.Background(), indexed.Indexes, projectgraph.Options{
-					Root:      os.DirFS(root),
-					Files:     indexed.Files,
-					TestPaths: benchTestPaths,
-				})
-				require.NoError(t, err)
+				g := linkProject(t, root, indexed, projectgraph.Options{TestPaths: benchTestPaths})
 				results, err := reach.Reach(context.Background(), g, reach.Query{Targets: targets})
 				require.NoError(t, err)
 				return results

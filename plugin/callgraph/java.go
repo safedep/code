@@ -257,11 +257,6 @@ func localVariableDeclarationProcessor(declarationNode *sitter.Node, treeData []
 
 // processMethodArgs gives the arguments of a method invocation.
 func processMethodArgs(methodInvocationNode *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) []CallArgument {
-	if methodInvocationNode == nil || methodInvocationNode.Type() != "method_invocation" {
-		log.Warnf("Incorrect method invocation node processed for args - %s", methodInvocationNode.Content(treeData))
-		return []CallArgument{}
-	}
-
 	argumentsNode := methodInvocationNode.ChildByFieldName("arguments")
 	if argumentsNode == nil {
 		return []CallArgument{}

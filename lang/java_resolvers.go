@@ -21,7 +21,6 @@ const javaImportQuery = `
 		(asterisk)? @wildcard)
 `
 
-// Java class analysis queries
 const javaClassDefinitionQuery = `
 	(class_declaration
 		(modifiers)? @modifiers
@@ -31,7 +30,6 @@ const javaClassDefinitionQuery = `
 		body: (class_body) @class_body)
 `
 
-// Separate query for annotations on classes
 const javaClassAnnotationQuery = `
 	[
 		(class_declaration
@@ -129,10 +127,9 @@ func (r *javaResolvers) ResolveImports(ctx context.Context, tree core.ParseTree)
 	return imports, err
 }
 
-// resolveAliasNode resolves the alias node for the import declaration.
-// In Java, the alias is typically the last part of the scoped identifier.
-// For example, in `import com.example.MyClass`, the alias is `MyClass`.
-// If the alias is not present, it returns the module name node itself.
+// resolveAliasNode returns the last part of the scoped identifier of an
+// import, as MyClass in import com.example.MyClass, or the module name
+// node when it has no name part.
 func (r *javaResolvers) resolveAliasNode(moduleNameNode *sitter.Node) *sitter.Node {
 	aliasNode := moduleNameNode.ChildByFieldName("name")
 	if aliasNode == nil {
@@ -142,7 +139,6 @@ func (r *javaResolvers) resolveAliasNode(moduleNameNode *sitter.Node) *sitter.No
 	return aliasNode
 }
 
-// ResolveClasses extracts class declarations from Java parse tree
 func (r *javaResolvers) ResolveClasses(ctx context.Context, tree core.ParseTree) ([]*ast.ClassDeclarationNode, error) {
 	data, err := tree.Data()
 	if err != nil {
@@ -151,26 +147,22 @@ func (r *javaResolvers) ResolveClasses(ctx context.Context, tree core.ParseTree)
 
 	var classes []*ast.ClassDeclarationNode
 
-	// Step 1: Extract basic class definitions
 	classMap := make(map[string]*ast.ClassDeclarationNode)
 	err = r.extractClassDefinitions(ctx, data, tree, &classes, classMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract class definitions: %w", err)
 	}
 
-	// Step 2: Extract methods and constructors
 	err = r.extractClassMethods(ctx, data, tree, classMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract class methods: %w", err)
 	}
 
-	// Step 3: Extract fields
 	err = r.extractClassFields(ctx, data, tree, classMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract class fields: %w", err)
 	}
 
-	// Step 4: Extract annotations with separate query
 	err = r.extractClassAnnotations(ctx, data, tree, classMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract class annotations: %w", err)
@@ -179,7 +171,6 @@ func (r *javaResolvers) ResolveClasses(ctx context.Context, tree core.ParseTree)
 	return classes, nil
 }
 
-// ResolveInheritance builds inheritance graph from Java classes
 func (r *javaResolvers) ResolveInheritance(ctx context.Context, tree core.ParseTree) (*ast.InheritanceGraph, error) {
 	data, err := tree.Data()
 	if err != nil {
@@ -188,7 +179,6 @@ func (r *javaResolvers) ResolveInheritance(ctx context.Context, tree core.ParseT
 
 	inheritanceGraph := ast.NewInheritanceGraph()
 
-	// Extract inheritance relationships from class definitions
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(javaInheritanceQuery, func(m *sitter.QueryMatch) error {
 			if len(m.Captures) < 2 {
@@ -228,8 +218,6 @@ func (r *javaResolvers) ResolveInheritance(ctx context.Context, tree core.ParseT
 	return inheritanceGraph, nil
 }
 
-// Helper methods for Java class extraction
-
 func (r *javaResolvers) extractClassDefinitions(ctx context.Context, data *[]byte, tree core.ParseTree,
 	classes *[]*ast.ClassDeclarationNode, classMap map[string]*ast.ClassDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
@@ -242,13 +230,11 @@ func (r *javaResolvers) extractClassDefinitions(ctx context.Context, data *[]byt
 			for _, capture := range m.Captures {
 				switch capture.Node.Type() {
 				case "identifier":
-					// First identifier is the class name
 					if className == "" {
 						className = capture.Node.Content(*data)
 						classNode.SetClassNameNode(capture.Node)
 					}
 				case "type_identifier":
-					// Subsequent type_identifiers are superclass or interfaces
 					classNode.AddBaseClassNode(capture.Node)
 				case "modifiers":
 					modifiersNode = capture.Node
@@ -256,7 +242,6 @@ func (r *javaResolvers) extractClassDefinitions(ctx context.Context, data *[]byt
 			}
 
 			if className != "" {
-				// Check for abstract modifier and extract annotations
 				if modifiersNode != nil {
 					if r.hasAbstractModifier(modifiersNode, *data) {
 						classNode.SetIsAbstract(true)
@@ -273,10 +258,9 @@ func (r *javaResolvers) extractClassDefinitions(ctx context.Context, data *[]byt
 			return nil
 		}),
 
-		// Also handle interfaces as classes (Java interfaces are class-like)
 		ts.NewQueryItem(javaInterfaceDefinitionQuery, func(m *sitter.QueryMatch) error {
 			classNode := ast.NewClassDeclarationNode(ast.ToContent(*data))
-			classNode.SetIsAbstract(true) // Interfaces are abstract by nature
+			classNode.SetIsAbstract(true)
 
 			var className string
 
@@ -288,13 +272,12 @@ func (r *javaResolvers) extractClassDefinitions(ctx context.Context, data *[]byt
 						classNode.SetClassNameNode(capture.Node)
 					}
 				case "type_identifier":
-					// Parent interfaces
 					classNode.AddBaseClassNode(capture.Node)
 				}
 			}
 
 			if className != "" {
-				classNode.SetAccessModifier(ast.AccessModifierPublic) // Interfaces are public by default
+				classNode.SetAccessModifier(ast.AccessModifierPublic)
 				*classes = append(*classes, classNode)
 				classMap[className] = classNode
 			}
@@ -323,7 +306,6 @@ func (r *javaResolvers) extractClassMethods(ctx context.Context, data *[]byte, t
 				return nil
 			}
 
-			// Find the class this method belongs to
 			className := r.findParentClassName(methodDefNode, *data)
 			if className == "" {
 				return nil
@@ -336,7 +318,6 @@ func (r *javaResolvers) extractClassMethods(ctx context.Context, data *[]byte, t
 			return nil
 		}),
 
-		// Handle constructors separately
 		ts.NewQueryItem(javaClassConstructorQuery, func(m *sitter.QueryMatch) error {
 			var constructorDefNode *sitter.Node
 			var className string
@@ -378,7 +359,6 @@ func (r *javaResolvers) extractClassFields(ctx context.Context, data *[]byte, tr
 				return nil
 			}
 
-			// Find the class this field belongs to
 			className := r.findParentClassName(fieldDefNode, *data)
 			if className == "" {
 				return nil
@@ -422,8 +402,6 @@ func (r *javaResolvers) extractClassAnnotations(ctx context.Context, data *[]byt
 	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
-// Helper methods
-
 func (r *javaResolvers) findParentClassName(node *sitter.Node, data []byte) string {
 	current := node.Parent()
 	for current != nil {
@@ -439,8 +417,6 @@ func (r *javaResolvers) findParentClassName(node *sitter.Node, data []byte) stri
 }
 
 func (r *javaResolvers) extractAccessModifier(_ *sitter.QueryMatch) ast.AccessModifier {
-	// In Java, we need to look for modifiers in the parent nodes
-	// For now, default to public (can be enhanced later)
 	return ast.AccessModifierPublic
 }
 
@@ -449,7 +425,6 @@ func (r *javaResolvers) hasAbstractModifier(modifiersNode *sitter.Node, data []b
 		return false
 	}
 
-	// Traverse child nodes looking for "abstract" keyword
 	for i := 0; i < int(modifiersNode.ChildCount()); i++ {
 		child := modifiersNode.Child(i)
 		if child != nil && child.Type() == "abstract" {
@@ -464,7 +439,6 @@ func (r *javaResolvers) extractAnnotationsFromModifiers(modifiersNode *sitter.No
 		return
 	}
 
-	// Traverse child nodes looking for annotations
 	for i := 0; i < int(modifiersNode.ChildCount()); i++ {
 		child := modifiersNode.Child(i)
 		if child != nil {
@@ -475,7 +449,6 @@ func (r *javaResolvers) extractAnnotationsFromModifiers(modifiersNode *sitter.No
 	}
 }
 
-// Tree-Sitter queries for Java function definitions
 const javaFunctionDefinitionQuery = `
 	(method_declaration
 		(modifiers)? @modifiers
@@ -500,7 +473,6 @@ const javaFunctionAnnotationQuery = `
 		name: (identifier) @function_name)
 `
 
-// ResolveFunctions extracts function declarations from Java parse tree
 func (r *javaResolvers) ResolveFunctions(ctx context.Context, tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
 	data, err := tree.Data()
 	if err != nil {
@@ -508,27 +480,23 @@ func (r *javaResolvers) ResolveFunctions(ctx context.Context, tree core.ParseTre
 	}
 
 	var functions []*ast.FunctionDeclarationNode
-	functionMap := make(map[string]*ast.FunctionDeclarationNode) // To avoid duplicates and allow enhancement
+	functionMap := make(map[string]*ast.FunctionDeclarationNode)
 
-	// Extract method declarations
 	err = r.extractJavaFunctions(ctx, data, tree, functionMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract Java functions: %w", err)
 	}
 
-	// Extract constructor declarations
 	err = r.extractJavaConstructors(ctx, data, tree, functionMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract Java constructors: %w", err)
 	}
 
-	// Extract function annotations
 	err = r.extractJavaFunctionAnnotations(ctx, data, tree, functionMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract Java function annotations: %w", err)
 	}
 
-	// Convert map to slice
 	for _, function := range functionMap {
 		functions = append(functions, function)
 	}
@@ -536,19 +504,16 @@ func (r *javaResolvers) ResolveFunctions(ctx context.Context, tree core.ParseTre
 	return functions, nil
 }
 
-// Helper methods for Java function extraction
-
 func (r *javaResolvers) extractJavaFunctions(ctx context.Context, data *[]byte, tree core.ParseTree,
 	functionMap map[string]*ast.FunctionDeclarationNode) error {
 	queryRequestItems := []ts.QueryItem{
 		ts.NewQueryItem(javaFunctionDefinitionQuery, func(m *sitter.QueryMatch) error {
 			if len(m.Captures) < 4 {
-				return nil // Skip incomplete matches
+				return nil
 			}
 
 			var functionNameNode, returnTypeNode, paramsNode, bodyNode, modifiersNode *sitter.Node
 
-			// Parse captures
 			for _, capture := range m.Captures {
 				switch capture.Node.Type() {
 				case "identifier":
@@ -560,7 +525,6 @@ func (r *javaResolvers) extractJavaFunctions(ctx context.Context, data *[]byte, 
 				case "modifiers":
 					modifiersNode = capture.Node
 				default:
-					// Return type can be various types (type_identifier, primitive_type, etc.)
 					if returnTypeNode == nil {
 						returnTypeNode = capture.Node
 					}
@@ -575,23 +539,19 @@ func (r *javaResolvers) extractJavaFunctions(ctx context.Context, data *[]byte, 
 			functionNode := ast.NewFunctionDeclarationNode(data)
 			functionNode.SetFunctionNameNode(functionNameNode)
 
-			// Set parameters
 			if paramsNode != nil {
 				paramNodes := r.extractJavaParameterNodes(paramsNode)
 				functionNode.SetFunctionParameterNodes(paramNodes)
 			}
 
-			// Set return type
 			if returnTypeNode != nil {
 				functionNode.SetFunctionReturnTypeNode(returnTypeNode)
 			}
 
-			// Set function body
 			if bodyNode != nil {
 				functionNode.SetFunctionBodyNode(bodyNode)
 			}
 
-			// Determine function type and access modifier
 			parentClassName := r.findParentClassName(functionNameNode, *data)
 			if parentClassName != "" {
 				functionNode.SetParentClassName(parentClassName)
@@ -600,7 +560,6 @@ func (r *javaResolvers) extractJavaFunctions(ctx context.Context, data *[]byte, 
 				functionNode.SetFunctionType(ast.FunctionTypeFunction)
 			}
 
-			// Process modifiers
 			if modifiersNode != nil {
 				r.processJavaModifiers(modifiersNode, functionNode, *data)
 			} else {
@@ -647,24 +606,20 @@ func (r *javaResolvers) extractJavaConstructors(ctx context.Context, data *[]byt
 			functionNode.SetFunctionNameNode(constructorNameNode)
 			functionNode.SetFunctionType(ast.FunctionTypeConstructor)
 
-			// Set parameters
 			if paramsNode != nil {
 				paramNodes := r.extractJavaParameterNodes(paramsNode)
 				functionNode.SetFunctionParameterNodes(paramNodes)
 			}
 
-			// Set constructor body
 			if bodyNode != nil {
 				functionNode.SetFunctionBodyNode(bodyNode)
 			}
 
-			// Set parent class
 			parentClassName := r.findParentClassName(constructorNameNode, *data)
 			if parentClassName != "" {
 				functionNode.SetParentClassName(parentClassName)
 			}
 
-			// Process modifiers
 			if modifiersNode != nil {
 				r.processJavaModifiers(modifiersNode, functionNode, *data)
 			} else {
@@ -712,8 +667,6 @@ func (r *javaResolvers) extractJavaFunctionAnnotations(ctx context.Context, data
 	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
-// Helper methods for Java function processing
-
 func (r *javaResolvers) extractJavaParameterNodes(parametersNode *sitter.Node) []*sitter.Node {
 	var paramNodes []*sitter.Node
 
@@ -738,7 +691,6 @@ func (r *javaResolvers) processJavaModifiers(modifiersNode *sitter.Node,
 		return
 	}
 
-	// Default access modifier
 	accessModifier := ast.AccessModifierPackage
 
 	for i := 0; i < int(modifiersNode.ChildCount()); i++ {
@@ -775,7 +727,6 @@ func (r *javaResolvers) generateJavaFunctionKey(functionNameNode *sitter.Node, d
 		return parentClassName + "." + functionName
 	}
 
-	// Add line number to distinguish functions with same name in different scopes
 	lineNumber := functionNameNode.StartPoint().Row
 	return fmt.Sprintf("%s:%d", functionName, lineNumber)
 }

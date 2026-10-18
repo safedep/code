@@ -85,13 +85,12 @@ func TestDeadlineFailsTheFileAndGivesThePartialGraph(t *testing.T) {
 	require.NoError(t, err)
 
 	var partial *CallGraph
-	executor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+	executor := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
 		NewCallGraphPlugin(func(_ context.Context, cg *CallGraph) error {
 			partial = cg
 			return nil
 		}),
 	})
-	require.NoError(t, err)
 
 	// The parse and the import queries read Err less often than live, so
 	// the deadline passes during the walk of the tree.

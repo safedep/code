@@ -293,7 +293,7 @@ func (b *builder) addIndexes(indexes []*fileindex.Index) error {
 			return fmt.Errorf("two indexes for the path %s", ix.Path)
 		}
 		if ix.Unit != "" && !profileOf(ix.Language).dependencyCode {
-			skipped[modules.Problem{Path: ix.Unit, Text: fmt.Sprintf("the link step does not link the %s code of a dependency", ix.Language)}] = true
+			skipped[modules.Problem{Path: ix.Unit, Text: fmt.Sprintf("the link step does not link the %s code of %s", ix.Language, ix.Unit)}] = true
 			continue
 		}
 		b.byPath[ix.Path] = ix
@@ -445,15 +445,9 @@ func (b *builder) finish() *Graph {
 		g.Roots = []Root{}
 	}
 	g.Problems = b.problems
-	g.Stats = Stats{
-		Version:      Version,
-		Files:        len(g.Files),
-		Nodes:        len(g.Nodes),
-		Edges:        len(g.Edges),
-		Unresolved:   len(g.Unresolved),
-		Roots:        len(g.Roots),
-		RootFallback: g.Stats.RootFallback,
-	}
+	g.Stats.Version = Version
+	g.Stats.Files, g.Stats.Nodes, g.Stats.Edges = len(g.Files), len(g.Nodes), len(g.Edges)
+	g.Stats.Unresolved, g.Stats.Roots = len(g.Unresolved), len(g.Roots)
 	return g
 }
 

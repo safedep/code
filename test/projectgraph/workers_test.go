@@ -1,9 +1,7 @@
 package projectgraph
 
 import (
-	"context"
 	"encoding/json"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -21,19 +19,11 @@ import (
 // both steps as JSON, so two runs compare byte for byte.
 func indexAndLink(t testing.TB, project string, want expectation, languages []core.Language, testPaths []string, workers int) []byte {
 	t.Helper()
-	ctx := context.Background()
 	cfg, roots := fileSystemConfig(project, want)
 	fsys, err := fs.NewLocalFileSystem(cfg)
 	require.NoError(t, err)
-	indexed, err := (&indexer.Indexer{}).Run(ctx, fsys, indexer.Options{Languages: languages, Workers: workers, Imports: len(want.Units) > 0})
-	require.NoError(t, err)
-	g, err := projectgraph.Build(ctx, indexed.Indexes, projectgraph.Options{
-		Root:      os.DirFS(project),
-		Files:     indexed.Statuses(),
-		TestPaths: testPaths,
-		Units:     roots,
-	})
-	require.NoError(t, err)
+	indexed := indexProject(t, fsys, indexer.Options{Languages: languages, Workers: workers, Imports: len(want.Units) > 0})
+	g := linkProject(t, project, indexed, projectgraph.Options{TestPaths: testPaths, Units: roots})
 
 	failed := make([]string, len(indexed.Report.Failed))
 	for i, f := range indexed.Report.Failed {

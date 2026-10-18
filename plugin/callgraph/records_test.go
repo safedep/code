@@ -54,18 +54,6 @@ func kotlinLanguage(t *testing.T) core.Language {
 
 // buildFromSource builds the call graph of source. The tree lives until the
 // end of the test, so the test can read the nodes of the graph.
-func buildFromSource(t *testing.T, language core.Language, name, source string) *CallGraph {
-	t.Helper()
-
-	tree, err := parser.ParseBytes(t.Context(), language, []byte(source), parser.WithFileName(name))
-	require.NoError(t, err)
-	t.Cleanup(tree.Close)
-
-	cg, err := Build(t.Context(), tree)
-	require.NoError(t, err)
-	return cg
-}
-
 func truncationKinds(cg *CallGraph) []TruncationKind {
 	var kinds []TruncationKind
 	for _, truncation := range cg.Truncations() {
@@ -93,7 +81,7 @@ func TestLimitNodesStopsTheGraphWithNoPanic(t *testing.T) {
 	}
 	source.WriteString("f1()\nf59999()\n")
 
-	cg := buildFromSource(t, pythonLanguage(t), "big.py", source.String())
+	cg := buildAndClose(t, pythonLanguage(t), "big.py", source.String())
 
 	assert.Equal(t, []TruncationKind{TruncationNodes}, truncationKinds(cg))
 	assert.True(t, cg.LimitExceeded())
@@ -112,7 +100,7 @@ func TestLimitAssignmentNodesAddsNothing(t *testing.T) {
 		fmt.Fprintf(&source, "%d\n", i)
 	}
 
-	cg := buildFromSource(t, pythonLanguage(t), "literals.py", source.String())
+	cg := buildAndClose(t, pythonLanguage(t), "literals.py", source.String())
 
 	assert.Equal(t, []TruncationKind{TruncationAssignmentNodes}, truncationKinds(cg))
 	assert.Len(t, cg.assignmentGraph.Assignments, maxAssignmentGraphNodes)
@@ -126,7 +114,7 @@ func TestLimitDepthMarksTheDroppedCall(t *testing.T) {
 	}
 	fmt.Fprintf(&source, "%syaml.load(data)\n", strings.Repeat("    ", 40))
 
-	cg := buildFromSource(t, pythonLanguage(t), "deep.py", source.String())
+	cg := buildAndClose(t, pythonLanguage(t), "deep.py", source.String())
 
 	assert.NotContains(t, calleesOf(cg, "deep.py"), "yaml//load")
 	require.Equal(t, []TruncationKind{TruncationDepth}, truncationKinds(cg))
@@ -150,7 +138,7 @@ func TestLimitMemberAndAttributeDepthGiveNoNamespace(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			cg := buildFromSource(t, tc.language, tc.file, tc.source)
+			cg := buildAndClose(t, tc.language, tc.file, tc.source)
 
 			assert.Equal(t, []TruncationKind{tc.kind}, truncationKinds(cg))
 			for namespace := range cg.Nodes {
@@ -173,7 +161,7 @@ func TestLimitPolymorphicFansOutToTheCap(t *testing.T) {
 	}
 	source.WriteString("x.run();\n")
 
-	cg := buildFromSource(t, javascriptLanguage(t), "poly.js", source.String())
+	cg := buildAndClose(t, javascriptLanguage(t), "poly.js", source.String())
 
 	var runs []string
 	for _, callee := range calleesOf(cg, "poly.js") {
@@ -187,7 +175,7 @@ func TestLimitPolymorphicFansOutToTheCap(t *testing.T) {
 }
 
 func TestLimitDFSResults(t *testing.T) {
-	cg := buildFromSource(t, pythonLanguage(t), "calls.py", "def f():\n    pass\n"+strings.Repeat("f()\n", maxDFSResultItems+1))
+	cg := buildAndClose(t, pythonLanguage(t), "calls.py", "def f():\n    pass\n"+strings.Repeat("f()\n", maxDFSResultItems+1))
 	require.False(t, cg.LimitExceeded())
 
 	assert.Len(t, cg.DFS(), maxDFSResultItems)
@@ -197,7 +185,7 @@ func TestLimitDFSResults(t *testing.T) {
 func TestMemberFanOutKeepsEveryTarget(t *testing.T) {
 	source := "const a = require('a');\nconst b = require('b');\nlet x = a;\nx = b;\nx.run();\n"
 
-	cg := buildFromSource(t, javascriptLanguage(t), "fan.js", source)
+	cg := buildAndClose(t, javascriptLanguage(t), "fan.js", source)
 
 	assert.Subset(t, calleesOf(cg, "fan.js"), []string{"a//run", "b//run"})
 	assert.Empty(t, cg.Truncations())
@@ -315,7 +303,7 @@ func TestUnresolvedCallSites(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			cg := buildFromSource(t, tc.language, tc.file, tc.source)
+			cg := buildAndClose(t, tc.language, tc.file, tc.source)
 
 			var actual []site
 			for _, unresolved := range cg.Unresolved() {
@@ -344,7 +332,7 @@ func TestNoKeyHoldsSourceText(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.file, func(t *testing.T) {
-			cg := buildFromSource(t, tc.language, tc.file, tc.source)
+			cg := buildAndClose(t, tc.language, tc.file, tc.source)
 
 			for namespace := range cg.Nodes {
 				assert.False(t, strings.ContainsAny(namespace, "()[]{}'\"` ,|!"), "key %q holds source text", namespace)
@@ -367,7 +355,7 @@ func TestLiteralReceiversResolveToTheBuiltinType(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.file, func(t *testing.T) {
-			cg := buildFromSource(t, tc.language, tc.file, tc.source)
+			cg := buildAndClose(t, tc.language, tc.file, tc.source)
 
 			assert.Subset(t, calleesOf(cg, tc.file), tc.callees)
 			assert.Empty(t, cg.Unresolved())
@@ -391,7 +379,7 @@ func TestImmediatelyInvokedFunctionKeepsItsCalls(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.file, func(t *testing.T) {
-			cg := buildFromSource(t, tc.language, tc.file, tc.source)
+			cg := buildAndClose(t, tc.language, tc.file, tc.source)
 
 			assert.Subset(t, calleesOf(cg, tc.caller), tc.callees)
 			assert.Empty(t, cg.Unresolved())
@@ -414,7 +402,7 @@ func TestStringIndexNamesTheMember(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			cg := buildFromSource(t, tc.language, tc.file, tc.source)
+			cg := buildAndClose(t, tc.language, tc.file, tc.source)
 
 			assert.Contains(t, calleesOf(cg, tc.file), tc.callee)
 			assert.Empty(t, cg.Unresolved())
@@ -423,7 +411,7 @@ func TestStringIndexNamesTheMember(t *testing.T) {
 }
 
 func TestUnresolvedTextIsClipped(t *testing.T) {
-	cg := buildFromSource(t, pythonLanguage(t), "long.py", "obj["+strings.Repeat("é", 100)+"]()\n")
+	cg := buildAndClose(t, pythonLanguage(t), "long.py", "obj["+strings.Repeat("é", 100)+"]()\n")
 
 	require.Len(t, cg.Unresolved(), 1)
 	text := cg.Unresolved()[0].Text
@@ -450,7 +438,7 @@ func TestUnboundCallee(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			cg := buildFromSource(t, tc.language, tc.file, tc.source)
+			cg := buildAndClose(t, tc.language, tc.file, tc.source)
 
 			require.Contains(t, cg.Nodes, tc.caller)
 			var refs []CallReference
@@ -466,7 +454,7 @@ func TestUnboundCallee(t *testing.T) {
 }
 
 func TestUnboundNameStaysUnboundOnTheSecondCall(t *testing.T) {
-	cg := buildFromSource(t, javascriptLanguage(t), "a.js", "function outer() { inner(); inner(); }\nfunction inner() {}\n")
+	cg := buildAndClose(t, javascriptLanguage(t), "a.js", "function outer() { inner(); inner(); }\nfunction inner() {}\n")
 
 	refs := cg.Nodes["a.js//outer"].CallsTo
 	require.Len(t, refs, 2)
@@ -491,7 +479,7 @@ func TestDeterministicDFS(t *testing.T) {
 			require.NoError(t, err)
 
 			order := func() []string {
-				cg := buildFromSource(t, tc.language, tc.fixture, string(source))
+				cg := buildAndClose(t, tc.language, tc.fixture, string(source))
 				var items []string
 				for _, item := range cg.DFS() {
 					items = append(items, fmt.Sprintf("%s<-%s@%d/%t", item.Namespace, item.Caller.Namespace, item.Depth, item.Terminal))
@@ -532,7 +520,7 @@ func TestArrowFunctionWithAnExpressionBody(t *testing.T) {
 	for _, l := range languages {
 		for _, tc := range cases {
 			t.Run(l.file+" "+tc.name, func(t *testing.T) {
-				cg := buildFromSource(t, l.language, l.file, tc.source)
+				cg := buildAndClose(t, l.language, l.file, tc.source)
 
 				callee := tc.callee
 				if strings.HasPrefix(callee, namespaceSeparator) {
@@ -574,7 +562,7 @@ require("os");
 
 	for _, l := range languages {
 		t.Run(l.file, func(t *testing.T) {
-			cg := buildFromSource(t, l.language, l.file, source)
+			cg := buildAndClose(t, l.language, l.file, source)
 
 			assert.Empty(t, cg.Unresolved())
 			assert.Subset(t, calleesOf(cg, l.file), []string{"process//exit", "Buffer//from", "crypto//randomUUID", "URL", "fetch", "Error", "require"})
@@ -588,7 +576,7 @@ require("os");
 func TestUnresolvedRecordsAreDeduplicated(t *testing.T) {
 	// The chain root client.get() is a call of its own, and the outer call
 	// resolves it again as its receiver. Both reach one site.
-	cg := buildFromSource(t, javascriptLanguage(t), "a.js", "function handle(client) { client.get().send(); }\n")
+	cg := buildAndClose(t, javascriptLanguage(t), "a.js", "function handle(client) { client.get().send(); }\n")
 
 	assert.Equal(t, []UnresolvedCall{{
 		Caller:   "a.js//handle",
@@ -642,7 +630,7 @@ func TestCallUnderAMemberOrATypeKeepsItsEdge(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			cg := buildFromSource(t, tc.language, tc.file, tc.source)
+			cg := buildAndClose(t, tc.language, tc.file, tc.source)
 
 			assert.Contains(t, calleesOf(cg, tc.file), tc.callee)
 		})
@@ -650,7 +638,7 @@ func TestCallUnderAMemberOrATypeKeepsItsEdge(t *testing.T) {
 }
 
 func TestTypeAssertionGivesTheValueOfTheExpression(t *testing.T) {
-	cg := buildFromSource(t, typescriptLanguage(t), "a.ts", "import { run } from './run';\nconst f = run as () => void;\nf();\n")
+	cg := buildAndClose(t, typescriptLanguage(t), "a.ts", "import { run } from './run';\nconst f = run as () => void;\nf();\n")
 
 	var targets []string
 	for _, ref := range cg.Nodes["a.ts"].CallsTo {
@@ -671,7 +659,7 @@ func TestPythonCallOfAnImportGivesTheImport(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			cg := buildFromSource(t, pythonLanguage(t), "a.py", tc.source)
+			cg := buildAndClose(t, pythonLanguage(t), "a.py", tc.source)
 
 			var targets []string
 			for _, ref := range cg.Nodes["a.py"].CallsTo {
@@ -693,7 +681,7 @@ func TestPythonCallGivesNoValue(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			cg := buildFromSource(t, pythonLanguage(t), "a.py", tc.source)
+			cg := buildAndClose(t, pythonLanguage(t), "a.py", tc.source)
 
 			var targets []string
 			for _, ref := range cg.Nodes["a.py"].CallsTo {
@@ -705,7 +693,7 @@ func TestPythonCallGivesNoValue(t *testing.T) {
 }
 
 func TestKotlinInstanceAndClassCalls(t *testing.T) {
-	cg := buildFromSource(t, kotlinLanguage(t), "a.kt", strings.Join([]string{
+	cg := buildAndClose(t, kotlinLanguage(t), "a.kt", strings.Join([]string{
 		"class A : Base(1) {",
 		"    fun run() { this.helper(); helper(); super.run(); Parser().parse() }",
 		"    fun helper() {}",
@@ -730,7 +718,7 @@ func TestStringInterpolationsRun(t *testing.T) {
 		{kotlinLanguage(t), "a.kt", "fun f() = \"x ${danger()}\"\n", "a.kt//f"},
 	}
 	for _, tc := range cases {
-		cg := buildFromSource(t, tc.language, tc.file, tc.source)
+		cg := buildAndClose(t, tc.language, tc.file, tc.source)
 		assert.Contains(t, calleesOf(cg, tc.caller), "danger", tc.file)
 	}
 }

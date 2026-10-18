@@ -166,7 +166,7 @@
       "targets": [
         "cache"
       ],
-      "kind": "decorator"
+      "kind": "call"
     },
     {
       "caller": "src/app.py//Parser//parse",

@@ -211,7 +211,7 @@ func TestBuildChecksTheUnitsOfTheIndexes(t *testing.T) {
 	g, err := Build(context.Background(), []*fileindex.Index{java, importer("kit", "run")}, Options{})
 	require.NoError(t, err)
 	assert.NotContains(t, g.Nodes, java.Path)
-	assert.Equal(t, []modules.Problem{{Path: "maven:org.acme:kit@1.0", Text: "the link step does not link the java code of a dependency"}}, g.Problems)
+	assert.Equal(t, []modules.Problem{{Path: "maven:org.acme:kit@1.0", Text: "the link step does not link the java code of maven:org.acme:kit@1.0"}}, g.Problems)
 }
 
 func TestBuildResolvesTheImportsOfAUnitInsideTheUnit(t *testing.T) {

@@ -109,8 +109,7 @@ func TestShapedLanguageCalls(t *testing.T) {
 				return nil
 			}
 
-			executor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{NewCallGraphPlugin(callback)})
-			require.NoError(t, err)
+			executor := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{NewCallGraphPlugin(callback)})
 			report, err := executor.Execute(context.Background(), fileSystem)
 			require.NoError(t, err)
 			assert.Empty(t, report.Failed)

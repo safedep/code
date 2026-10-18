@@ -38,9 +38,9 @@ type found struct {
 	entered map[string]bool
 }
 
-func (ix *index) uncertainties(s *search, maxDepth int) *found {
-	g := ix.g
-	f := &found{byMethod: map[string][]Uncertainty{}, reaches: ix.unitReaches, methodReaches: ix.methodReaches, units: map[string][]Uncertainty{}, entered: map[string]bool{}}
+func (a *adjacency) uncertainties(s *search, maxDepth int) *found {
+	g := a.g
+	f := &found{byMethod: map[string][]Uncertainty{}, reaches: a.unitReaches, methodReaches: a.methodReaches, units: map[string][]Uncertainty{}, entered: map[string]bool{}}
 
 	unresolved := map[string][]projectgraph.UnresolvedSite{}
 	prefixes := map[projectgraph.Site]string{}
@@ -66,7 +66,7 @@ func (ix *index) uncertainties(s *search, maxDepth int) *found {
 		f.byUnit = append(f.byUnit, Uncertainty{Kind: UnresolvedCall, Site: r.Site, Text: fmt.Sprintf("%s (%s)", r.Text, r.Reason), Unit: r.Unit})
 	}
 	for _, id := range s.order {
-		key := ix.keys[id]
+		key := a.keys[id]
 		n := g.Nodes[key]
 		if n == nil {
 			continue

@@ -47,10 +47,9 @@ func TestStripComments(t *testing.T) {
 				return nil
 			}
 
-			pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+			pluginExecutor := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
 				NewStripCommentsPlugin(stripCommentsCallback),
 			})
-			assert.NoError(t, err)
 
 			report, err := pluginExecutor.Execute(context.Background(), fileSystem)
 			assert.NoError(t, err)
@@ -84,7 +83,7 @@ func benchmarkStripComments(b *testing.B) {
 	}, []core.LanguageCode{core.LanguageCodeJavascript})
 	assert.NoError(b, err)
 
-	pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+	pluginExecutor := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
 		NewStripCommentsPlugin(func(ctx context.Context, scpd *StripCommentsPluginData) error {
 			assert.NotNil(b, scpd)
 			assert.NotNil(b, scpd.File)
@@ -92,7 +91,6 @@ func benchmarkStripComments(b *testing.B) {
 			return nil
 		}),
 	})
-	assert.NoError(b, err)
 
 	report, err := pluginExecutor.Execute(context.Background(), fileSystem)
 	assert.NoError(b, err)

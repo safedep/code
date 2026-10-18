@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -17,6 +18,7 @@ import (
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/fs"
+	"github.com/safedep/code/internal/testutil"
 	"github.com/safedep/code/lang"
 	"github.com/safedep/code/parser"
 	"github.com/safedep/code/pkg/test"
@@ -36,7 +38,7 @@ func indexFiles(t *testing.T, root string, files []string, codes ...core.Languag
 
 	var mu sync.Mutex
 	indexes := map[string]*fileindex.Index{}
-	executor, err := plugin.NewTreeWalkPluginExecutor(walker, []core.Plugin{
+	executor := plugin.NewTreeWalkPluginExecutor(walker, []core.Plugin{
 		NewFileIndexPlugin(func(_ context.Context, ix *fileindex.Index) error {
 			mu.Lock()
 			defer mu.Unlock()
@@ -44,7 +46,6 @@ func indexFiles(t *testing.T, root string, files []string, codes ...core.Languag
 			return nil
 		}),
 	})
-	require.NoError(t, err)
 
 	report, err := executor.Execute(context.Background(), fsys)
 	require.NoError(t, err)
@@ -57,18 +58,7 @@ func indexFiles(t *testing.T, root string, files []string, codes ...core.Languag
 // The flag -update writes the golden file.
 func assertGolden(t *testing.T, root string, ix *fileindex.Index) {
 	t.Helper()
-	got, err := json.MarshalIndent(ix, "", "  ")
-	require.NoError(t, err)
-	got = append(got, '\n')
-
-	golden := filepath.Join(root, "golden", ix.Path+".json")
-	if *update {
-		require.NoError(t, os.MkdirAll(filepath.Dir(golden), 0o755))
-		require.NoError(t, os.WriteFile(golden, got, 0o644))
-	}
-	want, err := os.ReadFile(golden)
-	require.NoError(t, err)
-	assert.Equal(t, string(want), string(got))
+	testutil.AssertGolden(t, filepath.Join(root, "golden", ix.Path+".json"), *update, ix)
 }
 
 func TestFileIndexGolden(t *testing.T) {
@@ -201,9 +191,7 @@ func TestFileIndexPartialAtTheDeadline(t *testing.T) {
 	}
 	tree := parseSource(t, core.LanguageCodeJavascript, "slow.js", source.String())
 
-	// The context turns done after the eight import queries and the first
-	// check of the build of the call graph.
-	ctx := &countdownContext{Context: context.Background(), left: 9}
+	ctx := &buildCutContext{Context: context.Background()}
 
 	var got *fileindex.Index
 	err := NewFileIndexPlugin(func(_ context.Context, ix *fileindex.Index) error {
@@ -215,18 +203,37 @@ func TestFileIndexPartialAtTheDeadline(t *testing.T) {
 	assert.True(t, partial(got))
 }
 
-// countdownContext is done after its Err has returned nil left times.
-type countdownContext struct {
+// buildCutContext is done from the first check inside the build of the
+// call graph on. The import queries before the build see it live, so the
+// build starts and the deadline cuts it. It reads the stack, so it does not
+// depend on the number of checks before the build.
+type buildCutContext struct {
 	context.Context
-	left int
+	cut bool
 }
 
-func (c *countdownContext) Err() error {
-	if c.left <= 0 {
+func (c *buildCutContext) Err() error {
+	if !c.cut {
+		c.cut = insideBuild()
+	}
+	if c.cut {
 		return context.Canceled
 	}
-	c.left--
 	return nil
+}
+
+func insideBuild() bool {
+	pcs := make([]uintptr, 64)
+	frames := runtime.CallersFrames(pcs[:runtime.Callers(2, pcs)])
+	for {
+		frame, more := frames.Next()
+		if strings.HasSuffix(frame.Function, "callgraph.(*CallGraph).build") {
+			return true
+		}
+		if !more {
+			return false
+		}
+	}
 }
 
 func parseSource(t *testing.T, code core.LanguageCode, name, source string) core.ParseTree {

@@ -55,7 +55,7 @@ func fullIndex() *Index {
 			{Caller: "src/app.py//Parser//parse", Line: 7, Column: 9, Callee: "yaml.load", Targets: []string{"yaml//load"}, Receiver: "yaml", Method: "load", Kind: CallCall, Args: []Arg{{Shape: ArgName, Targets: []string{"src/app.py//text"}}, {Shape: ArgLiteral}}},
 			{Caller: "src/app.py", Line: 11, Column: 1, Callee: "Parser", Targets: []string{"src/app.py//Parser"}, Kind: CallNew},
 			{Caller: "src/app.py", Line: 13, Column: 1, Callee: "helper", Targets: []string{"src/app.py//helper"}, Kind: CallCall, Args: []Arg{{Shape: ArgString}, {Shape: ArgTemplate}, {Shape: ArgMember, Targets: []string{"yaml//load"}}, {Shape: ArgComputed}, {Shape: ArgFunction, Targets: []string{"src/app.py//helper"}}}},
-			{Caller: "src/app.py//Parser//parse", Line: 6, Column: 5, Callee: "cache", Targets: []string{"cache"}, Kind: CallDecorator},
+			{Caller: "src/app.py//Parser//parse", Line: 6, Column: 5, Callee: "cache", Targets: []string{"cache"}, Kind: CallCall},
 			{Caller: "src/app.py", Line: 9, Column: 1, Callee: "import_module", Targets: []string{"plugins"}, Kind: CallImport, Args: []Arg{{Shape: ArgString}}},
 		},
 		Unresolved: []Unresolved{

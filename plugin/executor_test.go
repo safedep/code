@@ -57,8 +57,7 @@ func writeFiles(t *testing.T, files map[string]string) string {
 func execute(t *testing.T, dir string, plugins []core.Plugin, opts ...parser.Option) *plugin.Report {
 	treeWalker, fileSystem, err := test.SetupBasicPluginContext(dir, nil, []core.LanguageCode{core.LanguageCodePython}, opts...)
 	require.NoError(t, err)
-	executor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, plugins)
-	require.NoError(t, err)
+	executor := plugin.NewTreeWalkPluginExecutor(treeWalker, plugins)
 
 	report, err := executor.Execute(t.Context(), fileSystem)
 	require.NoError(t, err)
@@ -86,14 +85,13 @@ func TestExecuteStopsWhenTheContextIsCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	visited := 0
-	executor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+	executor := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
 		treeFunc{name: "cancel", fn: func(context.Context, core.ParseTree) error {
 			visited++
 			cancel()
 			return nil
 		}},
 	})
-	require.NoError(t, err)
 
 	report, err := executor.Execute(ctx, fileSystem)
 	assert.ErrorIs(t, err, context.Canceled)
@@ -108,13 +106,12 @@ func TestExecuteFailsTheFileThatTheContextStops(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	executor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+	executor := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
 		treeFunc{name: "stopped", fn: func(ctx context.Context, _ core.ParseTree) error {
 			cancel()
 			return ctx.Err()
 		}},
 	})
-	require.NoError(t, err)
 
 	report, err := executor.Execute(ctx, fileSystem)
 	assert.ErrorIs(t, err, context.Canceled)
@@ -180,8 +177,7 @@ func TestExecuteSkipsAFileThatNoLanguageParses(t *testing.T) {
 	require.NoError(t, err)
 	treeWalker, err := parser.NewWalkingParser(sourceWalker, []core.Language{python})
 	require.NoError(t, err)
-	executor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, nil)
-	require.NoError(t, err)
+	executor := plugin.NewTreeWalkPluginExecutor(treeWalker, nil)
 
 	report, err := executor.Execute(t.Context(), fileSystem)
 	require.NoError(t, err)
@@ -224,8 +220,7 @@ func TestExecuteGoesOnPastAFileThatDoesNotRead(t *testing.T) {
 	require.NoError(t, err)
 
 	var names []string
-	executor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{fileNames(&names)})
-	require.NoError(t, err)
+	executor := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{fileNames(&names)})
 
 	report, err := executor.Execute(t.Context(), nil)
 	require.NoError(t, err)
@@ -281,11 +276,10 @@ func TestExecuteClosesEachTreeAfterTheLastPlugin(t *testing.T) {
 		assert.False(t, tree.(*closeRecorder).closed, "a plugin gets an open tree")
 		return nil
 	}
-	executor, err := plugin.NewTreeWalkPluginExecutor(walker, []core.Plugin{
+	executor := plugin.NewTreeWalkPluginExecutor(walker, []core.Plugin{
 		treeFunc{name: "first", fn: openInPlugin},
 		treeFunc{name: "last", fn: openInPlugin},
 	})
-	require.NoError(t, err)
 
 	report, err := executor.Execute(t.Context(), fileSystem)
 	require.NoError(t, err)

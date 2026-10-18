@@ -886,10 +886,9 @@ func TestCallgraphPlugin(t *testing.T) {
 				return nil
 			}
 
-			pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+			pluginExecutor := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
 				NewCallGraphPlugin(callgraphCallback),
 			})
-			assert.NoError(t, err)
 
 			report, err := pluginExecutor.Execute(context.Background(), fileSystem)
 			assert.NoError(t, err)

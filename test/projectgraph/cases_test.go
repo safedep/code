@@ -23,6 +23,7 @@ import (
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/fileindex/store/memstore"
 	"github.com/safedep/code/fs"
+	"github.com/safedep/code/internal/testutil"
 	"github.com/safedep/code/plugin/indexer"
 	"github.com/safedep/code/projectgraph"
 	"github.com/safedep/code/projectgraph/modules"
@@ -170,21 +171,14 @@ func runCase(t *testing.T, dir string, languages []core.Language) {
 	fsys, err := fs.NewLocalFileSystem(cfg)
 	require.NoError(t, err)
 	ctx := context.Background()
-	indexed, err := (&indexer.Indexer{}).Run(ctx, fsys, indexer.Options{Languages: languages, Store: memstore.New(), MaxFileBytes: want.MaxFileBytes, Imports: len(want.Units) > 0})
-	require.NoError(t, err)
+	indexed := indexProject(t, fsys, indexer.Options{Languages: languages, Store: memstore.New(), MaxFileBytes: want.MaxFileBytes, Imports: len(want.Units) > 0})
 	var failed []string
 	for _, f := range indexed.Report.Failed {
 		failed = append(failed, f.File)
 	}
 	require.Equal(t, want.Failed, failed, "failed files")
 
-	g, err := projectgraph.Build(ctx, indexed.Indexes, projectgraph.Options{
-		Root:      os.DirFS(project),
-		Files:     indexed.Statuses(),
-		TestPaths: want.TestPaths,
-		Units:     roots,
-	})
-	require.NoError(t, err)
+	g := linkProject(t, project, indexed, projectgraph.Options{TestPaths: want.TestPaths, Units: roots})
 	assert.Equal(t, want.Problems, g.Problems, "problems")
 	assert.Equal(t, want.Dropped, mergeOverlay(t, filepath.Join(dir, "overlay.json"), g), "dropped overlay edges")
 
@@ -267,18 +261,7 @@ func checkSummary(t *testing.T, dir, unit string, indexed *indexer.Result, roots
 	}
 	s, err := summary.Summarize(context.Background(), indexes, projectgraph.Options{Files: files, Units: map[string]iofs.FS{unit: roots[unit]}})
 	require.NoError(t, err)
-	got, err := json.MarshalIndent(s, "", "  ")
-	require.NoError(t, err)
-	got = append(got, '\n')
-
-	golden := filepath.Join(dir, strings.NewReplacer(":", "_", "/", "_", "@", "_").Replace(unit)+".json")
-	if *update {
-		require.NoError(t, os.MkdirAll(dir, 0o755))
-		require.NoError(t, os.WriteFile(golden, got, 0o644))
-	}
-	want, err := os.ReadFile(golden)
-	require.NoError(t, err, "the summary of %s has no golden file: run with -update", unit)
-	assert.Equal(t, string(want), string(got), "summary of %s", unit)
+	testutil.AssertGolden(t, filepath.Join(dir, strings.NewReplacer(":", "_", "/", "_", "@", "_").Replace(unit)+".json"), *update, s)
 }
 
 // mergeOverlay merges the overlay at path, when the case has one, and returns

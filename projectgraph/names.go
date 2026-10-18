@@ -49,7 +49,7 @@ func (b *builder) lookupName(module, name string, hops int) (string, *failure) {
 	}
 
 	miss := noDefinition(name)
-	try := func(_ string, fail *failure) bool {
+	try := func(fail *failure) bool {
 		if fail == nil {
 			return true
 		}
@@ -60,7 +60,7 @@ func (b *builder) lookupName(module, name string, hops int) (string, *failure) {
 		return false
 	}
 	for _, ex := range sc.exports[name] {
-		if key, fail := b.followExport(sc, ex, hops); try(key, fail) {
+		if key, fail := b.followExport(sc, ex, hops); try(fail) {
 			return key, nil
 		}
 	}
@@ -68,13 +68,13 @@ func (b *builder) lookupName(module, name string, hops int) (string, *failure) {
 	// module imports stays a name of the module.
 	moduleNames := sc.profile.moduleNames
 	if imp, ok := sc.bindings[name]; ok && moduleNames {
-		if key, fail := b.followBinding(sc, imp, name, hops); try(key, fail) {
+		if key, fail := b.followBinding(sc, imp, name, hops); try(fail) {
 			return key, nil
 		}
 	}
 	if !moduleNames || !sc.hasExports || sc.exported(name) {
 		for _, st := range sc.stars {
-			if key, fail := b.followStar(sc, st, name, hops); try(key, fail) {
+			if key, fail := b.followStar(sc, st, name, hops); try(fail) {
 				return key, nil
 			}
 		}

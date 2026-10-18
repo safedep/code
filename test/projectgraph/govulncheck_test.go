@@ -166,7 +166,7 @@ func TestGovulncheckTraces(t *testing.T) {
 			root, module := vulnModule(t, run.dir)
 			g, ok := graphs[root]
 			if !ok {
-				g = vulnGraph(ctx, t, root, language)
+				g = vulnGraph(t, root, language)
 				graphs[root] = g
 				s.files += len(g.Files)
 			}
@@ -217,14 +217,11 @@ func vulnModule(t *testing.T, dir string) (string, string) {
 	}
 }
 
-func vulnGraph(ctx context.Context, t *testing.T, dir string, language core.Language) *projectgraph.Graph {
+func vulnGraph(t *testing.T, dir string, language core.Language) *projectgraph.Graph {
 	fsys, err := codefs.NewLocalFileSystem(codefs.LocalFileSystemConfig{AppDirectories: []string{dir}})
 	require.NoError(t, err)
-	indexed, err := (&indexer.Indexer{}).Run(ctx, fsys, indexer.Options{Languages: []core.Language{language}})
-	require.NoError(t, err)
-	g, err := projectgraph.Build(ctx, indexed.Indexes, projectgraph.Options{Root: os.DirFS(dir), Files: indexed.Files})
-	require.NoError(t, err)
-	return g
+	indexed := indexProject(t, fsys, indexer.Options{Languages: []core.Language{language}})
+	return linkProject(t, dir, indexed, projectgraph.Options{})
 }
 
 func (s *vulnScore) scoreTrace(ctx context.Context, t *testing.T, g *projectgraph.Graph, module string, trace []vulnFrame) {

@@ -120,13 +120,9 @@ func run() error {
 		return fmt.Errorf("failed to create tree walker: %w", err)
 	}
 
-	pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+	pluginExecutor := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
 		&exampleTreePlugin{},
 	})
-
-	if err != nil {
-		return fmt.Errorf("failed to create plugin executor: %w", err)
-	}
 
 	report, err := pluginExecutor.Execute(context.Background(), fileSystem)
 	if err != nil {

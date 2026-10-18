@@ -24,6 +24,8 @@ read(env("CONFIG"))
 
 // buildAndClose builds the call graph of source and closes the tree before
 // it returns the graph.
+// buildAndClose builds the call graph of a source and closes its tree, so
+// each test reads a graph that outlives the tree.
 func buildAndClose(t *testing.T, language core.Language, name, source string) *CallGraph {
 	t.Helper()
 

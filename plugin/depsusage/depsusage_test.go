@@ -168,10 +168,9 @@ func TestDepsusageEvidences(t *testing.T) {
 				return nil
 			}
 
-			pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+			pluginExecutor := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
 				NewDependencyUsagePlugin(usageCallback),
 			})
-			assert.NoError(t, err)
 
 			report, err := pluginExecutor.Execute(context.Background(), fileSystem)
 			assert.NoError(t, err)
@@ -201,13 +200,9 @@ func TestAbortedDepsusage(t *testing.T) {
 			return nil
 		}
 
-		pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+		pluginExecutor := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
 			NewDependencyUsagePlugin(usageCallback),
 		})
-
-		if err != nil {
-			t.Fatalf("failed to create plugin executor: %v", err)
-		}
 
 		report, err := pluginExecutor.Execute(context.Background(), fileSystem)
 		require.NoError(t, err)
@@ -226,10 +221,9 @@ func TestAbortedDepsusage(t *testing.T) {
 			return fmt.Errorf("aborting due to user err in callback")
 		}
 
-		pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+		pluginExecutor := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
 			NewDependencyUsagePlugin(usageCallback),
 		})
-		assert.NoError(t, err)
 
 		report, err := pluginExecutor.Execute(context.Background(), fileSystem)
 		require.NoError(t, err)

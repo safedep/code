@@ -8,7 +8,6 @@ import (
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
 	"github.com/safedep/code/pkg/ts"
-	"github.com/safedep/dry/log"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -689,25 +688,17 @@ func extractESMethods(ctx context.Context, data *[]byte, tree core.ParseTree,
 		return nil
 	}
 
-	queryRequestItems := []ts.QueryItem{
-		ts.NewQueryItem(esMethodDefinitionQuery, methodHandler),
-	}
-
-	err := ts.ExecuteQueries(ctx, tree, queryRequestItems)
+	items := []ts.QueryItem{ts.NewQueryItem(esMethodDefinitionQuery, methodHandler)}
+	language, err := tree.Language()
 	if err != nil {
 		return err
 	}
-
-	// Try decorator-aware query separately; it may not be supported by all grammars
-	decoratorQueryItems := []ts.QueryItem{
-		ts.NewQueryItem(esDecoratedMethodDefinitionQuery, methodHandler),
+	// The TypeScript grammar puts a decorator outside the method_definition,
+	// so the decorated query compiles only against the JavaScript grammar.
+	if language.Meta().Code == core.LanguageCodeJavascript {
+		items = append(items, ts.NewQueryItem(esDecoratedMethodDefinitionQuery, methodHandler))
 	}
-
-	if err := ts.ExecuteQueries(ctx, tree, decoratorQueryItems); err != nil {
-		log.Debugf("skipped the decorator query: %v", err)
-	}
-
-	return nil
+	return ts.ExecuteQueries(ctx, tree, items)
 }
 
 func extractESFunctionExpressions(ctx context.Context, data *[]byte, tree core.ParseTree,

@@ -52,10 +52,9 @@ const (
 type CallKind string
 
 const (
-	CallCall      CallKind = "call"
-	CallNew       CallKind = "new"
-	CallDecorator CallKind = "decorator"
-	CallImport    CallKind = "import"
+	CallCall   CallKind = "call"
+	CallNew    CallKind = "new"
+	CallImport CallKind = "import"
 )
 
 type ArgShape string
@@ -385,7 +384,7 @@ func (ix *Index) Key() Key {
 // ExternalCalls returns the calls that leave the file. Such a call has a
 // target under an import namespace, or a bare name that no definition of
 // the file binds. A call with no target counts its callee. The calls keep
-// the order of Calls. vet reads them in plan step 24.
+// the order of Calls.
 func (ix *Index) ExternalCalls() []Call {
 	namespaces := make([]string, 0, len(ix.Imports))
 	for _, imp := range ix.Imports {

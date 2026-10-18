@@ -144,12 +144,9 @@ func run() error {
 		return nil
 	}
 
-	pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+	pluginExecutor := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
 		callgraph.NewCallGraphPlugin(callgraphCallback),
 	})
-	if err != nil {
-		return fmt.Errorf("failed to create plugin executor: %w", err)
-	}
 
 	report, err := pluginExecutor.Execute(context.Background(), fileSystem)
 	if err != nil {
