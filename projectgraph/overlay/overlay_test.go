@@ -126,13 +126,15 @@ func TestReadRejectsABadFile(t *testing.T) {
 	f, err := Read(strings.NewReader(file(Version, "llm", "low")))
 	require.NoError(t, err)
 	assert.Equal(t, "model m1, prompt v2", f.Edges[0].Resolver())
+	_, err = Read(strings.NewReader(file(Version, "name", "low")))
+	require.NoError(t, err, "any kind of low confidence passes")
 
 	tests := []struct {
 		name, data, err string
 	}{
 		{"newer version", file("2", "llm", "low"), `overlay version "2" is not "1"`},
 		{"no version", `{"edges": []}`, `overlay version "" is not "1"`},
-		{"other kind", file(Version, "direct", "low"), `overlay edge 0: kind "direct" is not llm`},
+		{"other kind", file(Version, "direct", "low"), `overlay edge 0: kind "direct" has the confidence high, want low`},
 		{"other confidence", file(Version, "llm", "high"), `overlay edge 0: confidence "high" is not low`},
 		{"no model", `{"version": "1", "edges": [{"caller": "a.py//f", "site": {"path": "a.py", "line": 3}, "callee": "a.py//g", "kind": "llm", "confidence": "low"}]}`, "no model"},
 		{"no site", `{"version": "1", "edges": [{"caller": "a.py//f", "callee": "a.py//g", "kind": "llm", "confidence": "low"}]}`, "no site"},

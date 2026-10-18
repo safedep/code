@@ -24,9 +24,10 @@
 //	}
 //
 // The caller and the site name the unresolved site. The callee is a node key
-// of the graph, first party or external. The kind is always llm and the
-// confidence is always low. The model, the prompt version, the hash of the
-// prompt input and the raw output of the model make the edge auditable.
+// of the graph, first party or external. The kind is llm, or another kind
+// whose confidence is low, and the confidence is always low. The model, the
+// prompt version, the hash of the prompt input and the raw output of the
+// model make the edge auditable.
 package overlay
 
 import (
@@ -70,10 +71,10 @@ func (e Edge) Resolver() string {
 
 func (e Edge) validate() error {
 	switch {
-	case e.Kind != projectgraph.EdgeLLM:
-		return fmt.Errorf("kind %q is not %s", e.Kind, projectgraph.EdgeLLM)
-	case e.Confidence != projectgraph.EdgeLLM.Confidence():
-		return fmt.Errorf("confidence %q is not %s", e.Confidence, projectgraph.EdgeLLM.Confidence())
+	case e.Kind.Confidence() != projectgraph.ConfidenceLow:
+		return fmt.Errorf("kind %q has the confidence %s, want %s", e.Kind, e.Kind.Confidence(), projectgraph.ConfidenceLow)
+	case e.Confidence != projectgraph.ConfidenceLow:
+		return fmt.Errorf("confidence %q is not %s", e.Confidence, projectgraph.ConfidenceLow)
 	case e.Caller == "" || e.Callee == "":
 		return errors.New("no caller or no callee")
 	case e.Site.Path == "" || e.Site.Line < 1:

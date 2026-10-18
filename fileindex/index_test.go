@@ -3,6 +3,8 @@ package fileindex
 import (
 	"encoding/json"
 	"os"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/safedep/code/lang/grammar"
@@ -218,4 +220,45 @@ func TestKey(t *testing.T) {
 func TestHashContent(t *testing.T) {
 	assert.Equal(t, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", HashContent(nil))
 	assert.NotEqual(t, HashContent([]byte("a")), HashContent([]byte("b")))
+}
+
+// stringsOf returns every string value under v, through its structs and
+// its slices, so a test sees each string field of an index.
+func stringsOf(v reflect.Value) []string {
+	switch v.Kind() {
+	case reflect.String:
+		return []string{v.String()}
+	case reflect.Pointer:
+		if v.IsNil() {
+			return nil
+		}
+		return stringsOf(v.Elem())
+	case reflect.Struct:
+		var out []string
+		for i := 0; i < v.NumField(); i++ {
+			out = append(out, stringsOf(v.Field(i))...)
+		}
+		return out
+	case reflect.Slice:
+		var out []string
+		for i := 0; i < v.Len(); i++ {
+			out = append(out, stringsOf(v.Index(i))...)
+		}
+		return out
+	}
+	return nil
+}
+
+func TestEachStringReachesEveryStringOfTheIndex(t *testing.T) {
+	ix := fullIndex()
+	want := stringsOf(reflect.ValueOf(ix))
+	var got []string
+	ix.EachString(func(s string) string {
+		got = append(got, s)
+		return strings.ToUpper(s)
+	})
+	assert.ElementsMatch(t, want, got, "a string field of a record is not in EachString")
+	for _, s := range stringsOf(reflect.ValueOf(ix)) {
+		assert.Equal(t, strings.ToUpper(s), s, "EachString sets the string in place")
+	}
 }

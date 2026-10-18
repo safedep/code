@@ -434,86 +434,207 @@ func (ix *Index) DynamicSites() []Flag {
 // Sort puts every slice of the index in its defined order. Decorators and
 // class bases keep the source order, because the order has a meaning.
 func (ix *Index) Sort() {
-	slices.SortFunc(ix.Imports, func(a, b Import) int {
-		return cmp.Or(
-			cmp.Compare(a.Line, b.Line),
-			cmp.Compare(a.Module, b.Module),
-			cmp.Compare(a.Item, b.Item),
-			cmp.Compare(a.Alias, b.Alias),
-			CompareBool(a.Wildcard, b.Wildcard),
-			cmp.Compare(a.Kind, b.Kind),
-			cmp.Compare(a.Namespace, b.Namespace),
-			CompareBool(a.Require, b.Require),
-		)
-	})
-	slices.SortFunc(ix.Exports, func(a, b Export) int {
-		return cmp.Or(
-			cmp.Compare(a.Line, b.Line),
-			cmp.Compare(a.Name, b.Name),
-			cmp.Compare(a.Target, b.Target),
-			cmp.Compare(a.From, b.From),
-			cmp.Compare(a.Item, b.Item),
-		)
-	})
+	slices.SortFunc(ix.Imports, Import.Compare)
+	slices.SortFunc(ix.Exports, Export.Compare)
 	for i := range ix.Definitions {
 		slices.SortFunc(ix.Definitions[i].Flags, CompareFlags)
 	}
-	slices.SortFunc(ix.Definitions, func(a, b Definition) int {
-		return cmp.Or(
-			cmp.Compare(a.StartLine, b.StartLine),
-			cmp.Compare(a.Key, b.Key),
-		)
-	})
+	slices.SortFunc(ix.Definitions, Definition.Compare)
 	for i := range ix.Classes {
 		slices.Sort(ix.Classes[i].Methods)
 	}
-	slices.SortFunc(ix.Classes, func(a, b Class) int {
-		return cmp.Compare(a.Key, b.Key)
-	})
+	slices.SortFunc(ix.Classes, Class.Compare)
 	for i := range ix.Calls {
 		slices.Sort(ix.Calls[i].Targets)
 	}
-	slices.SortFunc(ix.Calls, func(a, b Call) int {
-		return cmp.Or(
-			cmp.Compare(a.Line, b.Line),
-			cmp.Compare(a.Column, b.Column),
-			cmp.Compare(a.Caller, b.Caller),
-			cmp.Compare(a.Callee, b.Callee),
-			cmp.Compare(a.Receiver, b.Receiver),
-			cmp.Compare(a.Method, b.Method),
-			cmp.Compare(a.Kind, b.Kind),
-		)
-	})
+	slices.SortFunc(ix.Calls, Call.Compare)
 	for i := range ix.References {
 		slices.Sort(ix.References[i].Targets)
 	}
-	slices.SortFunc(ix.References, func(a, b Reference) int {
-		return cmp.Or(
-			cmp.Compare(a.Line, b.Line),
-			cmp.Compare(a.Column, b.Column),
-			cmp.Compare(a.Caller, b.Caller),
-			cmp.Compare(a.Text, b.Text),
-		)
-	})
-	slices.SortFunc(ix.Unresolved, func(a, b Unresolved) int {
-		return cmp.Or(
-			cmp.Compare(a.Line, b.Line),
-			cmp.Compare(a.Column, b.Column),
-			cmp.Compare(a.Caller, b.Caller),
-			cmp.Compare(a.Text, b.Text),
-			cmp.Compare(a.Receiver, b.Receiver),
-			cmp.Compare(a.Method, b.Method),
-			cmp.Compare(a.Reason, b.Reason),
-		)
-	})
+	slices.SortFunc(ix.References, Reference.Compare)
+	slices.SortFunc(ix.Unresolved, Unresolved.Compare)
 	slices.SortFunc(ix.Flags, CompareFlags)
-	slices.SortFunc(ix.Truncated, func(a, b Truncation) int {
-		return cmp.Or(
-			cmp.Compare(a.Kind, b.Kind),
-			cmp.Compare(a.Line, b.Line),
-			cmp.Compare(a.Namespace, b.Namespace),
-		)
-	})
+	slices.SortFunc(ix.Truncated, Truncation.Compare)
+}
+
+// Compare orders imports by line, then by their fields.
+func (a Import) Compare(b Import) int {
+	return cmp.Or(
+		cmp.Compare(a.Line, b.Line),
+		cmp.Compare(a.Module, b.Module),
+		cmp.Compare(a.Item, b.Item),
+		cmp.Compare(a.Alias, b.Alias),
+		CompareBool(a.Wildcard, b.Wildcard),
+		cmp.Compare(a.Kind, b.Kind),
+		cmp.Compare(a.Namespace, b.Namespace),
+		CompareBool(a.Require, b.Require),
+	)
+}
+
+// Compare orders exports by line, then by their fields.
+func (a Export) Compare(b Export) int {
+	return cmp.Or(
+		cmp.Compare(a.Line, b.Line),
+		cmp.Compare(a.Name, b.Name),
+		cmp.Compare(a.Target, b.Target),
+		cmp.Compare(a.From, b.From),
+		cmp.Compare(a.Item, b.Item),
+	)
+}
+
+// Compare orders definitions by start line, then by key.
+func (a Definition) Compare(b Definition) int {
+	return cmp.Or(cmp.Compare(a.StartLine, b.StartLine), cmp.Compare(a.Key, b.Key))
+}
+
+// Compare orders classes by key.
+func (a Class) Compare(b Class) int {
+	return cmp.Compare(a.Key, b.Key)
+}
+
+// Compare orders calls by site, then by their fields.
+func (a Call) Compare(b Call) int {
+	return cmp.Or(
+		cmp.Compare(a.Line, b.Line),
+		cmp.Compare(a.Column, b.Column),
+		cmp.Compare(a.Caller, b.Caller),
+		cmp.Compare(a.Callee, b.Callee),
+		cmp.Compare(a.Receiver, b.Receiver),
+		cmp.Compare(a.Method, b.Method),
+		cmp.Compare(a.Kind, b.Kind),
+	)
+}
+
+// Compare orders references by site, then by caller and text.
+func (a Reference) Compare(b Reference) int {
+	return cmp.Or(
+		cmp.Compare(a.Line, b.Line),
+		cmp.Compare(a.Column, b.Column),
+		cmp.Compare(a.Caller, b.Caller),
+		cmp.Compare(a.Text, b.Text),
+	)
+}
+
+// Compare orders unresolved sites by site, then by their fields.
+func (a Unresolved) Compare(b Unresolved) int {
+	return cmp.Or(
+		cmp.Compare(a.Line, b.Line),
+		cmp.Compare(a.Column, b.Column),
+		cmp.Compare(a.Caller, b.Caller),
+		cmp.Compare(a.Text, b.Text),
+		cmp.Compare(a.Receiver, b.Receiver),
+		cmp.Compare(a.Method, b.Method),
+		cmp.Compare(a.Reason, b.Reason),
+	)
+}
+
+// Compare orders truncations by kind, then by line and namespace.
+func (a Truncation) Compare(b Truncation) int {
+	return cmp.Or(
+		cmp.Compare(a.Kind, b.Kind),
+		cmp.Compare(a.Line, b.Line),
+		cmp.Compare(a.Namespace, b.Namespace),
+	)
+}
+
+// EachString applies fn to every string of the index in place, the typed
+// kinds too. An interner shares the strings of many indexes through it,
+// and a hash of an index can read them through it. A new string field of
+// a record goes here.
+func (ix *Index) EachString(fn func(string) string) {
+	kind := func(s *string) { *s = fn(*s) }
+	strs := func(ss []string) {
+		for i := range ss {
+			ss[i] = fn(ss[i])
+		}
+	}
+	typed := func(ts []Typed) {
+		for i := range ts {
+			kind(&ts[i].Name)
+			kind(&ts[i].Type)
+		}
+	}
+	flags := func(fs []Flag) {
+		for i := range fs {
+			fs[i].Kind = FlagKind(fn(string(fs[i].Kind)))
+		}
+	}
+	kind(&ix.Version)
+	kind(&ix.Path)
+	ix.Language = langcode.Code(fn(string(ix.Language)))
+	kind(&ix.ContentHash)
+	kind(&ix.Package)
+	kind(&ix.Unit)
+	for i := range ix.Imports {
+		imp := &ix.Imports[i]
+		kind(&imp.Module)
+		kind(&imp.Item)
+		kind(&imp.Alias)
+		imp.Kind = ImportKind(fn(string(imp.Kind)))
+		kind(&imp.Namespace)
+	}
+	for i := range ix.Exports {
+		ex := &ix.Exports[i]
+		kind(&ex.Name)
+		kind(&ex.Target)
+		kind(&ex.From)
+		kind(&ex.Item)
+	}
+	for i := range ix.Definitions {
+		def := &ix.Definitions[i]
+		kind(&def.Key)
+		def.Kind = DefKind(fn(string(def.Kind)))
+		kind(&def.Name)
+		kind(&def.Parent)
+		strs(def.Decorators)
+		strs(def.Values)
+		typed(def.Params)
+		typed(def.Locals)
+		kind(&def.Returns)
+		flags(def.Flags)
+	}
+	for i := range ix.Classes {
+		c := &ix.Classes[i]
+		kind(&c.Key)
+		strs(c.Bases)
+		strs(c.Methods)
+		typed(c.Fields)
+		for j := range c.Abstract {
+			kind(&c.Abstract[j].Name)
+		}
+	}
+	for i := range ix.Calls {
+		c := &ix.Calls[i]
+		kind(&c.Caller)
+		kind(&c.Callee)
+		strs(c.Targets)
+		kind(&c.Receiver)
+		kind(&c.Method)
+		c.Kind = CallKind(fn(string(c.Kind)))
+		for j := range c.Args {
+			c.Args[j].Shape = ArgShape(fn(string(c.Args[j].Shape)))
+			strs(c.Args[j].Targets)
+		}
+	}
+	for i := range ix.References {
+		r := &ix.References[i]
+		kind(&r.Caller)
+		kind(&r.Text)
+		strs(r.Targets)
+	}
+	for i := range ix.Unresolved {
+		u := &ix.Unresolved[i]
+		kind(&u.Caller)
+		kind(&u.Text)
+		kind(&u.Receiver)
+		kind(&u.Method)
+		u.Reason = UnresolvedReason(fn(string(u.Reason)))
+	}
+	flags(ix.Flags)
+	for i := range ix.Truncated {
+		ix.Truncated[i].Kind = TruncationKind(fn(string(ix.Truncated[i].Kind)))
+		kind(&ix.Truncated[i].Namespace)
+	}
 }
 
 // CompareFlags orders flags by line, then by kind.

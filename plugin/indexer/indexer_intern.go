@@ -8,34 +8,17 @@ import "github.com/safedep/code/fileindex"
 // copy. The result of a run holds every index, so the copies add up.
 type interner map[string]string
 
-func intern[S ~string](t interner, s *S) {
-	if *s == "" {
-		return
+// intern returns the shared copy of a string. An empty string is shared by
+// the language.
+func (t interner) intern(s string) string {
+	if s == "" {
+		return s
 	}
-	if v, ok := t[string(*s)]; ok {
-		*s = S(v)
-		return
+	if v, ok := t[s]; ok {
+		return v
 	}
-	t[string(*s)] = string(*s)
-}
-
-func internAll[S ~string](t interner, ss []S) {
-	for i := range ss {
-		intern(t, &ss[i])
-	}
-}
-
-func (t interner) typed(ts []fileindex.Typed) {
-	for i := range ts {
-		intern(t, &ts[i].Name)
-		intern(t, &ts[i].Type)
-	}
-}
-
-func (t interner) flags(fs []fileindex.Flag) {
-	for i := range fs {
-		intern(t, &fs[i].Kind)
-	}
+	t[s] = s
+	return s
 }
 
 // fit copies a slice into one of its length. An append that builds the
@@ -57,80 +40,5 @@ func (t interner) index(ix *fileindex.Index) {
 	ix.Calls = fit(ix.Calls)
 	ix.References = fit(ix.References)
 	ix.Unresolved = fit(ix.Unresolved)
-	intern(t, &ix.Version)
-	intern(t, &ix.Path)
-	intern(t, &ix.Language)
-	intern(t, &ix.ContentHash)
-	intern(t, &ix.Package)
-	intern(t, &ix.Unit)
-	for i := range ix.Imports {
-		imp := &ix.Imports[i]
-		intern(t, &imp.Module)
-		intern(t, &imp.Item)
-		intern(t, &imp.Alias)
-		intern(t, &imp.Kind)
-		intern(t, &imp.Namespace)
-	}
-	for i := range ix.Exports {
-		ex := &ix.Exports[i]
-		intern(t, &ex.Name)
-		intern(t, &ex.Target)
-		intern(t, &ex.From)
-		intern(t, &ex.Item)
-	}
-	for i := range ix.Definitions {
-		def := &ix.Definitions[i]
-		intern(t, &def.Key)
-		intern(t, &def.Kind)
-		intern(t, &def.Name)
-		intern(t, &def.Parent)
-		internAll(t, def.Decorators)
-		internAll(t, def.Values)
-		t.typed(def.Params)
-		t.typed(def.Locals)
-		intern(t, &def.Returns)
-		t.flags(def.Flags)
-	}
-	for i := range ix.Classes {
-		c := &ix.Classes[i]
-		intern(t, &c.Key)
-		internAll(t, c.Bases)
-		internAll(t, c.Methods)
-		t.typed(c.Fields)
-		for j := range c.Abstract {
-			intern(t, &c.Abstract[j].Name)
-		}
-	}
-	for i := range ix.Calls {
-		c := &ix.Calls[i]
-		intern(t, &c.Caller)
-		intern(t, &c.Callee)
-		internAll(t, c.Targets)
-		intern(t, &c.Receiver)
-		intern(t, &c.Method)
-		intern(t, &c.Kind)
-		for j := range c.Args {
-			intern(t, &c.Args[j].Shape)
-			internAll(t, c.Args[j].Targets)
-		}
-	}
-	for i := range ix.References {
-		r := &ix.References[i]
-		intern(t, &r.Caller)
-		intern(t, &r.Text)
-		internAll(t, r.Targets)
-	}
-	for i := range ix.Unresolved {
-		u := &ix.Unresolved[i]
-		intern(t, &u.Caller)
-		intern(t, &u.Text)
-		intern(t, &u.Receiver)
-		intern(t, &u.Method)
-		intern(t, &u.Reason)
-	}
-	t.flags(ix.Flags)
-	for i := range ix.Truncated {
-		intern(t, &ix.Truncated[i].Kind)
-		intern(t, &ix.Truncated[i].Namespace)
-	}
+	ix.EachString(t.intern)
 }

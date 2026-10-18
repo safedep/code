@@ -73,16 +73,26 @@ func (k EdgeKind) outranks(old EdgeKind) bool {
 	return k.Confidence().Rank() > old.Confidence().Rank()
 }
 
+// confidences holds the confidence of each edge kind. A kind with no row
+// is high, as a decoded graph of a newer version can carry one.
+var confidences = map[EdgeKind]Confidence{
+	EdgeDirect:     ConfidenceHigh,
+	EdgeImport:     ConfidenceHigh,
+	EdgeExport:     ConfidenceHigh,
+	EdgeMember:     ConfidenceHigh,
+	EdgeAssignment: ConfidenceHigh,
+	EdgePackage:    ConfidenceHigh,
+	EdgeCHA:        ConfidenceMedium,
+	EdgeField:      ConfidenceLow,
+	EdgeWildcard:   ConfidenceLow,
+	EdgeLLM:        ConfidenceLow,
+	EdgeName:       ConfidenceLow,
+	EdgeReference:  ConfidenceLow,
+}
+
 // Confidence returns the confidence that an edge of the kind carries.
 func (k EdgeKind) Confidence() Confidence {
-	switch k {
-	case EdgeCHA:
-		return ConfidenceMedium
-	case EdgeField, EdgeWildcard, EdgeLLM, EdgeName, EdgeReference:
-		return ConfidenceLow
-	default:
-		return ConfidenceHigh
-	}
+	return cmp.Or(confidences[k], ConfidenceHigh)
 }
 
 type Confidence string
