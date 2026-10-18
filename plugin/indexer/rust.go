@@ -11,12 +11,39 @@ import (
 )
 
 var rustRules = languageRules{
+	kinds: map[string]fileindex.DefKind{
+		"function_item":    fileindex.DefFunction,
+		"macro_definition": fileindex.DefFunction,
+		"impl_item":        fileindex.DefClass,
+		"mod_item":         fileindex.DefClass,
+		"trait_item":       fileindex.DefInterface,
+	},
 	bases:       rustBases,
 	fields:      rustFields,
 	decorators:  rustAttributes,
 	signature:   rustSignature,
+	exported:    rustPublic,
 	definitions: rustTypes,
-	visitors:    []func(p *projection) visitor{rustVisitor},
+	visitors:    []func(p *projection) visitor{referenceVisitor, rustVisitor},
+	// A Rust path to a function, as handler in get(handler) or
+	// Self::visit in items.iter().for_each(Self::visit), is a value that
+	// the code that gets it calls.
+	references: &referenceSyntax{
+		holders: map[string]string{
+			"arguments":             "",
+			"let_declaration":       "value",
+			"assignment_expression": "right",
+			"return_expression":     "",
+			"field_initializer":     "value",
+			"array_expression":      "",
+		},
+		member:      "scoped_identifier",
+		object:      "path",
+		property:    "name",
+		identifiers: map[string]bool{"identifier": true},
+		instances:   map[string]bool{"Self": true},
+		rawNames:    true,
+	},
 }
 
 // rustTypeItems are the items that define a type, whose methods an impl
@@ -291,7 +318,7 @@ func (p *projection) rustLocals(body *sitter.Node, bounds map[string]string) []f
 
 // rustPublic reports whether an item is pub. A method of a trait impl is
 // as public as the trait.
-func (p *projection) rustPublic(def *fileindex.Definition) bool {
+func rustPublic(p *projection, def *fileindex.Definition) bool {
 	node := p.syntax[def.Key]
 	if node == nil {
 		return false

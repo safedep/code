@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/safedep/code/core"
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/pkg/ts"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -31,37 +30,12 @@ type dynamicSyntax struct {
 	// moduleGetattr names the function of a module that runs for a name
 	// that the module does not define, as __getattr__ of Python.
 	moduleGetattr string
-}
-
-var ecmascriptSyntax = dynamicSyntax{
-	call:           "call_expression",
-	assignment:     "assignment_expression",
-	subscript:      "subscript_expression",
-	subscriptIndex: "index",
-	members:        map[string]string{"member_expression": "object", "subscript_expression": "object"},
-	wrappers:       map[string]bool{"parenthesized_expression": true, "as_expression": true, "non_null_expression": true},
-	eval:           map[string]bool{"eval": true, "Function": true},
-	importers:      map[string]bool{"require": true},
-	reflection:     func(callee string) bool { return strings.HasPrefix(callee, "Reflect.") },
-	reflectionName: -1,
-}
-
-var dynamicSyntaxes = map[core.LanguageCode]dynamicSyntax{
-	core.LanguageCodeJavascript: ecmascriptSyntax,
-	core.LanguageCodeTypescript: ecmascriptSyntax,
-	core.LanguageCodePython: {
-		call:           "call",
-		assignment:     "assignment",
-		subscript:      "subscript",
-		subscriptIndex: "subscript",
-		members:        map[string]string{"attribute": "object", "subscript": "value"},
-		wrappers:       map[string]bool{"parenthesized_expression": true},
-		eval:           map[string]bool{"eval": true, "exec": true},
-		importers:      map[string]bool{"importlib.import_module": true, "import_module": true, "__import__": true},
-		reflection:     func(callee string) bool { return slices.Contains([]string{"getattr", "setattr", "delattr"}, callee) },
-		reflectionName: 1,
-		moduleGetattr:  "__getattr__",
-	},
+	// staticTopLevel marks a language where an importer call at the top
+	// level is a static import, as const x = require('x').
+	staticTopLevel bool
+	// stringIndexComputes marks a language where a call of a subscript
+	// with a string index computes the callee too.
+	stringIndexComputes bool
 }
 
 // flagModuleGetattr marks a module that defines __getattr__. A name of the
@@ -69,10 +43,11 @@ var dynamicSyntaxes = map[core.LanguageCode]dynamicSyntax{
 // the value that it returns. The flag lands on the module, so the link
 // step reads it where it looks a name up.
 func (p *projection) flagModuleGetattr() {
-	name := dynamicSyntaxes[p.ix.Language].moduleGetattr
-	if name == "" {
+	syntax := p.rules().dynamic
+	if syntax == nil || syntax.moduleGetattr == "" {
 		return
 	}
+	name := syntax.moduleGetattr
 	def, ok := p.defs[p.local(name)]
 	if !ok || def.Kind != fileindex.DefFunction {
 		return
@@ -94,12 +69,8 @@ func (p *projection) walkTree(ctx context.Context) {
 	p.addParseErrors(ctx, root)
 
 	var visitors []visitor
-	candidates := []visitor{p.bodyVisitor(), p.flagVisitor(), p.mainGuardVisitor(), p.referenceVisitor(), p.javaFlagVisitor(), p.javaReferenceVisitor()}
-	for _, v := range p.rules().visitors {
-		candidates = append(candidates, v(p))
-	}
-	for _, v := range candidates {
-		if v != nil {
+	for _, rule := range p.rules().visitors {
+		if v := rule(p); v != nil {
 			visitors = append(visitors, v)
 		}
 	}
@@ -120,21 +91,21 @@ func (p *projection) walkTree(ctx context.Context) {
 // file and on the innermost definition that holds it. The pass also adds a
 // dynamic import that the import resolvers do not see, and marks a require
 // in a function as dynamic.
-func (p *projection) flagVisitor() visitor {
-	syntax, ok := dynamicSyntaxes[p.ix.Language]
-	if !ok {
+func flagVisitor(p *projection) visitor {
+	syntax := p.rules().dynamic
+	if syntax == nil {
 		return nil
 	}
 	return func(node *sitter.Node, kind string) {
 		switch kind {
 		case syntax.call:
-			p.flagCall(syntax, node)
+			p.flagCall(*syntax, node)
 		case "new_expression":
 			if constructor := node.ChildByFieldName("constructor"); syntax.eval[p.text(constructor)] {
 				p.flag(fileindex.FlagEval, node)
 			}
 		case syntax.assignment:
-			p.flagMonkeyPatch(syntax, node.ChildByFieldName("left"))
+			p.flagMonkeyPatch(*syntax, node.ChildByFieldName("left"))
 		case "decorator":
 			if node.NamedChildCount() > 0 && node.NamedChild(0).Type() != "identifier" {
 				p.flagAt(fileindex.FlagDecoratorWrap, decorated(node).StartByte(), lineOf(node))
@@ -150,16 +121,11 @@ type mainGuard struct {
 	condition *regexp.Regexp
 }
 
-var mainGuards = map[core.LanguageCode]mainGuard{
-	core.LanguageCodePython: {statement: "if_statement", condition: regexp.MustCompile(`^(__name__\s*==\s*["']__main__["']|["']__main__["']\s*==\s*__name__)$`)},
-	core.LanguageCodeRuby:   {statement: "if", condition: regexp.MustCompile(`^(__FILE__\s*==\s*\$(0|PROGRAM_NAME)|\$(0|PROGRAM_NAME)\s*==\s*__FILE__)$`)},
-}
-
 // mainGuardVisitor marks a file that holds a main guard, as
 // if __name__ == "__main__" of Python or if __FILE__ == $0 of Ruby.
-func (p *projection) mainGuardVisitor() visitor {
-	guard, ok := mainGuards[p.ix.Language]
-	if !ok {
+func mainGuardVisitor(p *projection) visitor {
+	guard := p.rules().mainGuard
+	if guard == nil {
 		return nil
 	}
 	return func(node *sitter.Node, kind string) {
@@ -237,11 +203,9 @@ func (p *projection) flagCall(syntax dynamicSyntax, call *sitter.Node) {
 	case callee.Type() == "import":
 		p.dynamicImport(call, arguments, true)
 	case syntax.importers[name]:
-		p.dynamicImport(call, arguments, p.ix.Language == core.LanguageCodePython || !topLevel(call))
+		p.dynamicImport(call, arguments, !syntax.staticTopLevel || !topLevel(call))
 	case callee.Type() == syntax.subscript:
-		// A Python subscript is a lookup in a dict, so a string index
-		// computes the callee too.
-		if p.ix.Language == core.LanguageCodePython || !p.isString(callee.ChildByFieldName(syntax.subscriptIndex)) {
+		if syntax.stringIndexComputes || !p.isString(callee.ChildByFieldName(syntax.subscriptIndex)) {
 			p.flag(fileindex.FlagComputedAttribute, call)
 		}
 	}

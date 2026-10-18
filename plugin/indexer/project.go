@@ -20,55 +20,10 @@ import (
 // through its synthetic edges to the method.
 const maxInstanceHops = 4
 
-// definitionKinds maps the tree-sitter type of a definition to its kind. A
-// function in a class becomes a method. The root of the file is the module.
-var definitionKinds = map[string]fileindex.DefKind{
-	"class_declaration":               fileindex.DefClass,
-	"enum_declaration":                fileindex.DefClass,
-	"interface_declaration":           fileindex.DefInterface,
-	"object_declaration":              fileindex.DefClass,
-	"secondary_constructor":           fileindex.DefConstructor,
-	"abstract_class_declaration":      fileindex.DefClass,
-	"class_definition":                fileindex.DefClass,
-	"class":                           fileindex.DefClass,
-	"module":                          fileindex.DefClass,
-	"struct_declaration":              fileindex.DefClass,
-	"record_declaration":              fileindex.DefClass,
-	"trait_declaration":               fileindex.DefClass,
-	"function_declaration":            fileindex.DefFunction,
-	"generator_function_declaration":  fileindex.DefFunction,
-	"function_definition":             fileindex.DefFunction,
-	"function_expression":             fileindex.DefFunction,
-	"arrow_function":                  fileindex.DefFunction,
-	"function_item":                   fileindex.DefFunction,
-	"impl_item":                       fileindex.DefClass,
-	"trait_item":                      fileindex.DefInterface,
-	"mod_item":                        fileindex.DefClass,
-	"macro_definition":                fileindex.DefFunction,
-	"local_function_statement":        fileindex.DefFunction,
-	"method_definition":               fileindex.DefMethod,
-	"method_declaration":              fileindex.DefMethod,
-	"method":                          fileindex.DefMethod,
-	"singleton_method":                fileindex.DefMethod,
-	"constructor_declaration":         fileindex.DefConstructor,
-	"compact_constructor_declaration": fileindex.DefConstructor,
-	// A Java enum constant is a definition only when it has a class body.
-	"enum_constant": fileindex.DefClass,
-}
-
 // staticInitName names the static initializer of a class, as the JVM does.
 // The call graph of Kotlin and C# keys the code that runs when a class
 // loads under it.
 const staticInitName = "<clinit>"
-
-// constructorNames name the method that makes an instance of a class.
-var constructorNames = map[core.LanguageCode]string{
-	core.LanguageCodePython:     "__init__",
-	core.LanguageCodeJavascript: "constructor",
-	core.LanguageCodeTypescript: "constructor",
-	core.LanguageCodePHP:        "__construct",
-	core.LanguageCodeRuby:       "initialize",
-}
 
 // projection projects the call graph of one tree into an index.
 type projection struct {
@@ -135,28 +90,22 @@ func project(ctx context.Context, tree core.ParseTree) (*fileindex.Index, error)
 		members:  map[[2]uint32]bool{},
 	}
 
-	switch packageOf := p.rules().packageOf; {
-	case p.isGo():
-		p.ix.Package = p.goPackage()
-	case p.isJava():
-		p.ix.Package = p.javaPackage()
-	case packageOf != nil:
-		p.ix.Package = packageOf(p)
+	rules := p.rules()
+	if rules.packageOf != nil {
+		p.ix.Package = rules.packageOf(p)
 	}
 	p.addImports()
 	p.addDefinitions()
 	p.flagModuleGetattr()
-	p.addExports()
+	p.run(rules.exports)
 	p.addTruncations()
-	p.addGoSignatures()
-	p.addJavaSignatures()
 	p.addSignatures()
-	p.addJavaInits()
+	p.run(rules.inits)
 	p.walkTree(ctx)
-	p.addDeclaredTypes()
+	p.run(rules.afterWalk)
 	p.addCalls()
 	p.addUnresolved()
-	p.dropIdleJavaInits()
+	p.run(rules.prune)
 	if err := p.addClasses(ctx); err != nil {
 		return nil, err
 	}
@@ -167,6 +116,13 @@ func project(ctx context.Context, tree core.ParseTree) (*fileindex.Index, error)
 
 	p.ix.Sort()
 	return p.ix, nil
+}
+
+// run runs a pass of the rules of the language, when the language has it.
+func (p *projection) run(pass func(p *projection)) {
+	if pass != nil {
+		pass(p)
+	}
 }
 
 // unitOf returns the package unit of the name of a file of dependency code.
@@ -259,10 +215,13 @@ func (p *projection) typeOnlySpecifier(statement *sitter.Node, item string) bool
 	return false
 }
 
+// addDefinitions adds each node of the call graph whose node type is a
+// definition of the language. The root of the file is the module.
 func (p *projection) addDefinitions() {
 	file := p.cg.FileName
+	rules := p.rules()
 	for key, node := range p.cg.Nodes {
-		kind, ok := definitionKinds[node.Kind]
+		kind, ok := rules.kinds[node.Kind]
 		switch {
 		case key == file:
 			kind = fileindex.DefModule
@@ -275,8 +234,8 @@ func (p *projection) addDefinitions() {
 		}
 
 		treeNode := p.nodeAt(node.Position, node.Kind)
-		if kindOf := p.rules().kindOf; kindOf != nil {
-			kind = kindOf(p, treeNode, kind)
+		if rules.kindOf != nil {
+			kind = rules.kindOf(p, treeNode, kind)
 		}
 		p.defs[key] = &fileindex.Definition{
 			Key:       key,
@@ -287,11 +246,7 @@ func (p *projection) addDefinitions() {
 		}
 		p.addSyntax(key, treeNode)
 	}
-	p.addInterfaces()
-	p.addGoTypes()
-	if definitions := p.rules().definitions; definitions != nil {
-		definitions(p)
-	}
+	p.run(rules.definitions)
 
 	for _, def := range p.defs {
 		p.fillDefinition(def)
@@ -303,8 +258,15 @@ func (p *projection) addDefinitions() {
 // that no other definition holds, with the values of the name. A variable
 // has no tree node in syntax, so a flag in its value lands on the module.
 func (p *projection) addVariables() {
+	assigned := p.rules().assigned
+	if assigned == nil {
+		return
+	}
 	for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
-		for _, name := range p.assignedNames(statement) {
+		for _, name := range assigned(p, statement) {
+			if name == nil || name.Type() != "identifier" {
+				continue
+			}
 			key := p.local(p.text(name))
 			if _, defined := p.defs[key]; defined || p.bindings[p.text(name)] {
 				continue
@@ -319,31 +281,6 @@ func (p *projection) addVariables() {
 			}
 		}
 	}
-}
-
-// assignedNames returns the name nodes that a top-level statement assigns,
-// as x in x = f() or const x = f().
-func (p *projection) assignedNames(statement *sitter.Node) []*sitter.Node {
-	if statement.Type() == "export_statement" {
-		if statement = statement.ChildByFieldName("declaration"); statement == nil {
-			return nil
-		}
-	}
-	var names []*sitter.Node
-	switch statement.Type() {
-	case "expression_statement":
-		if p.ix.Language != core.LanguageCodePython || statement.NamedChildCount() == 0 {
-			return nil
-		}
-		if assignment := statement.NamedChild(0); assignment.Type() == "assignment" {
-			names = append(names, assignment.ChildByFieldName("left"))
-		}
-	case "lexical_declaration", "variable_declaration":
-		for _, declarator := range ts.NamedChildren(statement) {
-			names = append(names, declarator.ChildByFieldName("name"))
-		}
-	}
-	return slices.DeleteFunc(names, func(n *sitter.Node) bool { return n == nil || n.Type() != "identifier" })
 }
 
 // definitionName returns the last segment of a key. The module is the base
@@ -369,19 +306,14 @@ func (p *projection) fillDefinition(def *fileindex.Definition) {
 		if def.Kind == fileindex.DefFunction {
 			def.Kind = fileindex.DefMethod
 		}
-		if def.Kind == fileindex.DefMethod && def.Name == constructorNames[p.ix.Language] {
+		if def.Kind == fileindex.DefMethod && def.Name == p.rules().constructor {
 			def.Kind = fileindex.DefConstructor
 		}
 	}
-	switch decorators := p.rules().decorators; {
-	case p.isJava():
-		def.Decorators = p.javaAnnotations(p.syntax[def.Key])
-	case decorators != nil:
+	if decorators := p.rules().decorators; decorators != nil {
 		if node := p.syntax[def.Key]; node != nil {
 			def.Decorators = decorators(p, node)
 		}
-	default:
-		def.Decorators = p.decorators(p.syntax[def.Key])
 	}
 }
 
@@ -389,10 +321,7 @@ func (p *projection) fillDefinition(def *fileindex.Definition) {
 // arguments, as @app.route for @app.route("/"). A Python decorated
 // definition and a JavaScript method hold their decorators. A TypeScript
 // class body holds the decorators of a method before the method.
-func (p *projection) decorators(node *sitter.Node) []string {
-	if node == nil {
-		return nil
-	}
+func decorators(p *projection, node *sitter.Node) []string {
 	var nodes []*sitter.Node
 	switch parent := node.Parent(); {
 	case parent == nil:
@@ -420,15 +349,10 @@ func (p *projection) decorators(node *sitter.Node) []string {
 	return decorators
 }
 
-// addClasses adds each class definition with its methods and bases. The
-// bases come from the class resolver of the language, and from the class
-// heritage of a JavaScript class.
-func (p *projection) addClasses(ctx context.Context) error {
-	bases, err := p.classBases(ctx)
-	if err != nil {
-		return err
-	}
-
+// addClasses adds each class definition with its methods, its bases and
+// its fields, and each interface with its bases and the methods that it
+// declares. The bases come from the class node, as the decorators do.
+func (p *projection) addClasses(_ context.Context) error {
 	methods := map[string][]string{}
 	for key, def := range p.defs {
 		if def.Parent != "" {
@@ -439,84 +363,15 @@ func (p *projection) addClasses(ctx context.Context) error {
 		node := p.syntax[key]
 		switch {
 		case def.Kind == fileindex.DefInterface:
-			p.ix.Classes = append(p.ix.Classes, fileindex.Class{Key: key, Bases: p.interfaceBases(node), Abstract: p.goMethodElems(node)})
+			p.ix.Classes = append(p.ix.Classes, fileindex.Class{Key: key, Bases: p.bases(node), Abstract: p.abstract(node)})
 		case def.Kind != fileindex.DefClass:
 		case node == nil:
 			p.ix.Classes = append(p.ix.Classes, fileindex.Class{Key: key, Methods: methods[key]})
 		default:
-			p.ix.Classes = append(p.ix.Classes, fileindex.Class{Key: key, Bases: bases[spanOf(node)], Methods: methods[key], Fields: p.fields(node)})
+			p.ix.Classes = append(p.ix.Classes, fileindex.Class{Key: key, Bases: p.bases(node), Methods: methods[key], Fields: p.fields(node)})
 		}
 	}
 	return nil
-}
-
-// classBases returns the bases of each class by the span of the class node.
-// A start byte does not tell a class from the program that starts with it.
-// The bases come from the class node, as the decorators do. A query of the
-// class resolver over the whole tree costs the cube of the decorators of a
-// definition.
-func (p *projection) classBases(_ context.Context) (map[span][]string, error) {
-	bases := map[span][]string{}
-	rule := p.rules().bases
-	for _, node := range p.syntax {
-		if node == nil {
-			continue
-		}
-		switch {
-		case rule != nil:
-			bases[spanOf(node)] = rule(p, node)
-		case p.isJava():
-			bases[spanOf(node)] = p.javaBases(node)
-		case p.isGo():
-			bases[spanOf(node)] = p.goBases(node)
-		case node.Type() == "class_definition":
-			bases[spanOf(node)] = p.pythonBases(node)
-		case node.Type() == "class_declaration" || node.Type() == "class":
-			bases[spanOf(node)] = p.heritage(node)
-		}
-	}
-	return bases, nil
-}
-
-// pythonBases returns the bases of a Python class as written, as Base and
-// mod.Base in class A(Base, mod.Base, metaclass=M). A keyword argument, as
-// the metaclass, is no base.
-func (p *projection) pythonBases(class *sitter.Node) []string {
-	var bases []string
-	if list := class.ChildByFieldName("superclasses"); list != nil {
-		for _, base := range ts.NamedChildren(list) {
-			if base.Type() != "keyword_argument" {
-				bases = append(bases, p.text(base))
-			}
-		}
-	}
-	return bases
-}
-
-// heritage returns the bases that the class_heritage of a class names, as
-// Base in class A extends Base.
-func (p *projection) heritage(class *sitter.Node) []string {
-	var bases []string
-	for _, child := range ts.NamedChildren(class) {
-		if child.Type() != "class_heritage" {
-			continue
-		}
-		for _, base := range ts.NamedChildren(child) {
-			// TypeScript wraps the bases in an extends clause and an
-			// implements clause.
-			switch base.Type() {
-			case "extends_clause", "implements_clause":
-				for _, name := range ts.NamedChildren(base) {
-					if name.Type() != "type_arguments" {
-						bases = append(bases, p.text(name))
-					}
-				}
-			default:
-				bases = append(bases, p.text(base))
-			}
-		}
-	}
-	return bases
 }
 
 func (p *projection) addCalls() {
@@ -532,9 +387,7 @@ func (p *projection) addCalls() {
 			targets := p.targets(ref.Targets)
 			if ref.Unbound {
 				targets = p.rebind(key, ref.Method)
-				// A Java name that the file does not define keeps its
-				// name with no type arguments, as Box for new Box<>().
-				if len(targets) == 0 && p.isJava() {
+				if len(targets) == 0 && p.rules().rawUnbound {
 					targets = []string{ref.CalleeNamespace}
 				}
 			}
@@ -703,7 +556,7 @@ func (p *projection) rebind(caller, name string) []string {
 		return nil
 	}
 	for scope := caller; ; {
-		if def, ok := p.defs[scope]; ok && (def.Kind != fileindex.DefClass || scope == caller || p.memberScopes()) {
+		if def, ok := p.defs[scope]; ok && (def.Kind != fileindex.DefClass || scope == caller || p.rules().memberScopes) {
 			if _, bound := p.defs[fileindex.Join(scope, name)]; bound {
 				return []string{fileindex.Join(scope, name)}
 			}

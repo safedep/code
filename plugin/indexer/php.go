@@ -20,12 +20,22 @@ var phpIncludes = map[string]bool{
 var phpDirs = map[string]bool{"__DIR__": true, "dirname(__FILE__)": true}
 
 var phpRules = languageRules{
-	packageOf:  phpNamespace,
-	bases:      phpBases,
-	fields:     phpFields,
-	decorators: phpAttributes,
-	signature:  phpSignature,
-	visitors:   []func(p *projection) visitor{phpVisitor},
+	kinds: map[string]fileindex.DefKind{
+		"class_declaration":     fileindex.DefClass,
+		"enum_declaration":      fileindex.DefClass,
+		"trait_declaration":     fileindex.DefClass,
+		"interface_declaration": fileindex.DefInterface,
+		"function_definition":   fileindex.DefFunction,
+		"arrow_function":        fileindex.DefFunction,
+		"method_declaration":    fileindex.DefMethod,
+	},
+	constructor: "__construct",
+	packageOf:   phpNamespace,
+	bases:       phpBases,
+	fields:      phpFields,
+	decorators:  phpAttributes,
+	signature:   phpSignature,
+	visitors:    []func(p *projection) visitor{phpVisitor},
 }
 
 func phpNamespace(p *projection) string {

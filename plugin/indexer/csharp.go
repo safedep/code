@@ -19,14 +19,41 @@ var csharpReflection = []string{"GetMethod", "GetMethods", "GetProperty", "Invok
 const csharpTopLevel = "<Main>$"
 
 var csharpRules = languageRules{
+	kinds: map[string]fileindex.DefKind{
+		"class_declaration":        fileindex.DefClass,
+		"struct_declaration":       fileindex.DefClass,
+		"record_declaration":       fileindex.DefClass,
+		"enum_declaration":         fileindex.DefClass,
+		"interface_declaration":    fileindex.DefInterface,
+		"method_declaration":       fileindex.DefMethod,
+		"local_function_statement": fileindex.DefFunction,
+		"constructor_declaration":  fileindex.DefConstructor,
+	},
 	packageOf:    csharpNamespace,
 	bases:        csharpBases,
 	fields:       csharpFields,
 	decorators:   csharpAttributes,
 	signature:    csharpSignature,
 	definitions:  csharpTopLevelStatements,
-	visitors:     []func(p *projection) visitor{csharpFlagVisitor},
+	visitors:     []func(p *projection) visitor{referenceVisitor, csharpFlagVisitor},
 	memberScopes: true,
+	// A C# method group, as Process in list.ForEach(Process) or OnClick in
+	// button.Click += OnClick, is a delegate that the code that gets it
+	// calls.
+	references: &referenceSyntax{
+		holders: map[string]string{
+			"argument":                "",
+			"assignment_expression":   "right",
+			"return_statement":        "",
+			"arrow_expression_clause": "",
+		},
+		member:      "member_access_expression",
+		object:      "expression",
+		property:    "name",
+		identifiers: map[string]bool{"identifier": true},
+		instances:   map[string]bool{"this": true},
+		rawNames:    true,
+	},
 }
 
 // csharpNamespace returns the name of the first namespace of the file. A

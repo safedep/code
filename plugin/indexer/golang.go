@@ -1,7 +1,9 @@
 package indexer
 
 import (
-	"github.com/safedep/code/core"
+	"unicode"
+	"unicode/utf8"
+
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/pkg/ts"
@@ -12,8 +14,44 @@ import (
 // variables.
 const maxLocalDepth = 64
 
+var goRules = languageRules{
+	kinds: map[string]fileindex.DefKind{
+		"function_declaration": fileindex.DefFunction,
+		"method_declaration":   fileindex.DefMethod,
+	},
+	packageOf:   goPackage,
+	bases:       goBases,
+	fields:      goFields,
+	abstract:    goMethodElems,
+	signature:   goSignature,
+	exported:    goExported,
+	definitions: goTypes,
+	visitors:    []func(p *projection) visitor{referenceVisitor},
+	references: &referenceSyntax{
+		holders: map[string]string{
+			"argument_list":         "",
+			"short_var_declaration": "right",
+			"assignment_statement":  "right",
+			"var_spec":              "value",
+			"return_statement":      "",
+			"literal_value":         "",
+		},
+		member:      "selector_expression",
+		object:      "operand",
+		property:    "field",
+		identifiers: map[string]bool{"identifier": true},
+		lists:       map[string]bool{"expression_list": true, "literal_element": true, "keyed_element": true},
+	},
+	arguments: &argumentSyntax{
+		calls:    map[string]string{"call_expression": "function"},
+		skipped:  map[string]bool{"comment": true},
+		strings:  map[string]bool{"interpreted_string_literal": true, "raw_string_literal": true},
+		literals: map[string]bool{"int_literal": true, "float_literal": true, "imaginary_literal": true, "rune_literal": true, "true": true, "false": true, "nil": true, "composite_literal": true},
+	},
+}
+
 // goPackage returns the name of the package clause of a Go file.
-func (p *projection) goPackage() string {
+func goPackage(p *projection) string {
 	for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
 		if statement.Type() != "package_clause" {
 			continue
@@ -27,13 +65,10 @@ func (p *projection) goPackage() string {
 	return ""
 }
 
-// addGoTypes adds each top-level named type of a Go file. An interface is an
+// goTypes adds each top-level named type of a Go file. An interface is an
 // interface. Any other named type is a class, because it can have methods.
 // The call graph has no node for a type, so the tree gives the types.
-func (p *projection) addGoTypes() {
-	if !p.isGo() {
-		return
-	}
+func goTypes(p *projection) {
 	for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
 		if statement.Type() != "type_declaration" {
 			continue
@@ -64,7 +99,7 @@ func (p *projection) addGoTypes() {
 
 // goBases returns the types that a Go type embeds, and the type that an
 // alias names. A method of such a type is a method of the type too.
-func (p *projection) goBases(spec *sitter.Node) []string {
+func goBases(p *projection, spec *sitter.Node) []string {
 	t := spec.ChildByFieldName("type")
 	if t == nil {
 		return nil
@@ -91,10 +126,7 @@ func (p *projection) goBases(spec *sitter.Node) []string {
 }
 
 // goMethodElems returns the methods that a Go interface declares.
-func (p *projection) goMethodElems(spec *sitter.Node) []fileindex.Signature {
-	if !p.isGo() || spec == nil {
-		return nil
-	}
+func goMethodElems(p *projection, spec *sitter.Node) []fileindex.Signature {
 	t := spec.ChildByFieldName("type")
 	if t == nil || t.Type() != "interface_type" {
 		return nil
@@ -111,7 +143,7 @@ func (p *projection) goMethodElems(spec *sitter.Node) []fileindex.Signature {
 }
 
 // goFields returns the named fields of a Go struct that declare a type name.
-func (p *projection) goFields(spec *sitter.Node) []fileindex.Typed {
+func goFields(p *projection, spec *sitter.Node) []fileindex.Typed {
 	t := spec.ChildByFieldName("type")
 	if t == nil || t.Type() != "struct_type" || spec.Type() != "type_spec" {
 		return nil
@@ -144,26 +176,27 @@ func (p *projection) goStructFields(structType *sitter.Node) []*sitter.Node {
 	return fields
 }
 
-// addGoSignatures adds the receiver, the parameters, the arity, the first
-// result and the typed local variables of each Go function and method.
-func (p *projection) addGoSignatures() {
-	if !p.isGo() {
+// goSignature adds the receiver, the parameters, the arity, the first
+// result and the typed local variables of a Go function or method.
+func goSignature(p *projection, def *fileindex.Definition, node *sitter.Node) {
+	if def.Kind != fileindex.DefFunction && def.Kind != fileindex.DefMethod {
 		return
 	}
-	for key, def := range p.defs {
-		node := p.syntax[key]
-		if node == nil || def.Kind != fileindex.DefFunction && def.Kind != fileindex.DefMethod {
-			continue
-		}
-		if receiver := node.ChildByFieldName("receiver"); receiver != nil {
-			def.Params, _, _ = p.goParams(receiver, nil)
-		}
-		var params []fileindex.Typed
-		params, def.Arity, def.Variadic = p.goParams(node.ChildByFieldName("parameters"), p.goConstraints(node))
-		def.Params = append(def.Params, params...)
-		def.Returns = p.goResult(node.ChildByFieldName("result"))
-		def.Locals = p.goLocals(node.ChildByFieldName("body"))
+	if receiver := node.ChildByFieldName("receiver"); receiver != nil {
+		def.Params, _, _ = p.goParams(receiver, nil)
 	}
+	var params []fileindex.Typed
+	params, def.Arity, def.Variadic = p.goParams(node.ChildByFieldName("parameters"), p.goConstraints(node))
+	def.Params = append(def.Params, params...)
+	def.Returns = p.goResult(node.ChildByFieldName("result"))
+	def.Locals = p.goLocals(node.ChildByFieldName("body"))
+}
+
+// goExported reports that a name starts with an upper case letter, a
+// method too.
+func goExported(_ *projection, def *fileindex.Definition) bool {
+	r, _ := utf8.DecodeRuneInString(def.Name)
+	return unicode.IsUpper(r)
 }
 
 // goConstraints returns the type that the constraint of each type parameter
@@ -403,9 +436,4 @@ func nonEmpty(s string) []string {
 		return nil
 	}
 	return []string{s}
-}
-
-// isGo reports whether the projection is of a Go file.
-func (p *projection) isGo() bool {
-	return p.ix.Language == core.LanguageCodeGo
 }

@@ -16,6 +16,12 @@ import (
 const extensionParam = "this"
 
 var kotlinRules = languageRules{
+	kinds: map[string]fileindex.DefKind{
+		"class_declaration":     fileindex.DefClass,
+		"object_declaration":    fileindex.DefClass,
+		"function_declaration":  fileindex.DefFunction,
+		"secondary_constructor": fileindex.DefConstructor,
+	},
 	packageOf:    kotlinPackage,
 	kindOf:       kotlinKind,
 	bases:        kotlinBases,

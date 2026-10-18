@@ -1,7 +1,6 @@
 package indexer
 
 import (
-	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/pkg/ts"
@@ -17,41 +16,15 @@ type argumentSyntax struct {
 	literals map[string]bool
 }
 
-var ecmascriptArguments = argumentSyntax{
-	calls:    map[string]string{"call_expression": "function", "new_expression": "constructor"},
-	skipped:  map[string]bool{"comment": true},
-	strings:  map[string]bool{"string": true, "template_string": true},
-	literals: map[string]bool{"number": true, "true": true, "false": true, "null": true, "undefined": true, "array": true, "object": true, "regex": true},
-}
-
-var argumentSyntaxes = map[core.LanguageCode]argumentSyntax{
-	core.LanguageCodeGo: {
-		calls:    map[string]string{"call_expression": "function"},
-		skipped:  map[string]bool{"comment": true},
-		strings:  map[string]bool{"interpreted_string_literal": true, "raw_string_literal": true},
-		literals: map[string]bool{"int_literal": true, "float_literal": true, "imaginary_literal": true, "rune_literal": true, "true": true, "false": true, "nil": true, "composite_literal": true},
-	},
-	core.LanguageCodeJavascript: ecmascriptArguments,
-	core.LanguageCodeTypescript: ecmascriptArguments,
-	core.LanguageCodePython: {
-		calls: map[string]string{"call": "function"},
-		// A keyword argument has no position, so a rule that names a
-		// position does not read it.
-		skipped:  map[string]bool{"comment": true, "keyword_argument": true, "dictionary_splat": true},
-		strings:  map[string]bool{"string": true, "concatenated_string": true},
-		literals: map[string]bool{"integer": true, "float": true, "true": true, "false": true, "none": true, "list": true, "dictionary": true, "tuple": true, "set": true},
-	},
-}
-
 // arguments returns the positional arguments of the call whose callee is at
 // the site. A name or a member has the per-file targets of a reference, and
 // a function the key of its definition when the index has one.
 func (p *projection) arguments(caller string, site ast.NodePosition) []fileindex.Arg {
-	syntax, ok := argumentSyntaxes[p.ix.Language]
-	refs, hasRefs := referenceSyntaxes[p.ix.Language]
-	if !ok || !hasRefs {
+	rules := p.rules()
+	if rules.arguments == nil || rules.references == nil {
 		return nil
 	}
+	syntax, refs := *rules.arguments, *rules.references
 	call := p.descendant(site)
 	for call != nil {
 		if field, ok := syntax.calls[call.Type()]; ok {

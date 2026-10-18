@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"regexp"
 	"slices"
 	"strings"
 
@@ -24,10 +25,18 @@ var (
 )
 
 var rubyRules = languageRules{
+	kinds: map[string]fileindex.DefKind{
+		"class":            fileindex.DefClass,
+		"module":           fileindex.DefClass,
+		"method":           fileindex.DefMethod,
+		"singleton_method": fileindex.DefMethod,
+	},
+	constructor:  "initialize",
 	bases:        rubyBases,
 	signature:    rubySignature,
-	visitors:     []func(p *projection) visitor{rubyVisitor},
+	visitors:     []func(p *projection) visitor{mainGuardVisitor, rubyVisitor},
 	memberScopes: true,
+	mainGuard:    &mainGuard{statement: "if", condition: regexp.MustCompile(`^(__FILE__\s*==\s*\$(0|PROGRAM_NAME)|\$(0|PROGRAM_NAME)\s*==\s*__FILE__)$`)},
 }
 
 // rubyBases returns the superclass of a class and the modules that its

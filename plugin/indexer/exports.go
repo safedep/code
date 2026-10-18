@@ -1,51 +1,22 @@
 package indexer
 
 import (
-	"unicode"
-	"unicode/utf8"
-
-	"github.com/safedep/code/core"
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/pkg/ts"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-// addExports adds the export records of the file. The exports of a
-// JavaScript or TypeScript file are its export statements and its CommonJS
-// assignments. The exports of a Python file are the names of its __all__.
-func (p *projection) addExports() {
-	if !p.ix.Language.IsECMAScript() && p.ix.Language != core.LanguageCodePython {
-		return
-	}
-	for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
-		switch {
-		case statement.Type() == "export_statement":
-			p.exportStatements = append(p.exportStatements, statement)
-			p.addExportStatement(statement)
-		case statement.Type() == "expression_statement" && statement.NamedChildCount() > 0:
-			p.addExportAssignment(statement, statement.NamedChild(0))
-		}
-	}
-}
-
 // exported reports that the rule of the language makes the definition
-// visible outside the file. A JavaScript or TypeScript definition is
-// exported when an export names it. A Go name is exported when it starts
-// with an upper case letter, a method too. Elsewhere a top-level definition
-// is exported, and a method is exported with its class.
+// visible outside the file. With no rule, a top-level definition is
+// exported, and a method is exported with its class.
 func (p *projection) exported(def *fileindex.Definition) bool {
-	switch {
+	switch exported := p.rules().exported; {
 	case def.Kind == fileindex.DefModule:
 		return true
-	case p.ix.Language == core.LanguageCodeGo:
-		r, _ := utf8.DecodeRuneInString(def.Name)
-		return unicode.IsUpper(r)
-	case p.ix.Language == core.LanguageCodeRust:
-		return p.rustPublic(def)
+	case exported != nil:
+		return exported(p, def)
 	case def.Parent != "":
 		return p.exported(p.defs[def.Parent])
-	case p.ix.Language.IsECMAScript():
-		return p.exports[def.Key]
 	default:
 		return def.Key == p.local(def.Name)
 	}
@@ -171,21 +142,13 @@ func (p *projection) declaredNames(declaration *sitter.Node) []string {
 }
 
 // addExportAssignment adds the exports of a CommonJS assignment, as
-// module.exports = f, module.exports = { f } and exports.f = f, and the
-// names of a Python __all__.
+// module.exports = f, module.exports = { f } and exports.f = f.
 func (p *projection) addExportAssignment(statement, assignment *sitter.Node) {
 	left, right := assignment.ChildByFieldName("left"), assignment.ChildByFieldName("right")
 	if left == nil || right == nil {
 		return
 	}
 	line := lineOf(statement)
-
-	if p.ix.Language == core.LanguageCodePython {
-		if left.Type() == "identifier" && p.text(left) == "__all__" {
-			p.addAll(right, line)
-		}
-		return
-	}
 
 	switch target := p.text(left); {
 	case target == "module.exports":
@@ -242,25 +205,6 @@ func (p *projection) addModuleExports(value *sitter.Node, line int) {
 				}
 			}
 		}
-	}
-}
-
-// addAll adds the names of __all__ when it is a list or a tuple of string
-// literals. A computed __all__ gives no export.
-func (p *projection) addAll(value *sitter.Node, line int) {
-	if value.Type() != "list" && value.Type() != "tuple" {
-		return
-	}
-	var names []string
-	for _, item := range ts.NamedChildren(value) {
-		name, whole := p.stringPrefix(item)
-		if !whole {
-			return
-		}
-		names = append(names, name)
-	}
-	for _, name := range names {
-		p.export(name, name, line)
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/pkg/ts"
@@ -19,12 +18,32 @@ var javaInjections = []string{"Autowired", "Inject", "Resource"}
 // string or construct an instance with no new.
 var javaReflection = []string{"forName", "getMethod", "getDeclaredMethod", "getConstructor", "getDeclaredConstructor", "newInstance", "invoke", "loadClass"}
 
-func (p *projection) isJava() bool {
-	return p.ix.Language == core.LanguageCodeJava
+var javaRules = languageRules{
+	kinds: map[string]fileindex.DefKind{
+		"class_declaration":               fileindex.DefClass,
+		"enum_declaration":                fileindex.DefClass,
+		"record_declaration":              fileindex.DefClass,
+		"interface_declaration":           fileindex.DefInterface,
+		"method_declaration":              fileindex.DefMethod,
+		"constructor_declaration":         fileindex.DefConstructor,
+		"compact_constructor_declaration": fileindex.DefConstructor,
+		// A Java enum constant is a definition only when it has a class body.
+		"enum_constant": fileindex.DefClass,
+	},
+	memberScopes: true,
+	rawUnbound:   true,
+	packageOf:    javaPackage,
+	bases:        javaBases,
+	fields:       javaFields,
+	decorators:   javaAnnotations,
+	signature:    javaSignature,
+	inits:        addJavaInits,
+	prune:        dropIdleJavaInits,
+	visitors:     []func(p *projection) visitor{javaFlagVisitor, javaReferenceVisitor},
 }
 
 // javaPackage returns the name of the package clause of a Java file.
-func (p *projection) javaPackage() string {
+func javaPackage(p *projection) string {
 	for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
 		if statement.Type() != "package_declaration" {
 			continue
@@ -50,7 +69,7 @@ func javaModifiers(node *sitter.Node) *sitter.Node {
 
 // javaAnnotations returns the annotations of a declaration as written, with
 // no arguments, as @GetMapping for @GetMapping("/a").
-func (p *projection) javaAnnotations(node *sitter.Node) []string {
+func javaAnnotations(p *projection, node *sitter.Node) []string {
 	modifiers := javaModifiers(node)
 	if modifiers == nil {
 		return nil
@@ -64,32 +83,26 @@ func (p *projection) javaAnnotations(node *sitter.Node) []string {
 	return annotations
 }
 
-// addJavaSignatures adds the static mark, the typed parameters and the typed
-// local variables of each Java method and constructor.
-func (p *projection) addJavaSignatures() {
-	if !p.isJava() {
+// javaSignature adds the static mark, the typed parameters and the typed
+// local variables of a Java method or constructor.
+func javaSignature(p *projection, def *fileindex.Definition, node *sitter.Node) {
+	if def.Kind != fileindex.DefMethod && def.Kind != fileindex.DefConstructor {
 		return
 	}
-	for key, def := range p.defs {
-		node := p.syntax[key]
-		if node == nil || def.Kind != fileindex.DefMethod && def.Kind != fileindex.DefConstructor {
-			continue
-		}
-		if modifiers := javaModifiers(node); modifiers != nil {
-			def.Static = hasKeyword(modifiers, "static")
-		}
-		if params := node.ChildByFieldName("parameters"); params != nil {
-			for _, param := range ts.NamedChildren(params) {
-				if param.Type() != "formal_parameter" {
-					continue
-				}
-				if typ := p.javaTypeName(param.ChildByFieldName("type")); typ != "" {
-					def.Params = append(def.Params, fileindex.Typed{Name: p.text(param.ChildByFieldName("name")), Type: typ})
-				}
+	if modifiers := javaModifiers(node); modifiers != nil {
+		def.Static = hasKeyword(modifiers, "static")
+	}
+	if params := node.ChildByFieldName("parameters"); params != nil {
+		for _, param := range ts.NamedChildren(params) {
+			if param.Type() != "formal_parameter" {
+				continue
+			}
+			if typ := p.javaTypeName(param.ChildByFieldName("type")); typ != "" {
+				def.Params = append(def.Params, fileindex.Typed{Name: p.text(param.ChildByFieldName("name")), Type: typ})
 			}
 		}
-		def.Locals = p.javaLocals(node.ChildByFieldName("body"))
 	}
+	def.Locals = p.javaLocals(node.ChildByFieldName("body"))
 }
 
 // javaInitName names the static initializer of a Java class.
@@ -103,10 +116,7 @@ const javaInitName = staticInitName
 // <clinit> of the class, which takes the calls of those members. A call of
 // a static method then does not run the constructor. The constants of an
 // enum are instances, so the <clinit> of an enum calls the enum.
-func (p *projection) addJavaInits() {
-	if !p.isJava() {
-		return
-	}
+func addJavaInits(p *projection) {
 	var classes []string
 	for key, def := range p.defs {
 		if def.Kind == fileindex.DefClass || def.Kind == fileindex.DefInterface {
@@ -157,10 +167,7 @@ func (p *projection) addJavaInits() {
 
 // dropIdleJavaInits removes each static initializer that runs no call, no
 // reference and no unresolved site, as the one of static final int X = 1.
-func (p *projection) dropIdleJavaInits() {
-	if !p.isJava() {
-		return
-	}
+func dropIdleJavaInits(p *projection) {
 	busy := map[string]bool{}
 	for _, c := range p.ix.Calls {
 		busy[c.Caller] = true
@@ -239,7 +246,7 @@ func (p *projection) javaLocals(body *sitter.Node) []fileindex.Typed {
 
 // javaFields returns the fields of a Java class that declare a class type.
 // The components of a record are fields too.
-func (p *projection) javaFields(class *sitter.Node) []fileindex.Typed {
+func javaFields(p *projection, class *sitter.Node) []fileindex.Typed {
 	var fields []fileindex.Typed
 	if components := class.ChildByFieldName("parameters"); class.Type() == "record_declaration" && components != nil {
 		for _, c := range ts.NamedChildren(components) {
@@ -270,7 +277,7 @@ func (p *projection) javaFields(class *sitter.Node) []fileindex.Typed {
 // javaBases returns the class that a class extends and the interfaces that
 // it implements, or the interfaces that an interface extends, as written. A
 // constant of an enum with a class body extends the enum.
-func (p *projection) javaBases(node *sitter.Node) []string {
+func javaBases(p *projection, node *sitter.Node) []string {
 	if node.Type() == "enum_constant" {
 		if enum := node.Parent().Parent(); enum != nil && enum.Type() == "enum_declaration" {
 			return nonEmpty(p.text(enum.ChildByFieldName("name")))
@@ -320,10 +327,7 @@ func (p *projection) javaTypeName(node *sitter.Node) string {
 // javaFlagVisitor marks the reflection calls and the injected values of a
 // Java file. A Java call has no function field, so the flags pass of the
 // other languages does not read it.
-func (p *projection) javaFlagVisitor() visitor {
-	if !p.isJava() {
-		return nil
-	}
+func javaFlagVisitor(p *projection) visitor {
 	return func(node *sitter.Node, kind string) {
 		switch kind {
 		case "method_invocation":
@@ -343,10 +347,7 @@ func (p *projection) javaFlagVisitor() visitor {
 // javaReferenceVisitor adds each method reference of a Java file, as
 // this::helper or Parser::parse. The code that gets the value can call it.
 // A constructor reference, as Parser::new, names the class.
-func (p *projection) javaReferenceVisitor() visitor {
-	if !p.isJava() {
-		return nil
-	}
+func javaReferenceVisitor(p *projection) visitor {
 	return func(node *sitter.Node, kind string) {
 		if kind != "method_reference" || node.NamedChildCount() == 0 {
 			return
