@@ -34,7 +34,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var update = flag.Bool("update", false, "write the golden summaries of the cases")
+var (
+	update = flag.Bool("update", false, "write the golden summaries of the cases")
+	// dumpDir names a directory that receives the graph and the reach results
+	// of each case, so a refactor proves that it changes no output.
+	dumpDir = flag.String("dump", "", "write the graph and the reach results of each case under this directory")
+)
 
 // expectation is the expect.yaml of a case. A site is path:line. Roots,
 // unresolved sites and the fields of a result are the whole set. Edges are a
@@ -193,12 +198,15 @@ func runCase(t *testing.T, dir string, languages []core.Language) {
 	assert.Equal(t, want.Unresolved, unresolvedOf(g), "unresolved sites")
 	assert.Equal(t, want.Truncated, truncationsOf(g), "truncations")
 
+	var results []reach.Result
 	for _, w := range want.Results {
-		results, err := reach.Reach(ctx, g, reach.Query{Targets: []string{w.Target}, IncludeTests: w.IncludeTests})
+		got, err := reach.Reach(ctx, g, reach.Query{Targets: []string{w.Target}, IncludeTests: w.IncludeTests})
 		require.NoError(t, err)
-		require.Len(t, results, 1)
-		assert.Equal(t, w, resultOf(w, results[0]), "result for %s", w.Target)
+		require.Len(t, got, 1)
+		assert.Equal(t, w, resultOf(w, got[0]), "result for %s", w.Target)
+		results = append(results, got...)
 	}
+	dumpCase(t, dir, g, results)
 	for _, unit := range slices.Sorted(maps.Values(want.Units)) {
 		checkSummary(t, filepath.Join(dir, "summaries"), unit, indexed, roots)
 	}
@@ -225,6 +233,22 @@ func fileSystemConfig(project string, want expectation) (fs.LocalFileSystemConfi
 		}
 	}
 	return cfg, roots
+}
+
+// dumpCase writes the graph and the reach results of a case under the
+// directory of the flag -dump.
+func dumpCase(t *testing.T, dir string, g *projectgraph.Graph, results []reach.Result) {
+	t.Helper()
+	if *dumpDir == "" {
+		return
+	}
+	out := filepath.Join(*dumpDir, filepath.ToSlash(strings.TrimPrefix(dir, "cases"+string(filepath.Separator))))
+	require.NoError(t, os.MkdirAll(out, 0o755))
+	for name, v := range map[string]any{"graph.json": g, "results.json": results} {
+		data, err := json.MarshalIndent(v, "", "  ")
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(out, name), append(data, '\n'), 0o644))
+	}
 }
 
 // checkSummary compares the summary of one unit with its golden file. The

@@ -30,6 +30,10 @@ import (
 // license, so the repository does not hold a copy.
 const swarmJSEnv = "PROJECTGRAPH_SWARM_JS"
 
+// publicPairsEnv names a directory that receives the pairs of each case, one
+// file per case, so a refactor proves that it changes no answer.
+const publicPairsEnv = "PROJECTGRAPH_PUBLIC_PAIRS"
+
 // publicSet is a set of cases in the PyCG layout. Each directory with a
 // callgraph.json is one project, and callgraph.json maps each caller name to
 // its callee names.
@@ -162,6 +166,9 @@ func scoreCase(ctx context.Context, t *testing.T, name, dir string, language cor
 	got := graphPairs(g, importedUnits(indexed.Indexes))
 	if d := os.Getenv("PROJECTGRAPH_PUBLIC_DUMP"); d == name || d == "all" {
 		dump(t, g, got, expected)
+	}
+	if d := os.Getenv(publicPairsEnv); d != "" {
+		writePairs(t, filepath.Join(d, name+".txt"), got)
 	}
 
 	total.files += len(indexed.Indexes)
@@ -371,6 +378,17 @@ func (s *score) rows(set publicSet) []string {
 		rows = append(rows, fmt.Sprintf("  category=%s recall=%s", c, s.byCategory[c]))
 	}
 	return rows
+}
+
+func writePairs(t *testing.T, file string, got map[callPair][]projectgraph.EdgeKind) {
+	t.Helper()
+	var lines []string
+	for pair, kinds := range got {
+		lines = append(lines, fmt.Sprintf("%s -> %s %v", pair.from, pair.to, kinds))
+	}
+	slices.Sort(lines)
+	require.NoError(t, os.MkdirAll(filepath.Dir(file), 0o755))
+	require.NoError(t, os.WriteFile(file, []byte(strings.Join(lines, "\n")+"\n"), 0o644))
 }
 
 func dump(t *testing.T, g *projectgraph.Graph, got map[callPair][]projectgraph.EdgeKind, expected map[callPair]bool) {
