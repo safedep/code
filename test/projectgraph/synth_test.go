@@ -14,6 +14,7 @@ import (
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/lang"
+	"github.com/safedep/code/langcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -1406,7 +1407,7 @@ func (p *synthProject) kotlinModule(m *synthModule, ext []externalPackage) strin
 // TestSynthGivesOneOutputForAnyNumberOfWorkers indexes and links a project
 // of more than two batches per language with one worker and with four.
 func TestSynthGivesOneOutputForAnyNumberOfWorkers(t *testing.T) {
-	for _, code := range languageCodes {
+	for _, code := range langcode.All() {
 		t.Run(string(code), func(t *testing.T) {
 			language, err := lang.GetLanguage(string(code))
 			require.NoError(t, err)

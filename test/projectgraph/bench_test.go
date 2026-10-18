@@ -21,6 +21,7 @@ import (
 	"github.com/safedep/code/fileindex/store/localdbstore"
 	codefs "github.com/safedep/code/fs"
 	"github.com/safedep/code/lang"
+	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/plugin/indexer"
 	"github.com/safedep/code/projectgraph"
 	"github.com/safedep/code/projectgraph/reach"
@@ -68,7 +69,7 @@ func envInts(b *testing.B, name string, fallback ...int) []int {
 // store. Each step reports the peak heap of its run. The index steps other
 // than index-cold use the last number of workers.
 func BenchmarkProjectGraph(b *testing.B) {
-	for _, code := range languageCodes {
+	for _, code := range langcode.All() {
 		for _, files := range benchSizes(b) {
 			b.Run(string(code)+"/files="+strconv.Itoa(files), func(b *testing.B) {
 				benchProject(b, code, files)
@@ -306,7 +307,7 @@ func (p *peakHeap) stop() uint64 {
 // with more than 20 field candidates in the whole project is ambiguous,
 // and with fewer files it has field edges.
 func TestDegradesAtHalfTheColdTime(t *testing.T) {
-	for _, code := range languageCodes {
+	for _, code := range langcode.All() {
 		t.Run(string(code), func(t *testing.T) {
 			language, err := lang.GetLanguage(string(code))
 			require.NoError(t, err)

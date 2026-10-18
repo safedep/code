@@ -23,7 +23,34 @@ func All() []Code {
 	return []Code{Python, Javascript, Java, Go, Typescript, CSharp, Rust, PHP, Ruby, Kotlin}
 }
 
+// Family joins the languages whose files call each other and share their
+// libraries: TypeScript with JavaScript, Kotlin with Java. A language with
+// no such partner is its own family.
+func (c Code) Family() Code {
+	switch c {
+	case Typescript:
+		return Javascript
+	case Kotlin:
+		return Java
+	}
+	return c
+}
+
 // IsECMAScript reports whether the language is JavaScript or TypeScript.
 func (c Code) IsECMAScript() bool {
-	return c == Javascript || c == Typescript
+	return c.Family() == Javascript
+}
+
+// ModuleSeparator is the separator of a module path of the language, as the
+// dot of os.path or the :: of std::io.
+func (c Code) ModuleSeparator() string {
+	switch c {
+	case Python, Java, Kotlin, CSharp:
+		return "."
+	case PHP:
+		return `\`
+	case Rust:
+		return "::"
+	}
+	return "/"
 }

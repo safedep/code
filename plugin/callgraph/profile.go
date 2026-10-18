@@ -128,12 +128,13 @@ type stringShape struct {
 	interpolations map[string]bool
 }
 
-// languageProfiles are the languages of the call graph, in a fixed order.
+// languageProfiles are the languages of the call graph, in the order of
+// langcode.All.
 var languageProfiles = []*languageProfile{
 	&pythonProfile,
+	&javascriptProfile,
 	&javaProfile,
 	&goProfile,
-	&javascriptProfile,
 	&typescriptProfile,
 	&csharpProfile,
 	&rustProfile,

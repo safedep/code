@@ -13,7 +13,6 @@ import (
 // include names a file by its path.
 var phpProfile = profile{
 	code:              langcode.PHP,
-	family:            langcode.PHP,
 	resolver:          func(b *builder, _ *space) modules.Resolver { return phpResolver{b} },
 	units:             (*builder).addPHPUnits,
 	link:              (*builder).linkPHP,

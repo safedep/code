@@ -179,18 +179,13 @@ func HasKeyPrefix(key, prefix string) bool {
 // fs//promises for fs/promises in JavaScript or App//Kernel for \App\Kernel
 // in PHP. It keeps the leading dots of a relative module.
 func Namespace(lang langcode.Code, module string) string {
-	sep := "/"
 	switch lang {
-	case langcode.Python, langcode.Java, langcode.Kotlin, langcode.CSharp:
-		sep = "."
 	case langcode.PHP:
-		sep, module = `\`, strings.TrimPrefix(module, `\`)
-	case langcode.Rust:
-		sep = "::"
+		module = strings.TrimPrefix(module, `\`)
 	case langcode.Ruby:
 		module = strings.ReplaceAll(module, "::", "/")
 	}
-	return strings.ReplaceAll(module, sep, Separator)
+	return strings.ReplaceAll(module, lang.ModuleSeparator(), Separator)
 }
 
 // anonymousPrefix starts the name of a definition that has no name in the

@@ -13,9 +13,6 @@ import (
 // of the project.
 type profile struct {
 	code langcode.Code
-	// family joins the languages whose files call each other, as
-	// TypeScript with JavaScript.
-	family langcode.Code
 
 	// resolver returns the module resolver of the language for one space
 	// of a build: the project, or a unit of dependency code.
@@ -183,14 +180,6 @@ func profileOf(lang langcode.Code) *profile {
 		return p
 	}
 	return noProfile
-}
-
-// languageFamily joins the languages whose files call each other.
-func languageFamily(lang langcode.Code) langcode.Code {
-	if f := profileOf(lang).family; f != "" {
-		return f
-	}
-	return lang
 }
 
 func isInstanceKeyword(lang langcode.Code, name string) bool {

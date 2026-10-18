@@ -14,7 +14,6 @@ var typescriptProfile = ecmascriptProfile(langcode.Typescript, true)
 func ecmascriptProfile(code langcode.Code, typescript bool) profile {
 	return profile{
 		code:            code,
-		family:          langcode.Javascript,
 		resolver:        func(_ *builder, sp *space) modules.Resolver { return sp.keyed(sp.js.For(typescript)) },
 		dependencyCode:  true,
 		instance:        []string{"this"},

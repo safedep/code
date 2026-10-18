@@ -4,7 +4,9 @@ import (
 	"testing"
 
 	"github.com/safedep/code/core"
+	"github.com/safedep/code/langcode"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var resolveLanguageTestcases = []struct {
@@ -40,6 +42,16 @@ func TestResolveLanguage(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestAllLanguagesFollowLangcodeAll(t *testing.T) {
+	all, err := AllLanguages()
+	require.NoError(t, err)
+	var codes []langcode.Code
+	for _, l := range all {
+		codes = append(codes, l.Meta().Code)
+	}
+	assert.Equal(t, langcode.All(), codes)
 }
 
 func TestGetLanguage(t *testing.T) {

@@ -53,12 +53,8 @@ func indexAndLink(t testing.TB, project string, want expectation, languages []co
 
 func caseLanguages(t testing.TB) []core.Language {
 	t.Helper()
-	languages := make([]core.Language, 0, len(languageCodes))
-	for _, code := range languageCodes {
-		language, err := lang.GetLanguage(string(code))
-		require.NoError(t, err)
-		languages = append(languages, language)
-	}
+	languages, err := lang.AllLanguages()
+	require.NoError(t, err)
 	return languages
 }
 

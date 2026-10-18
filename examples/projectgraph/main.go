@@ -30,7 +30,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/safedep/code/core"
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/fileindex/store"
 	"github.com/safedep/code/fileindex/store/localdbstore"
@@ -62,8 +61,6 @@ var testPaths = []string{
 	"*.test.js", "*.spec.js", "*.test.ts", "*.spec.ts", "*.test.tsx", "*.spec.tsx", "*_test.go", "*Test.java", "*Tests.java", "*Test.kt", "*Tests.kt",
 	"*Test.cs", "*Tests.cs", "*Test.php", "*_test.rb", "*_spec.rb", "benches",
 }
-
-var languageCodes = []core.LanguageCode{core.LanguageCodePython, core.LanguageCodeJavascript, core.LanguageCodeTypescript, core.LanguageCodeGo, core.LanguageCodeJava, core.LanguageCodeKotlin, core.LanguageCodeCSharp, core.LanguageCodePHP, core.LanguageCodeRuby, core.LanguageCodeRust}
 
 type stringList []string
 
@@ -173,13 +170,9 @@ func run(ctx context.Context, cfg config, out io.Writer) (err error) {
 		return err
 	}
 
-	var languages []core.Language
-	for _, code := range languageCodes {
-		language, err := lang.GetLanguage(string(code))
-		if err != nil {
-			return err
-		}
-		languages = append(languages, language)
+	languages, err := lang.AllLanguages()
+	if err != nil {
+		return err
 	}
 
 	var s store.Store

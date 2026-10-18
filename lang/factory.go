@@ -7,26 +7,33 @@ import (
 	"sync"
 
 	"github.com/safedep/code/core"
+	"github.com/safedep/code/langcode"
 )
 
-// sharedLanguages builds each language once, in a fixed order. A language
-// keeps no state, so every caller shares one value.
-var sharedLanguages = sync.OnceValues(func() ([]core.Language, error) {
-	constructors := []func() (core.Language, error){
-		func() (core.Language, error) { return NewPythonLanguage() },
-		func() (core.Language, error) { return NewJavascriptLanguage() },
-		func() (core.Language, error) { return NewGoLanguage() },
-		func() (core.Language, error) { return NewJavaLanguage() },
-		func() (core.Language, error) { return NewTypescriptLanguage() },
-		func() (core.Language, error) { return NewCSharpLanguage() },
-		func() (core.Language, error) { return NewRustLanguage() },
-		func() (core.Language, error) { return NewPHPLanguage() },
-		func() (core.Language, error) { return NewRubyLanguage() },
-		func() (core.Language, error) { return NewKotlinLanguage() },
-	}
+// constructors builds the language of each code. langcode.All lists the
+// codes, so a new language needs an entry here and nowhere else in lang.
+var constructors = map[langcode.Code]func() (core.Language, error){
+	langcode.Python:     func() (core.Language, error) { return NewPythonLanguage() },
+	langcode.Javascript: func() (core.Language, error) { return NewJavascriptLanguage() },
+	langcode.Go:         func() (core.Language, error) { return NewGoLanguage() },
+	langcode.Java:       func() (core.Language, error) { return NewJavaLanguage() },
+	langcode.Typescript: func() (core.Language, error) { return NewTypescriptLanguage() },
+	langcode.CSharp:     func() (core.Language, error) { return NewCSharpLanguage() },
+	langcode.Rust:       func() (core.Language, error) { return NewRustLanguage() },
+	langcode.PHP:        func() (core.Language, error) { return NewPHPLanguage() },
+	langcode.Ruby:       func() (core.Language, error) { return NewRubyLanguage() },
+	langcode.Kotlin:     func() (core.Language, error) { return NewKotlinLanguage() },
+}
 
+// sharedLanguages builds each language once, in the order of langcode.All. A
+// language keeps no state, so every caller shares one value.
+var sharedLanguages = sync.OnceValues(func() ([]core.Language, error) {
 	langs := make([]core.Language, 0, len(constructors))
-	for _, newLanguage := range constructors {
+	for _, code := range langcode.All() {
+		newLanguage, ok := constructors[code]
+		if !ok {
+			return nil, fmt.Errorf("no language for the code %q", code)
+		}
 		l, err := newLanguage()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get language: %w", err)

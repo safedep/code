@@ -55,13 +55,13 @@ func (b *builder) extensionsNamed(sc *scope, name string) []string {
 			}
 			for i := range ix.Definitions {
 				if _, ok := extensionReceiver(&ix.Definitions[i]); ok {
-					k := familyName{family: languageFamily(ix.Language), name: ix.Definitions[i].Name}
+					k := familyName{family: ix.Language.Family(), name: ix.Definitions[i].Name}
 					b.extensionDefs[k] = append(b.extensionDefs[k], ix.Definitions[i].Key)
 				}
 			}
 		}
 	}
-	return b.extensionDefs[familyName{family: languageFamily(sc.ix.Language), name: name}]
+	return b.extensionDefs[familyName{family: sc.ix.Language.Family(), name: name}]
 }
 
 // linkImplicitMethods adds a reference edge from each class to each of its

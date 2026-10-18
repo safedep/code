@@ -16,7 +16,6 @@ import (
 // Java files of one package are one unit, so each calls the other.
 var kotlinProfile = profile{
 	code:            langcode.Kotlin,
-	family:          langcode.Java,
 	resolver:        func(b *builder, _ *space) modules.Resolver { return namespaceResolver{b, langcode.Java} },
 	link:            (*builder).linkKotlin,
 	implicitMethods: kotlinOperators,

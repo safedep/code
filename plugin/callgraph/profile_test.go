@@ -5,6 +5,7 @@ import (
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/lang"
+	"github.com/safedep/code/langcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -48,7 +49,8 @@ func TestLanguageProfiles(t *testing.T) {
 		})
 	}
 
-	assert.Equal(t, codes, NewCallGraphPlugin(nil).SupportedLanguages(), "the plugin supports exactly the registered codes")
+	assert.ElementsMatch(t, codes, NewCallGraphPlugin(nil).SupportedLanguages(), "the plugin supports exactly the registered codes")
+	assert.Equal(t, langcode.All(), SupportedLanguages(), "the profiles follow langcode.All")
 	assert.Len(t, profilesByCode, len(languageProfiles), "each code has one profile")
 }
 

@@ -12,7 +12,6 @@ import (
 
 var goProfile = profile{
 	code:               langcode.Go,
-	family:             langcode.Go,
 	resolver:           func(b *builder, sp *space) modules.Resolver { return goResolver{sp} },
 	units:              (*builder).addGoUnits,
 	dependencyCode:     true,

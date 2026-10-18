@@ -11,7 +11,6 @@ import (
 
 var pythonProfile = profile{
 	code:               langcode.Python,
-	family:             langcode.Python,
 	resolver:           func(_ *builder, sp *space) modules.Resolver { return sp.keyed(sp.python) },
 	dependencyCode:     true,
 	relativePath:       pythonRelativePath,

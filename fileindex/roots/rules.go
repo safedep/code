@@ -357,13 +357,6 @@ func Merge(base, extra []Rule) []Rule {
 
 // Applies reports whether the rule matches files of the language.
 func (r Rule) Applies(lang langcode.Code) bool {
-	switch langcode.Code(r.Language) {
-	case AnyLanguage, lang:
-		return true
-	case langcode.Javascript:
-		return lang == langcode.Typescript
-	case langcode.Java:
-		return lang == langcode.Kotlin
-	}
-	return false
+	code := langcode.Code(r.Language)
+	return code == AnyLanguage || code == lang || code == lang.Family()
 }

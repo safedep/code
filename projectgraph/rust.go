@@ -16,7 +16,6 @@ import (
 // impl of a trait makes the trait a base.
 var rustProfile = profile{
 	code:              langcode.Rust,
-	family:            langcode.Rust,
 	resolver:          func(b *builder, _ *space) modules.Resolver { return rustResolver{b} },
 	units:             (*builder).addRustUnits,
 	aliases:           (*builder).joinImplBlocks,

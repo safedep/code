@@ -276,7 +276,7 @@ type provisionKey struct {
 // depends only on the family, the module and the form, so the builder
 // keeps it.
 func (b *builder) providers(o origin) []provision {
-	family := languageFamily(o.lang)
+	family := o.lang.Family()
 	k := provisionKey{family: family, module: o.module, form: o.form}
 	if out, ok := b.provisions[k]; ok {
 		return out

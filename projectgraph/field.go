@@ -37,7 +37,7 @@ func (b *builder) linkFields() {
 		if profileOf(ix.Language).memberFields && u.Receiver != "" {
 			kind, byName = EdgeField, fields
 		}
-		family := languageFamily(ix.Language)
+		family := ix.Language.Family()
 		// The scan stops past the cap, because a common name has a
 		// candidate in most files of a large project.
 		var candidates []string
@@ -88,7 +88,7 @@ func (b *builder) definitionsByName() (fields, names map[familyName][]string) {
 		if ix == nil || isDeclarationFile(p) {
 			continue
 		}
-		family := languageFamily(ix.Language)
+		family := ix.Language.Family()
 		for _, def := range ix.Definitions {
 			k := familyName{unit: ix.Unit, family: family, name: def.Name}
 			switch def.Kind {

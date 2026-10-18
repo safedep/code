@@ -280,9 +280,9 @@ func (b *builder) overrides(class string, call fileindex.Call, found string) []s
 			out = append(out, key)
 		}
 	}
-	family := languageFamily(b.languageOf(class))
+	family := b.languageOf(class).Family()
 	for _, open := range b.openClasses() {
-		if languageFamily(b.languageOf(open)) != family || !sameUnit(open, class) {
+		if b.languageOf(open).Family() != family || !sameUnit(open, class) {
 			continue
 		}
 		if key, ok := b.ownMethod(open, call.Method); ok && key != found && b.isMethod(key) && !slices.Contains(out, key) {
