@@ -81,7 +81,7 @@ func (b *builder) linkKotlin(ix *fileindex.Index) {
 		}
 		if class, ok := b.resolveType(sc, def.Key, receiver); ok {
 			site := Site{Path: ix.Path, Line: def.StartLine}
-			b.addEdge(Edge{From: class, To: def.Key, Site: site, Kind: EdgeReference, Resolver: resolverName(ix.Language, "implicit")})
+			b.link(ix.Language, class, def.Key, site, EdgeReference, ruleImplicit)
 		}
 	}
 	b.linkExtensions(ix, b.kotlinExtensions)
@@ -97,7 +97,7 @@ func (b *builder) linkKotlin(ix *fileindex.Index) {
 func (b *builder) linkFileInits(ix *fileindex.Index) {
 	for _, def := range ix.Definitions {
 		if def.Kind == fileindex.DefFunction && def.Parent == "" && len(fileindex.Segments(def.Key)) == 1 {
-			b.addEdge(Edge{From: def.Key, To: ix.Path, Site: Site{Path: ix.Path, Line: def.StartLine}, Kind: EdgeDirect, Resolver: resolverName(ix.Language, "file-init")})
+			b.link(ix.Language, def.Key, ix.Path, Site{Path: ix.Path, Line: def.StartLine}, EdgeDirect, ruleFileInit)
 		}
 	}
 	sc := b.scopes[ix.Path]
@@ -106,7 +106,7 @@ func (b *builder) linkFileInits(ix *fileindex.Index) {
 			for _, key := range b.properties(sc, t) {
 				if p := fileindex.Unit(key); p != ix.Path {
 					site := Site{Path: ix.Path, Line: call.Line, Column: call.Column}
-					b.addEdge(Edge{From: b.runner(call.Caller), To: p, Site: site, Kind: EdgeDirect, Resolver: resolverName(ix.Language, "file-init")})
+					b.link(ix.Language, b.runner(call.Caller), p, site, EdgeDirect, ruleFileInit)
 				}
 			}
 		}

@@ -216,14 +216,14 @@ func (b *builder) wildcard(sc *scope, name string) []resolution {
 		mod, _, ok := b.resolveModule(sc.ix, st.spec)
 		if !ok {
 			key := b.importedExternal(sc.ix, fileindex.Join(fileindex.Namespace(sc.ix.Language, st.spec), name), st.spec, modules.FormImport, []string{name})
-			external = append(external, resolution{key: key, kind: EdgeWildcard, rule: "wildcard-external"})
+			external = append(external, resolution{key: key, kind: EdgeWildcard, rule: ruleWildcardExternal})
 			continue
 		}
 		if !b.starVisible(mod, name) {
 			continue
 		}
 		if key, fail := b.resolveName(mod, name, 0); fail == nil {
-			return []resolution{{key: key, kind: EdgeWildcard, rule: "wildcard"}}
+			return []resolution{{key: key, kind: EdgeWildcard, rule: ruleWildcard}}
 		}
 	}
 	return external

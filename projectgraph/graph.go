@@ -227,6 +227,10 @@ type Graph struct {
 	Truncated  []Truncation                    `json:"truncated,omitempty"`
 	Problems   []modules.Problem               `json:"problems,omitempty"`
 	Stats      Stats                           `json:"stats"`
+
+	// edges is the set of Edges, which AddEdge makes on its first call and
+	// keeps for the next ones.
+	edges *edgeSet
 }
 
 // IsExternal reports whether the key names a node outside the project.
@@ -256,17 +260,23 @@ func (g *Graph) AddEdge(e Edge) (bool, error) {
 		g.Nodes[e.To] = &Node{Key: e.To, Kind: NodeExternal}
 		g.Stats.Nodes = len(g.Nodes)
 	}
-	e.Confidence = e.Kind.Confidence()
-	i, found := slices.BinarySearchFunc(g.Edges, e, compareSlots)
-	switch {
-	case found && !e.Kind.outranks(g.Edges[i].Kind):
-		return false, nil
-	case found:
-		g.Edges[i] = e
-	default:
-		g.Edges = slices.Insert(g.Edges, i, e)
-		g.Stats.Edges = len(g.Edges)
+	if g.edges == nil {
+		g.edges = newEdgeSet(len(g.Edges))
+		for _, old := range g.Edges {
+			g.edges.add(old)
+		}
 	}
+	e = newEdge(e.From, e.To, e.Site, e.Kind, e.Resolver)
+	if !g.edges.add(e) {
+		return false, nil
+	}
+	i, found := slices.BinarySearchFunc(g.Edges, e, compareSlots)
+	if found {
+		g.Edges[i] = e
+		return true, nil
+	}
+	g.Edges = slices.Insert(g.Edges, i, e)
+	g.Stats.Edges = len(g.Edges)
 	return true, nil
 }
 

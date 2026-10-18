@@ -107,7 +107,7 @@ func (b *builder) constantFallback(_ *scope, _, first string, _ []string, target
 	if !startsUpper(first) {
 		return nil
 	}
-	return []resolution{{key: b.external(target), kind: EdgeDirect, rule: "external"}}
+	return []resolution{b.externalResolution(target)}
 }
 
 // constantPath returns the Ruby constant path of a name in a class, as

@@ -136,7 +136,7 @@ func (b *builder) phpScopeFallback(sc *scope, _, first string, rest []string, ta
 		}
 	}
 	if len(rest) > 0 && startsUpper(first) {
-		return []resolution{{key: b.external(target), kind: EdgeDirect, rule: "external"}}
+		return []resolution{b.externalResolution(target)}
 	}
 	return nil
 }

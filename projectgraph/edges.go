@@ -100,6 +100,30 @@ func (s *edgeSet) put(slot edgeSlot, e Edge) {
 	s.linked[[2]symbol{slot.from, slot.to}] = struct{}{}
 }
 
+// holds reports whether the set has an edge at the slot of e.
+func (s *edgeSet) holds(e Edge) bool {
+	_, ok := s.slots[s.slot(e)]
+	return ok
+}
+
+// add puts the edge in the set unless the caller already has an edge to
+// the callee at the site with a confidence at least as high. A higher one
+// replaces it, so a path through the site shows the best kind. It reports
+// whether the set changed.
+func (s *edgeSet) add(e Edge) bool {
+	slot := s.slot(e)
+	if old, ok := s.kind(slot); ok && !e.Kind.outranks(old) {
+		return false
+	}
+	s.put(slot, e)
+	return true
+}
+
+// newEdge returns an edge of the kind with the confidence of the kind.
+func newEdge(from, to string, site Site, kind EdgeKind, resolver string) Edge {
+	return Edge{From: from, To: to, Site: site, Kind: kind, Confidence: kind.Confidence(), Resolver: resolver}
+}
+
 // joins reports whether an edge goes from the caller to the callee.
 func (s *edgeSet) joins(from, to string) bool {
 	f, ok := s.symbols.ids[from]
@@ -140,15 +164,8 @@ func (s *edgeSet) sorted() []Edge {
 	str := s.symbols.strings
 	edges := make([]Edge, len(entries))
 	for i, e := range entries {
-		kind := EdgeKind(str[e.kind])
-		edges[i] = Edge{
-			From:       str[e.from],
-			To:         str[e.to],
-			Site:       Site{Path: str[e.path], Line: int(e.line), Column: int(e.column)},
-			Kind:       kind,
-			Confidence: kind.Confidence(),
-			Resolver:   str[e.resolver],
-		}
+		site := Site{Path: str[e.path], Line: int(e.line), Column: int(e.column)}
+		edges[i] = newEdge(str[e.from], str[e.to], site, EdgeKind(str[e.kind]), str[e.resolver])
 	}
 	return edges
 }

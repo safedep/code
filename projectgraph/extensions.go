@@ -26,7 +26,7 @@ func (b *builder) linkExtensions(ix *fileindex.Index, visible func(sc *scope, na
 		}
 		site := Site{Path: ix.Path, Line: line, Column: column}
 		for _, key := range visible(sc, method) {
-			b.addEdge(Edge{From: b.runner(caller), To: key, Site: site, Kind: EdgeName, Resolver: resolverName(ix.Language, "extension")})
+			b.link(ix.Language, b.runner(caller), key, site, EdgeName, ruleExtension)
 		}
 	}
 	for _, call := range ix.Calls {
@@ -72,8 +72,7 @@ func (b *builder) linkImplicitMethods(ix *fileindex.Index) {
 	for _, c := range ix.Classes {
 		for _, m := range c.Methods {
 			if def := b.defs[m]; def != nil && b.isMethod(m) && names[def.Name] {
-				n := b.g.Nodes[m]
-				b.addEdge(Edge{From: c.Key, To: m, Site: Site{Path: n.Path, Line: n.Line}, Kind: EdgeReference, Resolver: resolverName(ix.Language, "implicit")})
+				b.link(ix.Language, c.Key, m, b.siteOf(m), EdgeReference, ruleImplicit)
 			}
 		}
 	}

@@ -96,7 +96,7 @@ func TestMRO(t *testing.T) {
 	}
 	b, err := newBuilder([]*fileindex.Index{ix}, Options{})
 	require.NoError(t, err)
-	require.NoError(t, b.link(context.Background()))
+	require.NoError(t, b.linkAll(context.Background()))
 
 	names := func(class string) []string {
 		var out []string

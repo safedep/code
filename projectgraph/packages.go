@@ -341,7 +341,7 @@ func (b *builder) linkPackages(ctx context.Context) error {
 }
 
 func (b *builder) linkProvision(key string, o origin, pv provision) {
-	resolver := resolverName(o.lang, "package", cmp.Or(pv.via, "name"))
+	r := rulePackage.via(cmp.Or(pv.via, "name"))
 	fail := func(reason fileindex.UnresolvedReason) {
 		b.addUnresolved(UnresolvedSite{Caller: key, Site: Site{Path: pv.sp.unit}, Text: key, Reason: reason, Unit: pv.sp.unit})
 	}
@@ -361,16 +361,16 @@ func (b *builder) linkProvision(key string, o origin, pv provision) {
 		}
 		names = []string{def}
 	}
-	r := b.walk(pv.module, names)
-	if r.fail != nil {
-		fail(r.fail.reason)
+	res := b.walk(pv.module, names)
+	if res.fail != nil {
+		fail(res.fail.reason)
 		return
 	}
-	n := b.g.Nodes[r.key]
-	if r.key == key || n == nil {
+	n := b.g.Nodes[res.key]
+	if res.key == key || n == nil {
 		return
 	}
-	b.addEdge(Edge{From: key, To: r.key, Site: Site{Path: cmp.Or(n.Path, pv.sp.unit), Line: n.Line}, Kind: EdgePackage, Resolver: resolver})
+	b.link(o.lang, key, res.key, Site{Path: cmp.Or(n.Path, pv.sp.unit), Line: n.Line}, EdgePackage, r)
 }
 
 // addSurfaces links an external node to each exported symbol of each unit,

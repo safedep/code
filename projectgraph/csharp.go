@@ -1,7 +1,6 @@
 package projectgraph
 
 import (
-	"cmp"
 	"slices"
 	"strings"
 
@@ -72,8 +71,7 @@ func (b *builder) linkClassBodies(ix *fileindex.Index) {
 			if def == nil || def.Static || !b.isMethod(m) {
 				continue
 			}
-			n := b.g.Nodes[m]
-			b.addEdge(Edge{From: m, To: c.Key, Site: Site{Path: n.Path, Line: n.Line}, Kind: EdgeDirect, Resolver: resolverName(ix.Language, "instance")})
+			b.link(ix.Language, m, c.Key, b.siteOf(m), EdgeDirect, ruleInstance)
 		}
 	}
 }
@@ -98,9 +96,7 @@ func (b *builder) linkCSharp(ix *fileindex.Index) {
 
 // walkNamespace resolves the key of a name of a namespace table.
 func (b *builder) walkNamespace(key string) resolution {
-	r := b.walk(key, nil)
-	r.rule = cmp.Or(r.rule, "namespace")
-	return r
+	return b.walkAs(key, nil, ruleNamespace)
 }
 
 // csharpRoots are the first names of the namespaces of the platform, which
@@ -137,10 +133,10 @@ func (b *builder) csharpScopeFallback(sc *scope, _, first string, rest []string,
 		}
 		roots = append(roots, firstDotted(imp.Module))
 		key := fileindex.Join(fileindex.Namespace(sc.ix.Language, imp.Module), first)
-		out = append(out, resolution{key: b.external(fileindex.Join(key, rest...)), kind: EdgeWildcard, rule: "wildcard-external"})
+		out = append(out, b.wildcardExternal(fileindex.Join(key, rest...)))
 	}
 	if slices.Contains(roots, first) {
-		return []resolution{{key: b.external(target), kind: EdgeDirect, rule: "external"}}
+		return []resolution{b.externalResolution(target)}
 	}
 	return out
 }

@@ -68,7 +68,7 @@ func Build(ctx context.Context, indexes []*fileindex.Index, opts Options) (*Grap
 	if err != nil {
 		return nil, err
 	}
-	if err := b.link(ctx); err != nil {
+	if err := b.linkAll(ctx); err != nil {
 		return nil, err
 	}
 	if err := b.markRoots(ctx); err != nil {
@@ -283,7 +283,9 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 	return b, nil
 }
 
-func (b *builder) link(ctx context.Context) error {
+// linkAll adds the nodes and the edges of every file, then the surfaces,
+// the package edges and the field edges.
+func (b *builder) linkAll(ctx context.Context) error {
 	for _, p := range b.paths {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -446,21 +448,14 @@ func (b *builder) external(key string) string {
 	return key
 }
 
-// addEdge adds an edge unless the caller already has an edge to the callee
-// at the site with a confidence at least as high. A higher one replaces it,
-// so a path through the site shows the best kind. Graph.AddEdge keeps the
-// same rule after the build.
+// addEdge adds an edge by the rule of the edge set, unless the edge is new
+// and the graph is at its edge limit.
 func (b *builder) addEdge(e Edge) {
-	slot := b.edges.slot(e)
-	old, ok := b.edges.kind(slot)
-	switch {
-	case ok && !e.Kind.outranks(old):
-		return
-	case !ok && b.edges.len() >= b.opts.maxEdges:
+	if !b.edges.holds(e) && b.edges.len() >= b.opts.maxEdges {
 		b.truncations[Truncation{Kind: TruncationEdges}] = true
 		return
 	}
-	b.edges.put(slot, e)
+	b.edges.add(e)
 }
 
 func (b *builder) addUnresolved(u UnresolvedSite) {
@@ -489,13 +484,13 @@ func (b *builder) linkImports(ix *fileindex.Index) {
 		}
 		for _, m := range mods {
 			for _, to := range b.moduleFiles(m.key) {
-				b.addEdge(Edge{From: from, To: to, Site: site, Kind: EdgeImport, Resolver: resolverName(ix.Language, "import", m.via)})
+				b.link(ix.Language, from, to, site, EdgeImport, ruleImport.via(m.via))
 			}
 			if !profileOf(ix.Language).moduleNames || imp.Item == "" || b.bindsName(m.key, imp.Item) {
 				continue
 			}
 			if sub, ok := b.submodule(m.key, imp.Item); ok && b.isModule(sub) {
-				b.addEdge(Edge{From: from, To: sub, Site: site, Kind: EdgeImport, Resolver: resolverName(ix.Language, "import", "submodule")})
+				b.link(ix.Language, from, sub, site, EdgeImport, ruleImport.via("submodule"))
 			}
 		}
 	}
@@ -507,7 +502,7 @@ func (b *builder) linkImports(ix *fileindex.Index) {
 		for _, m := range mods {
 			if b.isModule(m.key) {
 				site := Site{Path: ix.Path, Line: ex.Line}
-				b.addEdge(Edge{From: ix.Path, To: m.key, Site: site, Kind: EdgeImport, Resolver: resolverName(ix.Language, "import", m.via)})
+				b.link(ix.Language, ix.Path, m.key, site, EdgeImport, ruleImport.via(m.via))
 			}
 		}
 	}
@@ -590,14 +585,7 @@ func (b *builder) linkConstructors(ix *fileindex.Index) {
 		if !ok {
 			continue
 		}
-		n := b.g.Nodes[ctor]
-		b.addEdge(Edge{
-			From:     c.Key,
-			To:       ctor,
-			Site:     Site{Path: n.Path, Line: n.Line},
-			Kind:     EdgeDirect,
-			Resolver: resolverName(ix.Language, "constructor"),
-		})
+		b.link(ix.Language, c.Key, ctor, b.siteOf(ctor), EdgeDirect, ruleConstructor)
 	}
 }
 
@@ -631,8 +619,7 @@ func (b *builder) linkOverrides(ix *fileindex.Index) {
 				if !ok || b.kindOf(key) != NodeMethod {
 					continue
 				}
-				n := b.g.Nodes[key]
-				b.addEdge(Edge{From: c.Key, To: key, Site: Site{Path: n.Path, Line: n.Line}, Kind: EdgeReference, Resolver: resolverName(ix.Language, "override")})
+				b.link(ix.Language, c.Key, key, b.siteOf(key), EdgeReference, ruleOverride)
 			}
 		}
 	}
@@ -650,7 +637,7 @@ func (b *builder) linkArgumentFunctions(ix *fileindex.Index) {
 			continue
 		}
 		site := Site{Path: ix.Path, Line: def.StartLine}
-		b.addEdge(Edge{From: b.definer(def.Key), To: def.Key, Site: site, Kind: EdgeDirect, Resolver: resolverName(ix.Language, "argument-function")})
+		b.link(ix.Language, b.definer(def.Key), def.Key, site, EdgeDirect, ruleArgumentFunction)
 	}
 }
 
@@ -683,7 +670,7 @@ func (b *builder) linkDecorators(ix *fileindex.Index) {
 				continue
 			}
 			for _, nested := range b.nestedFunctions(key) {
-				b.addEdge(Edge{From: def.Key, To: nested, Site: site, Kind: EdgeReference, Resolver: resolverName(ix.Language, "decorator-closure")})
+				b.link(ix.Language, def.Key, nested, site, EdgeReference, ruleDecoratorClosure)
 			}
 			if b.edges.joins(from, key) {
 				continue
@@ -691,7 +678,7 @@ func (b *builder) linkDecorators(ix *fileindex.Index) {
 			if b.g.Nodes[key] == nil {
 				b.external(key)
 			}
-			b.addEdge(Edge{From: from, To: key, Site: site, Kind: EdgeDirect, Resolver: resolverName(ix.Language, "decorator")})
+			b.link(ix.Language, from, key, site, EdgeDirect, ruleDecorator)
 		}
 	}
 }
@@ -856,8 +843,4 @@ func compareProblems(a, b modules.Problem) int {
 
 func compareTruncations(a, b Truncation) int {
 	return cmp.Or(cmp.Compare(a.Kind, b.Kind), cmp.Compare(a.Key, b.Key), compareSites(a.Site, b.Site))
-}
-
-func resolverName(lang langcode.Code, parts ...string) string {
-	return strings.Join(append([]string{string(lang)}, parts...), ".")
 }

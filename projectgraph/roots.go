@@ -79,8 +79,7 @@ func (b *builder) addRoot(key string, kind roots.Kind, rule string) {
 // root is at its own node.
 func (b *builder) addRootAt(key string, kind roots.Kind, rule string, site Site) {
 	if site.Path == "" {
-		n := b.g.Nodes[key]
-		site = Site{Path: n.Path, Line: n.Line}
+		site = b.siteOf(key)
 	}
 	b.g.Roots = append(b.g.Roots, Root{Key: key, Kind: kind, Rule: rule, Site: site})
 }

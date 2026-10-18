@@ -38,7 +38,7 @@ const javaLang = "java//lang"
 func (b *builder) javaScopeFallback(sc *scope, _, first string, rest []string, target string) []resolution {
 	var out []resolution
 	for _, key := range b.externalWildcards(sc, first) {
-		out = append(out, resolution{key: b.external(fileindex.Join(key, rest...)), kind: EdgeWildcard, rule: "wildcard-external"})
+		out = append(out, b.wildcardExternal(fileindex.Join(key, rest...)))
 	}
 	switch {
 	case len(out) > 0:
@@ -48,9 +48,9 @@ func (b *builder) javaScopeFallback(sc *scope, _, first string, rest []string, t
 		if key, ok := b.resolveJava(dotted); ok {
 			return []resolution{b.walk(key, nil)}
 		}
-		return []resolution{{key: b.external(target), kind: EdgeDirect, rule: "external"}}
+		return []resolution{b.externalResolution(target)}
 	case langcode.IsJavaLang(first):
-		return []resolution{{key: b.external(fileindex.Join(javaLang, target)), kind: EdgeDirect, rule: "java-lang"}}
+		return []resolution{{key: b.external(fileindex.Join(javaLang, target)), kind: EdgeDirect, rule: ruleJavaLang}}
 	}
 	return out
 }
@@ -95,8 +95,7 @@ func (b *builder) linkClassInits(ix *fileindex.Index) {
 			if from == init || from != c.Key && !b.isMethod(from) {
 				continue
 			}
-			n := b.g.Nodes[from]
-			b.addEdge(Edge{From: from, To: init, Site: Site{Path: n.Path, Line: n.Line}, Kind: EdgeDirect, Resolver: resolverName(ix.Language, "class-init")})
+			b.link(ix.Language, from, init, b.siteOf(from), EdgeDirect, ruleClassInit)
 		}
 	}
 }
@@ -152,7 +151,7 @@ func (b *builder) thisMethod(caller, name string) (resolution, bool) {
 	if p := profileOf(b.languageOf(caller)); p.constructorCall == name && p.classMethodPrefix != "" && strings.HasPrefix(fileindex.Last(caller), p.classMethodPrefix) {
 		if class, ok := b.enclosingClass(caller); ok {
 			if _, own := b.ownMethod(class, name); !own {
-				return resolution{key: class, kind: EdgeDirect, rule: "constructor"}, true
+				return resolution{key: class, kind: EdgeDirect, rule: ruleConstructor}, true
 			}
 		}
 	}

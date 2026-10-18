@@ -26,7 +26,7 @@ func noDefinition(name string) *failure {
 type resolution struct {
 	key  string
 	kind EdgeKind
-	rule string
+	rule rule
 	fail *failure
 	// unbound marks a target that no definition and no import of the file
 	// binds, as print or console//log.
@@ -144,14 +144,14 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			}
 			switch {
 			case r.kind == EdgeDirect && isAssignment(sc, call, r.target):
-				r.kind, r.rule = EdgeAssignment, "assignment"
+				r.kind, r.rule = EdgeAssignment, ruleAssignment
 			case r.kind == EdgeDirect && call.Receiver != "" && b.isMethod(r.key):
-				r.kind, r.rule = EdgeMember, "member"
+				r.kind, r.rule = EdgeMember, ruleMember
 			}
 			if r.kind == EdgeMember && r.declared {
-				r.rule = "declared-type"
+				r.rule = ruleDeclaredType
 			}
-			b.addEdge(Edge{From: from, To: r.key, Site: site, Kind: r.kind, Resolver: resolverName(ix.Language, r.rule)})
+			b.link(ix.Language, from, r.key, site, r.kind, r.rule)
 		}
 	}
 }
@@ -200,7 +200,7 @@ func (b *builder) linkCHA(call fileindex.Call, r resolution, from string, site S
 	}
 	overrides := b.overrides(class, call, found)
 	for _, key := range overrides {
-		b.addEdge(Edge{From: from, To: key, Site: site, Kind: EdgeCHA, Resolver: resolverName(lang, "cha")})
+		b.link(lang, from, key, site, EdgeCHA, ruleCHA)
 	}
 	// An ECMAScript type is structural. A value of an interface type can be
 	// an object literal or an instance of a class with no implements, and an
@@ -229,7 +229,7 @@ func (b *builder) linkReferences(ix *fileindex.Index) {
 			if r.fail != nil || r.unbound || sc.profile.typeConversions && b.isType(r.key) {
 				continue
 			}
-			b.addEdge(Edge{From: from, To: r.key, Site: site, Kind: EdgeReference, Resolver: resolverName(ix.Language, "reference")})
+			b.link(ix.Language, from, r.key, site, EdgeReference, ruleReference)
 		}
 	}
 }
@@ -279,23 +279,21 @@ func (b *builder) resolveTarget(sc *scope, caller, target string) []resolution {
 		names := append(lead, rest...)
 		mods := b.resolveModules(ix, module, formOf(imp))
 		if len(mods) == 0 {
-			return []resolution{{key: b.importedExternal(ix, target, module, formOf(imp), names), kind: EdgeDirect, rule: "external"}}
+			return []resolution{{key: b.importedExternal(ix, target, module, formOf(imp), names), kind: EdgeDirect, rule: ruleExternal}}
 		}
 		if len(names) == 0 && sc.profile.defaultExport != "" {
 			names = []string{sc.profile.defaultExport}
 		}
 		var out []resolution
 		for _, m := range mods {
-			r := b.walk(m.key, names)
-			r.rule = cmp.Or(r.rule, "import")
-			out = append(out, r)
+			out = append(out, b.walkAs(m.key, names, ruleImport))
 		}
 		return out
 	}
 	if rs := b.resolveScope(sc, caller, target); len(rs) > 0 {
 		return rs
 	}
-	return []resolution{{key: target, kind: EdgeDirect, rule: "external", unbound: true}}
+	return []resolution{{key: target, kind: EdgeDirect, rule: ruleExternal, unbound: true}}
 }
 
 // resolveScope resolves a target whose first name the file does not bind:
@@ -310,15 +308,11 @@ func (b *builder) resolveScope(sc *scope, caller, target string) []resolution {
 		}
 	}
 	if key, ok := b.nestedType(sc, caller, first); ok {
-		r := b.walk(key, rest)
-		r.rule = cmp.Or(r.rule, "nested")
-		return []resolution{r}
+		return []resolution{b.walkAs(key, rest, ruleNested)}
 	}
 	var out []resolution
 	for _, key := range b.unitNames(sc.ix.Path, first) {
-		r := b.walk(key, rest)
-		r.rule = cmp.Or(r.rule, "package")
-		out = append(out, r)
+		out = append(out, b.walkAs(key, rest, rulePackage))
 	}
 	if len(out) > 0 {
 		return out
@@ -332,10 +326,10 @@ func (b *builder) resolveScope(sc *scope, caller, target string) []resolution {
 		r := b.walk(key, rest)
 		switch {
 		case sc.profile.exactWildcards:
-			r.rule = cmp.Or(r.rule, "wildcard-import")
+			r.rule = cmp.Or(r.rule, ruleWildcardImport)
 		case r.kind == EdgeDirect:
 			r.kind = EdgeWildcard
-			r.rule = cmp.Or(r.rule, "dot-import")
+			r.rule = cmp.Or(r.rule, ruleDotImport)
 		}
 		out = append(out, r)
 	}
@@ -424,16 +418,15 @@ func (b *builder) resolveSuper(caller string, names []string) resolution {
 		}
 		switch {
 		case b.kindOf(base) != NodeClass:
-			return resolution{key: b.deriveExternal(base, names), kind: EdgeDirect, rule: "super"}
+			return resolution{key: b.deriveExternal(base, names), kind: EdgeDirect, rule: ruleSuper}
 		case len(names) == 0:
-			return resolution{key: base, kind: EdgeDirect, rule: "super"}
+			return resolution{key: base, kind: EdgeDirect, rule: ruleSuper}
 		}
 		if key, fail := b.method(base, names[0]); fail == nil {
-			r := b.walk(key, names[1:])
+			r := b.walkAs(key, names[1:], ruleSuper)
 			if r.kind == EdgeDirect && b.isMethod(r.key) {
 				r.kind = EdgeMember
 			}
-			r.rule = cmp.Or(r.rule, "super")
 			return r
 		}
 	}
@@ -441,7 +434,7 @@ func (b *builder) resolveSuper(caller string, names []string) resolution {
 	if missing || object == "" {
 		return resolution{fail: noDefinition(cmp.Or(strings.Join(names, fileindex.Separator), superKeyword))}
 	}
-	return resolution{key: b.external(fileindex.Join(object, names...)), kind: EdgeDirect, rule: "super"}
+	return resolution{key: b.external(fileindex.Join(object, names...)), kind: EdgeDirect, rule: ruleSuper}
 }
 
 // enclosingClass returns the innermost class or interface that holds the
@@ -462,9 +455,7 @@ func (b *builder) enclosingClass(key string) (string, bool) {
 // declared type gives its class.
 func (b *builder) resolveLocal(sc *scope, caller, target string) resolution {
 	if b.g.Nodes[target] != nil {
-		r := b.walk(target, nil)
-		r.rule = cmp.Or(r.rule, "local")
-		return r
+		return b.walkAs(target, nil, ruleLocal)
 	}
 	unit, segs := fileindex.Unit(target), fileindex.Segments(target)
 	for i := len(segs) - 1; i > 0; i-- {
@@ -479,18 +470,24 @@ func (b *builder) resolveLocal(sc *scope, caller, target string) resolution {
 				r = b.walkTyped(class, segs[i+1:])
 			}
 		}
-		r.rule = cmp.Or(r.rule, "local")
+		r.rule = cmp.Or(r.rule, ruleLocal)
 		return r
 	}
-	r := b.walk(unit, segs)
-	r.rule = cmp.Or(r.rule, "local")
-	return r
+	return b.walkAs(unit, segs, ruleLocal)
 }
 
 // walk resolves the names one at a time from a key: a name of a module, a
 // method of a class, or a member of an external key.
 func (b *builder) walk(key string, names []string) resolution {
 	return b.walkFrom(resolution{key: key, kind: EdgeDirect}, names)
+}
+
+// walkAs walks the names from a key, and names the rule of the walk when
+// no step of the walk named one.
+func (b *builder) walkAs(key string, names []string, r rule) resolution {
+	out := b.walk(key, names)
+	out.rule = cmp.Or(out.rule, r)
+	return out
 }
 
 // walkFrom walks the names from the key of r. A virtual r is an instance of
@@ -522,7 +519,7 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 					continue
 				}
 				if getter, ok := b.moduleGetattr(r.key); ok {
-					r.key, r.kind, r.rule, r.dynamic = getter, EdgeDirect, "module-getattr", true
+					r.key, r.kind, r.rule, r.dynamic = getter, EdgeDirect, ruleModuleGetattr, true
 					return r
 				}
 				r.fail = fail
@@ -573,7 +570,7 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 			// method of the class before a method of its instances.
 			if prefix := profileOf(lang).classMethodPrefix; prefix != "" && !instance && !r.virtual {
 				if key, ok := b.ownMethod(r.key, prefix+name); ok {
-					r.key, r.kind, r.rule, r.class = key, EdgeMember, "member", r.key
+					r.key, r.kind, r.rule, r.class = key, EdgeMember, ruleMember, r.key
 					i++
 					continue
 				}
@@ -587,7 +584,7 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 			key, ok := b.ownMethod(r.key, name)
 			switch {
 			case ok:
-				r.key, r.kind, r.rule = key, EdgeMember, "member"
+				r.key, r.kind, r.rule = key, EdgeMember, ruleMember
 				i++
 				continue
 			case !last:
@@ -603,7 +600,7 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 				r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
 				return r
 			case external && last:
-				r.key, r.kind, r.rule = b.deriveExternal(base, []string{name}), EdgeMember, "member"
+				r.key, r.kind, r.rule = b.deriveExternal(base, []string{name}), EdgeMember, ruleMember
 				i++
 			case external:
 				r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
@@ -614,7 +611,7 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 			}
 		case kind == NodeExternal || kind == "" && b.g.IsExternal(r.key):
 			r.key = b.deriveExternal(r.key, names[i:])
-			r.rule = cmp.Or(r.rule, "external")
+			r.rule = cmp.Or(r.rule, ruleExternal)
 			return r
 		case kind == NodeFunction || kind == NodeMethod || kind == NodeConstructor:
 			// A Go call of the function gives a value of its first result,

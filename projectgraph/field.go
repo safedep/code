@@ -58,7 +58,7 @@ func (b *builder) linkFields() {
 			continue
 		}
 		for _, key := range candidates {
-			b.addEdge(Edge{From: u.Caller, To: key, Site: u.Site, Kind: kind, Resolver: resolverName(ix.Language, string(kind))})
+			b.link(ix.Language, u.Caller, key, u.Site, kind, rule(kind))
 		}
 	}
 }

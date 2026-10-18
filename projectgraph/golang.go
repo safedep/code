@@ -217,8 +217,7 @@ func (b *builder) linkInits(ix *fileindex.Index) {
 	if b.kindOf(key) != NodeFunction {
 		return
 	}
-	n := b.g.Nodes[key]
-	b.addEdge(Edge{From: ix.Path, To: key, Site: Site{Path: ix.Path, Line: n.Line}, Kind: EdgeDirect, Resolver: resolverName(ix.Language, "init")})
+	b.link(ix.Language, ix.Path, key, b.siteOf(key), EdgeDirect, ruleInit)
 }
 
 // implementations returns the Go methods that a call of a method of the

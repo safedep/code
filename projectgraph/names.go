@@ -115,7 +115,7 @@ func (b *builder) followExport(sc *scope, ex fileindex.Export, hops int) (string
 				return "", fail
 			}
 		}
-		return b.bind(sc, ex.Name, ex.Line, key, "reexport"), nil
+		return b.bind(sc, ex.Name, ex.Line, key, ruleReexport), nil
 	}
 	imp, ok := sc.bindings[cmp.Or(ex.Item, ex.Name)]
 	if !ok {
@@ -150,7 +150,7 @@ func (b *builder) followBinding(sc *scope, imp fileindex.Import, name string, ho
 	default:
 		key = mod
 	}
-	return b.bind(sc, name, imp.Line, key, "reexport"), nil
+	return b.bind(sc, name, imp.Line, key, ruleReexport), nil
 }
 
 // followStar resolves a name through an export * from or a Python
@@ -165,23 +165,17 @@ func (b *builder) followStar(sc *scope, st star, name string, hops int) (string,
 	if fail != nil {
 		return "", fail
 	}
-	return b.bind(sc, name, st.line, key, "reexport-star"), nil
+	return b.bind(sc, name, st.line, key, ruleReexportStar), nil
 }
 
-func (b *builder) bind(sc *scope, name string, line int, target, rule string) string {
+func (b *builder) bind(sc *scope, name string, line int, target string, r rule) string {
 	if isNamespacePackage(target) {
 		return target
 	}
 	key := fileindex.Join(sc.ix.Path, name)
 	b.addNode(&Node{Key: key, Kind: NodeExport, Path: sc.ix.Path, Line: line, Exported: true, Test: b.test[sc.ix.Path]})
 	b.bindings[key] = target
-	b.addEdge(Edge{
-		From:     key,
-		To:       target,
-		Site:     Site{Path: sc.ix.Path, Line: line},
-		Kind:     EdgeExport,
-		Resolver: resolverName(sc.ix.Language, rule),
-	})
+	b.link(sc.ix.Language, key, target, Site{Path: sc.ix.Path, Line: line}, EdgeExport, r)
 	return key
 }
 

@@ -217,7 +217,7 @@ func (b *builder) rustScopeFallback(sc *scope, _, first string, rest []string, t
 		return []resolution{b.walkNamespace(key)}
 	}
 	if len(rest) > 0 {
-		return []resolution{{key: b.external(target), kind: EdgeDirect, rule: "external"}}
+		return []resolution{b.externalResolution(target)}
 	}
 	return nil
 }
