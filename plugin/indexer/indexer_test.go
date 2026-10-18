@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -79,8 +80,7 @@ func TestIndexerWarmRunParsesNothing(t *testing.T) {
 	fsys := appFileSystem(t, dir)
 	opts := Options{Languages: projectLanguages(t), Store: memstore.New()}
 
-	var indexer Indexer
-	cold, err := indexer.Run(context.Background(), fsys, opts)
+	cold, err := runIndexer(t, context.Background(), fsys, opts)
 	require.NoError(t, err)
 	assert.Equal(t, sourceNames, cold.Report.Visited)
 	assert.Equal(t, statuses(fileindex.FileIndexed, sourceNames...), cold.Files)
@@ -90,7 +90,7 @@ func TestIndexerWarmRunParsesNothing(t *testing.T) {
 		assert.Equal(t, name, cold.Indexes[i].Path)
 	}
 
-	warm, err := indexer.Run(context.Background(), fsys, opts)
+	warm, err := runIndexer(t, context.Background(), fsys, opts)
 	require.NoError(t, err)
 	assert.Equal(t, statuses(fileindex.FileCached, sourceNames...), warm.Files)
 	assert.Equal(t, cold.Indexes, warm.Indexes)
@@ -98,7 +98,7 @@ func TestIndexerWarmRunParsesNothing(t *testing.T) {
 
 	t.Run("a changed file parses again", func(t *testing.T) {
 		writeFiles(t, dir, map[string]string{"main.js": "import { helper } from './lib/helper';\nhelper();\nhelper();\n"})
-		changed, err := indexer.Run(context.Background(), fsys, opts)
+		changed, err := runIndexer(t, context.Background(), fsys, opts)
 		require.NoError(t, err)
 		assert.Equal(t, []string{"main.js"}, changed.Report.Visited)
 		assert.Equal(t, fileindex.FileIndexed, changed.Files["main.js"])
@@ -110,9 +110,8 @@ func TestIndexerWarmRunParsesNothing(t *testing.T) {
 func TestIndexerWithNoStoreParsesEveryFile(t *testing.T) {
 	dir := t.TempDir()
 	writeFiles(t, dir, projectFiles)
-	var indexer Indexer
 	for range 2 {
-		result, err := indexer.Run(context.Background(), appFileSystem(t, dir), Options{Languages: projectLanguages(t)})
+		result, err := runIndexer(t, context.Background(), appFileSystem(t, dir), Options{Languages: projectLanguages(t)})
 		require.NoError(t, err)
 		assert.Equal(t, statuses(fileindex.FileIndexed, sourceNames...), result.Files)
 		assert.Equal(t, sourceNames, result.Report.Visited)
@@ -130,8 +129,7 @@ func TestIndexerWithLocalDBStoreReadsTheStore(t *testing.T) {
 		s, err := localdbstore.New(context.Background(), mgr)
 		require.NoError(t, err)
 
-		var indexer Indexer
-		result, err := indexer.Run(context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s})
+		result, err := runIndexer(t, context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s})
 		require.NoError(t, err)
 		return result, len(result.Report.Visited)
 	}
@@ -165,8 +163,7 @@ func TestIndexerStopsAfterTheDeadline(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	var indexer Indexer
-	result, err := indexer.Run(ctx, appFileSystem(t, dir), Options{
+	result, err := runIndexer(t, ctx, appFileSystem(t, dir), Options{
 		Languages: languages(t, core.LanguageCodeJavascript),
 		Store:     &cancelingStore{Store: memstore.New(), cancel: cancel},
 	})
@@ -211,13 +208,12 @@ func TestIndexerRunsExtraPluginsOnEveryFile(t *testing.T) {
 	fsys := appFileSystem(t, dir)
 	opts := Options{Languages: projectLanguages(t), Store: memstore.New()}
 
-	var indexer Indexer
-	_, err := indexer.Run(context.Background(), fsys, opts)
+	_, err := runIndexer(t, context.Background(), fsys, opts)
 	require.NoError(t, err)
 
 	extra := &recordingPlugin{}
 	opts.Plugins = []core.Plugin{extra}
-	result, err := indexer.Run(context.Background(), fsys, opts)
+	result, err := runIndexer(t, context.Background(), fsys, opts)
 	require.NoError(t, err)
 	assert.ElementsMatch(t, sourceNames, extra.files)
 	assert.Equal(t, statuses(fileindex.FileIndexed, sourceNames...), result.Files)
@@ -231,8 +227,7 @@ func TestIndexerRejectsTwoFilesOfOneName(t *testing.T) {
 	writeFiles(t, first, map[string]string{"src/x.js": "x();\n"})
 	writeFiles(t, second, map[string]string{"src/x.js": "y();\n"})
 
-	var indexer Indexer
-	_, err := indexer.Run(context.Background(), appFileSystem(t, first, second), Options{Languages: projectLanguages(t)})
+	_, err := runIndexer(t, context.Background(), appFileSystem(t, first, second), Options{Languages: projectLanguages(t)})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "two files have the name src/x.js")
 }
@@ -244,8 +239,7 @@ func TestIndexerFailsAFileOverTheLimit(t *testing.T) {
 		"small.js": "x();\n",
 	})
 
-	var indexer Indexer
-	result, err := indexer.Run(context.Background(), appFileSystem(t, dir), Options{Languages: projectLanguages(t)})
+	result, err := runIndexer(t, context.Background(), appFileSystem(t, dir), Options{Languages: projectLanguages(t)})
 	require.NoError(t, err)
 	assert.Equal(t, map[string]fileindex.FileStatus{"big.js": fileindex.FileFailed, "small.js": fileindex.FileIndexed}, result.Files)
 	require.Len(t, result.Report.Failed, 1)
@@ -260,18 +254,11 @@ func TestIndexerTakesAFileSizeLimit(t *testing.T) {
 		"small.js": "x();\n",
 	})
 
-	var indexer Indexer
-	result, err := indexer.Run(context.Background(), appFileSystem(t, dir), Options{Languages: projectLanguages(t), MaxFileBytes: 64})
+	result, err := runIndexer(t, context.Background(), appFileSystem(t, dir), Options{Languages: projectLanguages(t), MaxFileBytes: 64})
 	require.NoError(t, err)
 	assert.Equal(t, map[string]fileindex.FileStatus{"big.js": fileindex.FileFailed, "small.js": fileindex.FileIndexed}, result.Files)
 	require.Len(t, result.Report.Failed, 1)
 	assert.ErrorIs(t, result.Report.Failed[0], parser.ErrInputTooLarge)
-}
-
-func TestIndexerNeedsALanguage(t *testing.T) {
-	var indexer Indexer
-	_, err := indexer.Run(context.Background(), appFileSystem(t, t.TempDir()), Options{})
-	assert.Error(t, err)
 }
 
 // output is the result of a run as text, so two runs compare byte for byte.
@@ -319,8 +306,7 @@ func TestIndexerGivesOneResultForAnyNumberOfWorkers(t *testing.T) {
 	fsys := appFileSystem(t, generatedProject(t))
 	run := func(workers int) (string, []string) {
 		extra := &recordingPlugin{}
-		var indexer Indexer
-		result, err := indexer.Run(context.Background(), fsys, Options{
+		result, err := runIndexer(t, context.Background(), fsys, Options{
 			Languages:    projectLanguages(t),
 			Plugins:      []core.Plugin{extra},
 			MaxFileBytes: 1024,
@@ -373,8 +359,7 @@ func TestIndexerCutsAParseAtTheDeadline(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			s := &deadlineStore{Store: memstore.New(), cancel: cancel, after: 100 * time.Millisecond}
-			var indexer Indexer
-			result, err := indexer.Run(ctx, appFileSystem(t, dir), Options{Languages: projectLanguages(t), Store: s, Workers: workers})
+			result, err := runIndexer(t, ctx, appFileSystem(t, dir), Options{Languages: projectLanguages(t), Store: s, Workers: workers})
 			require.ErrorIs(t, err, context.Canceled)
 			assert.Less(t, time.Since(s.started), time.Second, "the deadline stops the parse")
 
@@ -419,12 +404,12 @@ func TestIndexerIndexesTheImportDirectories(t *testing.T) {
 
 	_, fsys := project()
 	s := memstore.New()
-	result, err := (&Indexer{}).Run(context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s})
+	result, err := runIndexer(t, context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s})
 	require.NoError(t, err)
 	assert.Equal(t, statuses(fileindex.FileIndexed, "index.js"), result.Files, "the run reads no import file unless the caller asks")
 	assert.Empty(t, result.Dependencies)
 
-	result, err = (&Indexer{}).Run(context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Imports: true})
+	result, err = runIndexer(t, context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Imports: true})
 	require.NoError(t, err)
 	assert.Equal(t, map[string]fileindex.FileStatus{"index.js": fileindex.FileCached}, result.Files)
 	assert.Equal(t, statuses(fileindex.FileIndexed, unit+"//index.js", unit+"//template.js"), result.Dependencies)
@@ -441,7 +426,48 @@ func TestIndexerIndexesTheImportDirectories(t *testing.T) {
 	assert.Equal(t, unit+"//template.js//template", byPath[unit+"//template.js"].Definitions[1].Key)
 
 	_, fsys = project()
-	result, err = (&Indexer{}).Run(context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Imports: true})
+	result, err = runIndexer(t, context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Imports: true})
 	require.NoError(t, err)
 	assert.Equal(t, statuses(fileindex.FileCached, unit+"//index.js", unit+"//template.js"), result.Dependencies, "a second project with the package version reads its indexes from the store")
+}
+
+// runIndexer makes an indexer of the options, which must be valid, and
+// runs it on a file system.
+func runIndexer(t testing.TB, ctx context.Context, fsys core.ImportAwareFileSystem, opts Options) (*Result, error) {
+	t.Helper()
+	ix, err := New(opts)
+	require.NoError(t, err)
+	return ix.Run(ctx, fsys)
+}
+
+func TestNewValidatesTheOptions(t *testing.T) {
+	languages := projectLanguages(t)
+	for _, tt := range []struct {
+		name string
+		opts Options
+		want string
+	}{
+		{name: "no language", opts: Options{}, want: "no language to index"},
+		{name: "negative max file bytes", opts: Options{Languages: languages, MaxFileBytes: -1}, want: "max file bytes -1 is negative"},
+		{name: "negative workers", opts: Options{Languages: languages, Workers: -1}, want: "workers -1 is negative"},
+		{name: "two languages of one extension", opts: Options{Languages: append(languages, languages[0])}, want: "extension"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ix, err := New(tt.opts)
+			assert.ErrorContains(t, err, tt.want)
+			assert.Nil(t, ix)
+		})
+	}
+
+	ix, err := New(Options{Languages: languages})
+	require.NoError(t, err)
+	assert.Equal(t, parser.DefaultMaxBytes, ix.opts.MaxFileBytes, "the default size limit")
+	assert.Positive(t, ix.opts.Workers, "the default number of workers")
+	assert.NotEmpty(t, ix.byExtension)
+
+	caller := slices.Clone(languages)
+	ix, err = New(Options{Languages: caller})
+	require.NoError(t, err)
+	caller[0] = nil
+	assert.Equal(t, languages, ix.opts.Languages, "a change of the caller's slice after New does not reach the indexer")
 }

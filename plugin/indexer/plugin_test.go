@@ -379,7 +379,7 @@ func TestFileIndexOfDependencyCode(t *testing.T) {
 		ImportUnits:       map[string]string{"testdata": unit},
 	})
 	require.NoError(t, err)
-	result, err := (&Indexer{}).Run(context.Background(), fsys, Options{Languages: allLanguages(t), Imports: true, Workers: 2})
+	result, err := runIndexer(t, context.Background(), fsys, Options{Languages: allLanguages(t), Imports: true, Workers: 2})
 	require.NoError(t, err)
 	assert.Empty(t, result.Files)
 

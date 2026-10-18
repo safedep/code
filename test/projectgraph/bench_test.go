@@ -146,7 +146,7 @@ func benchProject(b *testing.B, code core.LanguageCode, files int) {
 	b.Run("reach", func(b *testing.B) {
 		var results []reach.Result
 		measure(b, written, func() any {
-			results, err = reach.Reach(ctx, g, reach.Query{Targets: targets})
+			results, err = reach.Reach(ctx, g, reach.Query{Targets: targetsOf(b, targets...)})
 			require.NoError(b, err)
 			return results
 		})
@@ -167,7 +167,7 @@ func benchProject(b *testing.B, code core.LanguageCode, files int) {
 		// The summary reads the project as one unit of dependency code.
 		unitFS, err := codefs.NewLocalFileSystem(codefs.LocalFileSystemConfig{ImportDirectories: []string{root}, ImportUnits: map[string]string{root: unit}})
 		require.NoError(b, err)
-		dependency, err := (&indexer.Indexer{}).Run(ctx, unitFS, indexer.Options{Languages: languages, Workers: workers, Imports: true})
+		dependency, err := runIndexer(b, ctx, unitFS, indexer.Options{Languages: languages, Workers: workers, Imports: true})
 		require.NoError(b, err)
 		require.Len(b, dependency.Indexes, written)
 		var s *summary.Summary
@@ -354,7 +354,7 @@ func TestDegradesAtHalfTheColdTime(t *testing.T) {
 
 			search := func(indexed *indexer.Result) []reach.Result {
 				g := linkProject(t, root, indexed, projectgraph.Options{TestPaths: benchTestPaths})
-				results, err := reach.Reach(context.Background(), g, reach.Query{Targets: targets})
+				results, err := reach.Reach(context.Background(), g, reach.Query{Targets: targetsOf(t, targets...)})
 				require.NoError(t, err)
 				return results
 			}
@@ -364,14 +364,14 @@ func TestDegradesAtHalfTheColdTime(t *testing.T) {
 			// files does not count. A deadline on the whole run can land
 			// before the parse on a slow machine.
 			coldStore := &firstReadStore{Store: memstore.New()}
-			_, err = (&indexer.Indexer{}).Run(context.Background(), fsys, indexer.Options{Languages: []core.Language{language}, Workers: 4, Store: coldStore})
+			_, err = runIndexer(t, context.Background(), fsys, indexer.Options{Languages: []core.Language{language}, Workers: 4, Store: coldStore})
 			require.NoError(t, err)
 			cold := time.Since(coldStore.started)
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			cutStore := &firstReadStore{Store: memstore.New(), onFirstRead: func() { time.AfterFunc(cold/2, cancel) }}
-			partial, err := (&indexer.Indexer{}).Run(ctx, fsys, indexer.Options{Languages: []core.Language{language}, Workers: 4, Store: cutStore})
+			partial, err := runIndexer(t, ctx, fsys, indexer.Options{Languages: []core.Language{language}, Workers: 4, Store: cutStore})
 			require.ErrorIs(t, err, context.Canceled)
 			indexed, missing := count(partial.Files, fileindex.FileIndexed), count(partial.Files, fileindex.FileMissing)
 			t.Logf("cold %v: %d indexed, %d missing at %v", cold, indexed, missing, cold/2)

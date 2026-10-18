@@ -179,21 +179,19 @@ func (r *Result) Graph() *projectgraph.Graph { return r.graph }
 // sets of the summary have none, so every target of Reaches has a path.
 // A summary stores no path, so a caller asks for one when a finding
 // needs it.
-func (r *Result) Path(ctx context.Context, symbol, target string) ([]reach.Hop, bool, error) {
+func (r *Result) Path(ctx context.Context, symbol string, target reach.Target) ([]reach.Hop, bool, error) {
 	return r.explorer.Path(ctx, symbol, target, reach.NoDepthCap)
 }
 
 // Status answers whether a symbol of the summary reaches a target, as a
 // reach query of the unit graph from the symbol answers it. The target is
-// reached when Reaches holds it. Otherwise an uncertainty of the symbol
-// that concerns the target makes it uncertain: one with no scope concerns
-// every target, a Method scope concerns its Targets and every target
-// whose last segment is the method, an ImportPrefix scope every target
-// under the prefix, and a Unit scope its Targets. A target that nothing
-// concerns is not found, or no such target when the summary does not know
-// it. A symbol that the summary does not hold is not found, unless
-// Incomplete is not empty.
-func (s *Summary) Status(symbol, target string) reach.Status {
+// reached when Reaches holds a key that matches it. Otherwise an
+// uncertainty of the symbol that concerns the target, as reach.Scoped
+// decides it, makes it uncertain. A target that nothing concerns is not
+// found, or no such target when the summary does not know it. A symbol
+// that the summary does not hold is not found, unless Incomplete is not
+// empty.
+func (s *Summary) Status(symbol string, target reach.Target) reach.Status {
 	i, ok := slices.BinarySearchFunc(s.Symbols, symbol, func(sym Symbol, key string) int { return strings.Compare(sym.Key, key) })
 	if !ok {
 		if len(s.Incomplete) > 0 {
@@ -202,31 +200,18 @@ func (s *Summary) Status(symbol, target string) reach.Status {
 		return reach.NotFound
 	}
 	sym := s.Symbols[i]
-	if _, found := slices.BinarySearch(sym.Reaches, target); found {
+	if target.MatchesSorted(sym.Reaches) {
 		return reach.Found
 	}
 	for _, idx := range sym.Uncertainties {
-		if s.concerns(s.Uncertainties[idx], target) {
+		if s.Uncertainties[idx].Concerns(target) {
 			return reach.Uncertain
 		}
 	}
-	if _, known := slices.BinarySearch(s.Targets, target); known {
+	if target.MatchesSorted(s.Targets) {
 		return reach.NotFound
 	}
 	return reach.NoSuchTarget
-}
-
-// concerns reports whether the scope of an uncertainty concerns a target.
-func (s *Summary) concerns(u reach.Scoped, target string) bool {
-	switch {
-	case u.Unit != "":
-		return slices.Contains(u.Targets, target)
-	case u.ImportPrefix != "":
-		return strings.HasPrefix(target, u.ImportPrefix)
-	case u.Method != "":
-		return fileindex.Last(target) == u.Method || slices.Contains(u.Targets, target)
-	}
-	return true
 }
 
 // unitOf returns the one unit of the indexes and the files.

@@ -24,7 +24,7 @@ import (
 var graphHashes = map[string]string{
 	"10/10": "fa32ae11c72bdf01c93d4b7afe3564b1d59b2436306e3b3503f01fc4c308e5aa",
 	"11/10": "421c6441093c8f82e4db8a2342884b5e42faf360951985d3600d99c96202625b",
-	"11/11": "f1ca89f1bacfe4e79fd1814b75f87d2c48a44151746f871b56cd1fde20c49562",
+	"11/11": "0638d53222abbdbdbe81e09f4cdc3fb8f49b644e3576a7bfec2bfe68807b6392",
 }
 
 // resultHashes records the hash of the reach results of every case for
@@ -33,6 +33,7 @@ var graphHashes = map[string]string{
 var resultHashes = map[string]string{
 	"11/10/1": "4beb6248ef1b8dc3572939a41d1aea11c6504f5007a5f24fd1261db026708186",
 	"11/11/1": "4beb6248ef1b8dc3572939a41d1aea11c6504f5007a5f24fd1261db026708186",
+	"11/11/2": "2b48d96ff43fe68aa70967dab6cd7ac7b2f93c9e247b45fec0a472c869781448",
 }
 
 // summaryHashes records the hash of the golden summaries of the cases for

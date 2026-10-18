@@ -19,6 +19,13 @@ import (
 
 const unit = "npm:kit@1.0.0"
 
+func targetOf(t testing.TB, key string) reach.Target {
+	t.Helper()
+	target, err := reach.TargetByKey(key)
+	require.NoError(t, err)
+	return target
+}
+
 // kit is a package whose run calls child_process.exec, console.log and its
 // own helper, and whose stop calls a name that the package does not give.
 func kit() []*fileindex.Index {
@@ -66,18 +73,21 @@ func TestSummarize(t *testing.T) {
 	assert.Equal(t, []string{"child_process//exec"}, run.Reaches, "a builtin is no symbol of a dependency")
 	assert.Empty(t, run.Uncertainties)
 	assert.Empty(t, s.Symbols[3].Reaches)
-	assert.Equal(t, reach.Found, s.Status("kit//run", "child_process//exec"))
-	assert.Equal(t, reach.NotFound, s.Status("kit//stop", "child_process//exec"))
-	assert.Equal(t, reach.NoSuchTarget, s.Status("kit//stop", "fs//rm"))
-	assert.Equal(t, reach.NotFound, s.Status("kit//nope", "child_process//exec"))
+	assert.Equal(t, reach.Found, s.Status("kit//run", targetOf(t, "child_process//exec")))
+	assert.Equal(t, reach.NotFound, s.Status("kit//stop", targetOf(t, "child_process//exec")))
+	assert.Equal(t, reach.NoSuchTarget, s.Status("kit//stop", targetOf(t, "fs//rm")))
+	assert.Equal(t, reach.Found, s.Status("kit//run", targetOf(t, "child_process//*")), "a wildcard matches a reached key")
+	assert.Equal(t, reach.NotFound, s.Status("kit//stop", targetOf(t, "child_process//*")))
+	assert.Equal(t, reach.NoSuchTarget, s.Status("kit//stop", targetOf(t, "fs//*")))
+	assert.Equal(t, reach.NotFound, s.Status("kit//nope", targetOf(t, "child_process//exec")))
 
-	hops, found, err := r.Path(context.Background(), "kit//run", "child_process//exec")
+	hops, found, err := r.Path(context.Background(), "kit//run", targetOf(t, "child_process//exec"))
 	require.NoError(t, err)
 	require.True(t, found)
 	assert.Equal(t, "kit//run", hops[0].Key)
 	assert.Equal(t, projectgraph.EdgePackage, hops[1].EdgeKind)
 	assert.Equal(t, "child_process//exec", hops[len(hops)-1].Key)
-	_, found, err = r.Path(context.Background(), "kit//stop", "child_process//exec")
+	_, found, err = r.Path(context.Background(), "kit//stop", targetOf(t, "child_process//exec"))
 	require.NoError(t, err)
 	assert.False(t, found)
 
@@ -101,8 +111,8 @@ func TestSummarizeKeepsTheUncertaintiesOfTheUnit(t *testing.T) {
 	for _, sym := range s.Symbols {
 		assert.Equal(t, []int{0}, sym.Uncertainties, sym.Key)
 	}
-	assert.Equal(t, reach.Uncertain, s.Status("kit//stop", "child_process//exec"))
-	assert.Equal(t, reach.Uncertain, s.Status("kit//nope", "child_process//exec"), "a file with no index can hold the symbol")
+	assert.Equal(t, reach.Uncertain, s.Status("kit//stop", targetOf(t, "child_process//exec")))
+	assert.Equal(t, reach.Uncertain, s.Status("kit//nope", targetOf(t, "child_process//exec")), "a file with no index can hold the symbol")
 }
 
 func TestSummarizeTakesOneUnit(t *testing.T) {
@@ -171,8 +181,8 @@ func TestStatusMatchesReach(t *testing.T) {
 	r, err := summary.Build(context.Background(), indexes, projectgraph.Options{Files: map[string]fileindex.FileStatus{unit + "//lib/big.js": fileindex.FileFailed}})
 	require.NoError(t, err)
 	summarytest.AssertStatusMatchesReach(t, r)
-	assert.Equal(t, reach.Uncertain, r.Summary.Status("kit//loop", "os//exit"), "a record of the method exit concerns os//exit")
-	assert.Equal(t, reach.Uncertain, r.Summary.Status("kit//stop", "os//exit"), "a computed name concerns every target")
+	assert.Equal(t, reach.Uncertain, r.Summary.Status("kit//loop", targetOf(t, "os//exit")), "a record of the method exit concerns os//exit")
+	assert.Equal(t, reach.Uncertain, r.Summary.Status("kit//stop", targetOf(t, "os//exit")), "a computed name concerns every target")
 }
 
 // chain returns a package whose one symbol reaches fs//rmSync through
@@ -202,8 +212,8 @@ func TestPathHasNoDepthCap(t *testing.T) {
 	r, err := summary.Build(context.Background(), chain(70), projectgraph.Options{})
 	require.NoError(t, err)
 	assert.Equal(t, []string{"fs//rmSync"}, r.Summary.Symbols[0].Reaches)
-	assert.Equal(t, reach.Found, r.Summary.Status("kit//f0", "fs//rmSync"))
-	hops, found, err := r.Path(context.Background(), "kit//f0", "fs//rmSync")
+	assert.Equal(t, reach.Found, r.Summary.Status("kit//f0", targetOf(t, "fs//rmSync")))
+	hops, found, err := r.Path(context.Background(), "kit//f0", targetOf(t, "fs//rmSync"))
 	require.NoError(t, err)
 	require.True(t, found, "every target of Reaches has a path")
 	assert.Equal(t, "fs//rmSync", hops[len(hops)-1].Key)

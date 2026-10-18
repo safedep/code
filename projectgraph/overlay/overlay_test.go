@@ -160,7 +160,9 @@ func TestMergeRejectsABadVersion(t *testing.T) {
 
 func reachOne(t *testing.T, g *projectgraph.Graph, target string) reach.Result {
 	t.Helper()
-	results, err := reach.Reach(context.Background(), g, reach.Query{Targets: []string{target}})
+	targets, err := reach.TargetsByKey(target)
+	require.NoError(t, err)
+	results, err := reach.Reach(context.Background(), g, reach.Query{Targets: targets})
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	return results[0]
@@ -176,7 +178,7 @@ func TestMergeTurnsNotFoundIntoFound(t *testing.T) {
 	after := reachOne(t, g, "yaml//load")
 	assert.Equal(t, reach.Found, after.Status)
 	assert.Equal(t, []reach.Hop{
-		{Key: "main.py"},
+		{Key: "main.py", Root: projectgraph.RootMain},
 		{Key: "main.py//dispatch", Site: projectgraph.Site{Path: "main.py", Line: 9, Column: 5}, EdgeKind: projectgraph.EdgeDirect, Confidence: projectgraph.ConfidenceHigh, Resolver: "python.local"},
 		{Key: "parsers.py//parse", Site: dispatchSite, EdgeKind: projectgraph.EdgeLLM, Confidence: projectgraph.ConfidenceLow, Resolver: "model m1, prompt v2"},
 		{Key: "yaml//load", Site: projectgraph.Site{Path: "parsers.py", Line: 6, Column: 12}, EdgeKind: projectgraph.EdgeDirect, Confidence: projectgraph.ConfidenceHigh, Resolver: "python.local"},

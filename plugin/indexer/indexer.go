@@ -117,8 +117,34 @@ func (r *Result) statuses(name string) map[string]fileindex.FileStatus {
 }
 
 // Indexer indexes the files of a file system and keeps the indexes in a
-// store. The zero value is ready to use.
-type Indexer struct{}
+// store. New makes one from its Options, and Run indexes one file system.
+type Indexer struct {
+	opts        Options
+	byExtension map[string]core.Language
+}
+
+// New validates the options and returns an Indexer that holds what every
+// run derives from them: the language of each file extension, and the
+// defaults of MaxFileBytes and Workers.
+func New(opts Options) (*Indexer, error) {
+	switch {
+	case len(opts.Languages) == 0:
+		return nil, errors.New("no language to index")
+	case opts.MaxFileBytes < 0:
+		return nil, fmt.Errorf("max file bytes %d is negative", opts.MaxFileBytes)
+	case opts.Workers < 0:
+		return nil, fmt.Errorf("workers %d is negative", opts.Workers)
+	}
+	byExtension, err := parser.LanguagesByExtension(opts.Languages)
+	if err != nil {
+		return nil, err
+	}
+	opts.Languages = slices.Clone(opts.Languages)
+	opts.Plugins = slices.Clone(opts.Plugins)
+	opts.MaxFileBytes = cmp.Or(opts.MaxFileBytes, parser.DefaultMaxBytes)
+	opts.Workers = cmp.Or(opts.Workers, runtime.GOMAXPROCS(0))
+	return &Indexer{opts: opts, byExtension: byExtension}, nil
+}
 
 // pending is a file that a run read and has not indexed yet.
 type pending struct {
@@ -133,7 +159,8 @@ type pending struct {
 }
 
 // run is the state of one call of Run. Only the goroutine of Run changes
-// the result. The workers send each outcome back to it.
+// the result. The workers send each outcome back to it. opts are the
+// options of the Indexer, with their defaults filled.
 type run struct {
 	opts   Options
 	result *Result
@@ -142,7 +169,8 @@ type run struct {
 }
 
 // Run indexes the app files of fsys, and its import files with
-// Options.Imports. It reads each file once and asks the store for the index
+// Options.Imports. An Indexer can run on several file systems, one at a
+// time. It reads each file once and asks the store for the index
 // of its bytes and for the artifacts of the cached plugins. A hit of all of
 // them needs no parse. Each new index and artifact goes to the store. A
 // file that fails does not stop the run.
@@ -155,21 +183,14 @@ type run struct {
 // missing, and returns the result so far with the error of ctx. Run fails
 // when two files of fsys have one name, as the same relative path under
 // two app roots, because the index keys a file by its name.
-func (*Indexer) Run(ctx context.Context, fsys core.ImportAwareFileSystem, opts Options) (*Result, error) {
-	if len(opts.Languages) == 0 {
-		return nil, errors.New("no language to index")
-	}
-	byExtension, err := parser.LanguagesByExtension(opts.Languages)
-	if err != nil {
-		return nil, err
-	}
-	files, skipped, err := enumerate(ctx, fsys, opts)
+func (ix *Indexer) Run(ctx context.Context, fsys core.ImportAwareFileSystem) (*Result, error) {
+	files, skipped, err := enumerate(ctx, fsys, ix.opts)
 	if err != nil {
 		return nil, err
 	}
 
 	r := &run{
-		opts: opts,
+		opts: ix.opts,
 		result: &Result{
 			Files:        make(map[string]fileindex.FileStatus, len(files)),
 			Dependencies: map[string]fileindex.FileStatus{},
@@ -177,11 +198,11 @@ func (*Indexer) Run(ctx context.Context, fsys core.ImportAwareFileSystem, opts O
 		},
 		strs: interner{},
 	}
-	if r.pool, err = newPool(ctx, opts.Languages, r.maxBytes(), cmp.Or(opts.Workers, runtime.GOMAXPROCS(0))); err != nil {
+	if r.pool, err = newPool(ctx, ix.opts.Languages, ix.opts.MaxFileBytes, ix.opts.Workers); err != nil {
 		return nil, err
 	}
 	defer r.pool.close()
-	err = r.index(ctx, files, byExtension)
+	err = r.index(ctx, files, ix.byExtension)
 	for _, file := range files {
 		statuses := r.result.statuses(file.Name())
 		_, done := statuses[file.Name()]
@@ -239,7 +260,7 @@ func (r *run) index(ctx context.Context, files []core.File, byExtension map[stri
 			r.result.Report.Skipped = append(r.result.Report.Skipped, file.Name())
 			continue
 		}
-		data, err := read(file, r.maxBytes())
+		data, err := read(file, r.opts.MaxFileBytes)
 		if err != nil {
 			r.fail(ctx, file, core.StageRead, err)
 			continue
@@ -271,10 +292,6 @@ func read(file core.File, limit int) ([]byte, error) {
 	}
 	data, err := io.ReadAll(io.LimitReader(reader, int64(limit)+1))
 	return data, errors.Join(err, reader.Close())
-}
-
-func (r *run) maxBytes() int {
-	return cmp.Or(r.opts.MaxFileBytes, parser.DefaultMaxBytes)
 }
 
 // flush serves the files of a batch from the store, parses the rest and

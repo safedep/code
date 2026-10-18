@@ -63,17 +63,16 @@ func TestIndexerServesACachedPluginFromTheStore(t *testing.T) {
 	writeFiles(t, dir, projectFiles)
 	fsys := appFileSystem(t, dir)
 	s := memstore.New()
-	var indexer Indexer
 
 	cold := newCountingPlugin("1")
-	result, err := indexer.Run(context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Plugins: []core.Plugin{cold}})
+	result, err := runIndexer(t, context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Plugins: []core.Plugin{cold}})
 	require.NoError(t, err)
 	assert.Equal(t, sourceNames, result.Report.Visited)
 	assert.Equal(t, ecmascriptNames, cold.analyzed)
 	assert.Empty(t, cold.restored)
 
 	warm := newCountingPlugin("1")
-	result, err = indexer.Run(context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Plugins: []core.Plugin{warm}})
+	result, err = runIndexer(t, context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Plugins: []core.Plugin{warm}})
 	require.NoError(t, err)
 	assert.Empty(t, result.Report.Visited, "a warm run with a cached plugin parses no file")
 	assert.Empty(t, result.Report.Failed)
@@ -84,7 +83,7 @@ func TestIndexerServesACachedPluginFromTheStore(t *testing.T) {
 
 	t.Run("a new plugin version parses again", func(t *testing.T) {
 		next := newCountingPlugin("2")
-		result, err := indexer.Run(context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Plugins: []core.Plugin{next}})
+		result, err := runIndexer(t, context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Plugins: []core.Plugin{next}})
 		require.NoError(t, err)
 		assert.Equal(t, ecmascriptNames, result.Report.Visited, "the files of the plugin's languages parse, the Python file stays cached")
 		assert.Equal(t, ecmascriptNames, next.analyzed)
@@ -95,7 +94,7 @@ func TestIndexerServesACachedPluginFromTheStore(t *testing.T) {
 	t.Run("a plugin that is not cached forces a parse", func(t *testing.T) {
 		extra := &recordingPlugin{}
 		again := newCountingPlugin("1")
-		result, err := indexer.Run(context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Plugins: []core.Plugin{again, extra}})
+		result, err := runIndexer(t, context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Plugins: []core.Plugin{again, extra}})
 		require.NoError(t, err)
 		assert.Equal(t, sourceNames, result.Report.Visited)
 		assert.Equal(t, ecmascriptNames, again.analyzed, "a parsed file goes to Analyze, not to Restore")
@@ -105,7 +104,7 @@ func TestIndexerServesACachedPluginFromTheStore(t *testing.T) {
 	t.Run("a restore that fails parses the file again", func(t *testing.T) {
 		broken := newCountingPlugin("1")
 		broken.fail = "main.js"
-		result, err := indexer.Run(context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Plugins: []core.Plugin{broken}})
+		result, err := runIndexer(t, context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Plugins: []core.Plugin{broken}})
 		require.NoError(t, err)
 		assert.Equal(t, []string{"main.js"}, result.Report.Visited)
 		assert.Empty(t, result.Report.Failed)
@@ -118,13 +117,13 @@ func TestIndexerServesACachedPluginFromTheStore(t *testing.T) {
 		good := newCountingPlugin("1")
 		broken := newCountingPlugin("1")
 		broken.name = "BrokenPlugin"
-		_, err := indexer.Run(context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Plugins: []core.Plugin{good, broken}})
+		_, err := runIndexer(t, context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Plugins: []core.Plugin{good, broken}})
 		require.NoError(t, err)
 
 		good, broken = newCountingPlugin("1"), newCountingPlugin("1")
 		broken.name = "BrokenPlugin"
 		broken.fail = "main.js"
-		result, err := indexer.Run(context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Plugins: []core.Plugin{good, broken}})
+		result, err := runIndexer(t, context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Plugins: []core.Plugin{good, broken}})
 		require.NoError(t, err)
 		assert.Equal(t, []string{"main.js"}, result.Report.Visited)
 		assert.Equal(t, ecmascriptNames, good.restored)

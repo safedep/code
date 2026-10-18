@@ -3,6 +3,9 @@
 // yaml//load. It keeps the file indexes in a localdb file in the -store
 // directory, so a second run parses only the files that changed. With
 // -overlay it merges a file of llm edges into the graph before the query.
+// Each -source names an entry point of the project that the root rules do
+// not mark, and -sources-only searches from the -source entry points
+// alone.
 //
 // Each -deps dir=unit, as -deps node_modules/lodash=npm:lodash@4.17.21,
 // adds the code of a dependency to the graph, so a path goes on into the
@@ -51,6 +54,61 @@ func (s *stringList) Set(value string) error {
 	return nil
 }
 
+// targetList is the -target flags. A bad key fails at the flag, so the
+// run never starts with a target that the query rejects.
+type targetList []reach.Target
+
+func (l *targetList) String() string {
+	parts := make([]string, 0, len(*l))
+	for _, t := range *l {
+		parts = append(parts, t.Key())
+	}
+	return strings.Join(parts, ",")
+}
+
+func (l *targetList) Set(value string) error {
+	t, err := reach.TargetByKey(value)
+	if err != nil {
+		return err
+	}
+	*l = append(*l, t)
+	return nil
+}
+
+// sourceList is the -source flags. A value with // is a key, as
+// app/server.py//main. Any other value is a file path and a dotted name
+// after a colon, as app/server.py:main or src/api.ts:Router.handle, or a
+// file path alone for its module top level.
+type sourceList []reach.Source
+
+func (l *sourceList) String() string {
+	parts := make([]string, 0, len(*l))
+	for _, s := range *l {
+		parts = append(parts, s.Key())
+	}
+	return strings.Join(parts, ",")
+}
+
+func (l *sourceList) Set(value string) error {
+	var s reach.Source
+	var err error
+	if strings.Contains(value, fileindex.Separator) {
+		s, err = reach.SourceByKey(value)
+	} else {
+		path, name, _ := strings.Cut(value, ":")
+		var names []string
+		if name != "" {
+			names = strings.Split(name, ".")
+		}
+		s, err = reach.SourceInFile(path, names...)
+	}
+	if err != nil {
+		return err
+	}
+	*l = append(*l, s)
+	return nil
+}
+
 // depList is the -deps flags: the unit of each directory of dependency
 // code.
 type depList map[string]string
@@ -76,7 +134,9 @@ type config struct {
 	dir          string
 	store        string
 	overlay      string
-	targets      stringList
+	targets      targetList
+	sources      sourceList
+	sourcesOnly  bool
 	importDirs   stringList
 	deps         depList
 	summary      bool
@@ -89,8 +149,10 @@ func main() {
 	cfg := config{deps: depList{}}
 	flag.StringVar(&cfg.dir, "dir", "", "directory of the project")
 	flag.StringVar(&cfg.store, "store", "", "directory of the localdb file that keeps the file indexes")
-	flag.StringVar(&cfg.overlay, "overlay", "", "JSON file of llm edges to merge into the graph")
+	flag.StringVar(&cfg.overlay, "overlay", "", "JSON file of llm edges to merge into the graph: edges that a model proposed for unresolved call sites, as the Overlay section of docs/projectgraph.md describes")
 	flag.Var(&cfg.targets, "target", "external symbol to reach, as yaml//load (repeatable)")
+	flag.Var(&cfg.sources, "source", "entry point of the project to search from, as app/server.py:main, src/api.ts:Router.handle or a key as app/server.py//main (repeatable)")
+	flag.BoolVar(&cfg.sourcesOnly, "sources-only", false, "search from the -source entry points alone, not from the roots that the rules mark")
 	flag.Var(cfg.deps, "deps", "directory of a dependency and its unit, as node_modules/lodash=npm:lodash@4.17.21 (repeatable)")
 	flag.Var(&cfg.importDirs, "import-dir", "directory that holds -deps directories, as venv/site-packages (repeatable)")
 	flag.BoolVar(&cfg.summary, "summary", false, "print the summary of each unit of -deps as JSON")
@@ -101,6 +163,11 @@ func main() {
 
 	if cfg.dir == "" || len(cfg.targets) == 0 && !cfg.summary {
 		fmt.Fprintln(os.Stderr, "projectgraph needs -dir, and -target or -summary")
+		flag.Usage()
+		os.Exit(2)
+	}
+	if cfg.sourcesOnly && len(cfg.sources) == 0 {
+		fmt.Fprintln(os.Stderr, "projectgraph needs a -source with -sources-only")
 		flag.Usage()
 		os.Exit(2)
 	}
@@ -165,7 +232,11 @@ func run(ctx context.Context, cfg config, out io.Writer) (err error) {
 		}
 	}
 
-	indexed, err := (&indexer.Indexer{}).Run(ctx, fsys, indexer.Options{Languages: languages, Store: s, Workers: cfg.workers, Imports: len(cfg.deps) > 0})
+	ix, err := indexer.New(indexer.Options{Languages: languages, Store: s, Workers: cfg.workers, Imports: len(cfg.deps) > 0})
+	if err != nil {
+		return err
+	}
+	indexed, err := ix.Run(ctx, fsys)
 	if err != nil {
 		return fmt.Errorf("failed to index %s: %w", root, err)
 	}
@@ -195,7 +266,7 @@ func printReach(ctx context.Context, cfg config, out io.Writer, root string, ind
 	if err != nil {
 		return fmt.Errorf("failed to link %s: %w", root, err)
 	}
-	if err := warnGraph(os.Stderr, g); err != nil {
+	if err := warnGraph(os.Stderr, g, cfg.sourcesOnly); err != nil {
 		return err
 	}
 	if cfg.overlay != "" {
@@ -203,7 +274,11 @@ func printReach(ctx context.Context, cfg config, out io.Writer, root string, ind
 			return err
 		}
 	}
-	results, err := reach.Reach(ctx, g, reach.Query{Targets: cfg.targets, IncludeTests: cfg.includeTests})
+	q := reach.Query{Targets: cfg.targets, Sources: cfg.sources, IncludeTests: cfg.includeTests}
+	if cfg.sourcesOnly {
+		q.SourceMode = reach.SourcesOnly
+	}
+	results, err := reach.Reach(ctx, g, q)
 	if err != nil {
 		return err
 	}
@@ -263,8 +338,9 @@ func warnIndex(warn io.Writer, indexed *indexer.Result) error {
 }
 
 // warnGraph writes the problems and the truncations of the link step to
-// warn, and says what to do when no root rule matched.
-func warnGraph(warn io.Writer, g *projectgraph.Graph) error {
+// warn, and says what to do when no root rule matched. A search from the
+// sources alone does not use the fallback roots, so it gets no such advice.
+func warnGraph(warn io.Writer, g *projectgraph.Graph, sourcesOnly bool) error {
 	for _, p := range g.Problems {
 		if _, err := fmt.Fprintf(warn, "problem: %s: %s\n", p.Path, p.Text); err != nil {
 			return err
@@ -275,7 +351,7 @@ func warnGraph(warn io.Writer, g *projectgraph.Graph) error {
 			return err
 		}
 	}
-	if g.Stats.RootFallback {
+	if g.Stats.RootFallback && !sourcesOnly {
 		if _, err := fmt.Fprintln(warn, "no root rule matched: every exported symbol is a root. Add a manifest entry, as a package.json bin or a pyproject.toml script, or a main guard, or pass -include-tests"); err != nil {
 			return err
 		}

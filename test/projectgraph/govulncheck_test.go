@@ -262,7 +262,7 @@ func (s *vulnScore) scoreTrace(ctx context.Context, t *testing.T, g *projectgrap
 	}
 	s.traces++
 	target := frameKey(trace[first-1])
-	results, err := reach.Reach(ctx, g, reach.Query{Targets: []string{target}})
+	results, err := reach.Reach(ctx, g, reach.Query{Targets: targetsOf(t, target)})
 	require.NoError(t, err)
 	r := results[0]
 	if r.Status != reach.Found {
@@ -295,7 +295,7 @@ func (s *vulnScore) scoreTrace(ctx context.Context, t *testing.T, g *projectgrap
 }
 
 func reachStatus(ctx context.Context, t *testing.T, g *projectgraph.Graph, target string) reach.Status {
-	results, err := reach.Reach(ctx, g, reach.Query{Targets: []string{target}})
+	results, err := reach.Reach(ctx, g, reach.Query{Targets: targetsOf(t, target)})
 	require.NoError(t, err)
 	return results[0].Status
 }

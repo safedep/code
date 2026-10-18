@@ -18,9 +18,10 @@ import (
 )
 
 // Version is the version of the search rules: the scope of each
-// uncertainty, the tie rule of the paths and the caps. Bump it when a rule
-// changes, so a diff of two results shows the change.
-const Version = "1"
+// uncertainty, the tie rule of the paths, the caps and the fields of a
+// hop. Bump it when a rule changes, so a diff of two results shows the
+// change. Version 2 added the root kind to the first hop of a path.
+const Version = "2"
 
 const (
 	defaultMaxDepth = 64
@@ -57,22 +58,26 @@ const (
 	RootFallback UncertaintyKind = "root-fallback"
 )
 
-// Query asks for the targets, as external keys like yaml//load. A target
-// is the key form of the import and the names under it: a Go import path
-// with // for /, as os//exec//Command, and a Java class under its package,
-// as java//lang//Thread//sleep. A target that ends in //* matches every
-// external key under it. MaxDepth 0 selects 64 hops.
+// Query asks for the targets. Sources are the nodes of the project that
+// the caller names as roots, and SourceMode says whether the search adds
+// them to the roots of the graph or starts from them alone. MaxDepth 0
+// selects 64 hops.
 type Query struct {
-	Targets      []string
+	Targets      []Target
+	Sources      []Source
+	SourceMode   SourceMode
 	IncludeTests bool
 	MaxDepth     int
 }
 
 // Hop is one step of a path. The first hop is the root and has no site.
+// Root is the kind of the root at the first hop of a path from a root, as
+// main or query, so a reader sees who chose the start of the path.
 // Resolver names the rule of the edge into the hop, or the model and the
 // prompt of an llm edge.
 type Hop struct {
 	Key        string                  `json:"key"`
+	Root       projectgraph.RootKind   `json:"root,omitempty"`
 	Site       projectgraph.Site       `json:"site,omitzero"`
 	EdgeKind   projectgraph.EdgeKind   `json:"edge_kind,omitempty"`
 	Confidence projectgraph.Confidence `json:"confidence,omitempty"`
@@ -125,7 +130,7 @@ type Searched struct {
 // reaches. SetAside lists the sites that a rule proved cannot reach the
 // target, with the rule.
 type Result struct {
-	Target        string        `json:"target"`
+	Target        Target        `json:"target"`
 	Status        Status        `json:"status"`
 	Path          []Hop         `json:"path,omitempty"`
 	TestPath      []Hop         `json:"test_path,omitempty"`
@@ -168,13 +173,18 @@ func (r Result) String() string {
 }
 
 // PathString writes a path as the call site of each hop and then the
-// target, as main.py:3 -> handlers.py:12 -> yaml//load. A hop with low
-// confidence names its edge kind, as main.py:3 (name), so a reader sees the
-// weak hop. An llm hop also names its model and its prompt. A package hop
-// names its kind at the definition in the package, so a reader sees where
-// the path enters dependency code.
+// target, as main.py:3 -> handlers.py:12 -> yaml//load. A path from a
+// source of the query starts with the key of the source, as
+// app.py//main (query), so a reader sees that the caller chose the start.
+// A hop with low confidence names its edge kind, as main.py:3 (name), so
+// a reader sees the weak hop. An llm hop also names its model and its
+// prompt. A package hop names its kind at the definition in the package,
+// so a reader sees where the path enters dependency code.
 func PathString(hops []Hop) string {
-	parts := make([]string, 0, len(hops))
+	parts := make([]string, 0, len(hops)+1)
+	if hops[0].Root == RootQuery {
+		parts = append(parts, hops[0].Key+" ("+string(RootQuery)+")")
+	}
 	for _, h := range hops[1:] {
 		part := h.Site.String()
 		switch {
@@ -193,8 +203,14 @@ func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error
 	if q.MaxDepth < 0 {
 		return nil, fmt.Errorf("max depth %d is negative", q.MaxDepth)
 	}
-	if slices.Contains(q.Targets, "") {
-		return nil, errors.New("an empty target")
+	if slices.ContainsFunc(q.Targets, Target.IsZero) {
+		return nil, errors.New("a zero target")
+	}
+	if q.SourceMode != SourcesAndRoots && q.SourceMode != SourcesOnly {
+		return nil, fmt.Errorf("source mode %d is not SourcesAndRoots or SourcesOnly", q.SourceMode)
+	}
+	if q.SourceMode == SourcesOnly && len(q.Sources) == 0 {
+		return nil, errors.New("source mode SourcesOnly needs at least one source")
 	}
 	a := newAdjacency(g)
 	a.includeTests = q.IncludeTests
@@ -205,27 +221,38 @@ func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error
 		targets[i] = a.match(t)
 	}
 
-	var rootSet, testRoots []projectgraph.Root
-	for _, r := range g.Roots {
-		if r.Kind == projectgraph.RootTest && !q.IncludeTests {
-			testRoots = append(testRoots, r)
-		} else {
-			rootSet = append(rootSet, r)
+	roots, err := a.queryRoots(q.Sources)
+	if err != nil {
+		return nil, err
+	}
+	var testRoots []projectgraph.Root
+	if q.SourceMode == SourcesAndRoots {
+		for _, r := range g.Roots {
+			if r.Kind == projectgraph.RootTest && !q.IncludeTests {
+				testRoots = append(testRoots, r)
+			} else {
+				roots = append(roots, r)
+			}
 		}
 	}
-	s := a.search(ctx, a.ids(rootSet), depth, targets)
+	kinds := a.rootKinds(roots)
+	s := a.search(ctx, a.ids(roots), depth, targets)
 	unc := a.uncertainties(s, depth)
+	// The fallback roots are in the search only with the roots of the
+	// graph, so a search from the sources alone has no fallback to report.
+	fallback := g.Stats.RootFallback && q.SourceMode == SourcesAndRoots
 
 	var tests *search
+	var testKinds rootKinds
 	results := make([]Result, len(q.Targets))
 	for i, t := range q.Targets {
 		r := Result{
 			Target:    t,
 			CallSites: a.callSites(targets[i], s),
-			Searched:  Searched{Version: Version, Roots: rootSet, Nodes: len(s.order), Edges: s.edges, DepthCut: s.depthCut, Stopped: s.stopped},
+			Searched:  Searched{Version: Version, Roots: roots, Nodes: len(s.order), Edges: s.edges, DepthCut: s.depthCut, Stopped: s.stopped},
 		}
 		if node, ok := s.nearest(targets[i]); ok {
-			r.Status, r.Path = Found, a.path(s, node)
+			r.Status, r.Path = Found, a.path(s, node, kinds)
 		} else {
 			r.Status = NotFound
 			r.Uncertainties, r.SetAside, r.Searched.Uncertainties = unc.forTarget(t)
@@ -237,14 +264,16 @@ func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error
 			}
 			if len(testRoots) > 0 {
 				if tests == nil {
-					tests = a.search(ctx, a.ids(g.Roots), depth, targets)
+					all := slices.Concat(roots, testRoots)
+					testKinds = a.rootKinds(all)
+					tests = a.search(ctx, a.ids(all), depth, targets)
 				}
 				if node, ok := tests.nearest(targets[i]); ok {
-					r.TestPath = a.path(tests, node)
+					r.TestPath = a.path(tests, node, testKinds)
 				}
 			}
 		}
-		if g.Stats.RootFallback {
+		if fallback {
 			r.Uncertainties = append(r.Uncertainties, Uncertainty{Kind: RootFallback, Text: "roots: every exported symbol"})
 			r.Searched.Uncertainties++
 		}
@@ -309,7 +338,7 @@ func (x *Explorer) Explore(ctx context.Context, from []string, maxDepth int) (*E
 	e := &Exploration{Reached: []Reached{}}
 	for _, id := range a.externals {
 		if s.dist[id] >= 0 && !slices.Contains(sources, id) {
-			e.Reached = append(e.Reached, Reached{Target: a.keys[id], Path: a.path(s, id)})
+			e.Reached = append(e.Reached, Reached{Target: a.keys[id], Path: a.path(s, id, nil)})
 		}
 	}
 	e.Uncertainties = a.uncertainties(s, depth).all()
@@ -445,7 +474,7 @@ func (a *adjacency) reachable(sources []int, more func(id int) []int) []bool {
 
 // unitReaches reports whether the code of a unit reaches a node of the
 // target.
-func (a *adjacency) unitReaches(unit, target string) bool {
+func (a *adjacency) unitReaches(unit string, target Target) bool {
 	c := a.closure(unit)
 	return slices.ContainsFunc(a.match(target), func(id int) bool { return c[id] })
 }
@@ -474,25 +503,24 @@ func (a *adjacency) methodClosure(name string) []bool {
 
 // methodReaches reports whether a node with the last segment reaches a
 // node of the target.
-func (a *adjacency) methodReaches(name, target string) bool {
+func (a *adjacency) methodReaches(name string, target Target) bool {
 	c := a.methodClosure(name)
 	return slices.ContainsFunc(a.match(target), func(id int) bool { return c[id] })
 }
 
 // match returns the external nodes of a target, by id.
-func (a *adjacency) match(target string) []int {
-	prefix, ok := strings.CutSuffix(target, "*")
-	if ok && strings.HasSuffix(prefix, fileindex.Separator) {
+func (a *adjacency) match(target Target) []int {
+	if _, ok := target.wildcard(); ok {
 		var ids []int
 		for _, id := range a.externals {
-			if strings.HasPrefix(a.keys[id], prefix) {
+			if target.Matches(a.keys[id]) {
 				ids = append(ids, id)
 			}
 		}
 		return ids
 	}
-	if n := a.g.Nodes[target]; n != nil && n.Kind == projectgraph.NodeExternal {
-		return []int{a.id[target]}
+	if n := a.g.Nodes[target.Key()]; n != nil && n.Kind == projectgraph.NodeExternal {
+		return []int{a.id[target.Key()]}
 	}
 	return nil
 }
@@ -594,14 +622,17 @@ func (s *search) nearest(ids []int) (int, bool) {
 	return best, found
 }
 
-func (a *adjacency) path(s *search, node int) []Hop {
+// path returns the hops of the shortest path to a node. kinds gives the
+// root kind of the first hop, and a search from no root, as an
+// exploration, passes nil.
+func (a *adjacency) path(s *search, node int, kinds rootKinds) []Hop {
 	var hops []Hop
 	for s.parent[node] >= 0 {
 		e := a.g.Edges[s.parent[node]]
 		hops = append(hops, Hop{Key: e.To, Site: e.Site, EdgeKind: e.Kind, Confidence: e.Confidence, Resolver: e.Resolver})
 		node = a.id[e.From]
 	}
-	hops = append(hops, Hop{Key: a.keys[node]})
+	hops = append(hops, Hop{Key: a.keys[node], Root: kinds[node]})
 	slices.Reverse(hops)
 	return hops
 }

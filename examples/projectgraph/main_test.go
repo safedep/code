@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/safedep/code/projectgraph"
 	"github.com/safedep/code/projectgraph/reach"
 	"github.com/safedep/code/projectgraph/summary"
 	"github.com/stretchr/testify/assert"
@@ -16,6 +17,7 @@ import (
 const (
 	acceptanceCase = "../../test/projectgraph/cases/python/helper-module/project"
 	overlayCase    = "../../test/projectgraph/cases/python/llm-overlay"
+	deadCallCase   = "../../test/projectgraph/cases/python/dead-call/project"
 	dependencyCase = "../../test/projectgraph/cases/javascript/dependency-transitive/project"
 )
 
@@ -110,6 +112,68 @@ func TestExamplePrintsTheSummaries(t *testing.T) {
 	assert.Equal(t, "npm:lodash@4.17.21", summaries[1].Unit)
 	assert.Equal(t, "lodash//template", summaries[1].Symbols[1].Key)
 	assert.Equal(t, []string{"lodash._reinterpolate"}, summaries[1].Symbols[1].Reaches)
+}
+
+func TestTargetFlag(t *testing.T) {
+	targets := targetList{}
+	require.NoError(t, targets.Set("yaml//load"))
+	require.NoError(t, targets.Set("os//*"))
+	assert.Equal(t, "yaml//load,os//*", targets.String())
+	assert.ErrorContains(t, targets.Set("yaml//"), "an empty segment")
+	assert.Len(t, targets, 2)
+}
+
+func TestSourceFlag(t *testing.T) {
+	sources := sourceList{}
+	require.NoError(t, sources.Set("app/server.py:main"))
+	require.NoError(t, sources.Set("src/api.ts:Router.handle"))
+	require.NoError(t, sources.Set("app/server.py"))
+	require.NoError(t, sources.Set("lib/x.py//Loader//load"))
+	assert.Equal(t, "app/server.py//main,src/api.ts//Router//handle,app/server.py,lib/x.py//Loader//load", sources.String())
+	assert.ErrorContains(t, sources.Set("app/server.py:main."), "an empty segment")
+	assert.ErrorContains(t, sources.Set(":main"), "no path")
+	assert.ErrorContains(t, sources.Set("app/server.py//*"), "has a wildcard")
+}
+
+func TestExampleSearchesFromASource(t *testing.T) {
+	bin := buildExample(t)
+	out, err := exec.Command(bin, "-dir", deadCallCase, "-target", "yaml//load").CombinedOutput()
+	require.NoError(t, err, string(out))
+	assert.Equal(t, "yaml//load: not-found\n  call at handlers.py:13 in handlers.py//load_old, which no root reaches\n  searched 1 roots, 5 nodes, 4 edges\n", string(out))
+
+	out, err = exec.Command(bin, "-dir", deadCallCase, "-source", "handlers.py:load_old", "-target", "yaml//load").CombinedOutput()
+	require.NoError(t, err, string(out))
+	assert.Equal(t, "yaml//load: found\n  handlers.py//load_old (query) -> handlers.py:13 -> yaml//load\n", string(out))
+
+	out, err = exec.Command(bin, "-dir", deadCallCase, "-source", "handlers.py:load_old", "-sources-only", "-target", "json//load").CombinedOutput()
+	require.NoError(t, err, string(out))
+	assert.Equal(t, "json//load: not-found\n  call at handlers.py:8 in handlers.py//parse, which no root reaches\n  searched 1 roots, 3 nodes, 2 edges\n", string(out))
+
+	cmd := exec.Command(bin, "-dir", deadCallCase, "-source", "handlers.py:load_odl", "-target", "yaml//load")
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	_, err = cmd.Output()
+	require.Error(t, err)
+	assert.Contains(t, stderr.String(), "unknown source: no node has the key handlers.py//load_odl")
+
+	cmd = exec.Command(bin, "-dir", deadCallCase, "-sources-only", "-target", "yaml//load")
+	stderr.Reset()
+	cmd.Stderr = &stderr
+	_, err = cmd.Output()
+	var exit *exec.ExitError
+	require.ErrorAs(t, err, &exit)
+	assert.Equal(t, 2, exit.ExitCode())
+	assert.Contains(t, stderr.String(), "projectgraph needs a -source with -sources-only")
+}
+
+func TestWarnGraphSkipsTheFallbackAdviceForSourcesOnly(t *testing.T) {
+	g := &projectgraph.Graph{Stats: projectgraph.Stats{RootFallback: true}}
+	var warn strings.Builder
+	require.NoError(t, warnGraph(&warn, g, false))
+	assert.Contains(t, warn.String(), "no root rule matched")
+	warn.Reset()
+	require.NoError(t, warnGraph(&warn, g, true))
+	assert.Empty(t, warn.String())
 }
 
 func TestDependencyFlag(t *testing.T) {

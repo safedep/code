@@ -20,7 +20,7 @@ import (
 // target, as a reach query of the project would with the symbol as its
 // one root. The depth cap is far above the depth of the graph, because a
 // summary has none.
-func statusOf(t testing.TB, g *projectgraph.Graph, symbol string, targets []string) map[string]reach.Status {
+func statusOf(t testing.TB, g *projectgraph.Graph, symbol string, targets []reach.Target) map[string]reach.Status {
 	t.Helper()
 	from := *g
 	from.Roots = []projectgraph.Root{{Key: symbol, Kind: projectgraph.RootMain, Rule: "test"}}
@@ -29,23 +29,30 @@ func statusOf(t testing.TB, g *projectgraph.Graph, symbol string, targets []stri
 	require.NoError(t, err)
 	out := map[string]reach.Status{}
 	for _, r := range results {
-		out[r.Target] = r.Status
+		out[r.Target.Key()] = r.Status
 	}
 	return out
 }
 
 // AssertStatusMatchesReach checks that the summary answers found, not
 // found or uncertain for every symbol and every target as a reach query
-// of the unit graph from the symbol does.
+// of the unit graph from the symbol does. The targets are the ones of the
+// summary, a wildcard under the module of the first one, a key that no
+// node has, and a key and a wildcard that only the method rule concerns.
 func AssertStatusMatchesReach(t testing.TB, r *summary.Result) {
 	t.Helper()
 	s := r.Summary
 	require.NotEmpty(t, s.Symbols)
-	targets := append(slices.Clone(s.Targets), "nope//missing", "fs//"+fileindex.Last(cmp.Or(firstMethod(s), "x")))
+	keys := append(slices.Clone(s.Targets), "nope//missing", "fs//"+fileindex.Last(cmp.Or(firstMethod(s), "x")), "fs//*")
+	if len(s.Targets) > 0 {
+		keys = append(keys, fileindex.Unit(s.Targets[0])+"//*")
+	}
+	targets, err := reach.TargetsByKey(keys...)
+	require.NoError(t, err)
 	for _, sym := range s.Symbols {
 		want := statusOf(t, r.Graph(), sym.Key, targets)
 		for _, target := range targets {
-			assert.Equal(t, want[target], s.Status(sym.Key, target), "%s -> %s", sym.Key, target)
+			assert.Equal(t, want[target.Key()], s.Status(sym.Key, target), "%s -> %s", sym.Key, target)
 		}
 	}
 }
