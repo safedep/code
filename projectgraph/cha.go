@@ -78,7 +78,7 @@ func (b *builder) mro(class string) []string {
 }
 
 func (b *builder) depthFirst(class string, depth int, seen map[string]bool) []string {
-	if seen[class] || depth > b.opts.maxExportHops {
+	if seen[class] || depth > b.opts.MaxExportHops {
 		return nil
 	}
 	seen[class] = true

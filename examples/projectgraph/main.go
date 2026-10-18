@@ -25,7 +25,6 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"slices"
 	"strings"
@@ -42,25 +41,6 @@ import (
 	"github.com/safedep/code/projectgraph/summary"
 	"github.com/safedep/dry/localdb"
 )
-
-// installedDirs hold installed code or caches at any depth.
-var installedDirs = []string{
-	"node_modules", "bower_components", ".git", ".hg", ".svn", "venv", ".venv", ".tox", ".nox",
-	"__pycache__", ".mypy_cache", ".pytest_cache", "site-packages", ".next", ".nuxt",
-}
-
-// rootDirs hold vendored or built code at the project root. A package of the
-// project can have one of these names below the root, as src/build, and its
-// files are first-party.
-var rootDirs = []string{"vendor", "third_party", "env", "dist", "build", "out", "target", "coverage"}
-
-// testPaths mark the test files. A test file gives roots only with
-// -include-tests.
-var testPaths = []string{
-	"test", "tests", "__tests__", "spec", "test_*.py", "*_test.py", "conftest.py",
-	"*.test.js", "*.spec.js", "*.test.ts", "*.spec.ts", "*.test.tsx", "*.spec.tsx", "*_test.go", "*Test.java", "*Tests.java", "*Test.kt", "*Tests.kt",
-	"*Test.cs", "*Tests.cs", "*Test.php", "*_test.rb", "*_spec.rb", "benches",
-}
 
 type stringList []string
 
@@ -134,7 +114,7 @@ func run(ctx context.Context, cfg config, out io.Writer) (err error) {
 	if err != nil {
 		return err
 	}
-	fsCfg := fs.LocalFileSystemConfig{AppDirectories: []string{root}, ImportUnits: map[string]string{}, ExcludePatterns: skipPatterns(root)}
+	fsCfg := fs.LocalFileSystemConfig{AppDirectories: []string{root}, ImportUnits: map[string]string{}, ExcludePatterns: fs.DefaultSkipPatterns(root)}
 	var importDirs []string
 	for _, dir := range cfg.importDirs {
 		abs, err := filepath.Abs(dir)
@@ -162,7 +142,7 @@ func run(ctx context.Context, cfg config, out io.Writer) (err error) {
 		fsCfg.ImportDirectories = append(fsCfg.ImportDirectories, dir)
 		// The patterns of root do not apply to the walk of a dependency,
 		// so the code that the dependency installs below it stays out.
-		fsCfg.ExcludePatterns = append(fsCfg.ExcludePatterns, installedPattern(dir))
+		fsCfg.ExcludePatterns = append(fsCfg.ExcludePatterns, fs.SkipPattern(dir))
 	}
 	slices.Sort(fsCfg.ImportDirectories)
 	fsys, err := fs.NewLocalFileSystem(fsCfg)
@@ -205,7 +185,7 @@ func printReach(ctx context.Context, cfg config, out io.Writer, root string, ind
 	g, err := projectgraph.Build(ctx, indexed.Indexes, projectgraph.Options{
 		Root:      os.DirFS(root),
 		Files:     indexed.Statuses(),
-		TestPaths: testPaths,
+		TestPaths: fileindex.DefaultTestPaths,
 		Units:     units,
 	})
 	if err != nil {
@@ -227,7 +207,7 @@ func printReach(ctx context.Context, cfg config, out io.Writer, root string, ind
 		return encoder.Encode(results)
 	}
 	for _, r := range results {
-		if err := printResult(out, r); err != nil {
+		if _, err := fmt.Fprintln(out, r); err != nil {
 			return err
 		}
 	}
@@ -240,18 +220,7 @@ func printReach(ctx context.Context, cfg config, out io.Writer, root string, ind
 func printSummaries(ctx context.Context, out io.Writer, indexed *indexer.Result, units map[string]iofs.FS) error {
 	summaries := []*summary.Summary{}
 	for _, unit := range slices.Sorted(maps.Keys(units)) {
-		var indexes []*fileindex.Index
-		for _, ix := range indexed.Indexes {
-			if ix.Unit == unit {
-				indexes = append(indexes, ix)
-			}
-		}
-		files := map[string]fileindex.FileStatus{}
-		for p, status := range indexed.Dependencies {
-			if fileindex.PackageOf(p) == unit {
-				files[p] = status
-			}
-		}
+		indexes, files := indexed.Unit(unit)
 		if len(indexes) == 0 && len(files) == 0 {
 			return fmt.Errorf("the unit %s has no file to summarize", unit)
 		}
@@ -289,84 +258,4 @@ func mergeOverlay(g *projectgraph.Graph, path string, warn io.Writer) error {
 func within(dir, path string) bool {
 	rel, err := filepath.Rel(dir, path)
 	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
-}
-
-// sep matches a path separator of any platform.
-const sep = `[\\/]`
-
-// skipPatterns match the installed directories at any depth below root and
-// the vendored or built directories directly under root. A root under a
-// directory named build keeps its code.
-func skipPatterns(root string) []*regexp.Regexp {
-	return []*regexp.Regexp{
-		installedPattern(root),
-		regexp.MustCompile(`^` + regexp.QuoteMeta(root) + sep + alternation(rootDirs) + `(?:` + sep + `|$)`),
-	}
-}
-
-// installedPattern matches the installed directories at any depth below dir.
-func installedPattern(dir string) *regexp.Regexp {
-	return regexp.MustCompile(`^` + regexp.QuoteMeta(dir) + sep + `(?:.*` + sep + `)?` + alternation(installedDirs) + `(?:` + sep + `|$)`)
-}
-
-func alternation(names []string) string {
-	quoted := make([]string, len(names))
-	for i, name := range names {
-		quoted[i] = regexp.QuoteMeta(name)
-	}
-	return `(?:` + strings.Join(quoted, "|") + `)`
-}
-
-func printResult(out io.Writer, r reach.Result) error {
-	lines := []string{fmt.Sprintf("%s: %s", r.Target, r.Status)}
-	if len(r.Path) > 0 {
-		lines = append(lines, "  "+pathText(r.Path))
-	}
-	if len(r.TestPath) > 0 {
-		lines = append(lines, "  test only: "+pathText(r.TestPath))
-	}
-	for _, u := range r.Uncertainties {
-		lines = append(lines, fmt.Sprintf("  %s: %s %s", u.Kind, siteText(u.Site), u.Text))
-	}
-	if r.Status == reach.NoSuchTarget {
-		lines = append(lines, "  no node has the key: a target is the key form of the import, as os//exec//Command or java//lang//Thread//sleep")
-	}
-	if r.Status != reach.Found {
-		for _, c := range r.CallSites {
-			if !c.Reached {
-				lines = append(lines, fmt.Sprintf("  call at %s in %s, which no root reaches", siteText(c.Site), c.Caller))
-			}
-		}
-		lines = append(lines, fmt.Sprintf("  searched %d roots, %d nodes, %d edges", len(r.Searched.Roots), r.Searched.Nodes, r.Searched.Edges))
-	}
-	_, err := fmt.Fprintln(out, strings.Join(lines, "\n"))
-	return err
-}
-
-// pathText writes a path as the call site of each hop and then the target,
-// as main.py:3 -> handlers.py:12 -> yaml//load. A hop with low confidence
-// names its edge kind, as main.py:3 (name), so a reader sees the weak hop.
-// An llm hop also names its model and its prompt. A package hop names its
-// kind at the definition in the package, so a reader sees where the path
-// enters dependency code.
-func pathText(hops []reach.Hop) string {
-	parts := make([]string, 0, len(hops))
-	for _, h := range hops[1:] {
-		part := siteText(h.Site)
-		switch {
-		case h.EdgeKind == projectgraph.EdgeLLM:
-			part += " (" + string(h.EdgeKind) + ", " + h.Resolver + ")"
-		case h.Confidence == projectgraph.ConfidenceLow || h.EdgeKind == projectgraph.EdgePackage:
-			part += " (" + string(h.EdgeKind) + ")"
-		}
-		parts = append(parts, part)
-	}
-	return strings.Join(append(parts, hops[len(hops)-1].Key), " -> ")
-}
-
-func siteText(s projectgraph.Site) string {
-	if s.Line == 0 {
-		return s.Path
-	}
-	return fmt.Sprintf("%s:%d", s.Path, s.Line)
 }

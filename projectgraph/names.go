@@ -19,7 +19,7 @@ func (b *builder) resolveName(module, name string, hops int) (string, *failure) 
 	if b.visiting[k] {
 		return "", &failure{reason: fileindex.UnresolvedNoDefinition, name: name, cut: true}
 	}
-	if hops > b.opts.maxExportHops {
+	if hops > b.opts.MaxExportHops {
 		path := strings.TrimSuffix(module, "/")
 		b.truncations[Truncation{Kind: TruncationExportHops, Key: fileindex.Join(path, name), Site: Site{Path: path}}] = true
 		return "", &failure{reason: fileindex.UnresolvedLimit, name: name, cut: true}

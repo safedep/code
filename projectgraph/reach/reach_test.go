@@ -521,3 +521,29 @@ edge npm:kit@1.0.0//k.js//dead os//exit direct 9
 	_, err = Explore(context.Background(), g, []string{"kit//run"}, -1)
 	assert.Error(t, err)
 }
+
+func TestPathStringNamesAWeakHop(t *testing.T) {
+	hops := []Hop{
+		{Key: "main.py"},
+		{Key: "app.py//Parser//parse", Site: projectgraph.Site{Path: "main.py", Line: 3}, EdgeKind: projectgraph.EdgeName, Confidence: projectgraph.ConfidenceLow},
+		{Key: "yaml//load", Site: projectgraph.Site{Path: "app.py", Line: 6}, EdgeKind: projectgraph.EdgeDirect, Confidence: projectgraph.ConfidenceHigh},
+	}
+	assert.Equal(t, "main.py:3 (name) -> app.py:6 -> yaml//load", PathString(hops))
+
+	hops[1].EdgeKind, hops[1].Resolver = projectgraph.EdgeLLM, "model m1, prompt v2"
+	assert.Equal(t, "main.py:3 (llm, model m1, prompt v2) -> app.py:6 -> yaml//load", PathString(hops))
+}
+
+func TestResultString(t *testing.T) {
+	found := Result{Target: "yaml//load", Status: Found, Path: []Hop{{Key: "main.py"}, {Key: "yaml//load", Site: projectgraph.Site{Path: "main.py", Line: 3}, EdgeKind: projectgraph.EdgeDirect, Confidence: projectgraph.ConfidenceHigh}}}
+	assert.Equal(t, "yaml//load: found\n  main.py:3 -> yaml//load", found.String())
+
+	missing := Result{
+		Target: "yaml//dump", Status: Uncertain,
+		CallSites:     []CallSite{{Caller: "dead.py//f", Site: projectgraph.Site{Path: "dead.py", Line: 2}}},
+		Uncertainties: []Uncertainty{{Kind: Budget, Site: projectgraph.Site{Path: "big.py"}, Text: "the file is missing"}},
+		Searched:      Searched{Roots: []projectgraph.Root{{Key: "main.py"}}, Nodes: 4, Edges: 3},
+	}
+	assert.Equal(t, "yaml//dump: uncertain\n  budget: big.py the file is missing\n  call at dead.py:2 in dead.py//f, which no root reaches\n  searched 1 roots, 4 nodes, 3 edges", missing.String())
+	assert.Contains(t, Result{Target: "Thread//sleep", Status: NoSuchTarget}.String(), "no node has the key")
+}

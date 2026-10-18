@@ -151,6 +151,15 @@ type Site struct {
 	Column int    `json:"column,omitempty"`
 }
 
+// String writes the site as path:line, or as the path alone for a site
+// with no line.
+func (s Site) String() string {
+	if s.Line == 0 {
+		return s.Path
+	}
+	return fmt.Sprintf("%s:%d", s.Path, s.Line)
+}
+
 // Node is a definition, a module top level, a re-exported name or an
 // external target. An external node has only its key and kind.
 type Node struct {

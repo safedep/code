@@ -48,9 +48,12 @@ type Options struct {
 	// search can then start from the symbols of a package, as a summary of
 	// the package does.
 	Surface bool
-
-	maxEdges      int
-	maxExportHops int
+	// MaxEdges caps the edges of the graph. Past it the link step adds no
+	// edge and records a truncation. Zero selects 5,000,000.
+	MaxEdges int
+	// MaxExportHops caps the hops of a walk through re-exports, bases and
+	// the modules of a Go package. Zero selects 10.
+	MaxExportHops int
 }
 
 // Build links the indexes of one project into a graph. Every index must have
@@ -181,8 +184,8 @@ type classRecord struct {
 }
 
 func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
-	opts.maxEdges = cmp.Or(opts.maxEdges, defaultMaxEdges)
-	opts.maxExportHops = cmp.Or(opts.maxExportHops, defaultMaxExportHops)
+	opts.MaxEdges = cmp.Or(opts.MaxEdges, defaultMaxEdges)
+	opts.MaxExportHops = cmp.Or(opts.MaxExportHops, defaultMaxExportHops)
 	if err := opts.validate(); err != nil {
 		return nil, err
 	}
@@ -377,7 +380,7 @@ func (b *builder) status(ix *fileindex.Index) fileindex.FileStatus {
 // addEdge adds an edge by the rule of the edge set, unless the edge is new
 // and the graph is at its edge limit.
 func (b *builder) addEdge(e Edge) {
-	if !b.edges.holds(e) && b.edges.len() >= b.opts.maxEdges {
+	if !b.edges.holds(e) && b.edges.len() >= b.opts.MaxEdges {
 		b.truncations[Truncation{Kind: TruncationEdges}] = true
 		return
 	}

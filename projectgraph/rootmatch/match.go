@@ -42,13 +42,13 @@ type Project struct {
 	Indexes []*fileindex.Index
 	IsTest  func(path string) bool
 	// Root holds the manifests and the files. A nil Root reads nothing.
-	Root   fs.FS
-	Files  *modules.Files
-	Python *modules.Python
-	JS     *modules.JavaScript
-	// Composer holds the autoload maps and the bin scripts of PHP. A nil
-	// Composer names no script.
-	Composer *modules.Composer
+	Root  fs.FS
+	Files *modules.Files
+	// State holds the manifest readers of the languages by code, as the
+	// link step keeps them: the *modules.Python of Python, the
+	// *modules.JavaScript of JavaScript and the *modules.Composer of PHP.
+	// A language with no entry has no manifest.
+	State map[langcode.Code]any
 	// Dependencies returns the packages that the manifests of the project
 	// declare for the ecosystem of a language, and the manifests that it
 	// could not read. A nil Dependencies declares none.
@@ -98,6 +98,12 @@ func Find(ctx context.Context, p Project, rs []rules.Rule) ([]Root, []modules.Pr
 		return cmp.Or(cmp.Compare(a.Key, b.Key), cmp.Compare(a.Kind, b.Kind), cmp.Compare(a.Rule, b.Rule))
 	})
 	return f.roots, f.problems, nil
+}
+
+// state returns the manifest reader of a language, or nil.
+func state[T any](p Project, code langcode.Code) *T {
+	s, _ := p.State[code].(*T)
+	return s
 }
 
 type finder struct {
@@ -240,8 +246,8 @@ func (f *finder) matchManifest(r rules.Rule) {
 		f.matchPackageJSON(r)
 		return
 	case rules.Composer:
-		if f.Composer != nil {
-			for _, bin := range f.Composer.Bins() {
+		if composer := state[modules.Composer](f.Project, langcode.PHP); composer != nil {
+			for _, bin := range composer.Bins() {
 				f.addFile(r, bin)
 			}
 		}
@@ -278,7 +284,11 @@ func (f *finder) matchManifest(r rules.Rule) {
 // another package calls what it exports. So the exports of such an entry
 // are roots too. A bin entry is a program, and only its top level runs.
 func (f *finder) matchPackageJSON(r rules.Rule) {
-	for _, pj := range f.JS.Packages() {
+	js := state[modules.JavaScript](f.Project, langcode.Javascript)
+	if js == nil {
+		return
+	}
+	for _, pj := range js.Packages() {
 		var programs, libraries []string
 		for _, field := range r.Match.Manifest.Fields {
 			switch field {
@@ -292,10 +302,10 @@ func (f *finder) matchPackageJSON(r rules.Rule) {
 				libraries = append(libraries, pj.ExportFiles()...)
 			}
 		}
-		for _, file := range f.entryFiles(pj.Dir, programs) {
+		for _, file := range f.entryFiles(js, pj.Dir, programs) {
 			f.addFile(r, file)
 		}
-		for _, file := range f.entryFiles(pj.Dir, libraries) {
+		for _, file := range f.entryFiles(js, pj.Dir, libraries) {
 			f.addFile(r, file)
 			if lang, ok := f.languages[file]; ok && r.Applies(lang) {
 				for _, key := range f.Exports(file) {
@@ -308,14 +318,14 @@ func (f *finder) matchPackageJSON(r rules.Rule) {
 
 // entryFiles returns the project files that the entries of a package.json
 // in dir name.
-func (f *finder) entryFiles(dir string, entries []string) []string {
+func (f *finder) entryFiles(js *modules.JavaScript, dir string, entries []string) []string {
 	var files []string
 	for _, entry := range entries {
 		if entry == "" {
 			continue
 		}
 		if base, ok := modules.Join(dir, entry); ok {
-			if file, ok := f.JS.File(base, true); ok {
+			if file, ok := js.File(base, true); ok {
 				files = append(files, file)
 			}
 		}
@@ -332,7 +342,11 @@ func (f *finder) addPythonEntry(r rules.Rule, dir, entry string) {
 		return
 	}
 	module, attr, _ := strings.Cut(fields[0], ":")
-	file, ok := f.Python.Absolute(path.Join(dir, rules.PyProject), module)
+	python := state[modules.Python](f.Project, langcode.Python)
+	if python == nil {
+		return
+	}
+	file, ok := python.Absolute(path.Join(dir, rules.PyProject), module)
 	if !ok || strings.HasSuffix(file, "/") {
 		return
 	}

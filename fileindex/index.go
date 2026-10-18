@@ -21,6 +21,16 @@ import (
 // store keys an index by Version, so the bump makes every older index miss.
 const Version = "10"
 
+// DefaultTestPaths are the globs that mark the test files of the common
+// layouts, as projectgraph.Options.TestPaths takes them. A glob with no "/"
+// matches one part of a path.
+var DefaultTestPaths = []string{
+	"test", "tests", "__tests__", "spec", "test_*.py", "*_test.py", "conftest.py",
+	"*.test.js", "*.spec.js", "*.test.ts", "*.spec.ts", "*.test.tsx", "*.spec.tsx",
+	"*_test.go", "*Test.java", "*Tests.java", "*Test.kt", "*Tests.kt",
+	"*Test.cs", "*Tests.cs", "*Test.php", "*_test.rb", "*_spec.rb", "benches",
+}
+
 type ImportKind string
 
 const (

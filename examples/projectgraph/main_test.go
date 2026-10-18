@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/safedep/code/projectgraph"
 	"github.com/safedep/code/projectgraph/reach"
 	"github.com/safedep/code/projectgraph/summary"
 	"github.com/stretchr/testify/assert"
@@ -119,48 +118,4 @@ func TestDependencyFlag(t *testing.T) {
 	assert.Equal(t, "node_modules/lodash=npm:lodash@4.17.21", deps.String())
 	assert.Error(t, deps.Set("node_modules/lodash"))
 	assert.Error(t, deps.Set("=npm:lodash@4.17.21"))
-}
-
-func TestSkipPatterns(t *testing.T) {
-	root := filepath.Join(string(filepath.Separator), "ci", "build", "app")
-	patterns := skipPatterns(root)
-	skipped := func(p string) bool {
-		for _, re := range patterns {
-			if re.MatchString(p) {
-				return true
-			}
-		}
-		return false
-	}
-
-	tests := []struct {
-		path string
-		skip bool
-	}{
-		{filepath.Join(root, "main.py"), false},
-		{filepath.Join(root, "src", "builder.py"), false},
-		{filepath.Join(root, "node_modules", "yaml", "index.js"), true},
-		{filepath.Join(root, "web", "node_modules"), true},
-		{filepath.Join(root, ".venv", "lib", "yaml.py"), true},
-		{filepath.Join(root, "pkg", "__pycache__", "a.pyc"), true},
-		{filepath.Join(root, "build", "app.js"), true},
-		{filepath.Join(root, "src", "build", "helper.py"), false},
-		{filepath.Join(root, "env"), true},
-		{filepath.Join(root, "app", "env", "settings.py"), false},
-	}
-	for _, tt := range tests {
-		assert.Equal(t, tt.skip, skipped(tt.path), tt.path)
-	}
-}
-
-func TestPathTextNamesAWeakHop(t *testing.T) {
-	hops := []reach.Hop{
-		{Key: "main.py"},
-		{Key: "app.py//Parser//parse", Site: projectgraph.Site{Path: "main.py", Line: 3}, EdgeKind: projectgraph.EdgeName, Confidence: projectgraph.ConfidenceLow},
-		{Key: "yaml//load", Site: projectgraph.Site{Path: "app.py", Line: 6}, EdgeKind: projectgraph.EdgeDirect, Confidence: projectgraph.ConfidenceHigh},
-	}
-	assert.Equal(t, "main.py:3 (name) -> app.py:6 -> yaml//load", pathText(hops))
-
-	hops[1].EdgeKind, hops[1].Resolver = projectgraph.EdgeLLM, "model m1, prompt v2"
-	assert.Equal(t, "main.py:3 (llm, model m1, prompt v2) -> app.py:6 -> yaml//load", pathText(hops))
 }

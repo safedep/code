@@ -25,13 +25,11 @@ func (b *builder) markRoots(ctx context.Context) error {
 		}
 	}
 	found, problems, err := rootmatch.Find(ctx, rootmatch.Project{
-		Indexes:  indexes,
-		IsTest:   func(p string) bool { return b.test[p] },
-		Root:     b.opts.Root,
-		Files:    b.project.files,
-		Python:   b.project.python,
-		JS:       b.project.js,
-		Composer: b.phpState().composer,
+		Indexes: indexes,
+		IsTest:  func(p string) bool { return b.test[p] },
+		Root:    b.opts.Root,
+		Files:   b.project.files,
+		State:   map[langcode.Code]any{langcode.Python: b.project.python, langcode.Javascript: b.project.js, langcode.PHP: b.phpState().composer},
 		Dependencies: func(lang langcode.Code) ([]string, []modules.Problem) {
 			if deps := profileOf(lang.Family()).dependencies; deps != nil {
 				return deps(b)
@@ -145,7 +143,7 @@ func (b *builder) resolveRuleName(p, name string) (string, bool) {
 // interface runs no code, so it is no root.
 func (b *builder) exportKeys(p string, seen map[string]bool) []string {
 	sc := b.scopes[p]
-	if sc == nil || seen[p] || len(seen) > b.opts.maxExportHops {
+	if sc == nil || seen[p] || len(seen) > b.opts.MaxExportHops {
 		return nil
 	}
 	seen[p] = true

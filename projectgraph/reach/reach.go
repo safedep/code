@@ -125,6 +125,55 @@ type Result struct {
 	Searched      Searched      `json:"searched"`
 }
 
+// String writes the result as lines: the status, the path, the test path,
+// the uncertainties and, for a target with no path, the call sites that no
+// root reaches and the size of the search.
+func (r Result) String() string {
+	lines := []string{fmt.Sprintf("%s: %s", r.Target, r.Status)}
+	if len(r.Path) > 0 {
+		lines = append(lines, "  "+PathString(r.Path))
+	}
+	if len(r.TestPath) > 0 {
+		lines = append(lines, "  test only: "+PathString(r.TestPath))
+	}
+	for _, u := range r.Uncertainties {
+		lines = append(lines, fmt.Sprintf("  %s: %s %s", u.Kind, u.Site, u.Text))
+	}
+	if r.Status == NoSuchTarget {
+		lines = append(lines, "  no node has the key: a target is the key form of the import, as os//exec//Command or java//lang//Thread//sleep")
+	}
+	if r.Status != Found {
+		for _, c := range r.CallSites {
+			if !c.Reached {
+				lines = append(lines, fmt.Sprintf("  call at %s in %s, which no root reaches", c.Site, c.Caller))
+			}
+		}
+		lines = append(lines, fmt.Sprintf("  searched %d roots, %d nodes, %d edges", len(r.Searched.Roots), r.Searched.Nodes, r.Searched.Edges))
+	}
+	return strings.Join(lines, "\n")
+}
+
+// PathString writes a path as the call site of each hop and then the
+// target, as main.py:3 -> handlers.py:12 -> yaml//load. A hop with low
+// confidence names its edge kind, as main.py:3 (name), so a reader sees the
+// weak hop. An llm hop also names its model and its prompt. A package hop
+// names its kind at the definition in the package, so a reader sees where
+// the path enters dependency code.
+func PathString(hops []Hop) string {
+	parts := make([]string, 0, len(hops))
+	for _, h := range hops[1:] {
+		part := h.Site.String()
+		switch {
+		case h.EdgeKind == projectgraph.EdgeLLM:
+			part += " (" + string(h.EdgeKind) + ", " + h.Resolver + ")"
+		case h.Confidence == projectgraph.ConfidenceLow || h.EdgeKind == projectgraph.EdgePackage:
+			part += " (" + string(h.EdgeKind) + ")"
+		}
+		parts = append(parts, part)
+	}
+	return strings.Join(append(parts, hops[len(hops)-1].Key), " -> ")
+}
+
 // Reach returns one result per target, in the order of the query.
 func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error) {
 	if q.MaxDepth < 0 {

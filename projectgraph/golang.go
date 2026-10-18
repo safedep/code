@@ -298,7 +298,7 @@ func (b *builder) implements(typ, iface string) bool {
 // with the methods of the first-party interfaces that it embeds.
 func (b *builder) abstract(iface string, depth int) []fileindex.Signature {
 	rec, ok := b.classes[iface]
-	if !ok || depth > b.opts.maxExportHops {
+	if !ok || depth > b.opts.MaxExportHops {
 		return nil
 	}
 	sigs := slices.Clone(rec.class.Abstract)

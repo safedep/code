@@ -105,7 +105,7 @@ func javascriptSurface(s *surfacer) {
 // names of its export * from.
 func (b *builder) exportNames(p string, seen map[string]bool) []string {
 	sc := b.scopes[p]
-	if sc == nil || seen[p] || len(seen) > b.opts.maxExportHops {
+	if sc == nil || seen[p] || len(seen) > b.opts.MaxExportHops {
 		return nil
 	}
 	seen[p] = true

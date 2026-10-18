@@ -88,6 +88,24 @@ func (r *Result) Statuses() map[string]fileindex.FileStatus {
 	return out
 }
 
+// Unit returns the indexes and the file statuses of one unit of dependency
+// code, as summary.Summarize takes them.
+func (r *Result) Unit(unit string) ([]*fileindex.Index, map[string]fileindex.FileStatus) {
+	var indexes []*fileindex.Index
+	for _, ix := range r.Indexes {
+		if ix.Unit == unit {
+			indexes = append(indexes, ix)
+		}
+	}
+	files := map[string]fileindex.FileStatus{}
+	for p, status := range r.Dependencies {
+		if fileindex.PackageOf(p) == unit {
+			files[p] = status
+		}
+	}
+	return indexes, files
+}
+
 // statuses returns the map of the status of a file of the name.
 func (r *Result) statuses(name string) map[string]fileindex.FileStatus {
 	if unit, _ := fileindex.SplitUnit(name); unit != "" {

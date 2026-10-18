@@ -159,7 +159,7 @@ func (b *builder) c3(class string) []string {
 	}
 	order := []string{class}
 	seen := map[string]bool{class: true}
-	for left > 0 && len(order) <= b.opts.maxExportHops {
+	for left > 0 && len(order) <= b.opts.MaxExportHops {
 		head := ""
 		for i, l := range lists {
 			if heads[i] < len(l) && tails[l[heads[i]]] == 0 {

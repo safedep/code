@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/safedep/code/core"
-	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/fileindex/store/memstore"
 	"github.com/safedep/code/fs"
 	"github.com/safedep/code/internal/testutil"
@@ -247,18 +246,7 @@ func dumpCase(t *testing.T, dir string, g *projectgraph.Graph, results []reach.R
 // flag -update writes the golden file.
 func checkSummary(t *testing.T, dir, unit string, indexed *indexer.Result, roots map[string]iofs.FS) {
 	t.Helper()
-	var indexes []*fileindex.Index
-	for _, ix := range indexed.Indexes {
-		if ix.Unit == unit {
-			indexes = append(indexes, ix)
-		}
-	}
-	files := map[string]fileindex.FileStatus{}
-	for p, status := range indexed.Dependencies {
-		if fileindex.PackageOf(p) == unit {
-			files[p] = status
-		}
-	}
+	indexes, files := indexed.Unit(unit)
 	s, err := summary.Summarize(context.Background(), indexes, projectgraph.Options{Files: files, Units: map[string]iofs.FS{unit: roots[unit]}})
 	require.NoError(t, err)
 	testutil.AssertGolden(t, filepath.Join(dir, strings.NewReplacer(":", "_", "/", "_", "@", "_").Replace(unit)+".json"), *update, s)

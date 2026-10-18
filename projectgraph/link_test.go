@@ -345,14 +345,17 @@ func TestBuildExportHopLimit(t *testing.T) {
 	tests := []struct {
 		name      string
 		packages  int
+		hops      int
 		truncated bool
 	}{
 		{name: "ten hops resolve", packages: 11},
 		{name: "eleven hops stop", packages: 12, truncated: true},
+		{name: "two hops resolve under the option", packages: 3, hops: 2},
+		{name: "three hops stop under the option", packages: 4, hops: 2, truncated: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g, err := Build(context.Background(), chain(tt.packages), Options{})
+			g, err := Build(context.Background(), chain(tt.packages), Options{MaxExportHops: tt.hops})
 			require.NoError(t, err)
 			if !tt.truncated {
 				assert.Empty(t, g.Truncated)
@@ -369,7 +372,7 @@ func TestBuildExportHopLimit(t *testing.T) {
 
 func TestBuildEdgeLimit(t *testing.T) {
 	indexes, opts := loadCase(t, "python/package-init")
-	opts.maxEdges = 3
+	opts.MaxEdges = 3
 	g, err := Build(context.Background(), indexes, opts)
 	require.NoError(t, err)
 	assert.Len(t, g.Edges, 3)
