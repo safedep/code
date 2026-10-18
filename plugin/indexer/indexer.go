@@ -38,7 +38,9 @@ type Options struct {
 	Store store.Store
 
 	// Plugins run on the tree of each file, next to the index plugin. A
-	// run with plugins parses every file, because a plugin needs the tree.
+	// plugin needs the tree, so a run with a plugin parses every file of
+	// the languages of the plugin, unless the plugin is a CachedPlugin and
+	// the store holds its artifact for the file.
 	Plugins []core.Plugin
 
 	// MaxFileBytes is the size limit of a file. A larger file fails at the
@@ -137,8 +139,13 @@ type run struct {
 
 // Run indexes the app files of fsys, and its import files with
 // Options.Imports. It reads each file once and asks the store for the index
-// of its bytes. A hit with no extra plugin needs no parse. Each new index
-// goes to the store. A file that fails does not stop the run.
+// of its bytes and for the artifacts of the cached plugins. A hit of all of
+// them needs no parse. Each new index and artifact goes to the store. A
+// file that fails does not stop the run.
+//
+// The extra plugins run on the goroutine of Run. In a batch, the files
+// that the store serves come first, in path order, and then the parsed
+// files, in path order.
 //
 // When ctx is done, Run stops, marks each file that it did not index as
 // missing, and returns the result so far with the error of ctx. Run fails
@@ -276,71 +283,97 @@ func (r *run) flush(ctx context.Context, batch []pending) error {
 		return err
 	}
 
-	stored, err := r.stored(ctx, batch)
+	stored, artifacts, err := r.stored(ctx, batch)
 	if err != nil {
 		return err
 	}
 
 	var parse []pending
 	for _, p := range batch {
-		if ix, ok := stored[p.key]; ok && len(r.opts.Plugins) == 0 {
+		if ix, ok := stored[p.key]; ok && !r.needsParse(p, artifacts) {
 			r.done(p.file, ix, fileindex.FileCached)
+			r.restore(ctx, p, artifacts)
 			continue
 		}
 		parse = append(parse, p)
 	}
 
-	put, err := r.parse(ctx, parse)
+	put, made, err := r.parse(ctx, parse)
 	if err != nil {
 		return err
 	}
-	if r.opts.Store == nil || len(put) == 0 {
+	if r.opts.Store == nil {
 		return nil
 	}
-	if err := r.opts.Store.Put(ctx, put); err != nil {
-		return fmt.Errorf("failed to store file indexes: %w", err)
+	if len(put) > 0 {
+		if err := r.opts.Store.Put(ctx, put); err != nil {
+			return fmt.Errorf("failed to store file indexes: %w", err)
+		}
+	}
+	if len(made) > 0 {
+		if err := r.opts.Store.PutArtifacts(ctx, made); err != nil {
+			return fmt.Errorf("failed to store plugin artifacts: %w", err)
+		}
 	}
 	return nil
 }
 
-func (r *run) stored(ctx context.Context, batch []pending) (map[fileindex.Key]*fileindex.Index, error) {
+// stored asks the store for the index of each file of the batch and for
+// the artifact of each cached plugin of the file.
+func (r *run) stored(ctx context.Context, batch []pending) (map[fileindex.Key]*fileindex.Index, map[store.ArtifactKey][]byte, error) {
 	if r.opts.Store == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 	keys := make([]fileindex.Key, len(batch))
+	var artifactKeys []store.ArtifactKey
 	for i, p := range batch {
 		keys[i] = p.key
+		for _, pl := range r.opts.Plugins {
+			if cached, ok := pl.(CachedPlugin); ok && supports(pl, p) {
+				artifactKeys = append(artifactKeys, artifactKey(p, cached))
+			}
+		}
 	}
 	stored, err := r.opts.Store.Get(ctx, keys)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file indexes: %w", err)
+		return nil, nil, fmt.Errorf("failed to read file indexes: %w", err)
 	}
-	return stored, nil
+	var artifacts map[store.ArtifactKey][]byte
+	if len(artifactKeys) > 0 {
+		if artifacts, err = r.opts.Store.GetArtifacts(ctx, artifactKeys); err != nil {
+			return nil, nil, fmt.Errorf("failed to read plugin artifacts: %w", err)
+		}
+	}
+	return stored, artifacts, nil
 }
 
 // parse sends the files to the workers and takes the outcomes in the order
 // of the files, so the report and the extra plugins see the files in the
-// order of a run with one worker. It returns the new indexes in that order.
-func (r *run) parse(ctx context.Context, files []pending) ([]*fileindex.Index, error) {
+// order of a run with one worker. It returns the new indexes and the new
+// artifacts in that order.
+func (r *run) parse(ctx context.Context, files []pending) ([]*fileindex.Index, []store.Artifact, error) {
 	var put []*fileindex.Index
+	var made []store.Artifact
 	r.pool.each(ctx, files, func(p pending, o outcome) {
-		if ix := r.collect(ctx, p, o); ix != nil {
+		ix, artifacts := r.collect(ctx, p, o)
+		if ix != nil {
 			put = append(put, ix)
 		}
+		made = append(made, artifacts...)
 	})
-	return put, ctx.Err()
+	return put, made, ctx.Err()
 }
 
 // collect records the outcome of one file, runs the extra plugins on its
 // tree and closes the tree. It returns the index of the file, or nil when
-// the file failed.
-func (r *run) collect(ctx context.Context, p pending, o outcome) *fileindex.Index {
+// the file failed, and the artifacts of the cached plugins.
+func (r *run) collect(ctx context.Context, p pending, o outcome) (*fileindex.Index, []store.Artifact) {
 	if o.err != nil {
 		r.fail(ctx, p.file, core.StageParse, o.err)
-		return nil
+		return nil, nil
 	}
 	if o.tree == nil {
-		return nil
+		return nil, nil
 	}
 	defer o.tree.Close()
 
@@ -350,21 +383,36 @@ func (r *run) collect(ctx context.Context, p pending, o outcome) *fileindex.Inde
 	if failed {
 		report.Failed = append(report.Failed, plugin.FileError{File: p.file.Name(), Stage: o.stage, Err: o.indexErr})
 	}
+	var artifacts []store.Artifact
 	for _, pl := range r.opts.Plugins {
-		if !slices.Contains(pl.SupportedLanguages(), p.language.Meta().Code) {
+		if !supports(pl, p) {
+			continue
+		}
+		if cached, ok := pl.(CachedPlugin); ok {
+			data, err := cached.Analyze(ctx, p.file, o.tree)
+			if err != nil {
+				report.Failed = append(report.Failed, failure(p.file, pl, err))
+			} else {
+				artifacts = append(artifacts, store.Artifact{Key: artifactKey(p, cached), Data: data})
+			}
 			continue
 		}
 		if err := plugin.Analyze(ctx, pl, p.file, o.tree); err != nil {
-			report.Failed = append(report.Failed, plugin.FileError{File: p.file.Name(), Stage: core.Stage(pl.Name()), Err: err})
+			report.Failed = append(report.Failed, failure(p.file, pl, err))
 		}
 	}
 
 	if o.index == nil || failed {
-		r.result.statuses(p.file.Name())[p.file.Name()] = failure(ctx)
-		return nil
+		r.result.statuses(p.file.Name())[p.file.Name()] = status(ctx)
+		return nil, nil
 	}
 	r.done(p.file, o.index, fileindex.FileIndexed)
-	return o.index
+	return o.index, artifacts
+}
+
+// failure is the report entry of a plugin that failed on a file.
+func failure(file core.File, pl core.Plugin, err error) plugin.FileError {
+	return plugin.FileError{File: file.Name(), Stage: core.Stage(pl.Name()), Err: err}
 }
 
 func (r *run) done(file core.File, ix *fileindex.Index, status fileindex.FileStatus) {
@@ -375,12 +423,12 @@ func (r *run) done(file core.File, ix *fileindex.Index, status fileindex.FileSta
 
 func (r *run) fail(ctx context.Context, file core.File, stage core.Stage, err error) {
 	r.result.Report.Failed = append(r.result.Report.Failed, plugin.FileError{File: file.Name(), Stage: stage, Err: err})
-	r.result.statuses(file.Name())[file.Name()] = failure(ctx)
+	r.result.statuses(file.Name())[file.Name()] = status(ctx)
 }
 
-// failure is the status of a file that failed. A failure after ctx is done
+// status is the status of a file that failed. A failure after ctx is done
 // is a stop, so the file is missing.
-func failure(ctx context.Context) fileindex.FileStatus {
+func status(ctx context.Context) fileindex.FileStatus {
 	if ctx.Err() != nil {
 		return fileindex.FileMissing
 	}

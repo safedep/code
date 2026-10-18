@@ -19,7 +19,8 @@ import (
 // reads on either side of a sleep of tick have two read times.
 const tick = 5 * time.Millisecond
 
-// Run runs the suite. newStore returns an empty store for each test.
+// Run runs the suite. newStore returns an empty store for each test. A
+// store that is a store.Pruner also passes the prune tests.
 func Run(t *testing.T, newStore func(t *testing.T) store.Store) {
 	tests := []struct {
 		name string
@@ -32,10 +33,22 @@ func Run(t *testing.T, newStore func(t *testing.T) store.Store) {
 		{"PutReplaces", testPutReplaces},
 		{"ReturnedIndexIsACopy", testReturnedIndexIsACopy},
 		{"ManyKeys", testManyKeys},
-		{"PruneRemovesOnlyRowsReadBefore", testPruneRemovesOnlyRowsReadBefore},
-		{"GetMarksRead", testGetMarksRead},
+		{"ArtifactRoundTrip", testArtifactRoundTrip},
+		{"ArtifactMissAfterKeyChange", testArtifactMissAfterKeyChange},
+		{"ArtifactReplacesAndCopies", testArtifactReplacesAndCopies},
+		{"ManyArtifactKeys", testManyArtifactKeys},
 		{"Concurrent", testConcurrent},
 		{"CanceledContext", testCanceledContext},
+	}
+	pruneTests := []struct {
+		name string
+		run  func(t *testing.T, s store.Pruner)
+	}{
+		{"PruneRemovesOnlyRowsReadBefore", testPruneRemovesOnlyRowsReadBefore},
+		{"PruneRemovesArtifacts", testPruneRemovesArtifacts},
+		{"GetMarksRead", testGetMarksRead},
+		{"GetArtifactsMarksRead", testGetArtifactsMarksRead},
+		{"CanceledPrune", testCanceledPrune},
 	}
 
 	for _, tc := range tests {
@@ -43,6 +56,32 @@ func Run(t *testing.T, newStore func(t *testing.T) store.Store) {
 			tc.run(t, newStore(t))
 		})
 	}
+	for _, tc := range pruneTests {
+		t.Run(tc.name, func(t *testing.T) {
+			p, ok := newStore(t).(store.Pruner)
+			if !ok {
+				t.Skip("the store is no store.Pruner")
+			}
+			tc.run(t, p)
+		})
+	}
+}
+
+// ArtifactKey returns the artifact key of a plugin for the index of a path.
+func ArtifactKey(path, plugin, version string) store.ArtifactKey {
+	return store.ArtifactKey{Key: Index(path).Key(), Plugin: plugin, Version: version}
+}
+
+func putArtifacts(t *testing.T, s store.Store, artifacts ...store.Artifact) {
+	t.Helper()
+	require.NoError(t, s.PutArtifacts(context.Background(), artifacts))
+}
+
+func getArtifacts(t *testing.T, s store.Store, keys ...store.ArtifactKey) map[store.ArtifactKey][]byte {
+	t.Helper()
+	found, err := s.GetArtifacts(context.Background(), keys)
+	require.NoError(t, err)
+	return found
 }
 
 // Index returns a small index of every record kind for a path.
@@ -165,7 +204,109 @@ func testManyKeys(t *testing.T, s store.Store) {
 	}
 }
 
-func testPruneRemovesOnlyRowsReadBefore(t *testing.T, s store.Store) {
+func testArtifactRoundTrip(t *testing.T, s store.Store) {
+	a, b := ArtifactKey("src/a.py", "calls", "1"), ArtifactKey("src/a.py", "flags", "1")
+	putArtifacts(t, s, store.Artifact{Key: a, Data: []byte("calls of a")}, store.Artifact{Key: b, Data: []byte("flags of a")})
+
+	found := getArtifacts(t, s, a, b, ArtifactKey("src/b.py", "calls", "1"))
+	assert.Equal(t, map[store.ArtifactKey][]byte{a: []byte("calls of a"), b: []byte("flags of a")}, found)
+	assert.Empty(t, getArtifacts(t, s))
+	require.NoError(t, s.PutArtifacts(context.Background(), nil))
+}
+
+func testArtifactMissAfterKeyChange(t *testing.T, s store.Store) {
+	a := ArtifactKey("src/a.py", "calls", "1")
+	putArtifacts(t, s, store.Artifact{Key: a, Data: []byte("calls of a")})
+
+	changes := map[string]func(k *store.ArtifactKey){
+		"plugin":          func(k *store.ArtifactKey) { k.Plugin = "flags" },
+		"plugin version":  func(k *store.ArtifactKey) { k.Version = "2" },
+		"index version":   func(k *store.ArtifactKey) { k.IndexVersion = fileindex.Version + "-next" },
+		"grammar version": func(k *store.ArtifactKey) { k.GrammarVersion += "-next" },
+		"content hash":    func(k *store.ArtifactKey) { k.ContentHash = fileindex.HashContent([]byte("changed")) },
+		"path":            func(k *store.ArtifactKey) { k.Path = "src/copy.py" },
+		"language":        func(k *store.ArtifactKey) { k.Language = langcode.Javascript },
+	}
+	for name, change := range changes {
+		t.Run(name, func(t *testing.T) {
+			key := a
+			change(&key)
+			assert.Empty(t, getArtifacts(t, s, key))
+		})
+	}
+	assert.Len(t, getArtifacts(t, s, a), 1)
+}
+
+func testArtifactReplacesAndCopies(t *testing.T, s store.Store) {
+	a := ArtifactKey("src/a.py", "calls", "1")
+	data := []byte("first")
+	putArtifacts(t, s, store.Artifact{Key: a, Data: data})
+	data[0] = 'x'
+	assert.Equal(t, []byte("first"), getArtifacts(t, s, a)[a], "the store keeps its own copy")
+
+	putArtifacts(t, s, store.Artifact{Key: a, Data: []byte("second")})
+	got := getArtifacts(t, s, a)[a]
+	assert.Equal(t, []byte("second"), got)
+	got[0] = 'x'
+	assert.Equal(t, []byte("second"), getArtifacts(t, s, a)[a], "a caller that changes a returned artifact does not change the store")
+}
+
+// testManyArtifactKeys passes more keys than one query of a SQL store
+// holds.
+func testManyArtifactKeys(t *testing.T, s store.Store) {
+	const n = 1201
+	artifacts := make([]store.Artifact, n)
+	keys := make([]store.ArtifactKey, 0, n+1)
+	for i := range artifacts {
+		key := ArtifactKey(fmt.Sprintf("src/m%04d.py", i), "calls", "1")
+		artifacts[i] = store.Artifact{Key: key, Data: []byte(key.Path)}
+		keys = append(keys, key)
+	}
+	putArtifacts(t, s, artifacts...)
+
+	keys = append(keys, ArtifactKey("src/missing.py", "calls", "1"))
+	found := getArtifacts(t, s, keys...)
+	require.Len(t, found, n)
+	for _, a := range artifacts {
+		assert.Equal(t, a.Data, found[a.Key])
+	}
+}
+
+func testPruneRemovesArtifacts(t *testing.T, s store.Pruner) {
+	old, fresh := ArtifactKey("src/old.py", "calls", "1"), ArtifactKey("src/fresh.py", "calls", "1")
+	oldIndex := Index("src/old.py")
+	put(t, s, oldIndex)
+	putArtifacts(t, s, store.Artifact{Key: old, Data: []byte("old")})
+	cut := pause()
+	putArtifacts(t, s, store.Artifact{Key: fresh, Data: []byte("fresh")})
+
+	removed, err := s.Prune(context.Background(), cut)
+	require.NoError(t, err)
+	assert.Equal(t, 2, removed, "the index and the artifact of the old file")
+	assert.Equal(t, map[store.ArtifactKey][]byte{fresh: []byte("fresh")}, getArtifacts(t, s, old, fresh))
+	assert.Empty(t, get(t, s, oldIndex.Key()))
+}
+
+func testGetArtifactsMarksRead(t *testing.T, s store.Pruner) {
+	read, unread := ArtifactKey("src/read.py", "calls", "1"), ArtifactKey("src/unread.py", "calls", "1")
+	putArtifacts(t, s, store.Artifact{Key: read, Data: []byte("read")}, store.Artifact{Key: unread, Data: []byte("unread")})
+	cut := pause()
+	assert.Len(t, getArtifacts(t, s, read), 1)
+
+	removed, err := s.Prune(context.Background(), cut)
+	require.NoError(t, err)
+	assert.Equal(t, 1, removed)
+	assert.Equal(t, map[store.ArtifactKey][]byte{read: []byte("read")}, getArtifacts(t, s, read, unread))
+}
+
+func testCanceledPrune(t *testing.T, s store.Pruner) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := s.Prune(ctx, time.Now())
+	require.ErrorIs(t, err, context.Canceled)
+}
+
+func testPruneRemovesOnlyRowsReadBefore(t *testing.T, s store.Pruner) {
 	old, fresh := Index("src/old.py"), Index("src/fresh.py")
 	put(t, s, old)
 	cut := pause()
@@ -183,7 +324,7 @@ func testPruneRemovesOnlyRowsReadBefore(t *testing.T, s store.Store) {
 	assert.Zero(t, removed)
 }
 
-func testGetMarksRead(t *testing.T, s store.Store) {
+func testGetMarksRead(t *testing.T, s store.Pruner) {
 	read, unread := Index("src/read.py"), Index("src/unread.py")
 	put(t, s, read, unread)
 	cut := pause()
@@ -237,7 +378,9 @@ func testCanceledContext(t *testing.T, s store.Store) {
 	require.ErrorIs(t, s.Put(ctx, []*fileindex.Index{a}), context.Canceled)
 	_, err := s.Get(ctx, []fileindex.Key{a.Key()})
 	require.ErrorIs(t, err, context.Canceled)
-	_, err = s.Prune(ctx, time.Now())
+	key := ArtifactKey("src/a.py", "calls", "1")
+	require.ErrorIs(t, s.PutArtifacts(ctx, []store.Artifact{{Key: key, Data: []byte("x")}}), context.Canceled)
+	_, err = s.GetArtifacts(ctx, []store.ArtifactKey{key})
 	require.ErrorIs(t, err, context.Canceled)
 }
 

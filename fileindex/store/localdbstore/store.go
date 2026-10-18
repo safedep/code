@@ -1,4 +1,4 @@
-// Package localdbstore is a store.Store in the SQLite file of a dry/localdb
+// Package localdbstore is a store.Pruner in the SQLite file of a dry/localdb
 // manager. It owns the code_graph module and its tables. The caller owns the
 // manager and the file, so the store never opens, closes or removes the file.
 package localdbstore
@@ -20,8 +20,8 @@ import (
 
 const moduleName = "code_graph"
 
-// maxBatchKeys bounds the keys of one query. Each key binds five variables,
-// so a batch stays far below the variable limit of SQLite.
+// maxBatchKeys bounds the keys of one query. Each key binds at most seven
+// variables, so a batch stays far below the variable limit of SQLite.
 const maxBatchKeys = 500
 
 // migrations is append-only, as localdb requires. A change of the record
@@ -40,21 +40,57 @@ var migrations = []string{
 		PRIMARY KEY (content_hash, path, index_version, grammar_version, language)
 	)`,
 	`CREATE INDEX code_graph_file_indexes_read ON code_graph_file_indexes (read_at)`,
+	`CREATE TABLE code_graph_artifacts (
+		content_hash    TEXT NOT NULL,
+		path            TEXT NOT NULL,
+		index_version   TEXT NOT NULL,
+		grammar_version TEXT NOT NULL,
+		language        TEXT NOT NULL,
+		plugin          TEXT NOT NULL,
+		plugin_version  TEXT NOT NULL,
+		data            BLOB NOT NULL,
+		written_at      INTEGER NOT NULL,
+		read_at         INTEGER NOT NULL,
+		PRIMARY KEY (content_hash, path, index_version, grammar_version, language, plugin, plugin_version)
+	)`,
+	`CREATE INDEX code_graph_artifacts_read ON code_graph_artifacts (read_at)`,
 }
 
-const keyColumns = `(content_hash, path, index_version, grammar_version, language)`
+const (
+	indexColumns    = `(content_hash, path, index_version, grammar_version, language)`
+	artifactColumns = `(content_hash, path, index_version, grammar_version, language, plugin, plugin_version)`
+)
 
-const putQuery = `INSERT INTO code_graph_file_indexes
-	(content_hash, path, index_version, grammar_version, language, data, written_at, read_at)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	ON CONFLICT ` + keyColumns + ` DO UPDATE SET
-		data = excluded.data,
-		written_at = excluded.written_at,
-		read_at = excluded.read_at`
+const (
+	getQuery = `UPDATE code_graph_file_indexes SET read_at = ?
+		WHERE ` + indexColumns + ` IN (VALUES %s)
+		RETURNING content_hash, path, index_version, grammar_version, language, data`
 
-const pruneQuery = `DELETE FROM code_graph_file_indexes WHERE read_at < ?`
+	putQuery = `INSERT INTO code_graph_file_indexes
+		(content_hash, path, index_version, grammar_version, language, data, written_at, read_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT ` + indexColumns + ` DO UPDATE SET
+			data = excluded.data,
+			written_at = excluded.written_at,
+			read_at = excluded.read_at`
 
-var _ store.Store = (*Store)(nil)
+	getArtifactsQuery = `UPDATE code_graph_artifacts SET read_at = ?
+		WHERE ` + artifactColumns + ` IN (VALUES %s)
+		RETURNING content_hash, path, index_version, grammar_version, language, plugin, plugin_version, data`
+
+	putArtifactQuery = `INSERT INTO code_graph_artifacts
+		(content_hash, path, index_version, grammar_version, language, plugin, plugin_version, data, written_at, read_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT ` + artifactColumns + ` DO UPDATE SET
+			data = excluded.data,
+			written_at = excluded.written_at,
+			read_at = excluded.read_at`
+
+	pruneQuery         = `DELETE FROM code_graph_file_indexes WHERE read_at < ?`
+	pruneArtifactQuery = `DELETE FROM code_graph_artifacts WHERE read_at < ?`
+)
+
+var _ store.Pruner = (*Store)(nil)
 
 type Store struct {
 	db *sql.DB
@@ -74,38 +110,10 @@ func New(ctx context.Context, mgr localdb.Manager) (*Store, error) {
 // Get marks the hits of each batch as read and reads them in one statement.
 func (s *Store) Get(ctx context.Context, keys []fileindex.Key) (map[fileindex.Key]*fileindex.Index, error) {
 	found := make(map[fileindex.Key]*fileindex.Index, len(keys))
-	now := time.Now().UnixMilli()
-
-	for start := 0; start < len(keys); start += maxBatchKeys {
-		batch := keys[start:min(start+maxBatchKeys, len(keys))]
-		if err := s.getBatch(ctx, batch, now, found); err != nil {
-			return nil, err
-		}
-	}
-
-	return found, nil
-}
-
-func (s *Store) getBatch(ctx context.Context, keys []fileindex.Key, now int64, found map[fileindex.Key]*fileindex.Index) (err error) {
-	query := `UPDATE code_graph_file_indexes SET read_at = ?
-		WHERE ` + keyColumns + ` IN (VALUES ` + placeholders(len(keys)) + `)
-		RETURNING content_hash, path, index_version, grammar_version, language, data`
-
-	args := make([]any, 0, 1+5*len(keys))
-	args = append(args, now)
-	for _, k := range keys {
-		args = append(args, k.ContentHash, k.Path, k.IndexVersion, k.GrammarVersion, string(k.Language))
-	}
-
-	rows, err := s.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return fmt.Errorf("localdbstore: get indexes: %w", err)
-	}
-	defer func() {
-		err = errors.Join(err, rows.Close())
-	}()
-
-	for rows.Next() {
+	err := s.getBatches(ctx, len(keys), 5, func(i int, args []any) []any {
+		k := keys[i]
+		return append(args, k.ContentHash, k.Path, k.IndexVersion, k.GrammarVersion, string(k.Language))
+	}, getQuery, func(rows *sql.Rows) error {
 		var k fileindex.Key
 		var language string
 		var data []byte
@@ -119,24 +127,81 @@ func (s *Store) getBatch(ctx context.Context, keys []fileindex.Key, now int64, f
 			return fmt.Errorf("localdbstore: decode index of %s: %w", k.Path, err)
 		}
 		found[k] = &ix
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
+	return found, nil
+}
 
+// GetArtifacts marks the hits of each batch as read and reads them in one
+// statement.
+func (s *Store) GetArtifacts(ctx context.Context, keys []store.ArtifactKey) (map[store.ArtifactKey][]byte, error) {
+	found := make(map[store.ArtifactKey][]byte, len(keys))
+	err := s.getBatches(ctx, len(keys), 7, func(i int, args []any) []any {
+		k := keys[i]
+		return append(args, k.ContentHash, k.Path, k.IndexVersion, k.GrammarVersion, string(k.Language), k.Plugin, k.Version)
+	}, getArtifactsQuery, func(rows *sql.Rows) error {
+		var k store.ArtifactKey
+		var language string
+		var data []byte
+		if err := rows.Scan(&k.ContentHash, &k.Path, &k.IndexVersion, &k.GrammarVersion, &language, &k.Plugin, &k.Version, &data); err != nil {
+			return fmt.Errorf("localdbstore: scan artifact: %w", err)
+		}
+		k.Language = langcode.Code(language)
+		found[k] = data
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return found, nil
+}
+
+// getBatches runs the query, with the placeholders of each batch of at
+// most maxBatchKeys keys, and gives each row to scan. bind appends the
+// width values of key i to the arguments.
+func (s *Store) getBatches(ctx context.Context, keys, width int, bind func(i int, args []any) []any, query string, scan func(*sql.Rows) error) error {
+	now := time.Now().UnixMilli()
+	for start := 0; start < keys; start += maxBatchKeys {
+		end := min(start+maxBatchKeys, keys)
+		args := make([]any, 0, 1+width*(end-start))
+		args = append(args, now)
+		for i := start; i < end; i++ {
+			args = bind(i, args)
+		}
+		if err := s.query(ctx, fmt.Sprintf(query, placeholders(end-start, width)), args, scan); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Store) query(ctx context.Context, query string, args []any, scan func(*sql.Rows) error) (err error) {
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("localdbstore: get: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, rows.Close())
+	}()
+
+	for rows.Next() {
+		if err := scan(rows); err != nil {
+			return err
+		}
+	}
 	if err := rows.Err(); err != nil {
-		return fmt.Errorf("localdbstore: read indexes: %w", err)
+		return fmt.Errorf("localdbstore: read rows: %w", err)
 	}
-
 	return nil
 }
 
 // Put encodes every index before the transaction starts, so the write
-// transaction stays short. The commit or the rollback closes the statement.
-func (s *Store) Put(ctx context.Context, indexes []*fileindex.Index) (err error) {
-	type row struct {
-		key  fileindex.Key
-		data []byte
-	}
-
-	rows := make([]row, 0, len(indexes))
+// transaction stays short.
+func (s *Store) Put(ctx context.Context, indexes []*fileindex.Index) error {
+	rows := make([][]any, 0, len(indexes))
 	for _, ix := range indexes {
 		if ix == nil {
 			return errors.New("localdbstore: nil index")
@@ -146,9 +211,25 @@ func (s *Store) Put(ctx context.Context, indexes []*fileindex.Index) (err error)
 		if err != nil {
 			return fmt.Errorf("localdbstore: encode index of %s: %w", ix.Path, err)
 		}
-		rows = append(rows, row{key: ix.Key(), data: data})
+		k := ix.Key()
+		rows = append(rows, []any{k.ContentHash, k.Path, k.IndexVersion, k.GrammarVersion, string(k.Language), data})
 	}
+	return s.put(ctx, putQuery, rows)
+}
 
+func (s *Store) PutArtifacts(ctx context.Context, artifacts []store.Artifact) error {
+	rows := make([][]any, 0, len(artifacts))
+	for _, a := range artifacts {
+		k := a.Key
+		rows = append(rows, []any{k.ContentHash, k.Path, k.IndexVersion, k.GrammarVersion, string(k.Language), k.Plugin, k.Version, a.Data})
+	}
+	return s.put(ctx, putArtifactQuery, rows)
+}
+
+// put runs the insert for each row in one transaction, with the time of
+// the write and of the read after the values of the row. The commit or
+// the rollback closes the statement.
+func (s *Store) put(ctx context.Context, query string, rows [][]any) (err error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("localdbstore: begin put: %w", err)
@@ -162,16 +243,15 @@ func (s *Store) Put(ctx context.Context, indexes []*fileindex.Index) (err error)
 		}
 	}()
 
-	stmt, err := tx.PrepareContext(ctx, putQuery)
+	stmt, err := tx.PrepareContext(ctx, query)
 	if err != nil {
 		return fmt.Errorf("localdbstore: prepare put: %w", err)
 	}
 
 	now := time.Now().UnixMilli()
 	for _, r := range rows {
-		k := r.key
-		if _, err := stmt.ExecContext(ctx, k.ContentHash, k.Path, k.IndexVersion, k.GrammarVersion, string(k.Language), r.data, now, now); err != nil {
-			return fmt.Errorf("localdbstore: put index of %s: %w", k.Path, err)
+		if _, err := stmt.ExecContext(ctx, append(r, now, now)...); err != nil {
+			return fmt.Errorf("localdbstore: put %v: %w", r[1], err)
 		}
 	}
 
@@ -183,19 +263,25 @@ func (s *Store) Put(ctx context.Context, indexes []*fileindex.Index) (err error)
 }
 
 func (s *Store) Prune(ctx context.Context, readBefore time.Time) (int, error) {
-	res, err := s.db.ExecContext(ctx, pruneQuery, readBefore.UnixMilli())
-	if err != nil {
-		return 0, fmt.Errorf("localdbstore: prune: %w", err)
+	removed := 0
+	for _, query := range []string{pruneQuery, pruneArtifactQuery} {
+		res, err := s.db.ExecContext(ctx, query, readBefore.UnixMilli())
+		if err != nil {
+			return 0, fmt.Errorf("localdbstore: prune: %w", err)
+		}
+
+		n, err := res.RowsAffected()
+		if err != nil {
+			return 0, fmt.Errorf("localdbstore: count pruned rows: %w", err)
+		}
+		removed += int(n)
 	}
 
-	n, err := res.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("localdbstore: count pruned rows: %w", err)
-	}
-
-	return int(n), nil
+	return removed, nil
 }
 
-func placeholders(n int) string {
-	return strings.TrimSuffix(strings.Repeat("(?, ?, ?, ?, ?), ", n), ", ")
+// placeholders returns n groups of width placeholders, as (?, ?), (?, ?).
+func placeholders(n, width int) string {
+	group := "(" + strings.TrimSuffix(strings.Repeat("?, ", width), ", ") + "), "
+	return strings.TrimSuffix(strings.Repeat(group, n), ", ")
 }

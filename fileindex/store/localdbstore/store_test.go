@@ -86,7 +86,7 @@ func TestTablesStartWithModuleName(t *testing.T) {
 	}
 	require.NoError(t, rows.Err())
 
-	assert.ElementsMatch(t, []string{"code_graph_file_indexes", "code_graph_file_indexes_read"}, names)
+	assert.ElementsMatch(t, []string{"code_graph_file_indexes", "code_graph_file_indexes_read", "code_graph_artifacts", "code_graph_artifacts_read"}, names)
 	for _, name := range names {
 		assert.True(t, strings.HasPrefix(name, moduleName+"_"), name)
 	}

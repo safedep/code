@@ -1,4 +1,4 @@
-// Package memstore is a store.Store in memory, for tests and one-shot
+// Package memstore is a store.Pruner in memory, for tests and one-shot
 // callers.
 package memstore
 
@@ -14,22 +14,23 @@ import (
 	"github.com/safedep/code/fileindex/store"
 )
 
-var _ store.Store = (*Store)(nil)
+var _ store.Pruner = (*Store)(nil)
 
-// entry keeps the JSON of an index, as a file store does, so a caller that
-// changes a returned index does not change the store.
+// entry keeps the bytes of an index or an artifact, as a file store does,
+// so a caller that changes a returned value does not change the store.
 type entry struct {
 	data   []byte
 	readAt int64
 }
 
 type Store struct {
-	mu      sync.Mutex
-	entries map[fileindex.Key]entry
+	mu        sync.Mutex
+	entries   map[fileindex.Key]entry
+	artifacts map[store.ArtifactKey]entry
 }
 
 func New() *Store {
-	return &Store{entries: map[fileindex.Key]entry{}}
+	return &Store{entries: map[fileindex.Key]entry{}, artifacts: map[store.ArtifactKey]entry{}}
 }
 
 func (s *Store) Get(ctx context.Context, keys []fileindex.Key) (map[fileindex.Key]*fileindex.Index, error) {
@@ -92,6 +93,47 @@ func (s *Store) Put(ctx context.Context, indexes []*fileindex.Index) error {
 	return nil
 }
 
+func (s *Store) GetArtifacts(ctx context.Context, keys []store.ArtifactKey) (map[store.ArtifactKey][]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	now := time.Now().UnixMilli()
+	found := make(map[store.ArtifactKey][]byte)
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, key := range keys {
+		e, ok := s.artifacts[key]
+		if !ok {
+			continue
+		}
+		e.readAt = now
+		s.artifacts[key] = e
+		found[key] = append([]byte(nil), e.data...)
+	}
+
+	return found, nil
+}
+
+func (s *Store) PutArtifacts(ctx context.Context, artifacts []store.Artifact) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	now := time.Now().UnixMilli()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, a := range artifacts {
+		s.artifacts[a.Key] = entry{data: append([]byte(nil), a.Data...), readAt: now}
+	}
+
+	return nil
+}
+
 func (s *Store) Prune(ctx context.Context, readBefore time.Time) (int, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err
@@ -106,6 +148,12 @@ func (s *Store) Prune(ctx context.Context, readBefore time.Time) (int, error) {
 	for key, e := range s.entries {
 		if e.readAt < cut {
 			delete(s.entries, key)
+			removed++
+		}
+	}
+	for key, e := range s.artifacts {
+		if e.readAt < cut {
+			delete(s.artifacts, key)
 			removed++
 		}
 	}
