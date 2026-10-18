@@ -1,5 +1,5 @@
 {
-  "version": "1",
+  "version": "2",
   "index_version": "11",
   "link_version": "10",
   "unit": "npm:store-kit@1.0.0",
@@ -17,35 +17,7 @@
         "npm:store-kit@1.0.0//index.js//Store//close"
       ],
       "reaches": [
-        {
-          "target": "fs//rmSync",
-          "path": [
-            {
-              "key": "store-kit//Store//close"
-            },
-            {
-              "key": "npm:store-kit@1.0.0//index.js//Store//close",
-              "site": {
-                "path": "npm:store-kit@1.0.0//index.js",
-                "line": 17
-              },
-              "edge_kind": "package",
-              "confidence": "high",
-              "resolver": "javascript.package.main"
-            },
-            {
-              "key": "fs//rmSync",
-              "site": {
-                "path": "npm:store-kit@1.0.0//index.js",
-                "line": 18,
-                "column": 5
-              },
-              "edge_kind": "direct",
-              "confidence": "high",
-              "resolver": "javascript.external"
-            }
-          ]
-        }
+        "fs//rmSync"
       ]
     },
     {
@@ -68,35 +40,7 @@
         "npm:store-kit@1.0.0//index.js//Store//close"
       ],
       "reaches": [
-        {
-          "target": "fs//rmSync",
-          "path": [
-            {
-              "key": "store-kit//index//Store//close"
-            },
-            {
-              "key": "npm:store-kit@1.0.0//index.js//Store//close",
-              "site": {
-                "path": "npm:store-kit@1.0.0//index.js",
-                "line": 17
-              },
-              "edge_kind": "package",
-              "confidence": "high",
-              "resolver": "javascript.package.subpath"
-            },
-            {
-              "key": "fs//rmSync",
-              "site": {
-                "path": "npm:store-kit@1.0.0//index.js",
-                "line": 18,
-                "column": 5
-              },
-              "edge_kind": "direct",
-              "confidence": "high",
-              "resolver": "javascript.external"
-            }
-          ]
-        }
+        "fs//rmSync"
       ]
     },
     {
@@ -113,17 +57,7 @@
       ],
       "reaches": [],
       "uncertainties": [
-        {
-          "kind": "unresolved-call",
-          "key": "npm:store-kit@1.0.0//index.js//load",
-          "site": {
-            "path": "npm:store-kit@1.0.0//index.js",
-            "line": 5,
-            "column": 10
-          },
-          "text": "store.get (unknown-receiver)",
-          "method": "get"
-        }
+        0
       ]
     },
     {
@@ -133,18 +67,24 @@
       ],
       "reaches": [],
       "uncertainties": [
-        {
-          "kind": "unresolved-call",
-          "key": "npm:store-kit@1.0.0//index.js//load",
-          "site": {
-            "path": "npm:store-kit@1.0.0//index.js",
-            "line": 5,
-            "column": 10
-          },
-          "text": "store.get (unknown-receiver)",
-          "method": "get"
-        }
+        0
       ]
+    }
+  ],
+  "targets": [
+    "fs//rmSync"
+  ],
+  "uncertainties": [
+    {
+      "kind": "unresolved-call",
+      "key": "npm:store-kit@1.0.0//index.js//load",
+      "site": {
+        "path": "npm:store-kit@1.0.0//index.js",
+        "line": 5,
+        "column": 10
+      },
+      "text": "store.get (unknown-receiver)",
+      "method": "get"
     }
   ]
 }

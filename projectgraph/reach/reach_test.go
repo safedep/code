@@ -3,6 +3,7 @@ package reach
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -549,4 +550,165 @@ func TestResultString(t *testing.T) {
 
 	fallback := Result{Target: "yaml//dump", Status: NotFound, Uncertainties: []Uncertainty{{Kind: RootFallback, Text: "roots: every exported symbol"}}}
 	assert.Equal(t, "yaml//dump: not-found\n  root-fallback: roots: every exported symbol\n  searched 0 roots, 0 nodes, 0 edges", fallback.String(), "an uncertainty with no site has one space")
+}
+
+// exploreAllGraphs are the graphs that compare ExploreAll with Explore: a
+// package with a cycle, records of each scope, a failed file of a unit and
+// a unit that no import names.
+var exploreAllGraphs = map[string]string{
+	"cycle and scopes": `
+edge kit//run npm:kit@1.0.0//k.js//run package
+edge npm:kit@1.0.0//k.js//run fs//rm direct 2
+edge npm:kit@1.0.0//k.js//run npm:kit@1.0.0//k.js//helper direct 3
+edge npm:kit@1.0.0//k.js//helper npm:kit@1.0.0//k.js//run direct 4
+edge npm:kit@1.0.0//k.js//helper child_process//exec direct 6
+unresolved npm:kit@1.0.0//k.js//helper 7 unknown-receiver send
+unresolved npm:kit@1.0.0//k.js//helper 8 computed-name
+edge kit//dead npm:kit@1.0.0//k.js//dead package
+edge npm:kit@1.0.0//k.js//dead os//exit direct 9
+unresolved npm:kit@1.0.0//k.js//dead 10 unknown-receiver exit
+edge kit//quiet npm:kit@1.0.0//k.js//quiet package
+flag npm:kit@1.0.0//k.js//quiet eval 11
+file npm:kit@1.0.0//big.js failed
+entry - npm:other@1.0.0
+edge npm:other@1.0.0//o.js//f fs//unlink direct 2
+`,
+	"project with units": dependencies + "edge main.py//run kit//load//close direct 4\nentry kit//load//close npm:kit@1.0.0\nedge npm:kit@1.0.0//k.js//close fs//unlink\n",
+}
+
+func TestExploreAllMatchesExplore(t *testing.T) {
+	for name, text := range exploreAllGraphs {
+		t.Run(name, func(t *testing.T) {
+			g := graphOf(t, text)
+			x := NewExplorer(g)
+			var from []string
+			for key, n := range g.Nodes {
+				if n.Kind == projectgraph.NodeExternal {
+					from = append(from, key)
+				}
+			}
+			slices.Sort(from)
+			sets, err := x.ExploreAll(context.Background(), from)
+			require.NoError(t, err)
+			require.Len(t, sets.Sources, len(from))
+
+			for i, key := range from {
+				e, err := x.Explore(context.Background(), []string{key}, 0)
+				require.NoError(t, err)
+				var reached []string
+				for _, r := range e.Reached {
+					reached = append(reached, r.Target)
+				}
+				if reached == nil {
+					reached = []string{}
+				}
+				assert.Equal(t, reached, sets.Sources[i].Reached, "reached from %s", key)
+
+				want := slices.Clone(e.Uncertainties)
+				var got []Uncertainty
+				for _, idx := range sets.Sources[i].Uncertainties {
+					got = append(got, sets.Uncertainties[idx].Uncertainty)
+				}
+				assert.ElementsMatch(t, want, got, "uncertainties from %s", key)
+			}
+		})
+	}
+}
+
+func TestExploreAllScopesTheTargets(t *testing.T) {
+	g := graphOf(t, exploreAllGraphs["cycle and scopes"])
+	sets, err := NewExplorer(g).ExploreAll(context.Background(), []string{"kit//dead", "kit//quiet"})
+	require.NoError(t, err)
+
+	dead := sets.Sources[0]
+	assert.Equal(t, []string{"os//exit"}, dead.Reached)
+	var methods []string
+	for _, idx := range dead.Uncertainties {
+		u := sets.Uncertainties[idx]
+		switch {
+		case u.Method != "":
+			methods = append(methods, u.Method)
+			assert.Equal(t, []string{"os//exit"}, u.Targets, "the external node with the last segment %s", u.Method)
+		case u.Unit != "":
+			assert.Equal(t, []string{"fs//unlink"}, u.Targets, "the code of the unit reaches unlink")
+		}
+	}
+	assert.Equal(t, []string{"exit"}, methods)
+
+	quiet := sets.Sources[1]
+	assert.Empty(t, quiet.Reached)
+	var kinds []UncertaintyKind
+	for _, idx := range quiet.Uncertainties {
+		kinds = append(kinds, sets.Uncertainties[idx].Kind)
+	}
+	assert.Equal(t, []UncertaintyKind{UnresolvedCall, Budget, DynamicFlag}, kinds, "the dark unit, the failed file of the unit and the flag")
+
+	_, err = NewExplorer(g).ExploreAll(context.Background(), []string{"kit//nope"})
+	assert.ErrorContains(t, err, "no node kit//nope")
+}
+
+func TestExploreAllSharesTheSetOfAChain(t *testing.T) {
+	g := graphOf(t, `
+edge a//x npm:a@1.0.0//a.js//x package
+edge npm:a@1.0.0//a.js//x npm:a@1.0.0//a.js//y direct 2
+edge npm:a@1.0.0//a.js//y npm:a@1.0.0//a.js//z direct 3
+edge npm:a@1.0.0//a.js//z fs//rm direct 4
+`)
+	a := NewExplorer(g).a
+	c := a.condense()
+	sets := c.sets(a, a.table())
+	x, z := a.id["npm:a@1.0.0//a.js//x"], a.id["npm:a@1.0.0//a.js//z"]
+	assert.Same(t, &sets[c.comp[x]][0], &sets[c.comp[z]][0], "x adds nothing to what z reaches, so it shares the set of z")
+	assert.NotSame(t, &sets[c.comp[z]][0], &sets[c.comp[a.id["fs//rm"]]][0], "z adds fs//rm")
+}
+
+func TestCondenseGroupsACycle(t *testing.T) {
+	g := graphOf(t, `
+edge main.py main.py//a direct 1
+edge main.py//a main.py//b direct 2
+edge main.py//b main.py//a direct 3
+edge main.py//b fs//rm direct 4
+`)
+	a := NewExplorer(g).a
+	c := a.condense()
+	assert.Equal(t, c.comp[a.id["main.py//a"]], c.comp[a.id["main.py//b"]])
+	assert.NotEqual(t, c.comp[a.id["main.py"]], c.comp[a.id["main.py//a"]])
+	assert.Len(t, c.order, 3)
+	assert.Equal(t, c.comp[a.id["fs//rm"]], c.order[0], "a component comes after every component that it reaches")
+	assert.Equal(t, c.comp[a.id["main.py"]], c.order[2])
+}
+
+func TestExplorerPath(t *testing.T) {
+	g := graphOf(t, exploreAllGraphs["cycle and scopes"])
+	x := NewExplorer(g)
+	hops, found, err := x.Path(context.Background(), "kit//run", "child_process//exec", 0)
+	require.NoError(t, err)
+	require.True(t, found)
+	assert.Equal(t, []string{"kit//run", "npm:kit@1.0.0//k.js//run", "npm:kit@1.0.0//k.js//helper", "child_process//exec"}, pathKeys(hops))
+
+	_, found, err = x.Path(context.Background(), "kit//run", "os//exit", 0)
+	require.NoError(t, err)
+	assert.False(t, found, "dead is not reached from run")
+	_, found, err = x.Path(context.Background(), "kit//run", "fs//nope", 0)
+	require.NoError(t, err)
+	assert.False(t, found, "a key of no node")
+	_, _, err = x.Path(context.Background(), "kit//nope", "fs//rm", 0)
+	assert.ErrorContains(t, err, "no node kit//nope")
+	_, _, err = x.Path(context.Background(), "kit//run", "fs//rm", -1)
+	assert.Error(t, err)
+}
+
+func TestBitset(t *testing.T) {
+	b := newBitset(130)
+	b.set(0)
+	b.set(129)
+	assert.True(t, b.has(0) && b.has(129))
+	assert.False(t, b.has(64))
+	o := newBitset(130)
+	o.set(64)
+	assert.False(t, o.subset(b))
+	b.or(o)
+	assert.True(t, o.subset(b))
+	assert.Equal(t, 3, b.count())
+	assert.Len(t, b.bytes(), 24)
 }

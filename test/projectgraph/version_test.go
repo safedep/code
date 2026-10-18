@@ -31,6 +31,7 @@ var graphHashes = map[string]string{
 var summaryHashes = map[string]string{
 	"10/10/1": "69c0f5f2082a61a0aceb28b1da7bffb4f662c31f35c6b5913a249c7b43410d25",
 	"11/10/1": "f3c6c7e7f2390a0c8ec81ab6673b6b8a02cadf95e0ca36dc963d57b72834589c",
+	"11/10/2": "8047cc4e4d95ce6744993a20c7f4224a78b2d3531c2e31415f371b16608f19a5",
 }
 
 func TestGraphHashFollowsVersion(t *testing.T) {

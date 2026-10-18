@@ -1,5 +1,5 @@
 {
-  "version": "1",
+  "version": "2",
   "index_version": "11",
   "link_version": "10",
   "unit": "go:github.com/acme/dep@v1.0.0",
@@ -17,35 +17,7 @@
         "go:github.com/acme/dep@v1.0.0//dep.go//Impl//Run"
       ],
       "reaches": [
-        {
-          "target": "os//exec//Command",
-          "path": [
-            {
-              "key": "github.com//acme//dep//Impl//Run"
-            },
-            {
-              "key": "go:github.com/acme/dep@v1.0.0//dep.go//Impl//Run",
-              "site": {
-                "path": "go:github.com/acme/dep@v1.0.0//dep.go",
-                "line": 11
-              },
-              "edge_kind": "package",
-              "confidence": "high",
-              "resolver": "go.package.module"
-            },
-            {
-              "key": "os//exec//Command",
-              "site": {
-                "path": "go:github.com/acme/dep@v1.0.0//dep.go",
-                "line": 12,
-                "column": 2
-              },
-              "edge_kind": "direct",
-              "confidence": "high",
-              "resolver": "go.external"
-            }
-          ]
-        }
+        "os//exec//Command"
       ]
     },
     {
@@ -55,5 +27,8 @@
       ],
       "reaches": []
     }
+  ],
+  "targets": [
+    "os//exec//Command"
   ]
 }

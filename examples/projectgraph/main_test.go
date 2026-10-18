@@ -109,7 +109,7 @@ func TestExamplePrintsTheSummaries(t *testing.T) {
 	assert.Equal(t, "npm:lodash._reinterpolate@3.0.0", summaries[0].Unit)
 	assert.Equal(t, "npm:lodash@4.17.21", summaries[1].Unit)
 	assert.Equal(t, "lodash//template", summaries[1].Symbols[1].Key)
-	assert.Equal(t, "lodash._reinterpolate", summaries[1].Symbols[1].Reaches[0].Target)
+	assert.Equal(t, []string{"lodash._reinterpolate"}, summaries[1].Symbols[1].Reaches)
 }
 
 func TestDependencyFlag(t *testing.T) {

@@ -1,5 +1,8 @@
 // Package reach answers which targets a project graph reaches from its
-// roots. One breadth-first search serves every target of a query.
+// roots. One breadth-first search serves every target of a query. It
+// reads a built graph and changes nothing in it: it adds no edge, resolves
+// no name and reads no file. What it cannot prove it reports as an
+// uncertainty.
 package reach
 
 import (
@@ -309,15 +312,7 @@ func (x *Explorer) Explore(ctx context.Context, from []string, maxDepth int) (*E
 			e.Reached = append(e.Reached, Reached{Target: a.keys[id], Path: a.path(s, id)})
 		}
 	}
-	f := a.uncertainties(s, depth)
-	e.Uncertainties = slices.Clone(f.global)
-	for _, m := range f.methods {
-		e.Uncertainties = append(e.Uncertainties, f.byMethod[m]...)
-	}
-	for _, p := range f.prefixed {
-		e.Uncertainties = append(e.Uncertainties, p.u)
-	}
-	e.Uncertainties = append(e.Uncertainties, f.byUnit...)
+	e.Uncertainties = a.uncertainties(s, depth).all()
 	return e, nil
 }
 
@@ -337,10 +332,20 @@ type adjacency struct {
 
 	includeTests bool
 
+	src            *sources
 	unitNodes      map[string][]int
 	closures       map[string][]bool
 	byLast         map[string][]int
 	methodClosures map[string][]bool
+}
+
+// sources returns the records, the flags and the budgets of the graph by
+// node, read once.
+func (a *adjacency) sources() *sources {
+	if a.src == nil {
+		a.src = newSources(a.g)
+	}
+	return a.src
 }
 
 func newAdjacency(g *projectgraph.Graph) *adjacency {

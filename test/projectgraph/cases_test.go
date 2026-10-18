@@ -29,6 +29,7 @@ import (
 	"github.com/safedep/code/projectgraph/overlay"
 	"github.com/safedep/code/projectgraph/reach"
 	"github.com/safedep/code/projectgraph/summary"
+	"github.com/safedep/code/projectgraph/summary/summarytest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -260,9 +261,10 @@ func dumpCase(t *testing.T, dir string, g *projectgraph.Graph, results []reach.R
 func checkSummary(t *testing.T, dir, unit string, indexed *indexer.Result, roots map[string]iofs.FS) {
 	t.Helper()
 	indexes, files := indexed.Unit(unit)
-	s, err := summary.Summarize(context.Background(), indexes, projectgraph.Options{Files: files, Units: map[string]iofs.FS{unit: roots[unit]}})
+	r, err := summary.Build(context.Background(), indexes, projectgraph.Options{Files: files, Units: map[string]iofs.FS{unit: roots[unit]}})
 	require.NoError(t, err)
-	testutil.AssertGolden(t, filepath.Join(dir, strings.NewReplacer(":", "_", "/", "_", "@", "_").Replace(unit)+".json"), *update, s)
+	testutil.AssertGolden(t, filepath.Join(dir, strings.NewReplacer(":", "_", "/", "_", "@", "_").Replace(unit)+".json"), *update, r.Summary)
+	summarytest.AssertStatusMatchesReach(t, r)
 }
 
 // mergeOverlay merges the overlay at path, when the case has one, and returns

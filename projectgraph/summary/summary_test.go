@@ -1,4 +1,4 @@
-package summary
+package summary_test
 
 import (
 	"context"
@@ -10,6 +10,9 @@ import (
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/projectgraph"
+	"github.com/safedep/code/projectgraph/reach"
+	"github.com/safedep/code/projectgraph/summary"
+	"github.com/safedep/code/projectgraph/summary/summarytest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -43,13 +46,15 @@ func kit() []*fileindex.Index {
 }
 
 func TestSummarize(t *testing.T) {
-	s, err := Summarize(context.Background(), kit(), projectgraph.Options{})
+	r, err := summary.Build(context.Background(), kit(), projectgraph.Options{})
 	require.NoError(t, err)
-	assert.Equal(t, Version, s.Version)
+	s := r.Summary
+	assert.Equal(t, summary.Version, s.Version)
 	assert.Equal(t, fileindex.Version, s.IndexVersion)
 	assert.Equal(t, projectgraph.Version, s.LinkVersion)
 	assert.Equal(t, unit, s.Unit)
 	assert.Empty(t, s.Incomplete)
+	assert.Equal(t, []string{"child_process//exec"}, s.Targets, "a builtin and a symbol of the package are no targets")
 
 	var keys []string
 	for _, sym := range s.Symbols {
@@ -58,15 +63,27 @@ func TestSummarize(t *testing.T) {
 	assert.Equal(t, []string{"kit//index//run", "kit//index//stop", "kit//run", "kit//stop"}, keys)
 	run := s.Symbols[2]
 	assert.Equal(t, []string{unit + "//index.js//run"}, run.Definitions)
-	require.Len(t, run.Reaches, 1, "a builtin is no symbol of a dependency")
-	assert.Equal(t, "child_process//exec", run.Reaches[0].Target)
-	assert.Equal(t, "kit//run", run.Reaches[0].Path[0].Key)
-	assert.Equal(t, projectgraph.EdgePackage, run.Reaches[0].Path[1].EdgeKind)
+	assert.Equal(t, []string{"child_process//exec"}, run.Reaches, "a builtin is no symbol of a dependency")
+	assert.Empty(t, run.Uncertainties)
 	assert.Empty(t, s.Symbols[3].Reaches)
+	assert.Equal(t, reach.Found, s.Status("kit//run", "child_process//exec"))
+	assert.Equal(t, reach.NotFound, s.Status("kit//stop", "child_process//exec"))
+	assert.Equal(t, reach.NoSuchTarget, s.Status("kit//stop", "fs//rm"))
+	assert.Equal(t, reach.NotFound, s.Status("kit//nope", "child_process//exec"))
+
+	hops, found, err := r.Path(context.Background(), "kit//run", "child_process//exec")
+	require.NoError(t, err)
+	require.True(t, found)
+	assert.Equal(t, "kit//run", hops[0].Key)
+	assert.Equal(t, projectgraph.EdgePackage, hops[1].EdgeKind)
+	assert.Equal(t, "child_process//exec", hops[len(hops)-1].Key)
+	_, found, err = r.Path(context.Background(), "kit//stop", "child_process//exec")
+	require.NoError(t, err)
+	assert.False(t, found)
 
 	first, err := json.Marshal(s)
 	require.NoError(t, err)
-	again, err := Summarize(context.Background(), kit(), projectgraph.Options{})
+	again, err := summary.Summarize(context.Background(), kit(), projectgraph.Options{})
 	require.NoError(t, err)
 	second, err := json.Marshal(again)
 	require.NoError(t, err)
@@ -74,15 +91,18 @@ func TestSummarize(t *testing.T) {
 }
 
 func TestSummarizeKeepsTheUncertaintiesOfTheUnit(t *testing.T) {
-	s, err := Summarize(context.Background(), kit(), projectgraph.Options{
+	s, err := summary.Summarize(context.Background(), kit(), projectgraph.Options{
 		Files: map[string]fileindex.FileStatus{unit + "//lib/big.js": fileindex.FileFailed},
 	})
 	require.NoError(t, err)
 	assert.Equal(t, []string{unit + "//lib/big.js"}, s.Incomplete)
+	require.Len(t, s.Uncertainties, 1)
+	assert.Equal(t, unit+"//lib/big.js", s.Uncertainties[0].Site.Path)
 	for _, sym := range s.Symbols {
-		require.Len(t, sym.Uncertainties, 1, sym.Key)
-		assert.Equal(t, unit+"//lib/big.js", sym.Uncertainties[0].Site.Path)
+		assert.Equal(t, []int{0}, sym.Uncertainties, sym.Key)
 	}
+	assert.Equal(t, reach.Uncertain, s.Status("kit//stop", "child_process//exec"))
+	assert.Equal(t, reach.Uncertain, s.Status("kit//nope", "child_process//exec"), "a file with no index can hold the symbol")
 }
 
 func TestSummarizeTakesOneUnit(t *testing.T) {
@@ -101,7 +121,7 @@ func TestSummarizeTakesOneUnit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := Summarize(context.Background(), tt.indexes, projectgraph.Options{Files: tt.files})
+			_, err := summary.Summarize(context.Background(), tt.indexes, projectgraph.Options{Files: tt.files})
 			assert.ErrorContains(t, err, tt.err)
 		})
 	}
@@ -122,8 +142,35 @@ func TestSummarizeManySymbolsIsFast(t *testing.T) {
 		ix.Calls = append(ix.Calls, fileindex.Call{Caller: fileindex.Join(p, name), Line: i + 2, Column: 3, Callee: "fs.rmSync", Targets: []string{"fs//rmSync"}, Kind: fileindex.CallCall})
 	}
 	start := time.Now()
-	s, err := Summarize(context.Background(), []*fileindex.Index{ix}, projectgraph.Options{})
+	s, err := summary.Summarize(context.Background(), []*fileindex.Index{ix}, projectgraph.Options{})
 	require.NoError(t, err)
 	assert.Less(t, time.Since(start), 20*time.Second)
 	assert.GreaterOrEqual(t, len(s.Symbols), n)
+}
+
+func TestStatusMatchesReach(t *testing.T) {
+	indexes := kit()
+	p := unit + "//index.js"
+	ix := indexes[0]
+	ix.Definitions = append(ix.Definitions,
+		fileindex.Definition{Key: p + "//loop", Kind: fileindex.DefFunction, Name: "loop", StartLine: 13, EndLine: 16, Exported: true},
+		fileindex.Definition{Key: p + "//dyn", Kind: fileindex.DefFunction, Name: "dyn", StartLine: 17, EndLine: 19, Exported: true, Flags: []fileindex.Flag{{Kind: fileindex.FlagEval, Line: 18}}},
+	)
+	ix.Exports = append(ix.Exports, fileindex.Export{Name: "loop", Target: p + "//loop", Line: 13}, fileindex.Export{Name: "dyn", Target: p + "//dyn", Line: 17})
+	ix.Calls = append(ix.Calls,
+		fileindex.Call{Caller: p + "//loop", Line: 14, Column: 3, Callee: "helper", Targets: []string{p + "//helper"}, Kind: fileindex.CallCall},
+		fileindex.Call{Caller: p + "//helper", Line: 12, Column: 3, Callee: "loop", Targets: []string{p + "//loop"}, Kind: fileindex.CallCall},
+		fileindex.Call{Caller: p + "//helper", Line: 12, Column: 10, Callee: "fs.rmSync", Targets: []string{"fs//rmSync"}, Kind: fileindex.CallCall},
+		fileindex.Call{Caller: p + "//dyn", Line: 19, Column: 3, Callee: "os.exit", Targets: []string{"os//exit"}, Kind: fileindex.CallCall},
+	)
+	ix.Imports = append(ix.Imports, fileindex.Import{Line: 2, Module: "fs", Alias: "fs", Kind: fileindex.ImportStatic, Namespace: "fs"}, fileindex.Import{Line: 2, Module: "os", Alias: "os", Kind: fileindex.ImportStatic, Namespace: "os"})
+	ix.Unresolved = append(ix.Unresolved,
+		fileindex.Unresolved{Caller: p + "//loop", Line: 15, Column: 3, Text: "x.exit", Receiver: "x", Method: "exit", Reason: fileindex.UnresolvedUnknownReceiver},
+		fileindex.Unresolved{Caller: p + "//stop", Line: 9, Column: 3, Text: "y[k]()", Reason: fileindex.UnresolvedComputedName},
+	)
+	r, err := summary.Build(context.Background(), indexes, projectgraph.Options{Files: map[string]fileindex.FileStatus{unit + "//lib/big.js": fileindex.FileFailed}})
+	require.NoError(t, err)
+	summarytest.AssertStatusMatchesReach(t, r)
+	assert.Equal(t, reach.Uncertain, r.Summary.Status("kit//loop", "os//exit"), "a record of the method exit concerns os//exit")
+	assert.Equal(t, reach.Uncertain, r.Summary.Status("kit//stop", "os//exit"), "a computed name concerns every target")
 }

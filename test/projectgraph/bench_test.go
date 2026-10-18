@@ -27,6 +27,7 @@ import (
 	"github.com/safedep/code/projectgraph"
 	"github.com/safedep/code/projectgraph/reach"
 	"github.com/safedep/code/projectgraph/summary"
+	"github.com/safedep/code/projectgraph/summary/summarytest"
 	"github.com/safedep/dry/localdb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -182,6 +183,27 @@ func benchProject(b *testing.B, code core.LanguageCode, files int) {
 		b.ReportMetric(float64(len(s.Symbols)), "symbols")
 		b.ReportMetric(float64(reaches), "reaches")
 	})
+}
+
+// TestSummaryStatusMatchesReachOnASyntheticPackage checks the summary of
+// a generated Python package of 100 files against a reach query from each
+// of its symbols, for every target.
+func TestSummaryStatusMatchesReachOnASyntheticPackage(t *testing.T) {
+	ctx := context.Background()
+	language, err := lang.GetLanguage(string(core.LanguageCodePython))
+	require.NoError(t, err)
+	root := t.TempDir()
+	written, err := generate(core.LanguageCodePython, 100).write(root)
+	require.NoError(t, err)
+	unit := benchUnits[core.LanguageCodePython]
+	unitFS, err := codefs.NewLocalFileSystem(codefs.LocalFileSystemConfig{ImportDirectories: []string{root}, ImportUnits: map[string]string{root: unit}})
+	require.NoError(t, err)
+	dependency := indexProject(t, unitFS, indexer.Options{Languages: []core.Language{language}, Workers: 4, Imports: true})
+	require.Len(t, dependency.Indexes, written)
+	r, err := summary.Build(ctx, dependency.Indexes, projectgraph.Options{Files: dependency.Dependencies, Units: map[string]iofs.FS{unit: os.DirFS(root)}})
+	require.NoError(t, err)
+	require.NotEmpty(t, r.Summary.Uncertainties, "the generated package has dynamic calls")
+	summarytest.AssertStatusMatchesReach(t, r)
 }
 
 // benchUnits name the generated project of each language that the link

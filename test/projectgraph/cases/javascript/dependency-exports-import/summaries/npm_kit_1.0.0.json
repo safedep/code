@@ -1,5 +1,5 @@
 {
-  "version": "1",
+  "version": "2",
   "index_version": "11",
   "link_version": "10",
   "unit": "npm:kit@1.0.0",
@@ -11,65 +11,13 @@
         "npm:kit@1.0.0//esm.js//run"
       ],
       "reaches": [
-        {
-          "target": "child_process//execSync",
-          "path": [
-            {
-              "key": "kit//run"
-            },
-            {
-              "key": "npm:kit@1.0.0//cjs.js//run",
-              "site": {
-                "path": "npm:kit@1.0.0//cjs.js",
-                "line": 3
-              },
-              "edge_kind": "package",
-              "confidence": "high",
-              "resolver": "javascript.package.exports-node"
-            },
-            {
-              "key": "child_process//execSync",
-              "site": {
-                "path": "npm:kit@1.0.0//cjs.js",
-                "line": 4,
-                "column": 3
-              },
-              "edge_kind": "direct",
-              "confidence": "high",
-              "resolver": "javascript.external"
-            }
-          ]
-        },
-        {
-          "target": "fs//readFileSync",
-          "path": [
-            {
-              "key": "kit//run"
-            },
-            {
-              "key": "npm:kit@1.0.0//esm.js//run",
-              "site": {
-                "path": "npm:kit@1.0.0//esm.js",
-                "line": 3
-              },
-              "edge_kind": "package",
-              "confidence": "high",
-              "resolver": "javascript.package.exports-node"
-            },
-            {
-              "key": "fs//readFileSync",
-              "site": {
-                "path": "npm:kit@1.0.0//esm.js",
-                "line": 4,
-                "column": 3
-              },
-              "edge_kind": "direct",
-              "confidence": "high",
-              "resolver": "javascript.external"
-            }
-          ]
-        }
+        "child_process//execSync",
+        "fs//readFileSync"
       ]
     }
+  ],
+  "targets": [
+    "child_process//execSync",
+    "fs//readFileSync"
   ]
 }

@@ -1,5 +1,5 @@
 {
-  "version": "1",
+  "version": "2",
   "index_version": "11",
   "link_version": "10",
   "unit": "npm:lodash@4.17.21",
@@ -11,17 +11,7 @@
       ],
       "reaches": [],
       "uncertainties": [
-        {
-          "kind": "unresolved-call",
-          "key": "npm:lodash@4.17.21//escape.js//escape",
-          "site": {
-            "path": "npm:lodash@4.17.21//escape.js",
-            "line": 2,
-            "column": 10
-          },
-          "text": "text.replace (unknown-receiver)",
-          "method": "replace"
-        }
+        0
       ]
     },
     {
@@ -30,45 +20,7 @@
         "npm:lodash@4.17.21//lodash.js//template"
       ],
       "reaches": [
-        {
-          "target": "lodash._reinterpolate",
-          "path": [
-            {
-              "key": "lodash//template"
-            },
-            {
-              "key": "npm:lodash@4.17.21//lodash.js//template",
-              "site": {
-                "path": "npm:lodash@4.17.21//lodash.js",
-                "line": 1
-              },
-              "edge_kind": "package",
-              "confidence": "high",
-              "resolver": "javascript.package.exports"
-            },
-            {
-              "key": "npm:lodash@4.17.21//template.js//template",
-              "site": {
-                "path": "npm:lodash@4.17.21//lodash.js",
-                "line": 1
-              },
-              "edge_kind": "export",
-              "confidence": "high",
-              "resolver": "javascript.reexport"
-            },
-            {
-              "key": "lodash._reinterpolate",
-              "site": {
-                "path": "npm:lodash@4.17.21//template.js",
-                "line": 4,
-                "column": 10
-              },
-              "edge_kind": "direct",
-              "confidence": "high",
-              "resolver": "javascript.external"
-            }
-          ]
-        }
+        "lodash._reinterpolate"
       ]
     },
     {
@@ -77,36 +29,24 @@
         "npm:lodash@4.17.21//template.js//template"
       ],
       "reaches": [
-        {
-          "target": "lodash._reinterpolate",
-          "path": [
-            {
-              "key": "lodash//template//template"
-            },
-            {
-              "key": "npm:lodash@4.17.21//template.js//template",
-              "site": {
-                "path": "npm:lodash@4.17.21//template.js",
-                "line": 3
-              },
-              "edge_kind": "package",
-              "confidence": "high",
-              "resolver": "javascript.package.exports"
-            },
-            {
-              "key": "lodash._reinterpolate",
-              "site": {
-                "path": "npm:lodash@4.17.21//template.js",
-                "line": 4,
-                "column": 10
-              },
-              "edge_kind": "direct",
-              "confidence": "high",
-              "resolver": "javascript.external"
-            }
-          ]
-        }
+        "lodash._reinterpolate"
       ]
+    }
+  ],
+  "targets": [
+    "lodash._reinterpolate"
+  ],
+  "uncertainties": [
+    {
+      "kind": "unresolved-call",
+      "key": "npm:lodash@4.17.21//escape.js//escape",
+      "site": {
+        "path": "npm:lodash@4.17.21//escape.js",
+        "line": 2,
+        "column": 10
+      },
+      "text": "text.replace (unknown-receiver)",
+      "method": "replace"
     }
   ]
 }

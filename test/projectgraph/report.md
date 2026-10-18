@@ -476,11 +476,36 @@ a summary of 3,000 symbols of one file took 26 s in the unit test of
 
 The generated project calls two or three external packages from every
 module and imports one to three other modules, so most symbols reach most
-of the 200 external functions. The step searches the graph once per symbol
-and keeps a path per reached symbol, so its time and its heap grow with
-the symbols times what they reach. A real package reaches less per symbol.
-The numbers are above any budget, and the lead decides whether the summary
-keeps a path per reach or a reach set per strongly connected component.
+of the 200 external functions. The step searched the graph once per
+symbol and kept a path per reached symbol, so its time and its heap grew
+with the symbols times what they reach.
+
+### Reach sets per component
+
+Round C of the final fixes stores reach sets and no path. The summary
+computes the sets once per strongly connected component of the unit
+graph, in reverse topological order, so each component unions the sets of
+its successors once, and a component whose set is the set of one
+successor shares its storage. Two symbols that reach one set share the
+reached slice. A caller that needs a path asks `Result.Path` for one
+search. The uncertainties of a symbol are indexes into one table, with the
+targets that each scope concerns, so `Summary.Status` gives the answer of
+a reach query with no graph. `summary.Version` is 2.
+
+Two runs of the `summary` step at 1,000 files with 4 workers on
+2026-10-18, before and after the change, on the machine of this report.
+The reach counts are the same, so the sets are the same.
+
+| Language | Symbols | Reaches | Time before | Time after | Peak heap before | Peak heap after |
+| --- | --- | --- | --- | --- | --- | --- |
+| Python | 16,730 | 2,193,241 | 182.5 s | 5.9 s | 11,843 MiB | 435 MiB |
+| JavaScript | 9,474 | 1,487,550 | 128.7 s | 3.2 s | 8,716 MiB | 338 MiB |
+| TypeScript | 9,503 | 1,460,529 | 44.9 s | 2.1 s | 4,997 MiB | 165 MiB |
+| Go | 11,137 | 1,460,695 | 48.7 s | 2.5 s | 4,978 MiB | 180 MiB |
+
+Python is under the target of 10 s and 1 GiB. Most of the time after the
+change goes to the 2.2 million reached keys of the output, which the
+format keeps as strings.
 
 ## Benchmark
 

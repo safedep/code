@@ -1,5 +1,5 @@
 {
-  "version": "1",
+  "version": "2",
   "index_version": "11",
   "link_version": "10",
   "unit": "pypi:badpkg@1.0.0",
@@ -11,15 +11,19 @@
       ],
       "reaches": [],
       "uncertainties": [
-        {
-          "kind": "budget",
-          "key": "pypi:badpkg@1.0.0//badpkg/big.py",
-          "site": {
-            "path": "pypi:badpkg@1.0.0//badpkg/big.py"
-          },
-          "text": "the file is failed"
-        }
+        0
       ]
+    }
+  ],
+  "targets": [],
+  "uncertainties": [
+    {
+      "kind": "budget",
+      "key": "pypi:badpkg@1.0.0//badpkg/big.py",
+      "site": {
+        "path": "pypi:badpkg@1.0.0//badpkg/big.py"
+      },
+      "text": "the file is failed"
     }
   ],
   "incomplete": [

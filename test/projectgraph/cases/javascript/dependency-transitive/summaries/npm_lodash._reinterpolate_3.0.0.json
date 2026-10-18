@@ -1,5 +1,5 @@
 {
-  "version": "1",
+  "version": "2",
   "index_version": "11",
   "link_version": "10",
   "unit": "npm:lodash._reinterpolate@3.0.0",
@@ -10,35 +10,7 @@
         "npm:lodash._reinterpolate@3.0.0//index.js//reinterpolate"
       ],
       "reaches": [
-        {
-          "target": "child_process//execSync",
-          "path": [
-            {
-              "key": "lodash._reinterpolate"
-            },
-            {
-              "key": "npm:lodash._reinterpolate@3.0.0//index.js//reinterpolate",
-              "site": {
-                "path": "npm:lodash._reinterpolate@3.0.0//index.js",
-                "line": 3
-              },
-              "edge_kind": "package",
-              "confidence": "high",
-              "resolver": "javascript.package.main"
-            },
-            {
-              "key": "child_process//execSync",
-              "site": {
-                "path": "npm:lodash._reinterpolate@3.0.0//index.js",
-                "line": 4,
-                "column": 10
-              },
-              "edge_kind": "direct",
-              "confidence": "high",
-              "resolver": "javascript.external"
-            }
-          ]
-        }
+        "child_process//execSync"
       ]
     },
     {
@@ -47,36 +19,11 @@
         "npm:lodash._reinterpolate@3.0.0//index.js//reinterpolate"
       ],
       "reaches": [
-        {
-          "target": "child_process//execSync",
-          "path": [
-            {
-              "key": "lodash._reinterpolate//index"
-            },
-            {
-              "key": "npm:lodash._reinterpolate@3.0.0//index.js//reinterpolate",
-              "site": {
-                "path": "npm:lodash._reinterpolate@3.0.0//index.js",
-                "line": 3
-              },
-              "edge_kind": "package",
-              "confidence": "high",
-              "resolver": "javascript.package.subpath"
-            },
-            {
-              "key": "child_process//execSync",
-              "site": {
-                "path": "npm:lodash._reinterpolate@3.0.0//index.js",
-                "line": 4,
-                "column": 10
-              },
-              "edge_kind": "direct",
-              "confidence": "high",
-              "resolver": "javascript.external"
-            }
-          ]
-        }
+        "child_process//execSync"
       ]
     }
+  ],
+  "targets": [
+    "child_process//execSync"
   ]
 }

@@ -1,5 +1,5 @@
 {
-  "version": "1",
+  "version": "2",
   "index_version": "11",
   "link_version": "10",
   "unit": "pypi:PyYAML@6.0.1",
@@ -10,36 +10,11 @@
         "pypi:PyYAML@6.0.1//yaml/__init__.py//load"
       ],
       "reaches": [
-        {
-          "target": "marshal//loads",
-          "path": [
-            {
-              "key": "yaml//load"
-            },
-            {
-              "key": "pypi:PyYAML@6.0.1//yaml/__init__.py//load",
-              "site": {
-                "path": "pypi:PyYAML@6.0.1//yaml/__init__.py",
-                "line": 4
-              },
-              "edge_kind": "package",
-              "confidence": "high",
-              "resolver": "python.package.absolute"
-            },
-            {
-              "key": "marshal//loads",
-              "site": {
-                "path": "pypi:PyYAML@6.0.1//yaml/__init__.py",
-                "line": 5,
-                "column": 12
-              },
-              "edge_kind": "direct",
-              "confidence": "high",
-              "resolver": "python.external"
-            }
-          ]
-        }
+        "marshal//loads"
       ]
     }
+  ],
+  "targets": [
+    "marshal//loads"
   ]
 }

@@ -1,9 +1,12 @@
 // Package summary gives the summary of one package version of dependency
 // code: for each exported symbol of the package, the external symbols of
-// its own dependencies that the symbol reaches, with the shortest path and
-// the uncertainties of the search. One index and one link of the package
-// alone give it, so a job can store one summary per package version, and a
-// project can join a call of a symbol to the summary of its package.
+// its own dependencies that the symbol reaches, and the uncertainties of
+// the search. One index and one link of the package alone give it, so a
+// job can store one summary per package version, and a project can join a
+// call of a symbol to the summary of its package. The summary stores reach
+// sets and no path. A caller that needs the path of one reach asks Result
+// for it. The package owns no search rule: reach computes the sets and
+// scopes the uncertainties, and the summary only filters and records them.
 package summary
 
 import (
@@ -12,6 +15,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
@@ -23,41 +27,54 @@ import (
 // Version is the version of the summary format and of the rules that fill
 // it. Bump it when a field or a rule changes. A store keys a summary by
 // Version, IndexVersion and LinkVersion.
-const Version = "1"
+const Version = "2"
 
-// Summary is the summary of one package unit. Symbols are in key order. The
-// JSON form of one input is one byte sequence. Incomplete lists the files of
-// the unit with no complete index, in path order. Such a file can hold a
-// symbol, so a symbol that Symbols does not hold is not known when
-// Incomplete is not empty.
+// Summary is the summary of one package unit. Symbols are in key order.
+// Targets holds every external symbol that the code of the unit calls,
+// other than the symbols of the unit and the builtins of its languages, in
+// key order. Uncertainties is the table that each symbol indexes.
+// Incomplete lists the files of the unit with no complete index, in path
+// order. Such a file can hold a symbol, so a symbol that Symbols does not
+// hold is not known when Incomplete is not empty. The JSON form of one
+// input is one byte sequence.
 type Summary struct {
-	Version      string            `json:"version"`
-	IndexVersion string            `json:"index_version"`
-	LinkVersion  string            `json:"link_version"`
-	Unit         string            `json:"unit"`
-	Symbols      []Symbol          `json:"symbols"`
-	Incomplete   []string          `json:"incomplete,omitempty"`
-	Problems     []modules.Problem `json:"problems,omitempty"`
+	Version       string            `json:"version"`
+	IndexVersion  string            `json:"index_version"`
+	LinkVersion   string            `json:"link_version"`
+	Unit          string            `json:"unit"`
+	Symbols       []Symbol          `json:"symbols"`
+	Targets       []string          `json:"targets"`
+	Uncertainties []reach.Scoped    `json:"uncertainties,omitempty"`
+	Incomplete    []string          `json:"incomplete,omitempty"`
+	Problems      []modules.Problem `json:"problems,omitempty"`
 }
 
 // Symbol is one exported symbol of the package. Key is the external key
 // that an importer writes, as lodash//template, and Definitions are the
-// nodes of the package that the key links to. Reaches holds each external
-// symbol of a dependency that the symbol reaches, in key order. A path
-// starts at Key and goes through the package. Uncertainties holds each
-// uncertainty of the search with its scope, so a symbol that Reaches does
-// not hold is not proved unreached when an uncertainty concerns it.
+// nodes of the package that the key links to. Reaches holds each target of
+// Summary.Targets that the symbol reaches, in key order, with no depth cap.
+// Uncertainties holds the indexes into Summary.Uncertainties of each
+// uncertainty of the search, ascending, so a target that Reaches does not
+// hold is not proved unreached when one of them concerns it. Status
+// applies that rule.
 type Symbol struct {
-	Key           string              `json:"key"`
-	Definitions   []string            `json:"definitions"`
-	Reaches       []reach.Reached     `json:"reaches"`
-	Uncertainties []reach.Uncertainty `json:"uncertainties,omitempty"`
+	Key           string   `json:"key"`
+	Definitions   []string `json:"definitions"`
+	Reaches       []string `json:"reaches"`
+	Uncertainties []int    `json:"uncertainties,omitempty"`
 }
 
-// Summarize links the indexes of one package unit alone and summarizes it.
+// Result is a summary with the graph of the unit that it comes from, so a
+// caller can ask for the path of one reach.
+type Result struct {
+	Summary *Summary
+	graph   *projectgraph.Graph
+}
+
+// Build links the indexes of one package unit alone and summarizes it.
 // Every index and every file of opts.Files must be of the one unit, and
 // opts.Units gives its manifests.
-func Summarize(ctx context.Context, indexes []*fileindex.Index, opts projectgraph.Options) (*Summary, error) {
+func Build(ctx context.Context, indexes []*fileindex.Index, opts projectgraph.Options) (*Result, error) {
 	unit, err := unitOf(indexes, opts.Files)
 	if err != nil {
 		return nil, err
@@ -85,30 +102,122 @@ func Summarize(ctx context.Context, indexes []*fileindex.Index, opts projectgrap
 	for _, ix := range indexes {
 		languages[ix.Language] = true
 	}
+	// A target is an external node that is no symbol of the package and
+	// no builtin.
+	isTarget := func(key string) bool {
+		_, own := definitions[key]
+		return !own && !builtin(languages, key)
+	}
 
-	s := &Summary{Version: Version, IndexVersion: fileindex.Version, LinkVersion: projectgraph.Version, Unit: unit, Symbols: []Symbol{}, Problems: g.Problems}
+	s := &Summary{Version: Version, IndexVersion: fileindex.Version, LinkVersion: projectgraph.Version, Unit: unit, Symbols: []Symbol{}, Targets: []string{}, Problems: g.Problems}
 	for _, p := range slices.Sorted(maps.Keys(g.Files)) {
 		if !g.Files[p].Complete() {
 			s.Incomplete = append(s.Incomplete, p)
 		}
 	}
-	explorer := reach.NewExplorer(g)
-	for _, key := range slices.Sorted(maps.Keys(definitions)) {
-		e, err := explorer.Explore(ctx, []string{key}, 0)
-		if err != nil {
-			return nil, err
+	for _, key := range slices.Sorted(maps.Keys(g.Nodes)) {
+		if g.Nodes[key].Kind == projectgraph.NodeExternal && isTarget(key) {
+			s.Targets = append(s.Targets, key)
 		}
-		defs := append([]string{}, definitions[key]...)
-		slices.Sort(defs)
-		sym := Symbol{Key: key, Definitions: slices.Compact(defs), Reaches: []reach.Reached{}, Uncertainties: e.Uncertainties}
-		for _, r := range e.Reached {
-			if _, own := definitions[r.Target]; !own && !builtin(languages, r.Target) {
-				sym.Reaches = append(sym.Reaches, r)
+	}
+
+	keys := slices.Sorted(maps.Keys(definitions))
+	sets, err := reach.NewExplorer(g).ExploreAll(ctx, keys)
+	if err != nil {
+		return nil, err
+	}
+	s.Uncertainties = sets.Uncertainties
+	for i := range s.Uncertainties {
+		s.Uncertainties[i].Targets = slices.DeleteFunc(s.Uncertainties[i].Targets, func(key string) bool { return !isTarget(key) })
+	}
+	// Two symbols that reach one set share its reached slice, so the
+	// filter runs once per set.
+	filtered := map[*string][]string{}
+	for i, key := range keys {
+		src := sets.Sources[i]
+		reaches := []string{}
+		if len(src.Reached) > 0 {
+			if r, ok := filtered[&src.Reached[0]]; ok {
+				reaches = r
+			} else {
+				reaches = slices.DeleteFunc(slices.Clone(src.Reached), func(key string) bool { return !isTarget(key) })
+				filtered[&src.Reached[0]] = reaches
 			}
 		}
-		s.Symbols = append(s.Symbols, sym)
+		defs := slices.Compact(slices.Sorted(slices.Values(definitions[key])))
+		if defs == nil {
+			defs = []string{}
+		}
+		s.Symbols = append(s.Symbols, Symbol{Key: key, Definitions: defs, Reaches: reaches, Uncertainties: src.Uncertainties})
 	}
-	return s, nil
+	return &Result{Summary: s, graph: g}, nil
+}
+
+// Summarize links the indexes of one package unit alone and returns its
+// summary, as Build does.
+func Summarize(ctx context.Context, indexes []*fileindex.Index, opts projectgraph.Options) (*Summary, error) {
+	r, err := Build(ctx, indexes, opts)
+	if err != nil {
+		return nil, err
+	}
+	return r.Summary, nil
+}
+
+// Graph returns the graph of the unit that the summary comes from.
+func (r *Result) Graph() *projectgraph.Graph { return r.graph }
+
+// Path returns the shortest path from a symbol of the summary to a target
+// that it reaches, with one search inside the unit, or false when the
+// symbol does not reach the target. A summary stores no path, so a caller
+// asks for one when a finding needs it.
+func (r *Result) Path(ctx context.Context, symbol, target string) ([]reach.Hop, bool, error) {
+	return reach.NewExplorer(r.graph).Path(ctx, symbol, target, 0)
+}
+
+// Status answers whether a symbol of the summary reaches a target, as a
+// reach query of the unit graph from the symbol answers it. The target is
+// reached when Reaches holds it. Otherwise an uncertainty of the symbol
+// that concerns the target makes it uncertain: one with no scope concerns
+// every target, a Method scope concerns its Targets and every target
+// whose last segment is the method, an ImportPrefix scope every target
+// under the prefix, and a Unit scope its Targets. A target that nothing
+// concerns is not found, or no such target when the summary does not know
+// it. A symbol that the summary does not hold is not found, unless
+// Incomplete is not empty.
+func (s *Summary) Status(symbol, target string) reach.Status {
+	i, ok := slices.BinarySearchFunc(s.Symbols, symbol, func(sym Symbol, key string) int { return strings.Compare(sym.Key, key) })
+	if !ok {
+		if len(s.Incomplete) > 0 {
+			return reach.Uncertain
+		}
+		return reach.NotFound
+	}
+	sym := s.Symbols[i]
+	if _, found := slices.BinarySearch(sym.Reaches, target); found {
+		return reach.Found
+	}
+	for _, idx := range sym.Uncertainties {
+		if s.concerns(s.Uncertainties[idx], target) {
+			return reach.Uncertain
+		}
+	}
+	if _, known := slices.BinarySearch(s.Targets, target); known {
+		return reach.NotFound
+	}
+	return reach.NoSuchTarget
+}
+
+// concerns reports whether the scope of an uncertainty concerns a target.
+func (s *Summary) concerns(u reach.Scoped, target string) bool {
+	switch {
+	case u.Unit != "":
+		return slices.Contains(u.Targets, target)
+	case u.ImportPrefix != "":
+		return strings.HasPrefix(target, u.ImportPrefix)
+	case u.Method != "":
+		return fileindex.Last(target) == u.Method || slices.Contains(u.Targets, target)
+	}
+	return true
 }
 
 // unitOf returns the one unit of the indexes and the files.

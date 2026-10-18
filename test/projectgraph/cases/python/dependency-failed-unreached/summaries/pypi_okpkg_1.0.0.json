@@ -1,5 +1,5 @@
 {
-  "version": "1",
+  "version": "2",
   "index_version": "11",
   "link_version": "10",
   "unit": "pypi:okpkg@1.0.0",
@@ -10,36 +10,11 @@
         "pypi:okpkg@1.0.0//okpkg/__init__.py//run"
       ],
       "reaches": [
-        {
-          "target": "subprocess//run",
-          "path": [
-            {
-              "key": "okpkg//run"
-            },
-            {
-              "key": "pypi:okpkg@1.0.0//okpkg/__init__.py//run",
-              "site": {
-                "path": "pypi:okpkg@1.0.0//okpkg/__init__.py",
-                "line": 4
-              },
-              "edge_kind": "package",
-              "confidence": "high",
-              "resolver": "python.package.absolute"
-            },
-            {
-              "key": "subprocess//run",
-              "site": {
-                "path": "pypi:okpkg@1.0.0//okpkg/__init__.py",
-                "line": 5,
-                "column": 5
-              },
-              "edge_kind": "direct",
-              "confidence": "high",
-              "resolver": "python.external"
-            }
-          ]
-        }
+        "subprocess//run"
       ]
     }
+  ],
+  "targets": [
+    "subprocess//run"
   ]
 }

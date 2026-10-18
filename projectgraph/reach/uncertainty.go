@@ -38,91 +38,84 @@ type found struct {
 	entered map[string]bool
 }
 
-func (a *adjacency) uncertainties(s *search, maxDepth int) *found {
-	g := a.g
-	f := &found{byMethod: map[string][]Uncertainty{}, reaches: a.unitReaches, methodReaches: a.methodReaches, units: map[string][]Uncertainty{}, entered: map[string]bool{}}
-
-	unresolved := map[string][]projectgraph.UnresolvedSite{}
-	prefixes := map[projectgraph.Site]string{}
-	for _, u := range g.Unresolved {
-		unresolved[u.Caller] = append(unresolved[u.Caller], u)
-		if u.ImportPrefix != "" {
-			prefixes[projectgraph.Site{Path: u.Site.Path, Line: u.Site.Line}] = u.ImportPrefix
-		}
-	}
-	truncated := map[string][]projectgraph.Truncation{}
-	for _, t := range g.Truncated {
-		if t.Key == "" {
-			f.global = append(f.global, Uncertainty{Kind: Budget, Site: t.Site, Text: "the link step hit its " + string(t.Kind) + " limit"})
-		} else {
-			truncated[t.Key] = append(truncated[t.Key], t)
-		}
-	}
-	f.addFileBudgets(g.Files)
-	// A record with no caller is a unit that no import names. Any search
-	// can enter it, so it counts for every search.
-	for _, r := range unresolved[""] {
-		f.enter(r.Unit)
-		f.byUnit = append(f.byUnit, Uncertainty{Kind: UnresolvedCall, Site: r.Site, Text: fmt.Sprintf("%s (%s)", r.Text, r.Reason), Unit: r.Unit})
-	}
-	for _, id := range s.order {
-		key := a.keys[id]
-		n := g.Nodes[key]
-		if n == nil {
-			continue
-		}
-		f.enter(fileindex.PackageOf(n.Path))
-		for _, t := range truncated[key] {
-			site := t.Site
-			site.Path = cmp.Or(site.Path, n.Path)
-			f.global = append(f.global, Uncertainty{Kind: Budget, Key: key, Site: site, Text: "the link step hit its " + string(t.Kind) + " limit"})
-		}
-		f.addFlags(key, n, prefixes)
-		f.addRecords(key, unresolved[key])
-	}
-	if s.depthCut {
-		f.global = append(f.global, Uncertainty{Kind: Budget, Text: fmt.Sprintf("the search stopped at depth %d", maxDepth)})
-	}
-	if s.stopped {
-		f.global = append(f.global, Uncertainty{Kind: Budget, Text: "the search stopped at the deadline"})
-	}
-	return f
+// sources holds the records, the import prefixes and the truncations of a
+// graph by node, so a search and a set computation read them once.
+type sources struct {
+	unresolved map[string][]projectgraph.UnresolvedSite
+	prefixes   map[projectgraph.Site]string
+	truncated  map[string][]projectgraph.Truncation
+	// global holds the truncations with no node and the records of a unit
+	// that no import names. They count for every search.
+	global []Uncertainty
+	// budgets holds the file budgets of each unit of dependency code. A
+	// file of the project is a global budget.
+	budgets map[string][]Uncertainty
+	// units lists the units that a search can enter, in key order.
+	units []string
 }
 
-// addFileBudgets adds a budget uncertainty for each file with no complete
-// index. A file of the project can hold a root or a caller that the graph
-// does not know, so it counts where the search does not reach it. A file
-// of dependency code holds no root, and its code runs only when a call
-// enters its package. So it counts only for a search that reaches a node
-// of its unit.
-func (f *found) addFileBudgets(files map[string]fileindex.FileStatus) {
-	for _, p := range slices.Sorted(maps.Keys(files)) {
-		status := files[p]
+func newSources(g *projectgraph.Graph) *sources {
+	s := &sources{unresolved: map[string][]projectgraph.UnresolvedSite{}, prefixes: map[projectgraph.Site]string{}, truncated: map[string][]projectgraph.Truncation{}, budgets: map[string][]Uncertainty{}}
+	for _, u := range g.Unresolved {
+		s.unresolved[u.Caller] = append(s.unresolved[u.Caller], u)
+		if u.ImportPrefix != "" {
+			s.prefixes[projectgraph.Site{Path: u.Site.Path, Line: u.Site.Line}] = u.ImportPrefix
+		}
+	}
+	for _, t := range g.Truncated {
+		if t.Key == "" {
+			s.global = append(s.global, Uncertainty{Kind: Budget, Site: t.Site, Text: "the link step hit its " + string(t.Kind) + " limit"})
+		} else {
+			s.truncated[t.Key] = append(s.truncated[t.Key], t)
+		}
+	}
+	// A record with no caller is a unit that no import names. Any search
+	// can enter it, so it counts for every search.
+	for _, r := range s.unresolved[""] {
+		s.global = append(s.global, Uncertainty{Kind: UnresolvedCall, Site: r.Site, Text: fmt.Sprintf("%s (%s)", r.Text, r.Reason), Unit: r.Unit})
+	}
+	// A file of the project can hold a root or a caller that the graph
+	// does not know, so it counts where the search does not reach it. A
+	// file of dependency code holds no root, and its code runs only when a
+	// call enters its package. So it counts only for a search that
+	// reaches a node of its unit.
+	for _, p := range slices.Sorted(maps.Keys(g.Files)) {
+		status := g.Files[p]
 		if status.Complete() {
 			continue
 		}
 		u := Uncertainty{Kind: Budget, Key: p, Site: projectgraph.Site{Path: p}, Text: "the file is " + string(status)}
 		if unit := fileindex.PackageOf(p); unit != "" {
-			f.units[unit] = append(f.units[unit], u)
+			s.budgets[unit] = append(s.budgets[unit], u)
 		} else {
-			f.global = append(f.global, u)
+			s.global = append(s.global, u)
 		}
 	}
-}
-
-// enter adds the file budgets of a unit the first time the search enters
-// it.
-func (f *found) enter(unit string) {
-	if unit != "" && !f.entered[unit] {
-		f.entered[unit] = true
-		f.global = append(f.global, f.units[unit]...)
+	units := map[string]bool{}
+	for _, n := range g.Nodes {
+		if unit := fileindex.PackageOf(n.Path); unit != "" {
+			units[unit] = true
+		}
 	}
+	for _, r := range g.Unresolved {
+		if r.Unit != "" {
+			units[r.Unit] = true
+		}
+	}
+	s.units = slices.Sorted(maps.Keys(units))
+	return s
 }
 
-// addFlags adds the dynamic flags of a node. A parse error is a budget. A
-// computed import with a static prefix concerns only the targets that the
-// prefix can name.
-func (f *found) addFlags(key string, n *projectgraph.Node, prefixes map[projectgraph.Site]string) {
+// at returns the uncertainties of one reached node: its truncations, its
+// dynamic flags and its unresolved sites. The fields of each one say what
+// it concerns: a Unit, an ImportPrefix, a Method, or every target.
+func (s *sources) at(key string, n *projectgraph.Node) []Uncertainty {
+	var out []Uncertainty
+	for _, t := range s.truncated[key] {
+		site := t.Site
+		site.Path = cmp.Or(site.Path, n.Path)
+		out = append(out, Uncertainty{Kind: Budget, Key: key, Site: site, Text: "the link step hit its " + string(t.Kind) + " limit"})
+	}
 	for _, fl := range n.Flags {
 		site := projectgraph.Site{Path: n.Path, Line: fl.Line}
 		u := Uncertainty{Kind: DynamicFlag, Key: key, Site: site, Text: string(fl.Kind)}
@@ -137,42 +130,111 @@ func (f *found) addFlags(key string, n *projectgraph.Node, prefixes map[projectg
 			continue
 		case fl.Kind == fileindex.FlagParseError:
 			u.Kind = Budget
-			f.global = append(f.global, u)
-		case fl.Kind == fileindex.FlagComputedImport && prefixes[site] != "":
-			u.ImportPrefix = prefixes[site]
-			f.prefixed = append(f.prefixed, prefixed{u: u, prefix: prefixes[site]})
-		default:
-			f.global = append(f.global, u)
+		case fl.Kind == fileindex.FlagComputedImport && s.prefixes[site] != "":
+			u.ImportPrefix = s.prefixes[site]
 		}
+		out = append(out, u)
 	}
-}
-
-// addRecords adds the unresolved sites of a node: a site of a unit counts
-// for the targets that the unit reaches, a computed import for the targets
-// that its prefix can name, and a site with a method name for the targets
-// of that name.
-func (f *found) addRecords(key string, records []projectgraph.UnresolvedSite) {
-	for _, r := range records {
-		f.enter(fileindex.PackageOf(r.Site.Path))
-		f.enter(r.Unit)
+	for _, r := range s.unresolved[key] {
 		u := Uncertainty{Kind: UnresolvedCall, Key: key, Site: r.Site, Text: fmt.Sprintf("%s (%s)", r.Text, r.Reason)}
 		switch {
 		case r.Unit != "":
 			u.Unit = r.Unit
-			f.byUnit = append(f.byUnit, u)
 		case r.ImportPrefix != "":
 			u.ImportPrefix = r.ImportPrefix
-			f.prefixed = append(f.prefixed, prefixed{u: u, prefix: r.ImportPrefix})
 		case r.Method != "" && !projectgraph.ReachesAny(r.Reason):
 			u.Method = r.Method
-			if _, ok := f.byMethod[r.Method]; !ok {
-				f.methods = append(f.methods, r.Method)
+		}
+		out = append(out, u)
+	}
+	return out
+}
+
+// unitsOf returns the units that a node makes a search enter: the unit of
+// its file and the units of its records.
+func (s *sources) unitsOf(n *projectgraph.Node, key string) []string {
+	var units []string
+	if u := fileindex.PackageOf(n.Path); u != "" {
+		units = append(units, u)
+	}
+	for _, r := range s.unresolved[key] {
+		for _, u := range []string{fileindex.PackageOf(r.Site.Path), r.Unit} {
+			if u != "" {
+				units = append(units, u)
 			}
-			f.byMethod[r.Method] = append(f.byMethod[r.Method], u)
-		default:
-			f.global = append(f.global, u)
 		}
 	}
+	return units
+}
+
+func (a *adjacency) uncertainties(s *search, maxDepth int) *found {
+	g := a.g
+	src := a.sources()
+	f := &found{byMethod: map[string][]Uncertainty{}, reaches: a.unitReaches, methodReaches: a.methodReaches, units: src.budgets, entered: map[string]bool{}}
+	for _, u := range src.global {
+		f.add(u)
+	}
+	for _, id := range s.order {
+		key := a.keys[id]
+		n := g.Nodes[key]
+		if n == nil {
+			continue
+		}
+		for _, unit := range src.unitsOf(n, key) {
+			f.enter(unit)
+		}
+		for _, u := range src.at(key, n) {
+			f.add(u)
+		}
+	}
+	if s.depthCut {
+		f.global = append(f.global, Uncertainty{Kind: Budget, Text: fmt.Sprintf("the search stopped at depth %d", maxDepth)})
+	}
+	if s.stopped {
+		f.global = append(f.global, Uncertainty{Kind: Budget, Text: "the search stopped at the deadline"})
+	}
+	return f
+}
+
+// add routes an uncertainty by what it concerns: a unit, an import
+// prefix, a method name, or every target.
+func (f *found) add(u Uncertainty) {
+	switch {
+	case u.Unit != "":
+		f.byUnit = append(f.byUnit, u)
+	case u.ImportPrefix != "":
+		f.prefixed = append(f.prefixed, prefixed{u: u, prefix: u.ImportPrefix})
+	case u.Method != "":
+		if _, ok := f.byMethod[u.Method]; !ok {
+			f.methods = append(f.methods, u.Method)
+		}
+		f.byMethod[u.Method] = append(f.byMethod[u.Method], u)
+	default:
+		f.global = append(f.global, u)
+	}
+}
+
+// enter adds the file budgets of a unit the first time the search enters
+// it.
+func (f *found) enter(unit string) {
+	if unit != "" && !f.entered[unit] {
+		f.entered[unit] = true
+		f.global = append(f.global, f.units[unit]...)
+	}
+}
+
+// all returns every uncertainty of the search with no cap, in the order of
+// the search: first the ones that concern every target, then the ones
+// that a Method, an ImportPrefix or a Unit scopes.
+func (f *found) all() []Uncertainty {
+	out := slices.Clone(f.global)
+	for _, m := range f.methods {
+		out = append(out, f.byMethod[m]...)
+	}
+	for _, p := range f.prefixed {
+		out = append(out, p.u)
+	}
+	return append(out, f.byUnit...)
 }
 
 // forTarget returns the uncertainties of a target, at most maxPerKind of

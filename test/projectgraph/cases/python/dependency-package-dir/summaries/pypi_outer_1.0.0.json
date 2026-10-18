@@ -1,5 +1,5 @@
 {
-  "version": "1",
+  "version": "2",
   "index_version": "11",
   "link_version": "10",
   "unit": "pypi:outer@1.0.0",
@@ -10,35 +10,7 @@
         "pypi:outer@1.0.0//impl.py//run"
       ],
       "reaches": [
-        {
-          "target": "os//system",
-          "path": [
-            {
-              "key": "outer//impl//run"
-            },
-            {
-              "key": "pypi:outer@1.0.0//impl.py//run",
-              "site": {
-                "path": "pypi:outer@1.0.0//impl.py",
-                "line": 4
-              },
-              "edge_kind": "package",
-              "confidence": "high",
-              "resolver": "python.package.absolute"
-            },
-            {
-              "key": "os//system",
-              "site": {
-                "path": "pypi:outer@1.0.0//impl.py",
-                "line": 5,
-                "column": 5
-              },
-              "edge_kind": "direct",
-              "confidence": "high",
-              "resolver": "python.external"
-            }
-          ]
-        }
+        "os//system"
       ]
     },
     {
@@ -47,46 +19,11 @@
         "pypi:outer@1.0.0//__init__.py//run"
       ],
       "reaches": [
-        {
-          "target": "os//system",
-          "path": [
-            {
-              "key": "outer//run"
-            },
-            {
-              "key": "pypi:outer@1.0.0//__init__.py//run",
-              "site": {
-                "path": "pypi:outer@1.0.0//__init__.py",
-                "line": 1
-              },
-              "edge_kind": "package",
-              "confidence": "high",
-              "resolver": "python.package.absolute"
-            },
-            {
-              "key": "pypi:outer@1.0.0//impl.py//run",
-              "site": {
-                "path": "pypi:outer@1.0.0//__init__.py",
-                "line": 1
-              },
-              "edge_kind": "export",
-              "confidence": "high",
-              "resolver": "python.reexport"
-            },
-            {
-              "key": "os//system",
-              "site": {
-                "path": "pypi:outer@1.0.0//impl.py",
-                "line": 5,
-                "column": 5
-              },
-              "edge_kind": "direct",
-              "confidence": "high",
-              "resolver": "python.external"
-            }
-          ]
-        }
+        "os//system"
       ]
     }
+  ],
+  "targets": [
+    "os//system"
   ]
 }
