@@ -12,7 +12,7 @@ each in a store.
 
 | Step | Call | Reads | Gives |
 | --- | --- | --- | --- |
-| Index | `indexer.Indexer.Run` | The source files, with tree-sitter | One `fileindex.Index` per file |
+| Index | `indexer.New` and `Indexer.Run` | The source files, with tree-sitter | One `fileindex.Index` per file |
 | Link | `projectgraph.Build` | The indexes and the manifests | A `projectgraph.Graph` |
 | Roots | `rootmatch.Find` | The indexes and the manifests | The roots of the graph. `Build` calls it |
 | Reach | `reach.Reach` | The graph | One `reach.Result` per target |
@@ -30,14 +30,17 @@ that the link step could not resolve.
 ## Index
 
 ```go
-indexed, err := (&indexer.Indexer{}).Run(ctx, fsys, indexer.Options{
+ix, err := indexer.New(indexer.Options{
     Languages: languages,
     Store:     store,
     Workers:   4,
 })
+indexed, err := ix.Run(ctx, fsys)
 ```
 
-`Run` walks the file system, reads each file once and gives the tree of the
+`New` validates the options: a run needs a language, two languages
+cannot share a file extension, and a size limit or a number of workers
+cannot be negative. `Run` walks the file system, reads each file once and gives the tree of the
 file to the index plugin. The index of a file holds what the link step
 needs: the imports, the exports, the definitions, the classes with their
 bases, the calls with their resolved targets, the references, the

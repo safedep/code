@@ -227,7 +227,11 @@ func run(ctx context.Context, cfg config, out io.Writer) (err error) {
 		}
 	}
 
-	indexed, err := (&indexer.Indexer{}).Run(ctx, fsys, indexer.Options{Languages: languages, Store: s, Workers: cfg.workers, Imports: len(cfg.deps) > 0})
+	ix, err := indexer.New(indexer.Options{Languages: languages, Store: s, Workers: cfg.workers, Imports: len(cfg.deps) > 0})
+	if err != nil {
+		return err
+	}
+	indexed, err := ix.Run(ctx, fsys)
 	if err != nil {
 		return fmt.Errorf("failed to index %s: %w", root, err)
 	}
