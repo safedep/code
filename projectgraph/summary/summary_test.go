@@ -174,3 +174,45 @@ func TestStatusMatchesReach(t *testing.T) {
 	assert.Equal(t, reach.Uncertain, r.Summary.Status("kit//loop", "os//exit"), "a record of the method exit concerns os//exit")
 	assert.Equal(t, reach.Uncertain, r.Summary.Status("kit//stop", "os//exit"), "a computed name concerns every target")
 }
+
+// chain returns a package whose one symbol reaches fs//rmSync through
+// hops definitions.
+func chain(hops int) []*fileindex.Index {
+	p := unit + "//index.js"
+	ix := &fileindex.Index{
+		Version: fileindex.Version, Path: p, Language: langcode.Javascript, Unit: unit,
+		Imports:     []fileindex.Import{{Line: 1, Module: "fs", Alias: "fs", Kind: fileindex.ImportStatic, Namespace: "fs"}},
+		Exports:     []fileindex.Export{{Name: "f0", Target: p + "//f0", Line: 2}},
+		Definitions: []fileindex.Definition{{Key: p, Kind: fileindex.DefModule, Name: "index", StartLine: 1, EndLine: hops + 3}},
+	}
+	for i := range hops + 1 {
+		name := fmt.Sprintf("f%d", i)
+		ix.Definitions = append(ix.Definitions, fileindex.Definition{Key: fileindex.Join(p, name), Kind: fileindex.DefFunction, Name: name, StartLine: i + 2, EndLine: i + 2, Exported: i == 0})
+		callee := fmt.Sprintf("f%d", i+1)
+		targets := []string{fileindex.Join(p, callee)}
+		if i == hops {
+			callee, targets = "fs.rmSync", []string{"fs//rmSync"}
+		}
+		ix.Calls = append(ix.Calls, fileindex.Call{Caller: fileindex.Join(p, name), Line: i + 2, Column: 3, Callee: callee, Targets: targets, Kind: fileindex.CallCall})
+	}
+	return []*fileindex.Index{ix}
+}
+
+func TestPathHasNoDepthCap(t *testing.T) {
+	r, err := summary.Build(context.Background(), chain(70), projectgraph.Options{})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"fs//rmSync"}, r.Summary.Symbols[0].Reaches)
+	assert.Equal(t, reach.Found, r.Summary.Status("kit//f0", "fs//rmSync"))
+	hops, found, err := r.Path(context.Background(), "kit//f0", "fs//rmSync")
+	require.NoError(t, err)
+	require.True(t, found, "every target of Reaches has a path")
+	assert.Equal(t, "fs//rmSync", hops[len(hops)-1].Key)
+	assert.Greater(t, len(hops), 64)
+}
+
+func TestBuildReturnsTheErrorOfTheContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := summary.Build(ctx, chain(3), projectgraph.Options{})
+	assert.ErrorIs(t, err, context.Canceled)
+}

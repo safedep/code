@@ -67,8 +67,9 @@ type Symbol struct {
 // Result is a summary with the graph of the unit that it comes from, so a
 // caller can ask for the path of one reach.
 type Result struct {
-	Summary *Summary
-	graph   *projectgraph.Graph
+	Summary  *Summary
+	graph    *projectgraph.Graph
+	explorer *reach.Explorer
 }
 
 // Build links the indexes of one package unit alone and summarizes it.
@@ -122,8 +123,14 @@ func Build(ctx context.Context, indexes []*fileindex.Index, opts projectgraph.Op
 	}
 
 	keys := slices.Sorted(maps.Keys(definitions))
-	sets, err := reach.NewExplorer(g).ExploreAll(ctx, keys)
+	explorer := reach.NewExplorer(g)
+	sets, err := explorer.ExploreAll(ctx, keys)
 	if err != nil {
+		return nil, err
+	}
+	// A walk that the context stopped leaves the sets partial, so the
+	// summary is no summary.
+	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 	s.Uncertainties = sets.Uncertainties
@@ -150,7 +157,7 @@ func Build(ctx context.Context, indexes []*fileindex.Index, opts projectgraph.Op
 		}
 		s.Symbols = append(s.Symbols, Symbol{Key: key, Definitions: defs, Reaches: reaches, Uncertainties: src.Uncertainties})
 	}
-	return &Result{Summary: s, graph: g}, nil
+	return &Result{Summary: s, graph: g, explorer: explorer}, nil
 }
 
 // Summarize links the indexes of one package unit alone and returns its
@@ -168,10 +175,12 @@ func (r *Result) Graph() *projectgraph.Graph { return r.graph }
 
 // Path returns the shortest path from a symbol of the summary to a target
 // that it reaches, with one search inside the unit, or false when the
-// symbol does not reach the target. A summary stores no path, so a caller
-// asks for one when a finding needs it.
+// symbol does not reach the target. The search has no depth cap, as the
+// sets of the summary have none, so every target of Reaches has a path.
+// A summary stores no path, so a caller asks for one when a finding
+// needs it.
 func (r *Result) Path(ctx context.Context, symbol, target string) ([]reach.Hop, bool, error) {
-	return reach.NewExplorer(r.graph).Path(ctx, symbol, target, 0)
+	return r.explorer.Path(ctx, symbol, target, reach.NoDepthCap)
 }
 
 // Status answers whether a symbol of the summary reaches a target, as a
