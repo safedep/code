@@ -29,6 +29,7 @@ func (b *builder) markRoots(ctx context.Context) error {
 		Files:       b.project.files,
 		Python:      b.project.python,
 		JS:          b.project.js,
+		Composer:    b.phpState().composer,
 		Defined:     func(key string) bool { return b.g.Nodes[key] != nil && b.kindOf(key) != NodeExternal },
 		Exports:     func(p string) []string { return b.exportKeys(p, map[string]bool{}) },
 		Export:      b.exportKey,

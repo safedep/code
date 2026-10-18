@@ -259,19 +259,8 @@ func exportTargets(raw json.RawMessage, subpath string, form Form) ([]string, st
 	if value, ok := m.values[subpath]; ok {
 		return pickTargets(value, form)
 	}
-	best, bestPrefix, star := "", -1, ""
-	for _, key := range m.keys {
-		prefix, suffix, ok := strings.Cut(key, "*")
-		if !ok || len(subpath) < len(prefix)+len(suffix) ||
-			!strings.HasPrefix(subpath, prefix) || !strings.HasSuffix(subpath, suffix) {
-			continue
-		}
-		if len(prefix) < bestPrefix || len(prefix) == bestPrefix && key > best {
-			continue
-		}
-		best, bestPrefix, star = key, len(prefix), subpath[len(prefix):len(subpath)-len(suffix)]
-	}
-	if best == "" {
+	best, star, ok := matchStar(m.keys, subpath)
+	if !ok {
 		return nil, "", false
 	}
 	targets, cond, ok := pickTargets(m.values[best], form)
@@ -386,7 +375,7 @@ func loadTSConfig(root fs.FS, name string, depth int) (*tsconfig, error) {
 
 	cfg := &tsconfig{}
 	dir := Dir(name)
-	for _, parent := range extendsList(raw.Extends) {
+	for _, parent := range stringOrList(raw.Extends) {
 		file, ok := extendsFile(root, dir, parent)
 		if !ok {
 			continue
@@ -423,21 +412,6 @@ func (c *tsconfig) pathsDir() string {
 		return c.baseURL
 	}
 	return c.pathsBase
-}
-
-func extendsList(raw json.RawMessage) []string {
-	if len(raw) == 0 {
-		return nil
-	}
-	var one string
-	if json.Unmarshal(raw, &one) == nil {
-		return []string{one}
-	}
-	var many []string
-	if json.Unmarshal(raw, &many) == nil {
-		return many
-	}
-	return nil
 }
 
 // extendsFile returns the project path of a relative extends entry. An

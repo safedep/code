@@ -9,6 +9,7 @@ import (
 
 	rules "github.com/safedep/code/fileindex/roots"
 	"github.com/safedep/code/langcode"
+	"github.com/safedep/code/projectgraph/modules"
 )
 
 var (
@@ -70,11 +71,8 @@ func packageOf(lang langcode.Code, module string) string {
 		first, _, _ := strings.Cut(module, ".")
 		return first
 	}
-	parts := strings.SplitN(module, "/", 3)
-	if strings.HasPrefix(module, "@") && len(parts) > 1 {
-		return parts[0] + "/" + parts[1]
-	}
-	return parts[0]
+	name, _ := modules.SplitPackage(module)
+	return name
 }
 
 // dependencies returns the normalized names of the packages that the
@@ -145,32 +143,15 @@ func (f *finder) pythonDependencies(dir string) []string {
 // of Poetry.
 func pyprojectDependencies(data []byte) []string {
 	var names []string
-	table, inList := "", false
-	for _, line := range strings.Split(string(data), "\n") {
-		line = strings.TrimSpace(line)
-		if inList {
-			names = append(names, quotedRequirements(line)...)
-			inList = !strings.Contains(line, "]")
-			continue
-		}
-		if m := tomlTable.FindStringSubmatch(line); m != nil {
-			table = unquoteDotted(m[1])
-			continue
-		}
-		m := tomlPair.FindStringSubmatch(line)
-		if m == nil {
-			continue
-		}
-		key, value := unquote(m[1]), strings.TrimSpace(m[2])
+	for _, pair := range modules.ScanTOML(data) {
 		switch {
-		case poetryDependencies(table):
-			if key != "python" {
-				names = append(names, key)
+		case poetryDependencies(pair.Table):
+			if pair.Key != "python" {
+				names = append(names, pair.Key)
 			}
-		case table == "project" && key == "dependencies", table == "project.optional-dependencies":
-			if strings.HasPrefix(value, "[") {
-				names = append(names, quotedRequirements(value)...)
-				inList = !strings.Contains(value, "]")
+		case pair.Table == "project" && pair.Key == "dependencies", pair.Table == "project.optional-dependencies":
+			if strings.HasPrefix(pair.Value, "[") {
+				names = append(names, quotedRequirements(pair.Value)...)
 			}
 		}
 	}
@@ -187,15 +168,9 @@ func poetryDependencies(table string) bool {
 // tomlTableKeys returns the keys of the tables of a TOML file.
 func tomlTableKeys(data []byte, tables ...string) []string {
 	var keys []string
-	table := ""
-	for _, line := range strings.Split(string(data), "\n") {
-		line = strings.TrimSpace(line)
-		if m := tomlTable.FindStringSubmatch(line); m != nil {
-			table = unquoteDotted(m[1])
-			continue
-		}
-		if m := tomlPair.FindStringSubmatch(line); m != nil && slices.Contains(tables, table) {
-			keys = append(keys, unquote(m[1]))
+	for _, pair := range modules.ScanTOML(data) {
+		if slices.Contains(tables, pair.Table) {
+			keys = append(keys, pair.Key)
 		}
 	}
 	return keys

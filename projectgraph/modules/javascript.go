@@ -2,6 +2,7 @@ package modules
 
 import (
 	"io/fs"
+	"maps"
 	"path"
 	"slices"
 	"strings"
@@ -258,19 +259,7 @@ func matchPaths(paths map[string][]string, spec string) (string, string, bool) {
 	if _, ok := paths[spec]; ok {
 		return spec, "", true
 	}
-	best, bestPrefix, star := "", -1, ""
-	for pattern := range paths {
-		prefix, suffix, ok := strings.Cut(pattern, "*")
-		if !ok || len(spec) < len(prefix)+len(suffix) ||
-			!strings.HasPrefix(spec, prefix) || !strings.HasSuffix(spec, suffix) {
-			continue
-		}
-		if len(prefix) < bestPrefix || len(prefix) == bestPrefix && pattern > best {
-			continue
-		}
-		best, bestPrefix, star = pattern, len(prefix), spec[len(prefix):len(spec)-len(suffix)]
-	}
-	return best, star, bestPrefix >= 0
+	return matchStar(slices.Collect(maps.Keys(paths)), spec)
 }
 
 func (j *JavaScript) readPackageJSON(root fs.FS, dir string) {

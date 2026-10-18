@@ -46,6 +46,9 @@ type Project struct {
 	Files  *modules.Files
 	Python *modules.Python
 	JS     *modules.JavaScript
+	// Composer holds the autoload maps and the bin scripts of PHP. A nil
+	// Composer names no script.
+	Composer *modules.Composer
 	// Defined reports whether a key names a first-party node of the graph.
 	Defined func(key string) bool
 	// Exports returns the keys of the names that a file exports.
@@ -221,8 +224,16 @@ func (f *finder) matchTestFiles(r rules.Rule) {
 
 func (f *finder) matchManifest(r rules.Rule) {
 	m := r.Match.Manifest
-	if m.File == rules.PackageJSON {
+	switch m.File {
+	case rules.PackageJSON:
 		f.matchPackageJSON(r)
+		return
+	case rules.Composer:
+		if f.Composer != nil {
+			for _, bin := range f.Composer.Bins() {
+				f.addFile(r, bin)
+			}
+		}
 		return
 	}
 	for _, dir := range f.Files.Dirs() {
@@ -246,12 +257,6 @@ func (f *finder) matchManifest(r rules.Rule) {
 		case rules.Dockerfile:
 			for _, cmd := range dockerfileCommands(data) {
 				f.addCommand(r, dir, cmd)
-			}
-		case rules.Composer:
-			for _, bin := range composerBins(data) {
-				if file, ok := modules.Join(dir, bin); ok {
-					f.addFile(r, file)
-				}
 			}
 		}
 	}
@@ -385,10 +390,6 @@ func (f *finder) read(name string) ([]byte, bool) {
 }
 
 var (
-	tomlTable  = regexp.MustCompile(`^\[\[?\s*([^\]]+?)\s*\]\]?`)
-	tomlPair   = regexp.MustCompile(`^("[^"]*"|'[^']*'|[A-Za-z0-9_.-]+)\s*=\s*(.*)$`)
-	tomlString = regexp.MustCompile(`^("[^"]*"|'[^']*')`)
-	tomlInline = regexp.MustCompile(`("[^"]*"|'[^']*'|[A-Za-z0-9_.-]+)\s*=\s*("[^"]*"|'[^']*')`)
 	setupList  = regexp.MustCompile(`console_scripts['"]?\s*[:=]?\s*\[([^\]]*)\]`)
 	setupEntry = regexp.MustCompile(`['"]\s*[^'"=\s]+\s*=\s*([^'"\s]+)\s*['"]`)
 )
@@ -404,29 +405,17 @@ func pyprojectEntries(data []byte, fields []string) []string {
 			return table == f || strings.HasPrefix(table, f+".")
 		})
 	}
-	table := ""
-	for _, line := range strings.Split(string(data), "\n") {
-		line = strings.TrimSpace(line)
-		if m := tomlTable.FindStringSubmatch(line); m != nil {
-			table = unquoteDotted(m[1])
-			continue
-		}
-		m := tomlPair.FindStringSubmatch(line)
-		if m == nil {
-			continue
-		}
-		key, value := unquote(m[1]), strings.TrimSpace(m[2])
-		if strings.HasPrefix(value, "{") {
-			if !wanted(joinTable(table, key)) {
-				continue
-			}
-			for _, pair := range tomlInline.FindAllStringSubmatch(value, -1) {
-				entries = append(entries, unquote(pair[2]))
+	for _, pair := range modules.ScanTOML(data) {
+		if inline, ok := modules.TOMLInlineTable(pair.Value); ok {
+			if wanted(joinTable(pair.Table, pair.Key)) {
+				for _, p := range inline {
+					entries = append(entries, p.Value)
+				}
 			}
 			continue
 		}
-		if str := tomlString.FindString(value); wanted(table) && str != "" {
-			entries = append(entries, unquote(str))
+		if str, ok := modules.TOMLString(pair.Value); ok && wanted(pair.Table) {
+			entries = append(entries, str)
 		}
 	}
 	return entries
@@ -442,26 +431,6 @@ func setupEntries(data []byte) []string {
 		}
 	}
 	return entries
-}
-
-// composerBins returns the scripts of the bin field of a composer.json, a
-// string or a list.
-func composerBins(data []byte) []string {
-	var manifest struct {
-		Bin json.RawMessage `json:"bin"`
-	}
-	if json.Unmarshal(data, &manifest) != nil || len(manifest.Bin) == 0 {
-		return nil
-	}
-	var one string
-	if json.Unmarshal(manifest.Bin, &one) == nil {
-		return []string{one}
-	}
-	var many []string
-	if json.Unmarshal(manifest.Bin, &many) == nil {
-		return many
-	}
-	return nil
 }
 
 // procfileCommands returns the command of each process of a Procfile.
@@ -503,17 +472,4 @@ func joinTable(table, key string) string {
 		return key
 	}
 	return table + "." + key
-}
-
-func unquote(s string) string {
-	if len(s) >= 2 && (s[0] == '"' || s[0] == '\'') && s[len(s)-1] == s[0] {
-		return s[1 : len(s)-1]
-	}
-	return s
-}
-
-// unquoteDotted removes the quotes of the parts of a table name, as
-// project.entry-points."flake8.extension".
-func unquoteDotted(s string) string {
-	return strings.NewReplacer(`"`, "", `'`, "").Replace(s)
 }

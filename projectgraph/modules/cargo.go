@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io/fs"
 	"path"
-	"regexp"
 	"slices"
 	"strings"
 )
@@ -23,11 +22,6 @@ type Crate struct {
 	Dir  string
 	Name string
 }
-
-var (
-	cargoTable = regexp.MustCompile(`^\[\s*([A-Za-z0-9_.-]+)\s*\]`)
-	cargoName  = regexp.MustCompile(`^name\s*=\s*["']([^"']+)["']`)
-)
 
 // NewCargo reads the Cargo.toml of each directory of the file set. The name
 // of the lib table wins over the name of the package table.
@@ -58,16 +52,13 @@ func NewCargo(files *Files, root fs.FS) *Cargo {
 // cargoCrate returns the name of the lib table, or else of the package
 // table. A workspace manifest has neither.
 func cargoCrate(data []byte) string {
-	table := ""
 	names := map[string]string{}
-	for _, line := range strings.Split(string(data), "\n") {
-		line = strings.TrimSpace(line)
-		if m := cargoTable.FindStringSubmatch(line); m != nil {
-			table = m[1]
+	for _, pair := range ScanTOML(data) {
+		if pair.Key != "name" || pair.Table != "package" && pair.Table != "lib" {
 			continue
 		}
-		if m := cargoName.FindStringSubmatch(line); m != nil && (table == "package" || table == "lib") {
-			names[table] = m[1]
+		if name, ok := TOMLString(pair.Value); ok && name != "" {
+			names[pair.Table] = name
 		}
 	}
 	return cmp.Or(names["lib"], names["package"])
