@@ -1,6 +1,8 @@
 // Package rootmatch finds the roots of a project graph: the definitions and the
 // module top levels that the root rules mark. It reads the indexes and the
-// manifests of the project, and no source file.
+// manifests of the project, and no source file. It resolves no name of its
+// own: the callbacks of Project give it the keys, so the link step owns
+// the one resolution of a name.
 package rootmatch
 
 import (

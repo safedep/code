@@ -144,6 +144,8 @@ type Diagnostic struct {
 	Reason Reason `json:"reason"`
 }
 
+// String writes the diagnostic as one line, with the index, the site, the
+// caller, the callee and the reason.
 func (d Diagnostic) String() string {
 	return fmt.Sprintf("overlay edge %d at %s:%d from %s to %s: %s", d.Index, d.Edge.Site.Path, d.Edge.Site.Line, d.Edge.Caller, d.Edge.Callee, d.Reason)
 }

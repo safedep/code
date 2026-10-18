@@ -128,6 +128,8 @@ const (
 	RootLibrarySurface = roots.LibrarySurface
 )
 
+// TruncationKind names the limit of the link step that a Truncation
+// records.
 type TruncationKind string
 
 const (

@@ -33,6 +33,7 @@ func New() *Store {
 	return &Store{entries: map[fileindex.Key]entry{}, artifacts: map[store.ArtifactKey]entry{}}
 }
 
+// Get decodes the stored index of each key and marks the hit as read.
 func (s *Store) Get(ctx context.Context, keys []fileindex.Key) (map[fileindex.Key]*fileindex.Index, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -63,6 +64,7 @@ func (s *Store) Get(ctx context.Context, keys []fileindex.Key) (map[fileindex.Ke
 	return found, nil
 }
 
+// Put encodes each index before it takes the lock.
 func (s *Store) Put(ctx context.Context, indexes []*fileindex.Index) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -93,6 +95,8 @@ func (s *Store) Put(ctx context.Context, indexes []*fileindex.Index) error {
 	return nil
 }
 
+// GetArtifacts returns a copy of each stored artifact and marks the hit as
+// read.
 func (s *Store) GetArtifacts(ctx context.Context, keys []store.ArtifactKey) (map[store.ArtifactKey][]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -117,6 +121,7 @@ func (s *Store) GetArtifacts(ctx context.Context, keys []store.ArtifactKey) (map
 	return found, nil
 }
 
+// PutArtifacts keeps a copy of each artifact.
 func (s *Store) PutArtifacts(ctx context.Context, artifacts []store.Artifact) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -134,6 +139,7 @@ func (s *Store) PutArtifacts(ctx context.Context, artifacts []store.Artifact) er
 	return nil
 }
 
+// Prune removes the indexes and the artifacts read before the time.
 func (s *Store) Prune(ctx context.Context, readBefore time.Time) (int, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err

@@ -1,6 +1,9 @@
 // Package indexer builds the file index of each source file: the
 // projection of the call graph of the file into the records of
-// github.com/safedep/code/fileindex.
+// github.com/safedep/code/fileindex. It is the only step of the project
+// graph that reads source and needs CGO. It resolves nothing across files:
+// an import stays as written, and a call keeps its per-file targets. The
+// link step of github.com/safedep/code/projectgraph owns that.
 package indexer
 
 import (

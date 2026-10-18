@@ -217,6 +217,7 @@ func (s *Store) Put(ctx context.Context, indexes []*fileindex.Index) error {
 	return s.put(ctx, putQuery, rows)
 }
 
+// PutArtifacts writes the artifacts in one transaction.
 func (s *Store) PutArtifacts(ctx context.Context, artifacts []store.Artifact) error {
 	rows := make([][]any, 0, len(artifacts))
 	for _, a := range artifacts {
@@ -262,6 +263,7 @@ func (s *Store) put(ctx context.Context, query string, rows [][]any) (err error)
 	return nil
 }
 
+// Prune deletes the rows of both tables read before the time.
 func (s *Store) Prune(ctx context.Context, readBefore time.Time) (int, error) {
 	removed := 0
 	for _, query := range []string{pruneQuery, pruneArtifactQuery} {
