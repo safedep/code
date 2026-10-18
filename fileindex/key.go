@@ -188,6 +188,28 @@ func Namespace(lang langcode.Code, module string) string {
 	return strings.ReplaceAll(module, lang.ModuleSeparator(), Separator)
 }
 
+// WithoutTypeArguments removes each type argument list from a name, as in
+// List<string>, Map<K, V>.Entry, serde_json::from_str::<Value> or
+// Hmac::<Sha256>::new. The text around the arguments stays as written.
+func WithoutTypeArguments(name string) string {
+	if !strings.Contains(name, "<") {
+		return name
+	}
+	var b strings.Builder
+	depth := 0
+	for _, r := range name {
+		switch {
+		case r == '<':
+			depth++
+		case r == '>' && depth > 0:
+			depth--
+		case depth == 0:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
 // anonymousPrefix starts the name of a definition that has no name in the
 // source.
 const anonymousPrefix = "<anonymous:"

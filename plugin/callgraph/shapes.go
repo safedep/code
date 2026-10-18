@@ -8,6 +8,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/pkg/ts"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -456,7 +457,7 @@ func (p *shapedProcessors) scope(node *sitter.Node, treeData []byte, currentName
 		return newProcessorResult()
 	}
 
-	scopeNamespace := currentNamespace + namespaceSeparator + shape.prefix + withoutTypeArguments(name.Content(treeData))
+	scopeNamespace := currentNamespace + namespaceSeparator + shape.prefix + fileindex.WithoutTypeArguments(name.Content(treeData))
 	callGraph.addNode(scopeNamespace, node)
 	if shape.class {
 		callGraph.classConstructors[scopeNamespace] = true
@@ -593,7 +594,7 @@ func (p *shapedProcessors) resolve(node *sitter.Node, treeData []byte, currentNa
 	}
 
 	p.processNestedCalls(node, treeData, currentNamespace, callGraph, metadata)
-	path := withoutTypeArguments(node.Content(treeData))
+	path := fileindex.WithoutTypeArguments(node.Content(treeData))
 	if !qualifiedPathPattern.MatchString(path) {
 		// A lambda, a cast or another expression is not a namespace.
 		return ""
@@ -611,7 +612,7 @@ var qualifiedPathPattern = regexp.MustCompile(`^[\p{L}_$@\\][\p{L}\p{N}_$@\\.:?!
 // System.Console.
 func (p *shapedProcessors) resolvePath(path string, currentNamespace string, callGraph *CallGraph) string {
 	var segments []string
-	for _, segment := range splitQualifiedName(withoutTypeArguments(path), p.separators) {
+	for _, segment := range splitQualifiedName(fileindex.WithoutTypeArguments(path), p.separators) {
 		if segment = cleanSegment(segment); segment != "" {
 			segments = append(segments, segment)
 		}
@@ -633,7 +634,7 @@ func (p *shapedProcessors) resolvePath(path string, currentNamespace string, cal
 }
 
 func (p *shapedProcessors) qualifiedName(name string) string {
-	return strings.Join(splitQualifiedName(withoutTypeArguments(name), p.separators), namespaceSeparator)
+	return strings.Join(splitQualifiedName(fileindex.WithoutTypeArguments(name), p.separators), namespaceSeparator)
 }
 
 // cleanSegment removes the spaces and the null-safe marks around a segment
@@ -712,27 +713,6 @@ func firstValue(result processorResult) string {
 		return ""
 	}
 	return result.ImmediateAssignments[0].Namespace
-}
-
-// withoutTypeArguments removes each type argument list from a name, as in
-// List<string>, serde_json::from_str::<Value> or Hmac::<Sha256>::new.
-func withoutTypeArguments(name string) string {
-	if !strings.Contains(name, "<") {
-		return name
-	}
-	var b strings.Builder
-	depth := 0
-	for _, r := range name {
-		switch {
-		case r == '<':
-			depth++
-		case r == '>' && depth > 0:
-			depth--
-		case depth == 0:
-			b.WriteRune(r)
-		}
-	}
-	return b.String()
 }
 
 func cutLast(s, separator string) (string, string, bool) {

@@ -84,6 +84,20 @@ func TestParseUnit(t *testing.T) {
 	}
 }
 
+func TestWithoutTypeArguments(t *testing.T) {
+	for in, want := range map[string]string{
+		"List<string>":                    "List",
+		"Map<K, V>.Entry":                 "Map.Entry",
+		"serde_json::from_str::<Value>":   "serde_json::from_str::",
+		"Hmac::<Sha256>::new_from_slice":  "Hmac::::new_from_slice",
+		"Dictionary<string, List<int>>.X": "Dictionary.X",
+		"GetRequiredService<IChat>":       "GetRequiredService",
+		"plain::path":                     "plain::path",
+	} {
+		assert.Equal(t, want, WithoutTypeArguments(in), in)
+	}
+}
+
 func TestNamespace(t *testing.T) {
 	assert.Equal(t, "yaml//loader", Namespace(langcode.Python, "yaml.loader"))
 	assert.Equal(t, "fs//promises", Namespace(langcode.Javascript, "fs/promises"))

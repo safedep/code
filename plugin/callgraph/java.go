@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/safedep/code/core"
+	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/pkg/ts"
 	"github.com/safedep/dry/log"
@@ -231,7 +232,7 @@ func objectCreationExpressionProcessor(objectCreationNode *sitter.Node, treeData
 				callGraph.addEdge(currentNamespace, CallNew, constructedClassNode, scopedIdentifierAssignment.Namespace, nil, argsResult)
 				markClassAssignment(scopedIdentifierAssignment)
 			}
-		} else if name := withoutTypeArguments(constructedClassName); name != "" {
+		} else if name := fileindex.WithoutTypeArguments(constructedClassName); name != "" {
 			callGraph.addUnboundCall(currentNamespace, strings.ReplaceAll(name, ".", namespaceSeparator), CallNew, constructedClassNode, argsResult)
 		}
 	}
@@ -362,7 +363,7 @@ func createdClasses(creation *sitter.Node, treeData []byte, currentNamespace str
 		}
 	}
 	if typeNode := creation.ChildByFieldName("type"); len(classes) == 0 && typeNode != nil {
-		classes = append(classes, strings.ReplaceAll(withoutTypeArguments(typeNode.Content(treeData)), ".", namespaceSeparator))
+		classes = append(classes, strings.ReplaceAll(fileindex.WithoutTypeArguments(typeNode.Content(treeData)), ".", namespaceSeparator))
 	}
 	return classes
 }

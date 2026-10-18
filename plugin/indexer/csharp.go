@@ -80,7 +80,7 @@ func (p *projection) csharpTypeName(node *sitter.Node) string {
 			return name
 		}
 	case "qualified_name":
-		return withoutTypeArgs(p.text(node))
+		return fileindex.WithoutTypeArguments(p.text(node))
 	case "generic_name":
 		return p.text(ts.ChildOfType(node, "identifier"))
 	case "nullable_type":
@@ -182,7 +182,7 @@ func csharpAttributes(p *projection, node *sitter.Node) []string {
 		}
 		for _, a := range ts.NamedChildren(list) {
 			if a.Type() == "attribute" {
-				attributes = append(attributes, "@"+withoutTypeArgs(p.text(a.ChildByFieldName("name"))))
+				attributes = append(attributes, "@"+fileindex.WithoutTypeArguments(p.text(a.ChildByFieldName("name"))))
 			}
 		}
 	}
@@ -260,7 +260,7 @@ func csharpFlagVisitor(p *projection) visitor {
 		if function == nil || function.Type() != "member_access_expression" {
 			return
 		}
-		name := withoutTypeArgs(p.text(function.ChildByFieldName("name")))
+		name := fileindex.WithoutTypeArguments(p.text(function.ChildByFieldName("name")))
 		if slices.Contains(csharpReflection, name) || name == "GetType" && p.text(function.ChildByFieldName("expression")) == "Type" {
 			p.flag(fileindex.FlagReflection, node)
 		}

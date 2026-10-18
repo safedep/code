@@ -745,10 +745,10 @@ func (b *builder) bases(rec classRecord) []string {
 		switch {
 		case ok:
 			out = append(out, key)
-		case profileOf(rec.ix.Language).implicitBases && langcode.IsJavaLang(withoutTypeArguments(base)):
+		case profileOf(rec.ix.Language).implicitBases && langcode.IsJavaLang(fileindex.WithoutTypeArguments(base)):
 			// A Java type that no import and no package of the project
 			// names is a type of java.lang, as Thread or Runnable.
-			out = append(out, fileindex.Join(javaLang, withoutTypeArguments(base)))
+			out = append(out, fileindex.Join(javaLang, fileindex.WithoutTypeArguments(base)))
 		case profileOf(rec.ix.Language).implicitBases:
 			out = append(out, fileindex.Namespace(rec.ix.Language, base))
 		}
@@ -917,15 +917,6 @@ var qualifiedNames = strings.NewReplacer("::", ".", `\`, ".")
 func lastWritten(callee string) string {
 	i := max(strings.LastIndex(callee, "."), strings.LastIndex(callee, `\`), strings.LastIndex(callee, ":"))
 	return callee[i+1:]
-}
-
-// withoutTypeArguments returns a type name with no type arguments, as List
-// for List<String>.
-func withoutTypeArguments(name string) string {
-	if i := strings.IndexByte(name, '<'); i >= 0 {
-		return strings.TrimSpace(name[:i])
-	}
-	return name
 }
 
 func isNamespacePackage(key string) bool {

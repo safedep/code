@@ -1,8 +1,6 @@
 package indexer
 
 import (
-	"strings"
-
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/fileindex"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -118,13 +116,4 @@ func (p *projection) addSignatures() {
 			signature(p, def, node)
 		}
 	}
-}
-
-// withoutTypeArgs removes the type arguments of a name, as List for
-// List<string>.
-func withoutTypeArgs(name string) string {
-	if i := strings.IndexByte(name, '<'); i >= 0 {
-		return strings.TrimSpace(name[:i])
-	}
-	return name
 }
