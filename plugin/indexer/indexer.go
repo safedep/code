@@ -126,6 +126,10 @@ type pending struct {
 	language core.Language
 	data     []byte
 	key      fileindex.Key
+
+	// restored names the cached plugins that took their stored artifact
+	// before another plugin rejected its own. They skip the tree.
+	restored map[string]bool
 }
 
 // run is the state of one call of Run. Only the goroutine of Run changes
@@ -290,9 +294,13 @@ func (r *run) flush(ctx context.Context, batch []pending) error {
 
 	var parse []pending
 	for _, p := range batch {
-		if ix, ok := stored[p.key]; ok && !r.needsParse(p, artifacts) && r.restore(ctx, p, artifacts) {
-			r.done(p.file, ix, fileindex.FileCached)
-			continue
+		if ix, ok := stored[p.key]; ok && !r.needsParse(p, artifacts) {
+			restored, ok := r.restore(ctx, p, artifacts)
+			if ok {
+				r.done(p.file, ix, fileindex.FileCached)
+				continue
+			}
+			p.restored = restored
 		}
 		parse = append(parse, p)
 	}
@@ -388,6 +396,9 @@ func (r *run) collect(ctx context.Context, p pending, o outcome) (*fileindex.Ind
 			continue
 		}
 		if cached, ok := pl.(CachedPlugin); ok {
+			if p.restored[pl.Name()] {
+				continue
+			}
 			data, err := cached.Analyze(ctx, p.file, o.tree)
 			if err != nil {
 				report.Failed = append(report.Failed, failure(p.file, pl, err))

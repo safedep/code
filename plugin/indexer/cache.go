@@ -64,10 +64,13 @@ func (r *run) needsParse(p pending, artifacts map[store.ArtifactKey][]byte) bool
 }
 
 // restore runs each cached plugin of the file on its stored artifact. It
-// reports whether every plugin took its artifact. A plugin that rejects
-// one gets the tree instead: the file parses, the plugin runs on it and
-// the run stores a fresh artifact.
-func (r *run) restore(ctx context.Context, p pending, artifacts map[store.ArtifactKey][]byte) bool {
+// reports whether every plugin took its artifact, and the names of the
+// plugins that took one. A plugin that rejects one gets the tree instead:
+// the file parses, the plugin runs on it and the run stores a fresh
+// artifact. The plugins that took theirs do not run on the tree, so no
+// plugin sees the file twice.
+func (r *run) restore(ctx context.Context, p pending, artifacts map[store.ArtifactKey][]byte) (map[string]bool, bool) {
+	restored := map[string]bool{}
 	for _, pl := range r.opts.Plugins {
 		cached, ok := pl.(CachedPlugin)
 		if !ok || !supports(pl, p) {
@@ -75,8 +78,9 @@ func (r *run) restore(ctx context.Context, p pending, artifacts map[store.Artifa
 		}
 		if err := cached.Restore(ctx, p.file, artifacts[artifactKey(p, cached)]); err != nil {
 			log.Warnf("the plugin %s rejected its stored artifact of %s, so the file parses again: %v", pl.Name(), p.file.Name(), err)
-			return false
+			return restored, false
 		}
+		restored[pl.Name()] = true
 	}
-	return true
+	return restored, true
 }

@@ -18,6 +18,7 @@ import (
 // file. It records which files it analyzed from a tree and which it
 // restored from the store.
 type countingPlugin struct {
+	name     string
 	version  string
 	analyzed []string
 	restored []string
@@ -25,7 +26,7 @@ type countingPlugin struct {
 	fail     string
 }
 
-func (p *countingPlugin) Name() string    { return "CountingPlugin" }
+func (p *countingPlugin) Name() string    { return p.name }
 func (p *countingPlugin) Version() string { return p.version }
 
 func (p *countingPlugin) SupportedLanguages() []core.LanguageCode {
@@ -51,7 +52,7 @@ func (p *countingPlugin) Restore(_ context.Context, file core.File, data []byte)
 }
 
 func newCountingPlugin(version string) *countingPlugin {
-	return &countingPlugin{version: version, lines: map[string]string{}}
+	return &countingPlugin{name: "CountingPlugin", version: version, lines: map[string]string{}}
 }
 
 // ecmascriptNames are the files of the plugin's languages, in path order.
@@ -111,5 +112,23 @@ func TestIndexerServesACachedPluginFromTheStore(t *testing.T) {
 		assert.Equal(t, fileindex.FileIndexed, result.Files["main.js"])
 		assert.Equal(t, []string{"main.js"}, broken.analyzed, "the plugin runs on the tree and the run stores a fresh artifact")
 		assert.Equal(t, []string{"app/util.ts", "lib/helper.js"}, broken.restored)
+	})
+
+	t.Run("a plugin that took its artifact skips the tree of a file that parses again", func(t *testing.T) {
+		good := newCountingPlugin("1")
+		broken := newCountingPlugin("1")
+		broken.name = "BrokenPlugin"
+		_, err := indexer.Run(context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Plugins: []core.Plugin{good, broken}})
+		require.NoError(t, err)
+
+		good, broken = newCountingPlugin("1"), newCountingPlugin("1")
+		broken.name = "BrokenPlugin"
+		broken.fail = "main.js"
+		result, err := indexer.Run(context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Plugins: []core.Plugin{good, broken}})
+		require.NoError(t, err)
+		assert.Equal(t, []string{"main.js"}, result.Report.Visited)
+		assert.Equal(t, ecmascriptNames, good.restored)
+		assert.Empty(t, good.analyzed, "the plugin that took its artifact does not see main.js twice")
+		assert.Equal(t, []string{"main.js"}, broken.analyzed)
 	})
 }
