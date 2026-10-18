@@ -263,11 +263,25 @@ func (s *Store) put(ctx context.Context, query string, rows [][]any) (err error)
 	return nil
 }
 
-// Prune deletes the rows of both tables read before the time.
-func (s *Store) Prune(ctx context.Context, readBefore time.Time) (int, error) {
-	removed := 0
+// Prune deletes the rows of both tables read before the time, in one
+// transaction, so a reader sees the indexes and the artifacts of a file
+// go together.
+func (s *Store) Prune(ctx context.Context, readBefore time.Time) (removed int, err error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("localdbstore: begin prune: %w", err)
+	}
+	defer func() {
+		if err == nil {
+			return
+		}
+		if rbErr := tx.Rollback(); !errors.Is(rbErr, sql.ErrTxDone) {
+			err = errors.Join(err, rbErr)
+		}
+	}()
+
 	for _, query := range []string{pruneQuery, pruneArtifactQuery} {
-		res, err := s.db.ExecContext(ctx, query, readBefore.UnixMilli())
+		res, err := tx.ExecContext(ctx, query, readBefore.UnixMilli())
 		if err != nil {
 			return 0, fmt.Errorf("localdbstore: prune: %w", err)
 		}
@@ -279,6 +293,9 @@ func (s *Store) Prune(ctx context.Context, readBefore time.Time) (int, error) {
 		removed += int(n)
 	}
 
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("localdbstore: commit prune: %w", err)
+	}
 	return removed, nil
 }
 

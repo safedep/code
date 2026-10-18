@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/fileindex/store"
@@ -107,4 +108,21 @@ func TestGetFailsOnACorruptRow(t *testing.T) {
 func TestPutRejectsANilIndex(t *testing.T) {
 	s := newStore(t, newManager(t, t.TempDir()))
 	assert.Error(t, s.Put(context.Background(), []*fileindex.Index{nil}))
+}
+
+// TestPruneIsOneTransaction drops the artifact table, so the second
+// delete of the prune fails. The transaction rolls back, so the index
+// stays too.
+func TestPruneIsOneTransaction(t *testing.T) {
+	s := newStore(t, newManager(t, t.TempDir()))
+	a := storetest.Index("src/a.py")
+	require.NoError(t, s.Put(context.Background(), []*fileindex.Index{a}))
+	_, err := s.db.ExecContext(context.Background(), `DROP TABLE code_graph_artifacts`)
+	require.NoError(t, err)
+
+	_, err = s.Prune(context.Background(), time.Now().Add(time.Hour))
+	require.Error(t, err)
+	found, err := s.Get(context.Background(), []fileindex.Key{a.Key()})
+	require.NoError(t, err)
+	assert.Len(t, found, 1, "a prune that fails removes no index")
 }
