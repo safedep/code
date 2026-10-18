@@ -10,6 +10,7 @@ roots:
   - key: src/main.rs//main
     kind: main
     rule: rust.main
+exact_edges: true
 edges:
   - from: src/main.rs//main
     to: src/store.rs//run

@@ -4,6 +4,7 @@ roots:
   - key: src/main.js
     kind: manifest
     rule: node.package-json
+exact_edges: true
 edges:
   - from: src/main.js
     to: fs//readFileSync

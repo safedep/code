@@ -100,6 +100,7 @@ func main() {
 	flag.Parse()
 
 	if cfg.dir == "" || len(cfg.targets) == 0 && !cfg.summary {
+		fmt.Fprintln(os.Stderr, "projectgraph needs -dir, and -target or -summary")
 		flag.Usage()
 		os.Exit(2)
 	}
@@ -168,6 +169,9 @@ func run(ctx context.Context, cfg config, out io.Writer) (err error) {
 	if err != nil {
 		return fmt.Errorf("failed to index %s: %w", root, err)
 	}
+	if err := warnIndex(os.Stderr, indexed); err != nil {
+		return err
+	}
 	if len(cfg.targets) > 0 {
 		if err := printReach(ctx, cfg, out, root, indexed, units); err != nil {
 			return err
@@ -191,6 +195,9 @@ func printReach(ctx context.Context, cfg config, out io.Writer, root string, ind
 	if err != nil {
 		return fmt.Errorf("failed to link %s: %w", root, err)
 	}
+	if err := warnGraph(os.Stderr, g); err != nil {
+		return err
+	}
 	if cfg.overlay != "" {
 		if err := mergeOverlay(g, cfg.overlay, os.Stderr); err != nil {
 			return err
@@ -207,6 +214,11 @@ func printReach(ctx context.Context, cfg config, out io.Writer, root string, ind
 		return encoder.Encode(results)
 	}
 	for _, r := range results {
+		if r.Searched.Stopped {
+			if _, err := fmt.Fprintf(os.Stderr, "the search for %s stopped at the deadline\n", r.Target); err != nil {
+				return err
+			}
+		}
 		if _, err := fmt.Fprintln(out, r); err != nil {
 			return err
 		}
@@ -233,6 +245,42 @@ func printSummaries(ctx context.Context, out io.Writer, indexed *indexer.Result,
 	encoder := json.NewEncoder(out)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(summaries)
+}
+
+// warnIndex writes the files that the index step failed or skipped to warn.
+func warnIndex(warn io.Writer, indexed *indexer.Result) error {
+	for _, f := range indexed.Report.Failed {
+		if _, err := fmt.Fprintln(warn, "failed:", f); err != nil {
+			return err
+		}
+	}
+	if n := len(indexed.Report.Skipped); n > 0 {
+		if _, err := fmt.Fprintf(warn, "skipped %d files that no language parses\n", n); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// warnGraph writes the problems and the truncations of the link step to
+// warn, and says what to do when no root rule matched.
+func warnGraph(warn io.Writer, g *projectgraph.Graph) error {
+	for _, p := range g.Problems {
+		if _, err := fmt.Fprintf(warn, "problem: %s: %s\n", p.Path, p.Text); err != nil {
+			return err
+		}
+	}
+	for _, t := range g.Truncated {
+		if _, err := fmt.Fprintf(warn, "truncated: the link step hit its %s limit at %s %s\n", t.Kind, t.Key, t.Site); err != nil {
+			return err
+		}
+	}
+	if g.Stats.RootFallback {
+		if _, err := fmt.Fprintln(warn, "no root rule matched: every exported symbol is a root. Add a manifest entry, as a package.json bin or a pyproject.toml script, or a main guard, or pass -include-tests"); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // mergeOverlay merges the overlay at path into g and writes each edge that

@@ -143,22 +143,21 @@ func PackageDir(module string) (string, bool) {
 	return "", false
 }
 
-func (p *Python) relative(importer, module string) (string, bool) {
+// PythonRelativePath turns a relative Python module into a relative path,
+// as ./ for . and ./../pkg/x for ..pkg.x. A module that names a package
+// ends in /.
+func PythonRelativePath(module string) string {
 	rest := strings.TrimLeft(module, ".")
-	dots := len(module) - len(rest)
-	dir := Dir(importer)
-	for range dots - 1 {
-		if dir == "" {
-			return "", false
-		}
-		dir = Dir(dir)
-	}
-	if rest == "" {
-		return p.packageAt(dir)
-	}
-	base, ok := Join(dir, strings.ReplaceAll(rest, ".", "/"))
+	return "./" + strings.Repeat("../", len(module)-len(rest)-1) + strings.ReplaceAll(rest, ".", "/")
+}
+
+func (p *Python) relative(importer, module string) (string, bool) {
+	base, ok := Join(Dir(importer), PythonRelativePath(module))
 	if !ok {
 		return "", false
+	}
+	if strings.HasSuffix(module, ".") {
+		return p.packageAt(base)
 	}
 	return p.moduleAt(base)
 }

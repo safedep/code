@@ -19,6 +19,7 @@ import (
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/fileindex/store"
 	"github.com/safedep/code/fileindex/store/localdbstore"
+	"github.com/safedep/code/fileindex/store/memstore"
 	codefs "github.com/safedep/code/fs"
 	"github.com/safedep/code/lang"
 	"github.com/safedep/code/langcode"
@@ -291,6 +292,24 @@ func (p *peakHeap) stop() uint64 {
 	return p.max
 }
 
+// firstReadStore is an empty store that records the time of its first
+// read and calls onFirstRead then.
+type firstReadStore struct {
+	store.Store
+	started     time.Time
+	onFirstRead func()
+}
+
+func (s *firstReadStore) Get(ctx context.Context, keys []fileindex.Key) (map[fileindex.Key]*fileindex.Index, error) {
+	if s.started.IsZero() {
+		s.started = time.Now()
+		if s.onFirstRead != nil {
+			s.onFirstRead()
+		}
+	}
+	return s.Store.Get(ctx, keys)
+}
+
 // TestDegradesAtHalfTheColdTime gives the index step half the time of a cold
 // run. The files that the deadline cuts are missing, the link step takes
 // the partial result, and the reach query reports each target that it does
@@ -309,7 +328,6 @@ func TestDegradesAtHalfTheColdTime(t *testing.T) {
 			require.NoError(t, err)
 			fsys, err := codefs.NewLocalFileSystem(codefs.LocalFileSystemConfig{AppDirectories: []string{root}})
 			require.NoError(t, err)
-			opts := indexer.Options{Languages: []core.Language{language}, Workers: 4}
 			targets := reachTargets(code)
 
 			search := func(indexed *indexer.Result) []reach.Result {
@@ -319,15 +337,20 @@ func TestDegradesAtHalfTheColdTime(t *testing.T) {
 				return results
 			}
 
-			start := time.Now()
-			_, err = (&indexer.Indexer{}).Run(context.Background(), fsys, opts)
+			// The clock of both runs starts at the first read of the
+			// store, just before the first parse, so the walk of the
+			// files does not count. A deadline on the whole run can land
+			// before the parse on a slow machine.
+			coldStore := &firstReadStore{Store: memstore.New()}
+			_, err = (&indexer.Indexer{}).Run(context.Background(), fsys, indexer.Options{Languages: []core.Language{language}, Workers: 4, Store: coldStore})
 			require.NoError(t, err)
-			cold := time.Since(start)
+			cold := time.Since(coldStore.started)
 
-			ctx, cancel := context.WithTimeout(context.Background(), cold/2)
+			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			partial, err := (&indexer.Indexer{}).Run(ctx, fsys, opts)
-			require.ErrorIs(t, err, context.DeadlineExceeded)
+			cutStore := &firstReadStore{Store: memstore.New(), onFirstRead: func() { time.AfterFunc(cold/2, cancel) }}
+			partial, err := (&indexer.Indexer{}).Run(ctx, fsys, indexer.Options{Languages: []core.Language{language}, Workers: 4, Store: cutStore})
+			require.ErrorIs(t, err, context.Canceled)
 			indexed, missing := count(partial.Files, fileindex.FileIndexed), count(partial.Files, fileindex.FileMissing)
 			t.Logf("cold %v: %d indexed, %d missing at %v", cold, indexed, missing, cold/2)
 			assert.Positive(t, indexed)

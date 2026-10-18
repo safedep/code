@@ -128,3 +128,16 @@ func TestPythonRootPackage(t *testing.T) {
 	assert.True(t, p.FirstParty("outer.impl"))
 	assert.False(t, p.FirstParty("other"))
 }
+
+func TestPythonRelativePath(t *testing.T) {
+	tests := map[string]string{
+		".":        "./",
+		"..":       "./../",
+		".x":       "./x",
+		"..pkg.x":  "./../pkg/x",
+		"...a.b.c": "./../../a/b/c",
+	}
+	for module, want := range tests {
+		assert.Equal(t, want, PythonRelativePath(module), module)
+	}
+}

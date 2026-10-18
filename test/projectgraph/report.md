@@ -55,6 +55,8 @@ step.
 | Java | step 30 | none | n/a | n/a | n/a | 0.148 | 2.76 s | 0.33 s | 0.46 s | 34 ms | 61 / 38 / 57 / 5 MiB |
 | Python | step 33 | pycg-micro | 0.954 (145/152) | 0.708 (187/264) | 0.340 (85/250) | 0.159 | 1.57 s | 0.37 s | 0.36 s | 28 ms | 79 / 41 / 41 / 6 MiB |
 | JavaScript | step 33 | swarm-js | 0.821 (156/190) | 0.706 (204/289) | 0.358 (110/307) | 0.263 | 1.77 s | 0.42 s | 0.30 s | 31 ms | 80 / 36 / 38 / 7 MiB |
+| Python | review fixes | pycg-micro | 0.954 (145/152) | 0.708 (187/264) | 0.340 (85/250) | 0.159 | 1.48 s | n/a | 0.28 s | n/a | n/a |
+| JavaScript | review fixes | swarm-js | 0.828 (159/192) | 0.716 (207/289) | 0.345 (106/307) | 0.263 | 1.88 s | n/a | 0.32 s | n/a | n/a |
 | TypeScript | step 33 | none | n/a | n/a | n/a | 0.094 | 2.31 s | 0.31 s | 0.27 s | 20 ms | 72 / 33 / 38 / 4 MiB |
 | Go | step 33 | govulncheck | n/a | 1.000 (9/9) stacks | n/a | 0.082 | 1.38 s | 0.38 s | 0.21 s | 22 ms | 102 / 43 / 36 / 4 MiB |
 | Java | step 33 | none | n/a | n/a | n/a | 0.148 | 1.01 s | 0.39 s | 0.28 s | 25 ms | 76 / 37 / 37 / 5 MiB |
@@ -66,7 +68,10 @@ step.
 
 Python is now at 0.940, just under the precision gate of the design (0.95
 for `high` and `medium` edges). After step 27 it is 0.954, and its recall is
-0.708. JavaScript stays at 0.821 and 0.706.
+0.708. JavaScript stays at 0.821 and 0.706 until the review fixes of steps
+27 to 30, which take it to 0.828 and 0.716. The "review fixes" rows come
+from the run of that section, which measured the cold index step and the
+link step only.
 
 The step 33 rows come from the run of steps 32 and 33. The index cold step
 uses 4 workers, and its memory holds the 4 parsers and the trees in
@@ -209,8 +214,9 @@ class with static code has them, and they go to `<clinit>`.
 - The runner maps a function with an anonymous name to the scope that
   defines it, so the function literals of arguments change no pair.
 
-govulncheck stays at 9 of 9 stacks found, 7 of 7 call sites, 9 of 9
-stacks in order and 0 of 63 false found.
+govulncheck stays at 9 of 9 stacks found, 7 of 7 call sites and 9 of 9
+stacks in order. The graph makes no call to the symbols that govulncheck
+reports as not called, as the govulncheck section counts them.
 
 ### The language profiles
 
@@ -658,7 +664,13 @@ not called.
 | Stacks that the reach query finds | 1.000 (9/9) |
 | Paths that end at the call site of the stack | 1.000 (7/7). The script of the standard library leaves out the lines |
 | Paths with the functions of the stack, in order | 1.000 (9/9) |
-| Symbols that govulncheck does not reach and the graph finds | 0.000 (0/63) |
+| Distinct symbols that govulncheck reports as not called, in a package that the module calls into, and the graph finds | 0.000 (0/43) |
+
+The last row counts each symbol once, and only in a package that a file
+of the module calls into, because a symbol of any other package cannot be
+a node of the graph. Before this round the row counted 63 mentions of
+symbols over every package of the OSV entries. A found symbol here would
+be a call that the link step resolves to the wrong name.
 
 At the commit before step 29 the same runner gives 0.333 (3/9) found and
 0.000 (0/9) stacks. The other six were uncertain, because every import of

@@ -14,7 +14,7 @@ var pythonProfile = profile{
 	code:               langcode.Python,
 	resolver:           func(_ *builder, sp *space) modules.Resolver { return sp.keyed(sp.python) },
 	dependencyCode:     true,
-	relativePath:       pythonRelativePath,
+	relativePath:       modules.PythonRelativePath,
 	provide:            pythonProvide,
 	narrowProviders:    pythonNarrowProviders,
 	surface:            pythonSurface,
@@ -29,13 +29,6 @@ var pythonProfile = profile{
 	importBindsRoot:    true,
 	moduleNames:        true,
 	starImports:        true,
-}
-
-// pythonRelativePath turns a relative Python module into a relative path,
-// as ./ for . and ../pkg/x for ..pkg.x.
-func pythonRelativePath(spec string) string {
-	rest := strings.TrimLeft(spec, ".")
-	return "./" + strings.Repeat("../", len(spec)-len(rest)-1) + strings.ReplaceAll(rest, ".", "/")
 }
 
 // pythonDependencies returns the requirements of the Python manifests of

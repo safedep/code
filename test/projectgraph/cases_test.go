@@ -43,8 +43,9 @@ var (
 
 // expectation is the expect.yaml of a case. A site is path:line. Roots,
 // unresolved sites and the fields of a result are the whole set. Edges are a
-// subset of the edges of the graph, and no edge of the graph goes from a
-// key of NoEdges to its to key. Units names the package unit of each
+// subset of the edges of the graph, or the whole set with ExactEdges, and
+// no edge of the graph goes from a key of NoEdges to its to key. Units
+// names the package unit of each
 // directory of dependency code, relative to the project. ImportDirs are the
 // import directories that hold them, and they default to the directories of
 // Units.
@@ -59,6 +60,7 @@ type expectation struct {
 	Problems     []modules.Problem `yaml:"problems,omitempty"`
 	Roots        []root            `yaml:"roots"`
 	Edges        []edge            `yaml:"edges"`
+	ExactEdges   bool              `yaml:"exact_edges,omitempty"`
 	NoEdges      []noEdge          `yaml:"no_edges,omitempty"`
 	Unresolved   []unresolved      `yaml:"unresolved"`
 	Truncated    []truncation      `yaml:"truncated,omitempty"`
@@ -182,7 +184,11 @@ func runCase(t *testing.T, dir string, languages []core.Language) {
 	assert.Equal(t, want.Dropped, mergeOverlay(t, filepath.Join(dir, "overlay.json"), g), "dropped overlay edges")
 
 	assert.Equal(t, want.Roots, rootsOf(g, want.Roots), "roots")
-	assert.Subset(t, edgesOf(g), want.Edges, "edges")
+	if want.ExactEdges {
+		assert.ElementsMatch(t, want.Edges, edgesOf(g), "edges")
+	} else {
+		assert.Subset(t, edgesOf(g), want.Edges, "edges")
+	}
 	for _, e := range g.Edges {
 		assert.NotContains(t, want.NoEdges, noEdge{From: e.From, To: e.To}, "edge at %s", site(e.Site))
 	}

@@ -30,7 +30,8 @@ This directory tests the index step, the link step and the reach query of
    | `problems` | The whole set of problems of the link step, with `path` and `text`, as a manifest that it could not read or a unit that no import names |
    | `roots` | The whole set of roots, with `key`, `kind` and `rule`, and `site` when the case checks where a rule found the root |
    | `edges` | A subset of the edges, with `from`, `to`, `kind`, `confidence` and `site` |
-   | `no_edges` | Pairs of `from` and `to` that no edge of the graph may join |
+   | `exact_edges` | `true` makes `edges` the whole set, so a spurious edge fails the case. Use it for a small case |
+   | `no_edges` | Pairs of `from` and `to` that no edge of the graph may join. A case that is not exact needs one for each result that is found, so a spurious edge on its path fails the case |
    | `unresolved` | The whole set of unresolved sites, with `caller`, `site`, `reason` and `method` |
    | `truncated` | The whole set of truncation records of the link step, with `kind`, `key` and `site` |
    | `dropped` | The whole set of `overlay.json` edges that the merge drops, with `site`, `callee` and `reason` |

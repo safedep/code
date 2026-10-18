@@ -192,3 +192,8 @@ func TestMergeKeepsAnUncertainTarget(t *testing.T) {
 	assert.Equal(t, reach.Uncertain, after.Status, "the unresolved site stays, so the target is not proved dead")
 	assert.Equal(t, before.Uncertainties, after.Uncertainties)
 }
+
+func TestDiagnosticString(t *testing.T) {
+	d := Diagnostic{Index: 2, Edge: llmEdge("parsers.py//load"), Reason: UndefinedCallee}
+	assert.Equal(t, "overlay edge 2 at main.py:5 from main.py//dispatch to parsers.py//load: undefined-callee", d.String())
+}

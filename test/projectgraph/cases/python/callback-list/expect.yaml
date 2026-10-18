@@ -4,6 +4,7 @@ roots:
   - key: main.py
     kind: manifest
     rule: procfile
+exact_edges: true
 edges:
   - from: main.py
     to: json//loads

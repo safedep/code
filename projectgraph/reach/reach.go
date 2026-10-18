@@ -137,7 +137,11 @@ func (r Result) String() string {
 		lines = append(lines, "  test only: "+PathString(r.TestPath))
 	}
 	for _, u := range r.Uncertainties {
-		lines = append(lines, fmt.Sprintf("  %s: %s %s", u.Kind, u.Site, u.Text))
+		line := "  " + string(u.Kind) + ":"
+		if site := u.Site.String(); site != "" {
+			line += " " + site
+		}
+		lines = append(lines, line+" "+u.Text)
 	}
 	if r.Status == NoSuchTarget {
 		lines = append(lines, "  no node has the key: a target is the key form of the import, as os//exec//Command or java//lang//Thread//sleep")

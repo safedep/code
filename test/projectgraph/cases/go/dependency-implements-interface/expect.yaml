@@ -13,6 +13,7 @@ roots:
   - key: main.go//main
     kind: main
     rule: go.main
+exact_edges: true
 edges:
   - from: main.go//main
     to: github.com//acme//dep//New

@@ -16,6 +16,7 @@ import (
 	"github.com/safedep/code/fileindex/roots"
 	"github.com/safedep/code/internal/testutil"
 	"github.com/safedep/code/langcode"
+	"github.com/safedep/code/projectgraph/modules"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -1092,4 +1093,34 @@ func TestBuildWalksIntoTheDefaultValueOfAModule(t *testing.T) {
 	assert.Equal(t, []string{"main.js -> job.js//default//run member javascript.member"}, edgesOfKind(g, EdgeMember),
 		"a member that the module does not name is a member of its default class")
 	assert.Contains(t, edgeStrings(g), "main.js -> job.js//helper direct javascript.import", "a name of the module wins")
+}
+
+func TestFinishOrdersProblemsAndTruncations(t *testing.T) {
+	problems := []modules.Problem{{Path: "b/package.json", Text: "y"}, {Path: "a/package.json", Text: "z"}, {Path: "a/package.json", Text: "x"}}
+	slices.SortFunc(problems, compareProblems)
+	assert.Equal(t, []modules.Problem{{Path: "a/package.json", Text: "x"}, {Path: "a/package.json", Text: "z"}, {Path: "b/package.json", Text: "y"}}, problems)
+
+	truncations := []Truncation{
+		{Kind: TruncationExportHops, Key: "b.py//x", Site: Site{Path: "b.py"}},
+		{Kind: TruncationExportHops, Key: "a.py//x", Site: Site{Path: "a.py", Line: 2}},
+		{Kind: TruncationExportHops, Key: "a.py//x", Site: Site{Path: "a.py", Line: 1}},
+		{Kind: TruncationEdges},
+	}
+	slices.SortFunc(truncations, compareTruncations)
+	assert.Equal(t, []Truncation{
+		{Kind: TruncationEdges},
+		{Kind: TruncationExportHops, Key: "a.py//x", Site: Site{Path: "a.py", Line: 1}},
+		{Kind: TruncationExportHops, Key: "a.py//x", Site: Site{Path: "a.py", Line: 2}},
+		{Kind: TruncationExportHops, Key: "b.py//x", Site: Site{Path: "b.py"}},
+	}, truncations)
+}
+
+func TestBuildReportsTwoProblemsInPathOrder(t *testing.T) {
+	ix := &fileindex.Index{Version: fileindex.Version, Path: "src/a.js", Language: langcode.Javascript}
+	root := fstest.MapFS{"package.json": {Data: []byte("{")}, "src/package.json": {Data: []byte("[")}}
+	g, err := Build(context.Background(), []*fileindex.Index{ix}, Options{Root: root})
+	require.NoError(t, err)
+	require.Len(t, g.Problems, 2)
+	assert.Equal(t, "package.json", g.Problems[0].Path)
+	assert.Equal(t, "src/package.json", g.Problems[1].Path)
 }

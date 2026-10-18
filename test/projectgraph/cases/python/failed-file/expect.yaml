@@ -7,6 +7,7 @@ roots:
   - key: main.py
     kind: main
     rule: python.main-guard
+exact_edges: true
 edges:
   - from: main.py
     to: print

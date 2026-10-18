@@ -546,4 +546,7 @@ func TestResultString(t *testing.T) {
 	}
 	assert.Equal(t, "yaml//dump: uncertain\n  budget: big.py the file is missing\n  call at dead.py:2 in dead.py//f, which no root reaches\n  searched 1 roots, 4 nodes, 3 edges", missing.String())
 	assert.Contains(t, Result{Target: "Thread//sleep", Status: NoSuchTarget}.String(), "no node has the key")
+
+	fallback := Result{Target: "yaml//dump", Status: NotFound, Uncertainties: []Uncertainty{{Kind: RootFallback, Text: "roots: every exported symbol"}}}
+	assert.Equal(t, "yaml//dump: not-found\n  root-fallback: roots: every exported symbol\n  searched 0 roots, 0 nodes, 0 edges", fallback.String(), "an uncertainty with no site has one space")
 }

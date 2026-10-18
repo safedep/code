@@ -251,3 +251,21 @@ func TestSplitPackage(t *testing.T) {
 		assert.Equal(t, tt.sub, sub)
 	}
 }
+
+func TestParsePNPMWorkspace(t *testing.T) {
+	packages, err := parsePNPMWorkspace([]byte("packages:\n  - 'packages/*'\n  - apps/web\n"))
+	require.NoError(t, err)
+	assert.Equal(t, []string{"packages/*", "apps/web"}, packages)
+
+	packages, err = parsePNPMWorkspace([]byte("catalog:\n  react: 18\n"))
+	require.NoError(t, err)
+	assert.Empty(t, packages, "a file with no packages names no member")
+
+	_, err = parsePNPMWorkspace([]byte("packages: [\n"))
+	assert.Error(t, err)
+}
+
+func TestPackageJSONPath(t *testing.T) {
+	assert.Equal(t, "package.json", (&PackageJSON{}).Path())
+	assert.Equal(t, "packages/a/package.json", (&PackageJSON{Dir: "packages/a"}).Path())
+}

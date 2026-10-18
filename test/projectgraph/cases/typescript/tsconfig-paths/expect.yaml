@@ -4,6 +4,7 @@ roots:
   - key: src/main.ts
     kind: manifest
     rule: node.package-json
+exact_edges: true
 edges:
   - from: src/main.ts
     to: src/lib/loader.ts//load

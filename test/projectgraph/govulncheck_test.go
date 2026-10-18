@@ -69,8 +69,10 @@ type vulnMessage struct {
 type vulnRun struct {
 	dir      string
 	findings [][]vulnFrame
-	// symbols holds the symbols of each OSV entry, as pkg//Type//Method.
-	symbols map[string][]string
+	// symbols holds the symbols of each OSV entry, as pkg//Type//Method,
+	// and packages the package namespace of each symbol.
+	symbols  map[string][]string
+	packages map[string]string
 }
 
 var (
@@ -105,7 +107,10 @@ func readVulnRuns(t *testing.T, file string) []vulnRun {
 				for _, a := range m.OSV.Affected {
 					for _, imp := range a.EcosystemSpecific.Imports {
 						for _, sym := range imp.Symbols {
-							run.symbols[m.OSV.ID] = append(run.symbols[m.OSV.ID], fileindex.Join(fileindex.Namespace("go", imp.Path), strings.Split(sym, ".")...))
+							pkg := fileindex.Namespace("go", imp.Path)
+							key := fileindex.Join(pkg, strings.Split(sym, ".")...)
+							run.symbols[m.OSV.ID] = append(run.symbols[m.OSV.ID], key)
+							run.packages[key] = pkg
 						}
 					}
 				}
@@ -123,7 +128,7 @@ func readVulnRuns(t *testing.T, file string) []vulnRun {
 			flush()
 			m := moddirArg.FindStringSubmatch(line)
 			require.NotNil(t, m, line)
-			runs = append(runs, vulnRun{dir: m[1], symbols: map[string][]string{}})
+			runs = append(runs, vulnRun{dir: m[1], symbols: map[string][]string{}, packages: map[string]string{}})
 		case strings.HasPrefix(line, "#"):
 			flush()
 		default:
@@ -141,8 +146,10 @@ func readVulnRuns(t *testing.T, file string) []vulnRun {
 // site those whose path ends at the call site of the trace, of the sited
 // traces that give a line, and stack those
 // whose path has the functions of the module in the order of the trace.
-// called counts the symbols that govulncheck reports as not called and that
-// the reach query finds.
+// quiet counts the distinct symbols that govulncheck reports as not
+// called in a package that a file of the module calls into, and called
+// those of them that the reach query finds. A symbol of a package that no
+// file calls into cannot be a node of the graph, so it does not count.
 type vulnScore struct {
 	traces, found, sited, site, stack int
 	quiet, called                     int
@@ -176,16 +183,14 @@ func TestGovulncheckTraces(t *testing.T) {
 				called[trace[0].Package] = true
 				s.scoreTrace(ctx, t, g, module, trace)
 			}
-			for _, symbols := range run.symbols {
-				for _, sym := range symbols {
-					if slices.ContainsFunc(run.findings, func(trace []vulnFrame) bool { return frameKey(trace[0]) == sym }) {
-						continue
-					}
-					s.quiet++
-					if reachStatus(ctx, t, g, sym) == reach.Found {
-						s.called++
-						t.Logf("%s: govulncheck reports no call of %s, and the graph finds one", run.dir, sym)
-					}
+			for _, sym := range run.quietSymbols() {
+				if !callsInto(g, run.packages[sym]) {
+					continue
+				}
+				s.quiet++
+				if reachStatus(ctx, t, g, sym) == reach.Found {
+					s.called++
+					t.Logf("%s: govulncheck reports no call of %s, and the graph finds one", run.dir, sym)
 				}
 			}
 		}
@@ -196,12 +201,38 @@ func TestGovulncheckTraces(t *testing.T) {
 		fmt.Sprintf("  found=%s", ratio{hit: s.found, all: s.traces}),
 		fmt.Sprintf("  call-site=%s", ratio{hit: s.site, all: s.sited}),
 		fmt.Sprintf("  stack=%s", ratio{hit: s.stack, all: s.traces}),
-		fmt.Sprintf("  false-found=%s", ratio{hit: s.called, all: s.quiet}),
+		fmt.Sprintf("  not-called-found=%s", ratio{hit: s.called, all: s.quiet}),
 	}
 	t.Log("\n" + strings.Join(rows, "\n"))
 	if out := os.Getenv("PROJECTGRAPH_GOVULNCHECK_REPORT"); out != "" {
 		require.NoError(t, os.WriteFile(out, []byte(strings.Join(rows, "\n")+"\n"), 0o644))
 	}
+}
+
+// quietSymbols returns the distinct symbols of the run that no finding
+// calls, sorted.
+func (r vulnRun) quietSymbols() []string {
+	var quiet []string
+	for _, symbols := range r.symbols {
+		for _, sym := range symbols {
+			if !slices.ContainsFunc(r.findings, func(trace []vulnFrame) bool { return frameKey(trace[0]) == sym }) {
+				quiet = append(quiet, sym)
+			}
+		}
+	}
+	slices.Sort(quiet)
+	return slices.Compact(quiet)
+}
+
+// callsInto reports whether the graph has an external node under the
+// package namespace, as a call of a symbol of the package makes.
+func callsInto(g *projectgraph.Graph, pkg string) bool {
+	for key, n := range g.Nodes {
+		if n.Kind == projectgraph.NodeExternal && fileindex.HasKeyPrefix(key, pkg) {
+			return true
+		}
+	}
+	return false
 }
 
 // vulnModule returns the directory of the go.mod that holds the directory of

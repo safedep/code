@@ -5,6 +5,7 @@ roots:
     kind: framework
     rule: node.serverless.handler
     site: handler.js:3
+exact_edges: true
 edges:
   - from: handler.js//handler
     to: js-yaml//load
