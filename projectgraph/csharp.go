@@ -6,33 +6,20 @@ import (
 
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
-	"github.com/safedep/code/projectgraph/modules"
 )
 
 // csharpProfile reads the namespaces of C# as Java reads its packages: the
 // files of one namespace are one unit, a using names a namespace, and a
 // class names the classes of its namespace and of the namespaces that hold
 // it with no using.
-var csharpProfile = profile{
-	code:              langcode.CSharp,
-	resolver:          func(b *builder, _ *space) modules.Resolver { return namespaceResolver{b, langcode.CSharp} },
+var csharpProfile = classTableProfile(langcode.CSharp, langcode.CSharp, profile{
 	units:             func(b *builder) { b.addNamespaceUnits(langcode.CSharp, ".", langcode.CSharp) },
 	aliases:           (*builder).joinPartialClasses,
 	link:              (*builder).linkCSharp,
-	qualified:         func(b *builder, name string) (string, bool) { return b.resolveQualified(langcode.CSharp, name) },
 	scopeFallback:     (*builder).csharpScopeFallback,
-	instance:          []string{"this"},
-	thisCalls:         true,
-	superCalls:        true,
-	implicitBases:     true,
-	implicitFields:    true,
-	nestedTypes:       true,
-	annotationsData:   true,
-	scopeWildcards:    true,
-	exactWildcards:    true,
 	definitionExports: true,
 	implicitMethods:   csharpImplicit,
-}
+})
 
 // joinPartialClasses makes the partial classes of one name in one
 // namespace one class, as C# does.

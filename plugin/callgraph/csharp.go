@@ -109,9 +109,7 @@ func csharpConstructorProcessor(node *sitter.Node, treeData []byte, currentNames
 func csharpConstructorInitializerProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
 	args := resolveCallArguments(childOfType(node, "argument_list"), treeData, currentNamespace, callGraph, metadata)
 	if hasChildOfType(node, "base") {
-		ref := callGraph.reference(superKeyword, CallCall, node, args)
-		ref.Unbound = true
-		callGraph.addCall(currentNamespace, nil, ref)
+		callGraph.addUnboundCall(currentNamespace, superKeyword, CallCall, node, args)
 	}
 	return newProcessorResult()
 }

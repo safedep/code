@@ -215,6 +215,29 @@ func (cg *CallGraph) addEdge(caller string, kind CallKind, expression *sitter.No
 
 // addSyntheticEdge adds an edge that no call in the source makes, as the
 // edge from the instance to a method.
+// addUnboundCall adds a call of a name that the scope chain does not bind,
+// as super or a method of a base class. The link step resolves it.
+func (cg *CallGraph) addUnboundCall(caller, callee string, kind CallKind, site *sitter.Node, arguments []CallArgument) {
+	ref := cg.reference(callee, kind, site, arguments)
+	ref.Unbound = true
+	cg.addCall(caller, nil, ref)
+}
+
+// jvmConstructorName names the constructor of a Java or a Kotlin class, as
+// the JVM does. The name of the class would hide the class in the scope
+// chain of its body, so new A() in a method of A would not find the class.
+const jvmConstructorName = "<init>"
+
+// defineConstructor adds a constructor as a method of its class with the
+// name <init>, and returns its key. The class calls it, as a new of the
+// class runs it. The overloads of a constructor share one key.
+func (cg *CallGraph) defineConstructor(class string, node *sitter.Node) string {
+	namespace := class + namespaceSeparator + jvmConstructorName
+	cg.addSyntheticEdge(class, namespace, node)
+	cg.addDefinition(namespace, node)
+	return namespace
+}
+
 func (cg *CallGraph) addSyntheticEdge(caller, callee string, calleeTreeNode *sitter.Node) {
 	cg.addCall(caller, calleeTreeNode, CallReference{CalleeNamespace: callee, Kind: CallSynthetic, Arguments: []CallArgument{}})
 }

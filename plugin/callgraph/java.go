@@ -145,22 +145,13 @@ func javaMethodDeclarationProcessor(node *sitter.Node, treeData []byte, currentN
 	return functionDefinitionProcessor(node, treeData, currentNamespace, callGraph, metadata)
 }
 
-// javaConstructorName names the constructor of a Java class, as the JVM
-// does. The name of the class would hide the class in the scope chain of
-// its body, so new A() in a method of A would not find the class.
-const javaConstructorName = "<init>"
-
-// javaConstructorProcessor processes a constructor as a method of its class
-// with the name <init>. The class calls it, as a new of the class runs it.
-// The overloads of a constructor share one key.
+// javaConstructorProcessor processes a constructor as the <init> method of
+// its class, whose body runs in the key of the constructor.
 func javaConstructorProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
 	if node == nil {
 		return newProcessorResult()
 	}
-	namespace := currentNamespace + namespaceSeparator + javaConstructorName
-	callGraph.addSyntheticEdge(currentNamespace, namespace, node)
-	callGraph.addDefinition(namespace, node)
-	return processFunctionBody(node, treeData, namespace, callGraph, metadata)
+	return processFunctionBody(node, treeData, callGraph.defineConstructor(currentNamespace, node), callGraph, metadata)
 }
 
 // enumConstantProcessor processes a constant of an enum. A constant with a
@@ -188,10 +179,8 @@ func explicitConstructorInvocationProcessor(node *sitter.Node, treeData []byte, 
 		return newProcessorResult()
 	}
 	args := resolveCallArguments(node.ChildByFieldName("arguments"), treeData, currentNamespace, callGraph, metadata)
-	if constructor := node.ChildByFieldName("constructor"); constructor != nil && constructor.Type() == "super" {
-		ref := callGraph.reference("super", CallCall, constructor, args)
-		ref.Unbound = true
-		callGraph.addCall(currentNamespace, nil, ref)
+	if constructor := node.ChildByFieldName("constructor"); constructor != nil && constructor.Type() == superKeyword {
+		callGraph.addUnboundCall(currentNamespace, superKeyword, CallCall, constructor, args)
 	}
 	return newProcessorResult()
 }
@@ -243,9 +232,7 @@ func objectCreationExpressionProcessor(objectCreationNode *sitter.Node, treeData
 				markClassAssignment(scopedIdentifierAssignment)
 			}
 		} else if name := withoutTypeArguments(constructedClassName); name != "" {
-			ref := callGraph.reference(strings.ReplaceAll(name, ".", namespaceSeparator), CallNew, constructedClassNode, argsResult)
-			ref.Unbound = true
-			callGraph.addCall(currentNamespace, nil, ref)
+			callGraph.addUnboundCall(currentNamespace, strings.ReplaceAll(name, ".", namespaceSeparator), CallNew, constructedClassNode, argsResult)
 		}
 	}
 
@@ -412,9 +399,7 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 	// A name that the scope chain does not bind is a method of the class
 	// or of a base class, or a method that a static import names. The link
 	// step resolves it.
-	ref := callGraph.reference(methodName, CallCall, methodInvocationNode, argsResult)
-	ref.Unbound = true
-	callGraph.addCall(currentNamespace, nil, ref)
+	callGraph.addUnboundCall(currentNamespace, methodName, CallCall, methodInvocationNode, argsResult)
 	return newProcessorResult()
 }
 

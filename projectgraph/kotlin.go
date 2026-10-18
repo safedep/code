@@ -9,28 +9,15 @@ import (
 
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
-	"github.com/safedep/code/projectgraph/modules"
 )
 
 // kotlinProfile shares the class table and the rules of Java. Kotlin and
 // Java files of one package are one unit, so each calls the other.
-var kotlinProfile = profile{
-	code:            langcode.Kotlin,
-	resolver:        func(b *builder, _ *space) modules.Resolver { return namespaceResolver{b, langcode.Java} },
+var kotlinProfile = classTableProfile(langcode.Kotlin, langcode.Java, profile{
 	link:            (*builder).linkKotlin,
 	implicitMethods: kotlinOperators,
-	qualified:       (*builder).resolveJava,
 	scopeFallback:   (*builder).javaScopeFallback,
-	instance:        []string{"this"},
-	thisCalls:       true,
-	superCalls:      true,
-	implicitBases:   true,
-	implicitFields:  true,
-	nestedTypes:     true,
-	annotationsData: true,
-	scopeWildcards:  true,
-	exactWildcards:  true,
-}
+})
 
 // kotlinOperators name the member functions that Kotlin code calls with no
 // call of the name: an operator, as plus for a + b, a destructuring, as

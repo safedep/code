@@ -9,22 +9,32 @@ import (
 	"github.com/safedep/code/projectgraph/modules"
 )
 
-var javaProfile = profile{
-	code:            langcode.Java,
-	resolver:        func(b *builder, _ *space) modules.Resolver { return namespaceResolver{b, langcode.Java} },
-	units:           (*builder).addJavaUnits,
-	link:            (*builder).linkClassInits,
-	qualified:       (*builder).resolveJava,
-	scopeFallback:   (*builder).javaScopeFallback,
-	instance:        []string{"this"},
-	thisCalls:       true,
-	superCalls:      true,
-	implicitBases:   true,
-	implicitFields:  true,
-	nestedTypes:     true,
-	annotationsData: true,
-	scopeWildcards:  true,
-	exactWildcards:  true,
+var javaProfile = classTableProfile(langcode.Java, langcode.Java, profile{
+	units:         (*builder).addJavaUnits,
+	link:          (*builder).linkClassInits,
+	scopeFallback: (*builder).javaScopeFallback,
+})
+
+// classTableProfile fills the rules of a language whose files declare a
+// package or a namespace, and whose classes make a table by qualified name
+// in the family, as Java, Kotlin and C#. A call with no receiver in a method
+// runs on this, a class names the classes of its package and the types of
+// an implicit package with no import, a method names a field with no this,
+// an annotation is data, and a wildcard import names a class exactly.
+func classTableProfile(code, family langcode.Code, p profile) profile {
+	p.code = code
+	p.resolver = func(b *builder, _ *space) modules.Resolver { return namespaceResolver{b, family} }
+	p.qualified = func(b *builder, name string) (string, bool) { return b.resolveQualified(family, name) }
+	p.instance = []string{"this"}
+	p.thisCalls = true
+	p.superCalls = true
+	p.implicitBases = true
+	p.implicitFields = true
+	p.nestedTypes = true
+	p.annotationsData = true
+	p.scopeWildcards = true
+	p.exactWildcards = true
+	return p
 }
 
 // javaLang is the key of the package that a Java or a Kotlin file names

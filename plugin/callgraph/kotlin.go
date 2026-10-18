@@ -82,21 +82,14 @@ var kotlinProfile = shapedProfile(languageProfile{
 	trailing:      typed("call_suffix", "annotated_lambda"),
 })
 
-// kotlinConstructorName names a secondary constructor, as Java names a
-// constructor.
-const kotlinConstructorName = javaConstructorName
-
-// kotlinConstructorProcessor processes a secondary constructor as a method
-// of its class with the name <init>, as a Java constructor. The class calls
-// it.
+// kotlinConstructorProcessor processes a secondary constructor as the
+// <init> method of its class, as a Java constructor. Its parameters and
+// its body run in the key of the constructor.
 func kotlinConstructorProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
 	if node == nil {
 		return newProcessorResult()
 	}
-	namespace := currentNamespace + namespaceSeparator + kotlinConstructorName
-	callGraph.addSyntheticEdge(currentNamespace, namespace, node)
-	callGraph.addDefinition(namespace, node)
-	processChildren(node, treeData, namespace, callGraph, metadata)
+	processChildren(node, treeData, callGraph.defineConstructor(currentNamespace, node), callGraph, metadata)
 	return newProcessorResult()
 }
 
@@ -109,9 +102,7 @@ func kotlinDelegationCallProcessor(node *sitter.Node, treeData []byte, currentNa
 	}
 	args := resolveCallArguments(childOfType(node, "value_arguments"), treeData, currentNamespace, callGraph, metadata)
 	if node.ChildCount() > 0 && node.Child(0).Type() == superKeyword {
-		ref := callGraph.reference(superKeyword, CallCall, node.Child(0), args)
-		ref.Unbound = true
-		callGraph.addCall(currentNamespace, nil, ref)
+		callGraph.addUnboundCall(currentNamespace, superKeyword, CallCall, node.Child(0), args)
 	}
 	return newProcessorResult()
 }

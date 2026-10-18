@@ -201,9 +201,7 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 			markClassAssignment(assignment)
 			return result
 		}
-		ref := callGraph.reference(functionName, CallCall, functionCallNode, callArguments)
-		ref.Unbound = true
-		callGraph.addCall(currentNamespace, nil, ref)
+		callGraph.addUnboundCall(currentNamespace, functionName, CallCall, functionCallNode, callArguments)
 		return result
 	case "attribute", "subscript":
 		processPythonChainRoot(function, treeData, currentNamespace, callGraph, metadata)
