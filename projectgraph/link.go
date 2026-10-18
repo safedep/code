@@ -123,8 +123,6 @@ type builder struct {
 	// of variables across files stops.
 	reading map[string]bool
 
-	// composer holds the autoload maps of PHP.
-	composer *modules.Composer
 	// groupMembers holds the members of each group of aliases by its first
 	// alias, and nodesByParent the keys of the nodes by their parent.
 	groupMembers  map[string]map[string]string
@@ -133,17 +131,11 @@ type builder struct {
 	// externalBases the first external base of each class, or "".
 	groupRecords  map[string][]classRecord
 	externalBases map[string]string
-	// cargo holds the crates of Rust, and rustModules the module path of
-	// each Rust file.
-	cargo       *modules.Cargo
-	rustModules map[string]string
-	// rubyLoadPath holds the directories that a Ruby require reads.
-	rubyLoadPath []string
-	// constants holds the Ruby classes and modules by constant path, as
-	// Shop::Loader.
-	constants map[string][]string
-	units     map[string]*unit
-	unitOf    map[string]*unit
+	// state holds the state of each language that keeps one, as the crates
+	// of Rust. langState reads it.
+	state  map[langcode.Code]any
+	units  map[string]*unit
+	unitOf map[string]*unit
 	// namespaces holds the table of the units of each language family whose
 	// files declare a package or a namespace.
 	namespaces map[langcode.Code]*namespaces
@@ -167,12 +159,20 @@ type builder struct {
 	// structural holds the narrowed calls whose type an object of another
 	// class can satisfy, so they keep their field edges.
 	structural map[siteCall]bool
-	// goMethods holds the Go methods of each package unit by name.
-	goMethods map[familyName][]string
-	// implemented holds whether a Go type implements an interface.
-	implemented map[[2]string]bool
 	// loads holds whether the module top level of each file runs code.
 	loads map[string]bool
+}
+
+// langState returns the state of a language of the build. The first call
+// makes it. Each language file declares its own state type, so the builder
+// holds no field of one language.
+func langState[T any](b *builder, code langcode.Code) *T {
+	if s, ok := b.state[code]; ok {
+		return s.(*T)
+	}
+	s := new(T)
+	b.state[code] = s
+	return s
 }
 
 type classRecord struct {
@@ -216,6 +216,7 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		classes:     map[string]classRecord{},
 		defs:        make(map[string]*fileindex.Definition, defs),
 		reading:     map[string]bool{},
+		state:       map[langcode.Code]any{},
 		units:       map[string]*unit{},
 		unitOf:      map[string]*unit{},
 		spaces:      map[string]*space{},
@@ -229,7 +230,6 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		aliases:     map[string][]string{},
 		narrowed:    map[Site][]string{},
 		structural:  map[siteCall]bool{},
-		implemented: map[[2]string]bool{},
 		test:        map[string]bool{},
 		rules:       roots.Merge(roots.Default(), opts.Rules),
 	}

@@ -51,6 +51,18 @@ var rubyImplicit = map[string]bool{
 	"self.method_added": true, "self.const_missing": true, "self.method_missing": true,
 }
 
+// rubyState is the state of Ruby in a build: the directories that a
+// require reads, and the classes and modules by constant path, as
+// Shop::Loader.
+type rubyState struct {
+	loadPath  []string
+	constants map[string][]string
+}
+
+func (b *builder) rubyState() *rubyState {
+	return langState[rubyState](b, langcode.Ruby)
+}
+
 // addLanguageUnit makes the files of the language one unit, whose top-level
 // names are in scope in each file.
 func (b *builder) addLanguageUnit(lang langcode.Code) {
@@ -68,7 +80,7 @@ func (b *builder) addLanguageUnit(lang langcode.Code) {
 // joinReopenedClasses makes the classes and modules of one constant path
 // one class, as Shop::Loader in two files.
 func (b *builder) joinReopenedClasses() {
-	b.constants = map[string][]string{}
+	constants := map[string][]string{}
 	for _, p := range b.paths {
 		ix := b.byPath[p]
 		if ix == nil || ix.Language != langcode.Ruby {
@@ -76,11 +88,12 @@ func (b *builder) joinReopenedClasses() {
 		}
 		for _, c := range ix.Classes {
 			path := strings.Join(fileindex.Segments(c.Key), "::")
-			b.constants[path] = append(b.constants[path], c.Key)
+			constants[path] = append(constants[path], c.Key)
 		}
 	}
+	b.rubyState().constants = constants
 	var list [][]string
-	for _, g := range b.constants {
+	for _, g := range constants {
 		list = append(list, slices.Clone(g))
 	}
 	b.joinAliases(list)
@@ -133,14 +146,15 @@ func (r rubyResolver) FirstParty(spec string) bool {
 // rubyLibs returns the directories that a require reads, as Bundler and a
 // gemspec put them on the load path: each lib directory, and the root.
 func (b *builder) rubyLibs() []string {
-	if b.rubyLoadPath == nil {
-		b.rubyLoadPath = []string{}
+	s := b.rubyState()
+	if s.loadPath == nil {
+		s.loadPath = []string{}
 		for _, d := range b.project.files.Dirs() {
 			if path.Base(d) == "lib" {
-				b.rubyLoadPath = append(b.rubyLoadPath, d)
+				s.loadPath = append(s.loadPath, d)
 			}
 		}
-		b.rubyLoadPath = append(b.rubyLoadPath, "")
+		s.loadPath = append(s.loadPath, "")
 	}
-	return b.rubyLoadPath
+	return s.loadPath
 }

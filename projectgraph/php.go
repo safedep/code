@@ -39,10 +39,20 @@ var phpMagic = map[string]bool{
 	"rewind": true, "count": true, "jsonSerialize": true,
 }
 
+// phpState is the state of PHP in a build: the autoload maps of Composer.
+type phpState struct {
+	composer *modules.Composer
+}
+
+func (b *builder) phpState() *phpState {
+	return langState[phpState](b, langcode.PHP)
+}
+
 func (b *builder) addPHPUnits() {
 	b.addNamespaceUnits(langcode.PHP, `\`, langcode.PHP)
-	b.composer = modules.NewComposer(b.project.files, b.opts.Root)
-	b.problems = append(b.problems, b.composer.Problems()...)
+	composer := modules.NewComposer(b.project.files, b.opts.Root)
+	b.phpState().composer = composer
+	b.problems = append(b.problems, composer.Problems()...)
 }
 
 // linkPHP adds the edges of the class bodies, as C# does. PHP runs no
@@ -71,7 +81,7 @@ func (r phpResolver) Module(importer, spec string) (string, string, bool) {
 	if key, ok := r.b.resolveQualified(langcode.PHP, spec); ok {
 		return key, "class", true
 	}
-	for _, file := range r.b.composer.Files(spec) {
+	for _, file := range r.b.phpState().composer.Files(spec) {
 		if !r.b.project.files.Has(file) {
 			continue
 		}
@@ -90,7 +100,7 @@ func (r phpResolver) FirstParty(spec string) bool {
 	if phpPath(spec) {
 		return true
 	}
-	return r.b.namespaces[langcode.PHP].firstParty(spec) || r.b.composer.FirstParty(spec)
+	return r.b.namespaces[langcode.PHP].firstParty(spec) || r.b.phpState().composer.FirstParty(spec)
 }
 
 // phpPath reports whether the spec of an import names a file, as an

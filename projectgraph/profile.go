@@ -36,6 +36,17 @@ type profile struct {
 	// relativePath turns a relative module into a path, as ./pkg/ for ..pkg.
 	// in Python. A module that ends in its separator names a directory.
 	relativePath func(spec string) string
+	// provide returns the modules of a unit of dependency code that give a
+	// module of the family, as an import of the form names it. A unit that
+	// gives the package and not the module gives one provision with no
+	// module. The profile of the family holds it.
+	provide func(b *builder, sp *space, module string, form modules.Form) []provision
+	// narrowProviders drops the units that an import of the family does not
+	// read, as the shorter module paths of Go.
+	narrowProviders func(out []provision) []provision
+	// surface adds the exported symbols of a unit of dependency code with
+	// the import that names each one. The profile of the family holds it.
+	surface func(s *surfacer)
 
 	// instance names the receiver that holds the instance in a method. A
 	// call on it can reach the method of any subclass.

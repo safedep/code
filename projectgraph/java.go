@@ -194,7 +194,7 @@ func (b *builder) nestedType(sc *scope, from, name string) (string, bool) {
 		if nested := fileindex.Join(class, name); b.isType(nested) {
 			return nested, true
 		}
-		if keys := b.constants[constantPath(class, name)]; len(keys) > 0 {
+		if keys := b.rubyState().constants[constantPath(class, name)]; len(keys) > 0 {
 			return keys[0], true
 		}
 	}

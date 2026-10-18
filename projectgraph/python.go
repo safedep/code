@@ -1,6 +1,7 @@
 package projectgraph
 
 import (
+	"maps"
 	"slices"
 	"strings"
 
@@ -14,6 +15,9 @@ var pythonProfile = profile{
 	resolver:           func(_ *builder, sp *space) modules.Resolver { return sp.keyed(sp.python) },
 	dependencyCode:     true,
 	relativePath:       pythonRelativePath,
+	provide:            pythonProvide,
+	narrowProviders:    pythonNarrowProviders,
+	surface:            pythonSurface,
 	instance:           []string{"self", "cls"},
 	objectBase:         "object",
 	literals:           map[string]bool{"None": true, "True": true, "False": true, "Ellipsis": true, "NotImplemented": true},
@@ -31,6 +35,96 @@ var pythonProfile = profile{
 func pythonRelativePath(spec string) string {
 	rest := strings.TrimLeft(spec, ".")
 	return "./" + strings.Repeat("../", len(spec)-len(rest)-1) + strings.ReplaceAll(rest, ".", "/")
+}
+
+// pythonProvide returns the module of a pypi unit that an absolute import
+// names.
+func pythonProvide(_ *builder, sp *space, module string, _ modules.Form) []provision {
+	if strings.HasPrefix(module, ".") {
+		return nil
+	}
+	if _, ok := sp.python.Absolute("", firstDotted(module)); !ok {
+		return nil
+	}
+	mod, ok := sp.python.Absolute("", module)
+	if !ok {
+		return []provision{{sp: sp}}
+	}
+	return []provision{{sp: sp, module: sp.key(mod), via: "absolute"}}
+}
+
+// pythonNarrowProviders keeps the units that give the module when one
+// does. The distributions of one namespace package, as google, share its
+// top-level directory. Only one of them gives a module under it, so the
+// others do not miss the module.
+func pythonNarrowProviders(out []provision) []provision {
+	if slices.ContainsFunc(out, func(pv provision) bool { return pv.module != "" }) {
+		out = slices.DeleteFunc(out, func(pv provision) bool { return pv.module == "" })
+	}
+	return out
+}
+
+// pythonSurface adds the public names of each public Python module of a
+// unit.
+func pythonSurface(s *surfacer) {
+	b, sp := s.b, s.sp
+	for _, p := range b.paths {
+		ix := b.byPath[p]
+		if ix == nil || !sameUnit(p, sp.unit) || ix.Language != langcode.Python {
+			continue
+		}
+		if module, ok := pythonModuleName(sp.inner(p), sp.python.RootPackage()); ok {
+			for _, name := range b.pythonPublicNames(ix) {
+				s.exported(ix, module, modules.FormImport, name)
+			}
+		}
+	}
+}
+
+// pythonModuleName returns the dotted name of a Python module of a package,
+// as requests.api for requests/api.py, under the package that the file set
+// is, if any. A module with a part that starts with an underscore is
+// private, and a __main__ module is a script.
+func pythonModuleName(p, pkg string) (string, bool) {
+	rel, ok := strings.CutSuffix(p, ".py")
+	if !ok {
+		return "", false
+	}
+	rel = strings.TrimSuffix(strings.TrimSuffix(rel, "__init__"), "/")
+	var parts []string
+	if pkg != "" {
+		parts = append(parts, pkg)
+	}
+	if rel != "" {
+		parts = append(parts, strings.Split(rel, "/")...)
+	}
+	if len(parts) == 0 || slices.ContainsFunc(parts[len(parts)-len(strings.Split(rel, "/")):], func(part string) bool { return strings.HasPrefix(part, "_") }) {
+		return "", false
+	}
+	return strings.Join(parts, "."), true
+}
+
+// pythonPublicNames returns the names of __all__ of a module, or else its
+// top-level definitions and the names that it imports from its own
+// package, with no leading underscore.
+func (b *builder) pythonPublicNames(ix *fileindex.Index) []string {
+	sc := b.scopes[ix.Path]
+	if sc.hasExports {
+		return slices.Sorted(maps.Keys(sc.exports))
+	}
+	set := map[string]bool{}
+	for _, def := range ix.Definitions {
+		if segs := fileindex.Segments(def.Key); len(segs) == 1 {
+			set[segs[0]] = true
+		}
+	}
+	for name, imp := range sc.bindings {
+		module, _ := importedModule(ix.Language, imp)
+		if _, _, ok := b.resolveModule(ix, module); ok {
+			set[name] = true
+		}
+	}
+	return slices.DeleteFunc(slices.Sorted(maps.Keys(set)), func(n string) bool { return strings.HasPrefix(n, "_") })
 }
 
 // c3 returns the C3 linearization of the first-party bases of a class, or

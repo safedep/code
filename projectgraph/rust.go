@@ -72,17 +72,29 @@ var rustImplicit = map[string]bool{
 // toolchain, which no crate of the project defines.
 var rustRoots = map[string]bool{"std": true, "core": true, "alloc": true}
 
+// rustState is the state of Rust in a build: the crates, and the module
+// path of each Rust file.
+type rustState struct {
+	cargo   *modules.Cargo
+	modules map[string]string
+}
+
+func (b *builder) rustState() *rustState {
+	return langState[rustState](b, langcode.Rust)
+}
+
 // addRustUnits makes each Rust file the unit of its module, in the table of
 // the module paths.
 func (b *builder) addRustUnits() {
-	b.cargo = modules.NewCargo(b.project.files, b.opts.Root)
-	b.problems = append(b.problems, b.cargo.Problems()...)
-	b.rustModules = map[string]string{}
+	s := b.rustState()
+	s.cargo = modules.NewCargo(b.project.files, b.opts.Root)
+	b.problems = append(b.problems, s.cargo.Problems()...)
+	s.modules = map[string]string{}
 	files := map[string][]string{}
 	for _, p := range b.paths {
 		if ix := b.byPath[p]; ix != nil && ix.Language == langcode.Rust {
 			module := b.rustModule(p)
-			b.rustModules[p] = module
+			s.modules[p] = module
 			files[module] = append(files[module], p)
 		}
 	}
@@ -100,7 +112,7 @@ func (b *builder) addRustUnits() {
 // A file of src/bin, tests, examples or benches, and build.rs, is the root
 // of a crate of its own, which no path of another file names.
 func (b *builder) rustModule(p string) string {
-	crate, ok := b.cargo.Crate(p)
+	crate, ok := b.rustState().cargo.Crate(p)
 	name, rel := "crate", p
 	if ok {
 		name = crate.Name
@@ -148,7 +160,7 @@ func (b *builder) rustPaths(module, written string) []string {
 		return []string{joinPath(module, parts)}
 	}
 	out := []string{joinPath(module, parts)}
-	if b.cargo.Has(parts[0]) {
+	if b.rustState().cargo.Has(parts[0]) {
 		out = append(out, written)
 	}
 	return out
@@ -161,7 +173,7 @@ func joinPath(module string, parts []string) string {
 // resolveRust resolves a path that a file of the module writes to a
 // definition or a module of the project.
 func (b *builder) resolveRust(importer, written string) (string, bool) {
-	for _, p := range b.rustPaths(b.rustModules[importer], written) {
+	for _, p := range b.rustPaths(b.rustState().modules[importer], written) {
 		if key, ok := b.resolveQualified(langcode.Rust, p); ok {
 			return key, true
 		}
@@ -191,7 +203,7 @@ func (r rustResolver) FirstParty(spec string) bool {
 	case rustRoots[first]:
 		return false
 	}
-	return r.b.cargo.Has(first) || r.b.project.files.HasName(first)
+	return r.b.rustState().cargo.Has(first) || r.b.project.files.HasName(first)
 }
 
 // rustScopeFallback resolves a path that no use and no item of the module

@@ -2,8 +2,11 @@ package projectgraph
 
 import (
 	"cmp"
+	"maps"
 	"slices"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
@@ -16,10 +19,103 @@ var goProfile = profile{
 	units:              (*builder).addGoUnits,
 	dependencyCode:     true,
 	link:               (*builder).linkInits,
+	provide:            goProvide,
+	narrowProviders:    goNarrowProviders,
+	surface:            goSurface,
 	implicitInterfaces: true,
 	typeConversions:    true,
 	scopeWildcards:     true,
 	mainLoadsPackage:   true,
+}
+
+// goProvide returns the package unit of a Go module that an import path
+// under its module path names.
+func goProvide(_ *builder, sp *space, module string, _ modules.Form) []provision {
+	rel, ok := strings.CutPrefix(module, sp.pkg.Name)
+	if sp.pkg.Ecosystem != "go" || !ok || rel != "" && !strings.HasPrefix(rel, "/") {
+		return nil
+	}
+	dir, ok := sp.golang.Resolve(module)
+	if !ok {
+		dir = strings.TrimPrefix(rel, "/")
+	}
+	if u := sp.goPackages[dir]; u != nil {
+		return []provision{{sp: sp, module: u.key, via: "module"}}
+	}
+	return []provision{{sp: sp}}
+}
+
+// goNarrowProviders keeps the units of the longest module path, which holds
+// the package, as the go command takes it for nested modules.
+func goNarrowProviders(out []provision) []provision {
+	longest := 0
+	for _, pv := range out {
+		longest = max(longest, len(pv.sp.pkg.Name))
+	}
+	return slices.DeleteFunc(out, func(pv provision) bool { return len(pv.sp.pkg.Name) < longest })
+}
+
+// goSurface adds the exported names and methods of each Go package of a
+// unit that is not internal.
+func goSurface(s *surfacer) {
+	b, sp := s.b, s.sp
+	for _, dir := range slices.Sorted(maps.Keys(sp.goPackages)) {
+		importPath, ok := b.goImportPath(sp, dir)
+		if !ok {
+			continue
+		}
+		for _, p := range sp.goPackages[dir].files {
+			if strings.HasSuffix(p, "_test.go") || b.byPath[p] == nil {
+				continue
+			}
+			for _, def := range b.byPath[p].Definitions {
+				segs := fileindex.Segments(def.Key)
+				switch {
+				case len(segs) == 1 && isGoExported(segs[0]):
+					s.add(langcode.Go, importPath, modules.FormImport, segs[0])
+				case len(segs) == 2 && def.Kind == fileindex.DefMethod && isGoExported(segs[0]) && isGoExported(segs[1]):
+					s.add(langcode.Go, importPath, modules.FormImport, segs...)
+				}
+			}
+		}
+	}
+}
+
+// goImportPath returns the import path of a Go package of a unit. A package
+// under an internal directory and a main package have no importer outside
+// the module.
+func (b *builder) goImportPath(sp *space, dir string) (string, bool) {
+	u := sp.goPackages[dir]
+	if slices.Contains(strings.Split(dir, "/"), "internal") || slices.ContainsFunc(u.files, func(p string) bool {
+		ix := b.byPath[p]
+		return ix != nil && ix.Package == "main"
+	}) {
+		return "", false
+	}
+	if p, ok := sp.golang.ImportPath(dir); ok {
+		return p, true
+	}
+	return strings.TrimSuffix(sp.pkg.Name+"/"+dir, "/"), true
+}
+
+func isGoExported(name string) bool {
+	r, _ := utf8.DecodeRuneInString(name)
+	return unicode.IsUpper(r)
+}
+
+// goState is the state of Go in a build: the methods of each package unit
+// by name, and whether a type implements an interface.
+type goState struct {
+	methods     map[familyName][]string
+	implemented map[[2]string]bool
+}
+
+func (b *builder) goState() *goState {
+	s := langState[goState](b, langcode.Go)
+	if s.implemented == nil {
+		s.implemented = map[[2]string]bool{}
+	}
+	return s
 }
 
 // goResolver resolves a Go import path to the unit of the package that an
@@ -133,8 +229,9 @@ func (b *builder) linkInits(ix *fileindex.Index) {
 // interface of a unit holds only the types of its unit. One call as the
 // only argument can give more values, so it takes any arity.
 func (b *builder) implementations(iface string, call fileindex.Call) []string {
-	if b.goMethods == nil {
-		b.goMethods = map[familyName][]string{}
+	s := b.goState()
+	if s.methods == nil {
+		s.methods = map[familyName][]string{}
 		for _, p := range b.paths {
 			ix := b.byPath[p]
 			if ix == nil || ix.Language != langcode.Go {
@@ -143,7 +240,7 @@ func (b *builder) implementations(iface string, call fileindex.Call) []string {
 			for _, def := range ix.Definitions {
 				if def.Kind == fileindex.DefMethod && len(fileindex.Segments(def.Key)) == 2 {
 					k := familyName{unit: ix.Unit, name: def.Name}
-					b.goMethods[k] = append(b.goMethods[k], def.Key)
+					s.methods[k] = append(s.methods[k], def.Key)
 				}
 			}
 		}
@@ -160,7 +257,7 @@ func (b *builder) implementations(iface string, call fileindex.Call) []string {
 	spread := args == 1 && call.Args[0].Shape == fileindex.ArgComputed
 	var out []string
 	for _, unit := range units {
-		for _, key := range b.goMethods[familyName{unit: unit, name: call.Method}] {
+		for _, key := range s.methods[familyName{unit: unit, name: call.Method}] {
 			def := b.defs[key]
 			takes := spread || def.Arity == args || def.Variadic && args >= def.Arity-1
 			if takes && b.implements(fileindex.Parent(key), iface) {
@@ -179,8 +276,9 @@ func (b *builder) implementations(iface string, call fileindex.Call) []string {
 // embedded interface of a dependency are not known, so the type needs none
 // of them.
 func (b *builder) implements(typ, iface string) bool {
+	s := b.goState()
 	k := [2]string{typ, iface}
-	if held, ok := b.implemented[k]; ok {
+	if held, ok := s.implemented[k]; ok {
 		return held
 	}
 	held := true
@@ -192,7 +290,7 @@ func (b *builder) implements(typ, iface string) bool {
 			break
 		}
 	}
-	b.implemented[k] = held
+	s.implemented[k] = held
 	return held
 }
 
