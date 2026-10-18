@@ -82,7 +82,7 @@ func (p *projection) csharpTypeName(node *sitter.Node) string {
 	case "qualified_name":
 		return withoutTypeArgs(p.text(node))
 	case "generic_name":
-		return p.text(childOfType(node, "identifier"))
+		return p.text(ts.ChildOfType(node, "identifier"))
 	case "nullable_type":
 		return p.csharpTypeName(node.ChildByFieldName("type"))
 	}
@@ -90,7 +90,7 @@ func (p *projection) csharpTypeName(node *sitter.Node) string {
 }
 
 func csharpBases(p *projection, class *sitter.Node) []string {
-	list := childOfType(class, "base_list")
+	list := ts.ChildOfType(class, "base_list")
 	if list == nil {
 		return nil
 	}
@@ -107,7 +107,7 @@ func csharpBases(p *projection, class *sitter.Node) []string {
 // csharpFields returns the fields and the properties of a class that
 // declare a class type, and the parameters of a primary constructor.
 func csharpFields(p *projection, class *sitter.Node) []fileindex.Typed {
-	fields := p.csharpParams(childOfType(class, "parameter_list"))
+	fields := p.csharpParams(ts.ChildOfType(class, "parameter_list"))
 	body := class.ChildByFieldName("body")
 	if body == nil {
 		return fields
@@ -115,7 +115,7 @@ func csharpFields(p *projection, class *sitter.Node) []fileindex.Typed {
 	for _, member := range ts.NamedChildren(body) {
 		switch member.Type() {
 		case "field_declaration":
-			fields = append(fields, p.csharpVariables(childOfType(member, "variable_declaration"))...)
+			fields = append(fields, p.csharpVariables(ts.ChildOfType(member, "variable_declaration"))...)
 		case "property_declaration":
 			if typ := p.csharpTypeName(member.ChildByFieldName("type")); typ != "" {
 				fields = append(fields, fileindex.Typed{Name: p.text(member.ChildByFieldName("name")), Type: typ})
@@ -138,7 +138,7 @@ func (p *projection) csharpVariables(declaration *sitter.Node) []fileindex.Typed
 			continue
 		}
 		t := typ
-		if creation := childOfType(declarator, "object_creation_expression"); t == "" && creation != nil {
+		if creation := ts.ChildOfType(declarator, "object_creation_expression"); t == "" && creation != nil {
 			t = p.csharpTypeName(creation.ChildByFieldName("type"))
 		}
 		if t != "" {
@@ -199,16 +199,10 @@ func csharpSignature(p *projection, def *fileindex.Definition, node *sitter.Node
 	case node.Type() != "method_declaration" && node.Type() != "constructor_declaration" && node.Type() != "local_function_statement":
 		return
 	}
-	def.Static = csharpStatic(node)
+	def.Static = ts.HasModifier(node, "static")
 	def.Params = p.csharpParams(node.ChildByFieldName("parameters"))
 	def.Returns = p.csharpTypeName(node.ChildByFieldName("returns"))
 	def.Locals = p.csharpLocals(node.ChildByFieldName("body"))
-}
-
-func csharpStatic(node *sitter.Node) bool {
-	return slices.ContainsFunc(ts.NamedChildren(node), func(child *sitter.Node) bool {
-		return child.Type() == "modifier" && hasKeyword(child, "static")
-	})
 }
 
 // csharpLocals returns the local variables of a body that declare a class
@@ -246,7 +240,7 @@ func (p *projection) csharpLocals(body *sitter.Node) []fileindex.Typed {
 func csharpTopLevelStatements(p *projection) {
 	var statements []*sitter.Node
 	for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
-		if statement.Type() == "global_statement" && childOfType(statement, "local_function_statement") == nil {
+		if statement.Type() == "global_statement" && ts.ChildOfType(statement, "local_function_statement") == nil {
 			statements = append(statements, statement)
 		}
 	}

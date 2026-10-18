@@ -101,8 +101,8 @@ func (cg *CallGraph) addRecord(caller string, site *sitter.Node, receiver, metho
 	record := UnresolvedCall{
 		Caller:   caller,
 		Site:     ast.GetNodePosition(site),
-		Text:     clip(site.Content(treeData)),
-		Receiver: clip(receiver),
+		Text:     ClipText(site.Content(treeData)),
+		Receiver: ClipText(receiver),
 		Method:   method,
 		Reason:   reason,
 	}
@@ -173,7 +173,9 @@ func (cg *CallGraph) LimitExceeded() bool {
 	return len(cg.truncations) > 0
 }
 
-func clip(text string) string {
+// ClipText bounds the text of a record to maxSiteText bytes, at a rune
+// start.
+func ClipText(text string) string {
 	if len(text) <= maxSiteText {
 		return text
 	}

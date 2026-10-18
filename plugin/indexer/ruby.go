@@ -8,6 +8,7 @@ import (
 	"github.com/safedep/code/core/ast"
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/pkg/ts"
+	"github.com/safedep/code/plugin/callgraph"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -198,7 +199,7 @@ func (p *projection) addRubyUnresolved(node *sitter.Node, name string) {
 		Caller:   p.caller(p.innermost(node.StartByte()), site),
 		Line:     int(site.StartLine),
 		Column:   int(site.StartColumn),
-		Text:     clipText(p.text(node)),
+		Text:     callgraph.ClipText(p.text(node)),
 		Receiver: p.text(node.ChildByFieldName("receiver")),
 		Method:   name,
 		Reason:   fileindex.UnresolvedUnknownReceiver,

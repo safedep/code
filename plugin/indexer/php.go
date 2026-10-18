@@ -39,7 +39,7 @@ var phpRules = languageRules{
 }
 
 func phpNamespace(p *projection) string {
-	if ns := childOfType(p.tree.Tree().RootNode(), "namespace_definition"); ns != nil {
+	if ns := ts.ChildOfType(p.tree.Tree().RootNode(), "namespace_definition"); ns != nil {
 		return p.text(ns.ChildByFieldName("name"))
 	}
 	return ""
@@ -81,11 +81,11 @@ func (p *projection) phpTypeName(node *sitter.Node) string {
 	}
 	switch node.Type() {
 	case "named_type":
-		if name := childOfType(node, "name", "qualified_name"); name != nil {
+		if name := ts.ChildOfType(node, "name", "qualified_name"); name != nil {
 			return p.text(name)
 		}
 	case "optional_type":
-		return p.phpTypeName(childOfType(node, "named_type"))
+		return p.phpTypeName(ts.ChildOfType(node, "named_type"))
 	}
 	return ""
 }
@@ -107,7 +107,7 @@ func phpFields(p *projection, class *sitter.Node) []fileindex.Typed {
 			}
 			for _, element := range ts.NamedChildren(member) {
 				if element.Type() == "property_element" {
-					fields = append(fields, fileindex.Typed{Name: strings.TrimPrefix(p.text(childOfType(element, "variable_name")), "$"), Type: typ})
+					fields = append(fields, fileindex.Typed{Name: strings.TrimPrefix(p.text(ts.ChildOfType(element, "variable_name")), "$"), Type: typ})
 				}
 			}
 		case "method_declaration":
@@ -149,7 +149,7 @@ func phpSignature(p *projection, def *fileindex.Definition, node *sitter.Node) {
 	if node.Type() != "method_declaration" && node.Type() != "function_definition" {
 		return
 	}
-	def.Static = node.Type() == "function_definition" || childOfType(node, "static_modifier") != nil
+	def.Static = node.Type() == "function_definition" || ts.ChildOfType(node, "static_modifier") != nil
 	for _, param := range ts.NamedChildren(node.ChildByFieldName("parameters")) {
 		if typ := p.phpTypeName(param.ChildByFieldName("type")); typ != "" {
 			def.Params = append(def.Params, fileindex.Typed{Name: p.text(param.ChildByFieldName("name")), Type: typ})
@@ -219,7 +219,7 @@ func (p *projection) phpPath(node *sitter.Node) (string, bool) {
 }
 
 func (p *projection) stringText(node *sitter.Node) string {
-	if content := childOfType(node, "string_content"); content != nil {
+	if content := ts.ChildOfType(node, "string_content"); content != nil {
 		return p.text(content)
 	}
 	return ""

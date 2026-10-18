@@ -70,16 +70,6 @@ var csharpProfile = shapedProfile(languageProfile{
 // names it.
 const csharpStaticInit = "<clinit>"
 
-// csharpStatic reports whether a member has the modifier static.
-func csharpStatic(node *sitter.Node) bool {
-	for _, child := range ts.NamedChildren(node) {
-		if child.Type() == "modifier" && child.ChildCount() > 0 && child.Child(0).Type() == "static" {
-			return true
-		}
-	}
-	return false
-}
-
 // csharpConstructorProcessor processes a constructor as a method of its
 // class with the name of the class. A static constructor is the static
 // initializer of the class.
@@ -89,13 +79,13 @@ func csharpConstructorProcessor(node *sitter.Node, treeData []byte, currentNames
 		return newProcessorResult()
 	}
 	namespace := currentNamespace + namespaceSeparator + name.Content(treeData)
-	if csharpStatic(node) {
+	if ts.HasModifier(node, "static") {
 		namespace = currentNamespace + namespaceSeparator + csharpStaticInit
 	}
 	callGraph.addDefinition(namespace, node)
 	body := node.ChildByFieldName("body")
 	for _, child := range ts.NamedChildren(node) {
-		if !sameNode(child, name) && (body == nil || !sameNode(child, body)) {
+		if !ts.SameNode(child, name) && (body == nil || !ts.SameNode(child, body)) {
 			processNode(child, treeData, namespace, callGraph, metadata)
 		}
 	}
@@ -107,8 +97,8 @@ func csharpConstructorProcessor(node *sitter.Node, treeData []byte, currentNames
 // constructor, which runs the constructor of the base class. this(...)
 // runs another constructor of the class.
 func csharpConstructorInitializerProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	args := resolveCallArguments(childOfType(node, "argument_list"), treeData, currentNamespace, callGraph, metadata)
-	if hasChildOfType(node, "base") {
+	args := resolveCallArguments(ts.ChildOfType(node, "argument_list"), treeData, currentNamespace, callGraph, metadata)
+	if ts.HasChild(node, "base") {
 		callGraph.addUnboundCall(currentNamespace, superKeyword, CallCall, node, args)
 	}
 	return newProcessorResult()
@@ -118,7 +108,7 @@ func csharpConstructorInitializerProcessor(node *sitter.Node, treeData []byte, c
 // and the accessors of a static member run in the static initializer of
 // the class.
 func csharpMemberProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	if csharpStatic(node) {
+	if ts.HasModifier(node, "static") {
 		init := currentNamespace + namespaceSeparator + csharpStaticInit
 		if callGraph.Nodes[init] == nil {
 			callGraph.addDefinition(init, node)
@@ -133,7 +123,7 @@ func csharpMemberProcessor(node *sitter.Node, treeData []byte, currentNamespace 
 // whose type the code does not name is a record, because it can make an
 // instance of any class.
 func csharpImplicitCreationProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	args := resolveCallArguments(childOfType(node, "argument_list"), treeData, currentNamespace, callGraph, metadata)
+	args := resolveCallArguments(ts.ChildOfType(node, "argument_list"), treeData, currentNamespace, callGraph, metadata)
 	typ := csharpDeclaredType(node)
 	if typ == nil {
 		callGraph.addUnresolved(currentNamespace, node, nil, treeData, UnresolvedComputedName)
@@ -166,13 +156,4 @@ func csharpDeclaredType(node *sitter.Node) *sitter.Node {
 		return parent.ChildByFieldName("type")
 	}
 	return nil
-}
-
-func hasChildOfType(node *sitter.Node, nodeType string) bool {
-	for i := 0; i < int(node.ChildCount()); i++ {
-		if node.Child(i).Type() == nodeType {
-			return true
-		}
-	}
-	return false
 }

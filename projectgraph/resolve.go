@@ -301,7 +301,7 @@ func (b *builder) resolveTarget(sc *scope, caller, target string) []resolution {
 // Java class sees its methods, the methods of its bases and its nested
 // classes with no receiver.
 func (b *builder) resolveScope(sc *scope, caller, target string) []resolution {
-	first, rest := splitKey(target)
+	first, rest := fileindex.Unit(target), fileindex.Segments(target)
 	if sc.profile.thisCalls && len(rest) == 0 {
 		if r, ok := b.thisMethod(caller, first); ok {
 			return []resolution{r}
@@ -378,15 +378,6 @@ func (b *builder) forwards(class string) bool {
 	}
 	_, ok := b.ownMethod(class, m)
 	return ok
-}
-
-// splitKey returns the first segment of a key and the segments after it.
-func splitKey(key string) (string, []string) {
-	first, rest, ok := strings.Cut(key, fileindex.Separator)
-	if !ok {
-		return first, nil
-	}
-	return first, strings.Split(rest, fileindex.Separator)
 }
 
 // superKeyword is the receiver of a call of a method of the base class, as

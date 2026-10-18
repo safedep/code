@@ -104,8 +104,7 @@ func (b *builder) linkFileInits(ix *fileindex.Index) {
 // a per-file target names: one of the package of the file, or one that the
 // file imports.
 func (b *builder) properties(sc *scope, target string) []string {
-	first, _ := splitKey(target)
-	keys := slices.Clone(b.unitNames(sc.ix.Path, first))
+	keys := slices.Clone(b.unitNames(sc.ix.Path, fileindex.Unit(target)))
 	if imp, _, ok := sc.importFor(target); ok {
 		if key, ok := b.resolveJava(imp.Module); ok {
 			keys = append(keys, key)

@@ -90,7 +90,7 @@ func javaSignature(p *projection, def *fileindex.Definition, node *sitter.Node) 
 		return
 	}
 	if modifiers := javaModifiers(node); modifiers != nil {
-		def.Static = hasKeyword(modifiers, "static")
+		def.Static = ts.HasKeyword(modifiers, "static")
 	}
 	if params := node.ChildByFieldName("parameters"); params != nil {
 		for _, param := range ts.NamedChildren(params) {
@@ -197,7 +197,7 @@ func javaStaticMembers(body *sitter.Node) []*sitter.Node {
 		case "static_initializer", "constant_declaration", "enum_constant":
 			members = append(members, m)
 		case "field_declaration":
-			if modifiers := javaModifiers(m); modifiers != nil && hasKeyword(modifiers, "static") {
+			if modifiers := javaModifiers(m); modifiers != nil && ts.HasKeyword(modifiers, "static") {
 				members = append(members, m)
 			}
 		case "enum_body_declarations":

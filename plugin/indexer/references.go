@@ -2,11 +2,11 @@ package indexer
 
 import (
 	"slices"
-	"strings"
 
 	"github.com/safedep/code/core/ast"
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/pkg/ts"
+	"github.com/safedep/code/plugin/callgraph"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -113,18 +113,9 @@ func (p *projection) addReference(node *sitter.Node, caller string, targets []st
 		Caller:  p.caller(caller, site),
 		Line:    int(site.StartLine),
 		Column:  int(site.StartColumn),
-		Text:    clipText(p.text(node)),
+		Text:    callgraph.ClipText(p.text(node)),
 		Targets: targets,
 	})
-}
-
-// clipText bounds the text of a record as the call graph does.
-func clipText(text string) string {
-	const maxText = 120
-	if len(text) <= maxText {
-		return text
-	}
-	return strings.ToValidUTF8(text[:maxText], "")
 }
 
 // unlist replaces each list of the values with the value that it holds.

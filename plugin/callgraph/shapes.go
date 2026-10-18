@@ -373,7 +373,7 @@ func (p *shapedProcessors) creation(node *sitter.Node, treeData []byte, currentN
 
 	argumentsNode := shape.arguments.of(node)
 	if shape.arguments.empty() {
-		argumentsNode = childOfType(node, callGraph.profile.argumentList)
+		argumentsNode = ts.ChildOfType(node, callGraph.profile.argumentList)
 	}
 
 	arguments := []CallArgument{}
@@ -452,7 +452,7 @@ func (p *shapedProcessors) scope(node *sitter.Node, treeData []byte, currentName
 
 	body := shape.body.of(node)
 	if body == nil && shape.bodyRequired {
-		processNode(childOfType(node, callGraph.profile.argumentList), treeData, currentNamespace, callGraph, metadata)
+		processNode(ts.ChildOfType(node, callGraph.profile.argumentList), treeData, currentNamespace, callGraph, metadata)
 		return newProcessorResult()
 	}
 
@@ -464,7 +464,7 @@ func (p *shapedProcessors) scope(node *sitter.Node, treeData []byte, currentName
 
 	if shape.header {
 		for _, child := range ts.NamedChildren(node) {
-			if !sameNode(child, name) && (body == nil || !sameNode(child, body)) {
+			if !ts.SameNode(child, name) && (body == nil || !ts.SameNode(child, body)) {
 				processNode(child, treeData, scopeNamespace, callGraph, metadata)
 			}
 		}
@@ -496,7 +496,7 @@ func parameterProcessor(node *sitter.Node, treeData []byte, currentNamespace str
 	}
 	typ := node.ChildByFieldName("type")
 	for _, child := range ts.NamedChildren(node) {
-		if (name == nil || !sameNode(child, name)) && (typ == nil || !sameNode(child, typ)) {
+		if (name == nil || !ts.SameNode(child, name)) && (typ == nil || !ts.SameNode(child, typ)) {
 			processNode(child, treeData, currentNamespace, callGraph, metadata)
 		}
 	}
@@ -693,7 +693,7 @@ func (p *shapedProcessors) processUnhandledChildren(node *sitter.Node, handled [
 	for i := 0; i < int(node.NamedChildCount()); i++ {
 		child := node.NamedChild(i)
 		switch {
-		case slices.ContainsFunc(handled, func(h *sitter.Node) bool { return sameNode(h, child) }):
+		case slices.ContainsFunc(handled, func(h *sitter.Node) bool { return ts.SameNode(h, child) }):
 		case slices.ContainsFunc(handled, func(h *sitter.Node) bool { return holds(child, h) }):
 			p.processUnhandledChildren(child, handled, treeData, currentNamespace, callGraph, metadata)
 		default:
@@ -712,19 +712,6 @@ func firstValue(result processorResult) string {
 		return ""
 	}
 	return result.ImmediateAssignments[0].Namespace
-}
-
-func sameNode(a, b *sitter.Node) bool {
-	return a.StartByte() == b.StartByte() && a.EndByte() == b.EndByte() && a.Type() == b.Type()
-}
-
-func childOfType(node *sitter.Node, types ...string) *sitter.Node {
-	for i := 0; i < int(node.NamedChildCount()); i++ {
-		if child := node.NamedChild(i); slices.Contains(types, child.Type()) {
-			return child
-		}
-	}
-	return nil
 }
 
 // withoutTypeArguments removes each type argument list from a name, as in

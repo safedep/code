@@ -134,7 +134,7 @@ func rubySuperProcessor(node *sitter.Node, treeData []byte, currentNamespace str
 // process in items.map(&:process). It calls the method on each item, whose
 // value the graph does not know.
 func rubyBlockArgumentProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	if symbol := childOfType(node, "simple_symbol"); symbol != nil {
+	if symbol := ts.ChildOfType(node, "simple_symbol"); symbol != nil {
 		callGraph.addRecord(currentNamespace, symbol, "", strings.TrimPrefix(symbol.Content(treeData), ":"), treeData, UnresolvedUnknownReceiver)
 		return newProcessorResult()
 	}

@@ -42,7 +42,7 @@ func kotlinProperties(p *projection) {
 		if statement.Type() != "property_declaration" {
 			continue
 		}
-		name := childOfType(childOfType(statement, "variable_declaration"), "simple_identifier")
+		name := ts.ChildOfType(ts.ChildOfType(statement, "variable_declaration"), "simple_identifier")
 		key := p.local(p.text(name))
 		if _, defined := p.defs[key]; name == nil || defined {
 			continue
@@ -58,16 +58,16 @@ func kotlinProperties(p *projection) {
 }
 
 func kotlinPackage(p *projection) string {
-	header := childOfType(p.tree.Tree().RootNode(), "package_header")
+	header := ts.ChildOfType(p.tree.Tree().RootNode(), "package_header")
 	if header == nil {
 		return ""
 	}
-	return p.text(childOfType(header, "identifier"))
+	return p.text(ts.ChildOfType(header, "identifier"))
 }
 
 // kotlinKind tells an interface from a class. Both are class declarations.
 func kotlinKind(_ *projection, node *sitter.Node, kind fileindex.DefKind) fileindex.DefKind {
-	if node != nil && node.Type() == "class_declaration" && hasKeyword(node, "interface") {
+	if node != nil && node.Type() == "class_declaration" && ts.HasKeyword(node, "interface") {
 		return fileindex.DefInterface
 	}
 	return kind
@@ -79,7 +79,7 @@ func kotlinKind(_ *projection, node *sitter.Node, kind fileindex.DefKind) filein
 func kotlinBases(p *projection, class *sitter.Node) []string {
 	if class.Type() == "enum_entry" {
 		if enum := class.Parent().Parent(); enum != nil && enum.Type() == "class_declaration" {
-			return nonEmpty(p.text(childOfType(enum, "type_identifier")))
+			return nonEmpty(p.text(ts.ChildOfType(enum, "type_identifier")))
 		}
 		return nil
 	}
@@ -90,7 +90,7 @@ func kotlinBases(p *projection, class *sitter.Node) []string {
 		}
 		typ := spec.NamedChild(0)
 		if typ.Type() == "constructor_invocation" || typ.Type() == "explicit_delegation" {
-			typ = childOfType(typ, "user_type")
+			typ = ts.ChildOfType(typ, "user_type")
 		}
 		bases = append(bases, nonEmpty(p.kotlinTypeName(typ))...)
 	}
@@ -105,7 +105,7 @@ func (p *projection) kotlinTypeName(node *sitter.Node) string {
 	}
 	switch node.Type() {
 	case "nullable_type", "not_nullable_type", "parenthesized_type":
-		return p.kotlinTypeName(childOfType(node, "user_type", "parenthesized_type"))
+		return p.kotlinTypeName(ts.ChildOfType(node, "user_type", "parenthesized_type"))
 	case "user_type":
 		var parts []string
 		for _, id := range ts.NamedChildren(node) {
@@ -122,7 +122,7 @@ func (p *projection) kotlinTypeName(node *sitter.Node) string {
 // property or a variable declaration, the first type node among its
 // children.
 func (p *projection) kotlinTypeOf(node *sitter.Node) string {
-	return p.kotlinTypeName(childOfType(node, "user_type", "nullable_type", "not_nullable_type"))
+	return p.kotlinTypeName(ts.ChildOfType(node, "user_type", "nullable_type", "not_nullable_type"))
 }
 
 // kotlinFields returns the properties of a class that declare a type: the
@@ -132,35 +132,35 @@ func (p *projection) kotlinTypeOf(node *sitter.Node) string {
 // class itself, because the members of a companion are members of the
 // class.
 func kotlinFields(p *projection, class *sitter.Node) []fileindex.Typed {
-	name := p.text(childOfType(class, "type_identifier"))
+	name := p.text(ts.ChildOfType(class, "type_identifier"))
 	var fields []fileindex.Typed
 	if class.Type() == "object_declaration" {
 		fields = append(fields, fileindex.Typed{Name: "INSTANCE", Type: name})
 	}
-	if ctor := childOfType(class, "primary_constructor"); ctor != nil {
+	if ctor := ts.ChildOfType(class, "primary_constructor"); ctor != nil {
 		for _, param := range ts.NamedChildren(ctor) {
-			if param.Type() != "class_parameter" || childOfType(param, "binding_pattern_kind") == nil {
+			if param.Type() != "class_parameter" || ts.ChildOfType(param, "binding_pattern_kind") == nil {
 				continue
 			}
 			if typ := p.kotlinTypeOf(param); typ != "" {
-				fields = append(fields, fileindex.Typed{Name: p.text(childOfType(param, "simple_identifier")), Type: typ})
+				fields = append(fields, fileindex.Typed{Name: p.text(ts.ChildOfType(param, "simple_identifier")), Type: typ})
 			}
 		}
 	}
-	body := childOfType(class, "class_body", "enum_class_body")
+	body := ts.ChildOfType(class, "class_body", "enum_class_body")
 	if body == nil {
 		return fields
 	}
 	for _, member := range ts.NamedChildren(body) {
 		switch member.Type() {
 		case "property_declaration":
-			declaration := childOfType(member, "variable_declaration")
+			declaration := ts.ChildOfType(member, "variable_declaration")
 			if typ := p.kotlinTypeOf(declaration); declaration != nil && typ != "" {
-				fields = append(fields, fileindex.Typed{Name: p.text(childOfType(declaration, "simple_identifier")), Type: typ})
+				fields = append(fields, fileindex.Typed{Name: p.text(ts.ChildOfType(declaration, "simple_identifier")), Type: typ})
 			}
 		case "companion_object":
 			companion := "Companion"
-			if id := childOfType(member, "type_identifier"); id != nil {
+			if id := ts.ChildOfType(member, "type_identifier"); id != nil {
 				companion = p.text(id)
 			}
 			fields = append(fields, fileindex.Typed{Name: companion, Type: name})
@@ -172,7 +172,7 @@ func kotlinFields(p *projection, class *sitter.Node) []fileindex.Typed {
 // kotlinAnnotations returns the annotations of a declaration as written,
 // with no arguments, as @GetMapping for @GetMapping("/a").
 func kotlinAnnotations(p *projection, node *sitter.Node) []string {
-	modifiers := childOfType(node, "modifiers")
+	modifiers := ts.ChildOfType(node, "modifiers")
 	if modifiers == nil {
 		return nil
 	}
@@ -181,9 +181,9 @@ func kotlinAnnotations(p *projection, node *sitter.Node) []string {
 		if a.Type() != "annotation" {
 			continue
 		}
-		typ := childOfType(a, "user_type", "constructor_invocation")
+		typ := ts.ChildOfType(a, "user_type", "constructor_invocation")
 		if typ != nil && typ.Type() == "constructor_invocation" {
-			typ = childOfType(typ, "user_type")
+			typ = ts.ChildOfType(typ, "user_type")
 		}
 		if name := p.kotlinTypeName(typ); name != "" {
 			annotations = append(annotations, "@"+name)
@@ -216,10 +216,10 @@ func kotlinSignature(p *projection, def *fileindex.Definition, node *sitter.Node
 			def.Params = append(def.Params, fileindex.Typed{Name: extensionParam, Type: typ})
 		}
 	}
-	if params := childOfType(node, "function_value_parameters"); params != nil {
+	if params := ts.ChildOfType(node, "function_value_parameters"); params != nil {
 		for _, param := range ts.NamedChildren(params) {
 			if typ := p.kotlinTypeOf(param); param.Type() == "parameter" && typ != "" {
-				def.Params = append(def.Params, fileindex.Typed{Name: p.text(childOfType(param, "simple_identifier")), Type: typ})
+				def.Params = append(def.Params, fileindex.Typed{Name: p.text(ts.ChildOfType(param, "simple_identifier")), Type: typ})
 			}
 		}
 		// The result type comes after the parameters.
@@ -230,7 +230,7 @@ func kotlinSignature(p *projection, def *fileindex.Definition, node *sitter.Node
 			}
 		}
 	}
-	def.Locals = p.kotlinLocals(childOfType(node, "function_body", "statements"))
+	def.Locals = p.kotlinLocals(ts.ChildOfType(node, "function_body", "statements"))
 }
 
 // inCompanion reports whether a member is a member of a companion object.
@@ -250,7 +250,7 @@ func (p *projection) kotlinLocals(body *sitter.Node) []fileindex.Typed {
 			return
 		case node.Type() == "variable_declaration":
 			if typ := p.kotlinTypeOf(node); typ != "" {
-				locals = append(locals, fileindex.Typed{Name: p.text(childOfType(node, "simple_identifier")), Type: typ})
+				locals = append(locals, fileindex.Typed{Name: p.text(ts.ChildOfType(node, "simple_identifier")), Type: typ})
 			}
 		case node.Type() == "class_body", node.Type() == "function_declaration" && depth > 0:
 			return
@@ -273,7 +273,7 @@ func kotlinReferenceVisitor(p *projection) visitor {
 		if kind != "callable_reference" {
 			return
 		}
-		name := childOfType(node, "simple_identifier")
+		name := ts.ChildOfType(node, "simple_identifier")
 		if name == nil {
 			return
 		}
@@ -281,7 +281,7 @@ func kotlinReferenceVisitor(p *projection) visitor {
 		target := p.text(name)
 		receiver := ""
 		for i := 0; i < int(node.NamedChildCount()); i++ {
-			if child := node.NamedChild(i); !sameSpan(child, name) {
+			if child := node.NamedChild(i); !ts.SameNode(child, name) {
 				receiver = p.text(child)
 				break
 			}
@@ -314,14 +314,14 @@ func kotlinFlagVisitor(p *projection) visitor {
 			if callee == nil || callee.Type() != "navigation_expression" {
 				return
 			}
-			name := p.text(childOfType(childOfType(callee, "navigation_suffix"), "simple_identifier"))
+			name := p.text(ts.ChildOfType(ts.ChildOfType(callee, "navigation_suffix"), "simple_identifier"))
 			if slices.Contains(javaReflection, name) {
 				p.flag(fileindex.FlagReflection, node)
 			}
 		case "annotation":
-			typ := childOfType(node, "user_type", "constructor_invocation")
+			typ := ts.ChildOfType(node, "user_type", "constructor_invocation")
 			if typ != nil && typ.Type() == "constructor_invocation" {
-				typ = childOfType(typ, "user_type")
+				typ = ts.ChildOfType(typ, "user_type")
 			}
 			name := p.kotlinTypeName(typ)
 			if slices.Contains(javaInjections, name[strings.LastIndex(name, ".")+1:]) {
@@ -340,21 +340,4 @@ func (p *projection) enclosingClassKey(key string) string {
 		}
 	}
 	return p.cg.FileName
-}
-
-func sameSpan(a, b *sitter.Node) bool {
-	return spanOf(a) == spanOf(b)
-}
-
-// childOfType returns the first named child of one of the types, or nil.
-func childOfType(node *sitter.Node, types ...string) *sitter.Node {
-	if node == nil {
-		return nil
-	}
-	for _, child := range ts.NamedChildren(node) {
-		if slices.Contains(types, child.Type()) {
-			return child
-		}
-	}
-	return nil
 }

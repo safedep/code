@@ -100,7 +100,7 @@ func kotlinDelegationCallProcessor(node *sitter.Node, treeData []byte, currentNa
 	if node == nil {
 		return newProcessorResult()
 	}
-	args := resolveCallArguments(childOfType(node, "value_arguments"), treeData, currentNamespace, callGraph, metadata)
+	args := resolveCallArguments(ts.ChildOfType(node, "value_arguments"), treeData, currentNamespace, callGraph, metadata)
 	if node.ChildCount() > 0 && node.Child(0).Type() == superKeyword {
 		callGraph.addUnboundCall(currentNamespace, superKeyword, CallCall, node.Child(0), args)
 	}
@@ -115,12 +115,12 @@ func kotlinParameterProcessor(node *sitter.Node, treeData []byte, currentNamespa
 	if node == nil {
 		return newProcessorResult()
 	}
-	name := childOfType(node, "simple_identifier")
+	name := ts.ChildOfType(node, "simple_identifier")
 	if name != nil {
 		callGraph.assignmentGraph.addNode(currentNamespace+namespaceSeparator+name.Content(treeData), name)
 	}
 	for _, child := range ts.NamedChildren(node) {
-		if name == nil || !sameNode(child, name) {
+		if name == nil || !ts.SameNode(child, name) {
 			processNode(child, treeData, currentNamespace, callGraph, metadata)
 		}
 	}
@@ -134,8 +134,8 @@ func kotlinConstructorInvocationProcessor(node *sitter.Node, treeData []byte, cu
 	if node == nil {
 		return newProcessorResult()
 	}
-	args := resolveCallArguments(childOfType(node, "value_arguments"), treeData, currentNamespace, callGraph, metadata)
-	typeNode := childOfType(node, "user_type")
+	args := resolveCallArguments(ts.ChildOfType(node, "value_arguments"), treeData, currentNamespace, callGraph, metadata)
+	typeNode := ts.ChildOfType(node, "user_type")
 	if typeNode == nil {
 		return newProcessorResult()
 	}
@@ -155,7 +155,7 @@ const kotlinStaticInit = "<clinit>"
 // when the class loads, so they are the static initializer <clinit> of the
 // class, as in Java.
 func kotlinCompanionProcessor(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
-	body := childOfType(node, "class_body")
+	body := ts.ChildOfType(node, "class_body")
 	if body == nil {
 		return newProcessorResult()
 	}
@@ -188,7 +188,7 @@ func kotlinObjectLiteralProcessor(node *sitter.Node, treeData []byte, currentNam
 		case "class_body":
 			for _, member := range ts.NamedChildren(child) {
 				if member.Type() == "function_declaration" {
-					processNode(childOfType(member, "function_body"), treeData, currentNamespace, callGraph, metadata)
+					processNode(ts.ChildOfType(member, "function_body"), treeData, currentNamespace, callGraph, metadata)
 					continue
 				}
 				processNode(member, treeData, currentNamespace, callGraph, metadata)

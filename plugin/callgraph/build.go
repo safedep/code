@@ -184,9 +184,9 @@ func (cg *CallGraph) reference(callee string, kind CallKind, expression *sitter.
 	ref := CallReference{CalleeNamespace: callee, Kind: kind, Arguments: arguments}
 	if expression != nil {
 		ref.Site = cg.calleeSite(expression)
-		ref.Text = clip(string(cg.source[ref.Site.StartByte:ref.Site.EndByte]))
+		ref.Text = ClipText(string(cg.source[ref.Site.StartByte:ref.Site.EndByte]))
 		receiver, method := cg.profile.calleeParts(expression, cg.source)
-		ref.Receiver, ref.Method = clip(receiver), method
+		ref.Receiver, ref.Method = ClipText(receiver), method
 	}
 	return ref
 }

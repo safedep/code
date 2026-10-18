@@ -210,7 +210,7 @@ func (p *projection) rustBounds(fn *sitter.Node) map[string]string {
 			add(param.ChildByFieldName("left"), param.ChildByFieldName("bounds"))
 		}
 	}
-	if where := childOfType(fn, "where_clause"); where != nil {
+	if where := ts.ChildOfType(fn, "where_clause"); where != nil {
 		for _, predicate := range ts.NamedChildren(where) {
 			add(predicate.ChildByFieldName("left"), predicate.ChildByFieldName("bounds"))
 		}
@@ -224,7 +224,7 @@ func (p *projection) rustBounds(fn *sitter.Node) map[string]string {
 func rustAttributes(p *projection, node *sitter.Node) []string {
 	var attributes []string
 	for sibling := node.PrevNamedSibling(); sibling != nil && sibling.Type() == "attribute_item"; sibling = sibling.PrevNamedSibling() {
-		if attribute := childOfType(sibling, "attribute"); attribute != nil && attribute.NamedChildCount() > 0 {
+		if attribute := ts.ChildOfType(sibling, "attribute"); attribute != nil && attribute.NamedChildCount() > 0 {
 			attributes = append(attributes, "@"+p.text(attribute.NamedChild(0)))
 		}
 	}
@@ -241,7 +241,7 @@ func rustSignature(p *projection, def *fileindex.Definition, node *sitter.Node) 
 	}
 	params := node.ChildByFieldName("parameters")
 	if parent := p.defs[fileindex.Parent(def.Key)]; parent != nil && parent.Kind != fileindex.DefModule {
-		def.Static = childOfType(params, "self_parameter") == nil
+		def.Static = ts.ChildOfType(params, "self_parameter") == nil
 	}
 	bounds := p.rustBounds(node)
 	if impl := p.syntax[fileindex.Parent(def.Key)]; impl != nil && impl.Type() == "impl_item" {
@@ -325,10 +325,10 @@ func rustPublic(p *projection, def *fileindex.Definition) bool {
 	}
 	if node.Type() == "impl_item" {
 		return slices.ContainsFunc(p.rustSiblings(node, p.rustItemName(node)), func(item *sitter.Node) bool {
-			return item.Type() != "impl_item" && childOfType(item, "visibility_modifier") != nil
+			return item.Type() != "impl_item" && ts.ChildOfType(item, "visibility_modifier") != nil
 		})
 	}
-	if childOfType(node, "visibility_modifier") != nil {
+	if ts.ChildOfType(node, "visibility_modifier") != nil {
 		return true
 	}
 	if impl := rustImpl(node); impl != nil {

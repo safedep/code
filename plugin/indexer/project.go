@@ -180,18 +180,7 @@ const requireFunction = "require"
 // typeOnly reports whether a TypeScript import, export or specifier binds
 // only a type, as import type { A } or import { type A }.
 func typeOnly(node *sitter.Node) bool {
-	return hasKeyword(node, "type", "typeof")
-}
-
-// hasKeyword reports whether one of the anonymous children of the node is
-// one of the words.
-func hasKeyword(node *sitter.Node, words ...string) bool {
-	for i := 0; i < int(node.ChildCount()); i++ {
-		if child := node.Child(i); !child.IsNamed() && slices.Contains(words, child.Type()) {
-			return true
-		}
-	}
-	return false
+	return ts.HasKeyword(node, "type", "typeof")
 }
 
 // typeOnlySpecifier reports whether the import statement imports the item
@@ -464,7 +453,7 @@ func (p *projection) caller(key string, site ast.NodePosition) string {
 		case "class_static_block":
 			return fileindex.Parent(key)
 		case "field_definition", "public_field_definition":
-			if hasKeyword(node, "static") {
+			if ts.HasKeyword(node, "static") {
 				return fileindex.Parent(key)
 			}
 		}

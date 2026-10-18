@@ -358,7 +358,7 @@ func typescriptFields(p *projection, class *sitter.Node) []fileindex.Typed {
 		case "public_field_definition":
 			name := member.ChildByFieldName("name")
 			typ := p.typeName(member.ChildByFieldName("type"))
-			if name != nil && typ != "" && !hasKeyword(member, "static") {
+			if name != nil && typ != "" && !ts.HasKeyword(member, "static") {
 				fields = append(fields, fileindex.Typed{Name: p.text(name), Type: typ})
 			}
 		case "method_definition":
@@ -390,7 +390,7 @@ func parameterProperty(param *sitter.Node) bool {
 			return true
 		}
 	}
-	return hasKeyword(param, "readonly")
+	return ts.HasKeyword(param, "readonly")
 }
 
 // typeName returns the name of the class type that a type node names, as
