@@ -500,7 +500,7 @@ func TestAnalyzeHostileShapes(t *testing.T) {
 			for _, b := range a.Bindings() {
 				_ = a.Resolve(b.Name)
 			}
-			assert.Less(t, time.Since(start), 20*time.Second)
+			assert.Less(t, time.Since(start), linearLimit)
 		})
 	}
 }
@@ -523,7 +523,7 @@ func TestReverseChainStopsAtTheBudget(t *testing.T) {
 	b.WriteString("var a0 = eval;")
 	start := time.Now()
 	a := js(t, b.String())
-	assert.Less(t, time.Since(start), 20*time.Second)
+	assert.Less(t, time.Since(start), linearLimit)
 	assert.True(t, a.Truncated())
 }
 
