@@ -10,7 +10,6 @@ import (
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/fileindex/store/memstore"
-	"github.com/safedep/code/plugin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -102,13 +101,15 @@ func TestIndexerServesACachedPluginFromTheStore(t *testing.T) {
 		assert.Empty(t, again.restored)
 	})
 
-	t.Run("a restore that fails goes to the report", func(t *testing.T) {
+	t.Run("a restore that fails parses the file again", func(t *testing.T) {
 		broken := newCountingPlugin("1")
 		broken.fail = "main.js"
 		result, err := indexer.Run(context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Plugins: []core.Plugin{broken}})
 		require.NoError(t, err)
-		assert.Empty(t, result.Report.Visited)
-		assert.Equal(t, []plugin.FileError{{File: "main.js", Stage: "CountingPlugin", Err: errors.New("bad artifact")}}, result.Report.Failed)
-		assert.Equal(t, fileindex.FileCached, result.Files["main.js"], "the index of the file is still served")
+		assert.Equal(t, []string{"main.js"}, result.Report.Visited)
+		assert.Empty(t, result.Report.Failed)
+		assert.Equal(t, fileindex.FileIndexed, result.Files["main.js"])
+		assert.Equal(t, []string{"main.js"}, broken.analyzed, "the plugin runs on the tree and the run stores a fresh artifact")
+		assert.Equal(t, []string{"app/util.ts", "lib/helper.js"}, broken.restored)
 	})
 }

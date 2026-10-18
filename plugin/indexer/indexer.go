@@ -290,9 +290,8 @@ func (r *run) flush(ctx context.Context, batch []pending) error {
 
 	var parse []pending
 	for _, p := range batch {
-		if ix, ok := stored[p.key]; ok && !r.needsParse(p, artifacts) {
+		if ix, ok := stored[p.key]; ok && !r.needsParse(p, artifacts) && r.restore(ctx, p, artifacts) {
 			r.done(p.file, ix, fileindex.FileCached)
-			r.restore(ctx, p, artifacts)
 			continue
 		}
 		parse = append(parse, p)

@@ -6,6 +6,7 @@ import (
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/fileindex/store"
+	"github.com/safedep/dry/log"
 )
 
 // CachedPlugin is an extra plugin whose output per file the store keeps
@@ -17,8 +18,10 @@ import (
 type CachedPlugin interface {
 	core.Plugin
 
-	// Version names the rules of the plugin. Bump it when the artifact of
-	// a file changes.
+	// Version names the rules and the configuration of the plugin. The
+	// store keys an artifact by Name and Version only, so Version must
+	// change whenever the artifact of a file would change, as after a
+	// change of the rules or of the configuration of the plugin.
 	Version() string
 
 	// Analyze runs the plugin on the tree of a file and returns the
@@ -60,16 +63,20 @@ func (r *run) needsParse(p pending, artifacts map[store.ArtifactKey][]byte) bool
 	return false
 }
 
-// restore runs each cached plugin of the file on its stored artifact. A
-// plugin that fails goes to the report, as it does after a parse.
-func (r *run) restore(ctx context.Context, p pending, artifacts map[store.ArtifactKey][]byte) {
+// restore runs each cached plugin of the file on its stored artifact. It
+// reports whether every plugin took its artifact. A plugin that rejects
+// one gets the tree instead: the file parses, the plugin runs on it and
+// the run stores a fresh artifact.
+func (r *run) restore(ctx context.Context, p pending, artifacts map[store.ArtifactKey][]byte) bool {
 	for _, pl := range r.opts.Plugins {
 		cached, ok := pl.(CachedPlugin)
 		if !ok || !supports(pl, p) {
 			continue
 		}
 		if err := cached.Restore(ctx, p.file, artifacts[artifactKey(p, cached)]); err != nil {
-			r.result.Report.Failed = append(r.result.Report.Failed, failure(p.file, pl, err))
+			log.Warnf("the plugin %s rejected its stored artifact of %s, so the file parses again: %v", pl.Name(), p.file.Name(), err)
+			return false
 		}
 	}
+	return true
 }
