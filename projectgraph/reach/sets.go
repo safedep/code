@@ -39,7 +39,10 @@ type Sets struct {
 // walk over the strongly connected components of the graph in place of
 // one search per key. The components come in reverse topological order,
 // so each one unions the sets of its successors once. Two sources that
-// reach the same set share its storage.
+// reach the same set share its storage. When ctx ends during the walk,
+// the sets of the components that the walk did not reach are empty, and
+// every source gets a budget uncertainty that says the search stopped,
+// as Explore reports it.
 func (x *Explorer) ExploreAll(ctx context.Context, from []string) (*Sets, error) {
 	a := x.a
 	ids := make([]int, len(from))
@@ -50,17 +53,24 @@ func (x *Explorer) ExploreAll(ctx context.Context, from []string) (*Sets, error)
 		}
 		ids[i] = id
 	}
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
 	c := a.condense()
 	t := a.table()
-	sets := c.sets(a, t)
+	sets, stopped := c.sets(ctx, a, t)
+	if stopped {
+		t.global = append(t.global, len(t.entries))
+		t.entries = append(t.entries, Scoped{Uncertainty: Uncertainty{Kind: Budget, Text: "the search stopped at the deadline"}})
+	}
 
 	out := &Sets{Sources: make([]Reachable, len(from)), Uncertainties: t.entries}
 	shared := map[string]Reachable{}
 	for i, id := range ids {
 		set := sets[c.comp[id]]
+		// A source in a cycle is in its own set, and materialize drops
+		// it, so the sources of one cycle do not share one slice.
+		if item, ok := t.target[id]; ok && set.has(item) {
+			out.Sources[i] = t.materialize(a, set, id)
+			continue
+		}
 		key := string(set.bytes())
 		r, ok := shared[key]
 		if !ok {
@@ -73,13 +83,15 @@ func (x *Explorer) ExploreAll(ctx context.Context, from []string) (*Sets, error)
 }
 
 // table is the item space of the sets: the external nodes first, then the
-// units a search can enter, then the nodes with an uncertainty. entries is
-// the table of uncertainties, and at holds the index range of each item
-// of a unit or a node in it.
+// units a search can enter, then the nodes with an uncertainty. target
+// holds the item of each external node, and unc the item of each node
+// with an uncertainty. entries is the table of uncertainties, and at holds
+// the index range of each item of a unit or a node in it.
 type table struct {
 	items   int
 	targets []int
-	item    map[int]int
+	target  map[int]int
+	unc     map[int]int
 	units   map[string]int
 	entries []Scoped
 	at      map[int][2]int
@@ -90,9 +102,9 @@ type table struct {
 
 func (a *adjacency) table() *table {
 	src := a.sources()
-	t := &table{item: map[int]int{}, units: map[string]int{}, at: map[int][2]int{}}
+	t := &table{target: map[int]int{}, unc: map[int]int{}, units: map[string]int{}, at: map[int][2]int{}}
 	for _, id := range a.externals {
-		t.item[id] = t.items
+		t.target[id] = t.items
 		t.targets = append(t.targets, id)
 		t.items++
 	}
@@ -118,7 +130,7 @@ func (a *adjacency) table() *table {
 		if len(us) == 0 {
 			continue
 		}
-		t.item[id] = t.items
+		t.unc[id] = t.items
 		start := len(t.entries)
 		for _, u := range us {
 			t.entries = append(t.entries, a.scoped(u))
@@ -153,7 +165,10 @@ func (a *adjacency) scoped(u Uncertainty) Scoped {
 // enters and its uncertainties.
 func (t *table) own(a *adjacency, id int) []int {
 	var items []int
-	if item, ok := t.item[id]; ok {
+	if item, ok := t.target[id]; ok {
+		items = append(items, item)
+	}
+	if item, ok := t.unc[id]; ok {
 		items = append(items, item)
 	}
 	n := a.g.Nodes[a.keys[id]]
@@ -171,7 +186,7 @@ func (t *table) own(a *adjacency, id int) []int {
 func (t *table) materialize(a *adjacency, set bitset, source int) Reachable {
 	r := Reachable{Reached: []string{}, Uncertainties: slices.Clone(t.global)}
 	for _, id := range t.targets {
-		if id != source && set.has(t.item[id]) {
+		if id != source && set.has(t.target[id]) {
 			r.Reached = append(r.Reached, a.keys[id])
 		}
 	}
@@ -312,10 +327,21 @@ func (a *adjacency) condense() *condensation {
 }
 
 // sets returns the items that each component reaches. A component whose
-// set is the set of one successor shares its storage.
-func (c *condensation) sets(a *adjacency, t *table) []bitset {
+// set is the set of one successor shares its storage. It polls ctx per
+// component and reports whether ctx ended before the walk did. A
+// component that the walk did not reach has an empty set.
+func (c *condensation) sets(ctx context.Context, a *adjacency, t *table) ([]bitset, bool) {
 	sets := make([]bitset, len(c.members))
 	for _, id := range c.order {
+		if ctx.Err() != nil {
+			empty := newBitset(t.items)
+			for i := range sets {
+				if sets[i] == nil {
+					sets[i] = empty
+				}
+			}
+			return sets, true
+		}
 		var own []int
 		var succ []int32
 		for _, v := range c.members[id] {
@@ -330,7 +356,7 @@ func (c *condensation) sets(a *adjacency, t *table) []bitset {
 		succ = slices.Compact(succ)
 		sets[id] = c.union(t, sets, own, succ)
 	}
-	return sets
+	return sets, false
 }
 
 // union returns the union of the own items and the sets of the
@@ -365,11 +391,16 @@ func (c *condensation) union(t *table, sets []bitset, own []int, succ []int32) b
 	return set
 }
 
+// NoDepthCap is the maxDepth of a Path with no depth cap, as the sets of
+// ExploreAll have none.
+const NoDepthCap = -1
+
 // Path returns the shortest path from a node to an external target, as
 // Explore finds it, or false when the search from the node does not reach
-// the target. MaxDepth 0 selects 64 hops.
+// the target. The node itself is no target of its own search, as in
+// Explore. MaxDepth 0 selects 64 hops, and NoDepthCap no cap.
 func (x *Explorer) Path(ctx context.Context, from, target string, maxDepth int) ([]Hop, bool, error) {
-	if maxDepth < 0 {
+	if maxDepth < 0 && maxDepth != NoDepthCap {
 		return nil, false, fmt.Errorf("max depth %d is negative", maxDepth)
 	}
 	a := x.a
@@ -377,11 +408,15 @@ func (x *Explorer) Path(ctx context.Context, from, target string, maxDepth int) 
 	if !ok {
 		return nil, false, fmt.Errorf("no node %s", from)
 	}
-	targets := [][]int{a.match(target)}
+	targets := [][]int{slices.DeleteFunc(a.match(target), func(t int) bool { return t == id })}
 	if len(targets[0]) == 0 {
 		return nil, false, nil
 	}
-	s := a.search(ctx, []int{id}, cmp.Or(maxDepth, defaultMaxDepth), targets)
+	depth := cmp.Or(maxDepth, defaultMaxDepth)
+	if maxDepth == NoDepthCap {
+		depth = len(a.keys)
+	}
+	s := a.search(ctx, []int{id}, depth, targets)
 	if err := ctx.Err(); err != nil {
 		return nil, false, err
 	}

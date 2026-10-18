@@ -574,6 +574,13 @@ entry - npm:other@1.0.0
 edge npm:other@1.0.0//o.js//f fs//unlink direct 2
 `,
 	"project with units": dependencies + "edge main.py//run kit//load//close direct 4\nentry kit//load//close npm:kit@1.0.0\nedge npm:kit@1.0.0//k.js//close fs//unlink\n",
+	"two symbols in one cycle": `
+edge a//x npm:a@1.0.0//a.js//x package
+edge npm:a@1.0.0//a.js//x a//y direct 2
+edge a//y npm:a@1.0.0//a.js//y package
+edge npm:a@1.0.0//a.js//y a//x direct 2
+edge npm:a@1.0.0//a.js//y fs//rm direct 3
+`,
 }
 
 func TestExploreAllMatchesExplore(t *testing.T) {
@@ -656,7 +663,7 @@ edge npm:a@1.0.0//a.js//z fs//rm direct 4
 `)
 	a := NewExplorer(g).a
 	c := a.condense()
-	sets := c.sets(a, a.table())
+	sets, _ := c.sets(context.Background(), a, a.table())
 	x, z := a.id["npm:a@1.0.0//a.js//x"], a.id["npm:a@1.0.0//a.js//z"]
 	assert.Same(t, &sets[c.comp[x]][0], &sets[c.comp[z]][0], "x adds nothing to what z reaches, so it shares the set of z")
 	assert.NotSame(t, &sets[c.comp[z]][0], &sets[c.comp[a.id["fs//rm"]]][0], "z adds fs//rm")
@@ -692,9 +699,12 @@ func TestExplorerPath(t *testing.T) {
 	_, found, err = x.Path(context.Background(), "kit//run", "fs//nope", 0)
 	require.NoError(t, err)
 	assert.False(t, found, "a key of no node")
+	_, found, err = x.Path(context.Background(), "kit//run", "kit//run", 0)
+	require.NoError(t, err)
+	assert.False(t, found, "a node is no target of its own search")
 	_, _, err = x.Path(context.Background(), "kit//nope", "fs//rm", 0)
 	assert.ErrorContains(t, err, "no node kit//nope")
-	_, _, err = x.Path(context.Background(), "kit//run", "fs//rm", -1)
+	_, _, err = x.Path(context.Background(), "kit//run", "fs//rm", -2)
 	assert.Error(t, err)
 }
 
@@ -711,4 +721,46 @@ func TestBitset(t *testing.T) {
 	assert.True(t, o.subset(b))
 	assert.Equal(t, 3, b.count())
 	assert.Len(t, b.bytes(), 24)
+}
+
+// chain returns a package whose symbol reaches fs//rmSync through hops
+// definitions.
+func chain(hops int) string {
+	var b strings.Builder
+	b.WriteString("edge a//x npm:a@1.0.0//a.js//f0 package\n")
+	for i := range hops {
+		fmt.Fprintf(&b, "edge npm:a@1.0.0//a.js//f%d npm:a@1.0.0//a.js//f%d direct %d\n", i, i+1, i+2)
+	}
+	fmt.Fprintf(&b, "edge npm:a@1.0.0//a.js//f%d fs//rmSync direct %d\n", hops, hops+2)
+	return b.String()
+}
+
+func TestExplorerPathWithNoDepthCap(t *testing.T) {
+	x := NewExplorer(graphOf(t, chain(70)))
+	_, found, err := x.Path(context.Background(), "a//x", "fs//rmSync", 0)
+	require.NoError(t, err)
+	assert.False(t, found, "the default cap of 64 hops stops the search")
+	hops, found, err := x.Path(context.Background(), "a//x", "fs//rmSync", NoDepthCap)
+	require.NoError(t, err)
+	require.True(t, found)
+	assert.Len(t, hops, 73)
+	_, _, err = x.Path(context.Background(), "a//x", "fs//rmSync", -2)
+	assert.Error(t, err)
+}
+
+func TestExploreAllStopsAtTheDeadline(t *testing.T) {
+	x := NewExplorer(graphOf(t, chain(3)))
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	sets, err := x.ExploreAll(ctx, []string{"a//x"})
+	require.NoError(t, err)
+	assert.Empty(t, sets.Sources[0].Reached)
+	require.Len(t, sets.Sources[0].Uncertainties, 1)
+	u := sets.Uncertainties[sets.Sources[0].Uncertainties[0]]
+	assert.Equal(t, Budget, u.Kind)
+	assert.Equal(t, "the search stopped at the deadline", u.Text)
+
+	e, err := x.Explore(ctx, []string{"a//x"}, 0)
+	require.NoError(t, err)
+	assert.Equal(t, []Uncertainty{u.Uncertainty}, e.Uncertainties, "Explore reports the stop the same way")
 }
