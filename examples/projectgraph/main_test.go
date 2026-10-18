@@ -16,6 +16,7 @@ import (
 const (
 	acceptanceCase = "../../test/projectgraph/cases/python/helper-module/project"
 	overlayCase    = "../../test/projectgraph/cases/python/llm-overlay"
+	deadCallCase   = "../../test/projectgraph/cases/python/dead-call/project"
 	dependencyCase = "../../test/projectgraph/cases/javascript/dependency-transitive/project"
 )
 
@@ -119,6 +120,40 @@ func TestTargetFlag(t *testing.T) {
 	assert.Equal(t, "yaml//load,os//*", targets.String())
 	assert.ErrorContains(t, targets.Set("yaml//"), "an empty segment")
 	assert.Len(t, targets, 2)
+}
+
+func TestSourceFlag(t *testing.T) {
+	sources := sourceList{}
+	require.NoError(t, sources.Set("app/server.py:main"))
+	require.NoError(t, sources.Set("src/api.ts:Router.handle"))
+	require.NoError(t, sources.Set("app/server.py"))
+	require.NoError(t, sources.Set("lib/x.py//Loader//load"))
+	assert.Equal(t, "app/server.py//main,src/api.ts//Router//handle,app/server.py,lib/x.py//Loader//load", sources.String())
+	assert.ErrorContains(t, sources.Set("app/server.py:main."), "an empty segment")
+	assert.ErrorContains(t, sources.Set(":main"), "no path")
+	assert.ErrorContains(t, sources.Set("app/server.py//*"), "has a wildcard")
+}
+
+func TestExampleSearchesFromASource(t *testing.T) {
+	bin := buildExample(t)
+	out, err := exec.Command(bin, "-dir", deadCallCase, "-target", "yaml//load").CombinedOutput()
+	require.NoError(t, err, string(out))
+	assert.Equal(t, "yaml//load: not-found\n  call at handlers.py:13 in handlers.py//load_old, which no root reaches\n  searched 1 roots, 5 nodes, 4 edges\n", string(out))
+
+	out, err = exec.Command(bin, "-dir", deadCallCase, "-source", "handlers.py:load_old", "-target", "yaml//load").CombinedOutput()
+	require.NoError(t, err, string(out))
+	assert.Equal(t, "yaml//load: found\n  handlers.py//load_old (query) -> handlers.py:13 -> yaml//load\n", string(out))
+
+	out, err = exec.Command(bin, "-dir", deadCallCase, "-source", "handlers.py:load_old", "-sources-only", "-target", "json//load").CombinedOutput()
+	require.NoError(t, err, string(out))
+	assert.Equal(t, "json//load: not-found\n  call at handlers.py:8 in handlers.py//parse, which no root reaches\n  searched 1 roots, 3 nodes, 2 edges\n", string(out))
+
+	cmd := exec.Command(bin, "-dir", deadCallCase, "-source", "handlers.py:load_odl", "-target", "yaml//load")
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	_, err = cmd.Output()
+	require.Error(t, err)
+	assert.Contains(t, stderr.String(), "unknown source: no node has the key handlers.py//load_odl")
 }
 
 func TestDependencyFlag(t *testing.T) {

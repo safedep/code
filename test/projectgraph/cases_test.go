@@ -109,10 +109,16 @@ type unresolved struct {
 	Method string `yaml:"method,omitempty"`
 }
 
+// result is one reach query of a case and its result. Sources are the
+// sources of the query, as keys, and SourcesOnly its mode. Error is the
+// text of the error that the query must give, in place of a result.
 type result struct {
 	Target        string        `yaml:"target"`
+	Sources       []string      `yaml:"sources,omitempty"`
+	SourcesOnly   bool          `yaml:"sources_only,omitempty"`
 	IncludeTests  bool          `yaml:"include_tests,omitempty"`
-	Status        string        `yaml:"status"`
+	Error         string        `yaml:"error,omitempty"`
+	Status        string        `yaml:"status,omitempty"`
 	Path          []hop         `yaml:"path,omitempty"`
 	TestPath      []hop         `yaml:"test_path,omitempty"`
 	CallSites     []callSite    `yaml:"call_sites,omitempty"`
@@ -121,9 +127,11 @@ type result struct {
 }
 
 // hop has a resolver only for an llm edge, so a case checks the model and
-// the prompt of the hop.
+// the prompt of the hop, and a root only when the case names one on the
+// first hop, so a case checks who chose the start of the path.
 type hop struct {
 	Key        string `yaml:"key"`
+	Root       string `yaml:"root,omitempty"`
 	Site       string `yaml:"site,omitempty"`
 	Kind       string `yaml:"kind,omitempty"`
 	Confidence string `yaml:"confidence,omitempty"`
@@ -204,7 +212,12 @@ func runCase(t *testing.T, dir string, languages []core.Language) {
 
 	results := caseResults(t, g, want)
 	for i, w := range want.Results {
-		assert.Equal(t, w, resultOf(w, results[i]), "result for %s", w.Target)
+		if w.Error != "" {
+			assert.ErrorContains(t, results[i].err, w.Error, "query for %s", w.Target)
+			continue
+		}
+		require.NoError(t, results[i].err, "query for %s", w.Target)
+		assert.Equal(t, w, resultOf(w, results[i].Result), "result for %s", w.Target)
 	}
 	dumpCase(t, dir, g, results)
 	for _, unit := range slices.Sorted(maps.Values(want.Units)) {
@@ -212,17 +225,34 @@ func runCase(t *testing.T, dir string, languages []core.Language) {
 	}
 }
 
+// caseResult is the result of one query of a case, or its error. The
+// JSON form is the form of the result, so the dump and the hash of a case
+// hold the results alone.
+type caseResult struct {
+	reach.Result
+	err error
+}
+
 // caseResults runs the reach query of each result of the expectation, one
 // target per query, and returns the results in the order of the
 // expectation.
-func caseResults(t testing.TB, g *projectgraph.Graph, want expectation) []reach.Result {
+func caseResults(t testing.TB, g *projectgraph.Graph, want expectation) []caseResult {
 	t.Helper()
-	var results []reach.Result
+	var results []caseResult
 	for _, w := range want.Results {
-		got, err := reach.Reach(context.Background(), g, reach.Query{Targets: targetsOf(t, w.Target), IncludeTests: w.IncludeTests})
+		sources, err := reach.SourcesByKey(w.Sources...)
 		require.NoError(t, err)
+		q := reach.Query{Targets: targetsOf(t, w.Target), Sources: sources, IncludeTests: w.IncludeTests}
+		if w.SourcesOnly {
+			q.SourceMode = reach.SourcesOnly
+		}
+		got, err := reach.Reach(context.Background(), g, q)
+		if err != nil {
+			results = append(results, caseResult{err: err})
+			continue
+		}
 		require.Len(t, got, 1)
-		results = append(results, got...)
+		results = append(results, caseResult{Result: got[0]})
 	}
 	return results
 }
@@ -252,7 +282,7 @@ func fileSystemConfig(project string, want expectation) (fs.LocalFileSystemConfi
 
 // dumpCase writes the graph and the reach results of a case under the
 // directory of the flag -dump.
-func dumpCase(t *testing.T, dir string, g *projectgraph.Graph, results []reach.Result) {
+func dumpCase(t *testing.T, dir string, g *projectgraph.Graph, results []caseResult) {
 	t.Helper()
 	if *dumpDir == "" {
 		return
@@ -349,10 +379,12 @@ func truncationsOf(g *projectgraph.Graph) []truncation {
 func resultOf(w result, r reach.Result) result {
 	got := result{
 		Target:        r.Target.Key(),
+		Sources:       w.Sources,
+		SourcesOnly:   w.SourcesOnly,
 		IncludeTests:  w.IncludeTests,
 		Status:        string(r.Status),
-		Path:          hopsOf(r.Path),
-		TestPath:      hopsOf(r.TestPath),
+		Path:          hopsOf(w.Path, r.Path),
+		TestPath:      hopsOf(w.TestPath, r.TestPath),
 		Uncertainties: uncertaintiesOf(r.Uncertainties),
 		SetAside:      uncertaintiesOf(r.SetAside),
 	}
@@ -362,12 +394,17 @@ func resultOf(w result, r reach.Result) result {
 	return got
 }
 
-func hopsOf(hops []reach.Hop) []hop {
+// hopsOf returns the hops of a path. The first hop has its root kind
+// only when the expectation names one.
+func hopsOf(want []hop, hops []reach.Hop) []hop {
 	var out []hop
-	for _, h := range hops {
+	for i, h := range hops {
 		got := hop{Key: h.Key, Site: site(h.Site), Kind: string(h.EdgeKind), Confidence: string(h.Confidence)}
 		if h.EdgeKind == projectgraph.EdgeLLM {
 			got.Resolver = h.Resolver
+		}
+		if i == 0 && len(want) > 0 && want[0].Root != "" {
+			got.Root = string(h.Root)
 		}
 		out = append(out, got)
 	}

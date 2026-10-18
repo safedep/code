@@ -141,6 +141,46 @@ With no root of kind `main`, `manifest` or `framework`, every exported
 definition is a root, and `Graph.Stats.RootFallback` says so. Each result
 of a reach query then carries a `root-fallback` uncertainty.
 
+## Sources
+
+The rules decide the roots by default. An engineer who knows the entry
+points of the application names them as sources of the query, and the
+search starts from them. A source is a `reach.Source`: the key of a
+definition or of a module top level of a first-party file.
+
+| Constructor | Takes | Gives |
+| --- | --- | --- |
+| `reach.SourceByKey("app/server.py//main")` | The key, as a configuration or a flag writes it | `app/server.py//main` |
+| `reach.SourceInFile("src/api.ts", "Router", "handle")` | The path of the file and the qualified name of the definition. With no name, the module top level of the file | `src/api.ts//Router//handle` |
+
+`reach.SourcesByKey` reads a list of keys. `Query.SourceMode` says what
+the sources do.
+
+| Mode | Roots of the search |
+| --- | --- |
+| `reach.SourcesAndRoots` | The sources and the roots that the rules marked. It is the default |
+| `reach.SourcesOnly` | The sources alone. The root fallback does not apply, so no result carries a `root-fallback` uncertainty |
+
+A source must name a first-party node of the graph. A key of no node, an
+external symbol or a definition of dependency code is an error of `Reach`
+that wraps `reach.ErrUnknownSource`, one per bad source, so a typo never
+gives `not-found`. A source is a root of kind `query` in
+`Searched.Roots`, and a path from it starts with a hop of root kind
+`query`. `reach.PathString` writes such a path as
+`app/server.py//main (query) -> handlers.py:12 -> yaml//load`. All other
+uncertainty rules stay.
+
+A tool such as vet gives an engineer both forms: a list of entry points
+in its configuration, and a repeatable flag, each as `path:name.name` or
+as a key, and a switch between the two modes. With `SourcesAndRoots`
+a named entry point adds what the rules missed. With `SourcesOnly` the
+engineer owns the roots, as for a library whose rules give only the
+fallback. The tool reports an unknown source as an error of the
+configuration, and does not run the query.
+
+`examples/projectgraph` takes `-source app/server.py:main` and
+`-sources-only`.
+
 ## Reach
 
 ```go
@@ -162,7 +202,8 @@ the key, so a query never holds a key that no node can have.
 
 `reach.TargetsByKey` reads a list of keys. `Target.Key` returns the key,
 and the JSON form of a target is its key. One breadth-first search from
-the roots serves every target of a query.
+the roots, and from the sources of the query, serves every target of a
+query.
 
 A `reach.Result` has the status of the target, the shortest path from a
 root, the call sites of the target, the uncertainties of the answer and

@@ -441,5 +441,5 @@ func (x *Explorer) Path(ctx context.Context, from string, target Target, maxDept
 	if !found {
 		return nil, false, nil
 	}
-	return a.path(s, node), true, nil
+	return a.path(s, node, nil), true, nil
 }

@@ -153,7 +153,7 @@ func TestReachFound(t *testing.T) {
 	r := reachOne(t, graphOf(t, basic), Query{Targets: targetsOf(t, "yaml//load")})
 	assert.Equal(t, Found, r.Status)
 	assert.Equal(t, []Hop{
-		{Key: "main.py"},
+		{Key: "main.py", Root: projectgraph.RootMain},
 		{Key: "handlers.py//parse", Site: projectgraph.Site{Path: "main.py", Line: 3}, EdgeKind: projectgraph.EdgeDirect, Confidence: projectgraph.ConfidenceHigh, Resolver: "test"},
 		{Key: "yaml//load", Site: projectgraph.Site{Path: "handlers.py", Line: 12}, EdgeKind: projectgraph.EdgeDirect, Confidence: projectgraph.ConfidenceHigh, Resolver: "test"},
 	}, r.Path)

@@ -48,7 +48,7 @@ it at 0.80.
    | `unresolved` | The whole set of unresolved sites, with `caller`, `site`, `reason` and `method` |
    | `truncated` | The whole set of truncation records of the link step, with `kind`, `key` and `site` |
    | `dropped` | The whole set of `overlay.json` edges that the merge drops, with `site`, `callee` and `reason` |
-   | `results` | The reach result of each `target`, with `status`, `path`, `call_sites` and the uncertainties. An `llm` hop of a path has its `resolver`, as `model m1, prompt v2` |
+   | `results` | The reach result of each `target`, with `status`, `path`, `call_sites` and the uncertainties. An `llm` hop of a path has its `resolver`, as `model m1, prompt v2`. The first hop has its `root` kind, as `query`, when the case checks who chose the start of the path. `sources` names the sources of the query, as keys, and `sources_only` searches from them alone. `error` is the text of the error that the query must give, as for an unknown source, in place of a result |
 
    A site is `path:line`. A key is a symbol key, as `pkg/loader.py//parse` or
    `yaml//load`.

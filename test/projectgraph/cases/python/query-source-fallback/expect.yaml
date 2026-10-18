@@ -1,0 +1,64 @@
+source: safedep:hand
+description: A library with no manifest and no entry point, so every exported definition is a root. A query from a source alone has no fallback root, so it carries no root-fallback uncertainty and does not reach json.load from lib.run. A query that adds the source to the roots keeps the fallback and its uncertainty.
+roots:
+  - key: lib.py
+    kind: library-surface
+    rule: library-surface
+  - key: lib.py//load_old
+    kind: library-surface
+    rule: library-surface
+  - key: lib.py//run
+    kind: library-surface
+    rule: library-surface
+edges:
+  - from: lib.py//run
+    to: json//load
+    kind: direct
+    confidence: high
+    site: lib.py:8
+  - from: lib.py//load_old
+    to: yaml//load
+    kind: direct
+    confidence: high
+    site: lib.py:13
+unresolved: []
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: lib.py//load_old
+        root: library-surface
+      - key: yaml//load
+        site: lib.py:13
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib.py//load_old
+        site: lib.py:13
+        reached: true
+    uncertainties:
+      - kind: root-fallback
+  - target: json//load
+    sources: [lib.py//load_old]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: lib.py//run
+        site: lib.py:8
+        reached: false
+  - target: json//load
+    sources: [lib.py//load_old]
+    status: found
+    path:
+      - key: lib.py//run
+        root: library-surface
+      - key: json//load
+        site: lib.py:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib.py//run
+        site: lib.py:8
+        reached: true
+    uncertainties:
+      - kind: root-fallback

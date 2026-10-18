@@ -3,6 +3,9 @@
 // yaml//load. It keeps the file indexes in a localdb file in the -store
 // directory, so a second run parses only the files that changed. With
 // -overlay it merges a file of llm edges into the graph before the query.
+// Each -source names an entry point of the project that the root rules do
+// not mark, and -sources-only searches from the -source entry points
+// alone.
 //
 // Each -deps dir=unit, as -deps node_modules/lodash=npm:lodash@4.17.21,
 // adds the code of a dependency to the graph, so a path goes on into the
@@ -72,6 +75,40 @@ func (l *targetList) Set(value string) error {
 	return nil
 }
 
+// sourceList is the -source flags. A value with // is a key, as
+// app/server.py//main. Any other value is a file path and a dotted name
+// after a colon, as app/server.py:main or src/api.ts:Router.handle, or a
+// file path alone for its module top level.
+type sourceList []reach.Source
+
+func (l *sourceList) String() string {
+	parts := make([]string, 0, len(*l))
+	for _, s := range *l {
+		parts = append(parts, s.Key())
+	}
+	return strings.Join(parts, ",")
+}
+
+func (l *sourceList) Set(value string) error {
+	var s reach.Source
+	var err error
+	if strings.Contains(value, fileindex.Separator) {
+		s, err = reach.SourceByKey(value)
+	} else {
+		path, name, _ := strings.Cut(value, ":")
+		var names []string
+		if name != "" {
+			names = strings.Split(name, ".")
+		}
+		s, err = reach.SourceInFile(path, names...)
+	}
+	if err != nil {
+		return err
+	}
+	*l = append(*l, s)
+	return nil
+}
+
 // depList is the -deps flags: the unit of each directory of dependency
 // code.
 type depList map[string]string
@@ -98,6 +135,8 @@ type config struct {
 	store        string
 	overlay      string
 	targets      targetList
+	sources      sourceList
+	sourcesOnly  bool
 	importDirs   stringList
 	deps         depList
 	summary      bool
@@ -112,6 +151,8 @@ func main() {
 	flag.StringVar(&cfg.store, "store", "", "directory of the localdb file that keeps the file indexes")
 	flag.StringVar(&cfg.overlay, "overlay", "", "JSON file of llm edges to merge into the graph")
 	flag.Var(&cfg.targets, "target", "external symbol to reach, as yaml//load (repeatable)")
+	flag.Var(&cfg.sources, "source", "entry point of the project to search from, as app/server.py:main, src/api.ts:Router.handle or a key as app/server.py//main (repeatable)")
+	flag.BoolVar(&cfg.sourcesOnly, "sources-only", false, "search from the -source entry points alone, not from the roots that the rules mark")
 	flag.Var(cfg.deps, "deps", "directory of a dependency and its unit, as node_modules/lodash=npm:lodash@4.17.21 (repeatable)")
 	flag.Var(&cfg.importDirs, "import-dir", "directory that holds -deps directories, as venv/site-packages (repeatable)")
 	flag.BoolVar(&cfg.summary, "summary", false, "print the summary of each unit of -deps as JSON")
@@ -224,7 +265,11 @@ func printReach(ctx context.Context, cfg config, out io.Writer, root string, ind
 			return err
 		}
 	}
-	results, err := reach.Reach(ctx, g, reach.Query{Targets: cfg.targets, IncludeTests: cfg.includeTests})
+	q := reach.Query{Targets: cfg.targets, Sources: cfg.sources, IncludeTests: cfg.includeTests}
+	if cfg.sourcesOnly {
+		q.SourceMode = reach.SourcesOnly
+	}
+	results, err := reach.Reach(ctx, g, q)
 	if err != nil {
 		return err
 	}

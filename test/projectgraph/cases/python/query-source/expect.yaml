@@ -1,0 +1,75 @@
+source: safedep:hand
+description: A Procfile runs main.py, which calls handlers.parse. handlers.load_old calls yaml.load, and no root reaches it. A query that names load_old as a source reaches yaml.load, and a query from the source alone does not reach json.load. A source that names no node, or an external symbol, is an error.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+edges:
+  - from: main.py
+    to: handlers.py//parse
+    kind: direct
+    confidence: high
+    site: main.py:3
+  - from: handlers.py//parse
+    to: json//load
+    kind: direct
+    confidence: high
+    site: handlers.py:8
+  - from: handlers.py//load_old
+    to: yaml//load
+    kind: direct
+    confidence: high
+    site: handlers.py:13
+unresolved: []
+results:
+  - target: json//load
+    status: found
+    path:
+      - key: main.py
+        root: manifest
+      - key: handlers.py//parse
+        site: main.py:3
+        kind: direct
+        confidence: high
+      - key: json//load
+        site: handlers.py:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: handlers.py//parse
+        site: handlers.py:8
+        reached: true
+  - target: yaml//load
+    status: not-found
+    call_sites:
+      - caller: handlers.py//load_old
+        site: handlers.py:13
+        reached: false
+  - target: yaml//load
+    sources: [handlers.py//load_old]
+    status: found
+    path:
+      - key: handlers.py//load_old
+        root: query
+      - key: yaml//load
+        site: handlers.py:13
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: handlers.py//load_old
+        site: handlers.py:13
+        reached: true
+  - target: json//load
+    sources: [handlers.py//load_old]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: handlers.py//parse
+        site: handlers.py:8
+        reached: false
+  - target: yaml//load
+    sources: [handlers.py//load_odl, handlers.py//parse]
+    error: "unknown source: no node has the key handlers.py//load_odl"
+  - target: yaml//load
+    sources: [yaml//load]
+    error: "unknown source: yaml//load is an external symbol"
