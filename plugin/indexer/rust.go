@@ -290,29 +290,18 @@ func (p *projection) rustDefinesType(impl *sitter.Node) bool {
 // rustLocals returns the local variables of a body that declare a type.
 func (p *projection) rustLocals(body *sitter.Node, bounds map[string]string) []fileindex.Typed {
 	var locals []fileindex.Typed
-	var walk func(node *sitter.Node, depth int)
-	walk = func(node *sitter.Node, depth int) {
-		switch {
-		case depth > maxLocalDepth:
+	walkBody(body, map[string]bool{"function_item": true}, func(node *sitter.Node) {
+		if node.Type() != "let_declaration" {
 			return
-		case node.Type() == "function_item" && depth > 0:
-			return
-		case node.Type() == "let_declaration":
-			name := node.ChildByFieldName("pattern")
-			if name != nil && name.Type() == "mut_pattern" && name.NamedChildCount() > 0 {
-				name = name.NamedChild(0)
-			}
-			if typ := p.rustTypeName(node.ChildByFieldName("type"), bounds); typ != "" && name != nil && name.Type() == "identifier" {
-				locals = append(locals, fileindex.Typed{Name: p.text(name), Type: typ})
-			}
 		}
-		for _, child := range ts.NamedChildren(node) {
-			walk(child, depth+1)
+		name := node.ChildByFieldName("pattern")
+		if name != nil && name.Type() == "mut_pattern" && name.NamedChildCount() > 0 {
+			name = name.NamedChild(0)
 		}
-	}
-	if body != nil {
-		walk(body, 0)
-	}
+		if typ := p.rustTypeName(node.ChildByFieldName("type"), bounds); typ != "" && name != nil && name.Type() == "identifier" {
+			locals = append(locals, fileindex.Typed{Name: p.text(name), Type: typ})
+		}
+	})
 	return locals
 }
 

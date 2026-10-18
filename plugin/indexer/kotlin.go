@@ -78,7 +78,7 @@ func kotlinKind(_ *projection, node *sitter.Node, kind fileindex.DefKind) filein
 // class A : Base(), Runner. An enum entry with a body extends its enum.
 func kotlinBases(p *projection, class *sitter.Node) []string {
 	if class.Type() == "enum_entry" {
-		if enum := class.Parent().Parent(); enum != nil && enum.Type() == "class_declaration" {
+		if enum := enumOf(class, "class_declaration"); enum != nil {
 			return nonEmpty(p.text(ts.ChildOfType(enum, "type_identifier")))
 		}
 		return nil
@@ -243,25 +243,14 @@ func inCompanion(node *sitter.Node) bool {
 // type, as s in val s: Service = f().
 func (p *projection) kotlinLocals(body *sitter.Node) []fileindex.Typed {
 	var locals []fileindex.Typed
-	var walk func(node *sitter.Node, depth int)
-	walk = func(node *sitter.Node, depth int) {
-		switch {
-		case depth > maxLocalDepth:
-			return
-		case node.Type() == "variable_declaration":
-			if typ := p.kotlinTypeOf(node); typ != "" {
-				locals = append(locals, fileindex.Typed{Name: p.text(ts.ChildOfType(node, "simple_identifier")), Type: typ})
-			}
-		case node.Type() == "class_body", node.Type() == "function_declaration" && depth > 0:
+	walkBody(body, map[string]bool{"class_body": true, "function_declaration": true}, func(node *sitter.Node) {
+		if node.Type() != "variable_declaration" {
 			return
 		}
-		for _, child := range ts.NamedChildren(node) {
-			walk(child, depth+1)
+		if typ := p.kotlinTypeOf(node); typ != "" {
+			locals = append(locals, fileindex.Typed{Name: p.text(ts.ChildOfType(node, "simple_identifier")), Type: typ})
 		}
-	}
-	if body != nil {
-		walk(body, 0)
-	}
+	})
 	return locals
 }
 
@@ -324,7 +313,7 @@ func kotlinFlagVisitor(p *projection) visitor {
 				typ = ts.ChildOfType(typ, "user_type")
 			}
 			name := p.kotlinTypeName(typ)
-			if slices.Contains(javaInjections, name[strings.LastIndex(name, ".")+1:]) {
+			if injected(name) {
 				p.flag(fileindex.FlagInjection, node)
 			}
 		}

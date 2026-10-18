@@ -212,11 +212,7 @@ func javaStaticMembers(body *sitter.Node) []*sitter.Node {
 // var s = new Service().
 func (p *projection) javaLocals(body *sitter.Node) []fileindex.Typed {
 	var locals []fileindex.Typed
-	var walk func(node *sitter.Node, depth int)
-	walk = func(node *sitter.Node, depth int) {
-		if depth > maxLocalDepth || node.Type() == "class_body" {
-			return
-		}
+	walkBody(body, map[string]bool{"class_body": true}, func(node *sitter.Node) {
 		switch node.Type() {
 		case "local_variable_declaration":
 			typ := p.javaTypeName(node.ChildByFieldName("type"))
@@ -234,13 +230,7 @@ func (p *projection) javaLocals(body *sitter.Node) []fileindex.Typed {
 				locals = append(locals, fileindex.Typed{Name: p.text(node.ChildByFieldName("name")), Type: typ})
 			}
 		}
-		for _, child := range ts.NamedChildren(node) {
-			walk(child, depth+1)
-		}
-	}
-	if body != nil {
-		walk(body, 0)
-	}
+	})
 	return locals
 }
 
@@ -279,7 +269,7 @@ func javaFields(p *projection, class *sitter.Node) []fileindex.Typed {
 // constant of an enum with a class body extends the enum.
 func javaBases(p *projection, node *sitter.Node) []string {
 	if node.Type() == "enum_constant" {
-		if enum := node.Parent().Parent(); enum != nil && enum.Type() == "enum_declaration" {
+		if enum := enumOf(node, "enum_declaration"); enum != nil {
 			return nonEmpty(p.text(enum.ChildByFieldName("name")))
 		}
 		return nil
@@ -300,6 +290,25 @@ func javaBases(p *projection, node *sitter.Node) []string {
 		}
 	}
 	return bases
+}
+
+// enumOf returns the enum that holds a constant with a class body, two
+// levels up from the constant, when it has the type.
+func enumOf(constant *sitter.Node, enumType string) *sitter.Node {
+	body := constant.Parent()
+	if body == nil {
+		return nil
+	}
+	if enum := body.Parent(); enum != nil && enum.Type() == enumType {
+		return enum
+	}
+	return nil
+}
+
+// injected reports whether an annotation, as written with or without its
+// package, lets a container set a value.
+func injected(annotation string) bool {
+	return slices.Contains(javaInjections, annotation[strings.LastIndex(annotation, ".")+1:])
 }
 
 // javaTypeName returns the name of the class type that a type node names,
@@ -337,7 +346,7 @@ func javaFlagVisitor(p *projection) visitor {
 			}
 		case "marker_annotation", "annotation":
 			name := p.text(node.ChildByFieldName("name"))
-			if slices.Contains(javaInjections, name[strings.LastIndex(name, ".")+1:]) {
+			if injected(name) {
 				p.flag(fileindex.FlagInjection, node)
 			}
 		}

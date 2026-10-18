@@ -209,27 +209,16 @@ func csharpSignature(p *projection, def *fileindex.Definition, node *sitter.Node
 // type or that a new initializes, and the variable of a foreach.
 func (p *projection) csharpLocals(body *sitter.Node) []fileindex.Typed {
 	var locals []fileindex.Typed
-	var walk func(node *sitter.Node, depth int)
-	walk = func(node *sitter.Node, depth int) {
-		switch {
-		case depth > maxLocalDepth:
-			return
-		case node.Type() == "variable_declaration":
+	walkBody(body, map[string]bool{"local_function_statement": true}, func(node *sitter.Node) {
+		switch node.Type() {
+		case "variable_declaration":
 			locals = append(locals, p.csharpVariables(node)...)
-		case node.Type() == "foreach_statement":
+		case "foreach_statement":
 			if typ := p.csharpTypeName(node.ChildByFieldName("type")); typ != "" {
 				locals = append(locals, fileindex.Typed{Name: p.text(node.ChildByFieldName("left")), Type: typ})
 			}
-		case node.Type() == "local_function_statement" && depth > 0:
-			return
 		}
-		for _, child := range ts.NamedChildren(node) {
-			walk(child, depth+1)
-		}
-	}
-	if body != nil {
-		walk(body, 0)
-	}
+	})
 	return locals
 }
 

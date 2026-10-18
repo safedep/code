@@ -10,10 +10,6 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-// maxLocalDepth bounds the walk of a Go function body for its local
-// variables.
-const maxLocalDepth = 64
-
 var goRules = languageRules{
 	kinds: map[string]fileindex.DefKind{
 		"function_declaration": fileindex.DefFunction,
@@ -280,11 +276,7 @@ func (p *projection) goResult(result *sitter.Node) string {
 // the body shares the scope of the body, so its names count too.
 func (p *projection) goLocals(body *sitter.Node) []fileindex.Typed {
 	var locals []fileindex.Typed
-	var walk func(node *sitter.Node, depth int)
-	walk = func(node *sitter.Node, depth int) {
-		if depth > maxLocalDepth {
-			return
-		}
+	walkBody(body, nil, func(node *sitter.Node) {
 		switch node.Type() {
 		case "var_spec":
 			names := childrenByField(node, "name")
@@ -300,13 +292,7 @@ func (p *projection) goLocals(body *sitter.Node) []fileindex.Typed {
 				locals = append(locals, p.goAssigned(ts.NamedChildren(left), node.ChildByFieldName("right"))...)
 			}
 		}
-		for _, child := range ts.NamedChildren(node) {
-			walk(child, depth+1)
-		}
-	}
-	if body != nil {
-		walk(body, 0)
-	}
+	})
 	return locals
 }
 

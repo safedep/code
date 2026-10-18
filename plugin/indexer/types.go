@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/pkg/ts"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -53,6 +54,30 @@ func (p *projection) addBody(key string, kind fileindex.DefKind, node *sitter.No
 	p.addSyntax(key, node)
 	p.bodies[spanOf(node)] = key
 	p.fillDefinition(def)
+}
+
+// maxLocalDepth bounds the walk of a function body for its local
+// variables.
+const maxLocalDepth = 64
+
+// walkBody visits each node below the body of a function, the body first,
+// to the depth maxLocalDepth. It does not enter a node of a type in stop
+// below the body, as a nested function or a class body, whose names are
+// not the names of the function.
+func walkBody(body *sitter.Node, stop map[string]bool, visit func(node *sitter.Node)) {
+	var walk func(node *sitter.Node, depth int)
+	walk = func(node *sitter.Node, depth int) {
+		if depth > maxLocalDepth || depth > 0 && stop[node.Type()] {
+			return
+		}
+		visit(node)
+		for _, child := range ts.NamedChildren(node) {
+			walk(child, depth+1)
+		}
+	}
+	if body != nil {
+		walk(body, 0)
+	}
 }
 
 // innermost returns the key of the innermost definition that holds the
