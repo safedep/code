@@ -1,6 +1,6 @@
 [
   {
-    "version": "10",
+    "version": "11",
     "path": "config.py",
     "language": "python",
     "imports": [

@@ -1,6 +1,6 @@
 [
   {
-    "version": "10", "path": "src/main.js", "language": "javascript",
+    "version": "11", "path": "src/main.js", "language": "javascript",
     "imports": [
       {"line": 1, "module": "./parser.js", "item": "parse", "alias": "parse", "kind": "static", "namespace": ".//parser.js//parse"},
       {"line": 2, "module": "./util", "item": "fmt", "alias": "fmt", "kind": "static", "namespace": ".//util//fmt"},
@@ -14,7 +14,7 @@
     "unresolved": [{"caller": "src/main.js", "line": 5, "column": 1, "text": "import", "reason": "dynamic-import"}]
   },
   {
-    "version": "10", "path": "src/parser.js", "language": "javascript",
+    "version": "11", "path": "src/parser.js", "language": "javascript",
     "imports": [{"line": 1, "module": "js-yaml", "alias": "yaml", "kind": "static", "namespace": "js-yaml"}],
     "exports": [{"name": "parse", "target": "src/parser.js//parse", "line": 2}],
     "definitions": [
@@ -24,7 +24,7 @@
     "calls": [{"caller": "src/parser.js//parse", "line": 3, "column": 10, "callee": "yaml.load", "targets": ["js-yaml//load"], "receiver": "yaml", "method": "load", "kind": "call"}]
   },
   {
-    "version": "10", "path": "src/util.js", "language": "javascript",
+    "version": "11", "path": "src/util.js", "language": "javascript",
     "exports": [{"name": "fmt", "target": "src/util.js//fmt", "line": 1}],
     "definitions": [
       {"key": "src/util.js", "kind": "module", "name": "util", "start_line": 1, "end_line": 1, "exported": true},

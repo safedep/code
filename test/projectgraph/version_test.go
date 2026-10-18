@@ -22,6 +22,7 @@ import (
 // row of an old pair stays as it is.
 var graphHashes = map[string]string{
 	"10/10": "fa32ae11c72bdf01c93d4b7afe3564b1d59b2436306e3b3503f01fc4c308e5aa",
+	"11/10": "421c6441093c8f82e4db8a2342884b5e42faf360951985d3600d99c96202625b",
 }
 
 // summaryHashes records the hash of the golden summaries of the cases for
@@ -29,6 +30,7 @@ var graphHashes = map[string]string{
 // summary.Version.
 var summaryHashes = map[string]string{
 	"10/10/1": "69c0f5f2082a61a0aceb28b1da7bffb4f662c31f35c6b5913a249c7b43410d25",
+	"11/10/1": "f3c6c7e7f2390a0c8ec81ab6673b6b8a02cadf95e0ca36dc963d57b72834589c",
 }
 
 func TestGraphHashFollowsVersion(t *testing.T) {

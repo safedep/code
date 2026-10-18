@@ -1,8 +1,8 @@
 {
-  "version": "10",
+  "version": "11",
   "path": "exports.ts",
   "language": "typescript",
-  "content_hash": "bec31766778cf120994be72531c0cd11feccdd8ac3553d9b91cc06fd07e87747",
+  "content_hash": "0edcb9324080b924f3ac45d57f5b5cbe90d625038a0dd7f99fa9e5fcbeee1edc",
   "imports": [
     {
       "line": 1,
@@ -158,6 +158,9 @@
     },
     {
       "key": "exports.ts//Service",
+      "bases": [
+        "Main"
+      ],
       "methods": [
         "exports.ts//Service//start"
       ]

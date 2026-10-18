@@ -3,7 +3,7 @@ import type { Options } from './types';
 
 export function run(opts: Options): void {}
 export const make = (): void => run({});
-export abstract class Service {
+export abstract class Service extends Main {
   start(): void {}
 }
 export default class Main {}

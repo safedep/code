@@ -88,10 +88,11 @@ func ecmascriptRules(typescript bool) languageRules {
 
 // ecmascriptBases returns the bases of a class from its class heritage, as
 // Base in class A extends Base, and the interfaces that a TypeScript
-// interface extends.
+// interface extends. An abstract class of TypeScript is its own node type
+// and has a heritage too.
 func ecmascriptBases(p *projection, node *sitter.Node) []string {
 	switch node.Type() {
-	case "class_declaration", "class":
+	case "class_declaration", "class", "abstract_class_declaration":
 		return p.heritage(node)
 	case "interface_declaration":
 		return p.interfaceExtends(node)
