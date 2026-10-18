@@ -112,6 +112,15 @@ func TestExamplePrintsTheSummaries(t *testing.T) {
 	assert.Equal(t, []string{"lodash._reinterpolate"}, summaries[1].Symbols[1].Reaches)
 }
 
+func TestTargetFlag(t *testing.T) {
+	targets := targetList{}
+	require.NoError(t, targets.Set("yaml//load"))
+	require.NoError(t, targets.Set("os//*"))
+	assert.Equal(t, "yaml//load,os//*", targets.String())
+	assert.ErrorContains(t, targets.Set("yaml//"), "an empty segment")
+	assert.Len(t, targets, 2)
+}
+
 func TestDependencyFlag(t *testing.T) {
 	deps := depList{}
 	require.NoError(t, deps.Set("node_modules/lodash=npm:lodash@4.17.21"))

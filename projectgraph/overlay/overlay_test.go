@@ -160,7 +160,9 @@ func TestMergeRejectsABadVersion(t *testing.T) {
 
 func reachOne(t *testing.T, g *projectgraph.Graph, target string) reach.Result {
 	t.Helper()
-	results, err := reach.Reach(context.Background(), g, reach.Query{Targets: []string{target}})
+	targets, err := reach.TargetsByKey(target)
+	require.NoError(t, err)
+	results, err := reach.Reach(context.Background(), g, reach.Query{Targets: targets})
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	return results[0]

@@ -57,13 +57,9 @@ const (
 	RootFallback UncertaintyKind = "root-fallback"
 )
 
-// Query asks for the targets, as external keys like yaml//load. A target
-// is the key form of the import and the names under it: a Go import path
-// with // for /, as os//exec//Command, and a Java class under its package,
-// as java//lang//Thread//sleep. A target that ends in //* matches every
-// external key under it. MaxDepth 0 selects 64 hops.
+// Query asks for the targets. MaxDepth 0 selects 64 hops.
 type Query struct {
-	Targets      []string
+	Targets      []Target
 	IncludeTests bool
 	MaxDepth     int
 }
@@ -125,7 +121,7 @@ type Searched struct {
 // reaches. SetAside lists the sites that a rule proved cannot reach the
 // target, with the rule.
 type Result struct {
-	Target        string        `json:"target"`
+	Target        Target        `json:"target"`
 	Status        Status        `json:"status"`
 	Path          []Hop         `json:"path,omitempty"`
 	TestPath      []Hop         `json:"test_path,omitempty"`
@@ -193,8 +189,8 @@ func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error
 	if q.MaxDepth < 0 {
 		return nil, fmt.Errorf("max depth %d is negative", q.MaxDepth)
 	}
-	if slices.Contains(q.Targets, "") {
-		return nil, errors.New("an empty target")
+	if slices.ContainsFunc(q.Targets, Target.IsZero) {
+		return nil, errors.New("a zero target")
 	}
 	a := newAdjacency(g)
 	a.includeTests = q.IncludeTests
@@ -445,7 +441,7 @@ func (a *adjacency) reachable(sources []int, more func(id int) []int) []bool {
 
 // unitReaches reports whether the code of a unit reaches a node of the
 // target.
-func (a *adjacency) unitReaches(unit, target string) bool {
+func (a *adjacency) unitReaches(unit string, target Target) bool {
 	c := a.closure(unit)
 	return slices.ContainsFunc(a.match(target), func(id int) bool { return c[id] })
 }
@@ -474,25 +470,24 @@ func (a *adjacency) methodClosure(name string) []bool {
 
 // methodReaches reports whether a node with the last segment reaches a
 // node of the target.
-func (a *adjacency) methodReaches(name, target string) bool {
+func (a *adjacency) methodReaches(name string, target Target) bool {
 	c := a.methodClosure(name)
 	return slices.ContainsFunc(a.match(target), func(id int) bool { return c[id] })
 }
 
 // match returns the external nodes of a target, by id.
-func (a *adjacency) match(target string) []int {
-	prefix, ok := strings.CutSuffix(target, "*")
-	if ok && strings.HasSuffix(prefix, fileindex.Separator) {
+func (a *adjacency) match(target Target) []int {
+	if _, ok := target.wildcard(); ok {
 		var ids []int
 		for _, id := range a.externals {
-			if strings.HasPrefix(a.keys[id], prefix) {
+			if target.Matches(a.keys[id]) {
 				ids = append(ids, id)
 			}
 		}
 		return ids
 	}
-	if n := a.g.Nodes[target]; n != nil && n.Kind == projectgraph.NodeExternal {
-		return []int{a.id[target]}
+	if n := a.g.Nodes[target.Key()]; n != nil && n.Kind == projectgraph.NodeExternal {
+		return []int{a.id[target.Key()]}
 	}
 	return nil
 }

@@ -219,7 +219,7 @@ func caseResults(t testing.TB, g *projectgraph.Graph, want expectation) []reach.
 	t.Helper()
 	var results []reach.Result
 	for _, w := range want.Results {
-		got, err := reach.Reach(context.Background(), g, reach.Query{Targets: []string{w.Target}, IncludeTests: w.IncludeTests})
+		got, err := reach.Reach(context.Background(), g, reach.Query{Targets: targetsOf(t, w.Target), IncludeTests: w.IncludeTests})
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		results = append(results, got...)
@@ -348,7 +348,7 @@ func truncationsOf(g *projectgraph.Graph) []truncation {
 
 func resultOf(w result, r reach.Result) result {
 	got := result{
-		Target:        r.Target,
+		Target:        r.Target.Key(),
 		IncludeTests:  w.IncludeTests,
 		Status:        string(r.Status),
 		Path:          hopsOf(r.Path),

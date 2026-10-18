@@ -18,6 +18,23 @@ type Scoped struct {
 	Targets []string `json:"targets,omitempty"`
 }
 
+// Concerns reports whether the uncertainty concerns a target, as the
+// result of a reach query lists it: a Unit scope concerns its Targets, an
+// ImportPrefix scope every target under the prefix, a Method scope its
+// Targets and every target whose last segment is the method, and an
+// uncertainty with no scope every target.
+func (u Scoped) Concerns(t Target) bool {
+	switch {
+	case u.Unit != "":
+		return t.MatchesSorted(u.Targets)
+	case u.ImportPrefix != "":
+		return t.mayImport(u.ImportPrefix)
+	case u.Method != "":
+		return t.hasMethod(u.Method) || t.MatchesSorted(u.Targets)
+	}
+	return true
+}
+
 // Reachable is what one source reaches: the external nodes, in key order,
 // and the indexes into the table of uncertainties of the Sets, ascending.
 type Reachable struct {
@@ -399,7 +416,7 @@ const NoDepthCap = -1
 // Explore finds it, or false when the search from the node does not reach
 // the target. The node itself is no target of its own search, as in
 // Explore. MaxDepth 0 selects 64 hops, and NoDepthCap no cap.
-func (x *Explorer) Path(ctx context.Context, from, target string, maxDepth int) ([]Hop, bool, error) {
+func (x *Explorer) Path(ctx context.Context, from string, target Target, maxDepth int) ([]Hop, bool, error) {
 	if maxDepth < 0 && maxDepth != NoDepthCap {
 		return nil, false, fmt.Errorf("max depth %d is negative", maxDepth)
 	}

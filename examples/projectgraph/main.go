@@ -51,6 +51,27 @@ func (s *stringList) Set(value string) error {
 	return nil
 }
 
+// targetList is the -target flags. A bad key fails at the flag, so the
+// run never starts with a target that the query rejects.
+type targetList []reach.Target
+
+func (l *targetList) String() string {
+	parts := make([]string, 0, len(*l))
+	for _, t := range *l {
+		parts = append(parts, t.Key())
+	}
+	return strings.Join(parts, ",")
+}
+
+func (l *targetList) Set(value string) error {
+	t, err := reach.TargetByKey(value)
+	if err != nil {
+		return err
+	}
+	*l = append(*l, t)
+	return nil
+}
+
 // depList is the -deps flags: the unit of each directory of dependency
 // code.
 type depList map[string]string
@@ -76,7 +97,7 @@ type config struct {
 	dir          string
 	store        string
 	overlay      string
-	targets      stringList
+	targets      targetList
 	importDirs   stringList
 	deps         depList
 	summary      bool

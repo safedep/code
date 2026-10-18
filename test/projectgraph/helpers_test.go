@@ -8,6 +8,7 @@ import (
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/plugin/indexer"
 	"github.com/safedep/code/projectgraph"
+	"github.com/safedep/code/projectgraph/reach"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,6 +19,13 @@ func indexProject(t testing.TB, fsys core.ImportAwareFileSystem, opts indexer.Op
 	indexed, err := (&indexer.Indexer{}).Run(context.Background(), fsys, opts)
 	require.NoError(t, err)
 	return indexed
+}
+
+func targetsOf(t testing.TB, keys ...string) []reach.Target {
+	t.Helper()
+	targets, err := reach.TargetsByKey(keys...)
+	require.NoError(t, err)
+	return targets
 }
 
 // linkProject links the result of an index run with the manifests under

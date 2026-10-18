@@ -144,14 +144,25 @@ of a reach query then carries a `root-fallback` uncertainty.
 ## Reach
 
 ```go
-results, err := reach.Reach(ctx, g, reach.Query{Targets: []string{"yaml//load"}})
+target, err := reach.TargetByImport(langcode.Python, "yaml", "load")
+results, err := reach.Reach(ctx, g, reach.Query{Targets: []reach.Target{target}})
 ```
 
-A target is the key form of an import and the names under it: a Go import
-path with `//` for `/`, as `os//exec//Command`, and a Java class under its
-package, as `java//lang//Thread//sleep`. A target that ends in `//*`
-matches every external key under it. One breadth-first search from the
-roots serves every target of a query.
+A `reach.Target` is an external symbol that a query asks for. Its key is
+the key form of an import and the names under it: a Go import path with
+`//` for `/`, as `os//exec//Command`, and a Java class under its package,
+as `java//lang//Thread//sleep`. A target that ends in `//*` matches every
+external key under it. Two constructors make one, and each one validates
+the key, so a query never holds a key that no node can have.
+
+| Constructor | Takes | Gives |
+| --- | --- | --- |
+| `reach.TargetByKey("yaml//load")` | The key, as a configuration or a flag writes it | `yaml//load` |
+| `reach.TargetByImport(langcode.Go, "os/exec", "Command")` | The module as the source of the language writes it, and the names under it | `os//exec//Command` |
+
+`reach.TargetsByKey` reads a list of keys. `Target.Key` returns the key,
+and the JSON form of a target is its key. One breadth-first search from
+the roots serves every target of a query.
 
 A `reach.Result` has the status of the target, the shortest path from a
 root, the call sites of the target, the uncertainties of the answer and
@@ -182,9 +193,9 @@ a symbol to the summary of its package.
 The summary stores reach sets and no path. It computes the sets once per
 strongly connected component of the graph, in reverse topological order,
 so a package of many symbols costs one walk and not one search per
-symbol. `Summary.Status(symbol, target)` gives the status of a target as a
-reach query of the unit graph from the symbol would, and `Result.Path`
-runs that one search when a finding needs the path.
+symbol. `Summary.Status(symbol, target)` gives the status of a
+`reach.Target` as a reach query of the unit graph from the symbol would,
+and `Result.Path` runs that one search when a finding needs the path.
 
 ## Versions
 

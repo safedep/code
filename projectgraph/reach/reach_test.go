@@ -104,6 +104,20 @@ func graphOf(t *testing.T, spec string) *projectgraph.Graph {
 	return g
 }
 
+func targetOf(t testing.TB, key string) Target {
+	t.Helper()
+	target, err := TargetByKey(key)
+	require.NoError(t, err)
+	return target
+}
+
+func targetsOf(t testing.TB, keys ...string) []Target {
+	t.Helper()
+	targets, err := TargetsByKey(keys...)
+	require.NoError(t, err)
+	return targets
+}
+
 func reachOne(t *testing.T, g *projectgraph.Graph, q Query) Result {
 	t.Helper()
 	results, err := Reach(context.Background(), g, q)
@@ -136,7 +150,7 @@ edge handlers.py//dead yaml//load direct 40
 `
 
 func TestReachFound(t *testing.T) {
-	r := reachOne(t, graphOf(t, basic), Query{Targets: []string{"yaml//load"}})
+	r := reachOne(t, graphOf(t, basic), Query{Targets: targetsOf(t, "yaml//load")})
 	assert.Equal(t, Found, r.Status)
 	assert.Equal(t, []Hop{
 		{Key: "main.py"},
@@ -153,7 +167,7 @@ func TestReachFound(t *testing.T) {
 
 func TestReachNotFound(t *testing.T) {
 	g := graphOf(t, basic+"\nedge other.py//f os//system direct 2\n")
-	results, err := Reach(context.Background(), g, Query{Targets: []string{"os//system", "lodash//template"}})
+	results, err := Reach(context.Background(), g, Query{Targets: targetsOf(t, "os//system", "lodash//template")})
 	require.NoError(t, err)
 
 	dead := results[0]
@@ -213,7 +227,7 @@ func TestReachUncertainties(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := graphOf(t, basic+"edge other.py//f yaml//dump\n"+tt.extra)
-			r := reachOne(t, g, Query{Targets: []string{tt.target}})
+			r := reachOne(t, g, Query{Targets: targetsOf(t, tt.target)})
 			assert.Equal(t, tt.status, r.Status)
 			assert.Equal(t, tt.kinds, kinds(r.Uncertainties))
 			assert.Len(t, r.SetAside, tt.setAside)
@@ -232,9 +246,9 @@ root tests/test_app.py test
 edge tests/test_app.py//f yaml//dump
 unresolved handlers.py//parse 5 unknown-receiver f
 `)
-	r := reachOne(t, g, Query{Targets: []string{"yaml//dump"}})
+	r := reachOne(t, g, Query{Targets: targetsOf(t, "yaml//dump")})
 	assert.Equal(t, NotFound, r.Status)
-	r = reachOne(t, g, Query{Targets: []string{"yaml//dump"}, IncludeTests: true})
+	r = reachOne(t, g, Query{Targets: targetsOf(t, "yaml//dump"), IncludeTests: true})
 	assert.Equal(t, Uncertain, r.Status)
 }
 
@@ -243,7 +257,7 @@ func TestReachCapsUncertaintiesPerKind(t *testing.T) {
 	for i := range 5 {
 		spec += fmt.Sprintf("unresolved handlers.py//parse %d computed-name\nflag handlers.py//parse eval %d\n", 20+i, 20+i)
 	}
-	r := reachOne(t, graphOf(t, spec), Query{Targets: []string{"yaml//dump"}})
+	r := reachOne(t, graphOf(t, spec), Query{Targets: targetsOf(t, "yaml//dump")})
 	assert.Equal(t, []UncertaintyKind{DynamicFlag, DynamicFlag, DynamicFlag, UnresolvedCall, UnresolvedCall, UnresolvedCall}, kinds(r.Uncertainties))
 	assert.Equal(t, 10, r.Searched.Uncertainties)
 }
@@ -255,13 +269,13 @@ root tests/test_app.py test
 edge tests/test_app.py handlers.py//parse direct 2
 edge handlers.py//parse yaml//load direct 12
 `)
-	r := reachOne(t, g, Query{Targets: []string{"yaml//load"}})
+	r := reachOne(t, g, Query{Targets: targetsOf(t, "yaml//load")})
 	assert.Equal(t, NotFound, r.Status)
 	assert.Empty(t, r.Path)
 	assert.Equal(t, []string{"tests/test_app.py", "handlers.py//parse", "yaml//load"}, pathKeys(r.TestPath))
 	assert.Len(t, r.Searched.Roots, 1)
 
-	r = reachOne(t, g, Query{Targets: []string{"yaml//load"}, IncludeTests: true})
+	r = reachOne(t, g, Query{Targets: targetsOf(t, "yaml//load"), IncludeTests: true})
 	assert.Equal(t, Found, r.Status)
 	assert.Empty(t, r.TestPath)
 	assert.Len(t, r.Searched.Roots, 2)
@@ -276,12 +290,12 @@ edge main.py yaml//safe_load direct 3
 edge main.py yamlish//x direct 4
 unresolved main.py 5 unknown-receiver dump
 `)
-	r := reachOne(t, g, Query{Targets: []string{"yaml//*"}})
+	r := reachOne(t, g, Query{Targets: targetsOf(t, "yaml//*")})
 	assert.Equal(t, Found, r.Status)
 	assert.Equal(t, []string{"main.py", "yaml//safe_load"}, pathKeys(r.Path))
 	assert.Len(t, r.CallSites, 2)
 
-	r = reachOne(t, g, Query{Targets: []string{"lodash//*"}})
+	r = reachOne(t, g, Query{Targets: targetsOf(t, "lodash//*")})
 	assert.Equal(t, Uncertain, r.Status, "a method record can name any key under a wildcard")
 	assert.Empty(t, r.CallSites)
 }
@@ -294,15 +308,15 @@ edge b.py//f c.py//f
 edge c.py//f d.py//f
 edge d.py//f yaml//load
 `)
-	r := reachOne(t, g, Query{Targets: []string{"yaml//load"}, MaxDepth: 3})
+	r := reachOne(t, g, Query{Targets: targetsOf(t, "yaml//load"), MaxDepth: 3})
 	assert.Equal(t, Uncertain, r.Status)
 	assert.True(t, r.Searched.DepthCut)
 	assert.Equal(t, []UncertaintyKind{Budget}, kinds(r.Uncertainties))
 
-	r = reachOne(t, g, Query{Targets: []string{"yaml//load"}, MaxDepth: 4})
+	r = reachOne(t, g, Query{Targets: targetsOf(t, "yaml//load"), MaxDepth: 4})
 	assert.Equal(t, Found, r.Status)
 
-	r = reachOne(t, g, Query{Targets: []string{"yaml//load"}})
+	r = reachOne(t, g, Query{Targets: targetsOf(t, "yaml//load")})
 	assert.Equal(t, Found, r.Status, "depth 0 selects 64")
 }
 
@@ -314,7 +328,7 @@ edge main.py b.py//known direct 2
 edge a.py//guess yaml//load direct 3
 edge b.py//known yaml//load direct 4
 `)
-	r := reachOne(t, g, Query{Targets: []string{"yaml//load"}})
+	r := reachOne(t, g, Query{Targets: targetsOf(t, "yaml//load")})
 	assert.Equal(t, []string{"main.py", "b.py//known", "yaml//load"}, pathKeys(r.Path))
 
 	g = graphOf(t, `
@@ -325,28 +339,28 @@ edge main.py b.py//one direct 2
 edge b.py//one c.py//two direct 2
 edge c.py//two yaml//load direct 4
 `)
-	r = reachOne(t, g, Query{Targets: []string{"yaml//load"}})
+	r = reachOne(t, g, Query{Targets: targetsOf(t, "yaml//load")})
 	assert.Equal(t, []string{"main.py", "a.py//guess", "yaml//load"}, pathKeys(r.Path), "a shorter path wins over a surer one")
 	assert.Equal(t, projectgraph.ConfidenceLow, r.Path[1].Confidence)
 }
 
 func TestReachQuery(t *testing.T) {
 	g := graphOf(t, basic)
-	results, err := Reach(context.Background(), g, Query{Targets: []string{"lodash//x", "yaml//load"}})
+	results, err := Reach(context.Background(), g, Query{Targets: targetsOf(t, "lodash//x", "yaml//load")})
 	require.NoError(t, err)
-	assert.Equal(t, "lodash//x", results[0].Target)
-	assert.Equal(t, "yaml//load", results[1].Target)
+	assert.Equal(t, "lodash//x", results[0].Target.Key())
+	assert.Equal(t, "yaml//load", results[1].Target.Key())
 
-	_, err = Reach(context.Background(), g, Query{Targets: []string{""}})
+	_, err = Reach(context.Background(), g, Query{Targets: []Target{{}}})
 	assert.Error(t, err)
-	_, err = Reach(context.Background(), g, Query{Targets: []string{"x"}, MaxDepth: -1})
+	_, err = Reach(context.Background(), g, Query{Targets: targetsOf(t, "x"), MaxDepth: -1})
 	assert.Error(t, err)
 }
 
 func TestReachDeadline(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	results, err := Reach(ctx, graphOf(t, basic), Query{Targets: []string{"yaml//load"}})
+	results, err := Reach(ctx, graphOf(t, basic), Query{Targets: targetsOf(t, "yaml//load")})
 	require.NoError(t, err)
 	assert.Equal(t, Uncertain, results[0].Status)
 	assert.True(t, results[0].Searched.Stopped)
@@ -373,7 +387,7 @@ func TestReachBuiltGraph(t *testing.T) {
 	g, err := projectgraph.Build(context.Background(), indexes, projectgraph.Options{})
 	require.NoError(t, err)
 
-	r := reachOne(t, g, Query{Targets: []string{"yaml//load"}})
+	r := reachOne(t, g, Query{Targets: targetsOf(t, "yaml//load")})
 	require.Equal(t, Found, r.Status)
 	var sites []string
 	for _, h := range r.Path[1:] {
@@ -421,7 +435,7 @@ func TestReachLargeGraph(t *testing.T) {
 	require.Len(t, targets, 201)
 
 	start := time.Now()
-	results, err := Reach(context.Background(), g, Query{Targets: targets})
+	results, err := Reach(context.Background(), g, Query{Targets: targetsOf(t, targets...)})
 	elapsed := time.Since(start)
 	require.NoError(t, err)
 
@@ -490,7 +504,7 @@ func TestReachDependencyCode(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := reachOne(t, graphOf(t, dependencies+tt.extra), Query{Targets: []string{tt.target}})
+			r := reachOne(t, graphOf(t, dependencies+tt.extra), Query{Targets: targetsOf(t, tt.target)})
 			assert.Equal(t, tt.status, r.Status)
 			assert.Equal(t, tt.kinds, kinds(r.Uncertainties))
 		})
@@ -536,19 +550,19 @@ func TestPathStringNamesAWeakHop(t *testing.T) {
 }
 
 func TestResultString(t *testing.T) {
-	found := Result{Target: "yaml//load", Status: Found, Path: []Hop{{Key: "main.py"}, {Key: "yaml//load", Site: projectgraph.Site{Path: "main.py", Line: 3}, EdgeKind: projectgraph.EdgeDirect, Confidence: projectgraph.ConfidenceHigh}}}
+	found := Result{Target: targetOf(t, "yaml//load"), Status: Found, Path: []Hop{{Key: "main.py"}, {Key: "yaml//load", Site: projectgraph.Site{Path: "main.py", Line: 3}, EdgeKind: projectgraph.EdgeDirect, Confidence: projectgraph.ConfidenceHigh}}}
 	assert.Equal(t, "yaml//load: found\n  main.py:3 -> yaml//load", found.String())
 
 	missing := Result{
-		Target: "yaml//dump", Status: Uncertain,
+		Target: targetOf(t, "yaml//dump"), Status: Uncertain,
 		CallSites:     []CallSite{{Caller: "dead.py//f", Site: projectgraph.Site{Path: "dead.py", Line: 2}}},
 		Uncertainties: []Uncertainty{{Kind: Budget, Site: projectgraph.Site{Path: "big.py"}, Text: "the file is missing"}},
 		Searched:      Searched{Roots: []projectgraph.Root{{Key: "main.py"}}, Nodes: 4, Edges: 3},
 	}
 	assert.Equal(t, "yaml//dump: uncertain\n  budget: big.py the file is missing\n  call at dead.py:2 in dead.py//f, which no root reaches\n  searched 1 roots, 4 nodes, 3 edges", missing.String())
-	assert.Contains(t, Result{Target: "Thread//sleep", Status: NoSuchTarget}.String(), "no node has the key")
+	assert.Contains(t, Result{Target: targetOf(t, "Thread//sleep"), Status: NoSuchTarget}.String(), "no node has the key")
 
-	fallback := Result{Target: "yaml//dump", Status: NotFound, Uncertainties: []Uncertainty{{Kind: RootFallback, Text: "roots: every exported symbol"}}}
+	fallback := Result{Target: targetOf(t, "yaml//dump"), Status: NotFound, Uncertainties: []Uncertainty{{Kind: RootFallback, Text: "roots: every exported symbol"}}}
 	assert.Equal(t, "yaml//dump: not-found\n  root-fallback: roots: every exported symbol\n  searched 0 roots, 0 nodes, 0 edges", fallback.String(), "an uncertainty with no site has one space")
 }
 
@@ -688,23 +702,23 @@ edge main.py//b fs//rm direct 4
 func TestExplorerPath(t *testing.T) {
 	g := graphOf(t, exploreAllGraphs["cycle and scopes"])
 	x := NewExplorer(g)
-	hops, found, err := x.Path(context.Background(), "kit//run", "child_process//exec", 0)
+	hops, found, err := x.Path(context.Background(), "kit//run", targetOf(t, "child_process//exec"), 0)
 	require.NoError(t, err)
 	require.True(t, found)
 	assert.Equal(t, []string{"kit//run", "npm:kit@1.0.0//k.js//run", "npm:kit@1.0.0//k.js//helper", "child_process//exec"}, pathKeys(hops))
 
-	_, found, err = x.Path(context.Background(), "kit//run", "os//exit", 0)
+	_, found, err = x.Path(context.Background(), "kit//run", targetOf(t, "os//exit"), 0)
 	require.NoError(t, err)
 	assert.False(t, found, "dead is not reached from run")
-	_, found, err = x.Path(context.Background(), "kit//run", "fs//nope", 0)
+	_, found, err = x.Path(context.Background(), "kit//run", targetOf(t, "fs//nope"), 0)
 	require.NoError(t, err)
 	assert.False(t, found, "a key of no node")
-	_, found, err = x.Path(context.Background(), "kit//run", "kit//run", 0)
+	_, found, err = x.Path(context.Background(), "kit//run", targetOf(t, "kit//run"), 0)
 	require.NoError(t, err)
 	assert.False(t, found, "a node is no target of its own search")
-	_, _, err = x.Path(context.Background(), "kit//nope", "fs//rm", 0)
+	_, _, err = x.Path(context.Background(), "kit//nope", targetOf(t, "fs//rm"), 0)
 	assert.ErrorContains(t, err, "no node kit//nope")
-	_, _, err = x.Path(context.Background(), "kit//run", "fs//rm", -2)
+	_, _, err = x.Path(context.Background(), "kit//run", targetOf(t, "fs//rm"), -2)
 	assert.Error(t, err)
 }
 
@@ -737,14 +751,14 @@ func chain(hops int) string {
 
 func TestExplorerPathWithNoDepthCap(t *testing.T) {
 	x := NewExplorer(graphOf(t, chain(70)))
-	_, found, err := x.Path(context.Background(), "a//x", "fs//rmSync", 0)
+	_, found, err := x.Path(context.Background(), "a//x", targetOf(t, "fs//rmSync"), 0)
 	require.NoError(t, err)
 	assert.False(t, found, "the default cap of 64 hops stops the search")
-	hops, found, err := x.Path(context.Background(), "a//x", "fs//rmSync", NoDepthCap)
+	hops, found, err := x.Path(context.Background(), "a//x", targetOf(t, "fs//rmSync"), NoDepthCap)
 	require.NoError(t, err)
 	require.True(t, found)
 	assert.Len(t, hops, 73)
-	_, _, err = x.Path(context.Background(), "a//x", "fs//rmSync", -2)
+	_, _, err = x.Path(context.Background(), "a//x", targetOf(t, "fs//rmSync"), -2)
 	assert.Error(t, err)
 }
 

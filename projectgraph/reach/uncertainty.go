@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"strings"
 
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/projectgraph"
@@ -30,8 +29,8 @@ type found struct {
 	byUnit   []Uncertainty
 	// reaches reports whether the code of a unit reaches a target, and
 	// methodReaches whether a node with the last segment reaches one.
-	reaches       func(unit, target string) bool
-	methodReaches func(name, target string) bool
+	reaches       func(unit string, target Target) bool
+	methodReaches func(name string, target Target) bool
 	// units holds the file budgets of each unit of dependency code, and
 	// entered the units that the search entered.
 	units   map[string][]Uncertainty
@@ -240,11 +239,10 @@ func (f *found) all() []Uncertainty {
 // forTarget returns the uncertainties of a target, at most maxPerKind of
 // each kind, the sites that a computed import prefix sets aside, and the
 // count before the cap.
-func (f *found) forTarget(target string) ([]Uncertainty, []Uncertainty, int) {
+func (f *found) forTarget(target Target) ([]Uncertainty, []Uncertainty, int) {
 	all := slices.Clone(f.global)
-	prefix, isWildcard := strings.CutSuffix(target, wildcard)
 	for _, m := range f.methods {
-		if isWildcard || m == fileindex.Last(target) || f.methodReaches(m, target) {
+		if target.hasMethod(m) || f.methodReaches(m, target) {
 			all = append(all, f.byMethod[m]...)
 		}
 	}
@@ -257,7 +255,7 @@ func (f *found) forTarget(target string) ([]Uncertainty, []Uncertainty, int) {
 
 	var setAside []Uncertainty
 	for _, p := range f.prefixed {
-		if mayName(p.prefix, target, prefix, isWildcard) {
+		if target.mayImport(p.prefix) {
 			all = append(all, p.u)
 			continue
 		}
@@ -275,13 +273,4 @@ func (f *found) forTarget(target string) ([]Uncertainty, []Uncertainty, int) {
 		count[u.Kind]++
 	}
 	return capped, setAside, len(all)
-}
-
-// mayName reports whether a computed import with a static prefix can load
-// the module of a target.
-func mayName(importPrefix, target, targetPrefix string, isWildcard bool) bool {
-	if strings.HasPrefix(target, importPrefix) {
-		return true
-	}
-	return isWildcard && strings.HasPrefix(importPrefix, targetPrefix)
 }

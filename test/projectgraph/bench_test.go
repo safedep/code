@@ -146,7 +146,7 @@ func benchProject(b *testing.B, code core.LanguageCode, files int) {
 	b.Run("reach", func(b *testing.B) {
 		var results []reach.Result
 		measure(b, written, func() any {
-			results, err = reach.Reach(ctx, g, reach.Query{Targets: targets})
+			results, err = reach.Reach(ctx, g, reach.Query{Targets: targetsOf(b, targets...)})
 			require.NoError(b, err)
 			return results
 		})
@@ -354,7 +354,7 @@ func TestDegradesAtHalfTheColdTime(t *testing.T) {
 
 			search := func(indexed *indexer.Result) []reach.Result {
 				g := linkProject(t, root, indexed, projectgraph.Options{TestPaths: benchTestPaths})
-				results, err := reach.Reach(context.Background(), g, reach.Query{Targets: targets})
+				results, err := reach.Reach(context.Background(), g, reach.Query{Targets: targetsOf(t, targets...)})
 				require.NoError(t, err)
 				return results
 			}
