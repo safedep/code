@@ -16,10 +16,10 @@ import (
 	"testing"
 
 	"github.com/safedep/code/core"
-	fidx "github.com/safedep/code/fileindex"
+	"github.com/safedep/code/fileindex"
 	codefs "github.com/safedep/code/fs"
 	"github.com/safedep/code/lang"
-	"github.com/safedep/code/plugin/fileindex"
+	"github.com/safedep/code/plugin/indexer"
 	"github.com/safedep/code/projectgraph"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -157,7 +157,7 @@ func scoreCase(ctx context.Context, t *testing.T, name, dir string, language cor
 
 	fsys, err := codefs.NewLocalFileSystem(codefs.LocalFileSystemConfig{AppDirectories: []string{dir}})
 	require.NoError(t, err)
-	indexed, err := (&fileindex.Indexer{}).Run(ctx, fsys, fileindex.Options{Languages: []core.Language{language}})
+	indexed, err := (&indexer.Indexer{}).Run(ctx, fsys, indexer.Options{Languages: []core.Language{language}})
 	require.NoError(t, err, name)
 	assert.Empty(t, indexed.Report.Failed, name)
 	g, err := projectgraph.Build(ctx, indexed.Indexes, projectgraph.Options{Root: os.DirFS(dir), Files: indexed.Files})
@@ -295,17 +295,17 @@ func follow(key string, hops map[string][]string, seen map[string]bool) []string
 // calleeName names an external key that no file imports as a builtin, as
 // <builtin>.len or <builtin>.console.log.
 func calleeName(g *projectgraph.Graph, imported map[string]bool, key string) string {
-	if g.IsExternal(key) && !imported[fidx.Unit(key)] {
+	if g.IsExternal(key) && !imported[fileindex.Unit(key)] {
 		return "<builtin>." + callgraphName(key)
 	}
 	return callgraphName(key)
 }
 
-func importedUnits(indexes []*fidx.Index) map[string]bool {
+func importedUnits(indexes []*fileindex.Index) map[string]bool {
 	units := map[string]bool{}
 	for _, ix := range indexes {
 		for _, imp := range ix.Imports {
-			units[fidx.Unit(imp.Namespace)] = true
+			units[fileindex.Unit(imp.Namespace)] = true
 		}
 	}
 	return units
@@ -320,8 +320,8 @@ var packageFiles = map[string]string{".py": "__init__", ".js": "index", ".mjs": 
 // the index does not keep, so a function with an anonymous name stands for
 // the scope that defines it.
 func callgraphName(key string) string {
-	unit := fidx.Unit(key)
-	segments := fidx.Segments(key)
+	unit := fileindex.Unit(key)
+	segments := fileindex.Segments(key)
 	ext := path.Ext(unit)
 	if pkg, ok := packageFiles[ext]; ok {
 		unit = strings.TrimSuffix(unit, ext)
@@ -330,12 +330,12 @@ func callgraphName(key string) string {
 		}
 	}
 	parts := append(strings.Split(unit, "/"), segments...)
-	return strings.Join(slices.DeleteFunc(parts, func(s string) bool { return s == "" || fidx.IsAnonymous(s) }), ".")
+	return strings.Join(slices.DeleteFunc(parts, func(s string) bool { return s == "" || fileindex.IsAnonymous(s) }), ".")
 }
 
 // callSites counts the distinct call sites of the indexes and the sites
 // that the graph leaves unresolved.
-func callSites(g *projectgraph.Graph, indexes []*fidx.Index) (int, int) {
+func callSites(g *projectgraph.Graph, indexes []*fileindex.Index) (int, int) {
 	type site struct {
 		path         string
 		line, column int
@@ -343,7 +343,7 @@ func callSites(g *projectgraph.Graph, indexes []*fidx.Index) (int, int) {
 	all := map[site]bool{}
 	for _, ix := range indexes {
 		for _, c := range ix.Calls {
-			if c.Kind != fidx.CallImport {
+			if c.Kind != fileindex.CallImport {
 				all[site{ix.Path, c.Line, c.Column}] = true
 			}
 		}

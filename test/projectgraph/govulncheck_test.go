@@ -19,10 +19,10 @@ import (
 	"testing"
 
 	"github.com/safedep/code/core"
-	fidx "github.com/safedep/code/fileindex"
+	"github.com/safedep/code/fileindex"
 	codefs "github.com/safedep/code/fs"
 	"github.com/safedep/code/lang"
-	"github.com/safedep/code/plugin/fileindex"
+	"github.com/safedep/code/plugin/indexer"
 	"github.com/safedep/code/projectgraph"
 	"github.com/safedep/code/projectgraph/reach"
 	"github.com/stretchr/testify/require"
@@ -105,7 +105,7 @@ func readVulnRuns(t *testing.T, file string) []vulnRun {
 				for _, a := range m.OSV.Affected {
 					for _, imp := range a.EcosystemSpecific.Imports {
 						for _, sym := range imp.Symbols {
-							run.symbols[m.OSV.ID] = append(run.symbols[m.OSV.ID], fidx.Join(fidx.Namespace("go", imp.Path), strings.Split(sym, ".")...))
+							run.symbols[m.OSV.ID] = append(run.symbols[m.OSV.ID], fileindex.Join(fileindex.Namespace("go", imp.Path), strings.Split(sym, ".")...))
 						}
 					}
 				}
@@ -220,7 +220,7 @@ func vulnModule(t *testing.T, dir string) (string, string) {
 func vulnGraph(ctx context.Context, t *testing.T, dir string, language core.Language) *projectgraph.Graph {
 	fsys, err := codefs.NewLocalFileSystem(codefs.LocalFileSystemConfig{AppDirectories: []string{dir}})
 	require.NoError(t, err)
-	indexed, err := (&fileindex.Indexer{}).Run(ctx, fsys, fileindex.Options{Languages: []core.Language{language}})
+	indexed, err := (&indexer.Indexer{}).Run(ctx, fsys, indexer.Options{Languages: []core.Language{language}})
 	require.NoError(t, err)
 	g, err := projectgraph.Build(ctx, indexed.Indexes, projectgraph.Options{Root: os.DirFS(dir), Files: indexed.Files})
 	require.NoError(t, err)
@@ -255,7 +255,7 @@ func (s *vulnScore) scoreTrace(ctx context.Context, t *testing.T, g *projectgrap
 	}
 	slices.Reverse(want)
 	for _, h := range r.Path[:len(r.Path)-1] {
-		if segs := fidx.Segments(h.Key); len(segs) > 0 {
+		if segs := fileindex.Segments(h.Key); len(segs) > 0 {
 			got = append(got, strings.Join(segs, "."))
 		}
 	}
@@ -279,7 +279,7 @@ func frameKey(f vulnFrame) string {
 	if f.Receiver != "" {
 		segs = strings.Split(frameName(f), ".")
 	}
-	return fidx.Join(fidx.Namespace("go", f.Package), segs...)
+	return fileindex.Join(fileindex.Namespace("go", f.Package), segs...)
 }
 
 // frameName returns the name of the function of a frame with its receiver

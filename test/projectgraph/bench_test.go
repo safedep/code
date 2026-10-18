@@ -16,14 +16,14 @@ import (
 	"time"
 
 	"github.com/safedep/code/core"
-	fidx "github.com/safedep/code/fileindex"
+	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/fileindex/store"
+	"github.com/safedep/code/fileindex/store/localdbstore"
 	codefs "github.com/safedep/code/fs"
 	"github.com/safedep/code/lang"
-	"github.com/safedep/code/plugin/fileindex"
+	"github.com/safedep/code/plugin/indexer"
 	"github.com/safedep/code/projectgraph"
 	"github.com/safedep/code/projectgraph/reach"
-	"github.com/safedep/code/projectgraph/store"
-	"github.com/safedep/code/projectgraph/store/localdbstore"
 	"github.com/safedep/code/projectgraph/summary"
 	"github.com/safedep/dry/localdb"
 	"github.com/stretchr/testify/assert"
@@ -91,8 +91,8 @@ func benchProject(b *testing.B, code core.LanguageCode, files int) {
 
 	coldWorkers := envInts(b, benchWorkersEnv, 1, 4)
 	workers := coldWorkers[len(coldWorkers)-1]
-	index := func(s store.Store, workers int) *fileindex.Result {
-		indexed, err := (&fileindex.Indexer{}).Run(ctx, fsys, fileindex.Options{Languages: languages, Store: s, Workers: workers})
+	index := func(s store.Store, workers int) *indexer.Result {
+		indexed, err := (&indexer.Indexer{}).Run(ctx, fsys, indexer.Options{Languages: languages, Store: s, Workers: workers})
 		require.NoError(b, err)
 		require.Empty(b, indexed.Report.Failed)
 		require.Len(b, indexed.Indexes, written)
@@ -132,7 +132,7 @@ func benchProject(b *testing.B, code core.LanguageCode, files int) {
 	b.Run("index-warm", func(b *testing.B) {
 		retained := measure(b, written, func() any {
 			r := index(warm, workers)
-			require.Equal(b, written, count(r.Files, fidx.FileCached))
+			require.Equal(b, written, count(r.Files, fileindex.FileCached))
 			return r
 		})
 		b.ReportMetric(float64(retained)/(1<<10)/float64(written), "retained-KiB/file")
@@ -171,7 +171,7 @@ func benchProject(b *testing.B, code core.LanguageCode, files int) {
 		// The summary reads the project as one unit of dependency code.
 		unitFS, err := codefs.NewLocalFileSystem(codefs.LocalFileSystemConfig{ImportDirectories: []string{root}, ImportUnits: map[string]string{root: unit}})
 		require.NoError(b, err)
-		dependency, err := (&fileindex.Indexer{}).Run(ctx, unitFS, fileindex.Options{Languages: languages, Workers: workers, Imports: true})
+		dependency, err := (&indexer.Indexer{}).Run(ctx, unitFS, indexer.Options{Languages: languages, Workers: workers, Imports: true})
 		require.NoError(b, err)
 		require.Len(b, dependency.Indexes, written)
 		var s *summary.Summary
@@ -200,7 +200,7 @@ var benchUnits = map[core.LanguageCode]string{
 
 // jsonKiB is the size of the JSON form of the indexes, as the store keeps
 // them.
-func jsonKiB(b *testing.B, indexes []*fidx.Index) float64 {
+func jsonKiB(b *testing.B, indexes []*fileindex.Index) float64 {
 	size := 0
 	for _, ix := range indexes {
 		data, err := json.Marshal(ix)
@@ -210,7 +210,7 @@ func jsonKiB(b *testing.B, indexes []*fidx.Index) float64 {
 	return float64(size) / (1 << 10)
 }
 
-func count(files map[string]fidx.FileStatus, status fidx.FileStatus) int {
+func count(files map[string]fileindex.FileStatus, status fileindex.FileStatus) int {
 	n := 0
 	for _, s := range files {
 		if s == status {
@@ -315,10 +315,10 @@ func TestDegradesAtHalfTheColdTime(t *testing.T) {
 			require.NoError(t, err)
 			fsys, err := codefs.NewLocalFileSystem(codefs.LocalFileSystemConfig{AppDirectories: []string{root}})
 			require.NoError(t, err)
-			opts := fileindex.Options{Languages: []core.Language{language}, Workers: 4}
+			opts := indexer.Options{Languages: []core.Language{language}, Workers: 4}
 			targets := reachTargets(code)
 
-			search := func(indexed *fileindex.Result) []reach.Result {
+			search := func(indexed *indexer.Result) []reach.Result {
 				g, err := projectgraph.Build(context.Background(), indexed.Indexes, projectgraph.Options{
 					Root:      os.DirFS(root),
 					Files:     indexed.Files,
@@ -331,15 +331,15 @@ func TestDegradesAtHalfTheColdTime(t *testing.T) {
 			}
 
 			start := time.Now()
-			_, err = (&fileindex.Indexer{}).Run(context.Background(), fsys, opts)
+			_, err = (&indexer.Indexer{}).Run(context.Background(), fsys, opts)
 			require.NoError(t, err)
 			cold := time.Since(start)
 
 			ctx, cancel := context.WithTimeout(context.Background(), cold/2)
 			defer cancel()
-			partial, err := (&fileindex.Indexer{}).Run(ctx, fsys, opts)
+			partial, err := (&indexer.Indexer{}).Run(ctx, fsys, opts)
 			require.ErrorIs(t, err, context.DeadlineExceeded)
-			indexed, missing := count(partial.Files, fidx.FileIndexed), count(partial.Files, fidx.FileMissing)
+			indexed, missing := count(partial.Files, fileindex.FileIndexed), count(partial.Files, fileindex.FileMissing)
 			t.Logf("cold %v: %d indexed, %d missing at %v", cold, indexed, missing, cold/2)
 			assert.Positive(t, indexed)
 			assert.Positive(t, missing)

@@ -7,7 +7,7 @@ import (
 
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/fileindex/roots"
-	pgroots "github.com/safedep/code/projectgraph/roots"
+	"github.com/safedep/code/projectgraph/rootmatch"
 )
 
 // markRoots adds the roots that the rules mark. With no root of kind main,
@@ -22,7 +22,7 @@ func (b *builder) markRoots(ctx context.Context) error {
 			indexes = append(indexes, ix)
 		}
 	}
-	found, problems, err := pgroots.Find(ctx, pgroots.Project{
+	found, problems, err := rootmatch.Find(ctx, rootmatch.Project{
 		Indexes:     indexes,
 		IsTest:      func(p string) bool { return b.test[p] },
 		Root:        b.opts.Root,

@@ -31,15 +31,15 @@ import (
 	"strings"
 
 	"github.com/safedep/code/core"
-	fidx "github.com/safedep/code/fileindex"
+	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/fileindex/store"
+	"github.com/safedep/code/fileindex/store/localdbstore"
 	"github.com/safedep/code/fs"
 	"github.com/safedep/code/lang"
-	"github.com/safedep/code/plugin/fileindex"
+	"github.com/safedep/code/plugin/indexer"
 	"github.com/safedep/code/projectgraph"
 	"github.com/safedep/code/projectgraph/overlay"
 	"github.com/safedep/code/projectgraph/reach"
-	"github.com/safedep/code/projectgraph/store"
-	"github.com/safedep/code/projectgraph/store/localdbstore"
 	"github.com/safedep/code/projectgraph/summary"
 	"github.com/safedep/dry/localdb"
 )
@@ -191,7 +191,7 @@ func run(ctx context.Context, cfg config, out io.Writer) (err error) {
 		}
 	}
 
-	indexed, err := (&fileindex.Indexer{}).Run(ctx, fsys, fileindex.Options{Languages: languages, Store: s, Workers: cfg.workers, Imports: len(cfg.deps) > 0})
+	indexed, err := (&indexer.Indexer{}).Run(ctx, fsys, indexer.Options{Languages: languages, Store: s, Workers: cfg.workers, Imports: len(cfg.deps) > 0})
 	if err != nil {
 		return fmt.Errorf("failed to index %s: %w", root, err)
 	}
@@ -208,7 +208,7 @@ func run(ctx context.Context, cfg config, out io.Writer) (err error) {
 
 // printReach links the project with its dependencies and writes the result
 // of each target.
-func printReach(ctx context.Context, cfg config, out io.Writer, root string, indexed *fileindex.Result, units map[string]iofs.FS) error {
+func printReach(ctx context.Context, cfg config, out io.Writer, root string, indexed *indexer.Result, units map[string]iofs.FS) error {
 	g, err := projectgraph.Build(ctx, indexed.Indexes, projectgraph.Options{
 		Root:      os.DirFS(root),
 		Files:     indexed.Statuses(),
@@ -244,18 +244,18 @@ func printReach(ctx context.Context, cfg config, out io.Writer, root string, ind
 // printSummaries writes the summary of each unit as one JSON array, in the
 // order of the units. Each unit gets one index and one link of its own
 // files.
-func printSummaries(ctx context.Context, out io.Writer, indexed *fileindex.Result, units map[string]iofs.FS) error {
+func printSummaries(ctx context.Context, out io.Writer, indexed *indexer.Result, units map[string]iofs.FS) error {
 	summaries := []*summary.Summary{}
 	for _, unit := range slices.Sorted(maps.Keys(units)) {
-		var indexes []*fidx.Index
+		var indexes []*fileindex.Index
 		for _, ix := range indexed.Indexes {
 			if ix.Unit == unit {
 				indexes = append(indexes, ix)
 			}
 		}
-		files := map[string]fidx.FileStatus{}
+		files := map[string]fileindex.FileStatus{}
 		for p, status := range indexed.Dependencies {
-			if fidx.PackageOf(p) == unit {
+			if fileindex.PackageOf(p) == unit {
 				files[p] = status
 			}
 		}

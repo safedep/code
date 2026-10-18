@@ -10,7 +10,7 @@ import (
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/fs"
 	"github.com/safedep/code/lang"
-	"github.com/safedep/code/plugin/fileindex"
+	"github.com/safedep/code/plugin/indexer"
 	"github.com/safedep/code/projectgraph"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,7 +25,7 @@ func indexAndLink(t testing.TB, project string, want expectation, languages []co
 	cfg, roots := fileSystemConfig(project, want)
 	fsys, err := fs.NewLocalFileSystem(cfg)
 	require.NoError(t, err)
-	indexed, err := (&fileindex.Indexer{}).Run(ctx, fsys, fileindex.Options{Languages: languages, Workers: workers, Imports: len(want.Units) > 0})
+	indexed, err := (&indexer.Indexer{}).Run(ctx, fsys, indexer.Options{Languages: languages, Workers: workers, Imports: len(want.Units) > 0})
 	require.NoError(t, err)
 	g, err := projectgraph.Build(ctx, indexed.Indexes, projectgraph.Options{
 		Root:      os.DirFS(project),

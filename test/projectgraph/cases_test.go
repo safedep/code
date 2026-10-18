@@ -20,14 +20,14 @@ import (
 	"testing"
 
 	"github.com/safedep/code/core"
-	fidx "github.com/safedep/code/fileindex"
+	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/fileindex/store/memstore"
 	"github.com/safedep/code/fs"
-	"github.com/safedep/code/plugin/fileindex"
+	"github.com/safedep/code/plugin/indexer"
 	"github.com/safedep/code/projectgraph"
 	"github.com/safedep/code/projectgraph/modules"
 	"github.com/safedep/code/projectgraph/overlay"
 	"github.com/safedep/code/projectgraph/reach"
-	"github.com/safedep/code/projectgraph/store/memstore"
 	"github.com/safedep/code/projectgraph/summary"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -172,7 +172,7 @@ func runCase(t *testing.T, dir string, languages []core.Language) {
 	fsys, err := fs.NewLocalFileSystem(cfg)
 	require.NoError(t, err)
 	ctx := context.Background()
-	indexed, err := (&fileindex.Indexer{}).Run(ctx, fsys, fileindex.Options{Languages: languages, Store: memstore.New(), MaxFileBytes: want.MaxFileBytes, Imports: len(want.Units) > 0})
+	indexed, err := (&indexer.Indexer{}).Run(ctx, fsys, indexer.Options{Languages: languages, Store: memstore.New(), MaxFileBytes: want.MaxFileBytes, Imports: len(want.Units) > 0})
 	require.NoError(t, err)
 	var failed []string
 	for _, f := range indexed.Report.Failed {
@@ -253,17 +253,17 @@ func dumpCase(t *testing.T, dir string, g *projectgraph.Graph, results []reach.R
 
 // checkSummary compares the summary of one unit with its golden file. The
 // flag -update writes the golden file.
-func checkSummary(t *testing.T, dir, unit string, indexed *fileindex.Result, roots map[string]iofs.FS) {
+func checkSummary(t *testing.T, dir, unit string, indexed *indexer.Result, roots map[string]iofs.FS) {
 	t.Helper()
-	var indexes []*fidx.Index
+	var indexes []*fileindex.Index
 	for _, ix := range indexed.Indexes {
 		if ix.Unit == unit {
 			indexes = append(indexes, ix)
 		}
 	}
-	files := map[string]fidx.FileStatus{}
+	files := map[string]fileindex.FileStatus{}
 	for p, status := range indexed.Dependencies {
-		if fidx.PackageOf(p) == unit {
+		if fileindex.PackageOf(p) == unit {
 			files[p] = status
 		}
 	}

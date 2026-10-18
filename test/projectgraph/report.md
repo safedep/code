@@ -241,7 +241,7 @@ costs about 8 min of the 34, so a run without it fits in 30 min.
 
 ### The parallel index step
 
-`fileindex.Options.Workers` sets the workers. Each worker owns a parser.
+`indexer.Options.Workers` sets the workers. Each worker owns a parser.
 The goroutine of `Run` takes the outcomes in path order and runs the extra
 plugins, so the output of 1 and 4 workers is the same byte for byte. Tests
 compare it on the hand-written cases, on a project of two batches, and on
