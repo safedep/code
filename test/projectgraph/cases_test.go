@@ -164,22 +164,29 @@ func readExpectation(t testing.TB, dir string) expectation {
 	return want
 }
 
-func runCase(t *testing.T, dir string, languages []core.Language) {
+// caseGraph indexes and links the project of a case. It returns the
+// expectation, the result of the index step, the graph and the root of
+// each unit.
+func caseGraph(t testing.TB, dir string, languages []core.Language) (expectation, *indexer.Result, *projectgraph.Graph, map[string]iofs.FS) {
+	t.Helper()
 	want := readExpectation(t, dir)
-
 	project := filepath.Join(dir, "project")
 	cfg, roots := fileSystemConfig(project, want)
 	fsys, err := fs.NewLocalFileSystem(cfg)
 	require.NoError(t, err)
-	ctx := context.Background()
 	indexed := indexProject(t, fsys, indexer.Options{Languages: languages, Store: memstore.New(), MaxFileBytes: want.MaxFileBytes, Imports: len(want.Units) > 0})
+	g := linkProject(t, project, indexed, projectgraph.Options{TestPaths: want.TestPaths, Units: roots})
+	return want, indexed, g, roots
+}
+
+func runCase(t *testing.T, dir string, languages []core.Language) {
+	want, indexed, g, roots := caseGraph(t, dir, languages)
+	ctx := context.Background()
 	var failed []string
 	for _, f := range indexed.Report.Failed {
 		failed = append(failed, f.File)
 	}
 	require.Equal(t, want.Failed, failed, "failed files")
-
-	g := linkProject(t, project, indexed, projectgraph.Options{TestPaths: want.TestPaths, Units: roots})
 	assert.Equal(t, want.Problems, g.Problems, "problems")
 	assert.Equal(t, want.Dropped, mergeOverlay(t, filepath.Join(dir, "overlay.json"), g), "dropped overlay edges")
 

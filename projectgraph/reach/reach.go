@@ -14,6 +14,11 @@ import (
 	"github.com/safedep/code/projectgraph"
 )
 
+// Version is the version of the search rules: the scope of each
+// uncertainty, the tie rule of the paths and the caps. Bump it when a rule
+// changes, so a diff of two results shows the change.
+const Version = "1"
+
 const (
 	defaultMaxDepth = 64
 	// maxPerKind caps the uncertainties of one kind on a result. The first
@@ -98,9 +103,11 @@ type Uncertainty struct {
 	Unit         string            `json:"unit,omitempty"`
 }
 
-// Searched is what the search did. Uncertainties counts every uncertainty
-// of the result before the cap per kind.
+// Searched is what the search did. Version is the Version of the search
+// rules. Uncertainties counts every uncertainty of the result before the
+// cap per kind.
 type Searched struct {
+	Version       string              `json:"version"`
 	Roots         []projectgraph.Root `json:"roots"`
 	Nodes         int                 `json:"nodes"`
 	Edges         int                 `json:"edges"`
@@ -212,7 +219,7 @@ func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error
 		r := Result{
 			Target:    t,
 			CallSites: a.callSites(targets[i], s),
-			Searched:  Searched{Roots: rootSet, Nodes: len(s.order), Edges: s.edges, DepthCut: s.depthCut, Stopped: s.stopped},
+			Searched:  Searched{Version: Version, Roots: rootSet, Nodes: len(s.order), Edges: s.edges, DepthCut: s.depthCut, Stopped: s.stopped},
 		}
 		if node, ok := s.nearest(targets[i]); ok {
 			r.Status, r.Path = Found, a.path(s, node)

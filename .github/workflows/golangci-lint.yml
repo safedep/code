@@ -21,7 +21,7 @@ jobs:
         uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8
         with:
           version: latest
-          args: --issues-exit-code=1 --timeout=10m
+          args: --issues-exit-code=1 --timeout=10m --build-tags projectgraph
           only-new-issues: true
           skip-cache: true
           skip-save-cache: true

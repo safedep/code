@@ -32,7 +32,11 @@ jobs:
       - name: Score the public sets
         env:
           PROJECTGRAPH_PUBLIC_REPORT: ${{ runner.temp }}/public.txt
-        run: go test -tags projectgraph -run TestPublicSets -count=1 ./test/projectgraph/
+          PROJECTGRAPH_GOVULNCHECK_REPORT: ${{ runner.temp }}/govulncheck.txt
+        run: go test -tags projectgraph -run 'TestPublicSets|TestGovulncheckTraces' -count=1 ./test/projectgraph/
+
+      - name: Check the gates
+        run: bash scripts/check_projectgraph_gates.sh "$RUNNER_TEMP/public.txt" "$RUNNER_TEMP/govulncheck.txt" pycg-micro=0.95 swarm-js=0.80
 
       - name: Run the benchmark
         env:
@@ -47,6 +51,7 @@ jobs:
             echo "## Public sets"
             echo '```'
             cat "$RUNNER_TEMP/public.txt"
+            cat "$RUNNER_TEMP/govulncheck.txt"
             echo '```'
             echo "## Benchmark"
             echo '```'

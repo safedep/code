@@ -5,11 +5,23 @@ This directory tests the index step, the link step and the reach query of
 
 | Part | Files | Runs in |
 | --- | --- | --- |
-| Hand-written cases | `cases/<language>/<case>/`, `cases_test.go` | `go test ./...` |
-| Public sets | `public/`, `public_test.go` | `go test -tags projectgraph` |
-| Benchmark | `bench_test.go`, `synth_test.go` | `go test -tags projectgraph -bench .` |
+| Hand-written cases | `cases/<language>/<case>/`, `cases_test.go`, `workers_test.go` (one output for any number of workers), `version_test.go` (the hash of the graphs and the summaries per version) | `go test ./...` |
+| Public sets | `public/`, `public_test.go`, `govulncheck_test.go` | `go test -tags projectgraph` |
+| Benchmark | `bench_test.go`, `synth_test.go`, `synth_languages_test.go` (the C#, PHP, Ruby and Rust generators) | `go test -tags projectgraph -bench .` |
 
+`helpers_test.go` holds the index and link helpers that every part uses.
 `report.md` holds the numbers of the last run that a person committed.
+
+`version_test.go` records the hash of the graphs of every case for each
+pair of `fileindex.Version` and `projectgraph.Version`, and the hash of the
+golden summaries for each triple with `summary.Version`. A change of a
+graph or a summary fails the test until the Version that owns the rule is
+bumped and a row is added. The job `projectgraph-sets` of
+`.github/workflows/ci.yml` runs the committed public sets on every pull
+request and fails under the gates of `scripts/check_projectgraph_gates.sh`:
+`precision-high-medium` of pycg-micro at or over 0.95, and every govulncheck
+stack found in order. The weekly benchmark job fetches SWARM-JS and gates
+it at 0.80.
 
 ## Add a hand-written case
 

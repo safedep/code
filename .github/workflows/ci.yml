@@ -59,3 +59,28 @@ jobs:
 
       - name: Test CGO-free Packages
         run: go test -count=1 ./langcode/ ./lang/grammar/ ./fileindex/... ./projectgraph/... ./internal/...
+
+  projectgraph-sets:
+    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568
+        with:
+          go-version-file: "go.mod"
+          check-latest: true
+
+      - name: Vet the tagged tests
+        run: go vet -tags projectgraph ./test/projectgraph/
+
+      - name: Score the committed public sets
+        env:
+          PROJECTGRAPH_PUBLIC_REPORT: ${{ runner.temp }}/public.txt
+          PROJECTGRAPH_GOVULNCHECK_REPORT: ${{ runner.temp }}/govulncheck.txt
+        run: go test -tags projectgraph -run 'TestPublicSets|TestGovulncheckTraces' -count=1 ./test/projectgraph/
+
+      - name: Check the gates
+        run: bash scripts/check_projectgraph_gates.sh "$RUNNER_TEMP/public.txt" "$RUNNER_TEMP/govulncheck.txt" pycg-micro=0.95

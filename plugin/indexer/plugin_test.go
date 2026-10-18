@@ -3,8 +3,6 @@ package indexer
 import (
 	"cmp"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -94,31 +92,23 @@ func TestFileIndexGolden(t *testing.T) {
 	}
 }
 
-// goldenVersion and goldenHash pin the golden files to fileindex.Version. A
-// change of a golden file is a change of a fill rule, and a store must not
-// serve an index of the old rules for it. So a change of the golden files
-// needs a new Version, and both constants change with it.
-const (
-	goldenVersion = "10"
-	goldenHash    = "6053fe7c2b8fef2888806debc47372948eec366beb800419c1e435f021711fa0"
-)
+// goldenHashes records the hash of the golden files of each
+// fileindex.Version. A change of a golden file is a change of a fill rule,
+// and a store must not serve an index of the old rules for it. So a change
+// of the golden files needs a new Version and a new row. A row of an old
+// Version stays as it is.
+var goldenHashes = map[string]string{
+	"10": "6053fe7c2b8fef2888806debc47372948eec366beb800419c1e435f021711fa0",
+}
 
 func TestFileIndexGoldenHashFollowsVersion(t *testing.T) {
 	names, err := filepath.Glob(filepath.Join("testdata", "golden", "*.json"))
 	require.NoError(t, err)
 	require.NotEmpty(t, names)
 
-	sum := sha256.New()
-	for _, name := range names {
-		data, err := os.ReadFile(name)
-		require.NoError(t, err)
-		_, err = fmt.Fprintf(sum, "%s\n%d\n", filepath.Base(name), len(data))
-		require.NoError(t, err)
-		_, err = sum.Write(data)
-		require.NoError(t, err)
-	}
-	assert.Equal(t, goldenVersion, fileindex.Version, "the golden files belong to another Version")
-	assert.Equal(t, goldenHash, hex.EncodeToString(sum.Sum(nil)), "the golden files changed: bump fileindex.Version, goldenVersion and goldenHash")
+	want, ok := goldenHashes[fileindex.Version]
+	require.True(t, ok, "no row of goldenHashes for fileindex.Version %s: add one", fileindex.Version)
+	assert.Equal(t, want, testutil.HashFiles(t, names), "the golden files changed: bump fileindex.Version and add a row to goldenHashes")
 }
 
 func TestFileIndexRecords(t *testing.T) {
