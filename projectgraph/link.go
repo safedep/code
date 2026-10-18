@@ -183,23 +183,63 @@ type classRecord struct {
 func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 	opts.maxEdges = cmp.Or(opts.maxEdges, defaultMaxEdges)
 	opts.maxExportHops = cmp.Or(opts.maxExportHops, defaultMaxExportHops)
+	if err := opts.validate(); err != nil {
+		return nil, err
+	}
+	b := newTables(indexes, opts)
+	if err := b.addIndexes(indexes); err != nil {
+		return nil, err
+	}
+	for p, status := range opts.Files {
+		if _, ok := b.byPath[p]; !ok && !status.Complete() {
+			b.paths = append(b.paths, p)
+		}
+	}
+	slices.Sort(b.paths)
+	if err := b.addSpaces(); err != nil {
+		return nil, err
+	}
+	for _, p := range b.paths {
+		b.test[p] = pathglob.MatchAny(opts.TestPaths, b.spaceOf(p).inner(p))
+	}
+	for _, p := range profiles {
+		if p.units != nil {
+			p.units(b)
+		}
+	}
+	for _, sp := range b.ordered {
+		for _, p := range profiles {
+			if p.resolver != nil && (sp == b.project || p.dependencyCode) {
+				sp.resolvers[p.code] = p.resolver(b, sp)
+			}
+		}
+	}
+	return b, nil
+}
+
+// validate checks the test paths and the root rules of the options.
+func (opts Options) validate() error {
 	for _, g := range opts.TestPaths {
 		if err := pathglob.Validate(g); err != nil {
-			return nil, fmt.Errorf("test path: %w", err)
+			return fmt.Errorf("test path: %w", err)
 		}
 	}
 	for _, r := range opts.Rules {
 		if err := r.Validate(); err != nil {
-			return nil, fmt.Errorf("root rule %q: %w", r.ID, err)
+			return fmt.Errorf("root rule %q: %w", r.ID, err)
 		}
 	}
+	return nil
+}
 
+// newTables returns a builder with its tables, sized for the indexes.
+func newTables(indexes []*fileindex.Index, opts Options) *builder {
 	defs, sites := len(indexes), 0
 	for _, ix := range indexes {
 		defs += len(ix.Definitions)
 		sites += len(ix.Imports) + len(ix.Calls) + len(ix.References)
 	}
-	b := &builder{
+	return &builder{
 		opts: opts,
 		g: &Graph{
 			Nodes: make(map[string]*Node, defs),
@@ -233,21 +273,25 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		test:        map[string]bool{},
 		rules:       roots.Merge(roots.Default(), opts.Rules),
 	}
+}
+
+// addIndexes checks each index and adds it by path. The tables of a
+// language with no space per unit, as the class table of Java, would join
+// the classes of the project and of its dependencies, and a call of the
+// project would skip the external key that a symbol record names. So an
+// index of dependency code of such a language is a problem, not a file.
+func (b *builder) addIndexes(indexes []*fileindex.Index) error {
 	skipped := map[modules.Problem]bool{}
 	for _, ix := range indexes {
 		if ix.Version != fileindex.Version {
-			return nil, fmt.Errorf("index of %s has version %q, want %q", ix.Path, ix.Version, fileindex.Version)
+			return fmt.Errorf("index of %s has version %q, want %q", ix.Path, ix.Version, fileindex.Version)
 		}
 		if unit, _ := fileindex.SplitUnit(ix.Path); unit != ix.Unit {
-			return nil, fmt.Errorf("index of %s has the unit %q, and its path names the unit %q", ix.Path, ix.Unit, unit)
+			return fmt.Errorf("index of %s has the unit %q, and its path names the unit %q", ix.Path, ix.Unit, unit)
 		}
 		if _, dup := b.byPath[ix.Path]; dup {
-			return nil, fmt.Errorf("two indexes for the path %s", ix.Path)
+			return fmt.Errorf("two indexes for the path %s", ix.Path)
 		}
-		// The tables of a language with no space per unit, as the class
-		// table of Java, would join the classes of the project and of its
-		// dependencies, and a call of the project would skip the external
-		// key that a symbol record names.
 		if ix.Unit != "" && !profileOf(ix.Language).dependencyCode {
 			skipped[modules.Problem{Path: ix.Unit, Text: fmt.Sprintf("the link step does not link the %s code of a dependency", ix.Language)}] = true
 			continue
@@ -256,31 +300,7 @@ func newBuilder(indexes []*fileindex.Index, opts Options) (*builder, error) {
 		b.paths = append(b.paths, ix.Path)
 	}
 	b.problems = append(b.problems, sortedKeys(skipped, compareProblems)...)
-	for p, status := range opts.Files {
-		if _, ok := b.byPath[p]; !ok && !status.Complete() {
-			b.paths = append(b.paths, p)
-		}
-	}
-	slices.Sort(b.paths)
-	if err := b.addSpaces(); err != nil {
-		return nil, err
-	}
-	for _, p := range b.paths {
-		b.test[p] = pathglob.MatchAny(opts.TestPaths, b.spaceOf(p).inner(p))
-	}
-	for _, p := range profiles {
-		if p.units != nil {
-			p.units(b)
-		}
-	}
-	for _, sp := range b.ordered {
-		for _, p := range profiles {
-			if p.resolver != nil && (sp == b.project || p.dependencyCode) {
-				sp.resolvers[p.code] = p.resolver(b, sp)
-			}
-		}
-	}
-	return b, nil
+	return nil
 }
 
 // linkAll adds the nodes and the edges of every file, then the surfaces,

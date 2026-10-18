@@ -284,104 +284,10 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 		log.Debugf("Method invocation without name - %s", methodInvocationNode.Content(treeData))
 		return newProcessorResult()
 	}
-
 	methodName := methodNameNode.Content(treeData)
 
-	hasChainedMethodInvocations := false
-
-	methodQualifierObjectNode := methodInvocationNode.ChildByFieldName("object")
-
-	if methodQualifierObjectNode != nil {
-		recordChainedCalls(methodInvocationNode, treeData, currentNamespace, callGraph)
-		for methodQualifierObjectNode.Type() == "method_invocation" {
-			processMethodArgs(methodQualifierObjectNode, treeData, currentNamespace, callGraph, metadata)
-
-			hasChainedMethodInvocations = true
-			nextObjNode := methodQualifierObjectNode.ChildByFieldName("object")
-			if nextObjNode == nil {
-				break
-			}
-
-			if nextObjNode.Type() != "method_invocation" {
-				break
-			}
-
-			processMethodArgs(nextObjNode, treeData, currentNamespace, callGraph, metadata)
-
-			methodQualifierObjectNode = nextObjNode
-		}
-
-		if creation, calledMethod := createdReceiver(methodQualifierObjectNode, methodName, hasChainedMethodInvocations, treeData); creation != nil {
-			created := objectCreationExpressionProcessor(creation, treeData, currentNamespace, callGraph, metadata)
-			var classes []string
-			for _, class := range created.ImmediateAssignments {
-				for _, target := range callGraph.assignmentGraph.resolve(class.Namespace) {
-					classes = append(classes, target.Namespace)
-				}
-			}
-			if typeNode := creation.ChildByFieldName("type"); len(classes) == 0 && typeNode != nil {
-				// A class with no import, as one of the same package or of
-				// java.lang, keeps its name.
-				classes = append(classes, strings.ReplaceAll(withoutTypeArguments(typeNode.Content(treeData)), ".", namespaceSeparator))
-			}
-			for _, class := range classes {
-				callGraph.addEdge(
-					currentNamespace, CallCall, methodInvocationNode,
-					class+namespaceSeparator+calledMethod, nil,
-					argsResult,
-				)
-			}
-			return newProcessorResult()
-		}
-
-		methodObjectQualifierNamespace := resolveQualifierObjectFieldaccess(methodQualifierObjectNode, treeData)
-		// The first call of a chain names its callee by its object and
-		// its name. Its arguments are no part of the name.
-		if methodQualifierObjectNode.Type() == "method_invocation" {
-			methodObjectQualifierNamespace = invocationNamespace(methodQualifierObjectNode, treeData)
-		}
-		qualifiers := strings.Split(methodObjectQualifierNamespace, namespaceSeparator)
-		callerObjectNamespaces := []string{}
-
-		if len(qualifiers) > 0 {
-			rootObjKeyword := qualifiers[0]
-			rootObjNode, rootObjNodeExists := searchSymbolInScopeChain(rootObjKeyword, currentNamespace, callGraph)
-
-			var rootCallerObjAssignments []*assignmentNode
-			if rootObjNodeExists {
-				rootCallerObjAssignments = callGraph.assignmentGraph.resolve(rootObjNode.Namespace)
-			} else {
-				// A root with no binding is the root of a qualified name, as sun
-				// in sun.reflect.Method.
-				callGraph.addNode(rootObjKeyword, nil)
-				rootCallerObjAssignments = callGraph.assignmentGraph.resolve(rootObjKeyword)
-			}
-
-			if len(qualifiers) > 1 {
-				remainingQualifiersNamespaceSuffix := strings.Join(qualifiers[1:], namespaceSeparator)
-				for _, rootCallerObjAssignment := range rootCallerObjAssignments {
-					callerObjectNamespaces = append(callerObjectNamespaces, rootCallerObjAssignment.Namespace+namespaceSeparator+remainingQualifiersNamespaceSuffix)
-				}
-			} else {
-				if rootObjNodeExists {
-					for _, rootCallerObjAssignment := range rootCallerObjAssignments {
-						callerObjectNamespaces = append(callerObjectNamespaces, rootCallerObjAssignment.Namespace)
-					}
-				} else {
-					callerObjectNamespaces = append(callerObjectNamespaces, rootObjKeyword)
-				}
-			}
-		}
-
-		for _, callerObjectNamespace := range callerObjectNamespaces {
-			calledNamespace := callerObjectNamespace
-			if !hasChainedMethodInvocations {
-				calledNamespace = calledNamespace + namespaceSeparator + methodName
-			}
-			log.Debugf("Method invocation %s searched (object qualified) & resolved to - %s\n", methodName, calledNamespace)
-			callGraph.addEdge(currentNamespace, CallCall, methodInvocationNode, calledNamespace, nil, argsResult)
-		}
-
+	if object := methodInvocationNode.ChildByFieldName("object"); object != nil {
+		resolveQualifiedInvocation(methodInvocationNode, object, methodName, argsResult, treeData, currentNamespace, callGraph, metadata)
 		return newProcessorResult()
 	}
 
@@ -401,6 +307,94 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 	// step resolves it.
 	callGraph.addUnboundCall(currentNamespace, methodName, CallCall, methodInvocationNode, argsResult)
 	return newProcessorResult()
+}
+
+// resolveQualifiedInvocation adds the edges of a method call with an
+// object, as a.b.m() or a.m1().m2(). It processes the arguments of each
+// call of a chain, and resolves the first call of the chain on its object
+// creation or on the names of its object.
+func resolveQualifiedInvocation(invocation, object *sitter.Node, methodName string, args []CallArgument, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) {
+	recordChainedCalls(invocation, treeData, currentNamespace, callGraph)
+	chained := false
+	for object.Type() == "method_invocation" {
+		processMethodArgs(object, treeData, currentNamespace, callGraph, metadata)
+		chained = true
+		next := object.ChildByFieldName("object")
+		if next == nil || next.Type() != "method_invocation" {
+			break
+		}
+		processMethodArgs(next, treeData, currentNamespace, callGraph, metadata)
+		object = next
+	}
+
+	if creation, calledMethod := createdReceiver(object, methodName, chained, treeData); creation != nil {
+		for _, class := range createdClasses(creation, treeData, currentNamespace, callGraph, metadata) {
+			callGraph.addEdge(currentNamespace, CallCall, invocation, class+namespaceSeparator+calledMethod, nil, args)
+		}
+		return
+	}
+
+	qualifier := resolveQualifierObjectFieldaccess(object, treeData)
+	// The first call of a chain names its callee by its object and its
+	// name. Its arguments are no part of the name.
+	if object.Type() == "method_invocation" {
+		qualifier = invocationNamespace(object, treeData)
+	}
+	for _, receiver := range receiverNamespaces(qualifier, currentNamespace, callGraph) {
+		callee := receiver
+		if !chained {
+			callee = receiver + namespaceSeparator + methodName
+		}
+		log.Debugf("Method invocation %s searched (object qualified) & resolved to - %s\n", methodName, callee)
+		callGraph.addEdge(currentNamespace, CallCall, invocation, callee, nil, args)
+	}
+}
+
+// createdClasses returns the classes that an object creation makes an
+// instance of. A class with no import, as one of the same package or of
+// java.lang, keeps its name.
+func createdClasses(creation *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) []string {
+	created := objectCreationExpressionProcessor(creation, treeData, currentNamespace, callGraph, metadata)
+	var classes []string
+	for _, class := range created.ImmediateAssignments {
+		for _, target := range callGraph.assignmentGraph.resolve(class.Namespace) {
+			classes = append(classes, target.Namespace)
+		}
+	}
+	if typeNode := creation.ChildByFieldName("type"); len(classes) == 0 && typeNode != nil {
+		classes = append(classes, strings.ReplaceAll(withoutTypeArguments(typeNode.Content(treeData)), ".", namespaceSeparator))
+	}
+	return classes
+}
+
+// receiverNamespaces returns the namespaces that the qualifier of a call
+// names: each value of its first name, with the names after it. A first
+// name with no binding is the root of a qualified name, as sun in
+// sun.reflect.Method.
+func receiverNamespaces(qualifier, currentNamespace string, callGraph *CallGraph) []string {
+	qualifiers := strings.Split(qualifier, namespaceSeparator)
+	root := qualifiers[0]
+	rootNode, bound := searchSymbolInScopeChain(root, currentNamespace, callGraph)
+	var values []*assignmentNode
+	if bound {
+		values = callGraph.assignmentGraph.resolve(rootNode.Namespace)
+	} else {
+		callGraph.addNode(root, nil)
+		values = callGraph.assignmentGraph.resolve(root)
+	}
+	if len(qualifiers) == 1 && !bound {
+		return []string{root}
+	}
+	rest := strings.Join(qualifiers[1:], namespaceSeparator)
+	var out []string
+	for _, value := range values {
+		if len(qualifiers) == 1 {
+			out = append(out, value.Namespace)
+		} else {
+			out = append(out, value.Namespace+namespaceSeparator+rest)
+		}
+	}
+	return out
 }
 
 // processAnonymousClassBody processes the members of an anonymous class in

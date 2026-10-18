@@ -87,16 +87,8 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			if r.unbound && sc.profile.literals[r.key] {
 				continue
 			}
-			// A Java call of a name that nothing binds runs on this, as
-			// a method that a base of a dependency or an override in a
-			// subclass gives. A builtin function, as println of Kotlin,
-			// runs unless the class has a method of the name.
-			if r.unbound && sc.profile.thisCalls && call.Kind == fileindex.CallCall && call.Receiver == "" && isIdentifier(r.key) {
-				if class, ok := b.enclosingClass(caller); ok {
-					if typed := b.walkTyped(class, []string{b.selfName(class, caller, r.key)}); typed.fail == nil || !langcode.IsBuiltin(ix.Language, r.key) {
-						r = typed
-					}
-				}
+			if r.unbound && sc.profile.thisCalls {
+				r = b.thisCall(ix, caller, call, r)
 			}
 			b.linkCHA(call, r, from, site)
 			// A declared type gives the class of the receiver, so the
@@ -119,28 +111,8 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			if r.dynamic {
 				b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: call.Callee, Receiver: call.Receiver, Reason: fileindex.UnresolvedComputedName})
 			}
-			if r.unbound {
-				// A call on an unknown receiver, as plugin.run(), has the
-				// fallback target plugin//run, which names no module. The
-				// record of the index holds the call, so it makes no edge.
-				if unknown[[2]int{call.Line, call.Column}] {
-					continue
-				}
-				// A name that no builtin binds is a parameter or a local
-				// variable, as cb in def run(cb): cb(x). Its value is not
-				// known, so the call is a record and not an external.
-				if !langcode.IsBuiltin(ix.Language, fileindex.Unit(r.key)) {
-					b.addUnresolved(UnresolvedSite{
-						Caller:   from,
-						Site:     site,
-						Text:     call.Callee,
-						Receiver: call.Receiver,
-						Method:   cmp.Or(call.Method, fileindex.Last(r.key)),
-						Reason:   fileindex.UnresolvedUnknownReceiver,
-					})
-					continue
-				}
-				b.external(r.key)
+			if r.unbound && !b.unboundEdge(ix, call, from, site, r, unknown[[2]int{call.Line, call.Column}]) {
+				continue
 			}
 			switch {
 			case r.kind == EdgeDirect && isAssignment(sc, call, r.target):
@@ -154,6 +126,50 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			b.link(ix.Language, from, r.key, site, r.kind, r.rule)
 		}
 	}
+}
+
+// thisCall resolves a call of a name that nothing binds in a language where
+// such a call runs on this, as a Java method that a base of a dependency
+// or an override in a subclass gives. A builtin function, as println of
+// Kotlin, runs unless the class has a method of the name.
+func (b *builder) thisCall(ix *fileindex.Index, caller string, call fileindex.Call, r resolution) resolution {
+	if call.Kind != fileindex.CallCall || call.Receiver != "" || !isIdentifier(r.key) {
+		return r
+	}
+	class, ok := b.enclosingClass(caller)
+	if !ok {
+		return r
+	}
+	if typed := b.walkTyped(class, []string{b.selfName(class, caller, r.key)}); typed.fail == nil || !langcode.IsBuiltin(ix.Language, r.key) {
+		return typed
+	}
+	return r
+}
+
+// unboundEdge reports whether a call of an unbound name gets an edge to
+// its external node, and records the call when it does not. A call on an
+// unknown receiver, as plugin.run(), has the fallback target plugin//run,
+// which names no module. The record of the index holds the call, so it
+// makes no edge. A name that no builtin binds is a parameter or a local
+// variable, as cb in def run(cb): cb(x). Its value is not known, so the
+// call is a record and not an external.
+func (b *builder) unboundEdge(ix *fileindex.Index, call fileindex.Call, from string, site Site, r resolution, unknownReceiver bool) bool {
+	if unknownReceiver {
+		return false
+	}
+	if !langcode.IsBuiltin(ix.Language, fileindex.Unit(r.key)) {
+		b.addUnresolved(UnresolvedSite{
+			Caller:   from,
+			Site:     site,
+			Text:     call.Callee,
+			Receiver: call.Receiver,
+			Method:   cmp.Or(call.Method, fileindex.Last(r.key)),
+			Reason:   fileindex.UnresolvedUnknownReceiver,
+		})
+		return false
+	}
+	b.external(r.key)
+	return true
 }
 
 // linkCHA narrows the site of a method call whose receiver can hold an
@@ -482,142 +498,43 @@ func (b *builder) walkAs(key string, names []string, r rule) resolution {
 }
 
 // walkFrom walks the names from the key of r. A virtual r is an instance of
-// its class, whose class methods the walk does not read.
+// its class, whose class methods the walk does not read. Each step reads
+// the node of the key: a unit, a module, a variable, a class, an external
+// key or a function. A step consumes the name, or moves the key on to a
+// value and reads the name again, or ends the walk.
 func (b *builder) walkFrom(r resolution, names []string) resolution {
 	instance := r.virtual
 	for i := 0; i < len(names); {
 		name := names[i]
+		var consumed, done bool
 		switch kind := b.kindOf(r.key); {
 		case b.units[r.key] != nil:
-			keys := b.units[r.key].names[name]
-			if len(keys) == 0 {
-				key, ok := b.unitMember(r.key, name)
-				if !ok {
-					r.fail = noDefinition(name)
-					return r
-				}
-				keys = []string{key}
-			}
-			r.key = keys[0]
-			i++
+			consumed, done = b.walkUnit(&r, name)
 		case b.unindexed(r.key):
 			return r
 		case isNamespacePackage(r.key) || kind == NodeModule:
-			key, fail := b.resolveName(r.key, name, 0)
-			if fail != nil {
-				if value, ok := b.defaultValue(r.key, name); ok {
-					r.key = value
-					continue
-				}
-				if getter, ok := b.moduleGetattr(r.key); ok {
-					r.key, r.kind, r.rule, r.dynamic = getter, EdgeDirect, ruleModuleGetattr, true
-					return r
-				}
-				r.fail = fail
-				return r
-			}
-			r.key = key
-			i++
+			consumed, done = b.walkModule(&r, name)
 		case kind == NodeExport:
 			r.key = b.bindings[r.key]
 		case kind == NodeVariable:
-			// A function that a property of the object of the variable
-			// holds is a definition under the variable, as api//go.
-			if n := b.g.Nodes[fileindex.Join(r.key, name)]; n != nil {
-				r.key = n.Key
-				i++
-				continue
-			}
-			value, ok := b.variableValue(r.key)
-			if !ok {
-				r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
-				return r
-			}
-			r.key = value
+			consumed, done = b.walkVariable(&r, name)
 		case kind == NodeClass || kind == NodeInterface:
-			lang := b.byPath[fileindex.Unit(r.key)].Language
-			if isInstanceKeyword(lang, name) {
-				r.virtual = true
-				i++
-				continue
-			}
-			// Client.new makes an instance of the class, and the edge to
-			// the class leads to its constructor.
-			if c := profileOf(lang).constructorCall; c != "" && name == c {
-				if _, own := b.ownMethod(r.key, name); !own {
-					instance = true
-					i++
-					continue
-				}
-			}
-			// self.class in Ruby is the class of the instance, whose class
-			// methods a call on it runs.
-			if c := profileOf(lang).classOf; c != "" && name == c {
-				instance, r.virtual = false, false
-				i++
-				continue
-			}
-			// A call on the class itself, as Report.build in Ruby, runs a
-			// method of the class before a method of its instances.
-			if prefix := profileOf(lang).classMethodPrefix; prefix != "" && !instance && !r.virtual {
-				if key, ok := b.ownMethod(r.key, prefix+name); ok {
-					r.key, r.kind, r.rule, r.class = key, EdgeMember, ruleMember, r.key
-					i++
-					continue
-				}
-			}
-			r.class = r.key
-			// A dependency base can give the method that a call names
-			// last. A name before it is an attribute of the instance,
-			// whose value the walk does not know, so the field and name
-			// edges of the call apply.
-			last := i+1 == len(names)
-			key, ok := b.ownMethod(r.key, name)
-			switch {
-			case ok:
-				r.key, r.kind, r.rule = key, EdgeMember, ruleMember
-				i++
-				continue
-			case !last:
-				if field, ok := b.fieldType(r.key, name); ok {
-					r.key, r.class, r.virtual, r.declared = field, "", true, true
-					i++
-					continue
-				}
-			}
-			base, external := b.externalBase(r.key)
-			switch {
-			case b.forwards(r.key):
-				r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
-				return r
-			case external && last:
-				r.key, r.kind, r.rule = b.deriveExternal(base, []string{name}), EdgeMember, ruleMember
-				i++
-			case external:
-				r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
-				return r
-			default:
-				r.fail = noDefinition(name)
-				return r
-			}
+			consumed, done = b.walkClass(&r, name, i+1 == len(names), &instance)
 		case kind == NodeExternal || kind == "" && b.g.IsExternal(r.key):
 			r.key = b.deriveExternal(r.key, names[i:])
 			r.rule = cmp.Or(r.rule, ruleExternal)
 			return r
 		case kind == NodeFunction || kind == NodeMethod || kind == NodeConstructor:
-			// A Go call of the function gives a value of its first result,
-			// as New().Run(). Else the name is a local variable or a
-			// parameter of the function, and the index does not know its
-			// value.
-			if class, ok := b.resultType(r.key); ok {
-				r.key, r.virtual, r.declared = class, true, true
-				continue
-			}
-			r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
-			return r
+			consumed, done = b.walkFunction(&r, name)
 		default:
 			r.fail = noDefinition(name)
 			return r
+		}
+		if done {
+			return r
+		}
+		if consumed {
+			i++
 		}
 	}
 	switch {
@@ -635,6 +552,136 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 		r.key = value
 	}
 	return r
+}
+
+// walkUnit reads a name of a unit: a definition of one of its files, or a
+// member of the unit.
+func (b *builder) walkUnit(r *resolution, name string) (consumed, done bool) {
+	keys := b.units[r.key].names[name]
+	if len(keys) == 0 {
+		key, ok := b.unitMember(r.key, name)
+		if !ok {
+			r.fail = noDefinition(name)
+			return false, true
+		}
+		keys = []string{key}
+	}
+	r.key = keys[0]
+	return true, false
+}
+
+// walkModule reads a name of a module or of a namespace package: a name
+// that the module binds, the member of its default value, or its
+// __getattr__.
+func (b *builder) walkModule(r *resolution, name string) (consumed, done bool) {
+	key, fail := b.resolveName(r.key, name, 0)
+	if fail == nil {
+		r.key = key
+		return true, false
+	}
+	if value, ok := b.defaultValue(r.key, name); ok {
+		r.key = value
+		return false, false
+	}
+	if getter, ok := b.moduleGetattr(r.key); ok {
+		r.key, r.kind, r.rule, r.dynamic = getter, EdgeDirect, ruleModuleGetattr, true
+		return false, true
+	}
+	r.fail = fail
+	return false, true
+}
+
+// walkVariable reads a name of a variable: a function that a property of
+// the object of the variable holds, as api//go, or else the name on the
+// value of the variable.
+func (b *builder) walkVariable(r *resolution, name string) (consumed, done bool) {
+	if n := b.g.Nodes[fileindex.Join(r.key, name)]; n != nil {
+		r.key = n.Key
+		return true, false
+	}
+	value, ok := b.variableValue(r.key)
+	if !ok {
+		r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+		return false, true
+	}
+	r.key = value
+	return false, false
+}
+
+// walkClass reads a name of a class or an interface: the instance keyword,
+// the constructor call or the class-of method of the language, a method of
+// the class, the type of a field before the last name, or a member of an
+// external base. last marks the last name of the walk, and instance holds
+// whether the key is an instance of the class.
+func (b *builder) walkClass(r *resolution, name string, last bool, instance *bool) (consumed, done bool) {
+	lang := b.byPath[fileindex.Unit(r.key)].Language
+	p := profileOf(lang)
+	if isInstanceKeyword(lang, name) {
+		r.virtual = true
+		return true, false
+	}
+	// Client.new makes an instance of the class, and the edge to the class
+	// leads to its constructor.
+	if p.constructorCall != "" && name == p.constructorCall {
+		if _, own := b.ownMethod(r.key, name); !own {
+			*instance = true
+			return true, false
+		}
+	}
+	// self.class in Ruby is the class of the instance, whose class methods a
+	// call on it runs.
+	if p.classOf != "" && name == p.classOf {
+		*instance, r.virtual = false, false
+		return true, false
+	}
+	// A call on the class itself, as Report.build in Ruby, runs a method of
+	// the class before a method of its instances.
+	if p.classMethodPrefix != "" && !*instance && !r.virtual {
+		if key, ok := b.ownMethod(r.key, p.classMethodPrefix+name); ok {
+			r.key, r.kind, r.rule, r.class = key, EdgeMember, ruleMember, r.key
+			return true, false
+		}
+	}
+	r.class = r.key
+	// A dependency base can give the method that a call names last. A name
+	// before it is an attribute of the instance, whose value the walk does
+	// not know, so the field and name edges of the call apply.
+	if key, ok := b.ownMethod(r.key, name); ok {
+		r.key, r.kind, r.rule = key, EdgeMember, ruleMember
+		return true, false
+	}
+	if !last {
+		if field, ok := b.fieldType(r.key, name); ok {
+			r.key, r.class, r.virtual, r.declared = field, "", true, true
+			return true, false
+		}
+	}
+	base, external := b.externalBase(r.key)
+	switch {
+	case b.forwards(r.key):
+		r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+	case external && last:
+		r.key, r.kind, r.rule = b.deriveExternal(base, []string{name}), EdgeMember, ruleMember
+		return true, false
+	case external:
+		r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+	default:
+		r.fail = noDefinition(name)
+	}
+	return false, true
+}
+
+// walkFunction reads a name of a function: a Go call of the function gives
+// a value of its first result, as New().Run(). Else the name is a local
+// variable or a parameter of the function, and the index does not know its
+// value.
+func (b *builder) walkFunction(r *resolution, name string) (consumed, done bool) {
+	if class, ok := b.resultType(r.key); ok {
+		r.key, r.virtual, r.declared = class, true, true
+		return false, false
+	}
+	r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+	return false, true
 }
 
 // defaultValue returns the class or the function that a module exports as
