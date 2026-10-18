@@ -1,0 +1,28 @@
+source: safedep:hand
+description: handler.js exports handler with exports.handler = async (event) => {}. The function is a definition of the property, so it is a root of the rule node.serverless.handler.
+roots:
+  - key: handler.js//handler
+    kind: framework
+    rule: node.serverless.handler
+    site: handler.js:3
+exact_edges: true
+edges:
+  - from: handler.js//handler
+    to: js-yaml//load
+    kind: direct
+    confidence: high
+    site: handler.js:4
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: handler.js//handler
+      - key: js-yaml//load
+        site: handler.js:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: handler.js//handler
+        site: handler.js:4
+        reached: true

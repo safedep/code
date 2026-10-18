@@ -4,12 +4,11 @@ import (
 	"testing"
 
 	"github.com/safedep/code/core"
-	"github.com/safedep/code/lang"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestResolvePackageHint(t *testing.T) {
-	t.Run("resolvePackageHint", func(t *testing.T) {
+	t.Run("packageHintOf", func(t *testing.T) {
 		type testCase struct {
 			moduleName          string
 			expectedPackageHint string
@@ -114,15 +113,14 @@ func TestResolvePackageHint(t *testing.T) {
 		}
 
 		for langCode, tests := range languageWiseTests {
-			language, err := lang.GetLanguage(string(langCode))
-			assert.NoError(t, err)
+			profile := usageProfileOf(langCode)
 
 			// Empty modulename must give error
-			_, err = resolvePackageHint("", language)
+			_, err := profile.packageHintOf("")
 			assert.Error(t, err)
 
 			for _, test := range tests {
-				packageHint, err := resolvePackageHint(test.moduleName, language)
+				packageHint, err := profile.packageHintOf(test.moduleName)
 				if test.expectedError {
 					assert.Error(t, err)
 					assert.Equal(t, "", packageHint)

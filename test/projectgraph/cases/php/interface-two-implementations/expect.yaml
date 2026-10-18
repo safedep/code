@@ -1,0 +1,47 @@
+source: safedep:hand
+description: persist calls save on a parameter of the interface type Store. The interface method has no body, so it is no definition, the site keeps a record, and cha edges go to the save of DbStore and of FileStore. mysqli_query is no builtin of the list, so its call is a record.
+roots:
+  - key: index.php
+    kind: main
+    rule: php.script
+edges:
+  - from: index.php//persist
+    to: src/Stores.php//DbStore//save
+    kind: cha
+    confidence: medium
+    site: index.php:7
+  - from: index.php//persist
+    to: src/Stores.php//FileStore//save
+    kind: cha
+    confidence: medium
+    site: index.php:7
+unresolved:
+  - caller: index.php//persist
+    site: index.php:7
+    reason: no-definition
+    method: save
+  - caller: src/Stores.php//DbStore//save
+    site: src/Stores.php:13
+    reason: unknown-receiver
+    method: mysqli_query
+results:
+  - target: unlink
+    status: found
+    path:
+      - key: index.php
+      - key: index.php//persist
+        site: index.php:10
+        kind: direct
+        confidence: high
+      - key: src/Stores.php//FileStore//save
+        site: index.php:7
+        kind: cha
+        confidence: medium
+      - key: unlink
+        site: src/Stores.php:21
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Stores.php//FileStore//save
+        site: src/Stores.php:21
+        reached: true

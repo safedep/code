@@ -1,0 +1,47 @@
+source: safedep:hand
+description: src/main.ts calls axios.get through fetchText. The exported dump calls yaml.dump, and no root reaches it. yaml.load is not called.
+roots:
+  - key: src/main.ts
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.ts
+    to: src/main.ts//fetchText
+    kind: direct
+    confidence: high
+    site: src/main.ts:13
+  - from: src/main.ts//fetchText
+    to: axios//get
+    kind: direct
+    confidence: high
+    site: src/main.ts:5
+unresolved:
+  - caller: src/main.ts
+    site: src/main.ts:13
+    reason: unknown-receiver
+    method: then
+results:
+  - target: axios//get
+    status: found
+    path:
+      - key: src/main.ts
+      - key: src/main.ts//fetchText
+        site: src/main.ts:13
+        kind: direct
+        confidence: high
+      - key: axios//get
+        site: src/main.ts:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.ts//fetchText
+        site: src/main.ts:5
+        reached: true
+  - target: js-yaml//load
+    status: no-such-target
+  - target: js-yaml//dump
+    status: not-found
+    call_sites:
+      - caller: src/main.ts//dump
+        site: src/main.ts:10
+        reached: false

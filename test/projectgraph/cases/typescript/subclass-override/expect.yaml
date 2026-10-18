@@ -1,0 +1,39 @@
+source: safedep:hand
+description: run calls parse on a parameter of the declared type Loader. The type narrows the receiver, so a member edge joins the call to Loader.parse and a cha edge to YamlLoader.parse, which calls yaml.load.
+roots:
+  - key: src/main.ts
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.ts//run
+    to: src/loaders.ts//Loader//parse
+    kind: member
+    confidence: high
+    site: src/main.ts:4
+  - from: src/main.ts//run
+    to: src/loaders.ts//YamlLoader//parse
+    kind: cha
+    confidence: medium
+    site: src/main.ts:4
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/main.ts
+      - key: src/main.ts//run
+        site: src/main.ts:7
+        kind: direct
+        confidence: high
+      - key: src/loaders.ts//YamlLoader//parse
+        site: src/main.ts:4
+        kind: cha
+        confidence: medium
+      - key: js-yaml//load
+        site: src/loaders.ts:11
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/loaders.ts//YamlLoader//parse
+        site: src/loaders.ts:11
+        reached: true

@@ -2,6 +2,8 @@ package callgraph
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 
 	callgraphv1 "buf.build/gen/go/safedep/api/protocolbuffers/go/safedep/messages/code/callgraph/v1"
@@ -9,6 +11,7 @@ import (
 	"github.com/safedep/code/pkg/test"
 	"github.com/safedep/code/plugin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestValidateSignatures(t *testing.T) {
@@ -58,7 +61,7 @@ func TestValidateSignatures(t *testing.T) {
 		},
 		{
 			signature:     callSignature("kotlin.language", core.LanguageCodeKotlin, MatchAny, "okhttp3.OkHttpClient"),
-			expectedError: true,
+			expectedError: false,
 		},
 		{
 			signature:     callSignature("csharp.invalid.match", core.LanguageCodeCSharp, "invalid_match_type", "OpenAI.*"),
@@ -99,100 +102,24 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "JavaScript signatures",
 			Language:  core.LanguageCodeJavascript,
-			FilePaths: []string{"fixtures/testJavascript.js"},
+			FilePaths: []string{"testJavascript.js"},
 			Signatures: []*callgraphv1.Signature{
-				{
-					Id: "js.console.log.usage",
-					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
-						"javascript": {
-							Match: "any",
-							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
-								{
-									Type:  "call",
-									Value: "console/log",
-								},
-							},
-						},
-					},
-				},
-				{
-					Id: "js.filesystem.access",
-					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
-						"javascript": {
-							Match: "any",
-							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
-								{
-									Type:  "call",
-									Value: "fs/readFileSync",
-								},
-							},
-						},
-					},
-				},
-				{
-					Id: "js.http.request",
-					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
-						"javascript": {
-							Match: "any",
-							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
-								{
-									Type:  "call",
-									Value: "axios/get",
-								},
-							},
-						},
-					},
-				},
-				{
-					Id: "js.database.constructor",
-					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
-						"javascript": {
-							Match: "any",
-							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
-								{
-									Type:  "call",
-									Value: "sqlite3/Database",
-								},
-							},
-						},
-					},
-				},
+				callSignature("js.console.log.usage", core.LanguageCodeJavascript, MatchAny, "console/log"),
+				callSignature("js.filesystem.access", core.LanguageCodeJavascript, MatchAny, "fs/readFileSync"),
+				callSignature("js.http.request", core.LanguageCodeJavascript, MatchAny, "axios/get"),
+				callSignature("js.database.constructor", core.LanguageCodeJavascript, MatchAny, "sqlite3/Database"),
 			},
 			ExpectedMatches: []signatureMatchExpectation{
-				{
-					SignatureID:      "js.console.log.usage",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodeJavascript,
-					MinEvidenceCount: 1,
-					CalleeContains:   "log",
-				},
-				{
-					SignatureID:      "js.filesystem.access",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodeJavascript,
-					MinEvidenceCount: 1,
-					CalleeContains:   "readFileSync",
-				},
-				{
-					SignatureID:      "js.http.request",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodeJavascript,
-					MinEvidenceCount: 1,
-					CalleeContains:   "get",
-				},
-				{
-					SignatureID:      "js.database.constructor",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodeJavascript,
-					MinEvidenceCount: 1,
-					CalleeContains:   "Database",
-				},
+				{SignatureID: "js.console.log.usage", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1, CalleeContains: "log"},
+				{SignatureID: "js.filesystem.access", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1, CalleeContains: "readFileSync"},
+				{SignatureID: "js.http.request", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1, CalleeContains: "get"},
+				{SignatureID: "js.database.constructor", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJavascript, MinEvidenceCount: 1, CalleeContains: "Database"},
 			},
 		},
 		{
 			Name:      "JavaScript CommonJS signatures",
 			Language:  core.LanguageCodeJavascript,
-			FilePaths: []string{"fixtures/testCommonJS.js"},
+			FilePaths: []string{"testCommonJS.js"},
 			Signatures: []*callgraphv1.Signature{
 				callSignature("anthropic.client", core.LanguageCodeJavascript, MatchAny, "@anthropic-ai/sdk"),
 				callSignature("node.events.emitter", core.LanguageCodeJavascript, MatchAny, "events/EventEmitter"),
@@ -207,7 +134,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "C# signatures",
 			Language:  core.LanguageCodeCSharp,
-			FilePaths: []string{"fixtures/testShapes.cs"},
+			FilePaths: []string{"testShapes.cs"},
 			Signatures: []*callgraphv1.Signature{
 				callSignature("openai.chat", core.LanguageCodeCSharp, MatchAll, "OpenAI.Chat.*", "ChatClient.CompleteChatAsync"),
 				callSignature("http.client", core.LanguageCodeCSharp, MatchAny, "System.Net.Http.HttpClient.*"),
@@ -222,7 +149,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "Rust signatures",
 			Language:  core.LanguageCodeRust,
-			FilePaths: []string{"fixtures/testShapes.rs"},
+			FilePaths: []string{"testShapes.rs"},
 			Signatures: []*callgraphv1.Signature{
 				callSignature("openai.client", core.LanguageCodeRust, MatchAny, "async_openai::Client::new"),
 				callSignature("http.client", core.LanguageCodeRust, MatchAny, "reqwest::*"),
@@ -237,7 +164,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "PHP signatures",
 			Language:  core.LanguageCodePHP,
-			FilePaths: []string{"fixtures/testShapes.php"},
+			FilePaths: []string{"testShapes.php"},
 			Signatures: []*callgraphv1.Signature{
 				callSignature("openai.client", core.LanguageCodePHP, MatchAny, "OpenAI::client"),
 				callSignature("http.client", core.LanguageCodePHP, MatchAny, "GuzzleHttp\\Client"),
@@ -252,7 +179,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "Ruby signatures",
 			Language:  core.LanguageCodeRuby,
-			FilePaths: []string{"fixtures/testShapes.rb"},
+			FilePaths: []string{"testShapes.rb"},
 			Signatures: []*callgraphv1.Signature{
 				callSignature("openai.client", core.LanguageCodeRuby, MatchAny, "OpenAI::Client.new"),
 				callSignature("http.client", core.LanguageCodeRuby, MatchAny, "Net::HTTP.*"),
@@ -267,7 +194,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "JavaScript chained calls",
 			Language:  core.LanguageCodeJavascript,
-			FilePaths: []string{"fixtures/testChains.js"},
+			FilePaths: []string{"testChains.js"},
 			Signatures: []*callgraphv1.Signature{
 				argSignature("crypto.md5", core.LanguageCodeJavascript, "crypto/createHash", "'md5'", `"md5"`),
 				callSignature("openai.chat", core.LanguageCodeJavascript, MatchAny, "openai/chat/completions/create"),
@@ -288,7 +215,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "Go chained calls and versioned imports",
 			Language:  core.LanguageCodeGo,
-			FilePaths: []string{"fixtures/testChains.go"},
+			FilePaths: []string{"testChains.go"},
 			Signatures: []*callgraphv1.Signature{
 				callSignature("crypto.ecdh", core.LanguageCodeGo, MatchAny, "crypto/ecdh/X25519/GenerateKey"),
 				callSignature("crypto.jwt", core.LanguageCodeGo, MatchAny, "github.com/golang-jwt/jwt/v5/NewWithClaims"),
@@ -306,7 +233,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "Python chained calls",
 			Language:  core.LanguageCodePython,
-			FilePaths: []string{"fixtures/testChains.py"},
+			FilePaths: []string{"testChains.py"},
 			Signatures: []*callgraphv1.Signature{
 				callSignature("crypto.argon2", core.LanguageCodePython, MatchAny, "argon2.PasswordHasher.hash"),
 				callSignature("crypto.sha256", core.LanguageCodePython, MatchAny, "hashlib.sha256.hexdigest"),
@@ -321,7 +248,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "Java calls on new objects",
 			Language:  core.LanguageCodeJava,
-			FilePaths: []string{"fixtures/testChains.java"},
+			FilePaths: []string{"testChains.java"},
 			Signatures: []*callgraphv1.Signature{
 				callSignature("pinecone.client", core.LanguageCodeJava, MatchAny, "io.pinecone.clients.Pinecone.Builder.build"),
 				callSignature("http.send", core.LanguageCodeJava, MatchAny, "com.example.http.Request.send"),
@@ -338,7 +265,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "Rust turbofish",
 			Language:  core.LanguageCodeRust,
-			FilePaths: []string{"fixtures/testGenerics.rs"},
+			FilePaths: []string{"testGenerics.rs"},
 			Signatures: []*callgraphv1.Signature{
 				callSignature("crypto.hmac", core.LanguageCodeRust, MatchAny, "hmac::Hmac::new_from_slice"),
 			},
@@ -349,7 +276,7 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "PHP string arguments",
 			Language:  core.LanguageCodePHP,
-			FilePaths: []string{"fixtures/testStrings.php"},
+			FilePaths: []string{"testStrings.php"},
 			Signatures: []*callgraphv1.Signature{
 				argSignature("crypto.sha256", core.LanguageCodePHP, "hash", `"sha256"`, "'sha256'"),
 				argSignature("crypto.md5", core.LanguageCodePHP, "hash", `"md5"`, "'md5'"),
@@ -364,286 +291,58 @@ func TestSignatureMatcher(t *testing.T) {
 		{
 			Name:      "Python signatures",
 			Language:  core.LanguageCodePython,
-			FilePaths: []string{"fixtures/testFunctions.py"},
+			FilePaths: []string{"testFunctions.py"},
 			Signatures: []*callgraphv1.Signature{
-				{
-					Id: "python.print.usage",
-					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
-						"python": {
-							Match: "any",
-							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
-								{
-									Type:  "call",
-									Value: "print",
-								},
-							},
-						},
-					},
-				},
-				{
-					Id: "python.pprint.pprint.usage",
-					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
-						"python": {
-							Match: "any",
-							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
-								{
-									Type:  "call",
-									Value: "pprint.pprint",
-								},
-							},
-						},
-					},
-				},
-				{
-					Id: "python.os.getenv.usage",
-					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
-						"python": {
-							Match: "any",
-							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
-								{
-									Type:  "call",
-									Value: "os.getenv",
-								},
-							},
-						},
-					},
-				},
-				{
-					Id: "python.pstats.getsomestat.usage",
-					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
-						"python": {
-							Match: "any",
-							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
-								{
-									Type:  "call",
-									Value: "pstats.getsomestat",
-								},
-							},
-						},
-					},
-				},
+				callSignature("python.print.usage", core.LanguageCodePython, MatchAny, "print"),
+				callSignature("python.pprint.pprint.usage", core.LanguageCodePython, MatchAny, "pprint.pprint"),
+				callSignature("python.os.getenv.usage", core.LanguageCodePython, MatchAny, "os.getenv"),
+				callSignature("python.pstats.getsomestat.usage", core.LanguageCodePython, MatchAny, "pstats.getsomestat"),
 			},
 			ExpectedMatches: []signatureMatchExpectation{
-				{
-					SignatureID:      "python.print.usage",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodePython,
-					MinEvidenceCount: 1,
-					CalleeContains:   "print",
-				},
-				{
-					SignatureID:      "python.pprint.pprint.usage",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodePython,
-					MinEvidenceCount: 1,
-					CalleeContains:   "pprint",
-				},
-				{
-					SignatureID:      "python.os.getenv.usage",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodePython,
-					MinEvidenceCount: 1,
-					CalleeContains:   "getenv",
-				},
-				{
-					SignatureID:      "python.pstats.getsomestat.usage",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodePython,
-					MinEvidenceCount: 1,
-					CalleeContains:   "getsomestat",
-				},
+				{SignatureID: "python.print.usage", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePython, MinEvidenceCount: 1, CalleeContains: "print"},
+				{SignatureID: "python.pprint.pprint.usage", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePython, MinEvidenceCount: 1, CalleeContains: "pprint"},
+				{SignatureID: "python.os.getenv.usage", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePython, MinEvidenceCount: 1, CalleeContains: "getenv"},
+				{SignatureID: "python.pstats.getsomestat.usage", ShouldMatch: true, ExpectedLanguage: core.LanguageCodePython, MinEvidenceCount: 1, CalleeContains: "getsomestat"},
 			},
 		},
 		{
 			Name:      "Go signatures",
 			Language:  core.LanguageCodeGo,
-			FilePaths: []string{"fixtures/testCallGraph.go"},
+			FilePaths: []string{"testCallGraph.go"},
 			Signatures: []*callgraphv1.Signature{
-				{
-					Id: "go.fmt.println.usage",
-					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
-						"go": {
-							Match: "any",
-							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
-								{
-									Type:  "call",
-									Value: "fmt/Println",
-								},
-							},
-						},
-					},
-				},
-				{
-					Id: "go.os.writefile.usage",
-					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
-						"go": {
-							Match: "any",
-							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
-								{
-									Type:  "call",
-									Value: "os/WriteFile",
-								},
-							},
-						},
-					},
-				},
-				{
-					Id: "go.os.getenv.usage",
-					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
-						"go": {
-							Match: "any",
-							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
-								{
-									Type:  "call",
-									Value: "os/Getenv",
-								},
-							},
-						},
-					},
-				},
-				{
-					Id: "go.fmt.sprintf.usage",
-					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
-						"go": {
-							Match: "any",
-							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
-								{
-									Type:  "call",
-									Value: "fmt/Sprintf",
-								},
-							},
-						},
-					},
-				},
+				callSignature("go.fmt.println.usage", core.LanguageCodeGo, MatchAny, "fmt/Println"),
+				callSignature("go.os.writefile.usage", core.LanguageCodeGo, MatchAny, "os/WriteFile"),
+				callSignature("go.os.getenv.usage", core.LanguageCodeGo, MatchAny, "os/Getenv"),
+				callSignature("go.fmt.sprintf.usage", core.LanguageCodeGo, MatchAny, "fmt/Sprintf"),
 			},
 			ExpectedMatches: []signatureMatchExpectation{
-				{
-					SignatureID:      "go.fmt.println.usage",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodeGo,
-					MinEvidenceCount: 1,
-					CalleeContains:   "Println",
-				},
-				{
-					SignatureID:      "go.os.writefile.usage",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodeGo,
-					MinEvidenceCount: 1,
-					CalleeContains:   "WriteFile",
-				},
-				{
-					SignatureID:      "go.os.getenv.usage",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodeGo,
-					MinEvidenceCount: 1,
-					CalleeContains:   "Getenv",
-				},
-				{
-					SignatureID:      "go.fmt.sprintf.usage",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodeGo,
-					MinEvidenceCount: 1,
-					CalleeContains:   "Sprintf",
-				},
+				{SignatureID: "go.fmt.println.usage", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeGo, MinEvidenceCount: 1, CalleeContains: "Println"},
+				{SignatureID: "go.os.writefile.usage", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeGo, MinEvidenceCount: 1, CalleeContains: "WriteFile"},
+				{SignatureID: "go.os.getenv.usage", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeGo, MinEvidenceCount: 1, CalleeContains: "Getenv"},
+				{SignatureID: "go.fmt.sprintf.usage", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeGo, MinEvidenceCount: 1, CalleeContains: "Sprintf"},
 			},
 		},
 		{
 			Name:      "Java signatures",
 			Language:  core.LanguageCodeJava,
-			FilePaths: []string{"fixtures/CallgraphTestcases.java"},
+			FilePaths: []string{"CallgraphTestcases.java"},
 			Signatures: []*callgraphv1.Signature{
-				{
-					Id: "java.system.println.usage",
-					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
-						"java": {
-							Match: "any",
-							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
-								{
-									Type:  "call",
-									Value: "System.out.println",
-								},
-							},
-						},
-					},
-				},
-				{
-					Id: "java.math.random.usage",
-					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
-						"java": {
-							Match: "any",
-							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
-								{
-									Type:  "call",
-									Value: "Math.random",
-								},
-							},
-						},
-					},
-				},
-				{
-					Id: "java.awt.dialog.constructor",
-					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
-						"java": {
-							Match: "any",
-							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
-								{
-									Type:  "call",
-									Value: "java.awt.Dialog",
-								},
-							},
-						},
-					},
-				},
-				{
-					Id: "java.string.valueof.usage",
-					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
-						"java": {
-							Match: "any",
-							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
-								{
-									Type:  "call",
-									Value: "String.valueOf",
-								},
-							},
-						},
-					},
-				},
+				callSignature("java.system.println.usage", core.LanguageCodeJava, MatchAny, "System.out.println"),
+				callSignature("java.math.random.usage", core.LanguageCodeJava, MatchAny, "Math.random"),
+				callSignature("java.awt.dialog.constructor", core.LanguageCodeJava, MatchAny, "java.awt.Dialog"),
+				callSignature("java.string.valueof.usage", core.LanguageCodeJava, MatchAny, "String.valueOf"),
 			},
 			ExpectedMatches: []signatureMatchExpectation{
-				{
-					SignatureID:      "java.system.println.usage",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodeJava,
-					MinEvidenceCount: 1,
-					CalleeContains:   "println",
-				},
-				{
-					SignatureID:      "java.math.random.usage",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodeJava,
-					MinEvidenceCount: 1,
-					CalleeContains:   "random",
-				},
-				{
-					SignatureID:      "java.awt.dialog.constructor",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodeJava,
-					MinEvidenceCount: 1,
-					CalleeContains:   "Dialog",
-				},
-				{
-					SignatureID:      "java.string.valueof.usage",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodeJava,
-					MinEvidenceCount: 1,
-					CalleeContains:   "valueOf",
-				},
+				{SignatureID: "java.system.println.usage", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJava, MinEvidenceCount: 1, CalleeContains: "println"},
+				{SignatureID: "java.math.random.usage", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJava, MinEvidenceCount: 1, CalleeContains: "random"},
+				{SignatureID: "java.awt.dialog.constructor", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJava, MinEvidenceCount: 1, CalleeContains: "Dialog"},
+				{SignatureID: "java.string.valueof.usage", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJava, MinEvidenceCount: 1, CalleeContains: "valueOf"},
 			},
 		},
 		{
 			Name:      "Java argument matching by index",
 			Language:  core.LanguageCodeJava,
-			FilePaths: []string{"fixtures/testJavaArguments.java"},
+			FilePaths: []string{"testJavaArguments.java"},
 			Signatures: []*callgraphv1.Signature{
 				{
 					Id: "java.crypto.md5.literal",
@@ -755,63 +454,20 @@ func TestSignatureMatcher(t *testing.T) {
 				},
 			},
 			ExpectedMatches: []signatureMatchExpectation{
-				{
-					SignatureID:      "java.crypto.md5.literal",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodeJava,
-					MinEvidenceCount: 1,
-					CalleeContains:   "MessageDigest",
-				},
-				{
-					SignatureID:      "java.crypto.sha256.literal",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodeJava,
-					MinEvidenceCount: 1,
-					CalleeContains:   "MessageDigest",
-				},
-				{
-					SignatureID:      "java.awt.canvas.setsize.32.99",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodeJava,
-					MinEvidenceCount: 1,
-					CalleeContains:   "setSize",
-				},
-				{
-					SignatureID:      "java.awt.dialog.with.window.type",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodeJava,
-					MinEvidenceCount: 1,
-					CalleeContains:   "Dialog",
-				},
-				{
-					SignatureID:      "java.awt.canvas.setsize.32.200.should.not.match",
-					ShouldMatch:      false,
-					ExpectedLanguage: core.LanguageCodeJava,
-					MinEvidenceCount: 0,
-					CalleeContains:   "",
-				},
+				{SignatureID: "java.crypto.md5.literal", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJava, MinEvidenceCount: 1, CalleeContains: "MessageDigest"},
+				{SignatureID: "java.crypto.sha256.literal", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJava, MinEvidenceCount: 1, CalleeContains: "MessageDigest"},
+				{SignatureID: "java.awt.canvas.setsize.32.99", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJava, MinEvidenceCount: 1, CalleeContains: "setSize"},
+				{SignatureID: "java.awt.dialog.with.window.type", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeJava, MinEvidenceCount: 1, CalleeContains: "Dialog"},
+				{SignatureID: "java.awt.canvas.setsize.32.200.should.not.match", ShouldMatch: false, ExpectedLanguage: core.LanguageCodeJava, MinEvidenceCount: 0, CalleeContains: ""},
 			},
 		},
 		{
 			Name:      "TypeScript falls back to JavaScript signatures",
 			Language:  core.LanguageCodeTypescript,
-			FilePaths: []string{"fixtures/testTypescript.ts"},
+			FilePaths: []string{"testTypescript.ts"},
 			Signatures: []*callgraphv1.Signature{
 				// JS-only signature: should match TS via fallback
-				{
-					Id: "js.console.log.usage",
-					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
-						"javascript": {
-							Match: "any",
-							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
-								{
-									Type:  "call",
-									Value: "console/log",
-								},
-							},
-						},
-					},
-				},
+				callSignature("js.console.log.usage", core.LanguageCodeJavascript, MatchAny, "console/log"),
 				// JS-only signature with argument matching
 				{
 					Id: "js.crypto.createhash.sha256",
@@ -884,43 +540,12 @@ func TestSignatureMatcher(t *testing.T) {
 					},
 				},
 				// Python-only signature: should NOT match TS
-				{
-					Id: "python.only.signature",
-					Languages: map[string]*callgraphv1.Signature_LanguageMatcher{
-						"python": {
-							Match: "any",
-							Conditions: []*callgraphv1.Signature_LanguageMatcher_SignatureCondition{
-								{
-									Type:  "call",
-									Value: "print",
-								},
-							},
-						},
-					},
-				},
+				callSignature("python.only.signature", core.LanguageCodePython, MatchAny, "print"),
 			},
 			ExpectedMatches: []signatureMatchExpectation{
-				{
-					SignatureID:      "js.console.log.usage",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodeTypescript,
-					MinEvidenceCount: 1,
-					CalleeContains:   "log",
-				},
-				{
-					SignatureID:      "js.crypto.createhash.sha256",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodeTypescript,
-					MinEvidenceCount: 1,
-					CalleeContains:   "createHash",
-				},
-				{
-					SignatureID:      "ts.axios.get.usage",
-					ShouldMatch:      true,
-					ExpectedLanguage: core.LanguageCodeTypescript,
-					MinEvidenceCount: 1,
-					CalleeContains:   "get",
-				},
+				{SignatureID: "js.console.log.usage", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeTypescript, MinEvidenceCount: 1, CalleeContains: "log"},
+				{SignatureID: "js.crypto.createhash.sha256", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeTypescript, MinEvidenceCount: 1, CalleeContains: "createHash"},
+				{SignatureID: "ts.axios.get.usage", ShouldMatch: true, ExpectedLanguage: core.LanguageCodeTypescript, MinEvidenceCount: 1, CalleeContains: "get"},
 				{
 					// TS key exists with non-matching condition, JS key has matching condition
 					// Should NOT match because TS key takes priority and its condition doesn't match
@@ -930,13 +555,7 @@ func TestSignatureMatcher(t *testing.T) {
 					MinEvidenceCount: 0,
 					CalleeContains:   "",
 				},
-				{
-					SignatureID:      "python.only.signature",
-					ShouldMatch:      false,
-					ExpectedLanguage: core.LanguageCodePython,
-					MinEvidenceCount: 0,
-					CalleeContains:   "",
-				},
+				{SignatureID: "python.only.signature", ShouldMatch: false, ExpectedLanguage: core.LanguageCodePython, MinEvidenceCount: 0, CalleeContains: ""},
 			},
 		},
 	}
@@ -949,31 +568,31 @@ func TestSignatureMatcher(t *testing.T) {
 			assert.NotNil(t, matcher, "Expected matcher to be non-nil")
 
 			// Setup test context
-			treeWalker, fileSystem, err := test.SetupBasicPluginContext(tc.FilePaths, []core.LanguageCode{tc.Language})
+			treeWalker, fileSystem, err := test.SetupBasicPluginContext("fixtures", tc.FilePaths, []core.LanguageCode{tc.Language})
 			assert.NoError(t, err, "Failed to setup plugin context")
 
-			// Collect callgraphs
+			// The executor closes the tree after the callback, so the
+			// assertions below read a graph that outlives its tree.
 			var capturedCallgraph *CallGraph
+			var matchResults []SignatureMatchResult
 			callgraphCallback := func(ctx context.Context, cg *CallGraph) error {
 				capturedCallgraph = cg
-				return nil
+				var err error
+				matchResults, err = matcher.MatchSignatures(cg)
+				return err
 			}
 
 			// Execute plugin
-			pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+			pluginExecutor := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
 				NewCallGraphPlugin(callgraphCallback),
 			})
-			assert.NoError(t, err, "Failed to create plugin executor")
 
-			err = pluginExecutor.Execute(context.Background(), fileSystem)
+			report, err := pluginExecutor.Execute(context.Background(), fileSystem)
 			assert.NoError(t, err, "Failed to execute plugin")
+			assert.Empty(t, report.Failed, "Failed to match signatures")
 
 			// Verify we captured a callgraph
 			assert.NotNil(t, capturedCallgraph, "Expected to capture a callgraph")
-
-			// Run signature matching
-			matchResults, err := matcher.MatchSignatures(capturedCallgraph)
-			assert.NoError(t, err, "Failed to match signatures")
 
 			// Create a map for easier assertion
 			matchedSignatureIds := make(map[string]SignatureMatchResult)
@@ -1010,14 +629,13 @@ func TestSignatureMatcher(t *testing.T) {
 						// Verify callee namespace if specified
 						if expectation.CalleeContains != "" && totalEvidences > 0 {
 							evidence := matchResult.MatchedConditions[0].Evidences[0]
-							treeData, err := capturedCallgraph.Tree.Data()
-							assert.NoError(t, err)
-
-							metadata := evidence.Metadata(treeData)
-							assert.NotEmpty(t, metadata.CallerNamespace, "Expected caller namespace")
-							assert.NotEmpty(t, metadata.CalleeNamespace, "Expected callee namespace")
-							assert.Contains(t, metadata.CalleeNamespace, expectation.CalleeContains,
+							require.NotNil(t, evidence.Caller)
+							require.NotNil(t, evidence.Callee)
+							assert.NotEmpty(t, evidence.Caller.Namespace, "Expected caller namespace")
+							assert.Contains(t, evidence.Callee.Namespace, expectation.CalleeContains,
 								"Expected callee namespace to contain '%s'", expectation.CalleeContains)
+							assert.NotEmpty(t, evidence.Text, "Expected the source of the call")
+							assert.Positive(t, evidence.Site.StartLine, "Expected a 1-based line")
 						}
 					} else {
 						assert.False(t, found, "Expected signature %s NOT to match", expectation.SignatureID)
@@ -1058,7 +676,34 @@ func TestCalleeOfKeepsTheNamespace(t *testing.T) {
 	assert.Same(t, node, calleeOf(DfsResultItem{Namespace: "openai//OpenAI", Node: node}))
 	assert.Equal(t, "crewai//flow//Flow", calleeOf(DfsResultItem{Namespace: "crewai//flow//Flow"}).Namespace)
 
-	evidence := MatchedEvidence{Callee: calleeOf(DfsResultItem{Namespace: "crewai//flow//Flow"})}
-	data := []byte{}
-	assert.Equal(t, "crewai//flow//Flow", evidence.Metadata(&data).CalleeNamespace)
+}
+
+func TestWildcardEvidenceHasOneOrder(t *testing.T) {
+	var source strings.Builder
+	source.WriteString("import os\n")
+	for c := 'a'; c <= 't'; c++ {
+		fmt.Fprintf(&source, "os.%c%c()\n", c, c)
+	}
+	cg := buildAndClose(t, pythonLanguage(t), "a.py", source.String())
+
+	matcher, err := NewSignatureMatcher([]*callgraphv1.Signature{callSignature("os.any", core.LanguageCodePython, MatchAny, "os.*")})
+	require.NoError(t, err)
+
+	calleesOfMatch := func() []string {
+		results, err := matcher.MatchSignatures(cg)
+		require.NoError(t, err)
+		require.Len(t, results, 1)
+		var callees []string
+		for _, evidence := range results[0].MatchedConditions[0].Evidences {
+			callees = append(callees, evidence.Callee.Namespace)
+		}
+		return callees
+	}
+
+	first := calleesOfMatch()
+	require.Len(t, first, 20)
+	assert.IsIncreasing(t, first)
+	for range 20 {
+		assert.Equal(t, first, calleesOfMatch())
+	}
 }

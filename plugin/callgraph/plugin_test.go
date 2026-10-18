@@ -12,9 +12,9 @@ import (
 )
 
 type dfsResultExpectation struct {
-	Namespace               string
-	CallerNamespace         string
-	CallerIdentifierContent string
+	Namespace       string
+	CallerNamespace string
+	Text            string
 }
 
 type expectedCallgraphRefs struct {
@@ -40,236 +40,237 @@ type callgraphTestcase struct {
 var testcases = []callgraphTestcase{
 	{
 		Language: core.LanguageCodePython,
-		FilePath: "fixtures/testClass.py",
+		FilePath: "testClass.py",
 		ExpectedAssignmentGraph: map[string][]string{
-			"printxyz1":      {"xyz//printxyz1"},
-			"xyz//printxyz1": {},
-			"printxyz2":      {"xyz//printxyz2"},
-			"xyz//printxyz2": {},
-			"prt3":           {"xyz//printxyz3"},
-			"xyz//printxyz3": {},
-			"pprint":         {},
-			"fixtures/testClass.py//TesterClass//__init__":    {},
-			"fixtures/testClass.py//TesterClass//self//name":  {"\"TesterClass name\""},
-			"fixtures/testClass.py//TesterClass//self//value": {"42", "fixtures/testClass.py//TesterClass//__init__//newValue", "100", "\"default value\""},
-			"fixtures/testClass.py//alice":                    {"fixtures/testClass.py//TesterClass"},
-			"fixtures/testClass.py//bannername":               {"fixtures/testClass.py//TesterClass//name"},
-			"fixtures/testClass.py//x":                        {"fixtures/testClass.py//ClassA", "fixtures/testClass.py//ClassB"},
-			"fixtures/testClass.py//y":                        {"fixtures/testClass.py//x"},
+			"printxyz1":                              {"xyz//printxyz1"},
+			"xyz//printxyz1":                         {},
+			"printxyz2":                              {"xyz//printxyz2"},
+			"xyz//printxyz2":                         {},
+			"prt3":                                   {"xyz//printxyz3"},
+			"xyz//printxyz3":                         {},
+			"pprint":                                 {},
+			"testClass.py//TesterClass//__init__":    {},
+			"testClass.py//TesterClass//self//name":  {"\"TesterClass name\""},
+			"testClass.py//TesterClass//self//value": {"42", "testClass.py//TesterClass//__init__//newValue", "100", "\"default value\""},
+			"testClass.py//alice":                    {"testClass.py//TesterClass"},
+			"testClass.py//bannername":               {"testClass.py//TesterClass//name"},
+			"testClass.py//x":                        {"testClass.py//ClassA", "testClass.py//ClassB"},
+			"testClass.py//y":                        {"testClass.py//x"},
 		},
 		ExpectedCallGraph: map[string][]expectedCallgraphRefs{
-			"fixtures/testClass.py": {
-				{"fixtures/testClass.py//TesterClass", [][]string{{"35"}}},
-				{"fixtures/testClass.py//TesterClass//aboutme", [][]string{}},
-				{"fixtures/testClass.py//ClassA", [][]string{}},
-				{"fixtures/testClass.py//ClassB", [][]string{}},
-				{"fixtures/testClass.py//ClassA//method1", [][]string{}},
-				{"fixtures/testClass.py//ClassA//method1", [][]string{}},
-				{"fixtures/testClass.py//ClassB//method1", [][]string{}},
-				{"fixtures/testClass.py//ClassB//method1", [][]string{}},
-				{"fixtures/testClass.py//ClassA//method2", [][]string{}},
-				{"fixtures/testClass.py//ClassB//method2", [][]string{}},
-				{"fixtures/testClass.py//ClassA//methodUnique", [][]string{}},
-				{"fixtures/testClass.py//ClassB//methodUnique", [][]string{}},
+			"testClass.py": {
+				{"testClass.py//TesterClass", [][]string{{"35"}}},
+				{"testClass.py//TesterClass//aboutme", [][]string{}},
+				{"testClass.py//ClassA", [][]string{}},
+				{"testClass.py//ClassB", [][]string{}},
+				{"testClass.py//ClassA//method1", [][]string{}},
+				{"testClass.py//ClassA//method1", [][]string{}},
+				{"testClass.py//ClassB//method1", [][]string{}},
+				{"testClass.py//ClassB//method1", [][]string{}},
+				{"testClass.py//ClassA//method2", [][]string{}},
+				{"testClass.py//ClassB//method2", [][]string{}},
+				{"testClass.py//ClassA//methodUnique", [][]string{}},
+				{"testClass.py//ClassB//methodUnique", [][]string{}},
 			},
-			"fixtures/testClass.py//TesterClass": {
-				{"fixtures/testClass.py//TesterClass//__init__", [][]string{}},
+			"testClass.py//TesterClass": {
+				{"testClass.py//TesterClass//__init__", [][]string{}},
 			},
-			"fixtures/testClass.py//TesterClass//self//__init__": {
-				{"fixtures/testClass.py//TesterClass//__init__", [][]string{}},
+			"testClass.py//TesterClass//self//__init__": {
+				{"testClass.py//TesterClass//__init__", [][]string{}},
 			},
-			"fixtures/testClass.py//TesterClass//__init__": {
+			"testClass.py//TesterClass//__init__": {
 				{"getenv", [][]string{{"\"USE_TAR\""}}},
 			},
-			"fixtures/testClass.py//TesterClass//self//helper_method": {
-				{"fixtures/testClass.py//TesterClass//helper_method", [][]string{}},
+			"testClass.py//TesterClass//self//helper_method": {
+				{"testClass.py//TesterClass//helper_method", [][]string{}},
 			},
-			"fixtures/testClass.py//TesterClass//helper_method": {
+			"testClass.py//TesterClass//helper_method": {
 				{"print", [][]string{{"\"Called helper_method\""}}},
 			},
-			"fixtures/testClass.py//TesterClass//self//deepest_method": {
-				{"fixtures/testClass.py//TesterClass//deepest_method", [][]string{}},
+			"testClass.py//TesterClass//self//deepest_method": {
+				{"testClass.py//TesterClass//deepest_method", [][]string{}},
 			},
-			"fixtures/testClass.py//TesterClass//deepest_method": {
-				{"fixtures/testClass.py//TesterClass//self//helper_method", [][]string{}},
+			"testClass.py//TesterClass//deepest_method": {
+				{"testClass.py//TesterClass//self//helper_method", [][]string{}},
 				{"print", [][]string{{"\"Called deepest_method\""}}},
 			},
-			"fixtures/testClass.py//TesterClass//aboutme": {
+			"testClass.py//TesterClass//aboutme": {
 				{"print", [][]string{{"f\"Name: {self.name}\""}}},
 			},
-			"fixtures/testClass.py//ClassA":       {},
-			"fixtures/testClass.py//ClassA//self": {},
-			"fixtures/testClass.py//ClassA//self//method1": {
-				{"fixtures/testClass.py//ClassA//method1", [][]string{}},
+			"testClass.py//ClassA":       {},
+			"testClass.py//ClassA//self": {},
+			"testClass.py//ClassA//self//method1": {
+				{"testClass.py//ClassA//method1", [][]string{}},
 			},
-			"fixtures/testClass.py//ClassA//method1": {
+			"testClass.py//ClassA//method1": {
 				{"printxyz2", [][]string{{"\"GG\""}}},
 			},
-			"fixtures/testClass.py//ClassA//self//method2": {
-				{"fixtures/testClass.py//ClassA//method2", [][]string{}},
+			"testClass.py//ClassA//self//method2": {
+				{"testClass.py//ClassA//method2", [][]string{}},
 			},
-			"fixtures/testClass.py//ClassA//method2": {
+			"testClass.py//ClassA//method2": {
 				{"printxyz2", [][]string{{"\"GG\""}}},
 			},
-			"fixtures/testClass.py//ClassB//self//methodUnique": {
-				{"fixtures/testClass.py//ClassB//methodUnique", [][]string{}},
+			"testClass.py//ClassB//self//methodUnique": {
+				{"testClass.py//ClassB//methodUnique", [][]string{}},
 			},
-			"fixtures/testClass.py//ClassB//methodUnique": {
+			"testClass.py//ClassB//methodUnique": {
 				{"prt3", [][]string{{"\"GG\""}}},
 				{"pprint//pp", [][]string{{"\"GG\""}}},
 			},
 		},
 		ExpectedDfsResults: []dfsResultExpectation{
-			{Namespace: "fixtures/testClass.py", CallerNamespace: "fixtures/testClass.py", CallerIdentifierContent: ""},
-			{Namespace: "fixtures/testClass.py//TesterClass//__init__", CallerNamespace: "fixtures/testClass.py//TesterClass", CallerIdentifierContent: ""},
-			{Namespace: "getenv", CallerNamespace: "fixtures/testClass.py//TesterClass//__init__", CallerIdentifierContent: "getenv"},
-			{Namespace: "os//getenv", CallerNamespace: "fixtures/testClass.py//TesterClass//__init__", CallerIdentifierContent: "getenv"},
-			{Namespace: "print", CallerNamespace: "fixtures/testClass.py//TesterClass//aboutme", CallerIdentifierContent: "print"},
-			{Namespace: "print", CallerNamespace: "fixtures/testClass.py//TesterClass//deepest_method", CallerIdentifierContent: "print"},
-			{Namespace: "print", CallerNamespace: "fixtures/testClass.py//TesterClass//helper_method", CallerIdentifierContent: "print"},
-			{Namespace: "xyz//printxyz2", CallerNamespace: "fixtures/testClass.py//ClassA//method1", CallerIdentifierContent: "printxyz2"},
-			{Namespace: "xyz//printxyz2", CallerNamespace: "fixtures/testClass.py//ClassA//method2", CallerIdentifierContent: "printxyz2"},
-			{Namespace: "xyz//printxyz2", CallerNamespace: "fixtures/testClass.py//ClassB//method1", CallerIdentifierContent: "printxyz2"},
-			{Namespace: "xyz//printxyz2", CallerNamespace: "fixtures/testClass.py//ClassB//method2", CallerIdentifierContent: "printxyz2"},
-			{Namespace: "xyz//printxyz3", CallerNamespace: "fixtures/testClass.py//ClassB//methodUnique", CallerIdentifierContent: "prt3"},
-			{Namespace: "fixtures/testClass.py//TesterClass", CallerNamespace: "fixtures/testClass.py", CallerIdentifierContent: "TesterClass"},
-			{Namespace: "fixtures/testClass.py//TesterClass//aboutme", CallerNamespace: "fixtures/testClass.py", CallerIdentifierContent: "alice.aboutme"},
-			{Namespace: "fixtures/testClass.py//ClassA", CallerNamespace: "fixtures/testClass.py", CallerIdentifierContent: "ClassA"},
-			{Namespace: "fixtures/testClass.py//ClassA//method1", CallerNamespace: "fixtures/testClass.py", CallerIdentifierContent: "x.method1"},
-			{Namespace: "fixtures/testClass.py//ClassA//method1", CallerNamespace: "fixtures/testClass.py", CallerIdentifierContent: "y.method1"},
-			{Namespace: "fixtures/testClass.py//ClassA//method2", CallerNamespace: "fixtures/testClass.py", CallerIdentifierContent: "y.method2"},
-			{Namespace: "fixtures/testClass.py//ClassB//methodUnique", CallerNamespace: "fixtures/testClass.py", CallerIdentifierContent: "y.methodUnique"},
-			{Namespace: "fixtures/testClass.py//TesterClass//deepest_method", CallerNamespace: "fixtures/testClass.py", CallerIdentifierContent: ""},
-			{Namespace: "fixtures/testClass.py//TesterClass//self//helper_method", CallerNamespace: "fixtures/testClass.py//TesterClass//deepest_method", CallerIdentifierContent: "self.helper_method"},
-			{Namespace: "fixtures/testClass.py//TesterClass//helper_method", CallerNamespace: "fixtures/testClass.py//TesterClass//self//helper_method", CallerIdentifierContent: ""},
+			{Namespace: "testClass.py", CallerNamespace: "testClass.py", Text: ""},
+			{Namespace: "testClass.py//TesterClass//__init__", CallerNamespace: "testClass.py//TesterClass", Text: ""},
+			{Namespace: "getenv", CallerNamespace: "testClass.py//TesterClass//__init__", Text: "getenv"},
+			{Namespace: "os//getenv", CallerNamespace: "testClass.py//TesterClass//__init__", Text: "getenv"},
+			{Namespace: "print", CallerNamespace: "testClass.py//TesterClass//aboutme", Text: "print"},
+			{Namespace: "print", CallerNamespace: "testClass.py//TesterClass//deepest_method", Text: "print"},
+			{Namespace: "print", CallerNamespace: "testClass.py//TesterClass//helper_method", Text: "print"},
+			{Namespace: "xyz//printxyz2", CallerNamespace: "testClass.py//ClassA//method1", Text: "printxyz2"},
+			{Namespace: "xyz//printxyz2", CallerNamespace: "testClass.py//ClassA//method2", Text: "printxyz2"},
+			{Namespace: "xyz//printxyz2", CallerNamespace: "testClass.py//ClassB//method1", Text: "printxyz2"},
+			{Namespace: "xyz//printxyz2", CallerNamespace: "testClass.py//ClassB//method2", Text: "printxyz2"},
+			{Namespace: "xyz//printxyz3", CallerNamespace: "testClass.py//ClassB//methodUnique", Text: "prt3"},
+			{Namespace: "testClass.py//TesterClass", CallerNamespace: "testClass.py", Text: "TesterClass"},
+			{Namespace: "testClass.py//TesterClass//aboutme", CallerNamespace: "testClass.py", Text: "alice.aboutme"},
+			{Namespace: "testClass.py//ClassA", CallerNamespace: "testClass.py", Text: "ClassA"},
+			{Namespace: "testClass.py//ClassA//method1", CallerNamespace: "testClass.py", Text: "x.method1"},
+			{Namespace: "testClass.py//ClassA//method1", CallerNamespace: "testClass.py", Text: "y.method1"},
+			{Namespace: "testClass.py//ClassA//method2", CallerNamespace: "testClass.py", Text: "y.method2"},
+			{Namespace: "testClass.py//ClassB//methodUnique", CallerNamespace: "testClass.py", Text: "y.methodUnique"},
+			{Namespace: "testClass.py//TesterClass//deepest_method", CallerNamespace: "testClass.py", Text: ""},
+			{Namespace: "testClass.py//TesterClass//self//helper_method", CallerNamespace: "testClass.py//TesterClass//deepest_method", Text: "self.helper_method"},
+			{Namespace: "testClass.py//TesterClass//helper_method", CallerNamespace: "testClass.py//TesterClass//self//helper_method", Text: ""},
 		},
 	},
 	{
 		Language: core.LanguageCodePython,
-		FilePath: "fixtures/testFunctions.py",
+		FilePath: "testFunctions.py",
 		ExpectedAssignmentGraph: map[string][]string{
-			"listdirfn":                      {"os//listdir"},
-			"printer2":                       {"xyzprintmodule//printer2"},
-			"printer3":                       {"xyzprintmodule//printer3"},
-			"printer4":                       {"xyzprintmodule//printer4"},
-			"SOME_CONSTANT":                  {"mypkg//SOME_CONSTANT"},
-			"fixtures/testFunctions.py//baz": {"fixtures/testFunctions.py//bar"},
-			"fixtures/testFunctions.py//xyz": {
+			"listdirfn":             {"os//listdir"},
+			"printer2":              {"xyzprintmodule//printer2"},
+			"printer3":              {"xyzprintmodule//printer3"},
+			"printer4":              {"xyzprintmodule//printer4"},
+			"SOME_CONSTANT":         {"mypkg//SOME_CONSTANT"},
+			"testFunctions.py//baz": {"testFunctions.py//bar"},
+			"testFunctions.py//xyz": {
 				"\"abc\"",
 				"25",
-				"fixtures/testFunctions.py//foo",
-				"fixtures/testFunctions.py//baz",
+				"testFunctions.py//foo",
+				"testFunctions.py//baz",
 			},
-			"fixtures/testFunctions.py//r1": {"95", "7.3", "2"},
-			"fixtures/testFunctions.py//p1": {"599", "\"going good\"", "39.2"},
-			"fixtures/testFunctions.py//p2": {"95", "True"},
-			"fixtures/testFunctions.py//p3": {"\"gg\""},
-			"fixtures/testFunctions.py//res": {
-				"fixtures/testFunctions.py//r1",
-				"fixtures/testFunctions.py//somenumber",
+			"testFunctions.py//r1": {"95", "7.3", "2"},
+			"testFunctions.py//p1": {"599", "\"going good\"", "39.2"},
+			"testFunctions.py//p2": {"95", "True"},
+			"testFunctions.py//p3": {"\"gg\""},
+			"testFunctions.py//res": {
+				"testFunctions.py//r1",
+				"testFunctions.py//somenumber",
 				"95",
 				"7.3",
+				"pstats//getsomestat",
 			},
-			"fixtures/testFunctions.py//mul": {
-				"fixtures/testFunctions.py//multiply",
+			"testFunctions.py//mul": {
+				"testFunctions.py//multiply",
 			},
 		},
 		ExpectedCallGraph: map[string][]expectedCallgraphRefs{
-			"fixtures/testFunctions.py": {
-				{"fixtures/testFunctions.py//factorial", [][]string{{"5"}}},
+			"testFunctions.py": {
+				{"testFunctions.py//factorial", [][]string{{"5"}}},
 				{"print", [][]string{{}}},
-				{"fixtures/testFunctions.py//xyz", [][]string{}},
-				{"fixtures/testFunctions.py//nestParent", [][]string{}},
+				{"testFunctions.py//xyz", [][]string{}},
+				{"testFunctions.py//nestParent", [][]string{}},
 				{"random//randint", [][]string{{"0"}, {"1"}}},
-				{"fixtures/testFunctions.py//add", [][]string{{"599", "\"going good\"", "39.2"}, {"95", "True"}}},
-				{"fixtures/testFunctions.py//sub", [][]string{{"\"gg\""}, {"6"}}},
+				{"testFunctions.py//add", [][]string{{"599", "\"going good\"", "39.2"}, {"95", "True"}}},
+				{"testFunctions.py//sub", [][]string{{"\"gg\""}, {"6"}}},
 				{"pstats//getsomestat", [][]string{}},
-				{"fixtures/testFunctions.py//mul", [][]string{{"2"}, {"3"}}},
-				{"fixtures/testFunctions.py//addProxy", [][]string{{"5"}, {"3"}}},
-				{"fixtures/testFunctions.py//concat", [][]string{{"\"Hello, \""}, {"\"World!\""}}},
-				{"fixtures/testFunctions.py//add", [][]string{{"599", "\"going good\"", "39.2"}, {"\"gg\""}}},
-				{"fixtures/testFunctions.py//add", [][]string{{"95", "True"}, {}}},
+				{"testFunctions.py//mul", [][]string{{"2"}, {"3"}}},
+				{"testFunctions.py//addProxy", [][]string{{"5"}, {"3"}}},
+				{"testFunctions.py//concat", [][]string{{"\"Hello, \""}, {"\"World!\""}}},
+				{"testFunctions.py//add", [][]string{{"599", "\"going good\"", "39.2"}, {"\"gg\""}}},
+				{"testFunctions.py//add", [][]string{{"95", "True"}, {}}},
 				{"getenv", [][]string{{"\"SOME_ENV_VAR\""}}},
-				{"print", [][]string{{"\"gg\""}, {"1"}, {"2.5"}, {"True"}, {"None"}, {"mypkg//SOME_CONSTANT"}, {}, {}, {}, {}, {}, {}, {}}},
+				{"print", [][]string{{"\"gg\""}, {"1"}, {"2.5"}, {"True"}, {"None"}, {"mypkg//SOME_CONSTANT"}, {}, {}, {}, {}, {}, {}, {"os//getenv"}}},
 			},
-			"fixtures/testFunctions.py//factorial": {
+			"testFunctions.py//factorial": {
 				{
-					"fixtures/testFunctions.py//factorial", [][]string{
-						{"fixtures/testFunctions.py//factorial//x", "1"},
+					"testFunctions.py//factorial", [][]string{
+						{"testFunctions.py//factorial//x", "1"},
 					},
 				},
 			},
-			"fixtures/testFunctions.py//foo": {
+			"testFunctions.py//foo": {
 				{"pprint//pprint", [][]string{{"\"foo\""}}},
 			},
-			"fixtures/testFunctions.py//bar": {
+			"testFunctions.py//bar": {
 				{"print", [][]string{{"\"bar\""}}},
 			},
-			"fixtures/testFunctions.py//outerfn1": {
+			"testFunctions.py//outerfn1": {
 				{"chmod", [][]string{{"\"outerfn1\""}}},
 			},
-			"fixtures/testFunctions.py//outerfn2": {
+			"testFunctions.py//outerfn2": {
 				{"listdirfn", [][]string{{"\"outerfn2\""}}},
 			},
-			"fixtures/testFunctions.py//fn1": {
+			"testFunctions.py//fn1": {
 				{"printer4", [][]string{{"\"outer fn1\""}}},
 			},
-			"fixtures/testFunctions.py//nestParent": {
-				{"fixtures/testFunctions.py//outerfn1", [][]string{}},
-				{"fixtures/testFunctions.py//nestParent//nestChild", [][]string{}},
+			"testFunctions.py//nestParent": {
+				{"testFunctions.py//outerfn1", [][]string{}},
+				{"testFunctions.py//nestParent//nestChild", [][]string{}},
 			},
-			"fixtures/testFunctions.py//nestParent//parentScopedFn": {
+			"testFunctions.py//nestParent//parentScopedFn": {
 				{"print", [][]string{{"\"parentScopedFn\""}}},
-				{"fixtures/testFunctions.py//fn1", [][]string{}},
+				{"testFunctions.py//fn1", [][]string{}},
 			},
-			"fixtures/testFunctions.py//nestParent//nestChild": {
+			"testFunctions.py//nestParent//nestChild": {
 				{"printer1", [][]string{{"\"nestChild\""}}},
-				{"fixtures/testFunctions.py//outerfn1", [][]string{}},
-				{"fixtures/testFunctions.py//nestParent//nestChild//nestGrandChild", [][]string{}},
+				{"testFunctions.py//outerfn1", [][]string{}},
+				{"testFunctions.py//nestParent//nestChild//nestGrandChild", [][]string{}},
 			},
-			"fixtures/testFunctions.py//nestParent//nestChild//fn1": {
+			"testFunctions.py//nestParent//nestChild//fn1": {
 				{"printer6", [][]string{{"\"inner fn1\""}}},
 			},
-			"fixtures/testFunctions.py//nestParent//nestChild//childScopedFn": {
+			"testFunctions.py//nestParent//nestChild//childScopedFn": {
 				{"printer2", [][]string{{"\"childScopedFn\""}}},
-				{"fixtures/testFunctions.py//nestParent//nestChild//fn1", [][]string{}},
+				{"testFunctions.py//nestParent//nestChild//fn1", [][]string{}},
 			},
-			"fixtures/testFunctions.py//nestParent//nestChild//nestGrandChildUseless": {
+			"testFunctions.py//nestParent//nestChild//nestGrandChildUseless": {
 				{"printer3", [][]string{{"\"nestGrandChildUseless\""}}},
 			},
-			"fixtures/testFunctions.py//nestParent//nestChild//nestGrandChild": {
+			"testFunctions.py//nestParent//nestChild//nestGrandChild": {
 				{"pprint//pp", [][]string{{"\"nestGrandChild\""}}},
-				{"fixtures/testFunctions.py//nestParent//parentScopedFn", [][]string{}},
-				{"fixtures/testFunctions.py//outerfn2", [][]string{}},
-				{"fixtures/testFunctions.py//nestParent//nestChild//childScopedFn", [][]string{}},
+				{"testFunctions.py//nestParent//parentScopedFn", [][]string{}},
+				{"testFunctions.py//outerfn2", [][]string{}},
+				{"testFunctions.py//nestParent//nestChild//childScopedFn", [][]string{}},
 			},
 		},
 		ExpectedDfsResults: []dfsResultExpectation{
-			{Namespace: "fixtures/testFunctions.py", CallerNamespace: "fixtures/testFunctions.py", CallerIdentifierContent: ""},
-			{Namespace: "fixtures/testFunctions.py//factorial", CallerNamespace: "fixtures/testFunctions.py", CallerIdentifierContent: "factorial"},
-			{Namespace: "fixtures/testFunctions.py//factorial", CallerNamespace: "fixtures/testFunctions.py//factorial", CallerIdentifierContent: "factorial"},
-			{Namespace: "fixtures/testFunctions.py//foo", CallerNamespace: "fixtures/testFunctions.py", CallerIdentifierContent: "xyz"},
-			{Namespace: "fixtures/testFunctions.py//bar", CallerNamespace: "fixtures/testFunctions.py", CallerIdentifierContent: "xyz"},
-			{Namespace: "os//chmod", CallerNamespace: "fixtures/testFunctions.py//outerfn1", CallerIdentifierContent: "chmod"},
-			{Namespace: "os//listdir", CallerNamespace: "fixtures/testFunctions.py//outerfn2", CallerIdentifierContent: "listdirfn"},
-			{Namespace: "xyzprintmodule//printer4", CallerNamespace: "fixtures/testFunctions.py//fn1", CallerIdentifierContent: "printer4"},
-			{Namespace: "pprint//pp", CallerNamespace: "fixtures/testFunctions.py//nestParent//nestChild//nestGrandChild", CallerIdentifierContent: "pprint.pp"},
-			{Namespace: "pprint//pprint", CallerNamespace: "fixtures/testFunctions.py//foo", CallerIdentifierContent: "pprint.pprint"},
-			{Namespace: "fixtures/testFunctions.py//nestParent//nestChild", CallerNamespace: "fixtures/testFunctions.py//nestParent", CallerIdentifierContent: "nestChild"},
-			{Namespace: "fixtures/testFunctions.py//nestParent//nestChild//childScopedFn", CallerNamespace: "fixtures/testFunctions.py//nestParent//nestChild//nestGrandChild", CallerIdentifierContent: "childScopedFn"},
-			{Namespace: "fixtures/testFunctions.py//nestParent//nestChild//nestGrandChild", CallerNamespace: "fixtures/testFunctions.py//nestParent//nestChild", CallerIdentifierContent: "nestGrandChild"},
-			{Namespace: "fixtures/testFunctions.py//add", CallerNamespace: "fixtures/testFunctions.py", CallerIdentifierContent: "add"},
-			{Namespace: "fixtures/testFunctions.py//sub", CallerNamespace: "fixtures/testFunctions.py", CallerIdentifierContent: "sub"},
-			{Namespace: "random//randint", CallerNamespace: "fixtures/testFunctions.py", CallerIdentifierContent: "random.randint"},
-			{Namespace: "fixtures/testFunctions.py//mul", CallerNamespace: "fixtures/testFunctions.py", CallerIdentifierContent: "mul"},
-			{Namespace: "fixtures/testFunctions.py//addProxy", CallerNamespace: "fixtures/testFunctions.py", CallerIdentifierContent: "addProxy"},
-			{Namespace: "fixtures/testFunctions.py//add", CallerNamespace: "fixtures/testFunctions.py", CallerIdentifierContent: "add"},
-			{Namespace: "fixtures/testFunctions.py//concat", CallerNamespace: "fixtures/testFunctions.py", CallerIdentifierContent: "concat"},
+			{Namespace: "testFunctions.py", CallerNamespace: "testFunctions.py", Text: ""},
+			{Namespace: "testFunctions.py//factorial", CallerNamespace: "testFunctions.py", Text: "factorial"},
+			{Namespace: "testFunctions.py//factorial", CallerNamespace: "testFunctions.py//factorial", Text: "factorial"},
+			{Namespace: "testFunctions.py//foo", CallerNamespace: "testFunctions.py", Text: "xyz"},
+			{Namespace: "testFunctions.py//bar", CallerNamespace: "testFunctions.py", Text: "xyz"},
+			{Namespace: "os//chmod", CallerNamespace: "testFunctions.py//outerfn1", Text: "chmod"},
+			{Namespace: "os//listdir", CallerNamespace: "testFunctions.py//outerfn2", Text: "listdirfn"},
+			{Namespace: "xyzprintmodule//printer4", CallerNamespace: "testFunctions.py//fn1", Text: "printer4"},
+			{Namespace: "pprint//pp", CallerNamespace: "testFunctions.py//nestParent//nestChild//nestGrandChild", Text: "pprint.pp"},
+			{Namespace: "pprint//pprint", CallerNamespace: "testFunctions.py//foo", Text: "pprint.pprint"},
+			{Namespace: "testFunctions.py//nestParent//nestChild", CallerNamespace: "testFunctions.py//nestParent", Text: "nestChild"},
+			{Namespace: "testFunctions.py//nestParent//nestChild//childScopedFn", CallerNamespace: "testFunctions.py//nestParent//nestChild//nestGrandChild", Text: "childScopedFn"},
+			{Namespace: "testFunctions.py//nestParent//nestChild//nestGrandChild", CallerNamespace: "testFunctions.py//nestParent//nestChild", Text: "nestGrandChild"},
+			{Namespace: "testFunctions.py//add", CallerNamespace: "testFunctions.py", Text: "add"},
+			{Namespace: "testFunctions.py//sub", CallerNamespace: "testFunctions.py", Text: "sub"},
+			{Namespace: "random//randint", CallerNamespace: "testFunctions.py", Text: "random.randint"},
+			{Namespace: "testFunctions.py//mul", CallerNamespace: "testFunctions.py", Text: "mul"},
+			{Namespace: "testFunctions.py//addProxy", CallerNamespace: "testFunctions.py", Text: "addProxy"},
+			{Namespace: "testFunctions.py//add", CallerNamespace: "testFunctions.py", Text: "add"},
+			{Namespace: "testFunctions.py//concat", CallerNamespace: "testFunctions.py", Text: "concat"},
 		},
 	},
 	{
 		Language: core.LanguageCodeJava,
-		FilePath: "fixtures/CallgraphTestcases.java",
+		FilePath: "CallgraphTestcases.java",
 		ExpectedAssignmentGraph: map[string][]string{
 			"Dialog":        {"java//awt//Dialog"},
 			"Frame":         {"java//awt//Frame"},
@@ -279,67 +280,67 @@ var testcases = []callgraphTestcase{
 			"Window":        {"java//awt//Window"},
 			"somelibfn":     {"somelib//xyz//somelibfn"},
 			"MailcapFile":   {"com//sun//activation//registries//MailcapFile"},
-			"fixtures/CallgraphTestcases.java//UtilityClass//somelibfn//x": {"5"},
-			"fixtures/CallgraphTestcases.java//CallgraphTestcases//i": {
+			"CallgraphTestcases.java//UtilityClass//somelibfn//x": {"5"},
+			"CallgraphTestcases.java//CallgraphTestcases//<init>//i": {
 				"5",
 				"7",
 				"1",
 				"2",
 				"59",
 			},
-			"fixtures/CallgraphTestcases.java//CallgraphTestcases//s": {
+			"CallgraphTestcases.java//CallgraphTestcases//<init>//s": {
 				"\"GG\"",
 				"\"HH\"",
 				"\"ii\"",
 			},
-			"fixtures/CallgraphTestcases.java//CallgraphTestcases": {},
-			"fixtures/CallgraphTestcases.java//CallgraphTestcases//main//dg": {
+			"CallgraphTestcases.java//CallgraphTestcases": {},
+			"CallgraphTestcases.java//CallgraphTestcases//main//dg": {
 				"Dialog",
 			},
-			"fixtures/CallgraphTestcases.java//CallgraphTestcases//main//cnv": {
+			"CallgraphTestcases.java//CallgraphTestcases//main//cnv": {
 				"java//awt//Canvas",
 				"ScrollPane",
 			},
-			"fixtures/CallgraphTestcases.java//CallgraphTestcases//main//width": {
+			"CallgraphTestcases.java//CallgraphTestcases//main//width": {
 				"32",
 				"64",
 			},
-			"fixtures/CallgraphTestcases.java//CallgraphTestcases//main//ht": {
+			"CallgraphTestcases.java//CallgraphTestcases//main//ht": {
 				"99",
 			},
-			"fixtures/CallgraphTestcases.java//CallgraphTestcases//main//lm": {
+			"CallgraphTestcases.java//CallgraphTestcases//main//lm": {
 				"java//awt//BorderLayout",
 				"java//awt//FlowLayout",
 				"GridLayout",
 			},
-			"fixtures/CallgraphTestcases.java//CallgraphTestcases//main//componentName": {
+			"CallgraphTestcases.java//CallgraphTestcases//main//componentName": {
 				"\"North\"",
 				"\"South\"",
 			},
-			"fixtures/CallgraphTestcases.java//CallgraphTestcases//main//worker": {
+			"CallgraphTestcases.java//CallgraphTestcases//main//worker": {
 				"java//awt//SomeLayoutWorker",
 			},
-			"fixtures/CallgraphTestcases.java//CallgraphTestcases//main//util": {
-				"fixtures/CallgraphTestcases.java//UtilityClass",
+			"CallgraphTestcases.java//CallgraphTestcases//main//util": {
+				"CallgraphTestcases.java//UtilityClass",
 			},
-			"fixtures/CallgraphTestcases.java//CallgraphTestcases//main//result": {"938"},
-			"fixtures/CallgraphTestcases.java//CallgraphTestcases//main//obj": {
+			"CallgraphTestcases.java//CallgraphTestcases//main//result": {"938"},
+			"CallgraphTestcases.java//CallgraphTestcases//main//obj": {
 				"org//mycompany//mylib//SomeClass",
 			},
 		},
 		ExpectedCallGraph: map[string][]expectedCallgraphRefs{
-			"fixtures/CallgraphTestcases.java//UtilityClass": {
+			"CallgraphTestcases.java//UtilityClass//<init>": {
 				{"System//out//println", [][]string{
-					{"fixtures/CallgraphTestcases.java//UtilityClass//x"},
+					{"CallgraphTestcases.java//UtilityClass//<init>//x"},
 				}},
 			},
-			"fixtures/CallgraphTestcases.java//UtilityClass//somelibfn": {
+			"CallgraphTestcases.java//UtilityClass//somelibfn": {
 				{"Math//random", [][]string{}},
 			},
-			"fixtures/CallgraphTestcases.java": {
-				{"fixtures/CallgraphTestcases.java//CallgraphTestcases//main", [][]string{}},
+			"CallgraphTestcases.java": {
+				{"CallgraphTestcases.java//CallgraphTestcases//main", [][]string{}},
 			},
-			"fixtures/CallgraphTestcases.java//CallgraphTestcases": {
+			"CallgraphTestcases.java//CallgraphTestcases//<init>": {
 				{"com//custompkg//SomeClass//defaultConstructor", [][]string{}},
 				{"com//custompkg//SomeClass//someMethod", [][]string{{"5", "7"}}},
 				{"com//custompkg//SomeClass//someOtherMethod", [][]string{
@@ -347,14 +348,14 @@ var testcases = []callgraphTestcase{
 					{"\"GG\"", "\"HH\"", "\"ii\""},
 				}},
 			},
-			"fixtures/CallgraphTestcases.java//CallgraphTestcases//this//myfunc": {
-				{"fixtures/CallgraphTestcases.java//CallgraphTestcases//myfunc", [][]string{}},
+			"CallgraphTestcases.java//CallgraphTestcases//this//myfunc": {
+				{"CallgraphTestcases.java//CallgraphTestcases//myfunc", [][]string{}},
 			},
-			"fixtures/CallgraphTestcases.java//CallgraphTestcases//myfunc": {
+			"CallgraphTestcases.java//CallgraphTestcases//myfunc": {
 				{"String//valueOf", [][]string{{"'c'"}}},
 				{"String//valueOf", [][]string{{"'c'", "59"}}},
 			},
-			"fixtures/CallgraphTestcases.java//CallgraphTestcases//main": {
+			"CallgraphTestcases.java//CallgraphTestcases//main": {
 				{"Dialog", [][]string{{"java//awt//Window"}}},
 				{"Window", [][]string{{"java//awt//Frame"}}},
 				{"Frame", [][]string{{"true"}}},
@@ -400,10 +401,10 @@ var testcases = []callgraphTestcase{
 					{"java//awt//BorderLayout", "java//awt//FlowLayout", "java//awt//GridLayout"},
 				}},
 
-				{"fixtures/CallgraphTestcases.java//UtilityClass", [][]string{{"10"}}},
-				{"fixtures/CallgraphTestcases.java//UtilityClass//somelibfn", [][]string{{"5"}, {"10"}}},
+				{"CallgraphTestcases.java//UtilityClass", [][]string{{"10"}}},
+				{"CallgraphTestcases.java//UtilityClass//somelibfn", [][]string{{"5"}, {"10"}}},
 				{"somelibfn", [][]string{}},
-				{"fixtures/CallgraphTestcases.java//CallgraphTestcases//myfunc", [][]string{}},
+				{"CallgraphTestcases.java//CallgraphTestcases//myfunc", [][]string{}},
 				{"System//out//println", [][]string{{"\"GG\""}}},
 				{"System//out//xyz//println", [][]string{{"\"GG\""}}},
 				{"System//console", [][]string{}},
@@ -416,166 +417,166 @@ var testcases = []callgraphTestcase{
 			},
 		},
 		ExpectedDfsResults: []dfsResultExpectation{
-			{Namespace: "fixtures/CallgraphTestcases.java", CallerNamespace: "fixtures/CallgraphTestcases.java", CallerIdentifierContent: ""},
-			{Namespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerNamespace: "fixtures/CallgraphTestcases.java", CallerIdentifierContent: ""},
+			{Namespace: "CallgraphTestcases.java", CallerNamespace: "CallgraphTestcases.java", Text: ""},
+			{Namespace: "CallgraphTestcases.java//CallgraphTestcases//main", CallerNamespace: "CallgraphTestcases.java", Text: ""},
 
-			{Namespace: "Frame", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new Frame(true)"},
-			{Namespace: "java//awt//Frame", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new Frame(true)"},
-			{Namespace: "Window", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new Window(new Frame(true))"},
-			{Namespace: "java//awt//Window", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new Window(new Frame(true))"},
-			{Namespace: "Dialog", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new Dialog(new Window(new Frame(true)))"},
-			{Namespace: "java//awt//Dialog", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new Dialog(new Window(new Frame(true)))"},
-			{Namespace: "java//awt//Dialog//setTitle", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "dg.setTitle(\"Test Dialog\")"},
-			{Namespace: "java//awt//Dialog//prop//getSomething", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "dg.prop.getSomething()"},
-			{Namespace: "java//awt//Canvas", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new java.awt.Canvas()"},
-			{Namespace: "java//awt//ScrollPane", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new ScrollPane()"},
-			{Namespace: "java//awt//Canvas//getWidth", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "cnv.getWidth()"},
-			{Namespace: "java//awt//ScrollPane//getWidth", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "cnv.getWidth()"},
-			{Namespace: "Math//random", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "Math.random()"},
-			{Namespace: "java//awt//Canvas//setSize", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "cnv.setSize(width, (Math.random() < 0.5) ? 55 : ht)"},
-			{Namespace: "java//awt//ScrollPane//setSize", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "cnv.setSize(width, (Math.random() < 0.5) ? 55 : ht)"},
-			{Namespace: "java//awt//Canvas//prop//subprop//subsubprop//getSomething", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "cnv.prop.subprop.subsubprop.getSomething()"},
-			{Namespace: "java//awt//ScrollPane//prop//subprop//subsubprop//getSomething", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "cnv.prop.subprop.subsubprop.getSomething()"},
+			{Namespace: "Frame", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "Frame"},
+			{Namespace: "java//awt//Frame", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "Frame"},
+			{Namespace: "Window", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "Window"},
+			{Namespace: "java//awt//Window", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "Window"},
+			{Namespace: "Dialog", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "Dialog"},
+			{Namespace: "java//awt//Dialog", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "Dialog"},
+			{Namespace: "java//awt//Dialog//setTitle", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "dg.setTitle"},
+			{Namespace: "java//awt//Dialog//prop//getSomething", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "dg.prop.getSomething"},
+			{Namespace: "java//awt//Canvas", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "java.awt.Canvas"},
+			{Namespace: "java//awt//ScrollPane", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "ScrollPane"},
+			{Namespace: "java//awt//Canvas//getWidth", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "cnv.getWidth"},
+			{Namespace: "java//awt//ScrollPane//getWidth", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "cnv.getWidth"},
+			{Namespace: "Math//random", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "Math.random"},
+			{Namespace: "java//awt//Canvas//setSize", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "cnv.setSize"},
+			{Namespace: "java//awt//ScrollPane//setSize", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "cnv.setSize"},
+			{Namespace: "java//awt//Canvas//prop//subprop//subsubprop//getSomething", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "cnv.prop.subprop.subsubprop.getSomething"},
+			{Namespace: "java//awt//ScrollPane//prop//subprop//subsubprop//getSomething", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "cnv.prop.subprop.subsubprop.getSomething"},
 
-			{Namespace: "java//awt//BorderLayout", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new java.awt.BorderLayout()"},
-			{Namespace: "java//awt//Button", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new java.awt.Button(\"North Button\")"},
-			{Namespace: "java//awt//BorderLayout//addLayoutComponent", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "lm.addLayoutComponent(componentName, new java.awt.Button(\"North Button\"))"},
-			{Namespace: "java//awt//FlowLayout", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new java.awt.FlowLayout()"},
-			{Namespace: "java//awt//Container", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new java.awt.Container()"},
-			{Namespace: "java//awt//BorderLayout//minimumLayoutSize", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "lm.minimumLayoutSize(new java.awt.Container())"},
-			{Namespace: "java//awt//FlowLayout//minimumLayoutSize", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "lm.minimumLayoutSize(new java.awt.Container())"},
-			{Namespace: "java//awt//GridLayout", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new GridLayout()"},
-			{Namespace: "java//awt//BorderLayout//toString", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "lm.toString()"},
-			{Namespace: "java//awt//FlowLayout//toString", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "lm.toString()"},
-			{Namespace: "java//awt//GridLayout//toString", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "lm.toString()"},
-			{Namespace: "java//awt//BorderLayout//prop//getSomething", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "lm.prop.getSomething()"},
-			{Namespace: "java//awt//FlowLayout//prop//getSomething", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "lm.prop.getSomething()"},
-			{Namespace: "java//awt//GridLayout//prop//getSomething", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "lm.prop.getSomething()"},
+			{Namespace: "java//awt//BorderLayout", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "java.awt.BorderLayout"},
+			{Namespace: "java//awt//Button", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "java.awt.Button"},
+			{Namespace: "java//awt//BorderLayout//addLayoutComponent", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "lm.addLayoutComponent"},
+			{Namespace: "java//awt//FlowLayout", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "java.awt.FlowLayout"},
+			{Namespace: "java//awt//Container", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "java.awt.Container"},
+			{Namespace: "java//awt//BorderLayout//minimumLayoutSize", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "lm.minimumLayoutSize"},
+			{Namespace: "java//awt//FlowLayout//minimumLayoutSize", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "lm.minimumLayoutSize"},
+			{Namespace: "java//awt//GridLayout", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "GridLayout"},
+			{Namespace: "java//awt//BorderLayout//toString", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "lm.toString"},
+			{Namespace: "java//awt//FlowLayout//toString", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "lm.toString"},
+			{Namespace: "java//awt//GridLayout//toString", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "lm.toString"},
+			{Namespace: "java//awt//BorderLayout//prop//getSomething", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "lm.prop.getSomething"},
+			{Namespace: "java//awt//FlowLayout//prop//getSomething", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "lm.prop.getSomething"},
+			{Namespace: "java//awt//GridLayout//prop//getSomething", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "lm.prop.getSomething"},
 
-			{Namespace: "java//awt//SomeLayoutWorker", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new java.awt.SomeLayoutWorker(lm)"},
+			{Namespace: "java//awt//SomeLayoutWorker", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "java.awt.SomeLayoutWorker"},
 
-			{Namespace: "fixtures/CallgraphTestcases.java//UtilityClass", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new UtilityClass(10)"},
-			{Namespace: "System//out//println", CallerNamespace: "fixtures/CallgraphTestcases.java//UtilityClass", CallerIdentifierContent: "System.out.println(x)"},
-			{Namespace: "fixtures/CallgraphTestcases.java//UtilityClass//somelibfn", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "util.somelibfn(5, 10)"},
+			{Namespace: "CallgraphTestcases.java//UtilityClass", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "UtilityClass"},
+			{Namespace: "System//out//println", CallerNamespace: "CallgraphTestcases.java//UtilityClass//<init>", Text: "System.out.println"},
+			{Namespace: "CallgraphTestcases.java//UtilityClass//somelibfn", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "util.somelibfn"},
 
-			{Namespace: "somelibfn", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "somelibfn()"},
-			{Namespace: "somelib//xyz//somelibfn", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "somelibfn()"},
-			{Namespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//myfunc", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "myfunc()"},
-			{Namespace: "String//valueOf", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//myfunc", CallerIdentifierContent: "String.valueOf('c')"},
-			{Namespace: "String//valueOf", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//myfunc", CallerIdentifierContent: "String.valueOf(false ? 'c' : 59)"},
-			{Namespace: "System//out//println", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "System.out.println(\"GG\")"},
-			{Namespace: "System//out//xyz//println", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "System.out.xyz.println(\"GG\")"},
+			{Namespace: "somelibfn", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "somelibfn"},
+			{Namespace: "somelib//xyz//somelibfn", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "somelibfn"},
+			{Namespace: "CallgraphTestcases.java//CallgraphTestcases//myfunc", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "myfunc"},
+			{Namespace: "String//valueOf", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//myfunc", Text: "String.valueOf"},
+			{Namespace: "String//valueOf", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//myfunc", Text: "String.valueOf"},
+			{Namespace: "System//out//println", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "System.out.println"},
+			{Namespace: "System//out//xyz//println", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "System.out.xyz.println"},
 
-			{Namespace: "System//console", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "System.console().readPassword()"},
-			{Namespace: "com//companyX//fn1", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "com.companyX.fn1()"},
-			{Namespace: "System//getenv", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "System.getenv().keySet().iterator(com.companyX.fn1()).hasNext()"},
-			{Namespace: "Math//atan", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "Math.atan(1.0)"},
+			{Namespace: "System//console", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "System.console().readPassword"},
+			{Namespace: "com//companyX//fn1", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "com.companyX.fn1"},
+			{Namespace: "System//getenv", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "System.getenv().keySet().iterator(com.companyX.fn1()).hasNext"},
+			{Namespace: "Math//atan", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "Math.atan"},
 
-			{Namespace: "com//somecompany//customlib//datatransfer//DataTransferer//getInstance", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "com.somecompany.customlib.datatransfer.DataTransferer.getInstance()"},
+			{Namespace: "com//somecompany//customlib//datatransfer//DataTransferer//getInstance", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "com.somecompany.customlib.datatransfer.DataTransferer.getInstance"},
 
-			{Namespace: "org//mycompany//mylib//SomeClass", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "new org.mycompany.mylib.SomeClass()"},
-			{Namespace: "org//mycompany//mylib//SomeClass//prop//someMethod", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases//main", CallerIdentifierContent: "obj.prop.someMethod(\"GG\")"},
+			{Namespace: "org//mycompany//mylib//SomeClass", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "org.mycompany.mylib.SomeClass"},
+			{Namespace: "org//mycompany//mylib//SomeClass//prop//someMethod", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//main", Text: "obj.prop.someMethod"},
 
-			{Namespace: "com//custompkg//SomeClass//defaultConstructor", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases", CallerIdentifierContent: "com.custompkg.SomeClass.defaultConstructor()"},
-			{Namespace: "com//custompkg//SomeClass//someMethod", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases", CallerIdentifierContent: "com.custompkg.SomeClass.someMethod(i)"},
-			{Namespace: "com//custompkg//SomeClass//someOtherMethod", CallerNamespace: "fixtures/CallgraphTestcases.java//CallgraphTestcases", CallerIdentifierContent: "com.custompkg.SomeClass.someOtherMethod(i, s)"},
+			{Namespace: "com//custompkg//SomeClass//defaultConstructor", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//<init>", Text: "com.custompkg.SomeClass.defaultConstructor"},
+			{Namespace: "com//custompkg//SomeClass//someMethod", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//<init>", Text: "com.custompkg.SomeClass.someMethod"},
+			{Namespace: "com//custompkg//SomeClass//someOtherMethod", CallerNamespace: "CallgraphTestcases.java//CallgraphTestcases//<init>", Text: "com.custompkg.SomeClass.someOtherMethod"},
 		},
 	},
 	{
 		Language: core.LanguageCodeGo,
-		FilePath: "fixtures/testCallGraph.go",
+		FilePath: "testCallGraph.go",
 		ExpectedAssignmentGraph: map[string][]string{
 			"fmt": {},
 			"os":  {},
 		},
 		ExpectedCallGraph: map[string][]expectedCallgraphRefs{
-			"fixtures/testCallGraph.go": {
-				{"fixtures/testCallGraph.go//helper", [][]string{}},
-				{"fixtures/testCallGraph.go//processFile", [][]string{}},
-				{"fixtures/testCallGraph.go//main", [][]string{}},
+			"testCallGraph.go": {
+				{"testCallGraph.go//helper", [][]string{}},
+				{"testCallGraph.go//processFile", [][]string{}},
+				{"testCallGraph.go//main", [][]string{}},
 			},
-			"fixtures/testCallGraph.go//main": {
-				{"fixtures/testCallGraph.go//helper", [][]string{{"10"}}},
-				{"fixtures/testCallGraph.go//processFile", [][]string{{"\"test.txt\""}}},
+			"testCallGraph.go//main": {
+				{"testCallGraph.go//helper", [][]string{{"10"}}},
+				{"testCallGraph.go//processFile", [][]string{{"\"test.txt\""}}},
 				{"os//Getenv", [][]string{{"\"HOME\""}}},
 				{"fmt//Sprintf", [][]string{{"\"formatted: %v\""}, {"123"}}},
-				{"fmt//Println", [][]string{{"fixtures/testCallGraph.go//main//result"}}},
+				{"fmt//Println", [][]string{{"testCallGraph.go//main//result"}}},
 			},
-			"fixtures/testCallGraph.go//helper": {
+			"testCallGraph.go//helper": {
 				{"fmt//Println", [][]string{{"\"helper called\""}}},
 			},
-			"fixtures/testCallGraph.go//processFile": {
+			"testCallGraph.go//processFile": {
 				{"os//WriteFile", [][]string{
-					{"fixtures/testCallGraph.go//processFile//filename"},
-					{"fixtures/testCallGraph.go//processFile//data"},
+					{"testCallGraph.go//processFile//filename"},
+					{"testCallGraph.go//processFile//data"},
 					{"0644"},
 				}},
 				{"fmt//Printf", [][]string{
 					{"\"Wrote file: %s\\n\""},
-					{"fixtures/testCallGraph.go//processFile//filename"},
+					{"testCallGraph.go//processFile//filename"},
 				}},
 			},
 		},
 		ExpectedDfsResults: []dfsResultExpectation{
-			{Namespace: "fixtures/testCallGraph.go", CallerNamespace: "fixtures/testCallGraph.go", CallerIdentifierContent: ""},
-			{Namespace: "fixtures/testCallGraph.go//helper", CallerNamespace: "fixtures/testCallGraph.go", CallerIdentifierContent: ""},
-			{Namespace: "fixtures/testCallGraph.go//processFile", CallerNamespace: "fixtures/testCallGraph.go", CallerIdentifierContent: ""},
-			{Namespace: "fixtures/testCallGraph.go//main", CallerNamespace: "fixtures/testCallGraph.go", CallerIdentifierContent: ""},
-			{Namespace: "fixtures/testCallGraph.go//helper", CallerNamespace: "fixtures/testCallGraph.go//main", CallerIdentifierContent: "helper"},
-			{Namespace: "fixtures/testCallGraph.go//processFile", CallerNamespace: "fixtures/testCallGraph.go//main", CallerIdentifierContent: "processFile"},
-			{Namespace: "fmt//Println", CallerNamespace: "fixtures/testCallGraph.go//helper", CallerIdentifierContent: "fmt.Println"},
-			{Namespace: "os//WriteFile", CallerNamespace: "fixtures/testCallGraph.go//processFile", CallerIdentifierContent: "os.WriteFile"},
-			{Namespace: "fmt//Printf", CallerNamespace: "fixtures/testCallGraph.go//processFile", CallerIdentifierContent: "fmt.Printf"},
-			{Namespace: "os//Getenv", CallerNamespace: "fixtures/testCallGraph.go//main", CallerIdentifierContent: "os.Getenv"},
-			{Namespace: "fmt//Sprintf", CallerNamespace: "fixtures/testCallGraph.go//main", CallerIdentifierContent: "fmt.Sprintf"},
+			{Namespace: "testCallGraph.go", CallerNamespace: "testCallGraph.go", Text: ""},
+			{Namespace: "testCallGraph.go//helper", CallerNamespace: "testCallGraph.go", Text: ""},
+			{Namespace: "testCallGraph.go//processFile", CallerNamespace: "testCallGraph.go", Text: ""},
+			{Namespace: "testCallGraph.go//main", CallerNamespace: "testCallGraph.go", Text: ""},
+			{Namespace: "testCallGraph.go//helper", CallerNamespace: "testCallGraph.go//main", Text: "helper"},
+			{Namespace: "testCallGraph.go//processFile", CallerNamespace: "testCallGraph.go//main", Text: "processFile"},
+			{Namespace: "fmt//Println", CallerNamespace: "testCallGraph.go//helper", Text: "fmt.Println"},
+			{Namespace: "os//WriteFile", CallerNamespace: "testCallGraph.go//processFile", Text: "os.WriteFile"},
+			{Namespace: "fmt//Printf", CallerNamespace: "testCallGraph.go//processFile", Text: "fmt.Printf"},
+			{Namespace: "os//Getenv", CallerNamespace: "testCallGraph.go//main", Text: "os.Getenv"},
+			{Namespace: "fmt//Sprintf", CallerNamespace: "testCallGraph.go//main", Text: "fmt.Sprintf"},
 		},
 	},
 	{
 		Language: core.LanguageCodeGo,
-		FilePath: "fixtures/testGoLibrary.go",
+		FilePath: "testGoLibrary.go",
 		ExpectedAssignmentGraph: map[string][]string{
 			"fmt":     {},
 			"strings": {},
 		},
 		ExpectedCallGraph: map[string][]expectedCallgraphRefs{
-			"fixtures/testGoLibrary.go": {
-				{"fixtures/testGoLibrary.go//ProcessData", [][]string{}},
-				{"fixtures/testGoLibrary.go//ValidateInput", [][]string{}},
-				{"fixtures/testGoLibrary.go//logError", [][]string{}},
-				{"fixtures/testGoLibrary.go//Transform", [][]string{}},
+			"testGoLibrary.go": {
+				{"testGoLibrary.go//ProcessData", [][]string{}},
+				{"testGoLibrary.go//ValidateInput", [][]string{}},
+				{"testGoLibrary.go//logError", [][]string{}},
+				{"testGoLibrary.go//Transform", [][]string{}},
 			},
-			"fixtures/testGoLibrary.go//ProcessData": {
-				{"strings//ToUpper", [][]string{{"fixtures/testGoLibrary.go//ProcessData//data"}}},
-				{"fmt//Printf", [][]string{{"\"Processed: %s\\n\""}, {"fixtures/testGoLibrary.go//ProcessData//result"}}},
+			"testGoLibrary.go//ProcessData": {
+				{"strings//ToUpper", [][]string{{"testGoLibrary.go//ProcessData//data"}}},
+				{"fmt//Printf", [][]string{{"\"Processed: %s\\n\""}, {"testGoLibrary.go//ProcessData//result"}}},
 			},
-			"fixtures/testGoLibrary.go//ValidateInput": {
-				{"fixtures/testGoLibrary.go//logError", [][]string{{"\"Empty input\""}}},
+			"testGoLibrary.go//ValidateInput": {
+				{"testGoLibrary.go//logError", [][]string{{"\"Empty input\""}}},
 			},
-			"fixtures/testGoLibrary.go//logError": {
-				{"fmt//Println", [][]string{{"\"Error:\""}, {"fixtures/testGoLibrary.go//logError//msg"}}},
+			"testGoLibrary.go//logError": {
+				{"fmt//Println", [][]string{{"\"Error:\""}, {"testGoLibrary.go//logError//msg"}}},
 			},
-			"fixtures/testGoLibrary.go//Transform": {
-				{"fixtures/testGoLibrary.go//ValidateInput", [][]string{{"fixtures/testGoLibrary.go//Transform//s"}}},
-				{"fixtures/testGoLibrary.go//ProcessData", [][]string{{"fixtures/testGoLibrary.go//Transform//s"}}},
+			"testGoLibrary.go//Transform": {
+				{"testGoLibrary.go//ValidateInput", [][]string{{"testGoLibrary.go//Transform//s"}}},
+				{"testGoLibrary.go//ProcessData", [][]string{{"testGoLibrary.go//Transform//s"}}},
 			},
 		},
 		ExpectedDfsResults: []dfsResultExpectation{
-			{Namespace: "fixtures/testGoLibrary.go", CallerNamespace: "fixtures/testGoLibrary.go", CallerIdentifierContent: ""},
-			{Namespace: "fixtures/testGoLibrary.go//ProcessData", CallerNamespace: "fixtures/testGoLibrary.go", CallerIdentifierContent: ""},
-			{Namespace: "fixtures/testGoLibrary.go//ValidateInput", CallerNamespace: "fixtures/testGoLibrary.go", CallerIdentifierContent: ""},
-			{Namespace: "fixtures/testGoLibrary.go//logError", CallerNamespace: "fixtures/testGoLibrary.go", CallerIdentifierContent: ""},
-			{Namespace: "fixtures/testGoLibrary.go//Transform", CallerNamespace: "fixtures/testGoLibrary.go", CallerIdentifierContent: ""},
-			{Namespace: "strings//ToUpper", CallerNamespace: "fixtures/testGoLibrary.go//ProcessData", CallerIdentifierContent: "strings.ToUpper"},
-			{Namespace: "fmt//Printf", CallerNamespace: "fixtures/testGoLibrary.go//ProcessData", CallerIdentifierContent: "fmt.Printf"},
-			{Namespace: "fixtures/testGoLibrary.go//logError", CallerNamespace: "fixtures/testGoLibrary.go//ValidateInput", CallerIdentifierContent: "logError"},
-			{Namespace: "fmt//Println", CallerNamespace: "fixtures/testGoLibrary.go//logError", CallerIdentifierContent: "fmt.Println"},
-			{Namespace: "fixtures/testGoLibrary.go//ValidateInput", CallerNamespace: "fixtures/testGoLibrary.go//Transform", CallerIdentifierContent: "ValidateInput"},
-			{Namespace: "fixtures/testGoLibrary.go//ProcessData", CallerNamespace: "fixtures/testGoLibrary.go//Transform", CallerIdentifierContent: "ProcessData"},
+			{Namespace: "testGoLibrary.go", CallerNamespace: "testGoLibrary.go", Text: ""},
+			{Namespace: "testGoLibrary.go//ProcessData", CallerNamespace: "testGoLibrary.go", Text: ""},
+			{Namespace: "testGoLibrary.go//ValidateInput", CallerNamespace: "testGoLibrary.go", Text: ""},
+			{Namespace: "testGoLibrary.go//logError", CallerNamespace: "testGoLibrary.go", Text: ""},
+			{Namespace: "testGoLibrary.go//Transform", CallerNamespace: "testGoLibrary.go", Text: ""},
+			{Namespace: "strings//ToUpper", CallerNamespace: "testGoLibrary.go//ProcessData", Text: "strings.ToUpper"},
+			{Namespace: "fmt//Printf", CallerNamespace: "testGoLibrary.go//ProcessData", Text: "fmt.Printf"},
+			{Namespace: "testGoLibrary.go//logError", CallerNamespace: "testGoLibrary.go//ValidateInput", Text: "logError"},
+			{Namespace: "fmt//Println", CallerNamespace: "testGoLibrary.go//logError", Text: "fmt.Println"},
+			{Namespace: "testGoLibrary.go//ValidateInput", CallerNamespace: "testGoLibrary.go//Transform", Text: "ValidateInput"},
+			{Namespace: "testGoLibrary.go//ProcessData", CallerNamespace: "testGoLibrary.go//Transform", Text: "ProcessData"},
 		},
 	},
 	{
 		Language: core.LanguageCodeGo,
-		FilePath: "fixtures/testGoNestedImports.go",
+		FilePath: "testGoNestedImports.go",
 		ExpectedAssignmentGraph: map[string][]string{
 			"json":     {"encoding//json"},
 			"http":     {"net//http"},
@@ -583,152 +584,156 @@ var testcases = []callgraphTestcase{
 			"ioutil":   {"io//ioutil"},
 		},
 		ExpectedCallGraph: map[string][]expectedCallgraphRefs{
-			"fixtures/testGoNestedImports.go": {
-				{"fixtures/testGoNestedImports.go//makeHTTPRequest", [][]string{}},
-				{"fixtures/testGoNestedImports.go//parseJSON", [][]string{}},
-				{"fixtures/testGoNestedImports.go//processPath", [][]string{}},
-				{"fixtures/testGoNestedImports.go//readConfig", [][]string{}},
-				{"fixtures/testGoNestedImports.go//fetchAndParse", [][]string{}},
-				{"fixtures/testGoNestedImports.go//main", [][]string{}},
+			"testGoNestedImports.go": {
+				{"testGoNestedImports.go//makeHTTPRequest", [][]string{}},
+				{"testGoNestedImports.go//parseJSON", [][]string{}},
+				{"testGoNestedImports.go//processPath", [][]string{}},
+				{"testGoNestedImports.go//readConfig", [][]string{}},
+				{"testGoNestedImports.go//fetchAndParse", [][]string{}},
+				{"testGoNestedImports.go//main", [][]string{}},
 			},
-			"fixtures/testGoNestedImports.go//makeHTTPRequest": {
+			"testGoNestedImports.go//makeHTTPRequest": {
 				{"net//http//Get", [][]string{{"\"https://api.example.com/data\""}}},
 			},
-			"fixtures/testGoNestedImports.go//parseJSON": {
+			"testGoNestedImports.go//parseJSON": {
 				{"encoding//json//Unmarshal", [][]string{
-					{"fixtures/testGoNestedImports.go//parseJSON//data"},
-					{"fixtures/testGoNestedImports.go//parseJSON//result"},
+					{"testGoNestedImports.go//parseJSON//data"},
+					{"testGoNestedImports.go//parseJSON//result"},
 				}},
 			},
-			"fixtures/testGoNestedImports.go//processPath": {
+			"testGoNestedImports.go//processPath": {
 				{"path//filepath//Join", [][]string{
-					{"fixtures/testGoNestedImports.go//processPath//dir"},
-					{"fixtures/testGoNestedImports.go//processPath//file"},
+					{"testGoNestedImports.go//processPath//dir"},
+					{"testGoNestedImports.go//processPath//file"},
 				}},
 			},
-			"fixtures/testGoNestedImports.go//readConfig": {
-				{"io//ioutil//ReadFile", [][]string{{"fixtures/testGoNestedImports.go//readConfig//filename"}}},
+			"testGoNestedImports.go//readConfig": {
+				{"io//ioutil//ReadFile", [][]string{{"testGoNestedImports.go//readConfig//filename"}}},
 			},
-			"fixtures/testGoNestedImports.go//fetchAndParse": {
+			"testGoNestedImports.go//fetchAndParse": {
 				{"net//http//Get", [][]string{{"\"https://api.example.com/config\""}}},
 				{"io//ioutil//ReadAll", [][]string{{}}},
-				{"fixtures/testGoNestedImports.go//parseJSON", [][]string{{"fixtures/testGoNestedImports.go//fetchAndParse//data"}}},
+				{"testGoNestedImports.go//parseJSON", [][]string{{"testGoNestedImports.go//fetchAndParse//data"}}},
 				{"path//filepath//Join", [][]string{{"\"/etc\""}, {"\"app.conf\""}}},
-				{"encoding//json//Marshal", [][]string{{"fixtures/testGoNestedImports.go//fetchAndParse//config"}}},
+				{"encoding//json//Marshal", [][]string{{"testGoNestedImports.go//fetchAndParse//config"}}},
 				{"net//http//NewRequest", [][]string{{"\"POST\""}, {"\"/api\""}, {}}},
 			},
-			"fixtures/testGoNestedImports.go//main": {
-				{"fixtures/testGoNestedImports.go//makeHTTPRequest", [][]string{}},
-				{"fixtures/testGoNestedImports.go//readConfig", [][]string{{"\"config.json\""}}},
-				{"fixtures/testGoNestedImports.go//parseJSON", [][]string{{"fixtures/testGoNestedImports.go//main//data"}}},
-				{"fixtures/testGoNestedImports.go//processPath", [][]string{{"\"/tmp\""}, {"\"test.txt\""}}},
-				{"fixtures/testGoNestedImports.go//fetchAndParse", [][]string{}},
+			"testGoNestedImports.go//main": {
+				{"testGoNestedImports.go//makeHTTPRequest", [][]string{}},
+				{"testGoNestedImports.go//readConfig", [][]string{{"\"config.json\""}}},
+				{"testGoNestedImports.go//parseJSON", [][]string{{"testGoNestedImports.go//main//data"}}},
+				{"testGoNestedImports.go//processPath", [][]string{{"\"/tmp\""}, {"\"test.txt\""}}},
+				{"testGoNestedImports.go//fetchAndParse", [][]string{}},
 				{"net//http//Head", [][]string{{"\"https://example.com\""}}},
-				{"encoding//json//Valid", [][]string{{"fixtures/testGoNestedImports.go//main//result"}}},
+				{"encoding//json//Valid", [][]string{{"testGoNestedImports.go//main//result"}}},
 				{"path//filepath//Abs", [][]string{{"\"/tmp\""}}},
 			},
 		},
 		ExpectedDfsResults: []dfsResultExpectation{
-			{Namespace: "fixtures/testGoNestedImports.go", CallerNamespace: "fixtures/testGoNestedImports.go", CallerIdentifierContent: ""},
-			{Namespace: "fixtures/testGoNestedImports.go//main", CallerNamespace: "fixtures/testGoNestedImports.go", CallerIdentifierContent: ""},
-			{Namespace: "net//http//Get", CallerNamespace: "fixtures/testGoNestedImports.go//makeHTTPRequest", CallerIdentifierContent: "http.Get"},
-			{Namespace: "encoding//json//Unmarshal", CallerNamespace: "fixtures/testGoNestedImports.go//parseJSON", CallerIdentifierContent: "json.Unmarshal"},
-			{Namespace: "path//filepath//Join", CallerNamespace: "fixtures/testGoNestedImports.go//processPath", CallerIdentifierContent: "filepath.Join"},
-			{Namespace: "io//ioutil//ReadFile", CallerNamespace: "fixtures/testGoNestedImports.go//readConfig", CallerIdentifierContent: "ioutil.ReadFile"},
-			{Namespace: "fixtures/testGoNestedImports.go//makeHTTPRequest", CallerNamespace: "fixtures/testGoNestedImports.go//main", CallerIdentifierContent: "makeHTTPRequest"},
-			{Namespace: "fixtures/testGoNestedImports.go//readConfig", CallerNamespace: "fixtures/testGoNestedImports.go//main", CallerIdentifierContent: "readConfig"},
-			{Namespace: "fixtures/testGoNestedImports.go//parseJSON", CallerNamespace: "fixtures/testGoNestedImports.go//main", CallerIdentifierContent: "parseJSON"},
+			{Namespace: "testGoNestedImports.go", CallerNamespace: "testGoNestedImports.go", Text: ""},
+			{Namespace: "testGoNestedImports.go//main", CallerNamespace: "testGoNestedImports.go", Text: ""},
+			{Namespace: "net//http//Get", CallerNamespace: "testGoNestedImports.go//makeHTTPRequest", Text: "http.Get"},
+			{Namespace: "encoding//json//Unmarshal", CallerNamespace: "testGoNestedImports.go//parseJSON", Text: "json.Unmarshal"},
+			{Namespace: "path//filepath//Join", CallerNamespace: "testGoNestedImports.go//processPath", Text: "filepath.Join"},
+			{Namespace: "io//ioutil//ReadFile", CallerNamespace: "testGoNestedImports.go//readConfig", Text: "ioutil.ReadFile"},
+			{Namespace: "testGoNestedImports.go//makeHTTPRequest", CallerNamespace: "testGoNestedImports.go//main", Text: "makeHTTPRequest"},
+			{Namespace: "testGoNestedImports.go//readConfig", CallerNamespace: "testGoNestedImports.go//main", Text: "readConfig"},
+			{Namespace: "testGoNestedImports.go//parseJSON", CallerNamespace: "testGoNestedImports.go//main", Text: "parseJSON"},
 		},
 	},
 	{
 		Language: core.LanguageCodeJavascript,
-		FilePath: "fixtures/testJavascript.js",
+		FilePath: "testJavascript.js",
 		ExpectedAssignmentGraph: map[string][]string{
-			"fs":       {},
-			"axios":    {},
-			"sqlite3":  {},
-			"readFile": {"fs//promises//readFile"},
-			"writeFile": {"fs//promises//writeFile"},
-			"log":  {"console//log"},
-			"warn": {"console//warn"},
-			"fixtures/testJavascript.js//simpleFunction": {},
-			"fixtures/testJavascript.js//TestClass":      {},
-			"fixtures/testJavascript.js//instance":       {"fixtures/testJavascript.js//TestClass"},
-			"fixtures/testJavascript.js//db":             {"sqlite3//Database"},
+			"fs":                                {},
+			"axios":                             {},
+			"sqlite3":                           {},
+			"readFile":                          {"fs//promises//readFile"},
+			"writeFile":                         {"fs//promises//writeFile"},
+			"log":                               {"console//log"},
+			"warn":                              {"console//warn"},
+			"testJavascript.js//simpleFunction": {},
+			"testJavascript.js//TestClass":      {},
+			"testJavascript.js//instance":       {"testJavascript.js//TestClass"},
+			"testJavascript.js//db":             {"sqlite3//Database"},
 		},
 		ExpectedCallGraph: map[string][]expectedCallgraphRefs{
-			"fixtures/testJavascript.js": {
-				{"fixtures/testJavascript.js//require", [][]string{{"'fs'"}}},
-				{"fixtures/testJavascript.js//require", [][]string{{"'fs/promises'"}}},
-				{"fixtures/testJavascript.js//require", [][]string{{"'sqlite3'"}}},
-				{"fixtures/testJavascript.js//TestClass", [][]string{{"\"test\""}, {"42"}}},
-				{"fixtures/testJavascript.js//TestClass//helperMethod", [][]string{}},
-				{"fixtures/testJavascript.js//TestClass//deepMethod", [][]string{}},
-				{"fixtures/testJavascript.js//simpleFunction", [][]string{{"1"}, {"2"}}},
-				{"fixtures/testJavascript.js//arrowFunc", [][]string{{"5"}}},
+			"testJavascript.js": {
+				{"require", [][]string{{"'fs'"}}},
+				{"require", [][]string{{"'fs/promises'"}}},
+				{"require", [][]string{{"'sqlite3'"}}},
+				{"testJavascript.js//TestClass", [][]string{{"\"test\""}, {"42"}}},
+				{"testJavascript.js//TestClass//helperMethod", [][]string{}},
+				{"testJavascript.js//TestClass//deepMethod", [][]string{}},
+				{"testJavascript.js//simpleFunction", [][]string{{"1"}, {"2"}}},
+				{"testJavascript.js//arrowFunc", [][]string{{"5"}}},
 				{"log", [][]string{{"\"Module level call\""}}},
 				{"fs//readFileSync", [][]string{{"\"file.txt\""}}},
 				{"axios//get", [][]string{{"\"https://example.com\""}}},
-				{"fixtures/testJavascript.js//TestClass//helperMethod", [][]string{}},
-				{"fixtures/testJavascript.js//TestClass//helperMethod//toString", [][]string{}},
-				{"fixtures/testJavascript.js//TestClass//helperMethod", [][]string{}},
-				{"fixtures/testJavascript.js//ClassA", [][]string{}},
-				{"fixtures/testJavascript.js//ClassB", [][]string{}},
-				{"fixtures/testJavascript.js//ClassA//method1", [][]string{}},
-				{"fixtures/testJavascript.js//ClassA//method1", [][]string{}},
-				{"fixtures/testJavascript.js//ClassA//method2", [][]string{}},
-				{"fixtures/testJavascript.js//ClassA//methodUnique", [][]string{}},
+				{"testJavascript.js//TestClass//helperMethod", [][]string{}},
+				{"testJavascript.js//TestClass//helperMethod//toString", [][]string{}},
+				{"testJavascript.js//TestClass//helperMethod", [][]string{}},
+				{"testJavascript.js//ClassA", [][]string{}},
+				{"testJavascript.js//ClassB", [][]string{}},
+				{"testJavascript.js//ClassA//method1", [][]string{}},
+				{"testJavascript.js//ClassA//method1", [][]string{}},
+				{"testJavascript.js//ClassB//method1", [][]string{}},
+				{"testJavascript.js//ClassB//method1", [][]string{}},
+				{"testJavascript.js//ClassA//method2", [][]string{}},
+				{"testJavascript.js//ClassB//method2", [][]string{}},
+				{"testJavascript.js//ClassA//methodUnique", [][]string{}},
+				{"testJavascript.js//ClassB//methodUnique", [][]string{}},
 				{"sqlite3//Database", [][]string{{"':memory:'"}}},
 			},
-			"fixtures/testJavascript.js//simpleFunction": {
+			"testJavascript.js//simpleFunction": {
 				{"log", [][]string{{"\"Simple function called\""}}},
 			},
-			"fixtures/testJavascript.js//arrowFunc": {
+			"testJavascript.js//arrowFunc": {
 				{"warn", [][]string{{"\"Arrow function called\""}}},
 			},
-			"fixtures/testJavascript.js//TestClass//constructor": {
+			"testJavascript.js//TestClass//constructor": {
 				{"log", [][]string{{"\"TestClass constructor\""}}},
 			},
-			"fixtures/testJavascript.js//TestClass//helperMethod": {
+			"testJavascript.js//TestClass//helperMethod": {
 				{"log", [][]string{{"\"Called helper method\""}}},
 			},
-			"fixtures/testJavascript.js//TestClass//deepMethod": {
-				{"fixtures/testJavascript.js//TestClass//this//helperMethod", [][]string{}},
+			"testJavascript.js//TestClass//deepMethod": {
+				{"testJavascript.js//TestClass//this//helperMethod", [][]string{}},
 				{"log", [][]string{{"\"Called deep method\""}}},
 			},
-			"fixtures/testJavascript.js//ClassA//method1": {
+			"testJavascript.js//ClassA//method1": {
 				{"log", [][]string{{"\"ClassA method1\""}}},
 			},
-			"fixtures/testJavascript.js//ClassA//method2": {
+			"testJavascript.js//ClassA//method2": {
 				{"warn", [][]string{{"\"ClassA method2\""}}},
 			},
-			"fixtures/testJavascript.js//ClassB//method1": {
+			"testJavascript.js//ClassB//method1": {
 				{"log", [][]string{{"\"ClassB method1\""}}},
 			},
-			"fixtures/testJavascript.js//ClassB//method2": {
+			"testJavascript.js//ClassB//method2": {
 				{"warn", [][]string{{"\"ClassB method2\""}}},
 			},
-			"fixtures/testJavascript.js//ClassB//methodUnique": {
+			"testJavascript.js//ClassB//methodUnique": {
 				{"log", [][]string{{"\"ClassB unique\""}}},
 			},
 		},
 		ExpectedDfsResults: []dfsResultExpectation{
-			{Namespace: "fixtures/testJavascript.js//simpleFunction", CallerNamespace: "fixtures/testJavascript.js", CallerIdentifierContent: "simpleFunction"},
-			{Namespace: "fixtures/testJavascript.js//arrowFunc", CallerNamespace: "fixtures/testJavascript.js", CallerIdentifierContent: "arrowFunc"},
-			{Namespace: "console//log", CallerNamespace: "fixtures/testJavascript.js", CallerIdentifierContent: "log"},
-			{Namespace: "console//log", CallerNamespace: "fixtures/testJavascript.js//simpleFunction", CallerIdentifierContent: "log"},
-			{Namespace: "console//warn", CallerNamespace: "fixtures/testJavascript.js//arrowFunc", CallerIdentifierContent: "warn"},
-			{Namespace: "console//log", CallerNamespace: "fixtures/testJavascript.js//TestClass//constructor", CallerIdentifierContent: "log"},
-			{Namespace: "console//log", CallerNamespace: "fixtures/testJavascript.js//TestClass//helperMethod", CallerIdentifierContent: "log"},
-			{Namespace: "console//log", CallerNamespace: "fixtures/testJavascript.js//TestClass//deepMethod", CallerIdentifierContent: "log"},
-			{Namespace: "console//log", CallerNamespace: "fixtures/testJavascript.js//ClassA//method1", CallerIdentifierContent: "log"},
-			{Namespace: "console//warn", CallerNamespace: "fixtures/testJavascript.js//ClassA//method2", CallerIdentifierContent: "warn"},
-			{Namespace: "fs//readFileSync", CallerNamespace: "fixtures/testJavascript.js", CallerIdentifierContent: "fs.readFileSync"},
+			{Namespace: "testJavascript.js//simpleFunction", CallerNamespace: "testJavascript.js", Text: "simpleFunction"},
+			{Namespace: "testJavascript.js//arrowFunc", CallerNamespace: "testJavascript.js", Text: "arrowFunc"},
+			{Namespace: "console//log", CallerNamespace: "testJavascript.js", Text: "log"},
+			{Namespace: "console//log", CallerNamespace: "testJavascript.js//simpleFunction", Text: "log"},
+			{Namespace: "console//warn", CallerNamespace: "testJavascript.js//arrowFunc", Text: "warn"},
+			{Namespace: "console//log", CallerNamespace: "testJavascript.js//TestClass//constructor", Text: "log"},
+			{Namespace: "console//log", CallerNamespace: "testJavascript.js//TestClass//helperMethod", Text: "log"},
+			{Namespace: "console//log", CallerNamespace: "testJavascript.js//TestClass//deepMethod", Text: "log"},
+			{Namespace: "console//log", CallerNamespace: "testJavascript.js//ClassA//method1", Text: "log"},
+			{Namespace: "console//warn", CallerNamespace: "testJavascript.js//ClassA//method2", Text: "warn"},
+			{Namespace: "fs//readFileSync", CallerNamespace: "testJavascript.js", Text: "fs.readFileSync"},
 		},
 	},
 	{
 		Language: core.LanguageCodeTypescript,
-		FilePath: "fixtures/testTypescript.ts",
+		FilePath: "testTypescript.ts",
 		ExpectedAssignmentGraph: map[string][]string{
 			// Import aliases
 			"axios":      {},
@@ -743,114 +748,118 @@ var testcases = []callgraphTestcase{
 			// Type-only import: should appear in assignment graph but NOT generate call edges
 			"AxiosResponse": {"axios//AxiosResponse"},
 			// Class/function definitions
-			"fixtures/testTypescript.ts//simpleFunction": {},
-			"fixtures/testTypescript.ts//TestClass":      {},
+			"testTypescript.ts//simpleFunction": {},
+			"testTypescript.ts//TestClass":      {},
 			// Instance tracking
-			"fixtures/testTypescript.ts//instance": {"fixtures/testTypescript.ts//TestClass"},
+			"testTypescript.ts//instance": {"testTypescript.ts//TestClass"},
 			// Polymorphic variable tracking
-			"fixtures/testTypescript.ts//x": {"fixtures/testTypescript.ts//ClassA", "fixtures/testTypescript.ts//ClassB"},
-			"fixtures/testTypescript.ts//y": {"fixtures/testTypescript.ts//x"},
+			"testTypescript.ts//x": {"testTypescript.ts//ClassA", "testTypescript.ts//ClassB"},
+			"testTypescript.ts//y": {"testTypescript.ts//x"},
 			// Constructor this-assignment tracking
-			"fixtures/testTypescript.ts//TestClass//constructor//this.name":  {"fixtures/testTypescript.ts//TestClass//constructor//name"},
-			"fixtures/testTypescript.ts//TestClass//constructor//this.value": {"fixtures/testTypescript.ts//TestClass//constructor//value"},
+			"testTypescript.ts//TestClass//constructor//this.name":  {"testTypescript.ts//TestClass//constructor//name"},
+			"testTypescript.ts//TestClass//constructor//this.value": {"testTypescript.ts//TestClass//constructor//value"},
 		},
 		ExpectedCallGraph: map[string][]expectedCallgraphRefs{
 			// Root-level calls
-			"fixtures/testTypescript.ts": {
-				{"fixtures/testTypescript.ts//TestClass", [][]string{{"\"test\""}, {"42"}}},
-				{"fixtures/testTypescript.ts//TestClass//helperMethod", [][]string{}},
-				{"fixtures/testTypescript.ts//TestClass//deepMethod", [][]string{}},
-				{"fixtures/testTypescript.ts//simpleFunction", [][]string{{"1"}, {"2"}}},
-				{"fixtures/testTypescript.ts//arrowFunc", [][]string{{"5"}}},
+			"testTypescript.ts": {
+				{"testTypescript.ts//TestClass", [][]string{{"\"test\""}, {"42"}}},
+				{"testTypescript.ts//TestClass//helperMethod", [][]string{}},
+				{"testTypescript.ts//TestClass//deepMethod", [][]string{}},
+				{"testTypescript.ts//simpleFunction", [][]string{{"1"}, {"2"}}},
+				{"testTypescript.ts//arrowFunc", [][]string{{"5"}}},
 				{"log", [][]string{{"\"Module level call\""}}},
 				{"axios//get", [][]string{{"\"https://example.com\""}}},
 				{"createHash", [][]string{{"\"sha256\""}}},
-				{"fixtures/testTypescript.ts//TestClass//helperMethod", [][]string{}},
-				{"fixtures/testTypescript.ts//TestClass//helperMethod//toString", [][]string{}},
-				{"fixtures/testTypescript.ts//TestClass//helperMethod", [][]string{}},
-				{"fixtures/testTypescript.ts//ClassA", [][]string{}},
-				{"fixtures/testTypescript.ts//ClassB", [][]string{}},
+				{"testTypescript.ts//TestClass//helperMethod", [][]string{}},
+				{"testTypescript.ts//TestClass//helperMethod//toString", [][]string{}},
+				{"testTypescript.ts//TestClass//helperMethod", [][]string{}},
+				{"testTypescript.ts//ClassA", [][]string{}},
+				{"testTypescript.ts//ClassB", [][]string{}},
 				// Polymorphic dispatch: x/y resolve to ClassA, so method calls go to ClassA
-				{"fixtures/testTypescript.ts//ClassA//method1", [][]string{}},
-				{"fixtures/testTypescript.ts//ClassA//method1", [][]string{}},
-				{"fixtures/testTypescript.ts//ClassA//method2", [][]string{}},
-				{"fixtures/testTypescript.ts//ClassA//methodUnique", [][]string{}},
+				{"testTypescript.ts//ClassA//method1", [][]string{}},
+				{"testTypescript.ts//ClassA//method1", [][]string{}},
+				{"testTypescript.ts//ClassB//method1", [][]string{}},
+				{"testTypescript.ts//ClassB//method1", [][]string{}},
+				{"testTypescript.ts//ClassA//method2", [][]string{}},
+				{"testTypescript.ts//ClassB//method2", [][]string{}},
+				{"testTypescript.ts//ClassA//methodUnique", [][]string{}},
+				{"testTypescript.ts//ClassB//methodUnique", [][]string{}},
 			},
 			// Function internals
-			"fixtures/testTypescript.ts//simpleFunction": {
+			"testTypescript.ts//simpleFunction": {
 				{"log", [][]string{{"\"Simple function called\""}}},
 			},
-			"fixtures/testTypescript.ts//arrowFunc": {
+			"testTypescript.ts//arrowFunc": {
 				{"warn", [][]string{{"\"Arrow function called\""}}},
 			},
 			// Class constructor dispatches to constructor method
-			"fixtures/testTypescript.ts//TestClass": {
-				{"fixtures/testTypescript.ts//TestClass//constructor", [][]string{}},
+			"testTypescript.ts//TestClass": {
+				{"testTypescript.ts//TestClass//constructor", [][]string{}},
 			},
 			// Constructor calls log
-			"fixtures/testTypescript.ts//TestClass//constructor": {
+			"testTypescript.ts//TestClass//constructor": {
 				{"log", [][]string{{"\"TestClass constructor\""}}},
 			},
-			"fixtures/testTypescript.ts//TestClass//helperMethod": {
+			"testTypescript.ts//TestClass//helperMethod": {
 				{"log", [][]string{{"\"Called helper method\""}}},
 			},
 			// deepMethod calls this.helperMethod() and log
-			"fixtures/testTypescript.ts//TestClass//deepMethod": {
-				{"fixtures/testTypescript.ts//TestClass//this//helperMethod", [][]string{}},
+			"testTypescript.ts//TestClass//deepMethod": {
+				{"testTypescript.ts//TestClass//this//helperMethod", [][]string{}},
 				{"log", [][]string{{"\"Called deep method\""}}},
 			},
 			// print method uses this.name as argument
-			"fixtures/testTypescript.ts//TestClass//print": {
-				{"log", [][]string{{"fixtures/testTypescript.ts//TestClass//this//name"}}},
+			"testTypescript.ts//TestClass//print": {
+				{"log", [][]string{{"testTypescript.ts//TestClass//this//name"}}},
 			},
 			// ClassA methods call distinct imported functions
-			"fixtures/testTypescript.ts//ClassA//method1": {
+			"testTypescript.ts//ClassA//method1": {
 				{"printA1", [][]string{{"\"ClassA method1\""}}},
 			},
-			"fixtures/testTypescript.ts//ClassA//method2": {
+			"testTypescript.ts//ClassA//method2": {
 				{"printA2", [][]string{{"\"ClassA method2\""}}},
 			},
 			// ClassB methods call distinct imported functions
-			"fixtures/testTypescript.ts//ClassB//method1": {
+			"testTypescript.ts//ClassB//method1": {
 				{"printB1", [][]string{{"\"ClassB method1\""}}},
 			},
-			"fixtures/testTypescript.ts//ClassB//method2": {
+			"testTypescript.ts//ClassB//method2": {
 				{"printB2", [][]string{{"\"ClassB method2\""}}},
 			},
-			"fixtures/testTypescript.ts//ClassB//methodUnique": {
+			"testTypescript.ts//ClassB//methodUnique": {
 				{"printBU", [][]string{{"\"ClassB unique\""}}},
 			},
 		},
 		ExpectedDfsResults: []dfsResultExpectation{
 			// Constructor chain: new TestClass -> constructor -> log
-			{Namespace: "fixtures/testTypescript.ts//TestClass", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "new TestClass(\"test\", 42)"},
-			{Namespace: "fixtures/testTypescript.ts//TestClass//constructor", CallerNamespace: "fixtures/testTypescript.ts//TestClass", CallerIdentifierContent: ""},
-			{Namespace: "console//log", CallerNamespace: "fixtures/testTypescript.ts//TestClass//constructor", CallerIdentifierContent: "log"},
+			{Namespace: "testTypescript.ts//TestClass", CallerNamespace: "testTypescript.ts", Text: "TestClass"},
+			{Namespace: "testTypescript.ts//TestClass//constructor", CallerNamespace: "testTypescript.ts//TestClass", Text: ""},
+			{Namespace: "console//log", CallerNamespace: "testTypescript.ts//TestClass//constructor", Text: "log"},
 			// Method calls on instance
-			{Namespace: "fixtures/testTypescript.ts//TestClass//helperMethod", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "instance.helperMethod"},
-			{Namespace: "console//log", CallerNamespace: "fixtures/testTypescript.ts//TestClass//helperMethod", CallerIdentifierContent: "log"},
-			{Namespace: "fixtures/testTypescript.ts//TestClass//deepMethod", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "instance.deepMethod"},
-			{Namespace: "fixtures/testTypescript.ts//TestClass//this//helperMethod", CallerNamespace: "fixtures/testTypescript.ts//TestClass//deepMethod", CallerIdentifierContent: "this.helperMethod"},
-			{Namespace: "console//log", CallerNamespace: "fixtures/testTypescript.ts//TestClass//deepMethod", CallerIdentifierContent: "log"},
+			{Namespace: "testTypescript.ts//TestClass//helperMethod", CallerNamespace: "testTypescript.ts", Text: "instance.helperMethod"},
+			{Namespace: "console//log", CallerNamespace: "testTypescript.ts//TestClass//helperMethod", Text: "log"},
+			{Namespace: "testTypescript.ts//TestClass//deepMethod", CallerNamespace: "testTypescript.ts", Text: "instance.deepMethod"},
+			{Namespace: "testTypescript.ts//TestClass//this//helperMethod", CallerNamespace: "testTypescript.ts//TestClass//deepMethod", Text: "this.helperMethod"},
+			{Namespace: "console//log", CallerNamespace: "testTypescript.ts//TestClass//deepMethod", Text: "log"},
 			// Module-level function calls
-			{Namespace: "fixtures/testTypescript.ts//simpleFunction", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "simpleFunction"},
-			{Namespace: "console//log", CallerNamespace: "fixtures/testTypescript.ts//simpleFunction", CallerIdentifierContent: "log"},
-			{Namespace: "fixtures/testTypescript.ts//arrowFunc", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "arrowFunc"},
-			{Namespace: "console//warn", CallerNamespace: "fixtures/testTypescript.ts//arrowFunc", CallerIdentifierContent: "warn"},
+			{Namespace: "testTypescript.ts//simpleFunction", CallerNamespace: "testTypescript.ts", Text: "simpleFunction"},
+			{Namespace: "console//log", CallerNamespace: "testTypescript.ts//simpleFunction", Text: "log"},
+			{Namespace: "testTypescript.ts//arrowFunc", CallerNamespace: "testTypescript.ts", Text: "arrowFunc"},
+			{Namespace: "console//warn", CallerNamespace: "testTypescript.ts//arrowFunc", Text: "warn"},
 			// Module-level log call
-			{Namespace: "console//log", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "log"},
+			{Namespace: "console//log", CallerNamespace: "testTypescript.ts", Text: "log"},
 			// Imported module calls
-			{Namespace: "axios//get", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "axios.get"},
-			{Namespace: "crypto//createHash", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "createHash"},
+			{Namespace: "axios//get", CallerNamespace: "testTypescript.ts", Text: "axios.get"},
+			{Namespace: "crypto//createHash", CallerNamespace: "testTypescript.ts", Text: "createHash"},
 			// Polymorphic dispatch: new ClassA/ClassB
-			{Namespace: "fixtures/testTypescript.ts//ClassA", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "new ClassA()"},
-			{Namespace: "fixtures/testTypescript.ts//ClassB", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "new ClassB()"},
+			{Namespace: "testTypescript.ts//ClassA", CallerNamespace: "testTypescript.ts", Text: "ClassA"},
+			{Namespace: "testTypescript.ts//ClassB", CallerNamespace: "testTypescript.ts", Text: "ClassB"},
 			// x.method1()/y.method1() resolve to ClassA methods
-			{Namespace: "fixtures/testTypescript.ts//ClassA//method1", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "x.method1"},
-			{Namespace: "fixtures/testTypescript.ts//ClassA//method1", CallerNamespace: "fixtures/testTypescript.ts", CallerIdentifierContent: "y.method1"},
+			{Namespace: "testTypescript.ts//ClassA//method1", CallerNamespace: "testTypescript.ts", Text: "x.method1"},
+			{Namespace: "testTypescript.ts//ClassA//method1", CallerNamespace: "testTypescript.ts", Text: "y.method1"},
 			// ClassA methods reach their distinct imported callees
-			{Namespace: "printers//printA1", CallerNamespace: "fixtures/testTypescript.ts//ClassA//method1", CallerIdentifierContent: "printA1"},
-			{Namespace: "printers//printA2", CallerNamespace: "fixtures/testTypescript.ts//ClassA//method2", CallerIdentifierContent: "printA2"},
+			{Namespace: "printers//printA1", CallerNamespace: "testTypescript.ts//ClassA//method1", Text: "printA1"},
+			{Namespace: "printers//printA2", CallerNamespace: "testTypescript.ts//ClassA//method2", Text: "printA2"},
 		},
 	},
 }
@@ -861,33 +870,29 @@ func TestCallgraphPlugin(t *testing.T) {
 			t.Parallel()
 
 			filePaths := []string{testcase.FilePath}
-			treeWalker, fileSystem, err := test.SetupBasicPluginContext(filePaths, []core.LanguageCode{testcase.Language})
+			treeWalker, fileSystem, err := test.SetupBasicPluginContext("fixtures", filePaths, []core.LanguageCode{testcase.Language})
 			assert.NoError(t, err)
 
 			var callgraphCallback CallgraphCallback = func(ctx context.Context, cg *CallGraph) error {
 				assert.NotNil(t, cg, "Expected call graph to be non-nil")
 				assert.NotNil(t, cg.assignmentGraph, "Expected assignment graph to be non-nil")
 
-				treeData, err := cg.Tree.Data()
-				assert.NoError(t, err)
-				assert.NotNil(t, treeData, "Expected tree data to be non-nil")
-
 				assertAssignmentGraph(t, cg, testcase.ExpectedAssignmentGraph)
 
 				assertCallGraph(t, cg, testcase.ExpectedCallGraph)
 
-				assertDfs(t, cg, testcase.ExpectedDfsResults, treeData)
+				assertDfs(t, cg, testcase.ExpectedDfsResults)
 
 				return nil
 			}
 
-			pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+			pluginExecutor := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
 				NewCallGraphPlugin(callgraphCallback),
 			})
-			assert.NoError(t, err)
 
-			err = pluginExecutor.Execute(context.Background(), fileSystem)
+			report, err := pluginExecutor.Execute(context.Background(), fileSystem)
 			assert.NoError(t, err)
+			assert.Empty(t, report.Failed)
 		})
 	}
 }
@@ -922,7 +927,7 @@ func assertCallGraph(t *testing.T, cg *CallGraph, expectedCallGraph map[string][
 			arguments := [][]string{}
 			for _, arg := range call.Arguments {
 				argResolutions := []string{}
-				for _, argResolution := range arg.Nodes {
+				for _, argResolution := range arg.Values {
 					argResolutions = append(argResolutions, argResolution.Namespace)
 				}
 				arguments = append(arguments, argResolutions)
@@ -937,7 +942,7 @@ func assertCallGraph(t *testing.T, cg *CallGraph, expectedCallGraph map[string][
 	}
 }
 
-func assertDfs(t *testing.T, cg *CallGraph, expectedDfsResults []dfsResultExpectation, treeData *[]byte) {
+func assertDfs(t *testing.T, cg *CallGraph, expectedDfsResults []dfsResultExpectation) {
 	dfsResults := cg.DFS()
 
 	actualDfsItems := make(map[dfsResultExpectation]int)
@@ -949,15 +954,10 @@ func assertDfs(t *testing.T, cg *CallGraph, expectedDfsResults []dfsResultExpect
 			callerNamespace = dfsResultItem.Caller.Namespace
 		}
 
-		callerIdentifierContent := ""
-		if dfsResultItem.CallerIdentifier != nil {
-			callerIdentifierContent = dfsResultItem.CallerIdentifier.Content(*treeData)
-		}
-
 		key := dfsResultExpectation{
-			Namespace:               namespace,
-			CallerNamespace:         callerNamespace,
-			CallerIdentifierContent: callerIdentifierContent,
+			Namespace:       namespace,
+			CallerNamespace: callerNamespace,
+			Text:            dfsResultItem.Text,
 		}
 		actualDfsItems[key]++
 	}

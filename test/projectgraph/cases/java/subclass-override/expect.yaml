@@ -1,0 +1,48 @@
+source: safedep:hand
+description: Step.run calls parse with no receiver, so the call runs on this. parse is abstract in Step, so the site keeps a record, and cha edges go to the parse of each subclass, YamlStep and ZipStep, which extends YamlStep.
+roots:
+  - key: src/com/shop/App.java//App//main
+    kind: main
+    rule: java.main
+edges:
+  - from: src/com/shop/App.java//App//main
+    to: src/com/shop/Step.java//Step//run
+    kind: member
+    confidence: high
+    site: src/com/shop/App.java:6
+  - from: src/com/shop/Step.java//Step//run
+    to: src/com/shop/Steps.java//YamlStep//parse
+    kind: cha
+    confidence: medium
+    site: src/com/shop/Step.java:5
+  - from: src/com/shop/Step.java//Step//run
+    to: src/com/shop/Steps.java//ZipStep//parse
+    kind: cha
+    confidence: medium
+    site: src/com/shop/Step.java:5
+unresolved:
+  - caller: src/com/shop/Step.java//Step//run
+    site: src/com/shop/Step.java:5
+    reason: no-definition
+    method: parse
+results:
+  - target: java//nio//file//Files//readAllBytes
+    status: found
+    path:
+      - key: src/com/shop/App.java//App//main
+      - key: src/com/shop/Step.java//Step//run
+        site: src/com/shop/App.java:6
+        kind: member
+        confidence: high
+      - key: src/com/shop/Steps.java//ZipStep//parse
+        site: src/com/shop/Step.java:5
+        kind: cha
+        confidence: medium
+      - key: java//nio//file//Files//readAllBytes
+        site: src/com/shop/Steps.java:16
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/com/shop/Steps.java//ZipStep//parse
+        site: src/com/shop/Steps.java:16
+        reached: true

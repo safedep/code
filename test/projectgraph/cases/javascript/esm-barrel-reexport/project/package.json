@@ -1,0 +1,5 @@
+{
+  "name": "barrel-app",
+  "type": "module",
+  "bin": { "barrel-app": "bin/cli.js" }
+}

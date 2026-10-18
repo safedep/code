@@ -1,0 +1,20 @@
+source: safedep:hand
+description: handlers.loadOld calls yaml.load, and no root reaches loadOld. index.js calls only parse.
+roots:
+  - key: index.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: handlers.js//loadOld
+    to: js-yaml//load
+    kind: direct
+    confidence: high
+    site: handlers.js:8
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: not-found
+    call_sites:
+      - caller: handlers.js//loadOld
+        site: handlers.js:8
+        reached: false

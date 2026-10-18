@@ -1,0 +1,34 @@
+source: safedep:hand
+description: The Kotlin main calls the static method decode of the Java class Codec of the same package with no import. Kotlin and Java files of one package share the class table.
+roots:
+  - key: src/com/shop/App.kt//main
+    kind: main
+    rule: java.main
+edges:
+  - from: src/com/shop/App.kt//main
+    to: src/com/shop/Codec.java//Codec//decode
+    kind: member
+    confidence: high
+    site: src/com/shop/App.kt:4
+unresolved:
+  - caller: src/com/shop/Codec.java//Codec//decode
+    site: src/com/shop/Codec.java:7
+    reason: unknown-receiver
+    method: decode
+results:
+  - target: java//util//Base64//getDecoder
+    status: found
+    path:
+      - key: src/com/shop/App.kt//main
+      - key: src/com/shop/Codec.java//Codec//decode
+        site: src/com/shop/App.kt:4
+        kind: member
+        confidence: high
+      - key: java//util//Base64//getDecoder
+        site: src/com/shop/Codec.java:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/com/shop/Codec.java//Codec//decode
+        site: src/com/shop/Codec.java:7
+        reached: true

@@ -87,13 +87,28 @@ func Walk(ctx context.Context, root *sitter.Node, opts WalkOptions, visit Visit)
 	}
 }
 
+// shortChildList is the most children that NamedChildren reads by index.
+const shortChildList = 8
+
 // NamedChildren returns the named children of n in order, in time linear in
 // the number of children.
 func NamedChildren(n *sitter.Node) []*sitter.Node {
-	if n == nil || n.NamedChildCount() == 0 {
+	if n == nil {
 		return nil
 	}
-	out := make([]*sitter.Node, 0, n.NamedChildCount())
+	count := int(n.NamedChildCount())
+	if count == 0 {
+		return nil
+	}
+	out := make([]*sitter.Node, 0, count)
+	// A cursor costs more than a few calls of NamedChild, so a short list
+	// takes the quadratic way.
+	if count <= shortChildList {
+		for i := range count {
+			out = append(out, n.NamedChild(i))
+		}
+		return out
+	}
 	c := sitter.NewTreeCursor(n)
 	defer c.Close()
 	for ok := c.GoToFirstChild(); ok; ok = c.GoToNextSibling() {

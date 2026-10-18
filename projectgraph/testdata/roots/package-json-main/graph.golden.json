@@ -1,0 +1,164 @@
+{
+  "nodes": {
+    "cli.js": {
+      "key": "cli.js",
+      "kind": "module",
+      "path": "cli.js",
+      "line": 1,
+      "exported": true
+    },
+    "cli.js//helper": {
+      "key": "cli.js//helper",
+      "kind": "function",
+      "path": "cli.js",
+      "line": 1,
+      "exported": true
+    },
+    "fmt.js": {
+      "key": "fmt.js",
+      "kind": "module",
+      "path": "fmt.js",
+      "line": 1,
+      "exported": true
+    },
+    "fmt.js//format": {
+      "key": "fmt.js//format",
+      "kind": "function",
+      "path": "fmt.js",
+      "line": 1,
+      "exported": true
+    },
+    "index.js": {
+      "key": "index.js",
+      "kind": "module",
+      "path": "index.js",
+      "line": 1,
+      "exported": true
+    },
+    "index.js//parse": {
+      "key": "index.js//parse",
+      "kind": "export",
+      "path": "index.js",
+      "line": 4,
+      "exported": true
+    },
+    "index.js//readConfig": {
+      "key": "index.js//readConfig",
+      "kind": "function",
+      "path": "index.js",
+      "line": 1,
+      "exported": true
+    },
+    "parser.js": {
+      "key": "parser.js",
+      "kind": "module",
+      "path": "parser.js",
+      "line": 1,
+      "exported": true
+    },
+    "parser.js//parse": {
+      "key": "parser.js//parse",
+      "kind": "function",
+      "path": "parser.js",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "index.js",
+      "to": "parser.js",
+      "site": {
+        "path": "index.js",
+        "line": 4
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.relative"
+    },
+    {
+      "from": "index.js",
+      "to": "fmt.js",
+      "site": {
+        "path": "index.js",
+        "line": 5
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.relative"
+    },
+    {
+      "from": "index.js//parse",
+      "to": "parser.js//parse",
+      "site": {
+        "path": "index.js",
+        "line": 4
+      },
+      "kind": "export",
+      "confidence": "high",
+      "resolver": "javascript.reexport"
+    }
+  ],
+  "unresolved": [],
+  "roots": [
+    {
+      "key": "cli.js",
+      "kind": "manifest",
+      "rule": "node.package-json",
+      "site": {
+        "path": "cli.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "fmt.js//format",
+      "kind": "manifest",
+      "rule": "node.package-json",
+      "site": {
+        "path": "fmt.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "index.js",
+      "kind": "manifest",
+      "rule": "node.package-json",
+      "site": {
+        "path": "index.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "index.js//parse",
+      "kind": "manifest",
+      "rule": "node.package-json",
+      "site": {
+        "path": "index.js",
+        "line": 4
+      }
+    },
+    {
+      "key": "index.js//readConfig",
+      "kind": "manifest",
+      "rule": "node.package-json",
+      "site": {
+        "path": "index.js",
+        "line": 1
+      }
+    }
+  ],
+  "files": {
+    "cli.js": "indexed",
+    "fmt.js": "indexed",
+    "index.js": "indexed",
+    "parser.js": "indexed"
+  },
+  "stats": {
+    "version": "11",
+    "files": 4,
+    "nodes": 9,
+    "edges": 3,
+    "unresolved": 0,
+    "roots": 5
+  }
+}

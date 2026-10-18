@@ -1,0 +1,38 @@
+source: safedep:hand
+description: src/main.ts imports parseConfig with no extension, and parseConfig casts the value of yaml.load with as. The import type of src/types.ts makes no edge.
+roots:
+  - key: src/main.ts
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.ts
+    to: src/config.ts//parseConfig
+    kind: direct
+    confidence: high
+    site: src/main.ts:3
+  - from: src/config.ts//parseConfig
+    to: js-yaml//load
+    kind: direct
+    confidence: high
+    site: src/config.ts:7
+no_edges:
+  - from: src/config.ts
+    to: src/types.ts
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/main.ts
+      - key: src/config.ts//parseConfig
+        site: src/main.ts:3
+        kind: direct
+        confidence: high
+      - key: js-yaml//load
+        site: src/config.ts:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/config.ts//parseConfig
+        site: src/config.ts:7
+        reached: true

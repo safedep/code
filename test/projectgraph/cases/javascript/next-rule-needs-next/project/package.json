@@ -1,0 +1,5 @@
+{
+  "name": "next-rule-needs-next",
+  "main": "server.js",
+  "dependencies": { "express": "^4.19.0", "js-yaml": "^4.1.0" }
+}

@@ -1,0 +1,264 @@
+{
+  "version": "11",
+  "path": "App.cs",
+  "language": "csharp",
+  "content_hash": "8991919e54610418b58a53fb6b26dc563c5ef5af684165b60e8af5b6e7e8773c",
+  "package": "Shop",
+  "imports": [
+    {
+      "line": 1,
+      "module": "System.IO",
+      "wildcard": true,
+      "kind": "static",
+      "namespace": "System//IO"
+    },
+    {
+      "line": 2,
+      "module": "Shop.Util",
+      "wildcard": true,
+      "kind": "static",
+      "namespace": "Shop//Util"
+    }
+  ],
+  "definitions": [
+    {
+      "key": "App.cs",
+      "kind": "module",
+      "name": "App",
+      "start_line": 1,
+      "end_line": 33,
+      "exported": true
+    },
+    {
+      "key": "App.cs//App",
+      "kind": "class",
+      "name": "App",
+      "start_line": 6,
+      "end_line": 22,
+      "exported": true,
+      "decorators": [
+        "@ApiController"
+      ]
+    },
+    {
+      "key": "App.cs//App//Run",
+      "kind": "method",
+      "name": "Run",
+      "start_line": 11,
+      "end_line": 17,
+      "exported": true,
+      "parent": "App.cs//App",
+      "decorators": [
+        "@HttpGet"
+      ]
+    },
+    {
+      "key": "App.cs//App//Audit",
+      "kind": "method",
+      "name": "Audit",
+      "start_line": 19,
+      "end_line": 19,
+      "exported": true,
+      "parent": "App.cs//App"
+    },
+    {
+      "key": "App.cs//App//Main",
+      "kind": "method",
+      "name": "Main",
+      "start_line": 21,
+      "end_line": 21,
+      "exported": true,
+      "parent": "App.cs//App",
+      "static": true
+    },
+    {
+      "key": "App.cs//IRunner",
+      "kind": "interface",
+      "name": "IRunner",
+      "start_line": 24,
+      "end_line": 27,
+      "exported": true
+    },
+    {
+      "key": "App.cs//Extensions",
+      "kind": "class",
+      "name": "Extensions",
+      "start_line": 29,
+      "end_line": 32,
+      "exported": true
+    },
+    {
+      "key": "App.cs//Extensions//Trimmed",
+      "kind": "method",
+      "name": "Trimmed",
+      "start_line": 31,
+      "end_line": 31,
+      "exported": true,
+      "parent": "App.cs//Extensions",
+      "params": [
+        {
+          "name": "this",
+          "type": "string"
+        }
+      ],
+      "static": true
+    }
+  ],
+  "classes": [
+    {
+      "key": "App.cs//App",
+      "bases": [
+        "ControllerBase",
+        "IRunner"
+      ],
+      "methods": [
+        "App.cs//App//Audit",
+        "App.cs//App//Main",
+        "App.cs//App//Run"
+      ],
+      "fields": [
+        {
+          "name": "store",
+          "type": "Store"
+        }
+      ]
+    },
+    {
+      "key": "App.cs//Extensions",
+      "methods": [
+        "App.cs//Extensions//Trimmed"
+      ]
+    },
+    {
+      "key": "App.cs//IRunner"
+    }
+  ],
+  "calls": [
+    {
+      "caller": "App.cs//App",
+      "line": 9,
+      "column": 40,
+      "callee": "Store",
+      "targets": [
+        "App.cs//App//Store"
+      ],
+      "method": "Store",
+      "kind": "new"
+    },
+    {
+      "caller": "App.cs//App//Run",
+      "line": 14,
+      "column": 9,
+      "callee": "store.Save",
+      "targets": [
+        "App.cs//App//Store//Save"
+      ],
+      "receiver": "store",
+      "method": "Save",
+      "kind": "call"
+    },
+    {
+      "caller": "App.cs//App//Run",
+      "line": 14,
+      "column": 20,
+      "callee": "File.ReadAllText",
+      "targets": [
+        "File//ReadAllText"
+      ],
+      "receiver": "File",
+      "method": "ReadAllText",
+      "kind": "call"
+    },
+    {
+      "caller": "App.cs//App//Run",
+      "line": 15,
+      "column": 9,
+      "callee": "this.Audit",
+      "targets": [
+        "App.cs//App//Audit"
+      ],
+      "receiver": "this",
+      "method": "Audit",
+      "kind": "call"
+    },
+    {
+      "caller": "App.cs//App//Run",
+      "line": 16,
+      "column": 9,
+      "callee": "Helper.Assist",
+      "targets": [
+        "Helper//Assist"
+      ],
+      "receiver": "Helper",
+      "method": "Assist",
+      "kind": "call"
+    },
+    {
+      "caller": "App.cs//App//Audit",
+      "line": 19,
+      "column": 29,
+      "callee": "Logger.Info",
+      "targets": [
+        "Logger//Info"
+      ],
+      "receiver": "Logger",
+      "method": "Info",
+      "kind": "call"
+    },
+    {
+      "caller": "App.cs//App//Main",
+      "line": 21,
+      "column": 47,
+      "callee": "new App().Run",
+      "targets": [
+        "App.cs//App//Run"
+      ],
+      "receiver": "new App()",
+      "method": "Run",
+      "kind": "call"
+    },
+    {
+      "caller": "App.cs//App//Main",
+      "line": 21,
+      "column": 51,
+      "callee": "App",
+      "targets": [
+        "App.cs//App"
+      ],
+      "method": "App",
+      "kind": "new"
+    },
+    {
+      "caller": "App.cs//Extensions//Trimmed",
+      "line": 31,
+      "column": 52,
+      "callee": "s.Trim",
+      "targets": [
+        "App.cs//Extensions//Trimmed//s//Trim"
+      ],
+      "receiver": "s",
+      "method": "Trim",
+      "kind": "call"
+    }
+  ],
+  "references": [
+    {
+      "caller": "App.cs//App//Run",
+      "line": 14,
+      "column": 37,
+      "text": "path",
+      "targets": [
+        "path"
+      ]
+    },
+    {
+      "caller": "App.cs//App//Run",
+      "line": 16,
+      "column": 23,
+      "text": "path",
+      "targets": [
+        "path"
+      ]
+    }
+  ]
+}

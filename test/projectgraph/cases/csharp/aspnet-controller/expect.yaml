@@ -1,0 +1,84 @@
+source: safedep:hand
+description: The top-level statements of Program.cs are the entry point <Main>$. MapGet takes the method group Health.Check, which is a reference. The action Get of the controller has [HttpGet], and every class and method of a file under Controllers is a root. Health.Unused has no caller.
+roots:
+  - key: src/Web/Controllers/UsersController.cs
+    kind: framework
+    rule: csharp.aspnet.controllers
+  - key: src/Web/Controllers/UsersController.cs//UsersController
+    kind: framework
+    rule: csharp.aspnet.action
+  - key: src/Web/Controllers/UsersController.cs//UsersController
+    kind: framework
+    rule: csharp.aspnet.controllers
+  - key: src/Web/Controllers/UsersController.cs//UsersController//Get
+    kind: framework
+    rule: csharp.aspnet.action
+  - key: src/Web/Controllers/UsersController.cs//UsersController//Get
+    kind: framework
+    rule: csharp.aspnet.controllers
+  - key: src/Web/Program.cs//<Main>$
+    kind: main
+    rule: csharp.top-level-statements
+edges:
+  - from: src/Web/Program.cs//<Main>$
+    to: src/Web/Health.cs//Health//Check
+    kind: reference
+    confidence: low
+    site: src/Web/Program.cs:5
+  - from: src/Web/Controllers/UsersController.cs//UsersController//Get
+    to: ControllerBase//Ok
+    kind: member
+    confidence: high
+    site: src/Web/Controllers/UsersController.cs:12
+unresolved:
+  - caller: src/Web/Program.cs//<Main>$
+    site: src/Web/Program.cs:3
+    reason: unknown-receiver
+    method: CreateBuilder
+  - caller: src/Web/Program.cs//<Main>$
+    site: src/Web/Program.cs:4
+    reason: unknown-receiver
+    method: Build
+  - caller: src/Web/Program.cs//<Main>$
+    site: src/Web/Program.cs:5
+    reason: unknown-receiver
+    method: MapGet
+  - caller: src/Web/Program.cs//<Main>$
+    site: src/Web/Program.cs:6
+    reason: unknown-receiver
+    method: Run
+results:
+  - target: System//IO//File//ReadAllText
+    status: found
+    path:
+      - key: src/Web/Controllers/UsersController.cs//UsersController//Get
+      - key: System//IO//File//ReadAllText
+        site: src/Web/Controllers/UsersController.cs:12
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Web/Controllers/UsersController.cs//UsersController//Get
+        site: src/Web/Controllers/UsersController.cs:12
+        reached: true
+  - target: System//Environment//MachineName
+    status: found
+    path:
+      - key: src/Web/Program.cs//<Main>$
+      - key: src/Web/Health.cs//Health//Check
+        site: src/Web/Program.cs:5
+        kind: reference
+        confidence: low
+      - key: System//Environment//MachineName
+        site: src/Web/Health.cs:7
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: src/Web/Health.cs//Health//Check
+        site: src/Web/Health.cs:7
+        reached: true
+  - target: System//Environment//UserName
+    status: not-found
+    call_sites:
+      - caller: src/Web/Health.cs//Health//Unused
+        site: src/Web/Health.cs:12
+        reached: false

@@ -1,0 +1,7 @@
+{
+  "name": "app",
+  "bin": "src/main.js",
+  "dependencies": {
+    "lodash": "4.17.21"
+  }
+}

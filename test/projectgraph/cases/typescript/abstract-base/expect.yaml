@@ -1,0 +1,56 @@
+source: safedep:hand
+description: >-
+  handle calls run on a parameter of the type Core. Base is an abstract class that extends Core and
+  overrides run with a call of child_process.execSync, and Impl extends Base. The declared type narrows
+  the receiver to Core, so the call has a member edge to Core.run and a cha edge to Base.run, the override
+  of the abstract class. The path to execSync goes through the cha edge.
+roots:
+  - key: src/main.ts
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.ts
+    to: src/main.ts//handle
+    kind: direct
+    confidence: high
+    site: src/main.ts:8
+  - from: src/main.ts//handle
+    to: src/core.ts//Core//run
+    kind: member
+    confidence: high
+    site: src/main.ts:5
+  - from: src/main.ts//handle
+    to: src/base.ts//Base//run
+    kind: cha
+    confidence: medium
+    site: src/main.ts:5
+  - from: src/base.ts//Base//run
+    to: child_process//execSync
+    kind: direct
+    confidence: high
+    site: src/base.ts:6
+no_edges:
+  - from: src/main.ts//handle
+    to: src/impl.ts//Impl//name
+unresolved: []
+results:
+  - target: child_process//execSync
+    status: found
+    path:
+      - key: src/main.ts
+      - key: src/main.ts//handle
+        site: src/main.ts:8
+        kind: direct
+        confidence: high
+      - key: src/base.ts//Base//run
+        site: src/main.ts:5
+        kind: cha
+        confidence: medium
+      - key: child_process//execSync
+        site: src/base.ts:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/base.ts//Base//run
+        site: src/base.ts:6
+        reached: true

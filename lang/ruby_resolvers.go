@@ -1,6 +1,7 @@
 package lang
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/safedep/code/core"
@@ -24,14 +25,14 @@ var rubyFunctionShapes = map[string]functionShape{
 //
 // Bundler.require in a Rails application loads the gems of the Gemfile
 // without a require call. Such a file has no import.
-func (r *rubyResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, error) {
+func (r *rubyResolvers) ResolveImports(ctx context.Context, tree core.ParseTree) ([]*ast.ImportNode, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
 	}
 
 	var imports []*ast.ImportNode
-	walkNamed(tree.Tree().RootNode(), func(node *sitter.Node) bool {
+	err = walkNamed(ctx, tree.Tree().RootNode(), func(node *sitter.Node) bool {
 		if node.Type() != "call" || node.ChildByFieldName("receiver") != nil {
 			return true
 		}
@@ -46,6 +47,9 @@ func (r *rubyResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, 
 		}
 		return false
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return imports, nil
 }
@@ -69,6 +73,6 @@ func rubyLiteralPath(arguments *sitter.Node) *sitter.Node {
 	return content
 }
 
-func (r *rubyResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
-	return resolveFunctionsByShape(tree, rubyFunctionShapes)
+func (r *rubyResolvers) ResolveFunctions(ctx context.Context, tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
+	return resolveFunctionsByShape(ctx, tree, rubyFunctionShapes)
 }

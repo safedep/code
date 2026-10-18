@@ -1,17 +1,13 @@
 package ts
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
 	"github.com/safedep/code/core"
 	sitter "github.com/smacker/go-tree-sitter"
 )
-
-type sitterQueryExecutor struct {
-	lang   *sitter.Language
-	source []byte
-}
 
 type queryMatchWrapper struct {
 	cursor *sitter.QueryCursor
@@ -40,22 +36,6 @@ func (m *queryMatchWrapper) ForEach(cb func(*sitter.QueryMatch) error) error {
 	}
 
 	return nil
-}
-
-func NewQueryExecutor(lang *sitter.Language, source []byte) *sitterQueryExecutor {
-	return &sitterQueryExecutor{
-		lang:   lang,
-		source: source,
-	}
-}
-
-func (e *sitterQueryExecutor) Execute(node *sitter.Node, query string) (*queryMatchWrapper, error) {
-	q, err := sitter.NewQuery([]byte(query), e.lang)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create query: %w", err)
-	}
-
-	return execute(q, node, e.source), nil
 }
 
 func execute(q *sitter.Query, node *sitter.Node, source []byte) *queryMatchWrapper {
@@ -115,21 +95,26 @@ func NewQueryItem(query string, cb QueryMatchProcessor) QueryItem {
 	}
 }
 
-type QueriesRequest struct {
-	language   core.Language
-	queryItems []QueryItem
-}
-
-func NewQueriesRequest(language core.Language, queryItems []QueryItem) QueriesRequest {
-	return QueriesRequest{
-		language:   language,
-		queryItems: queryItems,
+// ExecuteQueries runs each query on the tree in order. It compiles a query
+// against the grammar of the tree. A query compiled against another grammar
+// matches the wrong nodes, because the node symbols of two grammars differ.
+// It returns the error of ctx when ctx is done before a query.
+func ExecuteQueries(ctx context.Context, tree core.ParseTree, queryItems []QueryItem) error {
+	language, err := tree.Language()
+	if err != nil {
+		return fmt.Errorf("failed to get language from parse tree: %w", err)
 	}
-}
+	data, err := tree.Data()
+	if err != nil {
+		return fmt.Errorf("failed to get data from parse tree: %w", err)
+	}
 
-func ExecuteQueries(queriesRequest QueriesRequest, data *[]byte, tree core.ParseTree) error {
-	for _, queryItem := range queriesRequest.queryItems {
-		q, err := compiledQuery(queriesRequest.language, queryItem.query)
+	for _, queryItem := range queryItems {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		q, err := compiledQuery(language, queryItem.query)
 		if err != nil {
 			return err
 		}

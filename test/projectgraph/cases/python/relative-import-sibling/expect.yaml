@@ -1,0 +1,40 @@
+source: safedep:hand
+description: app/__main__.py imports load_config from its sibling by a relative import, and its main guard calls it.
+roots:
+  - key: app/__main__.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: app/__main__.py
+    to: app/config.py//load_config
+    kind: direct
+    confidence: high
+    site: app/__main__.py:4
+  - from: app/config.py//load_config
+    to: yaml//safe_load
+    kind: direct
+    confidence: high
+    site: app/config.py:6
+  - from: app/__main__.py
+    to: app/config.py
+    kind: import
+    confidence: high
+    site: app/__main__.py:1
+unresolved: []
+results:
+  - target: yaml//safe_load
+    status: found
+    path:
+      - key: app/__main__.py
+      - key: app/config.py//load_config
+        site: app/__main__.py:4
+        kind: direct
+        confidence: high
+      - key: yaml//safe_load
+        site: app/config.py:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: app/config.py//load_config
+        site: app/config.py:6
+        reached: true

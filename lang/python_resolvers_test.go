@@ -88,10 +88,10 @@ func TestPythonLanguageResolvers(t *testing.T) {
 			parseTree, err := fileParser.Parse(context.Background(), f)
 			assert.NoError(t, err)
 
-			imports, err := pythonLanguage.Resolvers().ResolveImports(parseTree)
+			imports, err := pythonLanguage.Resolvers().ResolveImports(t.Context(), parseTree)
 			assert.NoError(t, err)
 
-			expectedImports, ok := importExpectationsMapper[f.Name()]
+			expectedImports, ok := importExpectationsMapper[f.Path()]
 			assert.True(t, ok)
 
 			assert.Equal(t, len(expectedImports), len(imports))
@@ -126,10 +126,10 @@ func TestPythonLanguageResolvers(t *testing.T) {
 			parseTree, err := fileParser.Parse(context.Background(), f)
 			assert.NoError(t, err)
 
-			functions, err := pythonLanguage.Resolvers().ResolveFunctions(parseTree)
+			functions, err := pythonLanguage.Resolvers().ResolveFunctions(t.Context(), parseTree)
 			assert.NoError(t, err)
 
-			expectedFunctions, ok := pythonFunctionExpectations[f.Name()]
+			expectedFunctions, ok := pythonFunctionExpectations[f.Path()]
 			assert.True(t, ok)
 
 			var foundFunctions []string

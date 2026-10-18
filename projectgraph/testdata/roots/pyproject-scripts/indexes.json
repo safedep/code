@@ -1,0 +1,118 @@
+[
+  {
+    "version": "11",
+    "path": "src/app/cli.py",
+    "language": "python",
+    "definitions": [
+      {
+        "key": "src/app/cli.py",
+        "kind": "module",
+        "name": "cli",
+        "start_line": 1,
+        "end_line": 4,
+        "exported": true
+      },
+      {
+        "key": "src/app/cli.py//main",
+        "kind": "function",
+        "name": "main",
+        "start_line": 1,
+        "end_line": 2,
+        "exported": true
+      }
+    ]
+  },
+  {
+    "version": "11",
+    "path": "src/app/tool.py",
+    "language": "python",
+    "definitions": [
+      {
+        "key": "src/app/tool.py",
+        "kind": "module",
+        "name": "tool",
+        "start_line": 1,
+        "end_line": 4,
+        "exported": true
+      },
+      {
+        "key": "src/app/tool.py//run",
+        "kind": "function",
+        "name": "run",
+        "start_line": 1,
+        "end_line": 2,
+        "exported": true
+      }
+    ]
+  },
+  {
+    "version": "11",
+    "path": "src/app/plugin.py",
+    "language": "python",
+    "definitions": [
+      {
+        "key": "src/app/plugin.py",
+        "kind": "module",
+        "name": "plugin",
+        "start_line": 1,
+        "end_line": 4,
+        "exported": true
+      },
+      {
+        "key": "src/app/plugin.py//Plugin",
+        "kind": "class",
+        "name": "Plugin",
+        "start_line": 1,
+        "end_line": 2,
+        "exported": true
+      },
+      {
+        "key": "src/app/plugin.py//Plugin//load",
+        "kind": "method",
+        "name": "load",
+        "start_line": 2,
+        "end_line": 3,
+        "exported": true,
+        "parent": "src/app/plugin.py//Plugin"
+      }
+    ]
+  },
+  {
+    "version": "11",
+    "path": "src/app/legacy.py",
+    "language": "python",
+    "definitions": [
+      {
+        "key": "src/app/legacy.py",
+        "kind": "module",
+        "name": "legacy",
+        "start_line": 1,
+        "end_line": 4,
+        "exported": true
+      }
+    ]
+  },
+  {
+    "version": "11",
+    "path": "src/app/ignored.py",
+    "language": "python",
+    "definitions": [
+      {
+        "key": "src/app/ignored.py",
+        "kind": "module",
+        "name": "ignored",
+        "start_line": 1,
+        "end_line": 4,
+        "exported": true
+      },
+      {
+        "key": "src/app/ignored.py//x",
+        "kind": "function",
+        "name": "x",
+        "start_line": 1,
+        "end_line": 2,
+        "exported": true
+      }
+    ]
+  }
+]

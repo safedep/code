@@ -1,0 +1,43 @@
+source: safedep:hand
+description: >-
+  go reads handler from its parameter and calls run on it, so the receiver is not known. The project has no
+  definition named run, and the field candidates of a site come from the project only. The dependency plug
+  defines Plug.run, which calls fs.rmSync. A definition named run reaches fs.rmSync, so the record of the
+  site makes fs.rmSync uncertain, and x.y stays not found.
+units:
+  node_modules/plug: npm:plug@1.0.0
+roots:
+  - key: main.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: main.js
+    to: main.js//go
+    kind: direct
+    confidence: high
+    site: main.js:8
+  - from: npm:plug@1.0.0//index.js//Plug//run
+    to: fs//rmSync
+    kind: direct
+    confidence: high
+    site: npm:plug@1.0.0//index.js:5
+no_edges:
+  - from: main.js//go
+    to: npm:plug@1.0.0//index.js//Plug//run
+unresolved:
+  - caller: main.js//go
+    site: main.js:5
+    reason: unknown-receiver
+    method: run
+results:
+  - target: fs//rmSync
+    status: uncertain
+    call_sites:
+      - caller: npm:plug@1.0.0//index.js//Plug//run
+        site: npm:plug@1.0.0//index.js:5
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.js:5
+  - target: x//y
+    status: no-such-target

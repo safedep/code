@@ -1,0 +1,237 @@
+{
+  "version": "11",
+  "path": "app.php",
+  "language": "php",
+  "content_hash": "b57d8d52aafac8d7cbe2d19e5889e4e7b851ee71a48ea966cdd9cbfd14214466",
+  "package": "Shop",
+  "imports": [
+    {
+      "line": 5,
+      "module": "Shop\\Util\\Helper",
+      "alias": "Helper",
+      "kind": "static",
+      "namespace": "Shop//Util//Helper"
+    },
+    {
+      "line": 6,
+      "module": "Symfony\\Component\\Yaml\\Yaml",
+      "alias": "Yaml",
+      "kind": "static",
+      "namespace": "Symfony//Component//Yaml//Yaml"
+    }
+  ],
+  "definitions": [
+    {
+      "key": "app.php",
+      "kind": "module",
+      "name": "app",
+      "start_line": 1,
+      "end_line": 38,
+      "exported": true
+    },
+    {
+      "key": "app.php//App",
+      "kind": "class",
+      "name": "App",
+      "start_line": 8,
+      "end_line": 32,
+      "exported": true,
+      "decorators": [
+        "@Route"
+      ]
+    },
+    {
+      "key": "app.php//App//__construct",
+      "kind": "constructor",
+      "name": "__construct",
+      "start_line": 13,
+      "end_line": 13,
+      "exported": true,
+      "parent": "app.php//App",
+      "params": [
+        {
+          "name": "$store",
+          "type": "Store"
+        }
+      ]
+    },
+    {
+      "key": "app.php//App//run",
+      "kind": "method",
+      "name": "run",
+      "start_line": 15,
+      "end_line": 21,
+      "exported": true,
+      "parent": "app.php//App"
+    },
+    {
+      "key": "app.php//App//audit",
+      "kind": "method",
+      "name": "audit",
+      "start_line": 23,
+      "end_line": 26,
+      "exported": true,
+      "parent": "app.php//App"
+    },
+    {
+      "key": "app.php//App//main",
+      "kind": "method",
+      "name": "main",
+      "start_line": 28,
+      "end_line": 31,
+      "exported": true,
+      "parent": "app.php//App",
+      "static": true
+    },
+    {
+      "key": "app.php//Runner",
+      "kind": "interface",
+      "name": "Runner",
+      "start_line": 34,
+      "end_line": 37,
+      "exported": true
+    }
+  ],
+  "classes": [
+    {
+      "key": "app.php//App",
+      "bases": [
+        "Base",
+        "Runner",
+        "Audits"
+      ],
+      "methods": [
+        "app.php//App//__construct",
+        "app.php//App//audit",
+        "app.php//App//main",
+        "app.php//App//run"
+      ],
+      "fields": [
+        {
+          "name": "store",
+          "type": "Store"
+        }
+      ]
+    },
+    {
+      "key": "app.php//Runner"
+    }
+  ],
+  "calls": [
+    {
+      "caller": "app.php//App//run",
+      "line": 17,
+      "column": 9,
+      "callee": "$this-\u003estore-\u003esave",
+      "targets": [
+        "app.php//App//store//save"
+      ],
+      "receiver": "$this-\u003estore",
+      "method": "save",
+      "kind": "call"
+    },
+    {
+      "caller": "app.php//App//run",
+      "line": 17,
+      "column": 28,
+      "callee": "Yaml::parseFile",
+      "targets": [
+        "Symfony//Component//Yaml//Yaml//parseFile"
+      ],
+      "receiver": "Yaml",
+      "method": "parseFile",
+      "kind": "call"
+    },
+    {
+      "caller": "app.php//App//run",
+      "line": 18,
+      "column": 9,
+      "callee": "$this-\u003eaudit",
+      "targets": [
+        "app.php//App//audit"
+      ],
+      "receiver": "$this",
+      "method": "audit",
+      "kind": "call"
+    },
+    {
+      "caller": "app.php//App//run",
+      "line": 19,
+      "column": 9,
+      "callee": "Helper::assist",
+      "targets": [
+        "Shop//Util//Helper//assist"
+      ],
+      "receiver": "Helper",
+      "method": "assist",
+      "kind": "call"
+    },
+    {
+      "caller": "app.php//App//run",
+      "line": 20,
+      "column": 9,
+      "callee": "array_map",
+      "targets": [
+        "array_map"
+      ],
+      "method": "array_map",
+      "kind": "call"
+    },
+    {
+      "caller": "app.php//App//audit",
+      "line": 25,
+      "column": 9,
+      "callee": "error_log",
+      "targets": [
+        "error_log"
+      ],
+      "method": "error_log",
+      "kind": "call"
+    },
+    {
+      "caller": "app.php//App//main",
+      "line": 30,
+      "column": 9,
+      "callee": "(new static(new Store()))-\u003erun",
+      "targets": [
+        "app.php//App//run"
+      ],
+      "receiver": "(new static(new Store()))",
+      "method": "run",
+      "kind": "call"
+    },
+    {
+      "caller": "app.php//App//main",
+      "line": 30,
+      "column": 14,
+      "callee": "static",
+      "targets": [
+        "app.php//App"
+      ],
+      "method": "static",
+      "kind": "new"
+    },
+    {
+      "caller": "app.php//App//main",
+      "line": 30,
+      "column": 25,
+      "callee": "Store",
+      "targets": [
+        "Store"
+      ],
+      "method": "Store",
+      "kind": "new"
+    }
+  ],
+  "references": [
+    {
+      "caller": "app.php//App//run",
+      "line": 20,
+      "column": 19,
+      "text": "[$this, 'audit']",
+      "targets": [
+        "app.php//App//audit"
+      ]
+    }
+  ]
+}

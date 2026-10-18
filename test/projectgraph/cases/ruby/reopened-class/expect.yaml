@@ -1,0 +1,39 @@
+source: safedep:hand
+description: Two files open class Billing::Report. Report#publish calls upload, which the second file defines, and main.rb calls publish under the main guard.
+roots:
+  - key: main.rb
+    kind: main
+    rule: ruby.main-guard
+edges:
+  - from: main.rb
+    to: lib/report.rb//Billing//Report//publish
+    kind: member
+    confidence: high
+    site: main.rb:5
+  - from: lib/report.rb//Billing//Report//publish
+    to: lib/report_upload.rb//Billing//Report//upload
+    kind: member
+    confidence: high
+    site: lib/report.rb:5
+unresolved: []
+results:
+  - target: Net//HTTP//post
+    status: found
+    path:
+      - key: main.rb
+      - key: lib/report.rb//Billing//Report//publish
+        site: main.rb:5
+        kind: member
+        confidence: high
+      - key: lib/report_upload.rb//Billing//Report//upload
+        site: lib/report.rb:5
+        kind: member
+        confidence: high
+      - key: Net//HTTP//post
+        site: lib/report_upload.rb:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib/report_upload.rb//Billing//Report//upload
+        site: lib/report_upload.rb:6
+        reached: true

@@ -1,0 +1,90 @@
+{
+  "version": "2",
+  "index_version": "11",
+  "link_version": "11",
+  "unit": "npm:store-kit@1.0.0",
+  "symbols": [
+    {
+      "key": "store-kit//Store",
+      "definitions": [
+        "npm:store-kit@1.0.0//index.js//Store"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "store-kit//Store//close",
+      "definitions": [
+        "npm:store-kit@1.0.0//index.js//Store//close"
+      ],
+      "reaches": [
+        "fs//rmSync"
+      ]
+    },
+    {
+      "key": "store-kit//Store//get",
+      "definitions": [
+        "npm:store-kit@1.0.0//index.js//Store//get"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "store-kit//index//Store",
+      "definitions": [
+        "npm:store-kit@1.0.0//index.js//Store"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "store-kit//index//Store//close",
+      "definitions": [
+        "npm:store-kit@1.0.0//index.js//Store//close"
+      ],
+      "reaches": [
+        "fs//rmSync"
+      ]
+    },
+    {
+      "key": "store-kit//index//Store//get",
+      "definitions": [
+        "npm:store-kit@1.0.0//index.js//Store//get"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "store-kit//index//load",
+      "definitions": [
+        "npm:store-kit@1.0.0//index.js//load"
+      ],
+      "reaches": [],
+      "uncertainties": [
+        0
+      ]
+    },
+    {
+      "key": "store-kit//load",
+      "definitions": [
+        "npm:store-kit@1.0.0//index.js//load"
+      ],
+      "reaches": [],
+      "uncertainties": [
+        0
+      ]
+    }
+  ],
+  "targets": [
+    "fs//rmSync"
+  ],
+  "uncertainties": [
+    {
+      "kind": "unresolved-call",
+      "key": "npm:store-kit@1.0.0//index.js//load",
+      "site": {
+        "path": "npm:store-kit@1.0.0//index.js",
+        "line": 5,
+        "column": 10
+      },
+      "text": "store.get (unknown-receiver)",
+      "method": "get"
+    }
+  ]
+}

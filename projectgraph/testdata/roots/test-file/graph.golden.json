@@ -1,0 +1,79 @@
+{
+  "nodes": {
+    "tests/test_app.py": {
+      "key": "tests/test_app.py",
+      "kind": "module",
+      "path": "tests/test_app.py",
+      "line": 1,
+      "exported": true,
+      "test": true
+    },
+    "tests/test_app.py//TestApp": {
+      "key": "tests/test_app.py//TestApp",
+      "kind": "class",
+      "path": "tests/test_app.py",
+      "line": 1,
+      "exported": true,
+      "test": true
+    },
+    "tests/test_app.py//TestApp//test_run": {
+      "key": "tests/test_app.py//TestApp//test_run",
+      "kind": "method",
+      "path": "tests/test_app.py",
+      "line": 2,
+      "exported": true,
+      "test": true
+    },
+    "tests/test_app.py//helper": {
+      "key": "tests/test_app.py//helper",
+      "kind": "function",
+      "path": "tests/test_app.py",
+      "line": 5,
+      "exported": true,
+      "test": true
+    }
+  },
+  "edges": [],
+  "unresolved": [],
+  "roots": [
+    {
+      "key": "tests/test_app.py",
+      "kind": "test",
+      "rule": "test.files",
+      "site": {
+        "path": "tests/test_app.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "tests/test_app.py//TestApp//test_run",
+      "kind": "test",
+      "rule": "test.files",
+      "site": {
+        "path": "tests/test_app.py",
+        "line": 2
+      }
+    },
+    {
+      "key": "tests/test_app.py//helper",
+      "kind": "test",
+      "rule": "test.files",
+      "site": {
+        "path": "tests/test_app.py",
+        "line": 5
+      }
+    }
+  ],
+  "files": {
+    "tests/test_app.py": "indexed"
+  },
+  "stats": {
+    "version": "11",
+    "files": 1,
+    "nodes": 4,
+    "edges": 0,
+    "unresolved": 0,
+    "roots": 3,
+    "root_fallback": true
+  }
+}

@@ -1,0 +1,322 @@
+{
+  "version": "11",
+  "path": "flags.ts",
+  "language": "typescript",
+  "content_hash": "a84c4ad21735c1c250e33317463237749489ea1f220a93f97e2bea3f07b040c4",
+  "imports": [
+    {
+      "line": 1,
+      "module": "fs",
+      "alias": "fs",
+      "kind": "static",
+      "namespace": "fs"
+    },
+    {
+      "line": 2,
+      "module": "",
+      "kind": "dynamic-computed",
+      "namespace": "",
+      "require": true
+    },
+    {
+      "line": 5,
+      "module": "./lazy",
+      "alias": "lazy",
+      "kind": "dynamic-string",
+      "namespace": ".//lazy",
+      "require": true
+    },
+    {
+      "line": 6,
+      "module": "./locale/",
+      "kind": "dynamic-computed",
+      "namespace": ""
+    }
+  ],
+  "definitions": [
+    {
+      "key": "flags.ts",
+      "kind": "module",
+      "name": "flags",
+      "start_line": 1,
+      "end_line": 26,
+      "exported": true,
+      "flags": [
+        {
+          "kind": "computed-import",
+          "line": 2
+        },
+        {
+          "kind": "parse-error",
+          "line": 25
+        }
+      ]
+    },
+    {
+      "key": "flags.ts//plugins",
+      "kind": "variable",
+      "name": "plugins",
+      "start_line": 2,
+      "end_line": 2,
+      "exported": false
+    },
+    {
+      "key": "flags.ts//load",
+      "kind": "function",
+      "name": "load",
+      "start_line": 4,
+      "end_line": 7,
+      "exported": false,
+      "flags": [
+        {
+          "kind": "computed-import",
+          "line": 6
+        }
+      ]
+    },
+    {
+      "key": "flags.ts//run",
+      "kind": "function",
+      "name": "run",
+      "start_line": 9,
+      "end_line": 16,
+      "exported": false,
+      "flags": [
+        {
+          "kind": "eval",
+          "line": 10
+        },
+        {
+          "kind": "eval",
+          "line": 11
+        },
+        {
+          "kind": "reflection",
+          "line": 12
+        },
+        {
+          "kind": "computed-attribute",
+          "line": 13
+        },
+        {
+          "kind": "monkey-patch",
+          "line": 14
+        },
+        {
+          "kind": "monkey-patch",
+          "line": 15
+        }
+      ]
+    },
+    {
+      "key": "flags.ts//run//readFile",
+      "kind": "method",
+      "name": "readFile",
+      "start_line": 14,
+      "end_line": 14,
+      "exported": false
+    },
+    {
+      "key": "flags.ts//run//fs//writeFile",
+      "kind": "method",
+      "name": "writeFile",
+      "start_line": 15,
+      "end_line": 15,
+      "exported": false
+    },
+    {
+      "key": "flags.ts//View",
+      "kind": "class",
+      "name": "View",
+      "start_line": 18,
+      "end_line": 23,
+      "exported": false,
+      "flags": [
+        {
+          "kind": "decorator-wrap",
+          "line": 19
+        }
+      ]
+    },
+    {
+      "key": "flags.ts//View//render",
+      "kind": "method",
+      "name": "render",
+      "start_line": 22,
+      "end_line": 22,
+      "exported": false,
+      "parent": "flags.ts//View",
+      "decorators": [
+        "@observe"
+      ],
+      "flags": [
+        {
+          "kind": "decorator-wrap",
+          "line": 21
+        }
+      ]
+    }
+  ],
+  "classes": [
+    {
+      "key": "flags.ts//View",
+      "methods": [
+        "flags.ts//View//render"
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "caller": "flags.ts//run",
+      "line": 10,
+      "column": 3,
+      "callee": "eval",
+      "targets": [
+        "eval"
+      ],
+      "method": "eval",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        }
+      ]
+    },
+    {
+      "caller": "flags.ts//run",
+      "line": 11,
+      "column": 3,
+      "callee": "Function",
+      "targets": [
+        "Function"
+      ],
+      "method": "Function",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        }
+      ]
+    },
+    {
+      "caller": "flags.ts//run",
+      "line": 12,
+      "column": 3,
+      "callee": "Reflect.get",
+      "targets": [
+        "Reflect//get"
+      ],
+      "receiver": "Reflect",
+      "method": "get",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        },
+        {
+          "shape": "name"
+        }
+      ]
+    },
+    {
+      "caller": "flags.ts//View",
+      "line": 19,
+      "column": 4,
+      "callee": "Input",
+      "method": "Input",
+      "kind": "call"
+    },
+    {
+      "caller": "flags.ts//View",
+      "line": 21,
+      "column": 4,
+      "callee": "observe",
+      "method": "observe",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        }
+      ]
+    }
+  ],
+  "unresolved": [
+    {
+      "caller": "flags.ts",
+      "line": 2,
+      "column": 17,
+      "text": "require(pluginPath)",
+      "method": "require",
+      "reason": "dynamic-import"
+    },
+    {
+      "caller": "flags.ts//load",
+      "line": 6,
+      "column": 10,
+      "text": "import(`./locale/${name}`)",
+      "method": "import",
+      "reason": "dynamic-import"
+    },
+    {
+      "caller": "flags.ts//run",
+      "line": 11,
+      "column": 3,
+      "text": "Function(code)",
+      "reason": "computed-name"
+    },
+    {
+      "caller": "flags.ts//run",
+      "line": 13,
+      "column": 3,
+      "text": "obj[key]",
+      "receiver": "obj",
+      "reason": "computed-name"
+    }
+  ],
+  "flags": [
+    {
+      "kind": "computed-import",
+      "line": 2
+    },
+    {
+      "kind": "computed-import",
+      "line": 6
+    },
+    {
+      "kind": "eval",
+      "line": 10
+    },
+    {
+      "kind": "eval",
+      "line": 11
+    },
+    {
+      "kind": "reflection",
+      "line": 12
+    },
+    {
+      "kind": "computed-attribute",
+      "line": 13
+    },
+    {
+      "kind": "monkey-patch",
+      "line": 14
+    },
+    {
+      "kind": "monkey-patch",
+      "line": 15
+    },
+    {
+      "kind": "decorator-wrap",
+      "line": 19
+    },
+    {
+      "kind": "decorator-wrap",
+      "line": 21
+    },
+    {
+      "kind": "parse-error",
+      "line": 25
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+source: safedep:hand
+description: main imports the extension function shout and calls it on a value of type String. The call has an unknown receiver, so it keeps its record, and the extension that the file imports by the name gets a name edge, because the link step does not check the receiver type. whisper has no caller, and the record names shout, so the reach of URLDecoder.decode is not-found.
+roots:
+  - key: src/com/shop/App.kt//main
+    kind: main
+    rule: java.main
+edges:
+  - from: src/com/shop/App.kt//main
+    to: src/com/shop/text/Text.kt//shout
+    kind: name
+    confidence: low
+    site: src/com/shop/App.kt:6
+unresolved:
+  - caller: src/com/shop/App.kt//main
+    site: src/com/shop/App.kt:6
+    reason: unknown-receiver
+    method: shout
+results:
+  - target: java//net//URLEncoder//encode
+    status: found
+    path:
+      - key: src/com/shop/App.kt//main
+      - key: src/com/shop/text/Text.kt//shout
+        site: src/com/shop/App.kt:6
+        kind: name
+        confidence: low
+      - key: java//net//URLEncoder//encode
+        site: src/com/shop/text/Text.kt:3
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/com/shop/text/Text.kt//shout
+        site: src/com/shop/text/Text.kt:3
+        reached: true
+  - target: java//net//URLDecoder//decode
+    status: not-found
+    call_sites:
+      - caller: src/com/shop/text/Text.kt//whisper
+        site: src/com/shop/text/Text.kt:5
+        reached: false

@@ -1,0 +1,235 @@
+{
+  "nodes": {
+    "config.py": {
+      "key": "config.py",
+      "kind": "module",
+      "path": "config.py",
+      "line": 1,
+      "exported": true,
+      "flags": [
+        {
+          "kind": "reflection",
+          "line": 6
+        },
+        {
+          "kind": "eval",
+          "line": 7
+        }
+      ]
+    },
+    "config.py//Config": {
+      "key": "config.py//Config",
+      "kind": "class",
+      "path": "config.py",
+      "line": 4,
+      "exported": true
+    },
+    "config.py//Config//Inner": {
+      "key": "config.py//Config//Inner",
+      "kind": "class",
+      "path": "config.py",
+      "line": 9,
+      "exported": true
+    },
+    "config.py//Config//__init__": {
+      "key": "config.py//Config//__init__",
+      "kind": "constructor",
+      "path": "config.py",
+      "line": 12,
+      "exported": true
+    },
+    "config.py//build": {
+      "key": "config.py//build",
+      "kind": "function",
+      "path": "config.py",
+      "line": 16,
+      "exported": true
+    },
+    "config.py//build//Local": {
+      "key": "config.py//build//Local",
+      "kind": "class",
+      "path": "config.py",
+      "line": 17
+    },
+    "eval": {
+      "key": "eval",
+      "kind": "external"
+    },
+    "getattr": {
+      "key": "getattr",
+      "kind": "external"
+    },
+    "yaml//dump": {
+      "key": "yaml//dump",
+      "kind": "external"
+    },
+    "yaml//load": {
+      "key": "yaml//load",
+      "kind": "external"
+    },
+    "yaml//safe_dump": {
+      "key": "yaml//safe_dump",
+      "kind": "external"
+    },
+    "yaml//safe_load": {
+      "key": "yaml//safe_load",
+      "kind": "external"
+    }
+  },
+  "edges": [
+    {
+      "from": "config.py",
+      "to": "yaml//load",
+      "site": {
+        "path": "config.py",
+        "line": 5,
+        "column": 12
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.external"
+    },
+    {
+      "from": "config.py",
+      "to": "getattr",
+      "site": {
+        "path": "config.py",
+        "line": 6,
+        "column": 12
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.external"
+    },
+    {
+      "from": "config.py",
+      "to": "eval",
+      "site": {
+        "path": "config.py",
+        "line": 7,
+        "column": 5
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.external"
+    },
+    {
+      "from": "config.py",
+      "to": "yaml//dump",
+      "site": {
+        "path": "config.py",
+        "line": 10,
+        "column": 17
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.external"
+    },
+    {
+      "from": "config.py//Config",
+      "to": "config.py//Config//__init__",
+      "site": {
+        "path": "config.py",
+        "line": 12
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.constructor"
+    },
+    {
+      "from": "config.py//Config//__init__",
+      "to": "yaml//safe_dump",
+      "site": {
+        "path": "config.py",
+        "line": 13,
+        "column": 9
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.external"
+    },
+    {
+      "from": "config.py//build",
+      "to": "yaml//safe_load",
+      "site": {
+        "path": "config.py",
+        "line": 18,
+        "column": 13
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.external"
+    }
+  ],
+  "unresolved": [
+    {
+      "caller": "config.py",
+      "site": {
+        "path": "config.py",
+        "line": 6,
+        "column": 12
+      },
+      "text": "getattr(yaml, NAME)",
+      "reason": "computed-name"
+    }
+  ],
+  "roots": [
+    {
+      "key": "config.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "config.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "config.py//Config",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "config.py",
+        "line": 4
+      }
+    },
+    {
+      "key": "config.py//Config//Inner",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "config.py",
+        "line": 9
+      }
+    },
+    {
+      "key": "config.py//Config//__init__",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "config.py",
+        "line": 12
+      }
+    },
+    {
+      "key": "config.py//build",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "config.py",
+        "line": 16
+      }
+    }
+  ],
+  "files": {
+    "config.py": "indexed"
+  },
+  "stats": {
+    "version": "11",
+    "files": 1,
+    "nodes": 12,
+    "edges": 7,
+    "unresolved": 1,
+    "roots": 5,
+    "root_fallback": true
+  }
+}

@@ -1,0 +1,62 @@
+source: safedep:hand
+description: Main imports the class Store and the top-level function checkKey of the package com.shop.store, which the class table maps to the file. Store.drop has no caller, so no root reaches Files.delete.
+roots:
+  - key: src/main/kotlin/com/shop/app/Main.kt//main
+    kind: main
+    rule: java.main
+edges:
+  - from: src/main/kotlin/com/shop/app/Main.kt//main
+    to: src/main/kotlin/com/shop/store/Store.kt//checkKey
+    kind: direct
+    confidence: high
+    site: src/main/kotlin/com/shop/app/Main.kt:7
+  - from: src/main/kotlin/com/shop/app/Main.kt//main
+    to: src/main/kotlin/com/shop/store/Store.kt//Store
+    kind: direct
+    confidence: high
+    site: src/main/kotlin/com/shop/app/Main.kt:8
+  - from: src/main/kotlin/com/shop/app/Main.kt//main
+    to: src/main/kotlin/com/shop/store/Store.kt//Store//save
+    kind: member
+    confidence: high
+    site: src/main/kotlin/com/shop/app/Main.kt:8
+unresolved: []
+results:
+  - target: java//nio//file//Files//write
+    status: found
+    path:
+      - key: src/main/kotlin/com/shop/app/Main.kt//main
+      - key: src/main/kotlin/com/shop/store/Store.kt//Store//save
+        site: src/main/kotlin/com/shop/app/Main.kt:8
+        kind: member
+        confidence: high
+      - key: java//nio//file//Files//write
+        site: src/main/kotlin/com/shop/store/Store.kt:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main/kotlin/com/shop/store/Store.kt//Store//save
+        site: src/main/kotlin/com/shop/store/Store.kt:8
+        reached: true
+  - target: java//lang//System//getenv
+    status: found
+    path:
+      - key: src/main/kotlin/com/shop/app/Main.kt//main
+      - key: src/main/kotlin/com/shop/store/Store.kt//checkKey
+        site: src/main/kotlin/com/shop/app/Main.kt:7
+        kind: direct
+        confidence: high
+      - key: java//lang//System//getenv
+        site: src/main/kotlin/com/shop/store/Store.kt:16
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main/kotlin/com/shop/store/Store.kt//checkKey
+        site: src/main/kotlin/com/shop/store/Store.kt:16
+        reached: true
+  - target: java//nio//file//Files//delete
+    status: not-found
+    call_sites:
+      - caller: src/main/kotlin/com/shop/store/Store.kt//Store//drop
+        site: src/main/kotlin/com/shop/store/Store.kt:12
+        reached: false

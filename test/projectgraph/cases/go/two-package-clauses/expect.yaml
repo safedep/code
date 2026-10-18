@@ -1,0 +1,57 @@
+source: safedep:hand
+description: lib holds two files of package lib and a generator of package main. The import of lib names the package of the most files. The generator is a unit of its own with a truncation record, so its parse does not take the call of Load. Its main is a root.
+roots:
+  - key: cmd/app/main.go
+    kind: main
+    rule: go.main
+  - key: cmd/app/main.go//main
+    kind: main
+    rule: go.main
+  - key: lib/gen.go
+    kind: main
+    rule: go.main
+  - key: lib/gen.go//main
+    kind: main
+    rule: go.main
+edges:
+  - from: cmd/app/main.go//main
+    to: lib/load.go//Load
+    kind: direct
+    confidence: high
+    site: cmd/app/main.go:6
+  - from: lib/load.go//Load
+    to: lib/parse.go//parse
+    kind: direct
+    confidence: high
+    site: lib/load.go:4
+no_edges:
+  - from: lib/load.go//Load
+    to: lib/gen.go//parse
+  - from: cmd/app/main.go
+    to: lib/gen.go
+unresolved: []
+truncated:
+  - kind: package-clauses
+    key: lib/gen.go
+    site: lib/gen.go:1
+results:
+  - target: encoding//json//Unmarshal
+    status: found
+    path:
+      - key: cmd/app/main.go//main
+      - key: lib/load.go//Load
+        site: cmd/app/main.go:6
+        kind: direct
+        confidence: high
+      - key: lib/parse.go//parse
+        site: lib/load.go:4
+        kind: direct
+        confidence: high
+      - key: encoding//json//Unmarshal
+        site: lib/parse.go:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib/parse.go//parse
+        site: lib/parse.go:6
+        reached: true

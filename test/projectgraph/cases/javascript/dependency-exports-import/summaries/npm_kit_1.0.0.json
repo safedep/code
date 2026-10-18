@@ -1,0 +1,23 @@
+{
+  "version": "2",
+  "index_version": "11",
+  "link_version": "11",
+  "unit": "npm:kit@1.0.0",
+  "symbols": [
+    {
+      "key": "kit//run",
+      "definitions": [
+        "npm:kit@1.0.0//cjs.js//run",
+        "npm:kit@1.0.0//esm.js//run"
+      ],
+      "reaches": [
+        "child_process//execSync",
+        "fs//readFileSync"
+      ]
+    }
+  ],
+  "targets": [
+    "child_process//execSync",
+    "fs//readFileSync"
+  ]
+}

@@ -1,0 +1,20 @@
+source: safedep:hand
+description: Jobs.cleanup has the annotation @ScheduledTask of the project, which only starts with the Spring name @Scheduled. A rule name matches a decorator only as a whole name, so cleanup is no root and nothing calls it.
+roots:
+  - key: com/app/Main.java//Main//main
+    kind: main
+    rule: java.main
+edges:
+  - from: com/app/Jobs.java//Jobs//cleanup
+    to: java//nio//file//Files//delete
+    kind: direct
+    confidence: high
+    site: com/app/Jobs.java:9
+unresolved: []
+results:
+  - target: java//nio//file//Files//delete
+    status: not-found
+    call_sites:
+      - caller: com/app/Jobs.java//Jobs//cleanup
+        site: com/app/Jobs.java:9
+        reached: false

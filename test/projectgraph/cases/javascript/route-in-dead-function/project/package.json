@@ -1,0 +1,4 @@
+{
+  "name": "route-in-dead-function",
+  "bin": { "server": "src/server.js" }
+}

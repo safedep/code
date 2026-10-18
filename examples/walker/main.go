@@ -51,7 +51,7 @@ func main() {
 
 type treeVisitor struct{}
 
-func (v *treeVisitor) VisitTree(tree core.ParseTree) error {
+func (v *treeVisitor) VisitTree(_ context.Context, tree core.ParseTree) error {
 	file, err := tree.File()
 	if err != nil {
 		return fmt.Errorf("failed to get file: %w", err)

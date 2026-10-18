@@ -1,0 +1,5 @@
+{
+  "name": "esm-app",
+  "type": "module",
+  "bin": { "esm-app": "src/main.js" }
+}

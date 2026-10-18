@@ -1,0 +1,52 @@
+{
+  "version": "2",
+  "index_version": "11",
+  "link_version": "11",
+  "unit": "npm:lodash@4.17.21",
+  "symbols": [
+    {
+      "key": "lodash//escape",
+      "definitions": [
+        "npm:lodash@4.17.21//lodash.js//escape"
+      ],
+      "reaches": [],
+      "uncertainties": [
+        0
+      ]
+    },
+    {
+      "key": "lodash//template",
+      "definitions": [
+        "npm:lodash@4.17.21//lodash.js//template"
+      ],
+      "reaches": [
+        "lodash._reinterpolate"
+      ]
+    },
+    {
+      "key": "lodash//template//template",
+      "definitions": [
+        "npm:lodash@4.17.21//template.js//template"
+      ],
+      "reaches": [
+        "lodash._reinterpolate"
+      ]
+    }
+  ],
+  "targets": [
+    "lodash._reinterpolate"
+  ],
+  "uncertainties": [
+    {
+      "kind": "unresolved-call",
+      "key": "npm:lodash@4.17.21//escape.js//escape",
+      "site": {
+        "path": "npm:lodash@4.17.21//escape.js",
+        "line": 2,
+        "column": 10
+      },
+      "text": "text.replace (unknown-receiver)",
+      "method": "replace"
+    }
+  ]
+}

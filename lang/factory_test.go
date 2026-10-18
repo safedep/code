@@ -4,7 +4,9 @@ import (
 	"testing"
 
 	"github.com/safedep/code/core"
+	"github.com/safedep/code/langcode"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var resolveLanguageTestcases = []struct {
@@ -42,6 +44,16 @@ func TestResolveLanguage(t *testing.T) {
 	})
 }
 
+func TestAllLanguagesFollowLangcodeAll(t *testing.T) {
+	all, err := AllLanguages()
+	require.NoError(t, err)
+	var codes []langcode.Code
+	for _, l := range all {
+		codes = append(codes, l.Meta().Code)
+	}
+	assert.Equal(t, langcode.All(), codes)
+}
+
 func TestGetLanguage(t *testing.T) {
 	t.Run("GetLanguage", func(t *testing.T) {
 		allLangs, err := AllLanguages()
@@ -54,4 +66,28 @@ func TestGetLanguage(t *testing.T) {
 		_, err = GetLanguage("unknown")
 		assert.Error(t, err)
 	})
+}
+
+func TestLanguagesAreShared(t *testing.T) {
+	first, ok := ResolveLanguageFromPath("a.py")
+	assert.True(t, ok)
+	second, ok := ResolveLanguageFromPath("b/c.py")
+	assert.True(t, ok)
+	assert.Same(t, first, second)
+
+	byCode, err := GetLanguage(string(core.LanguageCodePython))
+	assert.NoError(t, err)
+	assert.Same(t, first, byCode)
+
+	all, err := AllLanguages()
+	assert.NoError(t, err)
+	again, err := AllLanguages()
+	assert.NoError(t, err)
+	assert.Equal(t, all, again, "the order is fixed")
+	assert.Contains(t, all, first)
+
+	all[0] = nil
+	again, err = AllLanguages()
+	assert.NoError(t, err)
+	assert.NotNil(t, again[0], "a caller cannot change the shared list")
 }

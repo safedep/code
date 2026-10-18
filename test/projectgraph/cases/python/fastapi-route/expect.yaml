@@ -1,0 +1,31 @@
+source: safedep:hand
+description: The decorators @router.get and @app.on_event resolve to methods of fastapi//APIRouter and fastapi//FastAPI, so items and startup are roots of the rule python.fastapi.route.
+roots:
+  - key: main.py//items
+    kind: framework
+    rule: python.fastapi.route
+    site: main.py:9
+  - key: main.py//startup
+    kind: framework
+    rule: python.fastapi.route
+    site: main.py:14
+edges:
+  - from: main.py//items
+    to: yaml//safe_load
+    kind: direct
+    confidence: high
+    site: main.py:10
+unresolved: []
+results:
+  - target: yaml//safe_load
+    status: found
+    path:
+      - key: main.py//items
+      - key: yaml//safe_load
+        site: main.py:10
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.py//items
+        site: main.py:10
+        reached: true

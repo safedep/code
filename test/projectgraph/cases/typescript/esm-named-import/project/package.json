@@ -1,0 +1,4 @@
+{
+  "name": "ts-app",
+  "bin": { "ts-app": "src/main.ts" }
+}

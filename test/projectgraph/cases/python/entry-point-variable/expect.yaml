@@ -1,0 +1,33 @@
+source: safedep:hand
+description: The Procfile runs gunicorn app.wsgi:application. application is a variable that the top level of app/wsgi.py sets by a call of create_app. gunicorn imports the module first, so the module top level is a root next to the variable, and create_app runs.
+roots:
+  - key: app/wsgi.py
+    kind: manifest
+    rule: procfile
+  - key: app/wsgi.py//application
+    kind: manifest
+    rule: procfile
+edges:
+  - from: app/wsgi.py
+    to: app/factory.py//create_app
+    kind: direct
+    confidence: high
+    site: app/wsgi.py:3
+unresolved: []
+results:
+  - target: yaml//safe_load
+    status: found
+    path:
+      - key: app/wsgi.py
+      - key: app/factory.py//create_app
+        site: app/wsgi.py:3
+        kind: direct
+        confidence: high
+      - key: yaml//safe_load
+        site: app/factory.py:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: app/factory.py//create_app
+        site: app/factory.py:5
+        reached: true

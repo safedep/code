@@ -1,0 +1,63 @@
+source: safedep:hand
+description: start calls run on a parameter of the interface type Runner. No class implements Runner, but TypeScript types are structural. The class YamlRunner has run with no implements, and the object literal shell has the type Runner. So the site keeps its record and gets the field edges of run.
+roots:
+  - key: src/main.ts
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.ts//start
+    to: src/impl.ts//YamlRunner//run
+    kind: field
+    confidence: low
+    site: src/main.ts:6
+  - from: src/main.ts//start
+    to: src/plain.ts//shell//run
+    kind: field
+    confidence: low
+    site: src/main.ts:6
+unresolved:
+  - caller: src/main.ts//start
+    site: src/main.ts:6
+    reason: no-definition
+    method: run
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/main.ts
+      - key: src/main.ts//start
+        site: src/main.ts:9
+        kind: direct
+        confidence: high
+      - key: src/impl.ts//YamlRunner//run
+        site: src/main.ts:6
+        kind: field
+        confidence: low
+      - key: js-yaml//load
+        site: src/impl.ts:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/impl.ts//YamlRunner//run
+        site: src/impl.ts:5
+        reached: true
+  - target: child_process//execSync
+    status: found
+    path:
+      - key: src/main.ts
+      - key: src/main.ts//start
+        site: src/main.ts:9
+        kind: direct
+        confidence: high
+      - key: src/plain.ts//shell//run
+        site: src/main.ts:6
+        kind: field
+        confidence: low
+      - key: child_process//execSync
+        site: src/plain.ts:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/plain.ts//shell//run
+        site: src/plain.ts:6
+        reached: true

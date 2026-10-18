@@ -1,0 +1,35 @@
+source: safedep:hand
+description: Main imports com.shop.util.* and java.util.*. Text is a class of the project package, so the class table resolves Text.render with a direct edge. ArrayList names no class of the project, so it comes from the package of the other wildcard import, as an external wildcard edge.
+roots:
+  - key: com/shop/app/Main.java//Main//main
+    kind: main
+    rule: java.main
+edges:
+  - from: com/shop/app/Main.java//Main//main
+    to: com/shop/util/Text.java//Text//render
+    kind: member
+    confidence: high
+    site: com/shop/app/Main.java:9
+  - from: com/shop/app/Main.java//Main//main
+    to: java//util//ArrayList
+    kind: wildcard
+    confidence: low
+    site: com/shop/app/Main.java:8
+unresolved: []
+results:
+  - target: org//apache//commons//text//StringEscapeUtils//escapeHtml4
+    status: found
+    path:
+      - key: com/shop/app/Main.java//Main//main
+      - key: com/shop/util/Text.java//Text//render
+        site: com/shop/app/Main.java:9
+        kind: member
+        confidence: high
+      - key: org//apache//commons//text//StringEscapeUtils//escapeHtml4
+        site: com/shop/util/Text.java:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: com/shop/util/Text.java//Text//render
+        site: com/shop/util/Text.java:7
+        reached: true

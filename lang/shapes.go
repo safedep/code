@@ -7,7 +7,6 @@ import (
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
 	"github.com/safedep/code/pkg/ts"
-	"github.com/safedep/dry/log"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -46,14 +45,14 @@ type functionShape struct {
 
 // resolveFunctionsByShape returns a declaration for each node in the tree
 // whose type has a shape.
-func resolveFunctionsByShape(tree core.ParseTree, shapes map[string]functionShape) ([]*ast.FunctionDeclarationNode, error) {
+func resolveFunctionsByShape(ctx context.Context, tree core.ParseTree, shapes map[string]functionShape) ([]*ast.FunctionDeclarationNode, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
 	}
 
 	var functions []*ast.FunctionDeclarationNode
-	walkNamed(tree.Tree().RootNode(), func(node *sitter.Node) bool {
+	err = walkNamed(ctx, tree.Tree().RootNode(), func(node *sitter.Node) bool {
 		shape, ok := shapes[node.Type()]
 		if !ok {
 			return true
@@ -75,17 +74,18 @@ func resolveFunctionsByShape(tree core.ParseTree, shapes map[string]functionShap
 		functions = append(functions, function)
 		return true
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return functions, nil
 }
 
 // walkNamed visits the node and its named descendants in source order. It does
-// not visit the children of a node for which visit returns false. The walk
-// has no node limit, as the resolvers had before ts.Walk.
-func walkNamed(node *sitter.Node, visit func(*sitter.Node) bool) {
-	if err := ts.Walk(context.Background(), node, ts.WalkOptions{MaxNodes: -1}, visit); err != nil {
-		log.Warnf("failed to walk the tree: %v", err)
-	}
+// not visit the children of a node for which visit returns false. It returns
+// ts.ErrNodeLimit past ts.DefaultMaxNodes and the error of ctx when ctx is done.
+func walkNamed(ctx context.Context, node *sitter.Node, visit func(*sitter.Node) bool) error {
+	return ts.Walk(ctx, node, ts.WalkOptions{}, visit)
 }
 
 func namedChildren(node *sitter.Node) []*sitter.Node {

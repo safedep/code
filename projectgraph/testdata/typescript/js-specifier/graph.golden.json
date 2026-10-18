@@ -1,0 +1,93 @@
+{
+  "nodes": {
+    "src/main.ts": {
+      "key": "src/main.ts",
+      "kind": "module",
+      "path": "src/main.ts",
+      "line": 1,
+      "exported": true
+    },
+    "src/util.ts": {
+      "key": "src/util.ts",
+      "kind": "module",
+      "path": "src/util.ts",
+      "line": 1,
+      "exported": true
+    },
+    "src/util.ts//f": {
+      "key": "src/util.ts//f",
+      "kind": "function",
+      "path": "src/util.ts",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "src/main.ts",
+      "to": "src/util.ts",
+      "site": {
+        "path": "src/main.ts",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "typescript.import.relative"
+    },
+    {
+      "from": "src/main.ts",
+      "to": "src/util.ts//f",
+      "site": {
+        "path": "src/main.ts",
+        "line": 2,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "typescript.import"
+    }
+  ],
+  "unresolved": [],
+  "roots": [
+    {
+      "key": "src/main.ts",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/main.ts",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/util.ts",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/util.ts",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/util.ts//f",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/util.ts",
+        "line": 1
+      }
+    }
+  ],
+  "files": {
+    "src/main.ts": "indexed",
+    "src/util.ts": "indexed"
+  },
+  "stats": {
+    "version": "11",
+    "files": 2,
+    "nodes": 3,
+    "edges": 2,
+    "unresolved": 0,
+    "roots": 3,
+    "root_fallback": true
+  }
+}

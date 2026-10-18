@@ -1,0 +1,1 @@
+{ "name": "t2", "bin": { "run": "src/main.ts" } }

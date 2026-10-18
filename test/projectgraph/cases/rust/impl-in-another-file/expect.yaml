@@ -1,0 +1,46 @@
+source: safedep:hand
+description: upload.rs adds the method upload to Report of report.rs with an impl block after a use of crate::report::Report. The two impl blocks are one class, so publish calls upload of the other file.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//main
+    to: src/report.rs//Report//publish
+    kind: member
+    confidence: high
+    site: src/main.rs:8
+  - from: src/report.rs//Report//publish
+    to: src/upload.rs//Report//upload
+    kind: member
+    confidence: high
+    site: src/report.rs:12
+unresolved:
+  - caller: src/upload.rs//Report//upload
+    site: src/upload.rs:7
+    reason: unknown-receiver
+    method: unwrap
+results:
+  - target: std//net//TcpStream//connect
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/report.rs//Report//publish
+        site: src/main.rs:8
+        kind: member
+        confidence: high
+      - key: src/upload.rs//Report//upload
+        site: src/report.rs:12
+        kind: member
+        confidence: high
+      - key: std//net//TcpStream//connect
+        site: src/upload.rs:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/upload.rs//Report//upload
+        site: src/upload.rs:7
+        reached: true

@@ -1,0 +1,30 @@
+[
+  {
+    "version": "11", "path": "main.js", "language": "javascript",
+    "imports": [
+      {"line": 1, "module": "./log", "alias": "log", "kind": "static", "namespace": ".//log"},
+      {"line": 2, "module": "./make", "alias": "make", "kind": "static", "namespace": ".//make"}
+    ],
+    "definitions": [{"key": "main.js", "kind": "module", "name": "main", "start_line": 1, "end_line": 4, "exported": true}],
+    "calls": [
+      {"caller": "main.js", "line": 3, "column": 1, "callee": "log", "targets": [".//log"], "kind": "call"},
+      {"caller": "main.js", "line": 4, "column": 1, "callee": "make", "targets": [".//make"], "kind": "call"}
+    ]
+  },
+  {
+    "version": "11", "path": "log.js", "language": "javascript",
+    "exports": [{"name": "default", "target": "log.js//log", "line": 1}],
+    "definitions": [
+      {"key": "log.js", "kind": "module", "name": "log", "start_line": 1, "end_line": 1, "exported": true},
+      {"key": "log.js//log", "kind": "function", "name": "log", "start_line": 1, "end_line": 1, "exported": true}
+    ]
+  },
+  {
+    "version": "11", "path": "make.js", "language": "javascript",
+    "exports": [{"name": "default", "target": "make.js//make", "line": 1}],
+    "definitions": [
+      {"key": "make.js", "kind": "module", "name": "make", "start_line": 1, "end_line": 1, "exported": true},
+      {"key": "make.js//make", "kind": "function", "name": "make", "start_line": 1, "end_line": 1, "exported": true}
+    ]
+  }
+]

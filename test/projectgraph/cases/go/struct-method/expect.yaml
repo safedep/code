@@ -1,0 +1,58 @@
+source: safedep:hand
+description: s holds the result of store.New, whose first result is *Store, so s.Put resolves to the method of Store. Put calls Encode on the field enc, whose declared type is *Encoder, and another file of the package defines the method. No root calls Drop.
+roots:
+  - key: cmd/app/main.go
+    kind: main
+    rule: go.main
+  - key: cmd/app/main.go//main
+    kind: main
+    rule: go.main
+edges:
+  - from: cmd/app/main.go//main
+    to: store/store.go//New
+    kind: direct
+    confidence: high
+    site: cmd/app/main.go:6
+  - from: cmd/app/main.go//main
+    to: store/store.go//Store//Put
+    kind: member
+    confidence: high
+    site: cmd/app/main.go:7
+  - from: store/store.go//Store//Put
+    to: store/encoder.go//Encoder//Encode
+    kind: member
+    confidence: high
+    site: store/store.go:13
+no_edges:
+  - from: cmd/app/main.go//main
+    to: store/store.go//Store//Drop
+  - from: store/store.go//Store//Put
+    to: store/encoder.go//Encoder//Remove
+unresolved: []
+results:
+  - target: gopkg.in//yaml.v3//Marshal
+    status: found
+    path:
+      - key: cmd/app/main.go//main
+      - key: store/store.go//Store//Put
+        site: cmd/app/main.go:7
+        kind: member
+        confidence: high
+      - key: store/encoder.go//Encoder//Encode
+        site: store/store.go:13
+        kind: member
+        confidence: high
+      - key: gopkg.in//yaml.v3//Marshal
+        site: store/encoder.go:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: store/encoder.go//Encoder//Encode
+        site: store/encoder.go:8
+        reached: true
+  - target: gopkg.in//yaml.v3//Unmarshal
+    status: not-found
+    call_sites:
+      - caller: store/encoder.go//Encoder//Remove
+        site: store/encoder.go:12
+        reached: false

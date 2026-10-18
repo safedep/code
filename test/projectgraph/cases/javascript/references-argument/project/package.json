@@ -1,0 +1,4 @@
+{
+  "name": "references-argument",
+  "bin": { "app": "src/main.js" }
+}

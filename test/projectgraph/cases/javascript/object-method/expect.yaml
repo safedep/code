@@ -1,0 +1,30 @@
+source: safedep:hand
+description: src/main.js calls the method run of an object literal through the name api. The method has the key api//run, as a function that the property run holds would have, so the call names it as a member of the object and needs no record.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.js
+    to: src/main.js//api//run
+    kind: member
+    confidence: high
+    site: src/main.js:9
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/main.js
+      - key: src/main.js//api//run
+        site: src/main.js:9
+        kind: member
+        confidence: high
+      - key: js-yaml//load
+        site: src/main.js:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.js//api//run
+        site: src/main.js:5
+        reached: true

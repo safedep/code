@@ -1,0 +1,39 @@
+source: safedep:hand
+description: Report uses the trait Uploads of another file. publish calls upload on $this, which the trait gives to the class, so the method lookup reads the trait as a base of the class.
+roots:
+  - key: index.php
+    kind: main
+    rule: php.script
+edges:
+  - from: index.php
+    to: src/Report.php//Report//publish
+    kind: member
+    confidence: high
+    site: index.php:4
+  - from: src/Report.php//Report//publish
+    to: src/Uploads.php//Uploads//upload
+    kind: member
+    confidence: high
+    site: src/Report.php:10
+unresolved: []
+results:
+  - target: file_put_contents
+    status: found
+    path:
+      - key: index.php
+      - key: src/Report.php//Report//publish
+        site: index.php:4
+        kind: member
+        confidence: high
+      - key: src/Uploads.php//Uploads//upload
+        site: src/Report.php:10
+        kind: member
+        confidence: high
+      - key: file_put_contents
+        site: src/Uploads.php:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Uploads.php//Uploads//upload
+        site: src/Uploads.php:8
+        reached: true

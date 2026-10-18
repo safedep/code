@@ -1,0 +1,46 @@
+source: safedep:hand
+description: Main makes a Loader of another file of the namespace Shop with no using, and calls Load on it. Loader names File through the using System.IO, which can give any of its classes, so the call is a wildcard edge. Save has no caller.
+roots:
+  - key: src/Shop/Program.cs//Program//Main
+    kind: main
+    rule: csharp.main
+edges:
+  - from: src/Shop/Program.cs//Program//Main
+    to: src/Shop/Loader.cs//Loader
+    kind: direct
+    confidence: high
+    site: src/Shop/Program.cs:9
+  - from: src/Shop/Loader.cs//Loader
+    to: src/Shop/Loader.cs//Loader//Loader
+    kind: direct
+    confidence: high
+    site: src/Shop/Loader.cs:9
+  - from: src/Shop/Program.cs//Program//Main
+    to: src/Shop/Loader.cs//Loader//Load
+    kind: member
+    confidence: high
+    site: src/Shop/Program.cs:10
+unresolved: []
+results:
+  - target: System//IO//File//ReadAllText
+    status: found
+    path:
+      - key: src/Shop/Program.cs//Program//Main
+      - key: src/Shop/Loader.cs//Loader//Load
+        site: src/Shop/Program.cs:10
+        kind: member
+        confidence: high
+      - key: System//IO//File//ReadAllText
+        site: src/Shop/Loader.cs:16
+        kind: wildcard
+        confidence: low
+    call_sites:
+      - caller: src/Shop/Loader.cs//Loader//Load
+        site: src/Shop/Loader.cs:16
+        reached: true
+  - target: System//IO//File//WriteAllText
+    status: not-found
+    call_sites:
+      - caller: src/Shop/Loader.cs//Loader//Save
+        site: src/Shop/Loader.cs:21
+        reached: false

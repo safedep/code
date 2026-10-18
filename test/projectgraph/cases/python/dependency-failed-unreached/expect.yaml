@@ -1,0 +1,51 @@
+source: safedep:hand
+description: >-
+  badpkg/big.py of the dependency badpkg is over the size limit, so its index fails. main.py imports and
+  calls badpkg only in later, which no root reaches. The search from the root goes through okpkg alone. A
+  file of dependency code makes only the paths through its unit uncertain, so os.system is not found with
+  no budget record, and subprocess.run is found through okpkg.
+units:
+  deps/okpkg: pypi:okpkg@1.0.0
+  deps/badpkg: pypi:badpkg@1.0.0
+max_file_bytes: 300
+failed:
+  - pypi:badpkg@1.0.0//badpkg/big.py
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+edges:
+  - from: main.py//later
+    to: pypi:badpkg@1.0.0//badpkg/__init__.py
+    kind: import
+    confidence: high
+    site: main.py:5
+  - from: badpkg//load
+    to: pypi:badpkg@1.0.0//badpkg/__init__.py//load
+    kind: package
+    confidence: high
+    site: pypi:badpkg@1.0.0//badpkg/__init__.py:1
+unresolved: []
+results:
+  - target: subprocess//run
+    status: found
+    path:
+      - key: main.py
+      - key: okpkg//run
+        site: main.py:10
+        kind: direct
+        confidence: high
+      - key: pypi:okpkg@1.0.0//okpkg/__init__.py//run
+        site: pypi:okpkg@1.0.0//okpkg/__init__.py:4
+        kind: package
+        confidence: high
+      - key: subprocess//run
+        site: pypi:okpkg@1.0.0//okpkg/__init__.py:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: pypi:okpkg@1.0.0//okpkg/__init__.py//run
+        site: pypi:okpkg@1.0.0//okpkg/__init__.py:5
+        reached: true
+  - target: os//system
+    status: no-such-target

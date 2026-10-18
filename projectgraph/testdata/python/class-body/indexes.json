@@ -1,0 +1,184 @@
+[
+  {
+    "version": "11",
+    "path": "config.py",
+    "language": "python",
+    "imports": [
+      {
+        "line": 1,
+        "module": "yaml",
+        "alias": "yaml",
+        "kind": "static",
+        "namespace": "yaml"
+      }
+    ],
+    "definitions": [
+      {
+        "key": "config.py",
+        "kind": "module",
+        "name": "config",
+        "start_line": 1,
+        "end_line": 19,
+        "exported": true
+      },
+      {
+        "key": "config.py//Config",
+        "kind": "class",
+        "name": "Config",
+        "start_line": 4,
+        "end_line": 13,
+        "exported": true,
+        "flags": [
+          {
+            "kind": "reflection",
+            "line": 6
+          },
+          {
+            "kind": "eval",
+            "line": 7
+          }
+        ]
+      },
+      {
+        "key": "config.py//Config//Inner",
+        "kind": "class",
+        "name": "Inner",
+        "start_line": 9,
+        "end_line": 10,
+        "exported": true,
+        "parent": "config.py//Config"
+      },
+      {
+        "key": "config.py//Config//__init__",
+        "kind": "constructor",
+        "name": "__init__",
+        "start_line": 12,
+        "end_line": 13,
+        "exported": true,
+        "parent": "config.py//Config"
+      },
+      {
+        "key": "config.py//build",
+        "kind": "function",
+        "name": "build",
+        "start_line": 16,
+        "end_line": 18,
+        "exported": true
+      },
+      {
+        "key": "config.py//build//Local",
+        "kind": "class",
+        "name": "Local",
+        "start_line": 17,
+        "end_line": 18,
+        "exported": false
+      }
+    ],
+    "classes": [
+      {
+        "key": "config.py//Config",
+        "methods": [
+          "config.py//Config//Inner",
+          "config.py//Config//__init__"
+        ]
+      },
+      {
+        "key": "config.py//Config//Inner"
+      },
+      {
+        "key": "config.py//build//Local"
+      }
+    ],
+    "calls": [
+      {
+        "caller": "config.py//Config",
+        "line": 5,
+        "column": 12,
+        "callee": "yaml.load",
+        "targets": [
+          "yaml//load"
+        ],
+        "receiver": "yaml",
+        "method": "load",
+        "kind": "call"
+      },
+      {
+        "caller": "config.py//Config",
+        "line": 6,
+        "column": 12,
+        "callee": "getattr",
+        "targets": [
+          "getattr"
+        ],
+        "method": "getattr",
+        "kind": "call"
+      },
+      {
+        "caller": "config.py//Config",
+        "line": 7,
+        "column": 5,
+        "callee": "eval",
+        "targets": [
+          "eval"
+        ],
+        "method": "eval",
+        "kind": "call"
+      },
+      {
+        "caller": "config.py//Config//Inner",
+        "line": 10,
+        "column": 17,
+        "callee": "yaml.dump",
+        "targets": [
+          "yaml//dump"
+        ],
+        "receiver": "yaml",
+        "method": "dump",
+        "kind": "call"
+      },
+      {
+        "caller": "config.py//Config//__init__",
+        "line": 13,
+        "column": 9,
+        "callee": "yaml.safe_dump",
+        "targets": [
+          "yaml//safe_dump"
+        ],
+        "receiver": "yaml",
+        "method": "safe_dump",
+        "kind": "call"
+      },
+      {
+        "caller": "config.py//build//Local",
+        "line": 18,
+        "column": 13,
+        "callee": "yaml.safe_load",
+        "targets": [
+          "yaml//safe_load"
+        ],
+        "receiver": "yaml",
+        "method": "safe_load",
+        "kind": "call"
+      }
+    ],
+    "unresolved": [
+      {
+        "caller": "config.py//Config",
+        "line": 6,
+        "column": 12,
+        "text": "getattr(yaml, NAME)",
+        "reason": "computed-name"
+      }
+    ],
+    "flags": [
+      {
+        "kind": "reflection",
+        "line": 6
+      },
+      {
+        "kind": "eval",
+        "line": 7
+      }
+    ]
+  }
+]

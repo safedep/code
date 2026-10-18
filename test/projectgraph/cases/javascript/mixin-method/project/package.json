@@ -1,0 +1,4 @@
+{
+  "name": "mixin-method",
+  "bin": { "app": "src/app.js" }
+}

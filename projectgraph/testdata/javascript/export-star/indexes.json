@@ -1,0 +1,49 @@
+[
+  {
+    "version": "11", "path": "main.js", "language": "javascript",
+    "imports": [
+      {"line": 1, "module": "./all", "item": "a", "alias": "a", "kind": "static", "namespace": ".//all//a"},
+      {"line": 1, "module": "./all", "item": "b", "alias": "b", "kind": "static", "namespace": ".//all//b"},
+      {"line": 1, "module": "./all", "item": "ns", "alias": "ns", "kind": "static", "namespace": ".//all//ns"}
+    ],
+    "definitions": [{"key": "main.js", "kind": "module", "name": "main", "start_line": 1, "end_line": 4, "exported": true}],
+    "calls": [
+      {"caller": "main.js", "line": 2, "column": 1, "callee": "a", "targets": [".//all//a"], "kind": "call"},
+      {"caller": "main.js", "line": 3, "column": 1, "callee": "b", "targets": [".//all//b"], "kind": "call"},
+      {"caller": "main.js", "line": 4, "column": 1, "callee": "ns.c", "targets": [".//all//ns//c"], "receiver": "ns", "method": "c", "kind": "call"}
+    ]
+  },
+  {
+    "version": "11", "path": "all.js", "language": "javascript",
+    "exports": [
+      {"name": "*", "target": "", "from": "./a", "item": "*", "line": 1},
+      {"name": "*", "target": "", "from": "./b", "item": "*", "line": 2},
+      {"name": "ns", "target": "", "from": "./c", "line": 3}
+    ],
+    "definitions": [{"key": "all.js", "kind": "module", "name": "all", "start_line": 1, "end_line": 3, "exported": true}]
+  },
+  {
+    "version": "11", "path": "a.js", "language": "javascript",
+    "exports": [{"name": "a", "target": "a.js//a", "line": 1}],
+    "definitions": [
+      {"key": "a.js", "kind": "module", "name": "a", "start_line": 1, "end_line": 1, "exported": true},
+      {"key": "a.js//a", "kind": "function", "name": "a", "start_line": 1, "end_line": 1, "exported": true}
+    ]
+  },
+  {
+    "version": "11", "path": "b.js", "language": "javascript",
+    "exports": [{"name": "b", "target": "b.js//b", "line": 1}],
+    "definitions": [
+      {"key": "b.js", "kind": "module", "name": "b", "start_line": 1, "end_line": 1, "exported": true},
+      {"key": "b.js//b", "kind": "function", "name": "b", "start_line": 1, "end_line": 1, "exported": true}
+    ]
+  },
+  {
+    "version": "11", "path": "c.js", "language": "javascript",
+    "exports": [{"name": "c", "target": "c.js//c", "line": 1}],
+    "definitions": [
+      {"key": "c.js", "kind": "module", "name": "c", "start_line": 1, "end_line": 1, "exported": true},
+      {"key": "c.js//c", "kind": "function", "name": "c", "start_line": 1, "end_line": 1, "exported": true}
+    ]
+  }
+]

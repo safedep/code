@@ -1,0 +1,417 @@
+{
+  "version": "11",
+  "path": "app.js",
+  "language": "javascript",
+  "content_hash": "247fdd512217fb5e7ce19cbf3f60b327e145abc15a26ee510e167cbc651b0a54",
+  "imports": [
+    {
+      "line": 1,
+      "module": "fs",
+      "alias": "fs",
+      "kind": "static",
+      "namespace": "fs"
+    },
+    {
+      "line": 2,
+      "module": "fs/promises",
+      "item": "readFile",
+      "alias": "readFile",
+      "kind": "static",
+      "namespace": "fs//promises//readFile"
+    },
+    {
+      "line": 2,
+      "module": "fs/promises",
+      "item": "writeFile",
+      "alias": "write",
+      "kind": "static",
+      "namespace": "fs//promises//writeFile"
+    },
+    {
+      "line": 3,
+      "module": "path",
+      "alias": "path",
+      "kind": "static",
+      "namespace": "path"
+    },
+    {
+      "line": 4,
+      "module": "./polyfill",
+      "wildcard": true,
+      "kind": "static",
+      "namespace": ".//polyfill"
+    },
+    {
+      "line": 5,
+      "module": "js-yaml",
+      "alias": "yaml",
+      "kind": "static",
+      "namespace": "js-yaml"
+    },
+    {
+      "line": 5,
+      "module": "js-yaml",
+      "item": "load",
+      "alias": "load",
+      "kind": "static",
+      "namespace": "js-yaml//load"
+    },
+    {
+      "line": 6,
+      "module": "util",
+      "alias": "util",
+      "kind": "static",
+      "namespace": "util",
+      "require": true
+    },
+    {
+      "line": 7,
+      "module": "./helper",
+      "item": "helper",
+      "alias": "helper",
+      "kind": "static",
+      "namespace": ".//helper//helper",
+      "require": true
+    }
+  ],
+  "definitions": [
+    {
+      "key": "app.js",
+      "kind": "module",
+      "name": "app",
+      "start_line": 1,
+      "end_line": 42,
+      "exported": true
+    },
+    {
+      "key": "app.js//Parser",
+      "kind": "class",
+      "name": "Parser",
+      "start_line": 9,
+      "end_line": 22,
+      "exported": false
+    },
+    {
+      "key": "app.js//Parser//constructor",
+      "kind": "constructor",
+      "name": "constructor",
+      "start_line": 10,
+      "end_line": 13,
+      "exported": false,
+      "parent": "app.js//Parser"
+    },
+    {
+      "key": "app.js//Parser//parse",
+      "kind": "method",
+      "name": "parse",
+      "start_line": 15,
+      "end_line": 17,
+      "exported": false,
+      "parent": "app.js//Parser"
+    },
+    {
+      "key": "app.js//Parser//render",
+      "kind": "method",
+      "name": "render",
+      "start_line": 19,
+      "end_line": 21,
+      "exported": false,
+      "parent": "app.js//Parser"
+    },
+    {
+      "key": "app.js//main",
+      "kind": "function",
+      "name": "main",
+      "start_line": 24,
+      "end_line": 37,
+      "exported": false,
+      "flags": [
+        {
+          "kind": "computed-attribute",
+          "line": 35
+        }
+      ]
+    },
+    {
+      "key": "app.js//main//nested",
+      "kind": "function",
+      "name": "nested",
+      "start_line": 25,
+      "end_line": 27,
+      "exported": false
+    },
+    {
+      "key": "app.js//later",
+      "kind": "function",
+      "name": "later",
+      "start_line": 39,
+      "end_line": 39,
+      "exported": false
+    }
+  ],
+  "classes": [
+    {
+      "key": "app.js//Parser",
+      "bases": [
+        "Base"
+      ],
+      "methods": [
+        "app.js//Parser//constructor",
+        "app.js//Parser//parse",
+        "app.js//Parser//render"
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "caller": "app.js//Parser//constructor",
+      "line": 11,
+      "column": 5,
+      "callee": "super",
+      "targets": [
+        "super"
+      ],
+      "method": "super",
+      "kind": "call"
+    },
+    {
+      "caller": "app.js//Parser//parse",
+      "line": 16,
+      "column": 12,
+      "callee": "helper",
+      "targets": [
+        ".//helper//helper"
+      ],
+      "method": "helper",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "member",
+          "targets": [
+            "app.js//Parser//text"
+          ]
+        }
+      ]
+    },
+    {
+      "caller": "app.js//Parser//render",
+      "line": 20,
+      "column": 12,
+      "callee": "this.parse",
+      "targets": [
+        "app.js//Parser//parse"
+      ],
+      "receiver": "this",
+      "method": "parse",
+      "kind": "call"
+    },
+    {
+      "caller": "app.js//main//nested",
+      "line": 26,
+      "column": 12,
+      "callee": "path.join",
+      "targets": [
+        "path//join"
+      ],
+      "receiver": "path",
+      "method": "join",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        },
+        {
+          "shape": "string"
+        }
+      ]
+    },
+    {
+      "caller": "app.js//main",
+      "line": 28,
+      "column": 3,
+      "callee": "nested",
+      "targets": [
+        "app.js//main//nested"
+      ],
+      "method": "nested",
+      "kind": "call"
+    },
+    {
+      "caller": "app.js//main",
+      "line": 29,
+      "column": 17,
+      "callee": "Parser",
+      "targets": [
+        "app.js//Parser"
+      ],
+      "method": "Parser",
+      "kind": "new",
+      "args": [
+        {
+          "shape": "string"
+        }
+      ]
+    },
+    {
+      "caller": "app.js//main",
+      "line": 30,
+      "column": 3,
+      "callee": "p.render",
+      "targets": [
+        "app.js//Parser//render"
+      ],
+      "receiver": "p",
+      "method": "render",
+      "kind": "call"
+    },
+    {
+      "caller": "app.js//main",
+      "line": 31,
+      "column": 3,
+      "callee": "load",
+      "targets": [
+        "js-yaml//load"
+      ],
+      "method": "load",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        }
+      ]
+    },
+    {
+      "caller": "app.js//main",
+      "line": 32,
+      "column": 3,
+      "callee": "later",
+      "targets": [
+        "app.js//later"
+      ],
+      "method": "later",
+      "kind": "call"
+    },
+    {
+      "caller": "app.js//main",
+      "line": 33,
+      "column": 3,
+      "callee": "missing",
+      "method": "missing",
+      "kind": "call"
+    },
+    {
+      "caller": "app.js//main",
+      "line": 36,
+      "column": 3,
+      "callee": "readFile",
+      "targets": [
+        "fs//promises//readFile"
+      ],
+      "method": "readFile",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        },
+        {
+          "shape": "name",
+          "targets": [
+            "fs//promises//writeFile"
+          ]
+        },
+        {
+          "shape": "name",
+          "targets": [
+            "fs"
+          ]
+        },
+        {
+          "shape": "name",
+          "targets": [
+            "js-yaml"
+          ]
+        },
+        {
+          "shape": "name",
+          "targets": [
+            "util"
+          ]
+        }
+      ]
+    },
+    {
+      "caller": "app.js",
+      "line": 41,
+      "column": 1,
+      "callee": "main",
+      "targets": [
+        "app.js//main"
+      ],
+      "method": "main",
+      "kind": "call"
+    }
+  ],
+  "references": [
+    {
+      "caller": "app.js//Parser//parse",
+      "line": 16,
+      "column": 19,
+      "text": "this.text",
+      "targets": [
+        "app.js//Parser//text"
+      ]
+    },
+    {
+      "caller": "app.js//main",
+      "line": 36,
+      "column": 17,
+      "text": "write",
+      "targets": [
+        "fs//promises//writeFile"
+      ]
+    },
+    {
+      "caller": "app.js//main",
+      "line": 36,
+      "column": 24,
+      "text": "fs",
+      "targets": [
+        "fs"
+      ]
+    },
+    {
+      "caller": "app.js//main",
+      "line": 36,
+      "column": 28,
+      "text": "yaml",
+      "targets": [
+        "js-yaml"
+      ]
+    },
+    {
+      "caller": "app.js//main",
+      "line": 36,
+      "column": 34,
+      "text": "util",
+      "targets": [
+        "util"
+      ]
+    }
+  ],
+  "unresolved": [
+    {
+      "caller": "app.js//main",
+      "line": 35,
+      "column": 3,
+      "text": "p[name]",
+      "receiver": "p",
+      "reason": "computed-name"
+    }
+  ],
+  "flags": [
+    {
+      "kind": "computed-attribute",
+      "line": 35
+    }
+  ]
+}

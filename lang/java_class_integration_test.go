@@ -18,7 +18,7 @@ type javaFixtureVisitor struct {
 	foundTree      *core.ParseTree
 }
 
-func (v *javaFixtureVisitor) VisitTree(tree core.ParseTree) error {
+func (v *javaFixtureVisitor) VisitTree(_ context.Context, tree core.ParseTree) error {
 	file, err := tree.File()
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func TestJavaInheritanceGraphConstruction(t *testing.T) {
 
 	resolvers := javaLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
 
-	inheritanceGraph, err := resolvers.ResolveInheritance(parseTree)
+	inheritanceGraph, err := resolvers.ResolveInheritance(t.Context(), parseTree)
 	if err != nil {
 		t.Fatalf("Failed to resolve inheritance: %v", err)
 	}
@@ -141,7 +141,7 @@ func TestJavaClassMethodExtraction(t *testing.T) {
 
 	resolvers := javaLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
 
-	classes, err := resolvers.ResolveClasses(parseTree)
+	classes, err := resolvers.ResolveClasses(t.Context(), parseTree)
 	if err != nil {
 		t.Fatalf("Failed to resolve classes: %v", err)
 	}
@@ -197,7 +197,7 @@ func TestJavaClassAnnotationsAndAbstractClasses(t *testing.T) {
 
 	resolvers := javaLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
 
-	classes, err := resolvers.ResolveClasses(parseTree)
+	classes, err := resolvers.ResolveClasses(t.Context(), parseTree)
 	if err != nil {
 		t.Fatalf("Failed to resolve classes: %v", err)
 	}
@@ -237,7 +237,7 @@ func TestJavaInterfaceResolution(t *testing.T) {
 
 	resolvers := javaLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
 
-	classes, err := resolvers.ResolveClasses(parseTree)
+	classes, err := resolvers.ResolveClasses(t.Context(), parseTree)
 	if err != nil {
 		t.Fatalf("Failed to resolve classes: %v", err)
 	}
@@ -278,7 +278,7 @@ func testJavaClassResolution(t *testing.T, fixturePath string, expectedClasses m
 
 	resolvers := javaLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
 
-	classes, err := resolvers.ResolveClasses(parseTree)
+	classes, err := resolvers.ResolveClasses(t.Context(), parseTree)
 	if err != nil {
 		t.Fatalf("Failed to resolve classes: %v", err)
 	}

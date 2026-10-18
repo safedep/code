@@ -1,0 +1,37 @@
+source: safedep:hand
+description: src/main.js calls a member of a require call with no binding. The member belongs to the module that require names. The require call itself is an import, not a call.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+exact_edges: true
+edges:
+  - from: src/main.js
+    to: fs//readFileSync
+    kind: direct
+    confidence: high
+    site: src/main.js:1
+  - from: src/main.js
+    to: js-yaml//load
+    kind: direct
+    confidence: high
+    site: src/main.js:3
+no_edges:
+  - from: src/main.js
+    to: require
+  - from: src/main.js
+    to: require//load
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/main.js
+      - key: js-yaml//load
+        site: src/main.js:3
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.js
+        site: src/main.js:3
+        reached: true

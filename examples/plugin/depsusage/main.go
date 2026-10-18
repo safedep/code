@@ -92,13 +92,17 @@ func run() error {
 		return nil
 	}
 
-	pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+	pluginExecutor := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
 		depsusage.NewDependencyUsagePlugin(usageCallback),
 	})
 
+	report, err := pluginExecutor.Execute(context.Background(), fileSystem)
 	if err != nil {
-		return fmt.Errorf("failed to create plugin executor: %w", err)
+		return fmt.Errorf("failed to execute plugins: %w", err)
 	}
 
-	return pluginExecutor.Execute(context.Background(), fileSystem)
+	for _, failure := range report.Failed {
+		log.Warnf("%v", failure)
+	}
+	return nil
 }

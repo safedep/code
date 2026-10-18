@@ -1,0 +1,29 @@
+source: safedep:hand
+description: dispatch calls handle on the parameter handler, whose value the index does not know. 25 object properties hold a function named handle. That is over the cap of 20, so the site gets no field edge and is ambiguous. An ambiguous site can call any target, so the reach result for yaml.load is uncertain.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.js
+    to: src/main.js//dispatch
+    kind: direct
+    confidence: high
+    site: src/main.js:7
+no_edges:
+  - from: src/main.js//dispatch
+    to: src/handlers.js//h0//handle
+unresolved:
+  - caller: src/main.js//dispatch
+    site: src/main.js:4
+    reason: ambiguous
+results:
+  - target: js-yaml//load
+    status: uncertain
+    call_sites:
+      - caller: src/handlers.js//h0//handle
+        site: src/handlers.js:3
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/main.js:4

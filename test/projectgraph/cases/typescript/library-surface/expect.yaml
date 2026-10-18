@@ -1,0 +1,38 @@
+source: safedep:hand
+description: A library with no package.json and no entry point. Every exported definition and every module is a root of kind library-surface.
+roots:
+  - key: src/index.ts
+    kind: library-surface
+    rule: library-surface
+  - key: src/reader.ts
+    kind: library-surface
+    rule: library-surface
+  - key: src/reader.ts//readConfig
+    kind: library-surface
+    rule: library-surface
+edges:
+  - from: src/reader.ts//readConfig
+    to: js-yaml//load
+    kind: direct
+    confidence: high
+    site: src/reader.ts:4
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/reader.ts//readConfig
+      - key: js-yaml//load
+        site: src/reader.ts:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/reader.ts//readConfig
+        site: src/reader.ts:4
+        reached: true
+    uncertainties:
+      - kind: root-fallback
+  - target: axios//get
+    status: no-such-target
+    uncertainties:
+      - kind: root-fallback

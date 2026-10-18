@@ -1,0 +1,149 @@
+{
+  "nodes": {
+    "src/app/server.ts": {
+      "key": "src/app/server.ts",
+      "kind": "module",
+      "path": "src/app/server.ts",
+      "line": 1,
+      "exported": true
+    },
+    "src/app/server.ts//serve": {
+      "key": "src/app/server.ts//serve",
+      "kind": "function",
+      "path": "src/app/server.ts",
+      "line": 1,
+      "exported": true
+    },
+    "src/config.ts": {
+      "key": "src/config.ts",
+      "kind": "module",
+      "path": "src/config.ts",
+      "line": 1,
+      "exported": true
+    },
+    "src/config.ts//cfg": {
+      "key": "src/config.ts//cfg",
+      "kind": "function",
+      "path": "src/config.ts",
+      "line": 1,
+      "exported": true
+    },
+    "src/main.ts": {
+      "key": "src/main.ts",
+      "kind": "module",
+      "path": "src/main.ts",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "src/main.ts",
+      "to": "src/app/server.ts",
+      "site": {
+        "path": "src/main.ts",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "typescript.import.tsconfig-paths"
+    },
+    {
+      "from": "src/main.ts",
+      "to": "src/config.ts",
+      "site": {
+        "path": "src/main.ts",
+        "line": 2
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "typescript.import.tsconfig-baseurl"
+    },
+    {
+      "from": "src/main.ts",
+      "to": "src/app/server.ts//serve",
+      "site": {
+        "path": "src/main.ts",
+        "line": 3,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "typescript.import"
+    },
+    {
+      "from": "src/main.ts",
+      "to": "src/config.ts//cfg",
+      "site": {
+        "path": "src/main.ts",
+        "line": 4,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "typescript.import"
+    }
+  ],
+  "unresolved": [],
+  "roots": [
+    {
+      "key": "src/app/server.ts",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/app/server.ts",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/app/server.ts//serve",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/app/server.ts",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/config.ts",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/config.ts",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/config.ts//cfg",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/config.ts",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/main.ts",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "src/main.ts",
+        "line": 1
+      }
+    }
+  ],
+  "files": {
+    "src/app/server.ts": "indexed",
+    "src/config.ts": "indexed",
+    "src/main.ts": "indexed"
+  },
+  "stats": {
+    "version": "11",
+    "files": 3,
+    "nodes": 5,
+    "edges": 4,
+    "unresolved": 0,
+    "roots": 5,
+    "root_fallback": true
+  }
+}

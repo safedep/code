@@ -23,14 +23,14 @@ func TestParseBytes(t *testing.T) {
 	cases := []struct {
 		name    string
 		data    string
-		opts    []BytesOption
+		opts    []Option
 		wantErr error
 		root    string
 	}{
 		{name: "parses with no file name", data: "require('x')", root: "program"},
-		{name: "ignores the name for the language", data: "a()", opts: []BytesOption{WithFileName("logo.svg")}, root: "program"},
-		{name: "rejects input over the limit", data: "a()", opts: []BytesOption{WithMaxBytes(2)}, wantErr: ErrInputTooLarge},
-		{name: "no limit when negative", data: strings.Repeat("a;", 10), opts: []BytesOption{WithMaxBytes(-1)}, root: "program"},
+		{name: "ignores the name for the language", data: "a()", opts: []Option{WithFileName("logo.svg")}, root: "program"},
+		{name: "rejects input over the limit", data: "a()", opts: []Option{WithMaxBytes(2)}, wantErr: ErrInputTooLarge},
+		{name: "no limit when negative", data: strings.Repeat("a;", 10), opts: []Option{WithMaxBytes(-1)}, root: "program"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -60,6 +60,7 @@ func TestParseBytesFile(t *testing.T) {
 	f, err := tree.File()
 	require.NoError(t, err)
 	assert.Equal(t, "dir/logo.svg", f.Name())
+	assert.Equal(t, "dir/logo.svg", f.Path())
 	assert.True(t, f.IsApp())
 
 	r, err := f.Reader()

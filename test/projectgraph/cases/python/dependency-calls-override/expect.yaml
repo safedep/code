@@ -1,0 +1,59 @@
+source: safedep:hand
+description: Handler extends BaseHTTPRequestHandler, and the server of the dependency calls its do_GET. Worker extends threading.Thread, and Thread.start calls its run. No first-party code calls these methods, so the class of each one has a reference edge of the resolver override to it.
+roots:
+  - key: server.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: server.py//Handler
+    to: server.py//Handler//do_GET
+    kind: reference
+    confidence: low
+    site: server.py:9
+  - from: server.py//Worker
+    to: server.py//Worker//run
+    kind: reference
+    confidence: low
+    site: server.py:14
+unresolved: []
+results:
+  - target: subprocess//run
+    status: found
+    path:
+      - key: server.py
+      - key: server.py//Handler
+        site: server.py:20
+        kind: reference
+        confidence: low
+      - key: server.py//Handler//do_GET
+        site: server.py:9
+        kind: reference
+        confidence: low
+      - key: subprocess//run
+        site: server.py:10
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: server.py//Handler//do_GET
+        site: server.py:10
+        reached: true
+  - target: yaml//safe_load
+    status: found
+    path:
+      - key: server.py
+      - key: server.py//Worker
+        site: server.py:19
+        kind: direct
+        confidence: high
+      - key: server.py//Worker//run
+        site: server.py:14
+        kind: reference
+        confidence: low
+      - key: yaml//safe_load
+        site: server.py:15
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: server.py//Worker//run
+        site: server.py:15
+        reached: true

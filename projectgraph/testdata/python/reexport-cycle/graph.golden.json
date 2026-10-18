@@ -1,0 +1,116 @@
+{
+  "nodes": {
+    "a/__init__.py": {
+      "key": "a/__init__.py",
+      "kind": "module",
+      "path": "a/__init__.py",
+      "line": 1,
+      "exported": true
+    },
+    "b/__init__.py": {
+      "key": "b/__init__.py",
+      "kind": "module",
+      "path": "b/__init__.py",
+      "line": 1,
+      "exported": true
+    },
+    "main.py": {
+      "key": "main.py",
+      "kind": "module",
+      "path": "main.py",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "a/__init__.py",
+      "to": "b/__init__.py",
+      "site": {
+        "path": "a/__init__.py",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "python.import.absolute"
+    },
+    {
+      "from": "b/__init__.py",
+      "to": "a/__init__.py",
+      "site": {
+        "path": "b/__init__.py",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "python.import.absolute"
+    },
+    {
+      "from": "main.py",
+      "to": "a/__init__.py",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "python.import.absolute"
+    }
+  ],
+  "unresolved": [
+    {
+      "caller": "main.py",
+      "site": {
+        "path": "main.py",
+        "line": 2,
+        "column": 1
+      },
+      "text": "x",
+      "method": "x",
+      "reason": "no-definition"
+    }
+  ],
+  "roots": [
+    {
+      "key": "a/__init__.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "a/__init__.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "b/__init__.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "b/__init__.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "main.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      }
+    }
+  ],
+  "files": {
+    "a/__init__.py": "indexed",
+    "b/__init__.py": "indexed",
+    "main.py": "indexed"
+  },
+  "stats": {
+    "version": "11",
+    "files": 3,
+    "nodes": 3,
+    "edges": 3,
+    "unresolved": 1,
+    "roots": 3,
+    "root_fallback": true
+  }
+}

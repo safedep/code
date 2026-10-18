@@ -1,0 +1,4 @@
+{
+  "name": "subclass-override",
+  "bin": { "app": "src/main.ts" }
+}

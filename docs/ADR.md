@@ -7,7 +7,7 @@ code for software supply chain security use-cases.
 
 Supply chain use-cases include:
 
-- Ability to build a call graph spanning across imported libraries
+- Ability to build a call graph spanning across imported libraries. See [projectgraph.md](projectgraph.md)
 - Ability to track usage of imports, classes and functions
 - Ability to track data flow within a source file, extending to multiple files
 - Ability to build xBOM based on code and database of known signatures

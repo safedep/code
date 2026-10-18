@@ -1,0 +1,43 @@
+{
+  "version": "2",
+  "index_version": "11",
+  "link_version": "11",
+  "unit": "npm:plug@1.0.0",
+  "symbols": [
+    {
+      "key": "plug//Plug",
+      "definitions": [
+        "npm:plug@1.0.0//index.js//Plug"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "plug//Plug//run",
+      "definitions": [
+        "npm:plug@1.0.0//index.js//Plug//run"
+      ],
+      "reaches": [
+        "fs//rmSync"
+      ]
+    },
+    {
+      "key": "plug//index//Plug",
+      "definitions": [
+        "npm:plug@1.0.0//index.js//Plug"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "plug//index//Plug//run",
+      "definitions": [
+        "npm:plug@1.0.0//index.js//Plug//run"
+      ],
+      "reaches": [
+        "fs//rmSync"
+      ]
+    }
+  ],
+  "targets": [
+    "fs//rmSync"
+  ]
+}

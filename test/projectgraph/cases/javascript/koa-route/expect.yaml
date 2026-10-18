@@ -1,0 +1,27 @@
+source: safedep:hand
+description: router comes from new Router() of @koa/router, so router.get('/config', show) makes show a root of the rule node.koa.route. app.use takes a call, which names no definition.
+roots:
+  - key: src/app.js//show
+    kind: framework
+    rule: node.koa.route
+    site: src/app.js:12
+edges:
+  - from: src/app.js//show
+    to: js-yaml//load
+    kind: direct
+    confidence: high
+    site: src/app.js:9
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/app.js//show
+      - key: js-yaml//load
+        site: src/app.js:9
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/app.js//show
+        site: src/app.js:9
+        reached: true

@@ -1,0 +1,111 @@
+source: safedep:adversarial
+description: Names that look alike call different methods. Report in module Billing is Billing::Report of another file, not the top-level Report. A::Foo and B::Foo both define run. Foo.run calls the class method self.run, not the run of an instance. valid? is not valid. A local variable upload shadows the method upload. A comment, a string and respond_to? call nothing, and private names danger without a call.
+roots:
+  - key: main.rb
+    kind: main
+    rule: ruby.main-guard
+edges:
+  - from: lib/billing/runner.rb//Billing//Runner//go
+    to: lib/billing/report.rb//Billing//Report//emit
+    kind: member
+    confidence: high
+    site: lib/billing/runner.rb:4
+  - from: main.rb
+    to: lib/shapes.rb//Foo//self.run
+    kind: member
+    confidence: high
+    site: main.rb:16
+unresolved:
+  - caller: lib/top.rb//Guarded//check
+    site: lib/top.rb:15
+    reason: no-definition
+    method: respond_to?
+results:
+  - target: Kernel//exec
+    status: found
+    path:
+      - key: main.rb
+      - key: lib/billing/runner.rb//Billing//Runner//go
+        site: main.rb:14
+        kind: member
+        confidence: high
+      - key: lib/billing/report.rb//Billing//Report//emit
+        site: lib/billing/runner.rb:4
+        kind: member
+        confidence: high
+      - key: Kernel//exec
+        site: lib/billing/report.rb:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib/billing/report.rb//Billing//Report//emit
+        site: lib/billing/report.rb:4
+        reached: true
+  - target: Kernel//system
+    status: not-found
+    call_sites:
+      - caller: lib/top.rb//Report//emit
+        site: lib/top.rb:3
+        reached: false
+  - target: Kernel//spawn
+    status: found
+    path:
+      - key: main.rb
+      - key: lib/shapes.rb//A//Foo//run
+        site: main.rb:15
+        kind: member
+        confidence: high
+      - key: Kernel//spawn
+        site: lib/shapes.rb:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib/shapes.rb//A//Foo//run
+        site: lib/shapes.rb:4
+        reached: true
+  - target: Kernel//fork
+    status: not-found
+    call_sites:
+      - caller: lib/shapes.rb//B//Foo//run
+        site: lib/shapes.rb:12
+        reached: false
+  - target: Kernel//abort
+    status: found
+    path:
+      - key: main.rb
+      - key: lib/shapes.rb//Foo//self.run
+        site: main.rb:16
+        kind: member
+        confidence: high
+      - key: Kernel//abort
+        site: lib/shapes.rb:19
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib/shapes.rb//Foo//self.run
+        site: lib/shapes.rb:19
+        reached: true
+  - target: Kernel//trap
+    status: not-found
+    call_sites:
+      - caller: lib/shapes.rb//Foo//run
+        site: lib/shapes.rb:23
+        reached: false
+  - target: Kernel//syscall
+    status: not-found
+    call_sites:
+      - caller: lib/tools.rb//Tools//valid
+        site: lib/tools.rb:7
+        reached: false
+  - target: Kernel//srand
+    status: not-found
+    call_sites:
+      - caller: lib/tools.rb//Tools//upload
+        site: lib/tools.rb:11
+        reached: false
+  - target: Kernel//sprintf
+    status: not-found
+    call_sites:
+      - caller: lib/top.rb//Guarded//danger
+        site: lib/top.rb:11
+        reached: false

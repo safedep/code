@@ -1,0 +1,69 @@
+source: safedep:hand
+description: >-
+  main calls Load of the module github.com/acme/yamlish, whose code is a unit under gomod. The unit has the
+  module path of its go.mod, so the external key of the call links to Load in load.go. Load calls decode,
+  which another file of the package defines, and decode calls yaml.Unmarshal. The path to yaml.Unmarshal
+  goes through the package. No file of the package runs code at load, so the import makes no edge. Dump is
+  not called.
+units:
+  gomod/github.com/acme/yamlish@v1.2.0: go:github.com/acme/yamlish@v1.2.0
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+exact_edges: true
+edges:
+  - from: main.go//main
+    to: github.com//acme//yamlish//Load
+    kind: direct
+    confidence: high
+    site: main.go:6
+  - from: github.com//acme//yamlish//Load
+    to: go:github.com/acme/yamlish@v1.2.0//load.go//Load
+    kind: package
+    confidence: high
+    site: go:github.com/acme/yamlish@v1.2.0//load.go:3
+  - from: go:github.com/acme/yamlish@v1.2.0//load.go//Load
+    to: go:github.com/acme/yamlish@v1.2.0//decode.go//decode
+    kind: direct
+    confidence: high
+    site: go:github.com/acme/yamlish@v1.2.0//load.go:5
+  - from: go:github.com/acme/yamlish@v1.2.0//decode.go//decode
+    to: gopkg.in//yaml.v3//Unmarshal
+    kind: direct
+    confidence: high
+    site: go:github.com/acme/yamlish@v1.2.0//decode.go:6
+no_edges:
+  - from: main.go
+    to: go:github.com/acme/yamlish@v1.2.0//load.go
+  - from: main.go//main
+    to: go:github.com/acme/yamlish@v1.2.0//load.go//Dump
+unresolved: []
+results:
+  - target: gopkg.in//yaml.v3//Unmarshal
+    status: found
+    path:
+      - key: main.go//main
+      - key: github.com//acme//yamlish//Load
+        site: main.go:6
+        kind: direct
+        confidence: high
+      - key: go:github.com/acme/yamlish@v1.2.0//load.go//Load
+        site: go:github.com/acme/yamlish@v1.2.0//load.go:3
+        kind: package
+        confidence: high
+      - key: go:github.com/acme/yamlish@v1.2.0//decode.go//decode
+        site: go:github.com/acme/yamlish@v1.2.0//load.go:5
+        kind: direct
+        confidence: high
+      - key: gopkg.in//yaml.v3//Unmarshal
+        site: go:github.com/acme/yamlish@v1.2.0//decode.go:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: go:github.com/acme/yamlish@v1.2.0//decode.go//decode
+        site: go:github.com/acme/yamlish@v1.2.0//decode.go:6
+        reached: true

@@ -1,0 +1,154 @@
+{
+  "nodes": {
+    "app/main.mjs": {
+      "key": "app/main.mjs",
+      "kind": "module",
+      "path": "app/main.mjs",
+      "line": 1,
+      "exported": true
+    },
+    "lib/cjs/index.cjs": {
+      "key": "lib/cjs/index.cjs",
+      "kind": "module",
+      "path": "lib/cjs/index.cjs",
+      "line": 1,
+      "exported": true
+    },
+    "lib/cjs/index.cjs//x": {
+      "key": "lib/cjs/index.cjs//x",
+      "kind": "function",
+      "path": "lib/cjs/index.cjs",
+      "line": 1,
+      "exported": true
+    },
+    "lib/esm/index.mjs": {
+      "key": "lib/esm/index.mjs",
+      "kind": "module",
+      "path": "lib/esm/index.mjs",
+      "line": 1,
+      "exported": true
+    },
+    "lib/esm/index.mjs//x": {
+      "key": "lib/esm/index.mjs//x",
+      "kind": "function",
+      "path": "lib/esm/index.mjs",
+      "line": 1,
+      "exported": true
+    },
+    "lib/src/feature/y.js": {
+      "key": "lib/src/feature/y.js",
+      "kind": "module",
+      "path": "lib/src/feature/y.js",
+      "line": 1,
+      "exported": true
+    },
+    "lib/src/feature/y.js//y": {
+      "key": "lib/src/feature/y.js//y",
+      "kind": "function",
+      "path": "lib/src/feature/y.js",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "app/main.mjs",
+      "to": "lib/esm/index.mjs",
+      "site": {
+        "path": "app/main.mjs",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.exports-import"
+    },
+    {
+      "from": "app/main.mjs",
+      "to": "lib/src/feature/y.js",
+      "site": {
+        "path": "app/main.mjs",
+        "line": 2
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.exports-default"
+    },
+    {
+      "from": "app/main.mjs",
+      "to": "lib/esm/index.mjs//x",
+      "site": {
+        "path": "app/main.mjs",
+        "line": 3,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.import"
+    },
+    {
+      "from": "app/main.mjs",
+      "to": "lib/src/feature/y.js//y",
+      "site": {
+        "path": "app/main.mjs",
+        "line": 4,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.import"
+    }
+  ],
+  "unresolved": [],
+  "roots": [
+    {
+      "key": "lib/cjs/index.cjs",
+      "kind": "manifest",
+      "rule": "node.package-json",
+      "site": {
+        "path": "lib/cjs/index.cjs",
+        "line": 1
+      }
+    },
+    {
+      "key": "lib/cjs/index.cjs//x",
+      "kind": "manifest",
+      "rule": "node.package-json",
+      "site": {
+        "path": "lib/cjs/index.cjs",
+        "line": 1
+      }
+    },
+    {
+      "key": "lib/esm/index.mjs",
+      "kind": "manifest",
+      "rule": "node.package-json",
+      "site": {
+        "path": "lib/esm/index.mjs",
+        "line": 1
+      }
+    },
+    {
+      "key": "lib/esm/index.mjs//x",
+      "kind": "manifest",
+      "rule": "node.package-json",
+      "site": {
+        "path": "lib/esm/index.mjs",
+        "line": 1
+      }
+    }
+  ],
+  "files": {
+    "app/main.mjs": "indexed",
+    "lib/cjs/index.cjs": "indexed",
+    "lib/esm/index.mjs": "indexed",
+    "lib/src/feature/y.js": "indexed"
+  },
+  "stats": {
+    "version": "11",
+    "files": 4,
+    "nodes": 7,
+    "edges": 4,
+    "unresolved": 0,
+    "roots": 4
+  }
+}

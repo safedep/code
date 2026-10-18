@@ -1,0 +1,30 @@
+version: 1
+rules:
+  - id: handlers
+    language: javascript
+    kind: framework
+    match: { definition: { name: handle, parent: Handler } }
+  - id: routes
+    language: typescript
+    kind: framework
+    match: { path: ["app/**/route.ts"] }
+  - id: flask
+    language: python
+    kind: framework
+    match: { decorator: ["@app.route"] }
+  - id: spring
+    language: java
+    kind: framework
+    match: { annotation: ["@RestController"] }
+  - id: express
+    language: javascript
+    kind: framework
+    match: { call: { callee_suffix: ["//get"], arg: -1, shape: function } }
+  - id: serverless
+    language: javascript
+    kind: framework
+    match: { export: { names: [handle] } }
+  - id: static-handle
+    language: javascript
+    kind: main
+    match: { definition: { name: handle, static: true } }

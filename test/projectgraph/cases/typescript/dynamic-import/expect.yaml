@@ -1,0 +1,36 @@
+source: safedep:hand
+description: loadPlugin imports a module by a computed name, so js-yaml is uncertain. loadLocale imports by a template under ./locale/, and the rule of the design sets that site aside for js-yaml.
+roots:
+  - key: src/main.ts
+    kind: manifest
+    rule: node.package-json
+edges: []
+no_edges:
+  - from: src/main.ts//loadPlugin
+    to: plugin//run
+unresolved:
+  - caller: src/main.ts//loadPlugin
+    site: src/main.ts:2
+    reason: dynamic-import
+    method: import
+  - caller: src/main.ts//loadPlugin
+    site: src/main.ts:3
+    reason: unknown-receiver
+    method: run
+  - caller: src/main.ts//loadLocale
+    site: src/main.ts:7
+    reason: dynamic-import
+    method: import
+results:
+  - target: js-yaml//load
+    status: uncertain
+    uncertainties:
+      - kind: dynamic-flag
+        site: src/main.ts:2
+      - kind: unresolved-call
+        site: src/main.ts:2
+    set_aside:
+      - kind: dynamic-flag
+        site: src/main.ts:7
+      - kind: unresolved-call
+        site: src/main.ts:7

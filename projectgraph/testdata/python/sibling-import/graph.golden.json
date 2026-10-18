@@ -1,0 +1,109 @@
+{
+  "nodes": {
+    "handlers.py": {
+      "key": "handlers.py",
+      "kind": "module",
+      "path": "handlers.py",
+      "line": 1,
+      "exported": true
+    },
+    "handlers.py//parse": {
+      "key": "handlers.py//parse",
+      "kind": "function",
+      "path": "handlers.py",
+      "line": 3,
+      "exported": true
+    },
+    "main.py": {
+      "key": "main.py",
+      "kind": "module",
+      "path": "main.py",
+      "line": 1,
+      "exported": true
+    },
+    "yaml//load": {
+      "key": "yaml//load",
+      "kind": "external"
+    }
+  },
+  "edges": [
+    {
+      "from": "handlers.py//parse",
+      "to": "yaml//load",
+      "site": {
+        "path": "handlers.py",
+        "line": 4,
+        "column": 12
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.external"
+    },
+    {
+      "from": "main.py",
+      "to": "handlers.py",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "python.import.absolute"
+    },
+    {
+      "from": "main.py",
+      "to": "handlers.py//parse",
+      "site": {
+        "path": "main.py",
+        "line": 3,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.import"
+    }
+  ],
+  "unresolved": [],
+  "roots": [
+    {
+      "key": "handlers.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "handlers.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "handlers.py//parse",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "handlers.py",
+        "line": 3
+      }
+    },
+    {
+      "key": "main.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      }
+    }
+  ],
+  "files": {
+    "handlers.py": "indexed",
+    "main.py": "indexed"
+  },
+  "stats": {
+    "version": "11",
+    "files": 2,
+    "nodes": 4,
+    "edges": 3,
+    "unresolved": 0,
+    "roots": 3,
+    "root_fallback": true
+  }
+}

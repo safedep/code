@@ -1,0 +1,45 @@
+source: safedep:hand
+description: legacyRoutes registers a route with a function literal, and no code calls legacyRoutes. The literal is a definition with an anonymous name, and the route rule marks it. The scope of the registration is no root, so toml.parse in the dead function stays not found.
+roots:
+  - key: src/server.js
+    kind: manifest
+    rule: node.package-json
+  - key: src/server.js//legacyRoutes//<anonymous:9>
+    kind: framework
+    rule: node.express.route
+    site: src/server.js:9
+edges:
+  - from: src/server.js//legacyRoutes
+    to: src/server.js//legacyRoutes//<anonymous:9>
+    kind: direct
+    confidence: high
+    site: src/server.js:9
+  - from: src/server.js//legacyRoutes//<anonymous:9>
+    to: js-yaml//load
+    kind: direct
+    confidence: high
+    site: src/server.js:9
+unresolved:
+  - caller: src/server.js//legacyRoutes//<anonymous:9>
+    site: src/server.js:9
+    reason: unknown-receiver
+    method: json
+results:
+  - target: toml//parse
+    status: not-found
+    call_sites:
+      - caller: src/server.js//legacyRoutes
+        site: src/server.js:8
+        reached: false
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/server.js//legacyRoutes//<anonymous:9>
+      - key: js-yaml//load
+        site: src/server.js:9
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/server.js//legacyRoutes//<anonymous:9>
+        site: src/server.js:9
+        reached: true

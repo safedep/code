@@ -1,0 +1,34 @@
+source: safedep:hand
+description: The container injects the field repository, whose declared type is the interface Repository. The @Scheduled method sweep is a root, and its call of purge on the field goes to SqlRepository.purge as cha. A class of a dependency can implement Repository too, so the site keeps a record. The @Inject annotation sets an injection flag on Jobs, which adds no uncertainty.
+roots:
+  - key: src/com/shop/Jobs.java//Jobs//sweep
+    kind: framework
+    rule: java.spring.web
+edges:
+  - from: src/com/shop/Jobs.java//Jobs//sweep
+    to: src/com/shop/SqlRepository.java//SqlRepository//purge
+    kind: cha
+    confidence: medium
+    site: src/com/shop/Jobs.java:12
+unresolved:
+  - caller: src/com/shop/Jobs.java//Jobs//sweep
+    site: src/com/shop/Jobs.java:12
+    reason: no-definition
+    method: purge
+results:
+  - target: java//sql//DriverManager//getConnection
+    status: found
+    path:
+      - key: src/com/shop/Jobs.java//Jobs//sweep
+      - key: src/com/shop/SqlRepository.java//SqlRepository//purge
+        site: src/com/shop/Jobs.java:12
+        kind: cha
+        confidence: medium
+      - key: java//sql//DriverManager//getConnection
+        site: src/com/shop/SqlRepository.java:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/com/shop/SqlRepository.java//SqlRepository//purge
+        site: src/com/shop/SqlRepository.java:8
+        reached: true

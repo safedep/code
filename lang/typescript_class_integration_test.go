@@ -57,7 +57,7 @@ func TestTypescriptInheritanceGraphConstruction(t *testing.T) {
 
 	resolvers := tsLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
 
-	inheritanceGraph, err := resolvers.ResolveInheritance(parseTree)
+	inheritanceGraph, err := resolvers.ResolveInheritance(t.Context(), parseTree)
 	if err != nil {
 		t.Fatalf("Failed to resolve inheritance: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestTypescriptClassMethodExtraction(t *testing.T) {
 
 	resolvers := tsLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
 
-	classes, err := resolvers.ResolveClasses(parseTree)
+	classes, err := resolvers.ResolveClasses(t.Context(), parseTree)
 	if err != nil {
 		t.Fatalf("Failed to resolve classes: %v", err)
 	}
@@ -189,7 +189,7 @@ func TestTypescriptInterfaceResolution(t *testing.T) {
 
 	resolvers := tsLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
 
-	classes, err := resolvers.ResolveClasses(parseTree)
+	classes, err := resolvers.ResolveClasses(t.Context(), parseTree)
 	if err != nil {
 		t.Fatalf("Failed to resolve classes: %v", err)
 	}
@@ -225,7 +225,7 @@ func TestTypescriptAbstractClassResolution(t *testing.T) {
 
 	resolvers := tsLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
 
-	classes, err := resolvers.ResolveClasses(parseTree)
+	classes, err := resolvers.ResolveClasses(t.Context(), parseTree)
 	if err != nil {
 		t.Fatalf("Failed to resolve classes: %v", err)
 	}
@@ -263,7 +263,7 @@ func TestTypescriptEnumResolution(t *testing.T) {
 
 	resolvers := tsLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
 
-	classes, err := resolvers.ResolveClasses(parseTree)
+	classes, err := resolvers.ResolveClasses(t.Context(), parseTree)
 	if err != nil {
 		t.Fatalf("Failed to resolve classes: %v", err)
 	}
@@ -298,7 +298,7 @@ func testTypescriptClassResolution(t *testing.T, fixturePath string, expectedCla
 
 	resolvers := tsLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
 
-	classes, err := resolvers.ResolveClasses(parseTree)
+	classes, err := resolvers.ResolveClasses(t.Context(), parseTree)
 	if err != nil {
 		t.Fatalf("Failed to resolve classes: %v", err)
 	}
@@ -352,7 +352,7 @@ type tsFixtureVisitor struct {
 	foundTree      *core.ParseTree
 }
 
-func (v *tsFixtureVisitor) VisitTree(tree core.ParseTree) error {
+func (v *tsFixtureVisitor) VisitTree(_ context.Context, tree core.ParseTree) error {
 	file, err := tree.File()
 	if err != nil {
 		return err

@@ -1,0 +1,49 @@
+source: safedep:hand
+description: The pyproject.toml declares Django only, but shop/api.py imports flask, so the project depends on flask and the Flask route rule applies. ReportView is routed by as_view and inherits get from the first-party ExportMixin, whose base comes from Django, so the class has an override edge to the inherited get.
+roots:
+  - key: manage.py
+    kind: main
+    rule: python.main-guard
+  - key: shop/api.py//load
+    kind: framework
+    rule: python.flask.route
+  - key: shop/views.py//ReportView
+    kind: framework
+    rule: python.django.view
+    site: shop/urls.py:5
+edges:
+  - from: shop/views.py//ReportView
+    to: shop/views.py//ExportMixin//get
+    kind: reference
+    confidence: low
+    site: shop/views.py:7
+unresolved: []
+results:
+  - target: subprocess//run
+    status: found
+    path:
+      - key: shop/views.py//ReportView
+      - key: shop/views.py//ExportMixin//get
+        site: shop/views.py:7
+        kind: reference
+        confidence: low
+      - key: subprocess//run
+        site: shop/views.py:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: shop/views.py//ExportMixin//get
+        site: shop/views.py:8
+        reached: true
+  - target: pickle//loads
+    status: found
+    path:
+      - key: shop/api.py//load
+      - key: pickle//loads
+        site: shop/api.py:10
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: shop/api.py//load
+        site: shop/api.py:10
+        reached: true

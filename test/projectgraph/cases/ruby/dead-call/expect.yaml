@@ -1,0 +1,36 @@
+source: safedep:hand
+description: main.rb calls Report.print under the main guard. Report.upload has no caller, so no root reaches Open3.capture2.
+roots:
+  - key: main.rb
+    kind: main
+    rule: ruby.main-guard
+edges:
+  - from: main.rb
+    to: report.rb//Report//self.print
+    kind: member
+    confidence: high
+    site: main.rb:4
+unresolved: []
+results:
+  - target: puts
+    status: found
+    path:
+      - key: main.rb
+      - key: report.rb//Report//self.print
+        site: main.rb:4
+        kind: member
+        confidence: high
+      - key: puts
+        site: report.rb:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: report.rb//Report//self.print
+        site: report.rb:5
+        reached: true
+  - target: Open3//capture2
+    status: not-found
+    call_sites:
+      - caller: report.rb//Report//self.upload
+        site: report.rb:9
+        reached: false

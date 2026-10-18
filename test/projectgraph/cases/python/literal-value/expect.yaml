@@ -1,0 +1,26 @@
+source: safedep:hand
+description: >-
+  The constructor sets cb to None, and run calls it. None is a literal and no function, so the call gets
+  no edge to a node None. The value of cb at the call is not known, so the site is a record with the
+  method cb, and None is no target of the graph.
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: main.py
+    to: main.py//Job//run
+    kind: member
+    confidence: high
+    site: main.py:10
+no_edges:
+  - from: main.py//Job//run
+    to: None
+unresolved:
+  - caller: main.py//Job//run
+    site: main.py:6
+    reason: unknown-receiver
+    method: cb
+results:
+  - target: None
+    status: no-such-target

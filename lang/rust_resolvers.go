@@ -1,6 +1,7 @@
 package lang
 
 import (
+	"context"
 	"fmt"
 	"unicode"
 	"unicode/utf8"
@@ -31,7 +32,7 @@ var rustLocalPathRoots = map[string]bool{
 // declarations. A crate is also in scope without a use declaration, as in
 // serde_json::to_string(&x), so the first path in a file that starts with a
 // crate name is an import of that crate too.
-func (r *rustResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, error) {
+func (r *rustResolvers) ResolveImports(ctx context.Context, tree core.ParseTree) ([]*ast.ImportNode, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
@@ -41,7 +42,7 @@ func (r *rustResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, 
 	var pathRoots []*sitter.Node
 	localNames := map[string]bool{}
 
-	walkNamed(tree.Tree().RootNode(), func(node *sitter.Node) bool {
+	err = walkNamed(ctx, tree.Tree().RootNode(), func(node *sitter.Node) bool {
 		switch node.Type() {
 		case "use_declaration":
 			imports = append(imports, rustUseImports(data, node.ChildByFieldName("argument"), nil, nil)...)
@@ -63,6 +64,9 @@ func (r *rustResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, 
 		}
 		return true
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	for _, imp := range imports {
 		localNames[rustImportKey(imp)] = true
@@ -168,6 +172,6 @@ func isRustCrateName(name string) bool {
 	return unicode.IsLower(first)
 }
 
-func (r *rustResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
-	return resolveFunctionsByShape(tree, rustFunctionShapes)
+func (r *rustResolvers) ResolveFunctions(ctx context.Context, tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
+	return resolveFunctionsByShape(ctx, tree, rustFunctionShapes)
 }

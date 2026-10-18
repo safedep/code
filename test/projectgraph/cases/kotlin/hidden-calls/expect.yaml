@@ -1,0 +1,163 @@
+source: safedep:hand
+description: Adversarial case. Each target runs through code that no call in the source names. process is a callable reference that a dependency calls. The call of InetAddress.getByName is in a string template. The + of Money runs its operator plus. The initializer of the top-level property client runs when the file class loads, which a call on client needs, and a call on the value of a call is a record. The init block of the object Config runs before get. The trailing lambda of with runs in main. The companion of Holder runs its initializer before make. No target may be not-found.
+roots:
+  - key: src/com/shop/App.kt//main
+    kind: main
+    rule: java.main
+edges:
+  - from: src/com/shop/App.kt//main
+    to: src/com/shop/App.kt//process
+    kind: reference
+    confidence: low
+    site: src/com/shop/App.kt:11
+  - from: src/com/shop/net/Net.kt//Money
+    to: src/com/shop/net/Net.kt//Money//plus
+    kind: reference
+    confidence: low
+    site: src/com/shop/net/Net.kt:6
+  - from: src/com/shop/App.kt//main
+    to: src/com/shop/net/Net.kt
+    kind: direct
+    confidence: high
+    site: src/com/shop/App.kt:14
+  - from: src/com/shop/App.kt//Config//get
+    to: src/com/shop/App.kt//Config
+    kind: direct
+    confidence: high
+    site: src/com/shop/App.kt:22
+  - from: src/com/shop/App.kt//Holder//make
+    to: src/com/shop/App.kt//Holder//<clinit>
+    kind: direct
+    confidence: high
+    site: src/com/shop/App.kt:28
+unresolved:
+  - caller: src/com/shop/App.kt//main
+    site: src/com/shop/App.kt:11
+    reason: unknown-receiver
+    method: forEach
+  - caller: src/com/shop/App.kt//main
+    site: src/com/shop/App.kt:14
+    reason: unknown-receiver
+    method: send
+results:
+  - target: java//lang//ProcessBuilder//start
+    status: found
+    path:
+      - key: src/com/shop/App.kt//main
+      - key: src/com/shop/App.kt//process
+        site: src/com/shop/App.kt:11
+        kind: reference
+        confidence: low
+      - key: java//lang//ProcessBuilder//start
+        site: src/com/shop/App.kt:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/com/shop/App.kt//process
+        site: src/com/shop/App.kt:7
+        reached: true
+  - target: java//net//InetAddress//getByName
+    status: found
+    path:
+      - key: src/com/shop/App.kt//main
+      - key: java//net//InetAddress//getByName
+        site: src/com/shop/App.kt:12
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/com/shop/App.kt//main
+        site: src/com/shop/App.kt:12
+        reached: true
+  - target: java//lang//Math//addExact
+    status: found
+    path:
+      - key: src/com/shop/App.kt//main
+      - key: src/com/shop/net/Net.kt//Money
+        site: src/com/shop/App.kt:13
+        kind: direct
+        confidence: high
+      - key: src/com/shop/net/Net.kt//Money//plus
+        site: src/com/shop/net/Net.kt:6
+        kind: reference
+        confidence: low
+      - key: java//lang//Math//addExact
+        site: src/com/shop/net/Net.kt:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/com/shop/net/Net.kt//Money//plus
+        site: src/com/shop/net/Net.kt:7
+        reached: true
+  - target: java//net//http//HttpClient//newHttpClient
+    status: found
+    path:
+      - key: src/com/shop/App.kt//main
+      - key: src/com/shop/net/Net.kt
+        site: src/com/shop/App.kt:14
+        kind: direct
+        confidence: high
+      - key: java//net//http//HttpClient//newHttpClient
+        site: src/com/shop/net/Net.kt:3
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/com/shop/net/Net.kt
+        site: src/com/shop/net/Net.kt:3
+        reached: true
+  - target: java//net//http//HttpClient//send
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: src/com/shop/App.kt:14
+  - target: java//lang//System//loadLibrary
+    status: found
+    path:
+      - key: src/com/shop/App.kt//main
+      - key: src/com/shop/App.kt//Config//get
+        site: src/com/shop/App.kt:15
+        kind: member
+        confidence: high
+      - key: src/com/shop/App.kt//Config
+        site: src/com/shop/App.kt:22
+        kind: direct
+        confidence: high
+      - key: java//lang//System//loadLibrary
+        site: src/com/shop/App.kt:21
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/com/shop/App.kt//Config
+        site: src/com/shop/App.kt:21
+        reached: true
+  - target: java//nio//file//Files//delete
+    status: found
+    path:
+      - key: src/com/shop/App.kt//main
+      - key: java//nio//file//Files//delete
+        site: src/com/shop/App.kt:16
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/com/shop/App.kt//main
+        site: src/com/shop/App.kt:16
+        reached: true
+  - target: java//util//Random
+    status: found
+    path:
+      - key: src/com/shop/App.kt//main
+      - key: src/com/shop/App.kt//Holder//make
+        site: src/com/shop/App.kt:17
+        kind: member
+        confidence: high
+      - key: src/com/shop/App.kt//Holder//<clinit>
+        site: src/com/shop/App.kt:28
+        kind: direct
+        confidence: high
+      - key: java//util//Random
+        site: src/com/shop/App.kt:27
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/com/shop/App.kt//Holder//<clinit>
+        site: src/com/shop/App.kt:27
+        reached: true

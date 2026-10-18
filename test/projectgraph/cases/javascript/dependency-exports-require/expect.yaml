@@ -1,0 +1,65 @@
+source: safedep:hand
+description: >-
+  main requires kit, whose exports map gives cjs.js for a require under node and esm.js for an import. The
+  require form picks cjs.js, so the path to child_process.execSync goes through cjs.js, and esm.js gets no
+  edge. fs.readFileSync of esm.js is not found.
+units:
+  node_modules/kit: npm:kit@1.0.0
+roots:
+  - key: main.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: main.js
+    to: npm:kit@1.0.0//cjs.js
+    kind: import
+    confidence: high
+    site: main.js:1
+  - from: main.js
+    to: kit//run
+    kind: direct
+    confidence: high
+    site: main.js:3
+  - from: kit//run
+    to: npm:kit@1.0.0//cjs.js//run
+    kind: package
+    confidence: high
+    site: npm:kit@1.0.0//cjs.js:3
+  - from: npm:kit@1.0.0//cjs.js//run
+    to: child_process//execSync
+    kind: direct
+    confidence: high
+    site: npm:kit@1.0.0//cjs.js:4
+no_edges:
+  - from: main.js
+    to: npm:kit@1.0.0//esm.js
+  - from: kit//run
+    to: npm:kit@1.0.0//esm.js//run
+unresolved: []
+results:
+  - target: child_process//execSync
+    status: found
+    path:
+      - key: main.js
+      - key: kit//run
+        site: main.js:3
+        kind: direct
+        confidence: high
+      - key: npm:kit@1.0.0//cjs.js//run
+        site: npm:kit@1.0.0//cjs.js:3
+        kind: package
+        confidence: high
+      - key: child_process//execSync
+        site: npm:kit@1.0.0//cjs.js:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: npm:kit@1.0.0//cjs.js//run
+        site: npm:kit@1.0.0//cjs.js:4
+        reached: true
+  - target: fs//readFileSync
+    status: not-found
+    call_sites:
+      - caller: npm:kit@1.0.0//esm.js//run
+        site: npm:kit@1.0.0//esm.js:4
+        reached: false

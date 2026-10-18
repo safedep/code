@@ -1,0 +1,29 @@
+{
+  "version": "2",
+  "index_version": "11",
+  "link_version": "11",
+  "unit": "pypi:outer@1.0.0",
+  "symbols": [
+    {
+      "key": "outer//impl//run",
+      "definitions": [
+        "pypi:outer@1.0.0//impl.py//run"
+      ],
+      "reaches": [
+        "os//system"
+      ]
+    },
+    {
+      "key": "outer//run",
+      "definitions": [
+        "pypi:outer@1.0.0//__init__.py//run"
+      ],
+      "reaches": [
+        "os//system"
+      ]
+    }
+  ],
+  "targets": [
+    "os//system"
+  ]
+}

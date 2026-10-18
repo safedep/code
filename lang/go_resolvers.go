@@ -1,17 +1,18 @@
 package lang
 
 import (
+	"context"
 	"fmt"
+	"strings"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
+	"github.com/safedep/code/pkg/helpers"
 	"github.com/safedep/code/pkg/ts"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-type goResolvers struct {
-	language *goLanguage
-}
+type goResolvers struct{}
 
 var _ core.LanguageResolvers = (*goResolvers)(nil)
 
@@ -32,7 +33,7 @@ const goWholeModuleImportQuery = `
 				path: (interpreted_string_literal) @module_name)))
 `
 
-func (r *goResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, error) {
+func (r *goResolvers) ResolveImports(ctx context.Context, tree core.ParseTree) ([]*ast.ImportNode, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
@@ -47,7 +48,6 @@ func (r *goResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, er
 			var explicitModuleAliasNode *sitter.Node = nil
 			var moduleNameNode *sitter.Node = nil
 
-			// Find module name and alias from captures
 			for _, capture := range m.Captures {
 				switch capture.Node.Type() {
 				case "interpreted_string_literal":
@@ -59,12 +59,14 @@ func (r *goResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, er
 				}
 			}
 			node.SetModuleNameNode(moduleNameNode)
+			importPath := strings.Trim(node.ModuleName(), `"`)
+			node.SetModuleName(importPath)
 			if explicitModuleAliasNode != nil {
 				node.SetModuleAliasNode(explicitModuleAliasNode)
 			} else if !node.IsWildcardImport() {
-				// For Go imports without explicit alias, set alias node to module name node
-				// The helpers.ResolveImportContentsGo() will extract the package name from it
+				// The path brings the package name into scope.
 				node.SetModuleAliasNode(moduleNameNode)
+				node.SetModuleAlias(helpers.GoPackageName(importPath))
 			}
 
 			imports = append(imports, node)
@@ -72,7 +74,7 @@ func (r *goResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, er
 		}),
 	}
 
-	err = ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	err = ts.ExecuteQueries(ctx, tree, queryRequestItems)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +82,6 @@ func (r *goResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, er
 	return imports, err
 }
 
-// Tree-Sitter queries for Go function definitions based on actual grammar
 const goFunctionDefinitionQuery = `
 	(function_declaration
 		name: (identifier) @function_name
@@ -88,7 +89,6 @@ const goFunctionDefinitionQuery = `
 		body: (block) @function_body)
 `
 
-// Based on Go grammar: method_declaration has receiver field with parameter_list and name field with field_identifier
 const goMethodDefinitionQuery = `
 	(method_declaration
 		receiver: (parameter_list) @receiver
@@ -97,29 +97,25 @@ const goMethodDefinitionQuery = `
 		body: (block) @method_body)
 `
 
-// ResolveFunctions extracts function declarations from Go parse tree
-func (r *goResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
+func (r *goResolvers) ResolveFunctions(ctx context.Context, tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
 	}
 
 	var functions []*ast.FunctionDeclarationNode
-	functionMap := make(map[string]*ast.FunctionDeclarationNode) // To avoid duplicates
+	functionMap := make(map[string]*ast.FunctionDeclarationNode)
 
-	// Extract regular function declarations
-	err = r.extractGoFunctions(data, tree, functionMap)
+	err = r.extractGoFunctions(ctx, data, tree, functionMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract Go functions: %w", err)
 	}
 
-	// Extract method declarations
-	err = r.extractGoMethods(data, tree, functionMap)
+	err = r.extractGoMethods(ctx, data, tree, functionMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract Go methods: %w", err)
 	}
 
-	// Convert map to slice
 	for _, function := range functionMap {
 		functions = append(functions, function)
 	}
@@ -127,9 +123,7 @@ func (r *goResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDecl
 	return functions, nil
 }
 
-// Helper methods for Go function extraction
-
-func (r *goResolvers) extractGoFunctions(data *[]byte, tree core.ParseTree,
+func (r *goResolvers) extractGoFunctions(ctx context.Context, data *[]byte, tree core.ParseTree,
 	functionMap map[string]*ast.FunctionDeclarationNode,
 ) error {
 	queryRequestItems := []ts.QueryItem{
@@ -155,10 +149,9 @@ func (r *goResolvers) extractGoFunctions(data *[]byte, tree core.ParseTree,
 				return nil
 			}
 
-			// Validate function name
 			functionName := functionNameNode.Content(*data)
 			if !r.isValidGoIdentifier(functionName) {
-				return nil // Skip invalid identifiers
+				return nil
 			}
 
 			functionKey := r.generateGoFunctionKey(functionNameNode, "", *data)
@@ -166,18 +159,15 @@ func (r *goResolvers) extractGoFunctions(data *[]byte, tree core.ParseTree,
 			functionNode.SetFunctionNameNode(functionNameNode)
 			functionNode.SetFunctionType(ast.FunctionTypeFunction)
 
-			// Set parameters
 			if paramsNode != nil {
 				paramNodes := r.extractGoParameterNodes(paramsNode)
 				functionNode.SetFunctionParameterNodes(paramNodes)
 			}
 
-			// Set function body
 			if bodyNode != nil {
 				functionNode.SetFunctionBodyNode(bodyNode)
 			}
 
-			// Go access modifiers: Public if starts with uppercase, Package if lowercase
 			if r.isExportedGoIdentifier(functionName) {
 				functionNode.SetAccessModifier(ast.AccessModifierPublic)
 			} else {
@@ -189,10 +179,10 @@ func (r *goResolvers) extractGoFunctions(data *[]byte, tree core.ParseTree,
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
 
-func (r *goResolvers) extractGoMethods(data *[]byte, tree core.ParseTree,
+func (r *goResolvers) extractGoMethods(ctx context.Context, data *[]byte, tree core.ParseTree,
 	functionMap map[string]*ast.FunctionDeclarationNode,
 ) error {
 	queryRequestItems := []ts.QueryItem{
@@ -222,21 +212,18 @@ func (r *goResolvers) extractGoMethods(data *[]byte, tree core.ParseTree,
 				return nil
 			}
 
-			// Validate method name
 			methodName := methodNameNode.Content(*data)
 			if !r.isValidGoIdentifier(methodName) {
-				return nil // Skip invalid identifiers
+				return nil
 			}
 
-			// Extract receiver type name from the receiver parameter list
 			receiverTypeName := r.extractReceiverTypeName(receiverNode, *data)
 			if receiverTypeName == "" {
 				return nil
 			}
 
-			// Validate receiver type name
 			if !r.isValidGoIdentifier(receiverTypeName) {
-				return nil // Skip invalid receiver types
+				return nil
 			}
 
 			functionKey := r.generateGoFunctionKey(methodNameNode, receiverTypeName, *data)
@@ -245,18 +232,15 @@ func (r *goResolvers) extractGoMethods(data *[]byte, tree core.ParseTree,
 			functionNode.SetFunctionType(ast.FunctionTypeMethod)
 			functionNode.SetParentClassName(receiverTypeName)
 
-			// Set parameters
 			if paramsNode != nil {
 				paramNodes := r.extractGoParameterNodes(paramsNode)
 				functionNode.SetFunctionParameterNodes(paramNodes)
 			}
 
-			// Set method body
 			if bodyNode != nil {
 				functionNode.SetFunctionBodyNode(bodyNode)
 			}
 
-			// Go methods are public if they start with uppercase
 			if r.isExportedGoIdentifier(methodName) {
 				functionNode.SetAccessModifier(ast.AccessModifierPublic)
 			} else {
@@ -268,10 +252,8 @@ func (r *goResolvers) extractGoMethods(data *[]byte, tree core.ParseTree,
 		}),
 	}
 
-	return ts.ExecuteQueries(ts.NewQueriesRequest(r.language, queryRequestItems), data, tree)
+	return ts.ExecuteQueries(ctx, tree, queryRequestItems)
 }
-
-// Helper methods for Go function processing
 
 func (r *goResolvers) extractGoParameterNodes(parametersNode *sitter.Node) []*sitter.Node {
 	var paramNodes []*sitter.Node
@@ -295,11 +277,9 @@ func (r *goResolvers) extractReceiverTypeName(receiverNode *sitter.Node, data []
 		return ""
 	}
 
-	// Look for type identifier in the receiver parameter list
 	for i := 0; i < int(receiverNode.ChildCount()); i++ {
 		child := receiverNode.Child(i)
 		if child.Type() == "parameter_declaration" {
-			// Find the type part of the parameter declaration
 			for j := 0; j < int(child.ChildCount()); j++ {
 				grandchild := child.Child(j)
 				if grandchild.Type() == "type_identifier" ||
@@ -321,7 +301,6 @@ func (r *goResolvers) extractTypeNameFromNode(typeNode *sitter.Node, data []byte
 	if typeNode.Type() == "type_identifier" {
 		return typeNode.Content(data)
 	} else if typeNode.Type() == "pointer_type" {
-		// For pointer types, get the underlying type
 		for i := 0; i < int(typeNode.ChildCount()); i++ {
 			child := typeNode.Child(i)
 			if child.Type() == "type_identifier" {
@@ -340,37 +319,33 @@ func (r *goResolvers) generateGoFunctionKey(functionNameNode *sitter.Node, recei
 		return receiverType + "." + functionName
 	}
 
-	// Add line number to distinguish functions with same name in different scopes
 	lineNumber := functionNameNode.StartPoint().Row
 	return fmt.Sprintf("%s:%d", functionName, lineNumber)
 }
 
-// isExportedGoIdentifier checks if a Go identifier is exported (public) based on Go naming conventions.
-// In Go, an identifier is exported if it starts with an uppercase letter.
+// isExportedGoIdentifier reports whether a Go identifier starts with an
+// upper case letter.
 func (r *goResolvers) isExportedGoIdentifier(identifier string) bool {
 	if len(identifier) == 0 {
 		return false
 	}
 
-	// Check if the first character is an uppercase letter
 	firstChar := identifier[0]
 	return firstChar >= 'A' && firstChar <= 'Z'
 }
 
-// isValidGoIdentifier validates if a string is a valid Go identifier.
-// A valid Go identifier starts with a letter or underscore, followed by letters, digits, or underscores.
+// isValidGoIdentifier reports whether the string is a Go identifier of
+// ASCII letters, digits and underscores.
 func (r *goResolvers) isValidGoIdentifier(identifier string) bool {
 	if len(identifier) == 0 {
 		return false
 	}
 
-	// First character must be a letter or underscore
 	firstChar := identifier[0]
 	if (firstChar < 'a' || firstChar > 'z') && (firstChar < 'A' || firstChar > 'Z') && firstChar != '_' {
 		return false
 	}
 
-	// Remaining characters must be letters, digits, or underscores
 	for i := 1; i < len(identifier); i++ {
 		char := identifier[i]
 		if (char < 'a' || char > 'z') && (char < 'A' || char > 'Z') && (char < '0' || char > '9') && char != '_' {

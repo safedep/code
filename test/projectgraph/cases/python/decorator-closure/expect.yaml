@@ -1,0 +1,48 @@
+source: safedep:hand
+description: The first-party decorator logged returns its nested function wrapper, which calls yaml.load. A call of the decorated handle runs wrapper, so handle gets an edge to wrapper.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+edges:
+  - from: handlers.py
+    to: handlers.py//logged
+    kind: direct
+    confidence: high
+    site: handlers.py:13
+  - from: handlers.py//handle
+    to: handlers.py//logged//wrapper
+    kind: reference
+    confidence: low
+    site: handlers.py:13
+  - from: handlers.py//logged
+    to: handlers.py//logged//wrapper
+    kind: reference
+    confidence: low
+    site: handlers.py:9
+unresolved:
+  - caller: handlers.py//logged//wrapper
+    site: handlers.py:7
+    reason: unknown-receiver
+    method: fn
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: handlers.py//handle
+        site: main.py:3
+        kind: direct
+        confidence: high
+      - key: handlers.py//logged//wrapper
+        site: handlers.py:13
+        kind: reference
+        confidence: low
+      - key: yaml//load
+        site: handlers.py:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: handlers.py//logged//wrapper
+        site: handlers.py:6
+        reached: true

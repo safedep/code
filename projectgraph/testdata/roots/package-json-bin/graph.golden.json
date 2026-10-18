@@ -1,0 +1,74 @@
+{
+  "nodes": {
+    "bin/cli.js": {
+      "key": "bin/cli.js",
+      "kind": "module",
+      "path": "bin/cli.js",
+      "line": 1,
+      "exported": true
+    },
+    "lib/run.js": {
+      "key": "lib/run.js",
+      "kind": "module",
+      "path": "lib/run.js",
+      "line": 1,
+      "exported": true
+    },
+    "lib/run.js//run": {
+      "key": "lib/run.js//run",
+      "kind": "function",
+      "path": "lib/run.js",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "bin/cli.js",
+      "to": "lib/run.js",
+      "site": {
+        "path": "bin/cli.js",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.relative"
+    },
+    {
+      "from": "bin/cli.js",
+      "to": "lib/run.js//run",
+      "site": {
+        "path": "bin/cli.js",
+        "line": 2,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.import"
+    }
+  ],
+  "unresolved": [],
+  "roots": [
+    {
+      "key": "bin/cli.js",
+      "kind": "manifest",
+      "rule": "node.package-json",
+      "site": {
+        "path": "bin/cli.js",
+        "line": 1
+      }
+    }
+  ],
+  "files": {
+    "bin/cli.js": "indexed",
+    "lib/run.js": "indexed"
+  },
+  "stats": {
+    "version": "11",
+    "files": 2,
+    "nodes": 3,
+    "edges": 2,
+    "unresolved": 0,
+    "roots": 1
+  }
+}

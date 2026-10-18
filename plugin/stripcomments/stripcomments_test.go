@@ -23,12 +23,12 @@ type StripCommentsTestcase struct {
 var testcases = []StripCommentsTestcase{
 	{
 		Language:          core.LanguageCodePython,
-		CommentedFilePath: "fixtures/commented.py",
+		CommentedFilePath: "commented.py",
 		StrippedFilePath:  "fixtures/stripped.py",
 	},
 	{
 		Language:          core.LanguageCodeJavascript,
-		CommentedFilePath: "fixtures/commented.js",
+		CommentedFilePath: "commented.js",
 		StrippedFilePath:  "fixtures/stripped.js",
 	},
 }
@@ -38,7 +38,7 @@ func TestStripComments(t *testing.T) {
 	for _, testcase := range testcases {
 		t.Run(fmt.Sprintf("%s (%s)", testcase.CommentedFilePath, testcase.Language), func(t *testing.T) {
 			filePaths := []string{testcase.CommentedFilePath}
-			treeWalker, fileSystem, err := test.SetupBasicPluginContext(filePaths, []core.LanguageCode{testcase.Language})
+			treeWalker, fileSystem, err := test.SetupBasicPluginContext("fixtures", filePaths, []core.LanguageCode{testcase.Language})
 			assert.NoError(t, err)
 
 			readers := []io.Reader{}
@@ -47,13 +47,13 @@ func TestStripComments(t *testing.T) {
 				return nil
 			}
 
-			pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+			pluginExecutor := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
 				NewStripCommentsPlugin(stripCommentsCallback),
 			})
-			assert.NoError(t, err)
 
-			err = pluginExecutor.Execute(context.Background(), fileSystem)
+			report, err := pluginExecutor.Execute(context.Background(), fileSystem)
 			assert.NoError(t, err)
+			assert.Empty(t, report.Failed)
 
 			assert.Equal(t, 1, len(readers))
 
@@ -77,13 +77,13 @@ func TestStripComments(t *testing.T) {
 }
 
 func benchmarkStripComments(b *testing.B) {
-	treeWalker, fileSystem, err := test.SetupBasicPluginContext([]string{
-		"fixtures/commented.js",
-		"fixtures/commented.py",
+	treeWalker, fileSystem, err := test.SetupBasicPluginContext("fixtures", []string{
+		"commented.js",
+		"commented.py",
 	}, []core.LanguageCode{core.LanguageCodeJavascript})
 	assert.NoError(b, err)
 
-	pluginExecutor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
+	pluginExecutor := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{
 		NewStripCommentsPlugin(func(ctx context.Context, scpd *StripCommentsPluginData) error {
 			assert.NotNil(b, scpd)
 			assert.NotNil(b, scpd.File)
@@ -91,10 +91,10 @@ func benchmarkStripComments(b *testing.B) {
 			return nil
 		}),
 	})
-	assert.NoError(b, err)
 
-	err = pluginExecutor.Execute(context.Background(), fileSystem)
+	report, err := pluginExecutor.Execute(context.Background(), fileSystem)
 	assert.NoError(b, err)
+	assert.Empty(b, report.Failed)
 }
 
 func BenchmarkStripComments(b *testing.B) {

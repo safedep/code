@@ -1,0 +1,27 @@
+source: safedep:hand
+description: program.command('convert <file>').action(convert) resolves to a key under commander, so convert is a root of the rule node.commander.action at the call.
+roots:
+  - key: bin/cli.js//convert
+    kind: framework
+    rule: node.commander.action
+    site: bin/cli.js:8
+edges:
+  - from: bin/cli.js//convert
+    to: js-yaml//load
+    kind: direct
+    confidence: high
+    site: bin/cli.js:5
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: bin/cli.js//convert
+      - key: js-yaml//load
+        site: bin/cli.js:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: bin/cli.js//convert
+        site: bin/cli.js:5
+        reached: true

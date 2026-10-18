@@ -1,7 +1,10 @@
 package core
 
 import (
+	"context"
+
 	"github.com/safedep/code/core/ast"
+	"github.com/safedep/code/langcode"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -11,11 +14,11 @@ import (
 type LanguageResolvers interface {
 	// ResolveImports returns a list of import statements
 	// identified from the parse tree
-	ResolveImports(tree ParseTree) ([]*ast.ImportNode, error)
+	ResolveImports(ctx context.Context, tree ParseTree) ([]*ast.ImportNode, error)
 
 	// ResolveFunctions returns a list of function declarations
 	// identified from the parse tree
-	ResolveFunctions(tree ParseTree) ([]*ast.FunctionDeclarationNode, error)
+	ResolveFunctions(ctx context.Context, tree ParseTree) ([]*ast.FunctionDeclarationNode, error)
 }
 
 // ObjectOrientedLanguageResolvers define the additional contract
@@ -31,26 +34,28 @@ type ObjectOrientedLanguageResolvers interface {
 
 	// ResolveClasses returns a list of class declarations
 	// identified from the parse tree
-	ResolveClasses(tree ParseTree) ([]*ast.ClassDeclarationNode, error)
+	ResolveClasses(ctx context.Context, tree ParseTree) ([]*ast.ClassDeclarationNode, error)
 
 	// ResolveInheritance returns the inheritance graph
 	// constructed from class definitions in the parse tree
-	ResolveInheritance(tree ParseTree) (*ast.InheritanceGraph, error)
+	ResolveInheritance(ctx context.Context, tree ParseTree) (*ast.InheritanceGraph, error)
 }
 
-type LanguageCode string
+// LanguageCode identifies a language. It is an alias of langcode.Code, so
+// a package that builds with no CGO can name a language with no import of core.
+type LanguageCode = langcode.Code
 
 const (
-	LanguageCodePython     LanguageCode = "python"
-	LanguageCodeJavascript LanguageCode = "javascript"
-	LanguageCodeJava       LanguageCode = "java"
-	LanguageCodeGo         LanguageCode = "go"
-	LanguageCodeTypescript LanguageCode = "typescript"
-	LanguageCodeCSharp     LanguageCode = "csharp"
-	LanguageCodeRust       LanguageCode = "rust"
-	LanguageCodePHP        LanguageCode = "php"
-	LanguageCodeRuby       LanguageCode = "ruby"
-	LanguageCodeKotlin     LanguageCode = "kotlin"
+	LanguageCodePython     = langcode.Python
+	LanguageCodeJavascript = langcode.Javascript
+	LanguageCodeJava       = langcode.Java
+	LanguageCodeGo         = langcode.Go
+	LanguageCodeTypescript = langcode.Typescript
+	LanguageCodeCSharp     = langcode.CSharp
+	LanguageCodeRust       = langcode.Rust
+	LanguageCodePHP        = langcode.PHP
+	LanguageCodeRuby       = langcode.Ruby
+	LanguageCodeKotlin     = langcode.Kotlin
 )
 
 // LanguageMeta is exposes metadata about a language
@@ -81,4 +86,12 @@ type Language interface {
 
 	// Get language specific resolvers
 	Resolvers() LanguageResolvers
+}
+
+// GrammarSelector is an optional interface of a Language that parses some of
+// its file extensions with another grammar. The returned Language has the
+// same Meta and its own grammar. The tree of a file reports the returned
+// Language, so a query on the tree compiles against the grammar that parsed it.
+type GrammarSelector interface {
+	LanguageForExtension(ext string) Language
 }

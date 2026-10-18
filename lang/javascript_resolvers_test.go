@@ -117,10 +117,10 @@ func TestJavascriptLanguageResolvers(t *testing.T) {
 			parseTree, err := fileParser.Parse(context.Background(), f)
 			assert.NoError(t, err)
 
-			imports, err := javascriptLanguage.Resolvers().ResolveImports(parseTree)
+			imports, err := javascriptLanguage.Resolvers().ResolveImports(t.Context(), parseTree)
 			assert.NoError(t, err)
 
-			expectedImports, ok := importExpectationsMapper[f.Name()]
+			expectedImports, ok := importExpectationsMapper[f.Path()]
 			assert.True(t, ok)
 
 			assert.Equal(t, len(expectedImports), len(imports))
@@ -154,10 +154,10 @@ func TestJavascriptLanguageResolvers(t *testing.T) {
 			parseTree, err := fileParser.Parse(context.Background(), f)
 			assert.NoError(t, err)
 
-			functions, err := javascriptLanguage.Resolvers().ResolveFunctions(parseTree)
+			functions, err := javascriptLanguage.Resolvers().ResolveFunctions(t.Context(), parseTree)
 			assert.NoError(t, err)
 
-			expectedFunctions, ok := javascriptFunctionExpectations[f.Name()]
+			expectedFunctions, ok := javascriptFunctionExpectations[f.Path()]
 			assert.True(t, ok)
 
 			var foundFunctions []string

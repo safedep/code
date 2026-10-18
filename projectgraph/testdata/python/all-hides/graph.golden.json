@@ -1,0 +1,185 @@
+{
+  "nodes": {
+    "main.py": {
+      "key": "main.py",
+      "kind": "module",
+      "path": "main.py",
+      "line": 1,
+      "exported": true
+    },
+    "pkg/__init__.py": {
+      "key": "pkg/__init__.py",
+      "kind": "module",
+      "path": "pkg/__init__.py",
+      "line": 1,
+      "exported": true
+    },
+    "pkg/__init__.py//f": {
+      "key": "pkg/__init__.py//f",
+      "kind": "export",
+      "path": "pkg/__init__.py",
+      "line": 1,
+      "exported": true
+    },
+    "pkg/__init__.py//g": {
+      "key": "pkg/__init__.py//g",
+      "kind": "export",
+      "path": "pkg/__init__.py",
+      "line": 1,
+      "exported": true
+    },
+    "pkg/a.py": {
+      "key": "pkg/a.py",
+      "kind": "module",
+      "path": "pkg/a.py",
+      "line": 1,
+      "exported": true
+    },
+    "pkg/a.py//f": {
+      "key": "pkg/a.py//f",
+      "kind": "function",
+      "path": "pkg/a.py",
+      "line": 1,
+      "exported": true
+    },
+    "pkg/a.py//g": {
+      "key": "pkg/a.py//g",
+      "kind": "function",
+      "path": "pkg/a.py",
+      "line": 3,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "main.py",
+      "to": "pkg/__init__.py",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "python.import.absolute"
+    },
+    {
+      "from": "main.py",
+      "to": "pkg/__init__.py//f",
+      "site": {
+        "path": "main.py",
+        "line": 2,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.import"
+    },
+    {
+      "from": "main.py",
+      "to": "pkg/__init__.py//g",
+      "site": {
+        "path": "main.py",
+        "line": 3,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.import"
+    },
+    {
+      "from": "pkg/__init__.py",
+      "to": "pkg/a.py",
+      "site": {
+        "path": "pkg/__init__.py",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "python.import.relative"
+    },
+    {
+      "from": "pkg/__init__.py//f",
+      "to": "pkg/a.py//f",
+      "site": {
+        "path": "pkg/__init__.py",
+        "line": 1
+      },
+      "kind": "export",
+      "confidence": "high",
+      "resolver": "python.reexport"
+    },
+    {
+      "from": "pkg/__init__.py//g",
+      "to": "pkg/a.py//g",
+      "site": {
+        "path": "pkg/__init__.py",
+        "line": 1
+      },
+      "kind": "export",
+      "confidence": "high",
+      "resolver": "python.reexport"
+    }
+  ],
+  "unresolved": [],
+  "roots": [
+    {
+      "key": "main.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "pkg/__init__.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "pkg/__init__.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "pkg/a.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "pkg/a.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "pkg/a.py//f",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "pkg/a.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "pkg/a.py//g",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "pkg/a.py",
+        "line": 3
+      }
+    }
+  ],
+  "files": {
+    "main.py": "indexed",
+    "pkg/__init__.py": "indexed",
+    "pkg/a.py": "indexed"
+  },
+  "stats": {
+    "version": "11",
+    "files": 3,
+    "nodes": 7,
+    "edges": 6,
+    "unresolved": 0,
+    "roots": 5,
+    "root_fallback": true
+  }
+}

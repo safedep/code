@@ -18,7 +18,7 @@ type fixtureVisitor struct {
 	foundTree      *core.ParseTree
 }
 
-func (v *fixtureVisitor) VisitTree(tree core.ParseTree) error {
+func (v *fixtureVisitor) VisitTree(_ context.Context, tree core.ParseTree) error {
 	file, err := tree.File()
 	if err != nil {
 		return err
@@ -73,7 +73,7 @@ func TestPythonInheritanceGraphConstruction(t *testing.T) {
 
 	resolvers := pythonLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
 
-	inheritanceGraph, err := resolvers.ResolveInheritance(parseTree)
+	inheritanceGraph, err := resolvers.ResolveInheritance(t.Context(), parseTree)
 	if err != nil {
 		t.Fatalf("Failed to resolve inheritance: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestPythonClassMethodExtraction(t *testing.T) {
 
 	resolvers := pythonLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
 
-	classes, err := resolvers.ResolveClasses(parseTree)
+	classes, err := resolvers.ResolveClasses(t.Context(), parseTree)
 	if err != nil {
 		t.Fatalf("Failed to resolve classes: %v", err)
 	}
@@ -203,7 +203,7 @@ func TestPythonClassDecoratorsAndAbstractClasses(t *testing.T) {
 
 	resolvers := pythonLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
 
-	classes, err := resolvers.ResolveClasses(parseTree)
+	classes, err := resolvers.ResolveClasses(t.Context(), parseTree)
 	if err != nil {
 		t.Fatalf("Failed to resolve classes: %v", err)
 	}
@@ -245,7 +245,7 @@ func testPythonClassResolution(t *testing.T, fixturePath string, expectedClasses
 
 	resolvers := pythonLang.Resolvers().(core.ObjectOrientedLanguageResolvers)
 
-	classes, err := resolvers.ResolveClasses(parseTree)
+	classes, err := resolvers.ResolveClasses(t.Context(), parseTree)
 	if err != nil {
 		t.Fatalf("Failed to resolve classes: %v", err)
 	}

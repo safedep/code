@@ -1,0 +1,43 @@
+source: safedep:hand
+description: main.py calls requests.get through fetch. yaml.dump is in a function that no root reaches, and yaml.load is not called.
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: main.py
+    to: main.py//fetch
+    kind: direct
+    confidence: high
+    site: main.py:14
+  - from: main.py//fetch
+    to: requests//get
+    kind: direct
+    confidence: high
+    site: main.py:6
+unresolved: []
+results:
+  - target: requests//get
+    status: found
+    path:
+      - key: main.py
+      - key: main.py//fetch
+        site: main.py:14
+        kind: direct
+        confidence: high
+      - key: requests//get
+        site: main.py:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.py//fetch
+        site: main.py:6
+        reached: true
+  - target: yaml//load
+    status: no-such-target
+  - target: yaml//dump
+    status: not-found
+    call_sites:
+      - caller: main.py//dump
+        site: main.py:10
+        reached: false

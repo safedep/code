@@ -1,0 +1,51 @@
+source: safedep:hand
+description: main calls store.Save through the import path that go.mod gives the directory. Save calls encode, which another file of the package defines, and encode calls yaml.Marshal. No root reaches unused. No file of store runs code at load, so the import makes no edge.
+roots:
+  - key: cmd/app/main.go
+    kind: main
+    rule: go.main
+  - key: cmd/app/main.go//main
+    kind: main
+    rule: go.main
+edges:
+  - from: cmd/app/main.go//main
+    to: internal/store/store.go//Save
+    kind: direct
+    confidence: high
+    site: cmd/app/main.go:6
+  - from: internal/store/store.go//Save
+    to: internal/store/encode.go//encode
+    kind: direct
+    confidence: high
+    site: internal/store/store.go:6
+no_edges:
+  - from: cmd/app/main.go
+    to: internal/store/store.go
+unresolved: []
+results:
+  - target: gopkg.in//yaml.v3//Marshal
+    status: found
+    path:
+      - key: cmd/app/main.go//main
+      - key: internal/store/store.go//Save
+        site: cmd/app/main.go:6
+        kind: direct
+        confidence: high
+      - key: internal/store/encode.go//encode
+        site: internal/store/store.go:6
+        kind: direct
+        confidence: high
+      - key: gopkg.in//yaml.v3//Marshal
+        site: internal/store/encode.go:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: internal/store/encode.go//encode
+        site: internal/store/encode.go:6
+        reached: true
+  - target: gopkg.in//yaml.v3//Unmarshal
+    status: not-found
+    call_sites:
+      - caller: internal/store/encode.go//unused
+        site: internal/store/encode.go:10
+        reached: false

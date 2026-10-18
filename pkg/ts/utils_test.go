@@ -15,17 +15,14 @@ import (
 
 const identifierQuery = `(identifier) @name`
 
-func countIdentifiers(t *testing.T, language core.Language, tree core.ParseTree) int {
-	data, err := tree.Data()
-	require.NoError(t, err)
-
+func countIdentifiers(t *testing.T, tree core.ParseTree) int {
 	count := 0
-	err = ts.ExecuteQueries(ts.NewQueriesRequest(language, []ts.QueryItem{
+	err := ts.ExecuteQueries(t.Context(), tree, []ts.QueryItem{
 		ts.NewQueryItem(identifierQuery, func(*sitter.QueryMatch) error {
 			count++
 			return nil
 		}),
-	}), data, tree)
+	})
 	require.NoError(t, err)
 	return count
 }
@@ -43,7 +40,7 @@ func TestExecuteQueriesSharesCompiledQueries(t *testing.T) {
 			go func(source string, want int) {
 				defer wg.Done()
 				tree := parseString(t, language, source)
-				assert.Equal(t, want, countIdentifiers(t, language, tree), source)
+				assert.Equal(t, want, countIdentifiers(t, tree), source)
 			}(source, want)
 		}
 	}
@@ -55,12 +52,9 @@ func TestExecuteQueriesReportsInvalidQuery(t *testing.T) {
 	require.NoError(t, err)
 
 	tree := parseString(t, language, "a")
-	data, err := tree.Data()
-	require.NoError(t, err)
-
-	err = ts.ExecuteQueries(ts.NewQueriesRequest(language, []ts.QueryItem{
+	err = ts.ExecuteQueries(t.Context(), tree, []ts.QueryItem{
 		ts.NewQueryItem(`(no_such_node) @x`, func(*sitter.QueryMatch) error { return nil }),
-	}), data, tree)
+	})
 	assert.Error(t, err)
 }
 
@@ -83,6 +77,7 @@ func (s stringTree) Tree() *sitter.Tree               { return s.tree }
 func (s stringTree) Data() (*[]byte, error)           { return &s.data, nil }
 func (s stringTree) File() (core.File, error)         { return nil, nil }
 func (s stringTree) Language() (core.Language, error) { return s.language, nil }
+func (s stringTree) Close()                           { s.tree.Close() }
 
 // otherGrammar has the code of one language and the grammar of another, as
 // a second version of a grammar would.
@@ -102,15 +97,13 @@ func TestExecuteQueriesKeepsAQueryForEachGrammar(t *testing.T) {
 	require.NoError(t, err)
 	strings := func(language core.Language, source string) int {
 		tree := parseString(t, language, source)
-		data, err := tree.Data()
-		require.NoError(t, err)
 		count := 0
-		require.NoError(t, ts.ExecuteQueries(ts.NewQueriesRequest(language, []ts.QueryItem{
+		require.NoError(t, ts.ExecuteQueries(t.Context(), tree, []ts.QueryItem{
 			ts.NewQueryItem(`(string) @s`, func(*sitter.QueryMatch) error {
 				count++
 				return nil
 			}),
-		}), data, tree))
+		}))
 		return count
 	}
 
@@ -118,4 +111,22 @@ func TestExecuteQueriesKeepsAQueryForEachGrammar(t *testing.T) {
 	mixed := otherGrammar{base: python, grammar: typescript.Language()}
 	assert.Equal(t, 2, strings(mixed, "const a = 'x' + 'y'"),
 		"a query compiled for the Python grammar does not run on a TypeScript tree")
+}
+
+func TestExecuteQueriesStopsWhenTheContextIsDone(t *testing.T) {
+	language, err := lang.NewTypescriptLanguage()
+	require.NoError(t, err)
+	tree := parseString(t, language, "a")
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	called := false
+	err = ts.ExecuteQueries(ctx, tree, []ts.QueryItem{
+		ts.NewQueryItem(identifierQuery, func(*sitter.QueryMatch) error {
+			called = true
+			return nil
+		}),
+	})
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.False(t, called)
 }

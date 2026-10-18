@@ -1,0 +1,1 @@
+{"name": "tool", "bin": {"tool": "./bin/cli.js"}}

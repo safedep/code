@@ -1,0 +1,59 @@
+source: safedep:hand
+description: Only a test calls yaml.load. The callback of test is a definition of the test file, so it is a test root. The test roots count only with include_tests.
+test_paths:
+  - '*.test.js'
+roots:
+  - key: index.js
+    kind: manifest
+    rule: node.package-json
+  - key: test/config.test.js
+    kind: test
+    rule: test.files
+  - key: test/config.test.js//<anonymous:3>
+    kind: test
+    rule: test.files
+edges:
+  - from: test/config.test.js//<anonymous:3>
+    to: js-yaml//load
+    kind: direct
+    confidence: high
+    site: test/config.test.js:4
+unresolved:
+  - caller: test/config.test.js
+    site: test/config.test.js:3
+    reason: unknown-receiver
+    method: test
+  - caller: test/config.test.js//<anonymous:3>
+    site: test/config.test.js:4
+    reason: unknown-receiver
+    method: expect
+  - caller: test/config.test.js//<anonymous:3>
+    site: test/config.test.js:4
+    reason: no-definition
+    method: toEqual
+results:
+  - target: js-yaml//load
+    status: not-found
+    test_path:
+      - key: test/config.test.js//<anonymous:3>
+      - key: js-yaml//load
+        site: test/config.test.js:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: test/config.test.js//<anonymous:3>
+        site: test/config.test.js:4
+        reached: false
+  - target: js-yaml//load
+    include_tests: true
+    status: found
+    path:
+      - key: test/config.test.js//<anonymous:3>
+      - key: js-yaml//load
+        site: test/config.test.js:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: test/config.test.js//<anonymous:3>
+        site: test/config.test.js:4
+        reached: true

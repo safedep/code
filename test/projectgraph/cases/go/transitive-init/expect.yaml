@@ -1,0 +1,49 @@
+source: safedep:hand
+description: main imports mid, and mid imports leaf for its init. mid.go runs no code of its own, but its import of leaf does, so the import of mid reaches mid.go and then the init of leaf. doc.go runs nothing, so the import makes no edge to it.
+roots:
+  - key: cmd/app/main.go
+    kind: main
+    rule: go.main
+  - key: cmd/app/main.go//main
+    kind: main
+    rule: go.main
+edges:
+  - from: cmd/app/main.go
+    to: mid/mid.go
+    kind: import
+    confidence: high
+    site: cmd/app/main.go:3
+  - from: mid/mid.go
+    to: leaf/leaf.go
+    kind: import
+    confidence: high
+    site: mid/mid.go:3
+no_edges:
+  - from: cmd/app/main.go
+    to: mid/doc.go
+unresolved: []
+results:
+  - target: net//http//HandleFunc
+    status: found
+    path:
+      - key: cmd/app/main.go
+      - key: mid/mid.go
+        site: cmd/app/main.go:3
+        kind: import
+        confidence: high
+      - key: leaf/leaf.go
+        site: mid/mid.go:3
+        kind: import
+        confidence: high
+      - key: leaf/leaf.go//init
+        site: leaf/leaf.go:5
+        kind: direct
+        confidence: high
+      - key: net//http//HandleFunc
+        site: leaf/leaf.go:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: leaf/leaf.go//init
+        site: leaf/leaf.go:6
+        reached: true

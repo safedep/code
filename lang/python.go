@@ -34,7 +34,5 @@ func (l *pythonLanguage) Language() *sitter.Language {
 }
 
 func (l *pythonLanguage) Resolvers() core.LanguageResolvers {
-	return &pythonResolvers{
-		language: l,
-	}
+	return &pythonResolvers{}
 }

@@ -34,7 +34,5 @@ func (l *javaLanguage) Language() *sitter.Language {
 }
 
 func (l *javaLanguage) Resolvers() core.LanguageResolvers {
-	return &javaResolvers{
-		language: l,
-	}
+	return &javaResolvers{}
 }

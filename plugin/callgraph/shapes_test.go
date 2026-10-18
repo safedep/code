@@ -19,7 +19,7 @@ func TestShapedLanguageCalls(t *testing.T) {
 	}{
 		{
 			language: core.LanguageCodeCSharp,
-			filePath: "fixtures/testShapes.cs",
+			filePath: "testShapes.cs",
 			calls: []string{
 				"OpenAI//Chat//*",
 				"ChatClient",
@@ -28,9 +28,9 @@ func TestShapedLanguageCalls(t *testing.T) {
 				"System//Net//Http//HttpClient",
 				"System//Net//Http//HttpClient//GetStringAsync",
 				"Console//WriteLine",
-				"fixtures/testShapes.cs//Demo//Agent//Ask",
-				"services//GetRequiredService",
-				"chatClient//CompleteChat",
+				"testShapes.cs//Agent//Ask",
+				"testShapes.cs//Host//Run//services//GetRequiredService",
+				"testShapes.cs//Host//Run//chatClient//CompleteChat",
 				"ChatOptions",
 				"AIFunctionFactory//Create",
 			},
@@ -40,17 +40,17 @@ func TestShapedLanguageCalls(t *testing.T) {
 			// sibling of the declarations in this grammar. vet walks its
 			// children too, so a grammar that nests them keeps the calls.
 			language: core.LanguageCodeCSharp,
-			filePath: "fixtures/testFileScoped.cs",
+			filePath: "testFileScoped.cs",
 			calls: []string{
 				"OpenAI//Chat//*",
-				"fixtures/testFileScoped.cs//Agent//Ask",
+				"testFileScoped.cs//Agent//Ask",
 				"ChatClient",
 				"ChatClient//CompleteChat",
 			},
 		},
 		{
 			language: core.LanguageCodeRust,
-			filePath: "fixtures/testShapes.rs",
+			filePath: "testShapes.rs",
 			calls: []string{
 				"async_openai//Client//new",
 				"async_openai//Client//chat//create",
@@ -62,12 +62,12 @@ func TestShapedLanguageCalls(t *testing.T) {
 				"candle_core//Tensor//arange//unsqueeze",
 				"async_openai//Client//models//list//data//iter//map//collect",
 				"println",
-				"fixtures/testShapes.rs//main",
+				"testShapes.rs//main",
 			},
 		},
 		{
 			language: core.LanguageCodePHP,
-			filePath: "fixtures/testShapes.php",
+			filePath: "testShapes.php",
 			calls: []string{
 				"OpenAI//client",
 				"OpenAI//client//chat//create",
@@ -77,12 +77,12 @@ func TestShapedLanguageCalls(t *testing.T) {
 				"GuzzleHttp//Psr7//Request",
 				"getenv",
 				"strtoupper",
-				"fixtures/testShapes.php//Assistant//ask",
+				"testShapes.php//Assistant//ask",
 			},
 		},
 		{
 			language: core.LanguageCodeRuby,
-			filePath: "fixtures/testShapes.rb",
+			filePath: "testShapes.rb",
 			calls: []string{
 				"openai//*",
 				"net/http//*",
@@ -91,14 +91,14 @@ func TestShapedLanguageCalls(t *testing.T) {
 				"Net//HTTP//get",
 				"URI",
 				"ENV//fetch",
-				"fixtures/testShapes.rb//Assistant//initialize",
+				"testShapes.rb//Assistant//initialize",
 			},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.filePath, func(t *testing.T) {
-			treeWalker, fileSystem, err := test.SetupBasicPluginContext([]string{tc.filePath}, []core.LanguageCode{tc.language})
+			treeWalker, fileSystem, err := test.SetupBasicPluginContext("fixtures", []string{tc.filePath}, []core.LanguageCode{tc.language})
 			require.NoError(t, err)
 
 			var calls []string
@@ -109,27 +109,15 @@ func TestShapedLanguageCalls(t *testing.T) {
 				return nil
 			}
 
-			executor, err := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{NewCallGraphPlugin(callback)})
+			executor := plugin.NewTreeWalkPluginExecutor(treeWalker, []core.Plugin{NewCallGraphPlugin(callback)})
+			report, err := executor.Execute(context.Background(), fileSystem)
 			require.NoError(t, err)
-			require.NoError(t, executor.Execute(context.Background(), fileSystem))
+			assert.Empty(t, report.Failed)
 
 			assert.Subset(t, calls, tc.calls)
 			for _, c := range calls {
 				assert.NotRegexp(t, `[\s()|{}]`, c, "a namespace holds no source text")
 			}
 		})
-	}
-}
-
-func TestWithoutTypeArguments(t *testing.T) {
-	for in, want := range map[string]string{
-		"List<string>":                    "List",
-		"serde_json::from_str::<Value>":   "serde_json::from_str::",
-		"Hmac::<Sha256>::new_from_slice":  "Hmac::::new_from_slice",
-		"Dictionary<string, List<int>>.X": "Dictionary.X",
-		"GetRequiredService<IChat>":       "GetRequiredService",
-		"plain::path":                     "plain::path",
-	} {
-		assert.Equal(t, want, withoutTypeArguments(in), in)
 	}
 }

@@ -23,6 +23,11 @@ type ImportNode struct {
 
 	// Whether the import is a wildcard import
 	isWildcardImport bool
+
+	// moduleName and moduleAlias replace the text of their nodes when the
+	// language writes them in another form, as a Go import path in quotes.
+	moduleName  string
+	moduleAlias string
 }
 
 // NewImportNode creates a new ImportNode instance
@@ -35,6 +40,9 @@ func NewImportNode(content Content) *ImportNode {
 }
 
 func (i *ImportNode) ModuleName() string {
+	if i.moduleName != "" {
+		return i.moduleName
+	}
 	return i.contentForNode(i.moduleNameNode)
 }
 
@@ -43,6 +51,9 @@ func (i *ImportNode) ModuleItem() string {
 }
 
 func (i *ImportNode) ModuleAlias() string {
+	if i.moduleAlias != "" {
+		return i.moduleAlias
+	}
 	return i.contentForNode(i.moduleAliasNode)
 }
 
@@ -72,6 +83,18 @@ func (i *ImportNode) GetModuleAliasNode() *sitter.Node {
 
 func (i *ImportNode) SetModuleAliasNode(node *sitter.Node) {
 	i.moduleAliasNode = node
+}
+
+// SetModuleName sets the module name when it differs from the text of the
+// module name node.
+func (i *ImportNode) SetModuleName(name string) {
+	i.moduleName = name
+}
+
+// SetModuleAlias sets the alias when it differs from the text of the alias
+// node.
+func (i *ImportNode) SetModuleAlias(alias string) {
+	i.moduleAlias = alias
 }
 
 func (i *ImportNode) SetIsWildcardImport(isWildcardImport bool) {

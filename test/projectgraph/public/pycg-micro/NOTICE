@@ -1,0 +1,10 @@
+PyCG micro-benchmark
+
+Source: https://github.com/vitsalis/PyCG, directory micro-benchmark/snippets
+Commit: 8d5dc40837803beef1d8d379fbf2cdad6cd94641 (2023-11-26)
+Copyright (c) 2020 Vitalis Salis
+License: Apache License 2.0, in the file LICENSE next to this file.
+
+The snippets directory is a verbatim copy of micro-benchmark/snippets at that
+commit: 119 cases, each with its Python files, its README.md and its
+callgraph.json. SafeDep made no change to the files.

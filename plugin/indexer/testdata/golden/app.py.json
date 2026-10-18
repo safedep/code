@@ -1,0 +1,401 @@
+{
+  "version": "11",
+  "path": "app.py",
+  "language": "python",
+  "content_hash": "a9cdb5fb012d2a29970c07deda9cc8360983015e2360cb9091bca7bfce5c801d",
+  "imports": [
+    {
+      "line": 1,
+      "module": "os",
+      "alias": "os",
+      "kind": "static",
+      "namespace": "os"
+    },
+    {
+      "line": 2,
+      "module": "os.path",
+      "alias": "os",
+      "kind": "static",
+      "namespace": "os"
+    },
+    {
+      "line": 3,
+      "module": "json",
+      "alias": "j",
+      "kind": "static",
+      "namespace": "json"
+    },
+    {
+      "line": 4,
+      "module": "yaml",
+      "item": "load",
+      "alias": "load",
+      "kind": "static",
+      "namespace": "yaml//load"
+    },
+    {
+      "line": 5,
+      "module": "yaml.loader",
+      "item": "SafeLoader",
+      "alias": "Loader",
+      "kind": "static",
+      "namespace": "yaml//loader//SafeLoader"
+    },
+    {
+      "line": 6,
+      "module": ".",
+      "item": "sibling",
+      "alias": "sibling",
+      "kind": "static",
+      "namespace": "////sibling"
+    },
+    {
+      "line": 7,
+      "module": ".utils",
+      "item": "helper",
+      "alias": "helper",
+      "kind": "static",
+      "namespace": "//utils//helper"
+    },
+    {
+      "line": 8,
+      "module": "..pkg",
+      "item": "thing",
+      "alias": "other",
+      "kind": "static",
+      "namespace": "////pkg//thing"
+    },
+    {
+      "line": 9,
+      "module": "collections",
+      "wildcard": true,
+      "kind": "static",
+      "namespace": "collections"
+    }
+  ],
+  "definitions": [
+    {
+      "key": "app.py",
+      "kind": "module",
+      "name": "app",
+      "start_line": 1,
+      "end_line": 43,
+      "exported": true
+    },
+    {
+      "key": "app.py//Parser",
+      "kind": "class",
+      "name": "Parser",
+      "start_line": 12,
+      "end_line": 20,
+      "exported": true
+    },
+    {
+      "key": "app.py//Parser//__init__",
+      "kind": "constructor",
+      "name": "__init__",
+      "start_line": 13,
+      "end_line": 14,
+      "exported": true,
+      "parent": "app.py//Parser"
+    },
+    {
+      "key": "app.py//Parser//parse",
+      "kind": "method",
+      "name": "parse",
+      "start_line": 16,
+      "end_line": 17,
+      "exported": true,
+      "parent": "app.py//Parser"
+    },
+    {
+      "key": "app.py//Parser//render",
+      "kind": "method",
+      "name": "render",
+      "start_line": 19,
+      "end_line": 20,
+      "exported": true,
+      "parent": "app.py//Parser"
+    },
+    {
+      "key": "app.py//main",
+      "kind": "function",
+      "name": "main",
+      "start_line": 23,
+      "end_line": 35,
+      "exported": true,
+      "flags": [
+        {
+          "kind": "reflection",
+          "line": 34
+        }
+      ]
+    },
+    {
+      "key": "app.py//main//nested",
+      "kind": "function",
+      "name": "nested",
+      "start_line": 24,
+      "end_line": 25,
+      "exported": false
+    },
+    {
+      "key": "app.py//later",
+      "kind": "function",
+      "name": "later",
+      "start_line": 38,
+      "end_line": 39,
+      "exported": true
+    }
+  ],
+  "classes": [
+    {
+      "key": "app.py//Parser",
+      "bases": [
+        "Base",
+        "mixins.Mixin"
+      ],
+      "methods": [
+        "app.py//Parser//__init__",
+        "app.py//Parser//parse",
+        "app.py//Parser//render"
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "caller": "app.py//Parser//parse",
+      "line": 17,
+      "column": 16,
+      "callee": "helper",
+      "targets": [
+        "//utils//helper"
+      ],
+      "method": "helper",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "member",
+          "targets": [
+            "app.py//Parser//text"
+          ]
+        }
+      ]
+    },
+    {
+      "caller": "app.py//Parser//render",
+      "line": 20,
+      "column": 16,
+      "callee": "self.parse",
+      "targets": [
+        "app.py//Parser//parse"
+      ],
+      "receiver": "self",
+      "method": "parse",
+      "kind": "call"
+    },
+    {
+      "caller": "app.py//main//nested",
+      "line": 25,
+      "column": 16,
+      "callee": "os.path.join",
+      "targets": [
+        "os//path//join"
+      ],
+      "receiver": "os.path",
+      "method": "join",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        },
+        {
+          "shape": "string"
+        }
+      ]
+    },
+    {
+      "caller": "app.py//main",
+      "line": 27,
+      "column": 5,
+      "callee": "nested",
+      "targets": [
+        "app.py//main//nested"
+      ],
+      "method": "nested",
+      "kind": "call"
+    },
+    {
+      "caller": "app.py//main",
+      "line": 28,
+      "column": 9,
+      "callee": "Parser",
+      "targets": [
+        "app.py//Parser"
+      ],
+      "method": "Parser",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        }
+      ]
+    },
+    {
+      "caller": "app.py//main",
+      "line": 29,
+      "column": 5,
+      "callee": "p.render",
+      "targets": [
+        "app.py//Parser//render"
+      ],
+      "receiver": "p",
+      "method": "render",
+      "kind": "call"
+    },
+    {
+      "caller": "app.py//main",
+      "line": 30,
+      "column": 5,
+      "callee": "load",
+      "targets": [
+        "yaml//load"
+      ],
+      "method": "load",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        }
+      ]
+    },
+    {
+      "caller": "app.py//main",
+      "line": 31,
+      "column": 5,
+      "callee": "later",
+      "targets": [
+        "app.py//later"
+      ],
+      "method": "later",
+      "kind": "call"
+    },
+    {
+      "caller": "app.py//main",
+      "line": 32,
+      "column": 5,
+      "callee": "missing",
+      "method": "missing",
+      "kind": "call"
+    },
+    {
+      "caller": "app.py//main",
+      "line": 34,
+      "column": 5,
+      "callee": "getattr",
+      "targets": [
+        "getattr"
+      ],
+      "method": "getattr",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        },
+        {
+          "shape": "name"
+        }
+      ]
+    },
+    {
+      "caller": "app.py//main",
+      "line": 35,
+      "column": 5,
+      "callee": "j.dumps",
+      "targets": [
+        "json//dumps"
+      ],
+      "receiver": "j",
+      "method": "dumps",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name",
+          "targets": [
+            "////sibling"
+          ]
+        },
+        {
+          "shape": "name",
+          "targets": [
+            "////pkg//thing"
+          ]
+        }
+      ]
+    },
+    {
+      "caller": "app.py",
+      "line": 42,
+      "column": 1,
+      "callee": "main",
+      "targets": [
+        "app.py//main"
+      ],
+      "method": "main",
+      "kind": "call"
+    }
+  ],
+  "references": [
+    {
+      "caller": "app.py//Parser//parse",
+      "line": 17,
+      "column": 23,
+      "text": "self.text",
+      "targets": [
+        "app.py//Parser//text"
+      ]
+    },
+    {
+      "caller": "app.py//main",
+      "line": 30,
+      "column": 25,
+      "text": "Loader",
+      "targets": [
+        "yaml//loader//SafeLoader"
+      ]
+    },
+    {
+      "caller": "app.py//main",
+      "line": 35,
+      "column": 13,
+      "text": "sibling",
+      "targets": [
+        "////sibling"
+      ]
+    },
+    {
+      "caller": "app.py//main",
+      "line": 35,
+      "column": 22,
+      "text": "other",
+      "targets": [
+        "////pkg//thing"
+      ]
+    }
+  ],
+  "unresolved": [
+    {
+      "caller": "app.py//main",
+      "line": 34,
+      "column": 5,
+      "text": "getattr(p, attr)",
+      "reason": "computed-name"
+    }
+  ],
+  "flags": [
+    {
+      "kind": "reflection",
+      "line": 34
+    }
+  ]
+}

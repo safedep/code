@@ -1,0 +1,428 @@
+{
+  "version": "11",
+  "path": "app.go",
+  "language": "go",
+  "content_hash": "3d65f36ed0edfd5e009c06d07d3d038337e9faebaca6c9762b5c473a14826166",
+  "package": "app",
+  "imports": [
+    {
+      "line": 4,
+      "module": "net/http",
+      "alias": "http",
+      "kind": "static",
+      "namespace": "net//http"
+    },
+    {
+      "line": 6,
+      "module": "example.com/app/store",
+      "alias": "store",
+      "kind": "static",
+      "namespace": "example.com//app//store"
+    }
+  ],
+  "definitions": [
+    {
+      "key": "app.go",
+      "kind": "module",
+      "name": "app",
+      "start_line": 1,
+      "end_line": 54,
+      "exported": true
+    },
+    {
+      "key": "app.go//Reader",
+      "kind": "interface",
+      "name": "Reader",
+      "start_line": 9,
+      "end_line": 11,
+      "exported": true
+    },
+    {
+      "key": "app.go//ReadCloser",
+      "kind": "interface",
+      "name": "ReadCloser",
+      "start_line": 13,
+      "end_line": 16,
+      "exported": true
+    },
+    {
+      "key": "app.go//Server",
+      "kind": "class",
+      "name": "Server",
+      "start_line": 18,
+      "end_line": 24,
+      "exported": true
+    },
+    {
+      "key": "app.go//Box",
+      "kind": "class",
+      "name": "Box",
+      "start_line": 26,
+      "end_line": 26,
+      "exported": true
+    },
+    {
+      "key": "app.go//Box//Get",
+      "kind": "method",
+      "name": "Get",
+      "start_line": 28,
+      "end_line": 28,
+      "exported": true,
+      "parent": "app.go//Box",
+      "params": [
+        {
+          "name": "b",
+          "type": "Box"
+        }
+      ],
+      "returns": "T"
+    },
+    {
+      "key": "app.go//NewServer",
+      "kind": "function",
+      "name": "NewServer",
+      "start_line": 30,
+      "end_line": 32,
+      "exported": true,
+      "arity": 2,
+      "variadic": true,
+      "returns": "Server"
+    },
+    {
+      "key": "app.go//Server//Run",
+      "kind": "method",
+      "name": "Run",
+      "start_line": 34,
+      "end_line": 49,
+      "exported": true,
+      "parent": "app.go//Server",
+      "params": [
+        {
+          "name": "s",
+          "type": "Server"
+        },
+        {
+          "name": "h",
+          "type": "http.Handler"
+        }
+      ],
+      "locals": [
+        {
+          "name": "db",
+          "type": "store.Open",
+          "result": true
+        },
+        {
+          "name": "r",
+          "type": "Reader"
+        },
+        {
+          "name": "c",
+          "type": "Server"
+        },
+        {
+          "name": "d",
+          "type": "NewServer",
+          "result": true
+        },
+        {
+          "name": "e",
+          "type": "store.DB"
+        }
+      ],
+      "arity": 2
+    },
+    {
+      "key": "app.go//Server//serve",
+      "kind": "method",
+      "name": "serve",
+      "start_line": 51,
+      "end_line": 51,
+      "exported": false,
+      "parent": "app.go//Server",
+      "params": [
+        {
+          "name": "s",
+          "type": "Server"
+        },
+        {
+          "name": "w",
+          "type": "http.ResponseWriter"
+        },
+        {
+          "name": "r",
+          "type": "http.Request"
+        }
+      ],
+      "arity": 2
+    },
+    {
+      "key": "app.go//Server//Close",
+      "kind": "method",
+      "name": "Close",
+      "start_line": 53,
+      "end_line": 53,
+      "exported": true,
+      "parent": "app.go//Server",
+      "params": [
+        {
+          "name": "s",
+          "type": "Server"
+        }
+      ]
+    }
+  ],
+  "classes": [
+    {
+      "key": "app.go//Box",
+      "methods": [
+        "app.go//Box//Get"
+      ],
+      "fields": [
+        {
+          "name": "v",
+          "type": "T"
+        }
+      ]
+    },
+    {
+      "key": "app.go//ReadCloser",
+      "bases": [
+        "Reader"
+      ],
+      "abstract": [
+        {
+          "name": "Close",
+          "arity": 0
+        }
+      ]
+    },
+    {
+      "key": "app.go//Reader",
+      "abstract": [
+        {
+          "name": "Read",
+          "arity": 1
+        }
+      ]
+    },
+    {
+      "key": "app.go//Server",
+      "bases": [
+        "Reader",
+        "store.Store"
+      ],
+      "methods": [
+        "app.go//Server//Close",
+        "app.go//Server//Run",
+        "app.go//Server//serve"
+      ],
+      "fields": [
+        {
+          "name": "db",
+          "type": "store.DB"
+        }
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "caller": "app.go//Server//Run",
+      "line": 35,
+      "column": 8,
+      "callee": "store.Open",
+      "targets": [
+        "example.com//app//store//Open"
+      ],
+      "receiver": "store",
+      "method": "Open",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        }
+      ]
+    },
+    {
+      "caller": "app.go//Server//Run",
+      "line": 38,
+      "column": 12,
+      "callee": "NewServer",
+      "targets": [
+        "app.go//NewServer"
+      ],
+      "method": "NewServer",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        }
+      ]
+    },
+    {
+      "caller": "app.go//Server//Run",
+      "line": 39,
+      "column": 7,
+      "callee": "new",
+      "targets": [
+        "new"
+      ],
+      "method": "new",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "computed"
+        }
+      ]
+    },
+    {
+      "caller": "app.go//Server//Run",
+      "line": 40,
+      "column": 2,
+      "callee": "r.Read",
+      "targets": [
+        "app.go//Server//Run//r//Read"
+      ],
+      "receiver": "r",
+      "method": "Read",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "literal"
+        }
+      ]
+    },
+    {
+      "caller": "app.go//Server//Run",
+      "line": 41,
+      "column": 2,
+      "callee": "c.Run",
+      "targets": [
+        "app.go//Server//Run//c//Run"
+      ],
+      "receiver": "c",
+      "method": "Run",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        },
+        {
+          "shape": "name"
+        }
+      ]
+    },
+    {
+      "caller": "app.go//Server//Run",
+      "line": 42,
+      "column": 2,
+      "callee": "d.Run",
+      "targets": [
+        "app.go//Server//Run//d//Run"
+      ],
+      "receiver": "d",
+      "method": "Run",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "literal"
+        },
+        {
+          "shape": "literal"
+        }
+      ]
+    },
+    {
+      "caller": "app.go//Server//Run",
+      "line": 43,
+      "column": 2,
+      "callee": "e.Close",
+      "targets": [
+        "app.go//Server//Run//e//Close"
+      ],
+      "receiver": "e",
+      "method": "Close",
+      "kind": "call"
+    },
+    {
+      "caller": "app.go//Server//Run",
+      "line": 44,
+      "column": 2,
+      "callee": "db.Query",
+      "targets": [
+        "app.go//Server//Run//db//Query"
+      ],
+      "receiver": "db",
+      "method": "Query",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        }
+      ]
+    },
+    {
+      "caller": "app.go//Server//Run",
+      "line": 46,
+      "column": 2,
+      "callee": "http.HandleFunc",
+      "targets": [
+        "net//http//HandleFunc"
+      ],
+      "receiver": "http",
+      "method": "HandleFunc",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        },
+        {
+          "shape": "member",
+          "targets": [
+            "app.go//Server//Run//s//serve"
+          ]
+        }
+      ]
+    },
+    {
+      "caller": "app.go//Server//Run",
+      "line": 47,
+      "column": 14,
+      "callee": "f",
+      "targets": [
+        "app.go//Server//Run//f"
+      ],
+      "method": "f",
+      "kind": "call"
+    }
+  ],
+  "references": [
+    {
+      "caller": "app.go//Box//Get",
+      "line": 28,
+      "column": 35,
+      "text": "b.v",
+      "targets": [
+        "app.go//Box//Get//b//v"
+      ]
+    },
+    {
+      "caller": "app.go//Server//Run",
+      "line": 45,
+      "column": 7,
+      "text": "s.Close",
+      "targets": [
+        "app.go//Server//Run//s//Close"
+      ]
+    },
+    {
+      "caller": "app.go//Server//Run",
+      "line": 46,
+      "column": 23,
+      "text": "s.serve",
+      "targets": [
+        "app.go//Server//Run//s//serve"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "version": "2",
+  "index_version": "11",
+  "link_version": "11",
+  "unit": "pypi:badpkg@1.0.0",
+  "symbols": [
+    {
+      "key": "badpkg//load",
+      "definitions": [
+        "pypi:badpkg@1.0.0//badpkg/__init__.py//load"
+      ],
+      "reaches": [],
+      "uncertainties": [
+        0
+      ]
+    }
+  ],
+  "targets": [],
+  "uncertainties": [
+    {
+      "kind": "budget",
+      "key": "pypi:badpkg@1.0.0//badpkg/big.py",
+      "site": {
+        "path": "pypi:badpkg@1.0.0//badpkg/big.py"
+      },
+      "text": "the file is failed"
+    }
+  ],
+  "incomplete": [
+    "pypi:badpkg@1.0.0//badpkg/big.py"
+  ]
+}

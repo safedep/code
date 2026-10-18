@@ -1,0 +1,34 @@
+{
+  "version": "2",
+  "index_version": "11",
+  "link_version": "11",
+  "unit": "go:github.com/acme/dep@v1.0.0",
+  "symbols": [
+    {
+      "key": "github.com//acme//dep//Impl",
+      "definitions": [
+        "go:github.com/acme/dep@v1.0.0//dep.go//Impl"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "github.com//acme//dep//Impl//Run",
+      "definitions": [
+        "go:github.com/acme/dep@v1.0.0//dep.go//Impl//Run"
+      ],
+      "reaches": [
+        "os//exec//Command"
+      ]
+    },
+    {
+      "key": "github.com//acme//dep//New",
+      "definitions": [
+        "go:github.com/acme/dep@v1.0.0//dep.go//New"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": [
+    "os//exec//Command"
+  ]
+}

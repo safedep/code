@@ -1,0 +1,59 @@
+source: safedep:hand
+description: >-
+  main holds a value of the project interface Runner and calls Run on it. The value comes from New of the
+  dependency dep, whose type Impl implements Runner and calls exec.Command in Run. The interface is
+  first-party, so Impl.Run of the unit is a cha candidate, and the site keeps its record. The record has
+  the method Run, and Impl.Run reaches exec.Command, so the target is never not found.
+units:
+  gomod/github.com/acme/dep@v1.0.0: go:github.com/acme/dep@v1.0.0
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+exact_edges: true
+edges:
+  - from: main.go//main
+    to: github.com//acme//dep//New
+    kind: direct
+    confidence: high
+    site: main.go:9
+  - from: github.com//acme//dep//New
+    to: go:github.com/acme/dep@v1.0.0//dep.go//New
+    kind: package
+    confidence: high
+    site: go:github.com/acme/dep@v1.0.0//dep.go:7
+  - from: main.go//main
+    to: go:github.com/acme/dep@v1.0.0//dep.go//Impl//Run
+    kind: cha
+    confidence: medium
+    site: main.go:10
+  - from: go:github.com/acme/dep@v1.0.0//dep.go//Impl//Run
+    to: os//exec//Command
+    kind: direct
+    confidence: high
+    site: go:github.com/acme/dep@v1.0.0//dep.go:12
+unresolved:
+  - caller: main.go//main
+    site: main.go:10
+    reason: no-definition
+    method: Run
+results:
+  - target: os//exec//Command
+    status: found
+    path:
+      - key: main.go//main
+      - key: go:github.com/acme/dep@v1.0.0//dep.go//Impl//Run
+        site: main.go:10
+        kind: cha
+        confidence: medium
+      - key: os//exec//Command
+        site: go:github.com/acme/dep@v1.0.0//dep.go:12
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: go:github.com/acme/dep@v1.0.0//dep.go//Impl//Run
+        site: go:github.com/acme/dep@v1.0.0//dep.go:12
+        reached: true

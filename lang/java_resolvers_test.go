@@ -69,10 +69,10 @@ func TestJavaLanguageResolvers(t *testing.T) {
 			parseTree, err := fileParser.Parse(context.Background(), f)
 			assert.NoError(t, err)
 
-			imports, err := javaLanguage.Resolvers().ResolveImports(parseTree)
+			imports, err := javaLanguage.Resolvers().ResolveImports(t.Context(), parseTree)
 			assert.NoError(t, err)
 
-			expectedImports, ok := importExpectationsMapper[f.Name()]
+			expectedImports, ok := importExpectationsMapper[f.Path()]
 			assert.True(t, ok)
 
 			assert.Equal(t, len(expectedImports), len(imports))
@@ -106,10 +106,10 @@ func TestJavaLanguageResolvers(t *testing.T) {
 			parseTree, err := fileParser.Parse(context.Background(), f)
 			assert.NoError(t, err)
 
-			functions, err := javaLanguage.Resolvers().ResolveFunctions(parseTree)
+			functions, err := javaLanguage.Resolvers().ResolveFunctions(t.Context(), parseTree)
 			assert.NoError(t, err)
 
-			expectedFunctions, ok := javaFunctionExpectations[f.Name()]
+			expectedFunctions, ok := javaFunctionExpectations[f.Path()]
 			assert.True(t, ok)
 
 			var foundFunctions []string

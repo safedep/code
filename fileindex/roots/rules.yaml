@@ -1,0 +1,174 @@
+# Root rules of the project graph. A rule marks the definitions or the
+# module top levels that run with no caller in the graph.
+# A callee is a symbol key as the graph writes it, as django//urls//path for
+# path of django.urls. requires names the packages of the framework of a
+# rule, and the rule applies only to a project that depends on one of them.
+version: 1
+rules:
+  - id: go.main
+    language: go
+    kind: main
+    match: { definition: { name: main, in_package: main } }
+  - id: java.main
+    language: java
+    kind: main
+    match: { definition: { name: main, static: true } }
+  - id: python.main-guard
+    language: python
+    kind: main
+    match: { main_guard: true }
+  - id: node.package-json
+    language: javascript
+    kind: manifest
+    match: { manifest: { file: package.json, fields: [main, bin, exports, module] } }
+  - id: python.project-scripts
+    language: python
+    kind: manifest
+    match: { manifest: { file: pyproject.toml, fields: ["project.scripts", "project.entry-points", "tool.poetry.scripts"] } }
+  - id: python.setup-py
+    language: python
+    kind: manifest
+    match: { manifest: { file: setup.py, fields: [console_scripts] } }
+  - id: procfile
+    language: any
+    kind: manifest
+    match: { manifest: { file: Procfile } }
+  - id: dockerfile
+    language: any
+    kind: manifest
+    match: { manifest: { file: Dockerfile } }
+  - id: python.flask.route
+    language: python
+    kind: framework
+    requires: [flask]
+    match: { call: { callee_suffix: ["//route", "//get", "//post", "//put", "//delete", "//patch", "//before_request", "//after_request", "//teardown_request", "//errorhandler"], receiver_from: ["flask//Flask", "flask//Blueprint"] } }
+  - id: python.fastapi.route
+    language: python
+    kind: framework
+    requires: [fastapi]
+    match: { call: { callee_suffix: ["//get", "//post", "//put", "//delete", "//patch", "//head", "//options", "//trace", "//api_route", "//websocket", "//on_event", "//middleware", "//exception_handler"], receiver_from: ["fastapi//FastAPI", "fastapi//APIRouter"] } }
+  - id: python.django.urls
+    language: python
+    kind: framework
+    requires: [django]
+    match: { call: { callee: ["django//urls//path", "django//urls//re_path", "django//conf//urls//url"], arg: 1, shape: [name, member] } }
+  - id: python.django.view
+    language: python
+    kind: framework
+    requires: [django]
+    match: { call: { callee_suffix: ["//as_view"], receiver_from: ["django"], root: receiver } }
+  - id: python.click.command
+    language: python
+    kind: framework
+    requires: [click]
+    match: { decorator: ["@click.command", "@click.group"] }
+  - id: python.click.subcommand
+    language: python
+    kind: framework
+    requires: [click]
+    match: { call: { callee_suffix: ["//command", "//group"], receiver_from: ["click//group", "click//Group"] } }
+  - id: python.typer.command
+    language: python
+    kind: framework
+    requires: [typer]
+    match: { call: { callee_suffix: ["//command", "//callback"], receiver_from: ["typer//Typer"] } }
+  - id: node.express.route
+    language: javascript
+    kind: framework
+    requires: [express]
+    match: { call: { callee_suffix: ["//get", "//post", "//put", "//delete", "//patch", "//head", "//options", "//all", "//use", "//param", "//route"], receiver_from: ["express"], arg: -1, shape: [function, name, member] } }
+  - id: node.koa.route
+    language: javascript
+    kind: framework
+    requires: [koa, "@koa/router", koa-router]
+    match: { call: { callee_suffix: ["//use", "//get", "//post", "//put", "//delete", "//patch", "//all"], receiver_from: ["koa", "@koa//router", "koa-router"], arg: -1, shape: [function, name, member] } }
+  - id: node.commander.action
+    language: javascript
+    kind: framework
+    requires: [commander]
+    match: { call: { callee_suffix: ["//action", "//hook"], receiver_from: ["commander"], arg: -1, shape: [function, name, member] } }
+  - id: node.next.route
+    language: javascript
+    kind: framework
+    requires: [next]
+    match: { path: ["app/**/route.*", "app/**/page.*", "app/**/layout.*", "src/app/**/route.*", "src/app/**/page.*", "src/app/**/layout.*", "pages/**", "src/pages/**"] }
+  - id: node.serverless.handler
+    language: javascript
+    kind: framework
+    match: { export: { names: [handler], path: ["**/handler.*", "**/handlers/**", "**/index.*", "**/lambda.*"] } }
+  - id: java.spring.web
+    language: java
+    kind: framework
+    match: { annotation: ["@RestController", "@Controller", "@RequestMapping", "@GetMapping", "@PostMapping", "@PutMapping", "@DeleteMapping", "@PatchMapping", "@ExceptionHandler", "@Scheduled", "@EventListener", "@KafkaListener", "@JmsListener", "@RabbitListener", "@Bean", "@PostConstruct"] }
+  - id: java.spring.component
+    language: java
+    kind: framework
+    match: { annotation: ["@Component", "@Service", "@Repository", "@Configuration", "@SpringBootApplication"] }
+  - id: csharp.main
+    language: csharp
+    kind: main
+    match: { definition: { name: Main, static: true } }
+  - id: csharp.top-level-statements
+    language: csharp
+    kind: main
+    match: { definition: { name: "<Main>$" } }
+  - id: csharp.aspnet.action
+    language: csharp
+    kind: framework
+    match: { annotation: ["@HttpGet", "@HttpPost", "@HttpPut", "@HttpDelete", "@HttpPatch", "@HttpHead", "@HttpOptions", "@Route", "@Function", "@FunctionName"] }
+  - id: csharp.aspnet.controllers
+    language: csharp
+    kind: framework
+    match: { path: ["**/Controllers/**"] }
+  - id: php.script
+    language: php
+    kind: main
+    match: { path: ["index.php", "public/*.php", "web/*.php", "bin/*.php", "cli/*.php", "scripts/*.php"] }
+  - id: php.composer-bin
+    language: php
+    kind: manifest
+    match: { manifest: { file: composer.json, fields: [bin] } }
+  - id: php.laravel.routes
+    language: php
+    kind: framework
+    match: { path: ["routes/*.php"] }
+  - id: php.laravel.controllers
+    language: php
+    kind: framework
+    match: { path: ["app/Http/Controllers/**", "app/Console/Commands/**", "app/Jobs/**", "app/Listeners/**"] }
+  - id: php.symfony.attribute
+    language: php
+    kind: framework
+    match: { annotation: ["@Route", "@AsCommand", "@AsController", "@AsEventListener", "@AsMessageHandler"] }
+  - id: ruby.main-guard
+    language: ruby
+    kind: main
+    match: { main_guard: true }
+  - id: ruby.script
+    language: ruby
+    kind: main
+    match: { path: ["exe/*", "bin/*", "script/*", "scripts/*", "Rakefile", "*.rake", "config.ru", "**/tasks/*.rake"] }
+  - id: ruby.rails.app
+    language: ruby
+    kind: framework
+    match: { path: ["app/controllers/**", "app/jobs/**", "app/mailers/**", "app/channels/**", "app/helpers/**", "app/workers/**", "app/views/**", "config/routes.rb", "config/initializers/**", "db/migrate/**", "db/seeds.rb"] }
+  - id: rust.main
+    language: rust
+    kind: main
+    match: { definition: { name: main } }
+  - id: rust.build-script
+    language: rust
+    kind: main
+    match: { path: ["build.rs", "**/build.rs"] }
+  - id: rust.web.attribute
+    language: rust
+    kind: framework
+    match: { annotation: ["@get", "@post", "@put", "@delete", "@patch", "@head", "@options", "@route", "@catch", "@launch"] }
+  - id: rust.test.attribute
+    language: rust
+    kind: test
+    match: { annotation: ["@test", "@tokio::test", "@rstest", "@bench"] }
+  - id: test.files
+    language: any
+    kind: test
+    match: { test_file: true }

@@ -1,0 +1,156 @@
+{
+  "nodes": {
+    "src/app/cli.py": {
+      "key": "src/app/cli.py",
+      "kind": "module",
+      "path": "src/app/cli.py",
+      "line": 1,
+      "exported": true
+    },
+    "src/app/cli.py//main": {
+      "key": "src/app/cli.py//main",
+      "kind": "function",
+      "path": "src/app/cli.py",
+      "line": 1,
+      "exported": true
+    },
+    "src/app/ignored.py": {
+      "key": "src/app/ignored.py",
+      "kind": "module",
+      "path": "src/app/ignored.py",
+      "line": 1,
+      "exported": true
+    },
+    "src/app/ignored.py//x": {
+      "key": "src/app/ignored.py//x",
+      "kind": "function",
+      "path": "src/app/ignored.py",
+      "line": 1,
+      "exported": true
+    },
+    "src/app/legacy.py": {
+      "key": "src/app/legacy.py",
+      "kind": "module",
+      "path": "src/app/legacy.py",
+      "line": 1,
+      "exported": true
+    },
+    "src/app/plugin.py": {
+      "key": "src/app/plugin.py",
+      "kind": "module",
+      "path": "src/app/plugin.py",
+      "line": 1,
+      "exported": true
+    },
+    "src/app/plugin.py//Plugin": {
+      "key": "src/app/plugin.py//Plugin",
+      "kind": "class",
+      "path": "src/app/plugin.py",
+      "line": 1,
+      "exported": true
+    },
+    "src/app/plugin.py//Plugin//load": {
+      "key": "src/app/plugin.py//Plugin//load",
+      "kind": "method",
+      "path": "src/app/plugin.py",
+      "line": 2,
+      "exported": true
+    },
+    "src/app/tool.py": {
+      "key": "src/app/tool.py",
+      "kind": "module",
+      "path": "src/app/tool.py",
+      "line": 1,
+      "exported": true
+    },
+    "src/app/tool.py//run": {
+      "key": "src/app/tool.py//run",
+      "kind": "function",
+      "path": "src/app/tool.py",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [],
+  "unresolved": [],
+  "roots": [
+    {
+      "key": "src/app/cli.py",
+      "kind": "manifest",
+      "rule": "python.project-scripts",
+      "site": {
+        "path": "src/app/cli.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/app/cli.py//main",
+      "kind": "manifest",
+      "rule": "python.project-scripts",
+      "site": {
+        "path": "src/app/cli.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/app/legacy.py",
+      "kind": "manifest",
+      "rule": "python.project-scripts",
+      "site": {
+        "path": "src/app/legacy.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/app/plugin.py",
+      "kind": "manifest",
+      "rule": "python.project-scripts",
+      "site": {
+        "path": "src/app/plugin.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/app/plugin.py//Plugin//load",
+      "kind": "manifest",
+      "rule": "python.project-scripts",
+      "site": {
+        "path": "src/app/plugin.py",
+        "line": 2
+      }
+    },
+    {
+      "key": "src/app/tool.py",
+      "kind": "manifest",
+      "rule": "python.project-scripts",
+      "site": {
+        "path": "src/app/tool.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/app/tool.py//run",
+      "kind": "manifest",
+      "rule": "python.project-scripts",
+      "site": {
+        "path": "src/app/tool.py",
+        "line": 1
+      }
+    }
+  ],
+  "files": {
+    "src/app/cli.py": "indexed",
+    "src/app/ignored.py": "indexed",
+    "src/app/legacy.py": "indexed",
+    "src/app/plugin.py": "indexed",
+    "src/app/tool.py": "indexed"
+  },
+  "stats": {
+    "version": "11",
+    "files": 5,
+    "nodes": 10,
+    "edges": 0,
+    "unresolved": 0,
+    "roots": 7
+  }
+}

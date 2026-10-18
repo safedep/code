@@ -1,0 +1,20 @@
+{
+  "version": "2",
+  "index_version": "11",
+  "link_version": "11",
+  "unit": "pypi:okpkg@1.0.0",
+  "symbols": [
+    {
+      "key": "okpkg//run",
+      "definitions": [
+        "pypi:okpkg@1.0.0//okpkg/__init__.py//run"
+      ],
+      "reaches": [
+        "subprocess//run"
+      ]
+    }
+  ],
+  "targets": [
+    "subprocess//run"
+  ]
+}

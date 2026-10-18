@@ -1,0 +1,4 @@
+{
+  "name": "field-ambiguous",
+  "bin": { "app": "src/main.js" }
+}

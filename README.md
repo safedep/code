@@ -9,3 +9,7 @@ SafeDep Code Analysis Framework
 See [docs/ADR.md](./docs/ADR.md) for architectural decisions.
 
 See [docs/detection.md](./docs/detection.md) for the APIs that security detections use.
+
+See [docs/projectgraph.md](./docs/projectgraph.md) for the project graph: the call graph of a
+whole project across its files and into its dependencies, with the index, link, roots, reach and
+summary steps.

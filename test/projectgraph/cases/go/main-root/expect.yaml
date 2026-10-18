@@ -1,0 +1,60 @@
+source: safedep:hand
+description: The main function of package main is a root. The program initializes the package before main runs, so the module top level of each file of the package is a root too. A function main in package lib is no root. The blank import of lib runs its init function, so http.HandleFunc is called and http.ListenAndServe is not.
+roots:
+  - key: cmd/tool/main.go
+    kind: main
+    rule: go.main
+  - key: cmd/tool/main.go//main
+    kind: main
+    rule: go.main
+edges:
+  - from: cmd/tool/main.go
+    to: lib/register.go
+    kind: import
+    confidence: high
+    site: cmd/tool/main.go:6
+  - from: lib/register.go
+    to: lib/register.go//init
+    kind: direct
+    confidence: high
+    site: lib/register.go:5
+unresolved: []
+results:
+  - target: os//exec//Command
+    status: found
+    path:
+      - key: cmd/tool/main.go//main
+      - key: os//exec//Command
+        site: cmd/tool/main.go:10
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: cmd/tool/main.go//main
+        site: cmd/tool/main.go:10
+        reached: true
+  - target: net//http//HandleFunc
+    status: found
+    path:
+      - key: cmd/tool/main.go
+      - key: lib/register.go
+        site: cmd/tool/main.go:6
+        kind: import
+        confidence: high
+      - key: lib/register.go//init
+        site: lib/register.go:5
+        kind: direct
+        confidence: high
+      - key: net//http//HandleFunc
+        site: lib/register.go:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib/register.go//init
+        site: lib/register.go:6
+        reached: true
+  - target: net//http//ListenAndServe
+    status: not-found
+    call_sites:
+      - caller: lib/register.go//main
+        site: lib/register.go:10
+        reached: false

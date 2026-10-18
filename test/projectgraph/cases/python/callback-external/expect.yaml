@@ -1,0 +1,35 @@
+source: safedep:hand
+description: main.py passes yaml.load to run, and run calls its parameter. The reference makes yaml.load possibly called from main.py.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+edges:
+  - from: main.py
+    to: tasks.py//run
+    kind: direct
+    confidence: high
+    site: main.py:5
+  - from: main.py
+    to: yaml//load
+    kind: reference
+    confidence: low
+    site: main.py:5
+unresolved:
+  - caller: tasks.py//run
+    site: tasks.py:2
+    reason: unknown-receiver
+    method: cb
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: yaml//load
+        site: main.py:5
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: main.py
+        site: main.py:5
+        reached: true

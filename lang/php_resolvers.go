@@ -1,6 +1,7 @@
 package lang
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/safedep/code/core"
@@ -27,14 +28,14 @@ var phpFunctionShapes = map[string]functionShape{
 // ResolveImports returns one import for each name in a use declaration, as in
 // use GuzzleHttp\Client as Http or use Illuminate\Support\{Str, Arr}. The
 // last segment of the name is the name in scope unless an alias renames it.
-func (r *phpResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, error) {
+func (r *phpResolvers) ResolveImports(ctx context.Context, tree core.ParseTree) ([]*ast.ImportNode, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
 	}
 
 	var imports []*ast.ImportNode
-	walkNamed(tree.Tree().RootNode(), func(node *sitter.Node) bool {
+	err = walkNamed(ctx, tree.Tree().RootNode(), func(node *sitter.Node) bool {
 		if node.Type() != "namespace_use_declaration" {
 			return phpImportContainers[node.Type()]
 		}
@@ -58,6 +59,9 @@ func (r *phpResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, e
 		}
 		return false
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return imports, nil
 }
@@ -76,6 +80,6 @@ func phpAlias(clause, name *sitter.Node) *sitter.Node {
 	return name
 }
 
-func (r *phpResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
-	return resolveFunctionsByShape(tree, phpFunctionShapes)
+func (r *phpResolvers) ResolveFunctions(ctx context.Context, tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
+	return resolveFunctionsByShape(ctx, tree, phpFunctionShapes)
 }

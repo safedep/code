@@ -1,0 +1,44 @@
+source: safedep:hand
+description: Repository is a partial class of the namespace Shop.Data in two files. Save in one file calls Validate and Write, which the other file defines, with no receiver, so the calls run on this and reach the methods of the other part.
+roots:
+  - key: src/Program.cs//Program//Main
+    kind: main
+    rule: csharp.main
+edges:
+  - from: src/Program.cs//Program//Main
+    to: src/Repository.cs//Repository//Save
+    kind: member
+    confidence: high
+    site: src/Program.cs:10
+  - from: src/Repository.cs//Repository//Save
+    to: src/Repository.Validation.cs//Repository//Validate
+    kind: member
+    confidence: high
+    site: src/Repository.cs:7
+  - from: src/Repository.cs//Repository//Save
+    to: src/Repository.Validation.cs//Repository//Write
+    kind: member
+    confidence: high
+    site: src/Repository.cs:8
+unresolved: []
+results:
+  - target: System//IO//File//AppendAllText
+    status: found
+    path:
+      - key: src/Program.cs//Program//Main
+      - key: src/Repository.cs//Repository//Save
+        site: src/Program.cs:10
+        kind: member
+        confidence: high
+      - key: src/Repository.Validation.cs//Repository//Write
+        site: src/Repository.cs:8
+        kind: member
+        confidence: high
+      - key: System//IO//File//AppendAllText
+        site: src/Repository.Validation.cs:14
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Repository.Validation.cs//Repository//Write
+        site: src/Repository.Validation.cs:14
+        reached: true

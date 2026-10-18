@@ -1,0 +1,48 @@
+[
+  {
+    "version": "11",
+    "path": "tool/main.py",
+    "language": "python",
+    "definitions": [
+      {
+        "key": "tool/main.py",
+        "kind": "module",
+        "name": "main",
+        "start_line": 1,
+        "end_line": 2,
+        "exported": true
+      },
+      {
+        "key": "tool/main.py//cli",
+        "kind": "function",
+        "name": "cli",
+        "start_line": 1,
+        "end_line": 2,
+        "exported": true
+      }
+    ]
+  },
+  {
+    "version": "11",
+    "path": "tool/admin.py",
+    "language": "python",
+    "definitions": [
+      {
+        "key": "tool/admin.py",
+        "kind": "module",
+        "name": "admin",
+        "start_line": 1,
+        "end_line": 2,
+        "exported": true
+      },
+      {
+        "key": "tool/admin.py//run",
+        "kind": "function",
+        "name": "run",
+        "start_line": 1,
+        "end_line": 2,
+        "exported": true
+      }
+    ]
+  }
+]

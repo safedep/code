@@ -1,0 +1,46 @@
+source: safedep:hand
+description: App holds a field store of the interface type Store, which an import type names. App.read calls this.store.get. YamlStore and MemoryStore implement Store, so cha edges join the call to both get methods. The interface has no code for get, so the site stays a record.
+roots:
+  - key: src/main.ts
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.ts//App//read
+    to: src/stores.ts//YamlStore//get
+    kind: cha
+    confidence: medium
+    site: src/main.ts:8
+  - from: src/main.ts//App//read
+    to: src/stores.ts//MemoryStore//get
+    kind: cha
+    confidence: medium
+    site: src/main.ts:8
+no_edges:
+  - from: src/main.ts
+    to: src/store.ts
+unresolved:
+  - caller: src/main.ts//App//read
+    site: src/main.ts:8
+    reason: no-definition
+    method: get
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/main.ts
+      - key: src/main.ts//App//read
+        site: src/main.ts:12
+        kind: member
+        confidence: high
+      - key: src/stores.ts//YamlStore//get
+        site: src/main.ts:8
+        kind: cha
+        confidence: medium
+      - key: js-yaml//load
+        site: src/stores.ts:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/stores.ts//YamlStore//get
+        site: src/stores.ts:6
+        reached: true

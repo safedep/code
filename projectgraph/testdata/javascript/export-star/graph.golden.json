@@ -1,0 +1,287 @@
+{
+  "nodes": {
+    "a.js": {
+      "key": "a.js",
+      "kind": "module",
+      "path": "a.js",
+      "line": 1,
+      "exported": true
+    },
+    "a.js//a": {
+      "key": "a.js//a",
+      "kind": "function",
+      "path": "a.js",
+      "line": 1,
+      "exported": true
+    },
+    "all.js": {
+      "key": "all.js",
+      "kind": "module",
+      "path": "all.js",
+      "line": 1,
+      "exported": true
+    },
+    "all.js//a": {
+      "key": "all.js//a",
+      "kind": "export",
+      "path": "all.js",
+      "line": 1,
+      "exported": true
+    },
+    "all.js//b": {
+      "key": "all.js//b",
+      "kind": "export",
+      "path": "all.js",
+      "line": 2,
+      "exported": true
+    },
+    "all.js//ns": {
+      "key": "all.js//ns",
+      "kind": "export",
+      "path": "all.js",
+      "line": 3,
+      "exported": true
+    },
+    "b.js": {
+      "key": "b.js",
+      "kind": "module",
+      "path": "b.js",
+      "line": 1,
+      "exported": true
+    },
+    "b.js//b": {
+      "key": "b.js//b",
+      "kind": "function",
+      "path": "b.js",
+      "line": 1,
+      "exported": true
+    },
+    "c.js": {
+      "key": "c.js",
+      "kind": "module",
+      "path": "c.js",
+      "line": 1,
+      "exported": true
+    },
+    "c.js//c": {
+      "key": "c.js//c",
+      "kind": "function",
+      "path": "c.js",
+      "line": 1,
+      "exported": true
+    },
+    "main.js": {
+      "key": "main.js",
+      "kind": "module",
+      "path": "main.js",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "all.js",
+      "to": "a.js",
+      "site": {
+        "path": "all.js",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.relative"
+    },
+    {
+      "from": "all.js",
+      "to": "b.js",
+      "site": {
+        "path": "all.js",
+        "line": 2
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.relative"
+    },
+    {
+      "from": "all.js",
+      "to": "c.js",
+      "site": {
+        "path": "all.js",
+        "line": 3
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.relative"
+    },
+    {
+      "from": "all.js//a",
+      "to": "a.js//a",
+      "site": {
+        "path": "all.js",
+        "line": 1
+      },
+      "kind": "export",
+      "confidence": "high",
+      "resolver": "javascript.reexport-star"
+    },
+    {
+      "from": "all.js//b",
+      "to": "b.js//b",
+      "site": {
+        "path": "all.js",
+        "line": 2
+      },
+      "kind": "export",
+      "confidence": "high",
+      "resolver": "javascript.reexport-star"
+    },
+    {
+      "from": "all.js//ns",
+      "to": "c.js",
+      "site": {
+        "path": "all.js",
+        "line": 3
+      },
+      "kind": "export",
+      "confidence": "high",
+      "resolver": "javascript.reexport"
+    },
+    {
+      "from": "main.js",
+      "to": "all.js",
+      "site": {
+        "path": "main.js",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "javascript.import.relative"
+    },
+    {
+      "from": "main.js",
+      "to": "all.js//a",
+      "site": {
+        "path": "main.js",
+        "line": 2,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.import"
+    },
+    {
+      "from": "main.js",
+      "to": "all.js//b",
+      "site": {
+        "path": "main.js",
+        "line": 3,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.import"
+    },
+    {
+      "from": "main.js",
+      "to": "c.js//c",
+      "site": {
+        "path": "main.js",
+        "line": 4,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.import"
+    }
+  ],
+  "unresolved": [],
+  "roots": [
+    {
+      "key": "a.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "a.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "a.js//a",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "a.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "all.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "all.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "b.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "b.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "b.js//b",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "b.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "c.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "c.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "c.js//c",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "c.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "main.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.js",
+        "line": 1
+      }
+    }
+  ],
+  "files": {
+    "a.js": "indexed",
+    "all.js": "indexed",
+    "b.js": "indexed",
+    "c.js": "indexed",
+    "main.js": "indexed"
+  },
+  "stats": {
+    "version": "11",
+    "files": 5,
+    "nodes": 11,
+    "edges": 10,
+    "unresolved": 0,
+    "roots": 8,
+    "root_fallback": true
+  }
+}

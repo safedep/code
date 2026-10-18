@@ -1,0 +1,66 @@
+source: safedep:hand
+description: Startup is a Spring @Component that implements CommandLineRunner, so Spring creates it and calls its run. Task implements Runnable, and the executor of the dependency calls its run. No first-party code calls either run, so the class of each one has a reference edge of the resolver override to it. The component rule makes the class Startup a root.
+roots:
+  - key: com/app/Main.java//Main//main
+    kind: main
+    rule: java.main
+  - key: com/app/Startup.java//Startup
+    kind: framework
+    rule: java.spring.component
+edges:
+  - from: com/app/Startup.java//Startup
+    to: com/app/Startup.java//Startup//run
+    kind: reference
+    confidence: low
+    site: com/app/Startup.java:8
+  - from: com/app/Task.java//Task
+    to: com/app/Task.java//Task//run
+    kind: reference
+    confidence: low
+    site: com/app/Task.java:6
+unresolved:
+  - caller: com/app/Main.java//Main//main
+    site: com/app/Main.java:9
+    reason: unknown-receiver
+    method: submit
+  - caller: com/app/Startup.java//Startup//run
+    site: com/app/Startup.java:10
+    reason: unknown-receiver
+    method: exec
+results:
+  - target: org//yaml//snakeyaml//Yaml//load
+    status: found
+    path:
+      - key: com/app/Main.java//Main//main
+      - key: com/app/Task.java//Task
+        site: com/app/Main.java:9
+        kind: direct
+        confidence: high
+      - key: com/app/Task.java//Task//run
+        site: com/app/Task.java:6
+        kind: reference
+        confidence: low
+      - key: org//yaml//snakeyaml//Yaml//load
+        site: com/app/Task.java:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: com/app/Task.java//Task//run
+        site: com/app/Task.java:7
+        reached: true
+  - target: java//lang//Runtime//getRuntime
+    status: found
+    path:
+      - key: com/app/Startup.java//Startup
+      - key: com/app/Startup.java//Startup//run
+        site: com/app/Startup.java:8
+        kind: reference
+        confidence: low
+      - key: java//lang//Runtime//getRuntime
+        site: com/app/Startup.java:10
+        kind: assignment
+        confidence: high
+    call_sites:
+      - caller: com/app/Startup.java//Startup//run
+        site: com/app/Startup.java:10
+        reached: true

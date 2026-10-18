@@ -1,19 +1,17 @@
 package callgraph
 
 import (
-	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
 	callgraphv1 "buf.build/gen/go/safedep/api/protocolbuffers/go/safedep/messages/code/callgraph/v1"
 	"buf.build/go/protovalidate"
 	"github.com/safedep/code/core"
-	"github.com/safedep/dry/ds/trie"
+	"github.com/safedep/code/core/ast"
 	"github.com/safedep/dry/log"
-	"github.com/safedep/dry/utils"
-	sitter "github.com/smacker/go-tree-sitter"
 )
 
 const (
@@ -21,58 +19,14 @@ const (
 	MatchAll = "all"
 )
 
+// MatchedEvidence is one call that matched a condition. Site is the
+// position of the expression that makes the call, and Text its source.
 type MatchedEvidence struct {
-	Caller           *CallGraphNode
-	Callee           *CallGraphNode
-	CallerIdentifier *sitter.Node
-	Arguments        []CallArgument
-}
-
-// Note - We're only providing content details for the caller identifier since its
-// expected to be at most one line from the entire file, but callerNamespace is an entire
-// scope (fn/class/module) which consumes a lot of repetitive memory
-type EvidenceMetadata struct {
-	CallerNamespace string
-	CallerMetadata  *TreeNodeMetadata
-
-	CalleeNamespace string
-	CalleeMetadata  *TreeNodeMetadata
-
-	// Keyword / statement that caused the match
-	CallerIdentifierContent  string
-	CallerIdentifierMetadata *TreeNodeMetadata
-}
-
-func (evidence *MatchedEvidence) Metadata(treeData *[]byte) EvidenceMetadata {
-	result := EvidenceMetadata{}
-
-	if evidence.Caller != nil {
-		result.CallerNamespace = evidence.Caller.Namespace
-		callerMetadata, exists := evidence.Caller.Metadata()
-		if exists {
-			result.CallerMetadata = &callerMetadata
-		}
-	}
-
-	if evidence.Callee != nil {
-		result.CalleeNamespace = evidence.Callee.Namespace
-		calleeMetadata, exists := evidence.Callee.Metadata()
-		if exists {
-			result.CalleeMetadata = &calleeMetadata
-		}
-	}
-
-	if evidence.CallerIdentifier != nil {
-		result.CallerIdentifierContent = evidence.CallerIdentifier.Content(*treeData)
-		result.CallerIdentifierMetadata = &TreeNodeMetadata{
-			StartLine:   evidence.CallerIdentifier.StartPoint().Row,
-			EndLine:     evidence.CallerIdentifier.EndPoint().Row,
-			StartColumn: evidence.CallerIdentifier.StartPoint().Column,
-			EndColumn:   evidence.CallerIdentifier.EndPoint().Column,
-		}
-	}
-
-	return result
+	Caller    *CallGraphNode
+	Callee    *CallGraphNode
+	Site      ast.NodePosition
+	Text      string
+	Arguments []CallArgument
 }
 
 type MatchedCondition struct {
@@ -91,9 +45,8 @@ type SignatureMatcher struct {
 	targetSignatures []*callgraphv1.Signature
 }
 
-// Creates a new SignatureMatcher instance with the provided target signatures.
-// It validates the signatures using the ValidateSignatures function.
-// If the validation fails, it returns an error.
+// NewSignatureMatcher returns a matcher of the signatures. It fails when a
+// signature is not valid.
 func NewSignatureMatcher(targetSignatures []*callgraphv1.Signature) (*SignatureMatcher, error) {
 	validationErr := ValidateSignatures(targetSignatures)
 	if validationErr != nil {
@@ -106,99 +59,58 @@ func NewSignatureMatcher(targetSignatures []*callgraphv1.Signature) (*SignatureM
 }
 
 func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResult, error) {
-	language, err := cg.Tree.Language()
-	if err != nil {
-		log.Errorf("failed to get language from parse tree: %v", err)
-		return nil, err
-	}
-
-	languageCode := language.Meta().Code
+	languageCode := cg.Language
+	profile := cg.languageProfile()
 
 	matcherResults := []SignatureMatchResult{}
 
-	// Early termination if callgraph is too large or was truncated
-	if cg.limitExceeded {
-		log.Warnf("CallGraph for %s was truncated due to size limits, signature matching may be incomplete", cg.FileName)
+	dfsResults := cg.DFS()
+
+	if cg.LimitExceeded() {
+		log.Warnf("CallGraph for %s was truncated by %v, signature matching may be incomplete", cg.FileName, cg.Truncations())
 	}
 
-	functionCallTrie := trie.NewTrie[[]DfsResultItem]()
-	functionCallResultItems := cg.DFS()
-
-	// Warn if DFS results are very large
-	if len(functionCallResultItems) > 50000 {
-		log.Warnf("Large DFS result set (%d items) for file %s, signature matching may be slow", len(functionCallResultItems), cg.FileName)
+	if len(dfsResults) > 50000 {
+		log.Warnf("Large DFS result set (%d items) for file %s, signature matching may be slow", len(dfsResults), cg.FileName)
 	}
 
-	for _, resultItem := range functionCallResultItems {
-		existingResultItem, exists := functionCallTrie.GetWord(resultItem.Namespace)
-		if !exists {
-			existingResultItem = utils.PtrTo(make([]DfsResultItem, 0))
-		}
-
-		*existingResultItem = append(*existingResultItem, resultItem)
-
-		functionCallTrie.Insert(resultItem.Namespace, existingResultItem)
-	}
+	calls := newCallIndex(dfsResults)
 
 	for _, signature := range sm.targetSignatures {
 		languageSignature, exists := signature.Languages[string(languageCode)]
+		if !exists && profile.signatureFallback != "" {
+			languageSignature, exists = signature.Languages[string(profile.signatureFallback)]
+		}
 		if !exists {
-			// TypeScript falls back to JavaScript signatures since they share
-			// the same library ecosystem and call patterns
-			if languageCode == core.LanguageCodeTypescript {
-				languageSignature, exists = signature.Languages[string(core.LanguageCodeJavascript)]
-			}
-			if !exists {
-				continue
-			}
+			continue
 		}
 
 		matchedConditions := []MatchedCondition{}
 		for _, condition := range languageSignature.Conditions {
-			if condition.Type == "call" {
-				matchCondition := MatchedCondition{
-					Condition: condition,
-					Evidences: []MatchedEvidence{},
+			if condition.Type != "call" {
+				continue
+			}
+
+			matchCondition := MatchedCondition{
+				Condition: condition,
+				Evidences: []MatchedEvidence{},
+			}
+
+			for _, item := range calls.lookup(profile.moduleNamespace(condition.Value)) {
+				if !matchesArgumentConstraints(item, condition.Args, profile) {
+					continue
 				}
+				matchCondition.Evidences = append(matchCondition.Evidences, MatchedEvidence{
+					Caller:    item.Caller,
+					Callee:    calleeOf(item),
+					Site:      item.Site,
+					Text:      item.Text,
+					Arguments: item.Arguments,
+				})
+			}
 
-				lookupNamespace := resolveNamespaceWithSeparator(condition.Value, language)
-				lookupNamespace, isWildcardLookup := trimWildcardLookupNamespace(lookupNamespace, language)
-
-				var dfsResultItemsWithMatchedFunctionName []DfsResultItem
-
-				if isWildcardLookup {
-					// Look up any children of the namespace in the trie
-					lookupEntries := functionCallTrie.WordsWithPrefix(lookupNamespace + namespaceSeparator)
-					dfsResultItemsWithMatchedFunctionName = []DfsResultItem{}
-					for _, lookupEntry := range lookupEntries {
-						dfsResultItemsWithMatchedFunctionName = append(dfsResultItemsWithMatchedFunctionName, *lookupEntry.Value...)
-					}
-				} else {
-					// Lookup the exact namespace in the trie
-					lookupNode, nodeExists := functionCallTrie.GetWord(lookupNamespace)
-					if nodeExists && lookupNode != nil {
-						dfsResultItemsWithMatchedFunctionName = *lookupNode
-					}
-				}
-
-				for _, evidenceResultItem := range dfsResultItemsWithMatchedFunctionName {
-					if matchesArgumentConstraints(evidenceResultItem, condition.Args, language) {
-						// If the arguments match the required constraints, we can add this evidence
-						matchCondition.Evidences = append(matchCondition.Evidences, MatchedEvidence{
-							Caller:           evidenceResultItem.Caller,
-							Callee:           calleeOf(evidenceResultItem),
-							CallerIdentifier: evidenceResultItem.CallerIdentifier,
-							Arguments:        evidenceResultItem.Arguments,
-						})
-					} else {
-						// Skip this evidence if it doesn't match the argument constraints
-						continue
-					}
-				}
-
-				if len(matchCondition.Evidences) > 0 {
-					matchedConditions = append(matchedConditions, matchCondition)
-				}
+			if len(matchCondition.Evidences) > 0 {
+				matchedConditions = append(matchedConditions, matchCondition)
 			}
 		}
 
@@ -213,6 +125,42 @@ func (sm *SignatureMatcher) MatchSignatures(cg *CallGraph) ([]SignatureMatchResu
 	}
 
 	return matcherResults, nil
+}
+
+// callIndex holds the DFS results of a graph by namespace. The keys are
+// sorted, so a wildcard lookup gives its results in one order.
+type callIndex struct {
+	items map[string][]DfsResultItem
+	keys  []string
+}
+
+func newCallIndex(results []DfsResultItem) callIndex {
+	items := make(map[string][]DfsResultItem)
+	for _, item := range results {
+		items[item.Namespace] = append(items[item.Namespace], item)
+	}
+	return callIndex{items: items, keys: slices.Sorted(maps.Keys(items))}
+}
+
+// lookup returns the results of namespace. A namespace that ends in //*,
+// as os//*, gives the results of every namespace below it, in key order.
+// Only the last segment can be a wildcard.
+func (ci callIndex) lookup(namespace string) []DfsResultItem {
+	prefix, wildcard := strings.CutSuffix(namespace, namespaceSeparator+"*")
+	if !wildcard {
+		return ci.items[namespace]
+	}
+
+	prefix += namespaceSeparator
+	var items []DfsResultItem
+	start, _ := slices.BinarySearch(ci.keys, prefix)
+	for _, key := range ci.keys[start:] {
+		if !strings.HasPrefix(key, prefix) {
+			break
+		}
+		items = append(items, ci.items[key]...)
+	}
+	return items
 }
 
 // calleeOf returns the call graph node of a DFS result. A namespace that
@@ -232,7 +180,7 @@ func calleeOf(item DfsResultItem) *CallGraphNode {
 func matchesArgumentConstraints(
 	dfsResultItem DfsResultItem,
 	requiredArgs []*callgraphv1.Signature_LanguageMatcher_SignatureCondition_Argument,
-	language core.Language,
+	profile *languageProfile,
 ) bool {
 	if len(requiredArgs) == 0 {
 		return true // No conditions to match, so it matches by default
@@ -244,7 +192,7 @@ func matchesArgumentConstraints(
 	for _, requiredArg := range requiredArgs {
 		requiredArgResolvesToNamespaces := make([]string, len(requiredArg.ResolvesTo))
 		for i, resolvesTo := range requiredArg.ResolvesTo {
-			requiredArgResolvesToNamespaces[i] = resolveNamespaceWithSeparator(resolvesTo, language)
+			requiredArgResolvesToNamespaces[i] = profile.moduleNamespace(resolvesTo)
 		}
 
 		// No values or resolves_to specified, so no constraints to satisfy
@@ -263,16 +211,16 @@ func matchesArgumentConstraints(
 
 		// an argument can be resolved to multiple namespaces or literal nodes
 		// so we need to check if "any" of the resolved nodes satisfy the constraints
-		for _, argNode := range argAtIndex.Nodes {
-			if argNode.IsLiteralValue() {
-				if slices.Contains(requiredArg.Values, argNode.Namespace) {
+		for _, value := range argAtIndex.Values {
+			if value.Literal {
+				if slices.Contains(requiredArg.Values, value.Namespace) {
 					// If this is a literal value and it matches any of the required values,
 					// then this arg's constraints are satisfied
 					constraintsSatisfied = true
 					break
 				}
 			} else {
-				if slices.Contains(requiredArgResolvesToNamespaces, argNode.Namespace) {
+				if slices.Contains(requiredArgResolvesToNamespaces, value.Namespace) {
 					// If this is a resolved type and it matches any of the required
 					// arg resolves_to namespaces, then this arg's constraints are satisfied
 					constraintsSatisfied = true
@@ -288,18 +236,6 @@ func matchesArgumentConstraints(
 	}
 
 	return true
-}
-
-// Identifies if the namespace is a wildcard lookup and returns the namespace without the wildcard
-// qualifier and a boolean indicating if it was a wildcard lookup.
-// Note - We only support wildcard lookup qualifier at the end of the namespace.
-// eg. "foo//bar//*" is a valid wildcard lookup namespace, but "foo//*//bar" is not valid
-func trimWildcardLookupNamespace(namespace string, language core.Language) (string, bool) {
-	if strings.HasSuffix(namespace, "//*") {
-		// Remove the wildcard qualifier from the namespace
-		return strings.TrimSuffix(namespace, "//*"), true
-	}
-	return namespace, false
 }
 
 // Validates list of callgraphv1.Signature based on protovalidate specification
@@ -354,5 +290,6 @@ func isSupportedLanguageKey(violation *protovalidate.Violation) bool {
 		return false
 	}
 
-	return slices.Contains(supportedLanguages, core.LanguageCode(elements[0].GetStringKey()))
+	_, supported := profilesByCode[core.LanguageCode(elements[0].GetStringKey())]
+	return supported
 }

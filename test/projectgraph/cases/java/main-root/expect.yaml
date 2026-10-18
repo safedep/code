@@ -1,0 +1,43 @@
+source: safedep:hand
+description: The static main of Tool is a root. Report has a method main that is not static, so it is no root and no root reaches its new URL. exec runs on the value of getRuntime(), which the graph does not know, so the site is a record and the reach of Runtime.exec is uncertain.
+roots:
+  - key: src/com/shop/Tool.java//Tool//main
+    kind: main
+    rule: java.main
+edges:
+  - from: src/com/shop/Tool.java//Tool//main
+    to: java//lang//System//exit
+    kind: direct
+    confidence: high
+    site: src/com/shop/Tool.java:6
+unresolved:
+  - caller: src/com/shop/Tool.java//Tool//main
+    site: src/com/shop/Tool.java:5
+    reason: unknown-receiver
+    method: exec
+results:
+  - target: java//lang//System//exit
+    status: found
+    path:
+      - key: src/com/shop/Tool.java//Tool//main
+      - key: java//lang//System//exit
+        site: src/com/shop/Tool.java:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/com/shop/Tool.java//Tool//main
+        site: src/com/shop/Tool.java:6
+        reached: true
+  - target: java//lang//Runtime//exec
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: src/com/shop/Tool.java:5
+  - target: java//net//URL
+    status: not-found
+    call_sites:
+      - caller: src/com/shop/Report.java//Report//main
+        site: src/com/shop/Report.java:7
+        reached: false
+  - target: System//exit
+    status: no-such-target

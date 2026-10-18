@@ -1,0 +1,141 @@
+[
+  {
+    "version": "11",
+    "path": "main.js",
+    "language": "javascript",
+    "imports": [
+      {
+        "line": 2,
+        "module": "",
+        "kind": "dynamic-computed",
+        "namespace": ""
+      }
+    ],
+    "definitions": [
+      {
+        "key": "main.js",
+        "kind": "module",
+        "name": "main",
+        "start_line": 1,
+        "end_line": 12,
+        "exported": true
+      },
+      {
+        "key": "main.js//loadPlugin",
+        "kind": "function",
+        "name": "loadPlugin",
+        "start_line": 1,
+        "end_line": 4,
+        "exported": false,
+        "flags": [
+          {
+            "kind": "computed-import",
+            "line": 2
+          }
+        ]
+      },
+      {
+        "key": "main.js//handle",
+        "kind": "function",
+        "name": "handle",
+        "start_line": 6,
+        "end_line": 9,
+        "exported": false
+      }
+    ],
+    "calls": [
+      {
+        "caller": "main.js//loadPlugin",
+        "line": 2,
+        "column": 18,
+        "callee": "require",
+        "targets": [
+          "require"
+        ],
+        "method": "require",
+        "kind": "call"
+      },
+      {
+        "caller": "main.js//loadPlugin",
+        "line": 3,
+        "column": 10,
+        "callee": "plugin.run",
+        "targets": [
+          "plugin//run"
+        ],
+        "receiver": "plugin",
+        "method": "run",
+        "kind": "call"
+      },
+      {
+        "caller": "main.js//handle",
+        "line": 7,
+        "column": 3,
+        "callee": "console.log",
+        "targets": [
+          "console//log"
+        ],
+        "receiver": "console",
+        "method": "log",
+        "kind": "call"
+      },
+      {
+        "caller": "main.js//handle",
+        "line": 8,
+        "column": 3,
+        "callee": "res.json",
+        "targets": [
+          "res//json"
+        ],
+        "receiver": "res",
+        "method": "json",
+        "kind": "call"
+      },
+      {
+        "caller": "main.js",
+        "line": 11,
+        "column": 1,
+        "callee": "loadPlugin",
+        "targets": [
+          "main.js//loadPlugin"
+        ],
+        "method": "loadPlugin",
+        "kind": "call"
+      }
+    ],
+    "unresolved": [
+      {
+        "caller": "main.js//loadPlugin",
+        "line": 2,
+        "column": 18,
+        "text": "require(name)",
+        "method": "require",
+        "reason": "dynamic-import"
+      },
+      {
+        "caller": "main.js//loadPlugin",
+        "line": 3,
+        "column": 10,
+        "text": "plugin.run",
+        "receiver": "plugin",
+        "method": "run",
+        "reason": "unknown-receiver"
+      },
+      {
+        "caller": "main.js//handle",
+        "line": 8,
+        "column": 3,
+        "text": "res.json",
+        "receiver": "res",
+        "method": "json",
+        "reason": "unknown-receiver"
+      }
+    ],
+    "flags": [
+      {
+        "kind": "computed-import",
+        "line": 2
+      }
+    ]
+  }
+]

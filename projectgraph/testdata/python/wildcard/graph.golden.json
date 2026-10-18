@@ -1,0 +1,123 @@
+{
+  "nodes": {
+    "main.py": {
+      "key": "main.py",
+      "kind": "module",
+      "path": "main.py",
+      "line": 1,
+      "exported": true
+    },
+    "util.py": {
+      "key": "util.py",
+      "kind": "module",
+      "path": "util.py",
+      "line": 1,
+      "exported": true
+    },
+    "util.py//_private": {
+      "key": "util.py//_private",
+      "kind": "function",
+      "path": "util.py",
+      "line": 3
+    },
+    "util.py//helper": {
+      "key": "util.py//helper",
+      "kind": "function",
+      "path": "util.py",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "main.py",
+      "to": "util.py",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "python.import.absolute"
+    },
+    {
+      "from": "main.py",
+      "to": "util.py//helper",
+      "site": {
+        "path": "main.py",
+        "line": 2,
+        "column": 1
+      },
+      "kind": "wildcard",
+      "confidence": "low",
+      "resolver": "python.wildcard"
+    },
+    {
+      "from": "main.py",
+      "to": "util.py//_private",
+      "site": {
+        "path": "main.py",
+        "line": 3,
+        "column": 1
+      },
+      "kind": "name",
+      "confidence": "low",
+      "resolver": "python.name"
+    }
+  ],
+  "unresolved": [
+    {
+      "caller": "main.py",
+      "site": {
+        "path": "main.py",
+        "line": 3,
+        "column": 1
+      },
+      "text": "_private",
+      "method": "_private",
+      "reason": "unknown-receiver"
+    }
+  ],
+  "roots": [
+    {
+      "key": "main.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "util.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "util.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "util.py//helper",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "util.py",
+        "line": 1
+      }
+    }
+  ],
+  "files": {
+    "main.py": "indexed",
+    "util.py": "indexed"
+  },
+  "stats": {
+    "version": "11",
+    "files": 2,
+    "nodes": 4,
+    "edges": 3,
+    "unresolved": 1,
+    "roots": 3,
+    "root_fallback": true
+  }
+}

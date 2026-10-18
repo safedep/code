@@ -1,0 +1,75 @@
+source: safedep:hand
+description: Main imports com.shop.store.Store by its qualified name, which the class table maps to the file. The new runs the constructor of Store, and the constructor calls Codec.check of the same package with no import. No root calls load.
+roots:
+  - key: src/main/java/com/shop/app/Main.java//Main//main
+    kind: main
+    rule: java.main
+edges:
+  - from: src/main/java/com/shop/app/Main.java//Main//main
+    to: src/main/java/com/shop/store/Store.java//Store
+    kind: direct
+    confidence: high
+    site: src/main/java/com/shop/app/Main.java:7
+  - from: src/main/java/com/shop/store/Store.java//Store
+    to: src/main/java/com/shop/store/Store.java//Store//<init>
+    kind: direct
+    confidence: high
+    site: src/main/java/com/shop/store/Store.java:6
+  - from: src/main/java/com/shop/store/Store.java//Store//<init>
+    to: src/main/java/com/shop/store/Codec.java//Codec//check
+    kind: member
+    confidence: high
+    site: src/main/java/com/shop/store/Store.java:7
+  - from: src/main/java/com/shop/app/Main.java//Main//main
+    to: src/main/java/com/shop/store/Store.java//Store//save
+    kind: member
+    confidence: high
+    site: src/main/java/com/shop/app/Main.java:8
+unresolved: []
+results:
+  - target: org//yaml//snakeyaml//Yaml//dump
+    status: found
+    path:
+      - key: src/main/java/com/shop/app/Main.java//Main//main
+      - key: src/main/java/com/shop/store/Store.java//Store//save
+        site: src/main/java/com/shop/app/Main.java:8
+        kind: member
+        confidence: high
+      - key: org//yaml//snakeyaml//Yaml//dump
+        site: src/main/java/com/shop/store/Store.java:11
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main/java/com/shop/store/Store.java//Store//save
+        site: src/main/java/com/shop/store/Store.java:11
+        reached: true
+  - target: java//lang//System//getenv
+    status: found
+    path:
+      - key: src/main/java/com/shop/app/Main.java//Main//main
+      - key: src/main/java/com/shop/store/Store.java//Store
+        site: src/main/java/com/shop/app/Main.java:7
+        kind: direct
+        confidence: high
+      - key: src/main/java/com/shop/store/Store.java//Store//<init>
+        site: src/main/java/com/shop/store/Store.java:6
+        kind: direct
+        confidence: high
+      - key: src/main/java/com/shop/store/Codec.java//Codec//check
+        site: src/main/java/com/shop/store/Store.java:7
+        kind: member
+        confidence: high
+      - key: java//lang//System//getenv
+        site: src/main/java/com/shop/store/Codec.java:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main/java/com/shop/store/Codec.java//Codec//check
+        site: src/main/java/com/shop/store/Codec.java:5
+        reached: true
+  - target: org//yaml//snakeyaml//Yaml//load
+    status: not-found
+    call_sites:
+      - caller: src/main/java/com/shop/store/Store.java//Store//load
+        site: src/main/java/com/shop/store/Store.java:15
+        reached: false

@@ -1,0 +1,93 @@
+{
+  "nodes": {
+    "lib/api.py": {
+      "key": "lib/api.py",
+      "kind": "module",
+      "path": "lib/api.py",
+      "line": 1,
+      "exported": true
+    },
+    "lib/api.py//_private": {
+      "key": "lib/api.py//_private",
+      "kind": "function",
+      "path": "lib/api.py",
+      "line": 3
+    },
+    "lib/api.py//public": {
+      "key": "lib/api.py//public",
+      "kind": "function",
+      "path": "lib/api.py",
+      "line": 1,
+      "exported": true
+    },
+    "lib/test_api.py": {
+      "key": "lib/test_api.py",
+      "kind": "module",
+      "path": "lib/test_api.py",
+      "line": 1,
+      "exported": true,
+      "test": true
+    },
+    "lib/test_api.py//test_public": {
+      "key": "lib/test_api.py//test_public",
+      "kind": "function",
+      "path": "lib/test_api.py",
+      "line": 1,
+      "exported": true,
+      "test": true
+    }
+  },
+  "edges": [],
+  "unresolved": [],
+  "roots": [
+    {
+      "key": "lib/api.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "lib/api.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "lib/api.py//public",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "lib/api.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "lib/test_api.py",
+      "kind": "test",
+      "rule": "test.files",
+      "site": {
+        "path": "lib/test_api.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "lib/test_api.py//test_public",
+      "kind": "test",
+      "rule": "test.files",
+      "site": {
+        "path": "lib/test_api.py",
+        "line": 1
+      }
+    }
+  ],
+  "files": {
+    "lib/api.py": "indexed",
+    "lib/test_api.py": "indexed"
+  },
+  "stats": {
+    "version": "11",
+    "files": 2,
+    "nodes": 5,
+    "edges": 0,
+    "unresolved": 0,
+    "roots": 4,
+    "root_fallback": true
+  }
+}

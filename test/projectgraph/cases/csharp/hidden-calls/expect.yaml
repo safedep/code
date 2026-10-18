@@ -1,0 +1,138 @@
+source: safedep:hand
+description: Adversarial case. Each target runs through code that no call in the source names. Gate.Open runs the static initializer of Gate first. Shout and Whisper are extension methods, on a class of the project and on a string. Dispose runs at the end of the using block. Handle is a method group that ForEach calls. The lambda f runs in Main. The call of Danger.Leak is in an interpolated string. No target may be not-found.
+roots:
+  - key: src/Program.cs//Program//Main
+    kind: main
+    rule: csharp.main
+edges:
+  - from: src/Program.cs//Gate//Open
+    to: src/Program.cs//Gate//<clinit>
+    kind: direct
+    confidence: high
+    site: src/Program.cs:31
+  - from: src/Program.cs//Program//Main
+    to: src/Util/Ext.cs//Ext//Shout
+    kind: name
+    confidence: low
+    site: src/Program.cs:13
+  - from: src/Program.cs//Program//Main
+    to: src/Util/Ext.cs//Ext//Whisper
+    kind: name
+    confidence: low
+    site: src/Program.cs:14
+  - from: src/Program.cs//Resource
+    to: src/Program.cs//Resource//Dispose
+    kind: reference
+    confidence: low
+    site: src/Program.cs:38
+  - from: src/Program.cs//Program//Main
+    to: src/Program.cs//Program//Handle
+    kind: reference
+    confidence: low
+    site: src/Program.cs:19
+unresolved:
+  - caller: src/Program.cs//Program//Main
+    site: src/Program.cs:13
+    reason: no-definition
+    method: Shout
+  - caller: src/Program.cs//Program//Main
+    site: src/Program.cs:14
+    reason: unknown-receiver
+    method: Whisper
+  - caller: src/Program.cs//Program//Main
+    site: src/Program.cs:18
+    reason: unknown-receiver
+    method: List
+results:
+  - target: System//Environment//Exit
+    status: found
+    path:
+      - key: src/Program.cs//Program//Main
+      - key: src/Program.cs//Gate//Open
+        site: src/Program.cs:11
+        kind: member
+        confidence: high
+      - key: src/Program.cs//Gate//<clinit>
+        site: src/Program.cs:31
+        kind: direct
+        confidence: high
+      - key: src/Util/Ext.cs//Danger//MakeLock
+        site: src/Program.cs:30
+        kind: member
+        confidence: high
+      - key: System//Environment//Exit
+        site: src/Util/Ext.cs:13
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Util/Ext.cs//Danger//MakeLock
+        site: src/Util/Ext.cs:13
+        reached: true
+  - target: System//Net//Dns//GetHostName
+    status: found
+    path:
+      - key: src/Program.cs//Program//Main
+      - key: src/Util/Ext.cs//Ext//Shout
+        site: src/Program.cs:13
+        kind: name
+        confidence: low
+      - key: System//Net//Dns//GetHostName
+        site: src/Util/Ext.cs:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Util/Ext.cs//Ext//Shout
+        site: src/Util/Ext.cs:5
+        reached: true
+  - target: System//Threading//Thread//Sleep
+    status: found
+    path:
+      - key: src/Program.cs//Program//Main
+      - key: src/Util/Ext.cs//Ext//Whisper
+        site: src/Program.cs:14
+        kind: name
+        confidence: low
+      - key: System//Threading//Thread//Sleep
+        site: src/Util/Ext.cs:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Util/Ext.cs//Ext//Whisper
+        site: src/Util/Ext.cs:6
+        reached: true
+  - target: System//IO//File//Delete
+    status: found
+    path:
+      - key: src/Program.cs//Program//Main
+      - key: src/Program.cs//Resource
+        site: src/Program.cs:15
+        kind: direct
+        confidence: high
+      - key: src/Program.cs//Resource//Dispose
+        site: src/Program.cs:38
+        kind: reference
+        confidence: low
+      - key: System//IO//File//Delete
+        site: src/Program.cs:38
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Program.cs//Resource//Dispose
+        site: src/Program.cs:38
+        reached: true
+  - target: System//Diagnostics//Process//Start
+    status: found
+    path:
+      - key: src/Program.cs//Program//Main
+      - key: src/Program.cs//Program//Handle
+        site: src/Program.cs:19
+        kind: reference
+        confidence: low
+      - key: System//Diagnostics//Process//Start
+        site: src/Program.cs:25
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Program.cs//Program//Handle
+        site: src/Program.cs:25
+        reached: true

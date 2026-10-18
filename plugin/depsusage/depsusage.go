@@ -6,6 +6,7 @@ import (
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/pkg/helpers"
+	"github.com/safedep/code/pkg/ts"
 	"github.com/safedep/dry/log"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -33,40 +34,8 @@ func (p *dependencyUsagePlugin) Name() string {
 	return "DependencyUsagePlugin"
 }
 
-var supportedLanguages = []core.LanguageCode{
-	core.LanguageCodePython,
-	core.LanguageCodeGo,
-	core.LanguageCodeJavascript,
-	core.LanguageCodeJava,
-	core.LanguageCodeTypescript,
-	core.LanguageCodeCSharp,
-	core.LanguageCodeRust,
-	core.LanguageCodePHP,
-	core.LanguageCodeRuby,
-	core.LanguageCodeKotlin,
-}
-
 func (p *dependencyUsagePlugin) SupportedLanguages() []core.LanguageCode {
-	return supportedLanguages
-}
-
-var usageEvidentNodeTypes = map[string]bool{
-	"identifier":      true,
-	"type_identifier": true,
-}
-
-// languageUsageEvidentNodeTypes replaces usageEvidentNodeTypes for a grammar
-// with other names for identifier nodes.
-var languageUsageEvidentNodeTypes = map[core.LanguageCode]map[string]bool{
-	core.LanguageCodePHP:    {"name": true},
-	core.LanguageCodeKotlin: {"simple_identifier": true, "type_identifier": true},
-}
-
-func usageEvidentNodeTypesOf(code core.LanguageCode) map[string]bool {
-	if nodeTypes, ok := languageUsageEvidentNodeTypes[code]; ok {
-		return nodeTypes
-	}
-	return usageEvidentNodeTypes
+	return supportedLanguages()
 }
 
 func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) error {
@@ -83,19 +52,18 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 	log.Debugf("depsusage - Analyzing tree for language: %s, file: %s\n",
 		lang.Meta().Code, file.Name())
 
-	imports, err := lang.Resolvers().ResolveImports(tree)
+	imports, err := lang.Resolvers().ResolveImports(ctx, tree)
 	if err != nil {
 		return fmt.Errorf("failed to resolve imports: %w", err)
 	}
 
+	profile := usageProfileOf(lang.Meta().Code)
+
 	moduleIdentifiers := make(map[string]*identifierItem)
 	for _, imp := range imports {
-		importContents, err := helpers.ResolveImportContents(imp, lang)
-		if err != nil {
-			return fmt.Errorf("failed to resolve import contents: %w", err)
-		}
+		moduleName, moduleItem, moduleAlias := imp.ModuleName(), imp.ModuleItem(), imp.ModuleAlias()
 
-		packageHint, err := resolvePackageHint(importContents.ModuleName, lang)
+		packageHint, err := profile.packageHintOf(moduleName)
 		if err != nil {
 			log.Debugf("failed to resolve package hint: %s", err)
 		}
@@ -103,13 +71,13 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 		if imp.IsWildcardImport() {
 			// @TODO - This is false positive case for wildcard imports
 			// If it is a wildcard import, mark the module as used by default
-			evidence := newUsageEvidence(packageHint, importContents.ModuleName, importContents.ModuleItem, importContents.ModuleAlias, true, "", file.Name(), uint(imp.GetModuleNameNode().StartPoint().Row)+1)
+			evidence := newUsageEvidence(packageHint, moduleName, moduleItem, moduleAlias, true, "", file.Name(), uint(imp.GetModuleNameNode().StartPoint().Row)+1)
 			if err := p.usageCallback(ctx, evidence); err != nil {
 				return fmt.Errorf("failed to call usage callback for wildcard import: %w", err)
 			}
 		} else {
-			identifierKey := helpers.GetFirstNonEmptyString(importContents.ModuleAlias, importContents.ModuleItem, importContents.ModuleName)
-			moduleIdentifiers[identifierKey] = newIdentifierItem(importContents.ModuleName, importContents.ModuleItem, importContents.ModuleAlias, identifierKey, packageHint)
+			identifierKey := helpers.GetFirstNonEmptyString(moduleAlias, moduleItem, moduleName)
+			moduleIdentifiers[identifierKey] = newIdentifierItem(moduleName, moduleItem, moduleAlias, identifierKey, packageHint)
 		}
 	}
 
@@ -118,58 +86,26 @@ func (p *dependencyUsagePlugin) AnalyzeTree(ctx context.Context, tree core.Parse
 		return fmt.Errorf("failed to get tree data: %w", err)
 	}
 
-	treeLanguage, err := tree.Language()
-	if err != nil {
-		return fmt.Errorf("failed to get tree language: %w", err)
-	}
-
-	evidentNodeTypes := usageEvidentNodeTypesOf(lang.Meta().Code)
-
-	cursor := sitter.NewTreeCursor(tree.Tree().RootNode())
-	defer cursor.Close()
-
-	err = traverse(cursor, &treeLanguage, treeData, func(n *sitter.Node) error {
-		nodeType := n.Type()
-
-		if evidentNodeTypes[nodeType] {
+	// The walk collects the evidence and the callbacks run after it, because
+	// a visit cannot stop the walk with the error of a callback.
+	var evidences []*UsageEvidence
+	err = ts.Walk(ctx, tree.Tree().RootNode(), ts.WalkOptions{}, func(n *sitter.Node) bool {
+		if profile.evidentNodeTypes[n.Type()] {
 			identifierKey := n.Content(*treeData)
-			identifiedItem, identifierKeyExists := moduleIdentifiers[identifierKey]
-			if identifierKeyExists {
-				evidence := newUsageEvidence(identifiedItem.PackageHint, identifiedItem.Module, identifiedItem.Item, identifiedItem.Alias, false, identifierKey, file.Name(), uint(n.StartPoint().Row)+1)
-				if err := p.usageCallback(ctx, evidence); err != nil {
-					return fmt.Errorf("failed to call usage callback: %w", err)
-				}
+			if identifiedItem, ok := moduleIdentifiers[identifierKey]; ok {
+				evidences = append(evidences, newUsageEvidence(identifiedItem.PackageHint, identifiedItem.Module, identifiedItem.Item, identifiedItem.Alias, false, identifierKey, file.Name(), uint(n.StartPoint().Row)+1))
 			}
 		}
-		return nil
+		return !profile.ignores(n, treeData)
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to walk the tree: %w", err)
+	}
+
+	for _, evidence := range evidences {
+		if err := p.usageCallback(ctx, evidence); err != nil {
+			return fmt.Errorf("failed to call usage callback: %w", err)
+		}
 	}
 	return nil
-}
-
-func traverse(cursor *sitter.TreeCursor, treeLanguage *core.Language, treeData *[]byte, visit func(node *sitter.Node) error) error {
-	for {
-		// Call the visit function for the current node
-		err := visit(cursor.CurrentNode())
-		if err != nil {
-			return err
-		}
-
-		if !isIgnoredNode(cursor.CurrentNode(), treeLanguage, treeData) {
-			// Try going to the first child
-			if cursor.GoToFirstChild() {
-				continue
-			}
-		}
-
-		// If no children, try the next sibling
-		for !cursor.GoToNextSibling() {
-			// If no siblings, go to the parent and repeat
-			if !cursor.GoToParent() {
-				return nil // Exit traversal if back at the root
-			}
-		}
-	}
 }

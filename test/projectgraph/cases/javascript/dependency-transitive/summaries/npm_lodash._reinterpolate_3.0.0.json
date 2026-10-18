@@ -1,0 +1,29 @@
+{
+  "version": "2",
+  "index_version": "11",
+  "link_version": "11",
+  "unit": "npm:lodash._reinterpolate@3.0.0",
+  "symbols": [
+    {
+      "key": "lodash._reinterpolate",
+      "definitions": [
+        "npm:lodash._reinterpolate@3.0.0//index.js//reinterpolate"
+      ],
+      "reaches": [
+        "child_process//execSync"
+      ]
+    },
+    {
+      "key": "lodash._reinterpolate//index",
+      "definitions": [
+        "npm:lodash._reinterpolate@3.0.0//index.js//reinterpolate"
+      ],
+      "reaches": [
+        "child_process//execSync"
+      ]
+    }
+  ],
+  "targets": [
+    "child_process//execSync"
+  ]
+}

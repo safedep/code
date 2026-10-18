@@ -1,0 +1,119 @@
+{
+  "nodes": {
+    "main.py": {
+      "key": "main.py",
+      "kind": "module",
+      "path": "main.py",
+      "line": 1,
+      "exported": true
+    },
+    "main.py//load_plugin": {
+      "key": "main.py//load_plugin",
+      "kind": "function",
+      "path": "main.py",
+      "line": 5,
+      "exported": true,
+      "flags": [
+        {
+          "kind": "computed-import",
+          "line": 6
+        }
+      ]
+    },
+    "print": {
+      "key": "print",
+      "kind": "external"
+    },
+    "requests//get": {
+      "key": "requests//get",
+      "kind": "external"
+    },
+    "yaml//load": {
+      "key": "yaml//load",
+      "kind": "external"
+    }
+  },
+  "edges": [
+    {
+      "from": "main.py",
+      "to": "requests//get",
+      "site": {
+        "path": "main.py",
+        "line": 3,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.external"
+    },
+    {
+      "from": "main.py",
+      "to": "yaml//load",
+      "site": {
+        "path": "main.py",
+        "line": 4,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.external"
+    },
+    {
+      "from": "main.py",
+      "to": "print",
+      "site": {
+        "path": "main.py",
+        "line": 4,
+        "column": 4
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.external"
+    }
+  ],
+  "unresolved": [
+    {
+      "caller": "main.py//load_plugin",
+      "site": {
+        "path": "main.py",
+        "line": 6,
+        "column": 5
+      },
+      "text": "importlib.import_module",
+      "reason": "dynamic-import",
+      "import_prefix": "plugins//"
+    }
+  ],
+  "roots": [
+    {
+      "key": "main.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "main.py//load_plugin",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.py",
+        "line": 5
+      }
+    }
+  ],
+  "files": {
+    "main.py": "indexed"
+  },
+  "stats": {
+    "version": "11",
+    "files": 1,
+    "nodes": 5,
+    "edges": 3,
+    "unresolved": 1,
+    "roots": 2,
+    "root_fallback": true
+  }
+}

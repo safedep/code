@@ -1,0 +1,33 @@
+source: safedep:hand
+description: main imports the package text with a dot import, so the bare call Render resolves to the Render of that package with a wildcard edge.
+roots:
+  - key: cmd/app/main.go
+    kind: main
+    rule: go.main
+  - key: cmd/app/main.go//main
+    kind: main
+    rule: go.main
+edges:
+  - from: cmd/app/main.go//main
+    to: text/render.go//Render
+    kind: wildcard
+    confidence: low
+    site: cmd/app/main.go:6
+unresolved: []
+results:
+  - target: html//template//New
+    status: found
+    path:
+      - key: cmd/app/main.go//main
+      - key: text/render.go//Render
+        site: cmd/app/main.go:6
+        kind: wildcard
+        confidence: low
+      - key: html//template//New
+        site: text/render.go:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: text/render.go//Render
+        site: text/render.go:6
+        reached: true

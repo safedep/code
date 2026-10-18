@@ -1,0 +1,475 @@
+{
+  "version": "11",
+  "path": "App.java",
+  "language": "java",
+  "content_hash": "4b93f5c2c4ed8e1881cb857a9b7cd65c3a0d4cb4cd0929140539d0a418a27a95",
+  "package": "com.example.app",
+  "imports": [
+    {
+      "line": 3,
+      "module": "com.example.store.Store",
+      "alias": "Store",
+      "kind": "static",
+      "namespace": "com//example//store//Store"
+    },
+    {
+      "line": 4,
+      "module": "com.example.util",
+      "wildcard": true,
+      "kind": "static",
+      "namespace": "com//example//util"
+    },
+    {
+      "line": 5,
+      "module": "com.example.util.Strings.trim",
+      "alias": "trim",
+      "kind": "static",
+      "namespace": "com//example//util//Strings//trim"
+    },
+    {
+      "line": 6,
+      "module": "org.springframework.beans.factory.annotation.Autowired",
+      "alias": "Autowired",
+      "kind": "static",
+      "namespace": "org//springframework//beans//factory//annotation//Autowired"
+    }
+  ],
+  "definitions": [
+    {
+      "key": "App.java",
+      "kind": "module",
+      "name": "App",
+      "start_line": 1,
+      "end_line": 57,
+      "exported": true
+    },
+    {
+      "key": "App.java//App",
+      "kind": "class",
+      "name": "App",
+      "start_line": 8,
+      "end_line": 44,
+      "exported": true,
+      "decorators": [
+        "@RestController"
+      ],
+      "flags": [
+        {
+          "kind": "injection",
+          "line": 10
+        }
+      ]
+    },
+    {
+      "key": "App.java//App//\u003cinit\u003e",
+      "kind": "constructor",
+      "name": "\u003cinit\u003e",
+      "start_line": 14,
+      "end_line": 17,
+      "exported": true,
+      "parent": "App.java//App",
+      "params": [
+        {
+          "name": "store",
+          "type": "Store"
+        }
+      ]
+    },
+    {
+      "key": "App.java//App//main",
+      "kind": "method",
+      "name": "main",
+      "start_line": 19,
+      "end_line": 22,
+      "exported": true,
+      "parent": "App.java//App",
+      "locals": [
+        {
+          "name": "app",
+          "type": "App"
+        }
+      ],
+      "static": true
+    },
+    {
+      "key": "App.java//App//items",
+      "kind": "method",
+      "name": "items",
+      "start_line": 24,
+      "end_line": 33,
+      "exported": true,
+      "parent": "App.java//App",
+      "decorators": [
+        "@GetMapping"
+      ],
+      "locals": [
+        {
+          "name": "r",
+          "type": "Runnable"
+        }
+      ]
+    },
+    {
+      "key": "App.java//App//log",
+      "kind": "method",
+      "name": "log",
+      "start_line": 35,
+      "end_line": 37,
+      "exported": true,
+      "parent": "App.java//App",
+      "params": [
+        {
+          "name": "m",
+          "type": "String"
+        }
+      ],
+      "flags": [
+        {
+          "kind": "reflection",
+          "line": 36
+        }
+      ]
+    },
+    {
+      "key": "App.java//App//Inner",
+      "kind": "class",
+      "name": "Inner",
+      "start_line": 41,
+      "end_line": 43,
+      "exported": true,
+      "parent": "App.java//App"
+    },
+    {
+      "key": "App.java//App//Inner//work",
+      "kind": "method",
+      "name": "work",
+      "start_line": 42,
+      "end_line": 42,
+      "exported": true,
+      "parent": "App.java//App//Inner"
+    },
+    {
+      "key": "App.java//Sink",
+      "kind": "interface",
+      "name": "Sink",
+      "start_line": 46,
+      "end_line": 50,
+      "exported": true
+    },
+    {
+      "key": "App.java//Sink//flush",
+      "kind": "method",
+      "name": "flush",
+      "start_line": 49,
+      "end_line": 49,
+      "exported": true,
+      "parent": "App.java//Sink"
+    },
+    {
+      "key": "App.java//Mode",
+      "kind": "class",
+      "name": "Mode",
+      "start_line": 52,
+      "end_line": 56,
+      "exported": true
+    },
+    {
+      "key": "App.java//Mode//\u003cclinit\u003e",
+      "kind": "method",
+      "name": "\u003cclinit\u003e",
+      "start_line": 53,
+      "end_line": 53,
+      "exported": true,
+      "parent": "App.java//Mode",
+      "static": true
+    },
+    {
+      "key": "App.java//Mode//apply",
+      "kind": "method",
+      "name": "apply",
+      "start_line": 55,
+      "end_line": 55,
+      "exported": true,
+      "parent": "App.java//Mode"
+    }
+  ],
+  "classes": [
+    {
+      "key": "App.java//App",
+      "bases": [
+        "Base",
+        "Runnable"
+      ],
+      "methods": [
+        "App.java//App//\u003cinit\u003e",
+        "App.java//App//Inner",
+        "App.java//App//items",
+        "App.java//App//log",
+        "App.java//App//main"
+      ],
+      "fields": [
+        {
+          "name": "store",
+          "type": "Store"
+        },
+        {
+          "name": "names",
+          "type": "List"
+        }
+      ]
+    },
+    {
+      "key": "App.java//App//Inner",
+      "methods": [
+        "App.java//App//Inner//work"
+      ]
+    },
+    {
+      "key": "App.java//Mode",
+      "methods": [
+        "App.java//Mode//\u003cclinit\u003e",
+        "App.java//Mode//apply"
+      ]
+    },
+    {
+      "key": "App.java//Sink",
+      "bases": [
+        "AutoCloseable"
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "caller": "App.java//App",
+      "line": 12,
+      "column": 44,
+      "callee": "ArrayList\u003c\u003e",
+      "targets": [
+        "ArrayList"
+      ],
+      "kind": "new"
+    },
+    {
+      "caller": "App.java//App//\u003cinit\u003e",
+      "line": 15,
+      "column": 9,
+      "callee": "super",
+      "targets": [
+        "super"
+      ],
+      "method": "super",
+      "kind": "call"
+    },
+    {
+      "caller": "App.java//App//main",
+      "line": 20,
+      "column": 23,
+      "callee": "App",
+      "targets": [
+        "App.java//App"
+      ],
+      "method": "App",
+      "kind": "new"
+    },
+    {
+      "caller": "App.java//App//main",
+      "line": 20,
+      "column": 31,
+      "callee": "Store",
+      "targets": [
+        "com//example//store//Store"
+      ],
+      "method": "Store",
+      "kind": "new"
+    },
+    {
+      "caller": "App.java//App//main",
+      "line": 21,
+      "column": 9,
+      "callee": "app.run",
+      "targets": [
+        "App.java//App//run"
+      ],
+      "receiver": "app",
+      "method": "run",
+      "kind": "call"
+    },
+    {
+      "caller": "App.java//App//items",
+      "line": 26,
+      "column": 9,
+      "callee": "store.save",
+      "targets": [
+        "store//save"
+      ],
+      "receiver": "store",
+      "method": "save",
+      "kind": "call"
+    },
+    {
+      "caller": "App.java//App//items",
+      "line": 26,
+      "column": 20,
+      "callee": "trim",
+      "targets": [
+        "com//example//util//Strings//trim"
+      ],
+      "method": "trim",
+      "kind": "call"
+    },
+    {
+      "caller": "App.java//App//items",
+      "line": 27,
+      "column": 9,
+      "callee": "names.forEach",
+      "targets": [
+        "names//forEach"
+      ],
+      "receiver": "names",
+      "method": "forEach",
+      "kind": "call"
+    },
+    {
+      "caller": "App.java//App//items",
+      "line": 28,
+      "column": 26,
+      "callee": "Runnable",
+      "targets": [
+        "Runnable"
+      ],
+      "method": "Runnable",
+      "kind": "new"
+    },
+    {
+      "caller": "App.java//App//items",
+      "line": 29,
+      "column": 33,
+      "callee": "log",
+      "targets": [
+        "App.java//App//log"
+      ],
+      "method": "log",
+      "kind": "call"
+    },
+    {
+      "caller": "App.java//App//items",
+      "line": 31,
+      "column": 9,
+      "callee": "start",
+      "targets": [
+        "start"
+      ],
+      "method": "start",
+      "kind": "call"
+    },
+    {
+      "caller": "App.java//App//items",
+      "line": 32,
+      "column": 16,
+      "callee": "Helper.name",
+      "targets": [
+        "Helper//name"
+      ],
+      "receiver": "Helper",
+      "method": "name",
+      "kind": "call"
+    },
+    {
+      "caller": "App.java//App//log",
+      "line": 36,
+      "column": 9,
+      "callee": "Class.forName(m).getMethod(\"x\").invoke",
+      "targets": [
+        "Class//forName"
+      ],
+      "receiver": "Class.forName(m).getMethod(\"x\")",
+      "method": "invoke",
+      "kind": "call"
+    },
+    {
+      "caller": "App.java//App//Inner//work",
+      "line": 42,
+      "column": 27,
+      "callee": "Inner",
+      "targets": [
+        "App.java//App//Inner"
+      ],
+      "method": "Inner",
+      "kind": "new"
+    },
+    {
+      "caller": "App.java//Sink//flush",
+      "line": 49,
+      "column": 28,
+      "callee": "write",
+      "targets": [
+        "write"
+      ],
+      "method": "write",
+      "kind": "call"
+    },
+    {
+      "caller": "App.java//Mode//\u003cclinit\u003e",
+      "line": 53,
+      "column": 5,
+      "callee": "Mode",
+      "targets": [
+        "App.java//Mode"
+      ],
+      "kind": "new"
+    },
+    {
+      "caller": "App.java//Mode//apply",
+      "line": 55,
+      "column": 20,
+      "callee": "System.out.println",
+      "targets": [
+        "System//out//println"
+      ],
+      "receiver": "System.out",
+      "method": "println",
+      "kind": "call"
+    }
+  ],
+  "references": [
+    {
+      "caller": "App.java//App//items",
+      "line": 27,
+      "column": 23,
+      "text": "this::log",
+      "targets": [
+        "App.java//App//log"
+      ]
+    }
+  ],
+  "unresolved": [
+    {
+      "caller": "App.java//App//log",
+      "line": 36,
+      "column": 26,
+      "text": "getMethod",
+      "receiver": "Class.forName(m)",
+      "method": "getMethod",
+      "reason": "unknown-receiver"
+    },
+    {
+      "caller": "App.java//App//log",
+      "line": 36,
+      "column": 41,
+      "text": "invoke",
+      "receiver": "Class.forName(m).getMethod(\"x\")",
+      "method": "invoke",
+      "reason": "unknown-receiver"
+    }
+  ],
+  "flags": [
+    {
+      "kind": "injection",
+      "line": 10
+    },
+    {
+      "kind": "reflection",
+      "line": 36
+    }
+  ]
+}

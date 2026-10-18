@@ -1,0 +1,115 @@
+{
+  "nodes": {
+    "app/users/route.ts": {
+      "key": "app/users/route.ts",
+      "kind": "module",
+      "path": "app/users/route.ts",
+      "line": 1,
+      "exported": true
+    },
+    "src/handler.js": {
+      "key": "src/handler.js",
+      "kind": "module",
+      "path": "src/handler.js",
+      "line": 1,
+      "exported": true
+    },
+    "src/handler.js//Handler": {
+      "key": "src/handler.js//Handler",
+      "kind": "class",
+      "path": "src/handler.js",
+      "line": 1,
+      "exported": true
+    },
+    "src/handler.js//Handler//handle": {
+      "key": "src/handler.js//Handler//handle",
+      "kind": "method",
+      "path": "src/handler.js",
+      "line": 2,
+      "exported": true
+    },
+    "src/handler.js//handle": {
+      "key": "src/handler.js//handle",
+      "kind": "function",
+      "path": "src/handler.js",
+      "line": 4,
+      "exported": true
+    },
+    "views.py": {
+      "key": "views.py",
+      "kind": "module",
+      "path": "views.py",
+      "line": 1,
+      "exported": true
+    },
+    "views.py//index": {
+      "key": "views.py//index",
+      "kind": "function",
+      "path": "views.py",
+      "line": 2,
+      "exported": true
+    }
+  },
+  "edges": [],
+  "unresolved": [],
+  "roots": [
+    {
+      "key": "app/users/route.ts",
+      "kind": "framework",
+      "rule": "node.next.route",
+      "site": {
+        "path": "app/users/route.ts",
+        "line": 1
+      }
+    },
+    {
+      "key": "app/users/route.ts",
+      "kind": "framework",
+      "rule": "routes",
+      "site": {
+        "path": "app/users/route.ts",
+        "line": 1
+      }
+    },
+    {
+      "key": "src/handler.js//Handler//handle",
+      "kind": "framework",
+      "rule": "handlers",
+      "site": {
+        "path": "src/handler.js",
+        "line": 2
+      }
+    },
+    {
+      "key": "src/handler.js//handle",
+      "kind": "framework",
+      "rule": "serverless",
+      "site": {
+        "path": "src/handler.js",
+        "line": 4
+      }
+    },
+    {
+      "key": "views.py//index",
+      "kind": "framework",
+      "rule": "flask",
+      "site": {
+        "path": "views.py",
+        "line": 2
+      }
+    }
+  ],
+  "files": {
+    "app/users/route.ts": "indexed",
+    "src/handler.js": "indexed",
+    "views.py": "indexed"
+  },
+  "stats": {
+    "version": "11",
+    "files": 3,
+    "nodes": 7,
+    "edges": 0,
+    "unresolved": 0,
+    "roots": 5
+  }
+}

@@ -1,0 +1,390 @@
+{
+  "version": "11",
+  "path": "flags.py",
+  "language": "python",
+  "content_hash": "d3169e0c3c00508c3f9492866cf4db99ddd780d42dc9e4438558d1d4a22f2621",
+  "imports": [
+    {
+      "line": 1,
+      "module": "importlib",
+      "alias": "importlib",
+      "kind": "static",
+      "namespace": "importlib"
+    },
+    {
+      "line": 2,
+      "module": "os",
+      "alias": "os",
+      "kind": "static",
+      "namespace": "os"
+    },
+    {
+      "line": 6,
+      "module": "plugins.",
+      "kind": "dynamic-computed",
+      "namespace": ""
+    },
+    {
+      "line": 7,
+      "module": "yaml",
+      "kind": "dynamic-string",
+      "namespace": "yaml"
+    },
+    {
+      "line": 8,
+      "module": "",
+      "kind": "dynamic-computed",
+      "namespace": ""
+    }
+  ],
+  "definitions": [
+    {
+      "key": "flags.py",
+      "kind": "module",
+      "name": "flags",
+      "start_line": 1,
+      "end_line": 37,
+      "exported": true,
+      "flags": [
+        {
+          "kind": "module-getattr",
+          "line": 31
+        }
+      ]
+    },
+    {
+      "key": "flags.py//load",
+      "kind": "function",
+      "name": "load",
+      "start_line": 5,
+      "end_line": 9,
+      "exported": true,
+      "flags": [
+        {
+          "kind": "computed-import",
+          "line": 6
+        },
+        {
+          "kind": "computed-import",
+          "line": 8
+        }
+      ]
+    },
+    {
+      "key": "flags.py//run",
+      "kind": "function",
+      "name": "run",
+      "start_line": 12,
+      "end_line": 18,
+      "exported": true,
+      "flags": [
+        {
+          "kind": "eval",
+          "line": 13
+        },
+        {
+          "kind": "eval",
+          "line": 14
+        },
+        {
+          "kind": "reflection",
+          "line": 15
+        },
+        {
+          "kind": "computed-attribute",
+          "line": 17
+        },
+        {
+          "kind": "monkey-patch",
+          "line": 18
+        }
+      ]
+    },
+    {
+      "key": "flags.py//index",
+      "kind": "function",
+      "name": "index",
+      "start_line": 22,
+      "end_line": 23,
+      "exported": true,
+      "decorators": [
+        "@app.route"
+      ],
+      "flags": [
+        {
+          "kind": "decorator-wrap",
+          "line": 21
+        }
+      ]
+    },
+    {
+      "key": "flags.py//plain",
+      "kind": "function",
+      "name": "plain",
+      "start_line": 27,
+      "end_line": 28,
+      "exported": true,
+      "decorators": [
+        "@staticmethod"
+      ]
+    },
+    {
+      "key": "flags.py//__getattr__",
+      "kind": "function",
+      "name": "__getattr__",
+      "start_line": 31,
+      "end_line": 32,
+      "exported": true
+    },
+    {
+      "key": "flags.py//broken",
+      "kind": "function",
+      "name": "broken",
+      "start_line": 35,
+      "end_line": 36,
+      "exported": true,
+      "flags": [
+        {
+          "kind": "parse-error",
+          "line": 35
+        }
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "caller": "flags.py//load",
+      "line": 6,
+      "column": 14,
+      "callee": "importlib.import_module",
+      "targets": [
+        "importlib//import_module"
+      ],
+      "receiver": "importlib",
+      "method": "import_module",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "computed"
+        }
+      ]
+    },
+    {
+      "caller": "flags.py//load",
+      "line": 7,
+      "column": 14,
+      "callee": "importlib.import_module",
+      "targets": [
+        "importlib//import_module"
+      ],
+      "receiver": "importlib",
+      "method": "import_module",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "string"
+        }
+      ]
+    },
+    {
+      "caller": "flags.py//load",
+      "line": 8,
+      "column": 11,
+      "callee": "__import__",
+      "targets": [
+        "__import__"
+      ],
+      "method": "__import__",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        }
+      ]
+    },
+    {
+      "caller": "flags.py//run",
+      "line": 13,
+      "column": 5,
+      "callee": "eval",
+      "targets": [
+        "eval"
+      ],
+      "method": "eval",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        }
+      ]
+    },
+    {
+      "caller": "flags.py//run",
+      "line": 14,
+      "column": 5,
+      "callee": "exec",
+      "targets": [
+        "exec"
+      ],
+      "method": "exec",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        }
+      ]
+    },
+    {
+      "caller": "flags.py//run",
+      "line": 15,
+      "column": 5,
+      "callee": "getattr",
+      "targets": [
+        "getattr"
+      ],
+      "method": "getattr",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        },
+        {
+          "shape": "name"
+        }
+      ]
+    },
+    {
+      "caller": "flags.py//run",
+      "line": 16,
+      "column": 5,
+      "callee": "getattr",
+      "targets": [
+        "getattr"
+      ],
+      "method": "getattr",
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        },
+        {
+          "shape": "string"
+        }
+      ]
+    },
+    {
+      "caller": "flags.py//run",
+      "line": 16,
+      "column": 5,
+      "callee": "getattr(obj, \"fixed\")",
+      "targets": [
+        "flags.py//run//obj//fixed"
+      ],
+      "kind": "call",
+      "args": [
+        {
+          "shape": "name"
+        },
+        {
+          "shape": "string"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "caller": "flags.py//__getattr__",
+      "line": 32,
+      "column": 12,
+      "text": "load",
+      "targets": [
+        "flags.py//load"
+      ]
+    }
+  ],
+  "unresolved": [
+    {
+      "caller": "flags.py//load",
+      "line": 6,
+      "column": 14,
+      "text": "importlib.import_module(\"plugins.\" + name)",
+      "receiver": "importlib",
+      "method": "import_module",
+      "reason": "dynamic-import"
+    },
+    {
+      "caller": "flags.py//load",
+      "line": 8,
+      "column": 11,
+      "text": "__import__(name)",
+      "method": "__import__",
+      "reason": "dynamic-import"
+    },
+    {
+      "caller": "flags.py//run",
+      "line": 15,
+      "column": 5,
+      "text": "getattr(obj, attr)",
+      "reason": "computed-name"
+    },
+    {
+      "caller": "flags.py//run",
+      "line": 17,
+      "column": 5,
+      "text": "handlers[attr]",
+      "receiver": "handlers",
+      "reason": "computed-name"
+    },
+    {
+      "caller": "flags.py",
+      "line": 21,
+      "column": 2,
+      "text": "app.route",
+      "receiver": "app",
+      "method": "route",
+      "reason": "unknown-receiver"
+    }
+  ],
+  "flags": [
+    {
+      "kind": "computed-import",
+      "line": 6
+    },
+    {
+      "kind": "computed-import",
+      "line": 8
+    },
+    {
+      "kind": "eval",
+      "line": 13
+    },
+    {
+      "kind": "eval",
+      "line": 14
+    },
+    {
+      "kind": "reflection",
+      "line": 15
+    },
+    {
+      "kind": "computed-attribute",
+      "line": 17
+    },
+    {
+      "kind": "monkey-patch",
+      "line": 18
+    },
+    {
+      "kind": "decorator-wrap",
+      "line": 21
+    },
+    {
+      "kind": "module-getattr",
+      "line": 31
+    },
+    {
+      "kind": "parse-error",
+      "line": 35
+    }
+  ]
+}

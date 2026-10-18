@@ -106,10 +106,10 @@ func TestTypescriptLanguageResolvers(t *testing.T) {
 			parseTree, err := fileParser.Parse(context.Background(), f)
 			assert.NoError(t, err)
 
-			imports, err := typescriptLanguage.Resolvers().ResolveImports(parseTree)
+			imports, err := typescriptLanguage.Resolvers().ResolveImports(t.Context(), parseTree)
 			assert.NoError(t, err)
 
-			expectedImports, ok := importExpectationsMapper[f.Name()]
+			expectedImports, ok := importExpectationsMapper[f.Path()]
 			assert.True(t, ok)
 
 			var foundImports []string
@@ -145,10 +145,10 @@ func TestTypescriptLanguageResolvers(t *testing.T) {
 			parseTree, err := fileParser.Parse(context.Background(), f)
 			assert.NoError(t, err)
 
-			functions, err := typescriptLanguage.Resolvers().ResolveFunctions(parseTree)
+			functions, err := typescriptLanguage.Resolvers().ResolveFunctions(t.Context(), parseTree)
 			assert.NoError(t, err)
 
-			expectedFunctions, ok := typescriptFunctionExpectations[f.Name()]
+			expectedFunctions, ok := typescriptFunctionExpectations[f.Path()]
 			assert.True(t, ok)
 
 			var foundFunctions []string

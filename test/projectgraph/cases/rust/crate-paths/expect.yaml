@@ -1,0 +1,75 @@
+source: safedep:hand
+description: >-
+  run of the module store calls z of the crate root by crate::z and by super::z, and w of its own module by
+  self::w. Each path resolves to the definition, so no call gets an external key of crate, super or self.
+  z calls Command::new of std, and w remove_file.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+exact_edges: true
+edges:
+  - from: src/main.rs//main
+    to: src/store.rs//run
+    kind: direct
+    confidence: high
+    site: src/main.rs:8
+  - from: src/store.rs//run
+    to: src/main.rs//z
+    kind: direct
+    confidence: high
+    site: src/store.rs:6
+  - from: src/store.rs//run
+    to: src/main.rs//z
+    kind: direct
+    confidence: high
+    site: src/store.rs:7
+  - from: src/store.rs//run
+    to: src/store.rs//w
+    kind: direct
+    confidence: high
+    site: src/store.rs:8
+  - from: src/main.rs//z
+    to: std//process//Command//new
+    kind: direct
+    confidence: high
+    site: src/main.rs:4
+  - from: src/store.rs//w
+    to: std//fs//remove_file
+    kind: direct
+    confidence: high
+    site: src/store.rs:2
+no_edges:
+  - from: src/store.rs//run
+    to: crate//z
+  - from: src/store.rs//run
+    to: super//z
+  - from: src/store.rs//run
+    to: self//w
+unresolved: []
+results:
+  - target: std//process//Command//new
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/store.rs//run
+        site: src/main.rs:8
+        kind: direct
+        confidence: high
+      - key: src/main.rs//z
+        site: src/store.rs:6
+        kind: direct
+        confidence: high
+      - key: std//process//Command//new
+        site: src/main.rs:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.rs//z
+        site: src/main.rs:4
+        reached: true
+  - target: crate//z
+    status: no-such-target

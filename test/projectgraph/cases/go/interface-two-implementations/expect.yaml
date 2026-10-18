@@ -1,0 +1,58 @@
+source: safedep:hand
+description: run calls Write on a parameter of the interface type Sink. Every type of the project with a method Write of one parameter can hold the call, so cha edges go to File.Write and DB.Write. Log.Write takes no parameter, so it gets no edge. A type of a dependency can implement Sink too, so the site keeps a record. The record has the method Write, and Log.Write reaches os.Exit, so os.Exit is uncertain.
+roots:
+  - key: cmd/app/main.go
+    kind: main
+    rule: go.main
+  - key: cmd/app/main.go//main
+    kind: main
+    rule: go.main
+edges:
+  - from: cmd/app/main.go//run
+    to: sink/file.go//File//Write
+    kind: cha
+    confidence: medium
+    site: cmd/app/main.go:10
+  - from: cmd/app/main.go//run
+    to: sink/db.go//DB//Write
+    kind: cha
+    confidence: medium
+    site: cmd/app/main.go:10
+no_edges:
+  - from: cmd/app/main.go//run
+    to: sink/db.go//Log//Write
+unresolved:
+  - caller: cmd/app/main.go//run
+    site: cmd/app/main.go:10
+    reason: no-definition
+    method: Write
+results:
+  - target: database//sql//DB//Exec
+    status: found
+    path:
+      - key: cmd/app/main.go//main
+      - key: cmd/app/main.go//run
+        site: cmd/app/main.go:6
+        kind: direct
+        confidence: high
+      - key: sink/db.go//DB//Write
+        site: cmd/app/main.go:10
+        kind: cha
+        confidence: medium
+      - key: database//sql//DB//Exec
+        site: sink/db.go:11
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: sink/db.go//DB//Write
+        site: sink/db.go:11
+        reached: true
+  - target: os//Exit
+    status: uncertain
+    call_sites:
+      - caller: sink/db.go//Log//Write
+        site: sink/db.go:18
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: cmd/app/main.go:10

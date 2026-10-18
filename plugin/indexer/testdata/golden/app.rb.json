@@ -1,0 +1,297 @@
+{
+  "version": "11",
+  "path": "app.rb",
+  "language": "ruby",
+  "content_hash": "f3a3e601660e0130750119df4267cac37972c412ccc8f5d8f16e3ba516f659d9",
+  "imports": [
+    {
+      "line": 1,
+      "module": "yaml",
+      "wildcard": true,
+      "kind": "static",
+      "namespace": "yaml"
+    },
+    {
+      "line": 2,
+      "module": "./util/helper",
+      "kind": "static",
+      "namespace": ""
+    }
+  ],
+  "definitions": [
+    {
+      "key": "app.rb",
+      "kind": "module",
+      "name": "app",
+      "start_line": 1,
+      "end_line": 31,
+      "exported": true
+    },
+    {
+      "key": "app.rb//Shop",
+      "kind": "class",
+      "name": "Shop",
+      "start_line": 4,
+      "end_line": 30,
+      "exported": true
+    },
+    {
+      "key": "app.rb//Shop//App",
+      "kind": "class",
+      "name": "App",
+      "start_line": 5,
+      "end_line": 29,
+      "exported": true,
+      "parent": "app.rb//Shop"
+    },
+    {
+      "key": "app.rb//Shop//App//initialize",
+      "kind": "constructor",
+      "name": "initialize",
+      "start_line": 9,
+      "end_line": 11,
+      "exported": true,
+      "parent": "app.rb//Shop//App"
+    },
+    {
+      "key": "app.rb//Shop//App//run",
+      "kind": "method",
+      "name": "run",
+      "start_line": 13,
+      "end_line": 18,
+      "exported": true,
+      "parent": "app.rb//Shop//App"
+    },
+    {
+      "key": "app.rb//Shop//App//self.main",
+      "kind": "method",
+      "name": "main",
+      "start_line": 20,
+      "end_line": 22,
+      "exported": true,
+      "parent": "app.rb//Shop//App",
+      "static": true
+    },
+    {
+      "key": "app.rb//Shop//App//audit",
+      "kind": "method",
+      "name": "audit",
+      "start_line": 26,
+      "end_line": 28,
+      "exported": true,
+      "parent": "app.rb//Shop//App"
+    }
+  ],
+  "classes": [
+    {
+      "key": "app.rb//Shop",
+      "methods": [
+        "app.rb//Shop//App"
+      ]
+    },
+    {
+      "key": "app.rb//Shop//App",
+      "bases": [
+        "Base",
+        "Audits"
+      ],
+      "methods": [
+        "app.rb//Shop//App//audit",
+        "app.rb//Shop//App//initialize",
+        "app.rb//Shop//App//run",
+        "app.rb//Shop//App//self.main"
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "caller": "app.rb",
+      "line": 1,
+      "column": 1,
+      "callee": "require",
+      "targets": [
+        "require"
+      ],
+      "method": "require",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rb",
+      "line": 2,
+      "column": 1,
+      "callee": "require_relative",
+      "targets": [
+        "require_relative"
+      ],
+      "method": "require_relative",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rb//Shop//App",
+      "line": 6,
+      "column": 5,
+      "callee": "include",
+      "targets": [
+        "include"
+      ],
+      "method": "include",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rb//Shop//App",
+      "line": 7,
+      "column": 5,
+      "callee": "before_action",
+      "targets": [
+        "before_action"
+      ],
+      "method": "before_action",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rb//Shop//App//run",
+      "line": 14,
+      "column": 7,
+      "callee": "@store.save",
+      "targets": [
+        "@store//save"
+      ],
+      "receiver": "@store",
+      "method": "save",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rb//Shop//App//run",
+      "line": 14,
+      "column": 19,
+      "callee": "YAML.load_file",
+      "targets": [
+        "YAML//load_file"
+      ],
+      "receiver": "YAML",
+      "method": "load_file",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rb//Shop//App//run",
+      "line": 15,
+      "column": 7,
+      "callee": "audit",
+      "targets": [
+        "audit"
+      ],
+      "method": "audit",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rb//Shop//App//run",
+      "line": 16,
+      "column": 7,
+      "callee": "Helper.assist",
+      "targets": [
+        "Helper//assist"
+      ],
+      "receiver": "Helper",
+      "method": "assist",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rb//Shop//App//run",
+      "line": 17,
+      "column": 7,
+      "callee": "send",
+      "targets": [
+        "send"
+      ],
+      "method": "send",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rb//Shop//App//self.main",
+      "line": 21,
+      "column": 7,
+      "callee": "new",
+      "targets": [
+        "new"
+      ],
+      "method": "new",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rb//Shop//App//self.main",
+      "line": 21,
+      "column": 7,
+      "callee": "new(Store.new).run",
+      "targets": [
+        "new//run"
+      ],
+      "receiver": "new(Store.new)",
+      "method": "run",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rb//Shop//App//self.main",
+      "line": 21,
+      "column": 11,
+      "callee": "Store.new",
+      "targets": [
+        "Store//new"
+      ],
+      "receiver": "Store",
+      "method": "new",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rb//Shop//App",
+      "line": 24,
+      "column": 5,
+      "callee": "private",
+      "targets": [
+        "private"
+      ],
+      "method": "private",
+      "kind": "call"
+    },
+    {
+      "caller": "app.rb//Shop//App//audit",
+      "line": 27,
+      "column": 7,
+      "callee": "puts",
+      "targets": [
+        "puts"
+      ],
+      "method": "puts",
+      "kind": "call"
+    }
+  ],
+  "references": [
+    {
+      "caller": "app.rb//Shop//App",
+      "line": 7,
+      "column": 19,
+      "text": ":audit",
+      "targets": [
+        "app.rb//Shop//App//audit"
+      ]
+    }
+  ],
+  "unresolved": [
+    {
+      "caller": "app.rb//Shop//App//run",
+      "line": 17,
+      "column": 7,
+      "text": "send(:audit)",
+      "method": "audit",
+      "reason": "unknown-receiver"
+    },
+    {
+      "caller": "app.rb//Shop//App//self.main",
+      "line": 21,
+      "column": 7,
+      "text": "new(Store.new).run(argv[0])",
+      "receiver": "new(Store.new)",
+      "method": "run",
+      "reason": "unknown-receiver"
+    }
+  ]
+}

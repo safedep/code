@@ -1,0 +1,30 @@
+source: safedep:hand
+description: app.py makes the module variable parser from the class Parser, and main.py imports it and calls parser.parse. The variable holds the class, so the call is the method Parser.parse.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+edges:
+  - from: main.py
+    to: app.py//Parser//parse
+    kind: member
+    confidence: high
+    site: main.py:3
+unresolved: []
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: app.py//Parser//parse
+        site: main.py:3
+        kind: member
+        confidence: high
+      - key: yaml//load
+        site: app.py:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: app.py//Parser//parse
+        site: app.py:6
+        reached: true

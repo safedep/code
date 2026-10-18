@@ -1,0 +1,46 @@
+source: safedep:hand
+description: Worker extends threading.Thread and sets self.parser in its constructor. In self.parser.parse() the name parser is an attribute of the instance, not a method that the dependency base gives. So the call is a call on an unknown receiver, and a name edge joins it to Parser.parse. A call that names a method last, as super().__init__(), still falls to the dependency base.
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: main.py//Worker//__init__
+    to: threading//Thread//__init__
+    kind: direct
+    confidence: high
+    site: main.py:8
+  - from: main.py//Worker//work
+    to: parser.py//Parser//parse
+    kind: name
+    confidence: low
+    site: main.py:12
+no_edges:
+  - from: main.py//Worker//work
+    to: threading//Thread//parser//parse
+unresolved:
+  - caller: main.py//Worker//work
+    site: main.py:12
+    reason: unknown-receiver
+    method: parse
+results:
+  - target: yaml//safe_load
+    status: found
+    path:
+      - key: main.py
+      - key: main.py//Worker//work
+        site: main.py:16
+        kind: member
+        confidence: high
+      - key: parser.py//Parser//parse
+        site: main.py:12
+        kind: name
+        confidence: low
+      - key: yaml//safe_load
+        site: parser.py:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: parser.py//Parser//parse
+        site: parser.py:6
+        reached: true

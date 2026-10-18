@@ -1,0 +1,19 @@
+[
+  {
+    "version": "11", "path": "main.py", "language": "python",
+    "imports": [{"line": 1, "module": "util", "wildcard": true, "kind": "static", "namespace": "util"}],
+    "definitions": [{"key": "main.py", "kind": "module", "name": "main", "start_line": 1, "end_line": 3, "exported": true}],
+    "calls": [
+      {"caller": "main.py", "line": 2, "column": 1, "callee": "helper", "kind": "call"},
+      {"caller": "main.py", "line": 3, "column": 1, "callee": "_private", "kind": "call"}
+    ]
+  },
+  {
+    "version": "11", "path": "util.py", "language": "python",
+    "definitions": [
+      {"key": "util.py", "kind": "module", "name": "util", "start_line": 1, "end_line": 4, "exported": true},
+      {"key": "util.py//helper", "kind": "function", "name": "helper", "start_line": 1, "end_line": 2, "exported": true},
+      {"key": "util.py//_private", "kind": "function", "name": "_private", "start_line": 3, "end_line": 4, "exported": false}
+    ]
+  }
+]

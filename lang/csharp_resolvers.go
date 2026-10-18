@@ -1,6 +1,7 @@
 package lang
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/safedep/code/core"
@@ -28,14 +29,14 @@ var csharpFunctionShapes = map[string]functionShape{
 // ResolveImports returns one import for each using directive. A using
 // directive without an alias brings every type of a namespace into scope, so
 // it is a wildcard import. An alias imports one namespace or type by name.
-func (r *csharpResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode, error) {
+func (r *csharpResolvers) ResolveImports(ctx context.Context, tree core.ParseTree) ([]*ast.ImportNode, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from parse tree: %w", err)
 	}
 
 	var imports []*ast.ImportNode
-	walkNamed(tree.Tree().RootNode(), func(node *sitter.Node) bool {
+	err = walkNamed(ctx, tree.Tree().RootNode(), func(node *sitter.Node) bool {
 		if node.Type() != "using_directive" {
 			return csharpImportContainers[node.Type()]
 		}
@@ -49,10 +50,13 @@ func (r *csharpResolvers) ResolveImports(tree core.ParseTree) ([]*ast.ImportNode
 		imports = append(imports, newModuleImport(data, module, nil, alias, alias == nil))
 		return false
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return imports, nil
 }
 
-func (r *csharpResolvers) ResolveFunctions(tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
-	return resolveFunctionsByShape(tree, csharpFunctionShapes)
+func (r *csharpResolvers) ResolveFunctions(ctx context.Context, tree core.ParseTree) ([]*ast.FunctionDeclarationNode, error) {
+	return resolveFunctionsByShape(ctx, tree, csharpFunctionShapes)
 }

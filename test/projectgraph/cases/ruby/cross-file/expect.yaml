@@ -1,0 +1,55 @@
+source: safedep:hand
+description: A gem script under exe/ is a root. It loads lib/shop/runner.rb by require_relative, and runner.rb loads lib/shop/loader.rb by require against the lib/ load path. Runner#run names Loader inside module Shop, which is Shop::Loader of another file. Loader#dump has no caller.
+roots:
+  - key: exe/tool.rb
+    kind: main
+    rule: ruby.script
+edges:
+  - from: exe/tool.rb
+    to: lib/shop/runner.rb
+    kind: import
+    confidence: high
+    site: exe/tool.rb:1
+  - from: exe/tool.rb
+    to: lib/shop/runner.rb//Shop//Runner//run
+    kind: member
+    confidence: high
+    site: exe/tool.rb:3
+  - from: lib/shop/runner.rb
+    to: lib/shop/loader.rb
+    kind: import
+    confidence: high
+    site: lib/shop/runner.rb:1
+  - from: lib/shop/runner.rb//Shop//Runner//run
+    to: lib/shop/loader.rb//Shop//Loader//load
+    kind: member
+    confidence: high
+    site: lib/shop/runner.rb:6
+unresolved: []
+results:
+  - target: YAML//load_file
+    status: found
+    path:
+      - key: exe/tool.rb
+      - key: lib/shop/runner.rb//Shop//Runner//run
+        site: exe/tool.rb:3
+        kind: member
+        confidence: high
+      - key: lib/shop/loader.rb//Shop//Loader//load
+        site: lib/shop/runner.rb:6
+        kind: member
+        confidence: high
+      - key: YAML//load_file
+        site: lib/shop/loader.rb:10
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: lib/shop/loader.rb//Shop//Loader//load
+        site: lib/shop/loader.rb:10
+        reached: true
+  - target: YAML//dump
+    status: not-found
+    call_sites:
+      - caller: lib/shop/loader.rb//Shop//Loader//dump
+        site: lib/shop/loader.rb:14
+        reached: false

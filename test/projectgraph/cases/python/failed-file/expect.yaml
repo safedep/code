@@ -1,0 +1,23 @@
+source: safedep:hand
+description: The index step fails server.py, which is over the size limit of the case. The file can hold a root or a caller that the graph does not know, so the answer for yaml.load is uncertain although no search reaches the file.
+max_file_bytes: 120
+failed:
+  - server.py
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+exact_edges: true
+edges:
+  - from: main.py
+    to: print
+    kind: direct
+    confidence: high
+    site: main.py:2
+unresolved: []
+results:
+  - target: yaml//load
+    status: uncertain
+    uncertainties:
+      - kind: budget
+        site: server.py

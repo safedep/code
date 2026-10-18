@@ -1,0 +1,39 @@
+source: safedep:hand
+description: main.py calls parse on the result of make(). The index does not know the value of a call result, so a name edge joins the call to Parser.parse.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+edges:
+  - from: main.py
+    to: factory.py//make
+    kind: direct
+    confidence: high
+    site: main.py:3
+  - from: main.py
+    to: factory.py//Parser//parse
+    kind: name
+    confidence: low
+    site: main.py:3
+unresolved:
+  - caller: main.py
+    site: main.py:3
+    reason: unknown-receiver
+    method: parse
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: factory.py//Parser//parse
+        site: main.py:3
+        kind: name
+        confidence: low
+      - key: yaml//load
+        site: factory.py:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: factory.py//Parser//parse
+        site: factory.py:6
+        reached: true

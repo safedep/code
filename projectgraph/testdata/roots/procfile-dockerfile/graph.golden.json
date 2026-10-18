@@ -1,0 +1,118 @@
+{
+  "nodes": {
+    "app/__init__.py": {
+      "key": "app/__init__.py",
+      "kind": "module",
+      "path": "app/__init__.py",
+      "line": 1,
+      "exported": true
+    },
+    "app/cli.py": {
+      "key": "app/cli.py",
+      "kind": "module",
+      "path": "app/cli.py",
+      "line": 1,
+      "exported": true
+    },
+    "app/wsgi.py": {
+      "key": "app/wsgi.py",
+      "kind": "module",
+      "path": "app/wsgi.py",
+      "line": 1,
+      "exported": true
+    },
+    "app/wsgi.py//app": {
+      "key": "app/wsgi.py//app",
+      "kind": "function",
+      "path": "app/wsgi.py",
+      "line": 1,
+      "exported": true
+    },
+    "ignored.py": {
+      "key": "ignored.py",
+      "kind": "module",
+      "path": "ignored.py",
+      "line": 1,
+      "exported": true
+    },
+    "web/server.js": {
+      "key": "web/server.js",
+      "kind": "module",
+      "path": "web/server.js",
+      "line": 1,
+      "exported": true
+    },
+    "worker.py": {
+      "key": "worker.py",
+      "kind": "module",
+      "path": "worker.py",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [],
+  "unresolved": [],
+  "roots": [
+    {
+      "key": "app/cli.py",
+      "kind": "manifest",
+      "rule": "dockerfile",
+      "site": {
+        "path": "app/cli.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "app/wsgi.py",
+      "kind": "manifest",
+      "rule": "procfile",
+      "site": {
+        "path": "app/wsgi.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "app/wsgi.py//app",
+      "kind": "manifest",
+      "rule": "procfile",
+      "site": {
+        "path": "app/wsgi.py",
+        "line": 1
+      }
+    },
+    {
+      "key": "web/server.js",
+      "kind": "manifest",
+      "rule": "dockerfile",
+      "site": {
+        "path": "web/server.js",
+        "line": 1
+      }
+    },
+    {
+      "key": "worker.py",
+      "kind": "manifest",
+      "rule": "procfile",
+      "site": {
+        "path": "worker.py",
+        "line": 1
+      }
+    }
+  ],
+  "files": {
+    "app/__init__.py": "indexed",
+    "app/cli.py": "indexed",
+    "app/wsgi.py": "indexed",
+    "ignored.py": "indexed",
+    "web/server.js": "indexed",
+    "worker.py": "indexed"
+  },
+  "stats": {
+    "version": "11",
+    "files": 6,
+    "nodes": 7,
+    "edges": 0,
+    "unresolved": 0,
+    "roots": 5
+  }
+}

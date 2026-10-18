@@ -51,7 +51,7 @@ func main() {
 
 type treeVisitor struct{}
 
-func (v *treeVisitor) VisitTree(tree core.ParseTree) error {
+func (v *treeVisitor) VisitTree(ctx context.Context, tree core.ParseTree) error {
 	file, err := tree.File()
 	if err != nil {
 		return fmt.Errorf("failed to get file: %w", err)
@@ -71,7 +71,7 @@ func (v *treeVisitor) VisitTree(tree core.ParseTree) error {
 		fmt.Printf("Language resolver supports OO: %v\n", or)
 	}
 
-	imports, err := language.Resolvers().ResolveImports(tree)
+	imports, err := language.Resolvers().ResolveImports(ctx, tree)
 	if err != nil {
 		return fmt.Errorf("failed to resolve imports: %w", err)
 	}

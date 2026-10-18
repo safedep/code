@@ -1,0 +1,297 @@
+{
+  "version": "11",
+  "path": "App.kt",
+  "language": "kotlin",
+  "content_hash": "458147a6c6ebc2561187207bb3bca7e091914bfd2e52f0540f58887976983462",
+  "package": "com.shop",
+  "imports": [
+    {
+      "line": 3,
+      "module": "org.yaml.snakeyaml.Yaml",
+      "alias": "Yaml",
+      "kind": "static",
+      "namespace": "org//yaml//snakeyaml//Yaml"
+    },
+    {
+      "line": 4,
+      "module": "com.shop.util",
+      "wildcard": true,
+      "kind": "static",
+      "namespace": "com//shop//util"
+    }
+  ],
+  "definitions": [
+    {
+      "key": "App.kt",
+      "kind": "module",
+      "name": "App",
+      "start_line": 1,
+      "end_line": 33,
+      "exported": true
+    },
+    {
+      "key": "App.kt//parser",
+      "kind": "variable",
+      "name": "parser",
+      "start_line": 6,
+      "end_line": 6,
+      "exported": true
+    },
+    {
+      "key": "App.kt//App",
+      "kind": "class",
+      "name": "App",
+      "start_line": 8,
+      "end_line": 26,
+      "exported": true,
+      "decorators": [
+        "@SpringBootApplication"
+      ]
+    },
+    {
+      "key": "App.kt//App//run",
+      "kind": "method",
+      "name": "run",
+      "start_line": 10,
+      "end_line": 14,
+      "exported": true,
+      "parent": "App.kt//App",
+      "params": [
+        {
+          "name": "path",
+          "type": "String"
+        }
+      ]
+    },
+    {
+      "key": "App.kt//App//audit",
+      "kind": "method",
+      "name": "audit",
+      "start_line": 16,
+      "end_line": 16,
+      "exported": true,
+      "parent": "App.kt//App"
+    },
+    {
+      "key": "App.kt//App//\u003cclinit\u003e",
+      "kind": "method",
+      "name": "\u003cclinit\u003e",
+      "start_line": 18,
+      "end_line": 25,
+      "exported": true,
+      "parent": "App.kt//App",
+      "static": true
+    },
+    {
+      "key": "App.kt//App//main",
+      "kind": "method",
+      "name": "main",
+      "start_line": 21,
+      "end_line": 24,
+      "exported": true,
+      "parent": "App.kt//App",
+      "decorators": [
+        "@JvmStatic"
+      ],
+      "params": [
+        {
+          "name": "args",
+          "type": "Array"
+        }
+      ],
+      "static": true
+    },
+    {
+      "key": "App.kt//Runner",
+      "kind": "interface",
+      "name": "Runner",
+      "start_line": 28,
+      "end_line": 30,
+      "exported": true
+    },
+    {
+      "key": "App.kt//trimmed",
+      "kind": "function",
+      "name": "trimmed",
+      "start_line": 32,
+      "end_line": 32,
+      "exported": true,
+      "params": [
+        {
+          "name": "this",
+          "type": "String"
+        }
+      ],
+      "returns": "String",
+      "static": true
+    }
+  ],
+  "classes": [
+    {
+      "key": "App.kt//App",
+      "bases": [
+        "Base",
+        "Runner"
+      ],
+      "methods": [
+        "App.kt//App//\u003cclinit\u003e",
+        "App.kt//App//audit",
+        "App.kt//App//main",
+        "App.kt//App//run"
+      ],
+      "fields": [
+        {
+          "name": "store",
+          "type": "Store"
+        },
+        {
+          "name": "Companion",
+          "type": "App"
+        }
+      ]
+    },
+    {
+      "key": "App.kt//Runner"
+    }
+  ],
+  "calls": [
+    {
+      "caller": "App.kt",
+      "line": 6,
+      "column": 14,
+      "callee": "Yaml",
+      "targets": [
+        "org//yaml//snakeyaml//Yaml"
+      ],
+      "method": "Yaml",
+      "kind": "call"
+    },
+    {
+      "caller": "App.kt//App",
+      "line": 9,
+      "column": 39,
+      "callee": "Base",
+      "targets": [
+        "Base"
+      ],
+      "kind": "new"
+    },
+    {
+      "caller": "App.kt//App//run",
+      "line": 11,
+      "column": 9,
+      "callee": "store.save",
+      "targets": [
+        "App.kt//App//store//save"
+      ],
+      "receiver": "store",
+      "method": "save",
+      "kind": "call"
+    },
+    {
+      "caller": "App.kt//App//run",
+      "line": 11,
+      "column": 20,
+      "callee": "parser.load",
+      "targets": [
+        "org//yaml//snakeyaml//Yaml//load"
+      ],
+      "receiver": "parser",
+      "method": "load",
+      "kind": "call"
+    },
+    {
+      "caller": "App.kt//App//run",
+      "line": 12,
+      "column": 9,
+      "callee": "this.audit",
+      "targets": [
+        "App.kt//App//audit"
+      ],
+      "receiver": "this",
+      "method": "audit",
+      "kind": "call"
+    },
+    {
+      "caller": "App.kt//App//run",
+      "line": 13,
+      "column": 9,
+      "callee": "helper",
+      "targets": [
+        "helper"
+      ],
+      "method": "helper",
+      "kind": "call"
+    },
+    {
+      "caller": "App.kt//App//audit",
+      "line": 16,
+      "column": 27,
+      "callee": "log.info",
+      "targets": [
+        "log//info"
+      ],
+      "receiver": "log",
+      "method": "info",
+      "kind": "call"
+    },
+    {
+      "caller": "App.kt//App//\u003cclinit\u003e",
+      "line": 19,
+      "column": 27,
+      "callee": "Logger.getLogger",
+      "targets": [
+        "Logger//getLogger"
+      ],
+      "receiver": "Logger",
+      "method": "getLogger",
+      "kind": "call"
+    },
+    {
+      "caller": "App.kt//App//main",
+      "line": 23,
+      "column": 13,
+      "callee": "App",
+      "targets": [
+        "App.kt//App"
+      ],
+      "method": "App",
+      "kind": "call"
+    },
+    {
+      "caller": "App.kt//App//main",
+      "line": 23,
+      "column": 13,
+      "callee": "App(Store()).run",
+      "targets": [
+        "App.kt//App//run"
+      ],
+      "receiver": "App(Store())",
+      "method": "run",
+      "kind": "call"
+    },
+    {
+      "caller": "App.kt//App//main",
+      "line": 23,
+      "column": 17,
+      "callee": "Store",
+      "targets": [
+        "Store"
+      ],
+      "method": "Store",
+      "kind": "call"
+    },
+    {
+      "caller": "App.kt//trimmed",
+      "line": 32,
+      "column": 32,
+      "callee": "this.trim",
+      "targets": [
+        "this//trim"
+      ],
+      "receiver": "this",
+      "method": "trim",
+      "kind": "call"
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+source: safedep:hand
+description: bin/cli.js imports parse from the barrel src/index.js, which re-exports it from src/parser.js. The path shows the export hop through src/index.js.
+roots:
+  - key: bin/cli.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: bin/cli.js
+    to: src/index.js//parse
+    kind: direct
+    confidence: high
+    site: bin/cli.js:3
+  - from: src/index.js//parse
+    to: src/parser.js//parse
+    kind: export
+    confidence: high
+    site: src/index.js:1
+  - from: src/parser.js//parse
+    to: js-yaml//load
+    kind: direct
+    confidence: high
+    site: src/parser.js:4
+  - from: src/index.js
+    to: src/parser.js
+    kind: import
+    confidence: high
+    site: src/index.js:1
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: bin/cli.js
+      - key: src/index.js//parse
+        site: bin/cli.js:3
+        kind: direct
+        confidence: high
+      - key: src/parser.js//parse
+        site: src/index.js:1
+        kind: export
+        confidence: high
+      - key: js-yaml//load
+        site: src/parser.js:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/parser.js//parse
+        site: src/parser.js:4
+        reached: true

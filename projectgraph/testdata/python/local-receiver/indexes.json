@@ -1,0 +1,120 @@
+[
+  {
+    "version": "11",
+    "path": "main.py",
+    "language": "python",
+    "imports": [
+      {
+        "line": 1,
+        "module": "importlib",
+        "alias": "importlib",
+        "kind": "static",
+        "namespace": "importlib"
+      },
+      {
+        "line": 10,
+        "module": "",
+        "kind": "dynamic-computed",
+        "namespace": ""
+      }
+    ],
+    "definitions": [
+      {
+        "key": "main.py",
+        "kind": "module",
+        "name": "main",
+        "start_line": 1,
+        "end_line": 12,
+        "exported": true
+      },
+      {
+        "key": "main.py//read",
+        "kind": "function",
+        "name": "read",
+        "start_line": 4,
+        "end_line": 6,
+        "exported": true
+      },
+      {
+        "key": "main.py//load_plugin",
+        "kind": "function",
+        "name": "load_plugin",
+        "start_line": 9,
+        "end_line": 11,
+        "exported": true,
+        "flags": [
+          {
+            "kind": "computed-import",
+            "line": 10
+          }
+        ]
+      }
+    ],
+    "calls": [
+      {
+        "caller": "main.py//read",
+        "line": 5,
+        "column": 10,
+        "callee": "open",
+        "targets": [
+          "open"
+        ],
+        "method": "open",
+        "kind": "call"
+      },
+      {
+        "caller": "main.py//read",
+        "line": 6,
+        "column": 16,
+        "callee": "f.read",
+        "targets": [
+          "main.py//read//f//read"
+        ],
+        "receiver": "f",
+        "method": "read",
+        "kind": "call"
+      },
+      {
+        "caller": "main.py//load_plugin",
+        "line": 10,
+        "column": 14,
+        "callee": "importlib.import_module",
+        "targets": [
+          "importlib//import_module"
+        ],
+        "receiver": "importlib",
+        "method": "import_module",
+        "kind": "call"
+      },
+      {
+        "caller": "main.py//load_plugin",
+        "line": 11,
+        "column": 12,
+        "callee": "module.run",
+        "targets": [
+          "main.py//load_plugin//module//run"
+        ],
+        "receiver": "module",
+        "method": "run",
+        "kind": "call"
+      }
+    ],
+    "unresolved": [
+      {
+        "caller": "main.py//load_plugin",
+        "line": 10,
+        "column": 14,
+        "text": "importlib.import_module(name)",
+        "receiver": "importlib",
+        "method": "import_module",
+        "reason": "dynamic-import"
+      }
+    ],
+    "flags": [
+      {
+        "kind": "computed-import",
+        "line": 10
+      }
+    ]
+  }
+]

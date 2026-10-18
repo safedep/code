@@ -1,0 +1,27 @@
+{
+  "version": "2",
+  "index_version": "11",
+  "link_version": "11",
+  "unit": "go:github.com/acme/yamlish@v1.2.0",
+  "symbols": [
+    {
+      "key": "github.com//acme//yamlish//Dump",
+      "definitions": [
+        "go:github.com/acme/yamlish@v1.2.0//load.go//Dump"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "github.com//acme//yamlish//Load",
+      "definitions": [
+        "go:github.com/acme/yamlish@v1.2.0//load.go//Load"
+      ],
+      "reaches": [
+        "gopkg.in//yaml.v3//Unmarshal"
+      ]
+    }
+  ],
+  "targets": [
+    "gopkg.in//yaml.v3//Unmarshal"
+  ]
+}

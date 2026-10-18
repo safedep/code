@@ -1,0 +1,26 @@
+source: safedep:hand
+description: The index step fails the entry file main.py, which is over the size limit of the case. No root rule matches, so the roots fall back to the library surface. The failed file can call any target, so a target with no path is uncertain.
+max_file_bytes: 120
+failed:
+  - main.py
+roots:
+  - key: handlers.py
+    kind: library-surface
+    rule: library-surface
+  - key: handlers.py//parse
+    kind: library-surface
+    rule: library-surface
+edges:
+  - from: handlers.py//parse
+    to: yaml//load
+    kind: direct
+    confidence: high
+    site: handlers.py:6
+unresolved: []
+results:
+  - target: yaml//dump
+    status: uncertain
+    uncertainties:
+      - kind: budget
+        site: main.py
+      - kind: root-fallback

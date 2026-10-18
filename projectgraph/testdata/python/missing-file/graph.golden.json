@@ -1,0 +1,66 @@
+{
+  "nodes": {
+    "handlers.py": {
+      "key": "handlers.py",
+      "kind": "module",
+      "path": "handlers.py"
+    },
+    "main.py": {
+      "key": "main.py",
+      "kind": "module",
+      "path": "main.py",
+      "line": 1,
+      "exported": true
+    }
+  },
+  "edges": [
+    {
+      "from": "main.py",
+      "to": "handlers.py",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      },
+      "kind": "import",
+      "confidence": "high",
+      "resolver": "python.import.absolute"
+    },
+    {
+      "from": "main.py",
+      "to": "handlers.py",
+      "site": {
+        "path": "main.py",
+        "line": 2,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "python.import"
+    }
+  ],
+  "unresolved": [],
+  "roots": [
+    {
+      "key": "main.py",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.py",
+        "line": 1
+      }
+    }
+  ],
+  "files": {
+    "handlers.py": "missing",
+    "main.py": "cached"
+  },
+  "stats": {
+    "version": "11",
+    "files": 2,
+    "nodes": 2,
+    "edges": 2,
+    "unresolved": 0,
+    "roots": 1,
+    "root_fallback": true
+  }
+}

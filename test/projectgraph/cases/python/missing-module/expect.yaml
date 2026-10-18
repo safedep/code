@@ -1,0 +1,17 @@
+source: safedep:hand
+description: main.py imports conf.loader. The project has a package conf but no conf/loader.py, so a generated file or a search path root can define it. The import is a site that can reach any target.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+edges: []
+unresolved:
+  - caller: main.py
+    site: main.py:1
+    reason: no-definition
+results:
+  - target: yaml//load
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: main.py:1

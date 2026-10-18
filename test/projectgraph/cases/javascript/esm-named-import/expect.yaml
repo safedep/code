@@ -1,0 +1,35 @@
+source: safedep:hand
+description: The bin entry src/main.js imports parseConfig by an ESM named import, and parseConfig calls the default import of js-yaml.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.js
+    to: src/config.js//parseConfig
+    kind: direct
+    confidence: high
+    site: src/main.js:3
+  - from: src/config.js//parseConfig
+    to: js-yaml//load
+    kind: direct
+    confidence: high
+    site: src/config.js:6
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/main.js
+      - key: src/config.js//parseConfig
+        site: src/main.js:3
+        kind: direct
+        confidence: high
+      - key: js-yaml//load
+        site: src/config.js:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/config.js//parseConfig
+        site: src/config.js:6
+        reached: true

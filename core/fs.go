@@ -6,10 +6,16 @@ import (
 )
 
 type File interface {
-	// The name of the file in the file system.
-	// This is the path relative to the root of the file system
-	// source defined by the file system.
+	// Name is the path of the file relative to the root that enumerated
+	// it, with / as the separator. For a root that is itself a file, Name
+	// is the base name of the file. A file of dependency code with a
+	// package unit has the unit and "//" first, as
+	// npm:lodash@4.17.21//template.js, so its name differs from the name
+	// of each file of the project.
 	Name() string
+
+	// Path is the path that Reader opens, as the file system knows it.
+	Path() string
 
 	// Open the file for reading.
 	Reader() (io.ReadCloser, error)

@@ -1,0 +1,55 @@
+source: safedep:hand
+description: index.php is a script, requires a file by a path under __DIR__, and makes a Loader of the namespace Shop that a use names. The class table maps the class to its file. The call on Yaml names a class of a dependency. Loader.dump has no caller.
+roots:
+  - key: index.php
+    kind: main
+    rule: php.script
+edges:
+  - from: index.php
+    to: src/bootstrap.php
+    kind: import
+    confidence: high
+    site: index.php:2
+  - from: index.php
+    to: src/Shop/Loader.php//Loader
+    kind: direct
+    confidence: high
+    site: index.php:6
+  - from: src/Shop/Loader.php//Loader
+    to: src/Shop/Loader.php//Loader//__construct
+    kind: direct
+    confidence: high
+    site: src/Shop/Loader.php:8
+  - from: index.php
+    to: src/Shop/Loader.php//Loader//load
+    kind: member
+    confidence: high
+    site: index.php:7
+unresolved:
+  - caller: src/bootstrap.php
+    site: src/bootstrap.php:2
+    reason: unknown-receiver
+    method: date_default_timezone_set
+results:
+  - target: Symfony//Component//Yaml//Yaml//parseFile
+    status: found
+    path:
+      - key: index.php
+      - key: src/Shop/Loader.php//Loader//load
+        site: index.php:7
+        kind: member
+        confidence: high
+      - key: Symfony//Component//Yaml//Yaml//parseFile
+        site: src/Shop/Loader.php:14
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Shop/Loader.php//Loader//load
+        site: src/Shop/Loader.php:14
+        reached: true
+  - target: Symfony//Component//Yaml//Yaml//dump
+    status: not-found
+    call_sites:
+      - caller: src/Shop/Loader.php//Loader//dump
+        site: src/Shop/Loader.php:19
+        reached: false

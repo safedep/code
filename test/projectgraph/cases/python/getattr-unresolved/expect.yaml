@@ -1,0 +1,19 @@
+source: safedep:hand
+description: dispatch calls a member of yaml by a computed name. The site can call any member, so yaml.safe_load is uncertain.
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges: []
+unresolved:
+  - caller: main.py//dispatch
+    site: main.py:5
+    reason: computed-name
+results:
+  - target: yaml//safe_load
+    status: uncertain
+    uncertainties:
+      - kind: dynamic-flag
+        site: main.py:5
+      - kind: unresolved-call
+        site: main.py:5

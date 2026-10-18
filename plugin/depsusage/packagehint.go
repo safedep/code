@@ -6,39 +6,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/safedep/code/core"
 	"github.com/safedep/code/pkg/helpers"
 )
 
-var goModuleQualifierVersionSuffixRegexp *regexp.Regexp
-
-func init() {
-	goModuleQualifierVersionSuffixRegexp = regexp.MustCompile(`v\d+$`)
-}
-
-// resolvePackageHint returns the package name hint for an imported module
-//
-// eg. for a python module "foo.bar" it should return "foo"
-func resolvePackageHint(moduleName string, lang core.Language) (string, error) {
-	if moduleName == "" {
-		return "", fmt.Errorf("invalid module name: %s", moduleName)
-	}
-
-	resolvers := map[core.LanguageCode]func(string) (string, error){
-		core.LanguageCodePython:     resolvePythonPackageHint,
-		core.LanguageCodeGo:         resolveGoPackageHint,
-		core.LanguageCodeJavascript: resolveJavascriptPackageHint,
-		core.LanguageCodeJava:       resolveJavaPackageHint,
-		core.LanguageCodeTypescript: resolveJavascriptPackageHint,
-		core.LanguageCodeKotlin:     resolveKotlinPackageHint,
-		core.LanguageCodeRust:       resolveRustPackageHint,
-		core.LanguageCodeRuby:       resolveRubyPackageHint,
-	}
-	if resolver, ok := resolvers[lang.Meta().Code]; ok {
-		return resolver(moduleName)
-	}
-	return moduleName, nil
-}
+var goModuleQualifierVersionSuffixRegexp = regexp.MustCompile(`v\d+$`)
 
 func resolvePythonPackageHint(moduleName string) (string, error) {
 	if moduleName == "" {

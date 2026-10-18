@@ -1,336 +1,255 @@
 package callgraph
 
 import (
+	"context"
 	"fmt"
-	"strings"
+	"io"
+	"maps"
+	"slices"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
-	"github.com/safedep/dry/log"
-	sitter "github.com/smacker/go-tree-sitter"
 )
 
 const namespaceSeparator = "//"
 
 const (
-	// Maximum number of nodes in callgraph before warning
-	// Prevents memory exhaustion in extremely large/complex files
+	// The limits keep the memory of a large or hostile file bounded. A
+	// build past a limit records a Truncation.
 	maxCallGraphNodes       = 50000
 	maxAssignmentGraphNodes = 100000
 	maxDFSResultItems       = 100000
 )
 
-// Refers to one argument passed to a function call
-// For example, in the function call `foo(a, b, c)`, there are
-// three CallArgument instances, one for each of `a`, `b`, and `c
+// CallArgument is one argument of a call. In foo(a, b, c), the call has
+// three arguments.
 type CallArgument struct {
-	// An argument may be resolved to multiple values (due to assignments)
-	// For example, a function call may have an argument like `foo(a)` where
-	// a was assigned to multiple values in the code previously
-	// eg. `a = 1`, `a = 2`, `a = 3
-	Nodes []*assignmentNode
+	// Values are the terminal values that the argument resolves to. An
+	// argument can resolve to more than one value, as a after a = 1 and a = 2.
+	Values []ArgumentValue
 }
 
+// ArgumentValue is one value of an argument.
+type ArgumentValue struct {
+	// Namespace is the key of the value. For a literal it is the source of
+	// the literal.
+	Namespace string
+	Literal   bool
+}
+
+// CallKind tells what makes the edge of a call reference.
+type CallKind string
+
+const (
+	// CallCall is a call in the source, as f(x) or obj.m(x).
+	CallCall CallKind = "call"
+
+	// CallNew is an object creation, as new Client(x).
+	CallNew CallKind = "new"
+
+	// CallImport is a dynamic import of a module that a string names, as
+	// import('x'). The callee is x//*.
+	CallImport CallKind = "import"
+
+	// CallWildcardImport is the edge from the root to module//* for a
+	// wildcard import, as from os import *.
+	CallWildcardImport CallKind = "wildcard-import"
+
+	// CallSynthetic is an edge that no call in the source makes: from the
+	// instance to a method, from a class to its constructor method, and
+	// from the root to the entry function or to each Go function. It has
+	// no site.
+	CallSynthetic CallKind = "synthetic"
+)
+
+// CallReference is one edge of the call graph. Site is the position of the
+// expression that names the callee, and Text its source, at most
+// maxSiteText bytes.
 type CallReference struct {
-	// Namespace of the called function or method
+	// CalleeNamespace is the callee as the call writes it, as the local name
+	// load after import { load } from 'js-yaml'.
 	CalleeNamespace string
 
-	// Tree sitter node for the called function or method
-	CalleeTreeNode *sitter.Node
+	Kind CallKind
 
-	// Identifier keyword node which actually invokes the function call
-	CallerIdentifier *sitter.Node
+	// Targets are the namespaces that the assignment graph resolves the
+	// callee to at the end of the build, sorted, as js-yaml//load for load.
+	// A callee with no assignment is its own target. An unbound callee that
+	// the assignment graph does not know has no target.
+	Targets []string
 
-	// Arguments passed to the function call
+	Site ast.NodePosition
+	Text string
+
+	// Receiver is the source of the object of a member call, as client in
+	// client.send(), at most maxSiteText bytes. Method is the called name,
+	// send. Receiver is empty for a bare call, and Method is empty when the
+	// call computes the name.
+	Receiver string
+	Method   string
+
 	Arguments []CallArgument
+
+	// Unbound marks a bare callee that the scope chain did not bind, as a
+	// function that the file declares after the call. CalleeNamespace is
+	// then a fallback key.
+	Unbound bool
 }
 
-// CallGraphNode represents a single node in the call graph
+// CallGraphNode represents a single node in the call graph. Kind is the
+// tree-sitter type of the node that defines it, and is empty when the build
+// saw no definition. Position is 1-based.
 type CallGraphNode struct {
 	Namespace string
+	Kind      string
+	Position  ast.NodePosition
 	CallsTo   []CallReference
-	TreeNode  *sitter.Node
 }
 
-type TreeNodeMetadata struct {
-	StartLine   uint32
-	EndLine     uint32
-	StartColumn uint32
-	EndColumn   uint32
-}
-
-// If tree sitter node is nil, it returns false indicating that the content details are not available
-// else, it returns the content details and true
-func (gn *CallGraphNode) Metadata() (TreeNodeMetadata, bool) {
-	if gn.TreeNode == nil {
-		return TreeNodeMetadata{}, false
-	}
-
-	return TreeNodeMetadata{
-		StartLine:   gn.TreeNode.StartPoint().Row,
-		EndLine:     gn.TreeNode.EndPoint().Row,
-		StartColumn: gn.TreeNode.StartPoint().Column,
-		EndColumn:   gn.TreeNode.EndPoint().Column,
-	}, true
-}
-
-// If tree sitter node is nil, it returns false indicating that the content details are not available
-// else, it returns the content details and true
-func (gn *CallGraphNode) Content(treeData *[]byte) (string, bool) {
-	if gn.TreeNode == nil {
-		return "", false
-	}
-	return gn.TreeNode.Content(*treeData), true
-}
-
-func newCallGraphNode(namespace string, treeNode *sitter.Node) *CallGraphNode {
-	return &CallGraphNode{
-		Namespace: namespace,
-		CallsTo:   []CallReference{},
-		TreeNode:  treeNode,
-	}
-}
-
+// CallGraph is the call graph of one file. It keeps no tree, so it outlives
+// the parse of the file.
 type CallGraph struct {
-	FileName          string
-	Nodes             map[string]*CallGraphNode
-	RootNode          *CallGraphNode
-	Tree              core.ParseTree
+	FileName string
+	Language core.LanguageCode
+	Nodes    map[string]*CallGraphNode
+	RootNode *CallGraphNode
+
+	// Imports are the imports of the file, in source order.
+	Imports []Import
+
+	profile           *languageProfile
 	assignmentGraph   assignmentGraph
 	classConstructors map[string]bool
-	languageCode      core.LanguageCode
-	nodeCount         int  // Track total nodes added
-	limitExceeded     bool // Flag to indicate if processing was truncated
+	// results holds the values of the calls of a shaped language that are
+	// no instance of a type, so a call on one has an unknown receiver.
+	results map[string]bool
+
+	// order holds the nodes in the order of the build, so DFS gives one
+	// result for one file.
+	order          []*CallGraphNode
+	truncations    truncations
+	unresolved     []UnresolvedCall
+	unresolvedSeen map[UnresolvedCall]bool
+
+	// ctx stops processChildren when it is done, and source gives the text
+	// of a call site. build sets them for the build and clears them after,
+	// so the graph keeps neither.
+	ctx     context.Context
+	source  []byte
+	visited int
+	ctxErr  error
 }
 
-func newCallGraph(fileName string, rootNode *sitter.Node, imports []*ast.ImportNode, tree core.ParseTree) (*CallGraph, error) {
-	language, err := tree.Language()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get language from parse tree: %w", err)
+// Values returns the namespaces that the assignment graph resolves a name
+// to, sorted, with no literal, as flask//Flask for app after
+// app = Flask(__name__). A name with no assignment has no value.
+func (cg *CallGraph) Values(namespace string) []string {
+	ag := &cg.assignmentGraph
+	var values []string
+	for _, node := range ag.resolve(namespace) {
+		if node.Namespace != namespace && !ag.literals[node.kind] {
+			values = append(values, node.Namespace)
+		}
 	}
+	slices.Sort(values)
+	return slices.Compact(values)
+}
 
-	builtIns := getBuiltins(language)
+// Dump writes the assignment graph and the call graph to w, in the order of
+// the keys. It leaves out the builtins that have no edge.
+func (cg *CallGraph) Dump(w io.Writer) error {
+	builtins := cg.languageProfile().builtinSet()
 
-	cg := &CallGraph{
-		FileName:          fileName,
-		Nodes:             make(map[string]*CallGraphNode),
-		Tree:              tree,
-		assignmentGraph:   *newAssignmentGraph(),
-		classConstructors: make(map[string]bool),
-		languageCode:      language.Meta().Code,
+	if _, err := io.WriteString(w, "Assignment Graph:\n"); err != nil {
+		return err
 	}
-
-	// Add root node to the call graph
-	cg.addRootNode(rootNode)
-
-	// Required to map identifiers to imported modules as assignments
-	// and register default calls for wildcard imports
-	importedIdentifiers, wildcardImports := parseImports(imports, language)
-
-	for _, wildcardImport := range wildcardImports {
-		// For wildcard imports, we add a call to importeditem//*
-		// assuming that anything under that namespace is posssibly used
-		cg.addEdge(fileName, rootNode, wildcardImport.NamespaceTreeNode, wildcardImport.Namespace, wildcardImport.NamespaceTreeNode, []CallArgument{})
-	}
-
-	for identifier, importedIdentifier := range importedIdentifiers {
-		cg.addNode(importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
-
-		if identifier == importedIdentifier.Namespace {
-			cg.assignmentGraph.addNode(importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
-		} else {
-			cg.assignmentGraph.addAssignment(identifier, importedIdentifier.IdentifierTreeNode, importedIdentifier.Namespace, importedIdentifier.NamespaceTreeNode)
+	for _, namespace := range slices.Sorted(maps.Keys(cg.assignmentGraph.Assignments)) {
+		node := cg.assignmentGraph.Assignments[namespace]
+		if builtins[namespace] && len(node.AssignedTo) == 0 {
+			continue
+		}
+		if _, err := fmt.Fprintf(w, "  %s (->%d) => %v\n", namespace, len(node.AssignedBy), node.AssignedTo); err != nil {
+			return err
 		}
 	}
 
-	for _, namespace := range builtIns {
-		// @TODO - Can't create sitter node for imported keywords
-		cg.assignmentGraph.addNode(namespace, nil)
+	if _, err := io.WriteString(w, "\nCall Graph:\n"); err != nil {
+		return err
 	}
-
-	return cg, nil
-}
-
-func (cg *CallGraph) addRootNode(treeNode *sitter.Node) {
-	cg.addNode(cg.FileName, treeNode)
-	cg.RootNode = cg.Nodes[cg.FileName]
-}
-
-func (cg *CallGraph) ensureNodeInAssignmentGraph(identifier string, treeNode *sitter.Node) {
-	cg.assignmentGraph.addNode(identifier, treeNode)
-}
-
-func (cg *CallGraph) addNode(identifier string, treeNode *sitter.Node) *CallGraphNode {
-	// Check if we've exceeded node limits
-	if cg.nodeCount >= maxCallGraphNodes && !cg.limitExceeded {
-		log.Warnf("CallGraph node limit (%d) exceeded for file %s, some nodes may be skipped", maxCallGraphNodes, cg.FileName)
-		cg.limitExceeded = true
-	}
-
-	// Still add to assignment graph for resolution, but skip callgraph if limit exceeded
-	cg.ensureNodeInAssignmentGraph(identifier, treeNode)
-
-	existingCgNode, exists := cg.Nodes[identifier]
-	if !exists {
-		if cg.nodeCount < maxCallGraphNodes {
-			cg.Nodes[identifier] = newCallGraphNode(identifier, treeNode)
-			cg.nodeCount++
-		} else {
-			// Return a stub node to prevent nil pointer errors
-			return &CallGraphNode{
-				Namespace: identifier,
-				CallsTo:   []CallReference{},
-				TreeNode:  treeNode,
-			}
+	for _, namespace := range slices.Sorted(maps.Keys(cg.Nodes)) {
+		node := cg.Nodes[namespace]
+		if builtins[namespace] && len(node.CallsTo) == 0 {
+			continue
 		}
-	} else if treeNode != nil && existingCgNode.TreeNode == nil {
-		// If the existing node has no tree node, we can set it now
-		cg.Nodes[identifier].TreeNode = treeNode
-	}
-
-	return cg.Nodes[identifier]
-}
-
-// addEdge adds an edge from one function to another
-func (cg *CallGraph) addEdge(caller string, callerTreeNode *sitter.Node, CallerIdentifier *sitter.Node, callee string, calleeTreeNode *sitter.Node, arguments []CallArgument) {
-	cg.addNode(caller, callerTreeNode)
-	cg.addNode(callee, calleeTreeNode)
-
-	cg.Nodes[caller].CallsTo = append(cg.Nodes[caller].CallsTo, CallReference{
-		CalleeNamespace:  callee,
-		CalleeTreeNode:   calleeTreeNode,
-		CallerIdentifier: CallerIdentifier,
-		Arguments:        arguments,
-	})
-}
-
-func (cg *CallGraph) PrintCallGraph() error {
-	lang, err := cg.Tree.Language()
-	if err != nil {
-		return fmt.Errorf("failed to get language from callgraph: %w", err)
-	}
-
-	builtInsMap := getBuiltinsMap(lang)
-
-	fmt.Println("Call Graph:")
-	for caller, node := range cg.Nodes {
-		if builtInsMap[caller] && len(node.CallsTo) == 0 {
-			continue // Skip built-in functions with no outgoing calls
+		callees := make([]string, len(node.CallsTo))
+		for i, ref := range node.CallsTo {
+			callees[i] = ref.CalleeNamespace
 		}
-
-		callsToNamespaces := make([]string, len(node.CallsTo))
-		for i, callRef := range node.CallsTo {
-			callsToNamespaces[i] = callRef.CalleeNamespace
+		if _, err := fmt.Fprintf(w, "  %s (calls)=> %v\n", namespace, callees); err != nil {
+			return err
 		}
-
-		fmt.Printf("  %s (calls)=> %v\n", caller, callsToNamespaces)
-	}
-	fmt.Println()
-
-	return nil
-}
-
-func (cg *CallGraph) PrintAssignmentGraph() error {
-	lang, err := cg.Tree.Language()
-	if err != nil {
-		return fmt.Errorf("failed to get language from callgraph: %w", err)
 	}
 
-	builtInsMap := getBuiltinsMap(lang)
-
-	fmt.Println("Assignment Graph:")
-	for assignmentNamespace, assignmentNode := range cg.assignmentGraph.Assignments {
-		if builtInsMap[assignmentNamespace] && len(assignmentNode.AssignedTo) == 0 {
-			continue // Skip built-in functions with no calls
-		}
-		fmt.Printf("  %s (->%d) => %v\n", assignmentNamespace, len(assignmentNode.AssignedBy), assignmentNode.AssignedTo)
-	}
-	fmt.Println()
-
-	return nil
+	_, err := io.WriteString(w, "\n")
+	return err
 }
 
-// Assumption - All functions and class constructors are reachable
-var dfsSourceNodeTypes = map[string]bool{
-	"program":                    true,
-	"file":                       true,
-	"module":                     true,
-	"function_definition":        true,
-	"method_declaration":         true,
-	"class_definition":           true,
-	"class_body":                 true,
-	"class_declaration":          true,
-	"abstract_class_declaration": true,
-	// JavaScript and TypeScript functions, which a file often exports and
-	// does not call
-	"function_declaration":           true,
-	"generator_function_declaration": true,
-	"function_expression":            true,
-	"arrow_function":                 true,
-	"method_definition":              true,
-}
-
+// DfsResultItem is one node that DFS reached. Site and Text give the call
+// that reached it, and are empty for a node that DFS starts from.
 type DfsResultItem struct {
-	Namespace        string
-	Node             *CallGraphNode
-	Caller           *CallGraphNode
-	CallerIdentifier *sitter.Node // This is the identifier keyword node from which the fn call was made
-	Arguments        []CallArgument
-	Depth            int
-	Terminal         bool
+	Namespace string
+	Node      *CallGraphNode
+	Caller    *CallGraphNode
+	Site      ast.NodePosition
+	Text      string
+	Arguments []CallArgument
+	Depth     int
+	Terminal  bool
 }
 
-func (dri DfsResultItem) ToString() string {
-	argNamespacesStr := ""
-	for _, arg := range dri.Arguments {
-		argNamespaces := make([]string, len(arg.Nodes))
-		for i, argNode := range arg.Nodes {
-			argNamespaces[i] = argNode.Namespace
-		}
-		argNamespacesStr += fmt.Sprintf("(%s), ", strings.Join(argNamespaces, ", "))
-	}
-
-	return fmt.Sprintf("Namespace: %s, Caller: %s, Depth: %d, Terminal: %t, Arguments: [%s]",
-		dri.Namespace, dri.Caller.Namespace, dri.Depth, dri.Terminal, argNamespacesStr)
-}
-
+// DFS walks the graph from the root and then from each reachable
+// definition that the walk from the root did not reach. A file often
+// exports its definitions and does not call them.
 func (cg *CallGraph) DFS() []DfsResultItem {
 	visited := make(map[string]bool)
 	var dfsResult []DfsResultItem
 	resultCount := 0
 
-	// Initially Interpret callgraph in its natural execution order starting from
-	// the file name which has reference for entrypoints (if any)
-	cg.dfsUtil(cg.FileName, cg.RootNode, nil, []CallArgument{}, visited, &dfsResult, 0, &resultCount)
+	cg.dfsUtil(cg.FileName, cg.RootNode, CallReference{Arguments: []CallArgument{}}, visited, &dfsResult, 0, &resultCount)
 
-	// Check if we hit the limit during initial traversal
-	if resultCount >= maxDFSResultItems {
-		log.Warnf("DFS result limit (%d) reached for file %s, some paths may be incomplete", maxDFSResultItems, cg.FileName)
-		return dfsResult
-	}
-
-	// Assumption - All functions and class constructors are reachable
-	// This is required because most files only expose their classes/functions
-	// which are imported and used by other files, so an entrypoint may not be
-	// present in every file.
-	for namespace, node := range cg.Nodes {
+	reachable := cg.languageProfile().reachable
+	for _, node := range cg.nodesInOrder() {
 		if resultCount >= maxDFSResultItems {
-			log.Warnf("DFS result limit (%d) reached for file %s, stopping traversal", maxDFSResultItems, cg.FileName)
 			break
 		}
 
-		if node.TreeNode != nil && dfsSourceNodeTypes[node.TreeNode.Type()] {
-			if !visited[namespace] {
-				cg.dfsUtil(namespace, cg.RootNode, nil, []CallArgument{}, visited, &dfsResult, 0, &resultCount)
-			}
+		if reachable[node.Kind] && !visited[node.Namespace] {
+			cg.dfsUtil(node.Namespace, cg.RootNode, CallReference{Arguments: []CallArgument{}}, visited, &dfsResult, 0, &resultCount)
 		}
+	}
+
+	if resultCount >= maxDFSResultItems {
+		cg.truncate(TruncationDFSResults, cg.FileName, nil)
 	}
 
 	return dfsResult
 }
 
-func (cg *CallGraph) dfsUtil(namespace string, caller *CallGraphNode, callerIdentifier *sitter.Node, arguments []CallArgument, visited map[string]bool, result *[]DfsResultItem, depth int, resultCount *int) {
-	// Check result count limit
+// nodesInOrder returns the nodes in the order of the build. A decoded graph
+// has no build order, so its nodes come in the order of their keys.
+func (cg *CallGraph) nodesInOrder() []*CallGraphNode {
+	if len(cg.order) > 0 {
+		return cg.order
+	}
+	nodes := make([]*CallGraphNode, 0, len(cg.Nodes))
+	for _, namespace := range slices.Sorted(maps.Keys(cg.Nodes)) {
+		nodes = append(nodes, cg.Nodes[namespace])
+	}
+	return nodes
+}
+
+// dfsUtil visits namespace, which call reaches from caller.
+func (cg *CallGraph) dfsUtil(namespace string, caller *CallGraphNode, call CallReference, visited map[string]bool, result *[]DfsResultItem, depth int, resultCount *int) {
 	if *resultCount >= maxDFSResultItems {
 		return
 	}
@@ -347,13 +266,14 @@ func (cg *CallGraph) dfsUtil(namespace string, caller *CallGraphNode, callerIden
 			terminalCallgraphNode, terminalCallgraphNodeExists := cg.Nodes[terminalAssignmentNode.Namespace]
 			if terminalCallgraphNodeExists {
 				*result = append(*result, DfsResultItem{
-					Namespace:        terminalAssignmentNode.Namespace,
-					Node:             terminalCallgraphNode,
-					Caller:           caller,
-					CallerIdentifier: callerIdentifier,
-					Arguments:        arguments,
-					Depth:            depth,
-					Terminal:         true,
+					Namespace: terminalAssignmentNode.Namespace,
+					Node:      terminalCallgraphNode,
+					Caller:    caller,
+					Site:      call.Site,
+					Text:      call.Text,
+					Arguments: call.Arguments,
+					Depth:     depth,
+					Terminal:  true,
 				})
 				*resultCount++
 			}
@@ -361,52 +281,35 @@ func (cg *CallGraph) dfsUtil(namespace string, caller *CallGraphNode, callerIden
 		return
 	}
 
-	// Mark the current node as visited and add it to the result
 	visited[namespace] = true
 	*result = append(*result, DfsResultItem{
-		Namespace:        namespace,
-		Node:             callgraphNode,
-		Caller:           caller,
-		CallerIdentifier: callerIdentifier,
-		Arguments:        arguments,
-		Depth:            depth,
-		Terminal:         !callgraphNodeExists || len(callgraphNode.CallsTo) == 0,
+		Namespace: namespace,
+		Node:      callgraphNode,
+		Caller:    caller,
+		Site:      call.Site,
+		Text:      call.Text,
+		Arguments: call.Arguments,
+		Depth:     depth,
+		Terminal:  !callgraphNodeExists || len(callgraphNode.CallsTo) == 0,
 	})
 	*resultCount++
 
 	assignmentGraphNode, assignmentNodeExists := cg.assignmentGraph.Assignments[namespace]
 	if assignmentNodeExists {
-		// Recursively visit all the nodes assigned to the current node
 		for _, assigned := range assignmentGraphNode.AssignedTo {
 			if *resultCount >= maxDFSResultItems {
 				return
 			}
-			cg.dfsUtil(assigned, caller, callerIdentifier, arguments, visited, result, depth, resultCount)
+			cg.dfsUtil(assigned, caller, call, visited, result, depth, resultCount)
 		}
 	}
 
-	// Recursively visit all the nodes called by the current node
-	// Any variable assignment would be ignored here, since it won't be in callgraph
 	if callgraphNodeExists {
 		for _, callRef := range callgraphNode.CallsTo {
 			if *resultCount >= maxDFSResultItems {
 				return
 			}
-			cg.dfsUtil(callRef.CalleeNamespace, callgraphNode, callRef.CallerIdentifier, callRef.Arguments, visited, result, depth+1, resultCount)
+			cg.dfsUtil(callRef.CalleeNamespace, callgraphNode, callRef, visited, result, depth+1, resultCount)
 		}
 	}
-}
-
-func (cg *CallGraph) getInstanceKeyword() (string, bool) {
-	language, err := cg.Tree.Language()
-	if err != nil {
-		log.Errorf("failed to get language from parse tree: %v", err)
-		return "", false
-	}
-	return resolveInstanceKeyword(language)
-}
-
-// LimitExceeded returns true if processing was truncated due to complexity limits
-func (cg *CallGraph) LimitExceeded() bool {
-	return cg.limitExceeded
 }

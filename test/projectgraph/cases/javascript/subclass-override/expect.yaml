@@ -1,0 +1,44 @@
+source: safedep:hand
+description: Loader.run calls this.parse. The receiver this can hold an instance of YamlLoader, so a cha edge joins the call to YamlLoader.parse, which calls yaml.load. The call on new Loader() holds a Loader only, so it gets no cha edge.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.js
+    to: src/loaders.js//Loader//run
+    kind: member
+    confidence: high
+    site: src/main.js:3
+  - from: src/loaders.js//Loader//run
+    to: src/loaders.js//Loader//parse
+    kind: member
+    confidence: high
+    site: src/loaders.js:5
+  - from: src/loaders.js//Loader//run
+    to: src/loaders.js//YamlLoader//parse
+    kind: cha
+    confidence: medium
+    site: src/loaders.js:5
+unresolved: []
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/main.js
+      - key: src/loaders.js//Loader//run
+        site: src/main.js:3
+        kind: member
+        confidence: high
+      - key: src/loaders.js//YamlLoader//parse
+        site: src/loaders.js:5
+        kind: cha
+        confidence: medium
+      - key: js-yaml//load
+        site: src/loaders.js:15
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/loaders.js//YamlLoader//parse
+        site: src/loaders.js:15
+        reached: true

@@ -1,0 +1,63 @@
+source: safedep:hand
+description: persist calls save on a parameter of the interface type Store. The interface method has no body, so it is no definition, the site keeps a record, and cha edges go to the save of DbStore and of FileStore. A call on an interface can run either implementation, so both targets are found.
+roots:
+  - key: src/com/shop/App.kt//main
+    kind: main
+    rule: java.main
+edges:
+  - from: src/com/shop/App.kt//persist
+    to: src/com/shop/Store.kt//DbStore//save
+    kind: cha
+    confidence: medium
+    site: src/com/shop/App.kt:4
+  - from: src/com/shop/App.kt//persist
+    to: src/com/shop/Store.kt//FileStore//save
+    kind: cha
+    confidence: medium
+    site: src/com/shop/App.kt:4
+unresolved:
+  - caller: src/com/shop/App.kt//persist
+    site: src/com/shop/App.kt:4
+    reason: no-definition
+    method: save
+results:
+  - target: java//sql//DriverManager//getConnection
+    status: found
+    path:
+      - key: src/com/shop/App.kt//main
+      - key: src/com/shop/App.kt//persist
+        site: src/com/shop/App.kt:8
+        kind: direct
+        confidence: high
+      - key: src/com/shop/Store.kt//DbStore//save
+        site: src/com/shop/App.kt:4
+        kind: cha
+        confidence: medium
+      - key: java//sql//DriverManager//getConnection
+        site: src/com/shop/Store.kt:9
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/com/shop/Store.kt//DbStore//save
+        site: src/com/shop/Store.kt:9
+        reached: true
+  - target: java//io//File//writeText
+    status: found
+    path:
+      - key: src/com/shop/App.kt//main
+      - key: src/com/shop/App.kt//persist
+        site: src/com/shop/App.kt:8
+        kind: direct
+        confidence: high
+      - key: src/com/shop/Store.kt//FileStore//save
+        site: src/com/shop/App.kt:4
+        kind: cha
+        confidence: medium
+      - key: java//io//File//writeText
+        site: src/com/shop/Store.kt:15
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/com/shop/Store.kt//FileStore//save
+        site: src/com/shop/Store.kt:15
+        reached: true

@@ -1,0 +1,36 @@
+source: safedep:hand
+description: main.py keeps yaml.load in a list and calls each item of the list. The reference in the list makes yaml.load possibly called.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+exact_edges: true
+edges:
+  - from: main.py
+    to: json//loads
+    kind: reference
+    confidence: low
+    site: main.py:5
+  - from: main.py
+    to: yaml//load
+    kind: reference
+    confidence: low
+    site: main.py:5
+unresolved:
+  - caller: main.py
+    site: main.py:8
+    reason: no-definition
+    method: handler
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: yaml//load
+        site: main.py:5
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: main.py
+        site: main.py:5
+        reached: true

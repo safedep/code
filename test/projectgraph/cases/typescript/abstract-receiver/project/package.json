@@ -1,0 +1,4 @@
+{
+  "name": "abstract-receiver",
+  "bin": { "app": "src/main.ts" }
+}

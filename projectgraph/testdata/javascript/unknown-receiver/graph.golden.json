@@ -1,0 +1,135 @@
+{
+  "nodes": {
+    "console//log": {
+      "key": "console//log",
+      "kind": "external"
+    },
+    "main.js": {
+      "key": "main.js",
+      "kind": "module",
+      "path": "main.js",
+      "line": 1,
+      "exported": true
+    },
+    "main.js//handle": {
+      "key": "main.js//handle",
+      "kind": "function",
+      "path": "main.js",
+      "line": 6
+    },
+    "main.js//loadPlugin": {
+      "key": "main.js//loadPlugin",
+      "kind": "function",
+      "path": "main.js",
+      "line": 1,
+      "flags": [
+        {
+          "kind": "computed-import",
+          "line": 2
+        }
+      ]
+    },
+    "require": {
+      "key": "require",
+      "kind": "external"
+    }
+  },
+  "edges": [
+    {
+      "from": "main.js",
+      "to": "main.js//loadPlugin",
+      "site": {
+        "path": "main.js",
+        "line": 11,
+        "column": 1
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.local"
+    },
+    {
+      "from": "main.js//handle",
+      "to": "console//log",
+      "site": {
+        "path": "main.js",
+        "line": 7,
+        "column": 3
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.external"
+    },
+    {
+      "from": "main.js//loadPlugin",
+      "to": "require",
+      "site": {
+        "path": "main.js",
+        "line": 2,
+        "column": 18
+      },
+      "kind": "direct",
+      "confidence": "high",
+      "resolver": "javascript.external"
+    }
+  ],
+  "unresolved": [
+    {
+      "caller": "main.js//loadPlugin",
+      "site": {
+        "path": "main.js",
+        "line": 2,
+        "column": 18
+      },
+      "text": "require(name)",
+      "method": "require",
+      "reason": "dynamic-import"
+    },
+    {
+      "caller": "main.js//loadPlugin",
+      "site": {
+        "path": "main.js",
+        "line": 3,
+        "column": 10
+      },
+      "text": "plugin.run",
+      "receiver": "plugin",
+      "method": "run",
+      "reason": "unknown-receiver"
+    },
+    {
+      "caller": "main.js//handle",
+      "site": {
+        "path": "main.js",
+        "line": 8,
+        "column": 3
+      },
+      "text": "res.json",
+      "receiver": "res",
+      "method": "json",
+      "reason": "unknown-receiver"
+    }
+  ],
+  "roots": [
+    {
+      "key": "main.js",
+      "kind": "library-surface",
+      "rule": "library-surface",
+      "site": {
+        "path": "main.js",
+        "line": 1
+      }
+    }
+  ],
+  "files": {
+    "main.js": "indexed"
+  },
+  "stats": {
+    "version": "11",
+    "files": 1,
+    "nodes": 5,
+    "edges": 3,
+    "unresolved": 3,
+    "roots": 1,
+    "root_fallback": true
+  }
+}

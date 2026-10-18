@@ -10,23 +10,24 @@ import (
 	"github.com/safedep/code/lang"
 	"github.com/safedep/code/parser"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var goImportExpectations = []ImportExpectations{
 	{
 		filePath: "fixtures/imports.go",
 		imports: []string{
-			"ImportNode{ModuleName: \"fmt\", ModuleItem: , ModuleAlias: \"fmt\", WildcardImport: false}",
-			"ImportNode{ModuleName: \"github.com/safedep/code/parser\", ModuleItem: , ModuleAlias: \"github.com/safedep/code/parser\", WildcardImport: false}",
-			"ImportNode{ModuleName: \"os\", ModuleItem: , ModuleAlias: osalias, WildcardImport: false}",
-			"ImportNode{ModuleName: \"github.com/safedep/code/core\", ModuleItem: , ModuleAlias: codeccorealias, WildcardImport: false}",
-			"ImportNode{ModuleName: \"embed\", ModuleItem: , ModuleAlias: , WildcardImport: true}",
-			"ImportNode{ModuleName: \"math\", ModuleItem: , ModuleAlias: , WildcardImport: true}",
-			"ImportNode{ModuleName: \"crypto\", ModuleItem: , ModuleAlias: cryptoalias, WildcardImport: false}",
-			"ImportNode{ModuleName: \"github.com/gin-contrib/pprof\", ModuleItem: , ModuleAlias: , WildcardImport: true}",
-			"ImportNode{ModuleName: \"github.com/smacker/go-tree-sitter\", ModuleItem: , ModuleAlias: gotreesitteralias, WildcardImport: false}",
-			"ImportNode{ModuleName: \"net/http\", ModuleItem: , ModuleAlias: , WildcardImport: true}",
-			"ImportNode{ModuleName: \"strings\", ModuleItem: , ModuleAlias: \"strings\", WildcardImport: false}",
+			"ImportNode{ModuleName: fmt, ModuleItem: , ModuleAlias: fmt, WildcardImport: false}",
+			"ImportNode{ModuleName: github.com/safedep/code/parser, ModuleItem: , ModuleAlias: parser, WildcardImport: false}",
+			"ImportNode{ModuleName: os, ModuleItem: , ModuleAlias: osalias, WildcardImport: false}",
+			"ImportNode{ModuleName: github.com/safedep/code/core, ModuleItem: , ModuleAlias: codeccorealias, WildcardImport: false}",
+			"ImportNode{ModuleName: embed, ModuleItem: , ModuleAlias: , WildcardImport: true}",
+			"ImportNode{ModuleName: math, ModuleItem: , ModuleAlias: , WildcardImport: true}",
+			"ImportNode{ModuleName: crypto, ModuleItem: , ModuleAlias: cryptoalias, WildcardImport: false}",
+			"ImportNode{ModuleName: github.com/gin-contrib/pprof, ModuleItem: , ModuleAlias: , WildcardImport: true}",
+			"ImportNode{ModuleName: github.com/smacker/go-tree-sitter, ModuleItem: , ModuleAlias: gotreesitteralias, WildcardImport: false}",
+			"ImportNode{ModuleName: net/http, ModuleItem: , ModuleAlias: , WildcardImport: true}",
+			"ImportNode{ModuleName: strings, ModuleItem: , ModuleAlias: strings, WildcardImport: false}",
 		},
 	},
 }
@@ -78,10 +79,10 @@ func TestGoLanguageResolvers(t *testing.T) {
 			parseTree, err := fileParser.Parse(context.Background(), f)
 			assert.NoError(t, err)
 
-			imports, err := goLanguage.Resolvers().ResolveImports(parseTree)
+			imports, err := goLanguage.Resolvers().ResolveImports(t.Context(), parseTree)
 			assert.NoError(t, err)
 
-			expectedImports, ok := importExpectationsMapper[f.Name()]
+			expectedImports, ok := importExpectationsMapper[f.Path()]
 			assert.True(t, ok)
 
 			assert.Equal(t, len(expectedImports), len(imports))
@@ -115,10 +116,10 @@ func TestGoLanguageResolvers(t *testing.T) {
 			parseTree, err := fileParser.Parse(context.Background(), f)
 			assert.NoError(t, err)
 
-			functions, err := goLanguage.Resolvers().ResolveFunctions(parseTree)
+			functions, err := goLanguage.Resolvers().ResolveFunctions(t.Context(), parseTree)
 			assert.NoError(t, err)
 
-			expectedFunctions, ok := goFunctionExpectations[f.Name()]
+			expectedFunctions, ok := goFunctionExpectations[f.Path()]
 			assert.True(t, ok)
 
 			var foundFunctions []string
@@ -134,4 +135,29 @@ func TestGoLanguageResolvers(t *testing.T) {
 		})
 		assert.NoError(t, err)
 	})
+}
+
+func TestGoImportModuleNameHasNoQuotes(t *testing.T) {
+	goLanguage, err := lang.NewGoLanguage()
+	require.NoError(t, err)
+
+	source := "package p\n\nimport (\n\t\"net/http\"\n\tyaml \"gopkg.in/yaml.v3\"\n\t\"github.com/golang-jwt/jwt/v5\"\n\t_ \"embed\"\n)\n"
+	tree, err := parser.ParseBytes(t.Context(), goLanguage, []byte(source))
+	require.NoError(t, err)
+	t.Cleanup(tree.Close)
+
+	imports, err := goLanguage.Resolvers().ResolveImports(t.Context(), tree)
+	require.NoError(t, err)
+
+	type nameAndAlias struct{ name, alias string }
+	var got []nameAndAlias
+	for _, imp := range imports {
+		got = append(got, nameAndAlias{imp.ModuleName(), imp.ModuleAlias()})
+	}
+	assert.Equal(t, []nameAndAlias{
+		{"net/http", "http"},
+		{"gopkg.in/yaml.v3", "yaml"},
+		{"github.com/golang-jwt/jwt/v5", "jwt"},
+		{"embed", ""},
+	}, got)
 }

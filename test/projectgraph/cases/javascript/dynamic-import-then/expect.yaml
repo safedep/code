@@ -1,0 +1,52 @@
+source: safedep:hand
+description: src/main.js imports ./parse.js by a dynamic import and calls parse on the module that the promise gives. The callback of then is a definition with an anonymous name, and the module joins it by a direct edge. The receiver m is a parameter, so a field edge joins the call to each first-party parse that a property holds. The exported function parse is a property of the module object.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.js
+    to: src/main.js//<anonymous:1>
+    kind: direct
+    confidence: high
+    site: src/main.js:1
+  - from: src/main.js//<anonymous:1>
+    to: src/parse.js
+    kind: import
+    confidence: high
+    site: src/main.js:1
+  - from: src/main.js//<anonymous:1>
+    to: src/parse.js//parse
+    kind: field
+    confidence: low
+    site: src/main.js:1
+unresolved:
+  - caller: src/main.js
+    site: src/main.js:1
+    reason: unknown-receiver
+    method: then
+  - caller: src/main.js//<anonymous:1>
+    site: src/main.js:1
+    reason: unknown-receiver
+    method: parse
+results:
+  - target: js-yaml//load
+    status: found
+    path:
+      - key: src/main.js
+      - key: src/main.js//<anonymous:1>
+        site: src/main.js:1
+        kind: direct
+        confidence: high
+      - key: src/parse.js//parse
+        site: src/main.js:1
+        kind: field
+        confidence: low
+      - key: js-yaml//load
+        site: src/parse.js:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/parse.js//parse
+        site: src/parse.js:4
+        reached: true
