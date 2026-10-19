@@ -145,7 +145,7 @@
     "main.py": "indexed"
   },
   "stats": {
-    "version": "11",
+    "version": "16",
     "files": 1,
     "nodes": 5,
     "edges": 3,

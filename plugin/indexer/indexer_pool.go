@@ -122,5 +122,8 @@ func analyze(ctx context.Context, p contentParser, file pending) outcome {
 		return outcome{tree: tree}
 	}
 	err = plugin.Analyze(ctx, indexPlugin, file.file, tree)
+	if err == nil {
+		index, err = skeletonIndex(ctx, p, file, tree, index)
+	}
 	return outcome{tree: tree, index: index, indexErr: err, stage: core.Stage(indexPlugin.Name())}
 }

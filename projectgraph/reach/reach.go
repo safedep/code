@@ -21,7 +21,9 @@ import (
 // uncertainty, the tie rule of the paths, the caps and the fields of a
 // hop. Bump it when a rule changes, so a diff of two results shows the
 // change. Version 2 added the root kind to the first hop of a path.
-const Version = "2"
+// Version 3 matches a target against the external key of a definition of a
+// unit of dependency code.
+const Version = "3"
 
 const (
 	defaultMaxDepth = 64
@@ -358,6 +360,10 @@ type adjacency struct {
 	out       [][]int32
 	in        [][]int32
 	externals []int
+	// unitDefs holds the definitions of units of dependency code with an
+	// external key, by id, and byExternal the same by the key.
+	unitDefs   []int
+	byExternal map[string][]int
 
 	includeTests bool
 
@@ -392,11 +398,17 @@ func newAdjacency(g *projectgraph.Graph) *adjacency {
 	slices.Sort(keys)
 	keys = slices.Compact(keys)
 
-	a := &adjacency{g: g, keys: keys, id: make(map[string]int, len(keys)), out: make([][]int32, len(keys)), in: make([][]int32, len(keys))}
+	a := &adjacency{g: g, keys: keys, id: make(map[string]int, len(keys)), out: make([][]int32, len(keys)), in: make([][]int32, len(keys)), byExternal: map[string][]int{}}
 	for i, k := range keys {
 		a.id[k] = i
-		if n := g.Nodes[k]; n != nil && n.Kind == projectgraph.NodeExternal {
+		n := g.Nodes[k]
+		switch {
+		case n == nil:
+		case n.Kind == projectgraph.NodeExternal:
 			a.externals = append(a.externals, i)
+		case n.External != "":
+			a.unitDefs = append(a.unitDefs, i)
+			a.byExternal[n.External] = append(a.byExternal[n.External], i)
 		}
 	}
 	for i, e := range g.Edges {
@@ -508,21 +520,31 @@ func (a *adjacency) methodReaches(name string, target Target) bool {
 	return slices.ContainsFunc(a.match(target), func(id int) bool { return c[id] })
 }
 
-// match returns the external nodes of a target, by id.
+// match returns the nodes of a target, by id: the external node of its
+// key, and each definition of a unit of dependency code whose external key
+// it names. A call inside a unit goes to the definition, so the search
+// reaches a target that only the code of its unit calls through it.
 func (a *adjacency) match(target Target) []int {
+	var ids []int
 	if _, ok := target.wildcard(); ok {
-		var ids []int
 		for _, id := range a.externals {
 			if target.Matches(a.keys[id]) {
 				ids = append(ids, id)
 			}
 		}
-		return ids
+		for _, id := range a.unitDefs {
+			if target.Matches(a.g.Nodes[a.keys[id]].External) {
+				ids = append(ids, id)
+			}
+		}
+	} else {
+		if n := a.g.Nodes[target.Key()]; n != nil && n.Kind == projectgraph.NodeExternal {
+			ids = append(ids, a.id[target.Key()])
+		}
+		ids = append(ids, a.byExternal[target.Key()]...)
 	}
-	if n := a.g.Nodes[target.Key()]; n != nil && n.Kind == projectgraph.NodeExternal {
-		return []int{a.id[target.Key()]}
-	}
-	return nil
+	slices.Sort(ids)
+	return ids
 }
 
 func (a *adjacency) ids(roots []projectgraph.Root) []int {
@@ -642,6 +664,11 @@ func (a *adjacency) callSites(ids []int, s *search) []CallSite {
 	for _, id := range ids {
 		for _, i := range a.in[id] {
 			e := &a.g.Edges[i]
+			// A package edge joins the external key of a target to its
+			// definition. The calls of the key are its own call sites.
+			if e.Kind == projectgraph.EdgePackage {
+				continue
+			}
 			sites = append(sites, CallSite{Caller: e.From, Site: e.Site, Reached: s.dist[a.id[e.From]] >= 0})
 		}
 	}

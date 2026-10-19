@@ -10,9 +10,10 @@ import (
 // typedName returns the class or interface that the declared type of a
 // parameter or a typed local variable of the name names. The name belongs
 // to the scope or to a function that holds the scope, as the parameter of a
-// method in an arrow function of the method. A Go local that holds the
-// result of a call has the type of the first result of the function.
-func (b *builder) typedName(sc *scope, scopeKey, name string) (string, bool) {
+// method in an arrow function of the method. A Go local that holds a
+// result of a call has the type of the result at its position. A name
+// with no known type gives the reason of the record of a call on it.
+func (b *builder) typedName(sc *scope, scopeKey, name string) (string, fileindex.UnresolvedReason, bool) {
 	for key := scopeKey; fileindex.HasKeyPrefix(key, sc.ix.Path) && key != sc.ix.Path; key = fileindex.Parent(key) {
 		def := b.defs[key]
 		if def == nil {
@@ -24,42 +25,41 @@ func (b *builder) typedName(sc *scope, scopeKey, name string) (string, bool) {
 					continue
 				}
 				if !t.Result {
-					return b.resolveType(sc, key, t.Type)
+					class, ok := b.resolveType(sc, key, t.Type)
+					return class, fileindex.UnresolvedUnknownReceiver, ok
 				}
 				fn, ok := b.resolveScopeName(sc, t.Type)
 				if !ok {
-					return "", false
+					return "", fileindex.UnresolvedUnknownReceiver, false
 				}
-				return b.resultType(fn)
+				res, reason, ok := b.resultType(fileindex.PackageOf(sc.ix.Path), fn, t.Index)
+				// A name that holds a whole Option or Result has no
+				// type of a method of the value inside.
+				if ok && res.wraps != "" {
+					return "", fileindex.UnresolvedUnknownReceiver, false
+				}
+				return res.class, reason, ok
 			}
 		}
 	}
-	return "", false
+	return "", fileindex.UnresolvedUnknownReceiver, false
 }
 
 // memberType returns the class of a name in a scope: a typed parameter or
 // local variable, or in Java a field of a class that holds the scope, which
-// a method names with no this.
-func (b *builder) memberType(sc *scope, scopeKey, name string) (string, bool) {
-	if class, ok := b.typedName(sc, scopeKey, name); ok || !sc.profile.implicitFields {
-		return class, ok
+// a method names with no this. A name with no known type gives the reason
+// of the record of a call on it.
+func (b *builder) memberType(sc *scope, scopeKey, name string) (string, fileindex.UnresolvedReason, bool) {
+	class, reason, ok := b.typedName(sc, scopeKey, name)
+	if ok || !sc.profile.implicitFields {
+		return class, reason, ok
 	}
 	for class, ok := b.enclosingClass(scopeKey); ok; class, ok = b.enclosingClass(fileindex.Parent(class)) {
 		if t, ok := b.fieldType(class, name); ok {
-			return t, true
+			return t, "", true
 		}
 	}
-	return "", false
-}
-
-// resultType returns the class or interface that the first result of a Go
-// function names.
-func (b *builder) resultType(fn string) (string, bool) {
-	def := b.defs[fn]
-	if def == nil || def.Returns == "" {
-		return "", false
-	}
-	return b.resolveType(b.scopes[fileindex.Unit(fn)], fn, def.Returns)
+	return "", reason, false
 }
 
 // fieldType returns the class or interface that the declared type of a
@@ -81,7 +81,11 @@ func (b *builder) fieldType(class, name string) (string, bool) {
 // first-party class or interface. A type of a dependency narrows nothing, as an
 // instance of a project class can extend it. A Go value holds its declared
 // type or, through an interface, a type of the project, so a Go type of a
-// dependency gives the external key of its methods.
+// dependency gives the external key of its methods. A type that a unit of
+// dependency code gives narrows in any language with no subclass, as a
+// Rust struct: a class gives its external key, and an interface or a trait
+// gives its definition, whose implementations the class hierarchy analysis
+// reads.
 func (b *builder) resolveType(sc *scope, from, text string) (string, bool) {
 	if sc == nil {
 		return "", false
@@ -92,10 +96,42 @@ func (b *builder) resolveType(sc *scope, from, text string) (string, bool) {
 		return "", false
 	case b.isType(key):
 		return key, true
-	case sc.profile.implicitInterfaces && b.kindOf(key) == "" && b.g.IsExternal(key) && strings.Contains(key, fileindex.Separator):
-		return key, true
+	case b.g.IsExternal(key) && strings.Contains(key, fileindex.Separator):
+		if t, ok := b.unitType(key); ok && (sc.profile.implicitInterfaces || sc.profile.unitTypes) {
+			return t, true
+		}
+		return key, sc.profile.implicitInterfaces && b.kindOf(key) == ""
 	}
 	return "", false
+}
+
+// unitType returns the type that a unit of dependency code gives for an
+// external key: the key itself for a class, or the definition of an
+// interface or a trait.
+func (b *builder) unitType(key string) (string, bool) {
+	if t, ok := b.unitTypes[key]; ok {
+		return t, t != ""
+	}
+	t := ""
+	defs, _ := b.unitDefinitions(b.origins[key])
+	for _, d := range defs {
+		switch b.kindOf(d) {
+		case NodeInterface:
+			t = d
+		case NodeClass:
+			t = key
+		default:
+			continue
+		}
+		break
+	}
+	// unitDefinitions skips a name that an outer walk resolves now, so an
+	// answer found under the cycle guard can miss a definition. It stays
+	// out of the cache, or a later query would get the miss.
+	if len(b.stepping) == 0 {
+		b.unitTypes[key] = t
+	}
+	return t, t != ""
 }
 
 // dispatches reports whether a receiver of the declared type can hold an

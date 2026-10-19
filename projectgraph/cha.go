@@ -185,7 +185,17 @@ func (b *builder) externalBase(class string) (string, bool) {
 	return base, base != ""
 }
 
+// findExternalBase searches the bases of the MRO of a class for an external
+// one. The name of a base can resolve through a wildcard import of the class
+// itself, as use self::Component::* in an impl of Component in Rust, and
+// that lookup asks for the external base of the same class again. A class
+// that the search reads now has no external base, so the search ends.
 func (b *builder) findExternalBase(class string) (string, bool) {
+	if b.findingBases[class] {
+		return "", false
+	}
+	b.findingBases[class] = true
+	defer delete(b.findingBases, class)
 	for _, c := range b.mro(class) {
 		for _, rec := range b.records(c) {
 			for _, base := range b.bases(rec) {

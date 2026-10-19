@@ -194,6 +194,22 @@ func (p *projection) rustTypeName(node *sitter.Node, bounds map[string]string) s
 	return ""
 }
 
+// rustWrappers are the types of std whose value ?, unwrap and expect give,
+// as T of Option<T> and of Result<T, E>.
+var rustWrappers = []string{"Option", "Result"}
+
+// rustResult returns the type that a result names, and the Option or the
+// Result that holds it, as Thing and Option for Option<Thing<u8>>.
+func (p *projection) rustResult(node *sitter.Node, bounds map[string]string) (string, string) {
+	if node != nil && node.Type() == "generic_type" {
+		name := p.rustTypeName(node.ChildByFieldName("type"), bounds)
+		if args := ts.NamedChildren(node.ChildByFieldName("type_arguments")); slices.Contains(rustWrappers, name) && len(args) > 0 {
+			return p.rustTypeName(args[0], bounds), name
+		}
+	}
+	return p.rustTypeName(node, bounds), ""
+}
+
 // rustBounds returns the first trait bound of each type parameter of a
 // function and of its where clause.
 func (p *projection) rustBounds(fn *sitter.Node) map[string]string {
@@ -259,7 +275,7 @@ func rustSignature(p *projection, def *fileindex.Definition, node *sitter.Node) 
 			def.Params = append(def.Params, fileindex.Typed{Name: p.text(name), Type: typ})
 		}
 	}
-	def.Returns = p.rustTypeName(node.ChildByFieldName("return_type"), bounds)
+	def.Returns, def.Wraps = p.rustResult(node.ChildByFieldName("return_type"), bounds)
 	def.Locals = p.rustLocals(node.ChildByFieldName("body"), bounds)
 	if impl := rustImpl(node); impl != nil && !def.Static && !p.rustDefinesType(impl) {
 		def.Params = append([]fileindex.Typed{{Name: extensionParam, Type: p.rustItemName(impl)}}, def.Params...)

@@ -184,7 +184,13 @@ func goSignature(p *projection, def *fileindex.Definition, node *sitter.Node) {
 	var params []fileindex.Typed
 	params, def.Arity, def.Variadic = p.goParams(node.ChildByFieldName("parameters"), p.goConstraints(node))
 	def.Params = append(def.Params, params...)
-	def.Returns = p.goResult(node.ChildByFieldName("result"))
+	results := p.goResults(node.ChildByFieldName("result"))
+	if len(results) > 0 {
+		def.Returns = results[0]
+	}
+	if len(results) > 1 {
+		def.Results = results
+	}
 	def.Locals = p.goLocals(node.ChildByFieldName("body"))
 }
 
@@ -253,20 +259,26 @@ func (p *projection) goParams(list *sitter.Node, constraints map[string]string) 
 	return typed, arity, variadic
 }
 
-// goResult returns the type name of the first result of a function.
-func (p *projection) goResult(result *sitter.Node) string {
+// goResults returns the type name of each result of a function, by
+// position. A result with no named type, as int or func(), gives "".
+func (p *projection) goResults(result *sitter.Node) []string {
 	if result == nil {
-		return ""
+		return nil
 	}
 	if result.Type() != "parameter_list" {
-		return p.goTypeName(result)
+		return []string{p.goTypeName(result)}
 	}
+	var out []string
 	for _, param := range ts.NamedChildren(result) {
-		if param.Type() == "parameter_declaration" {
-			return p.goTypeName(param.ChildByFieldName("type"))
+		if param.Type() != "parameter_declaration" {
+			continue
+		}
+		typ := p.goTypeName(param.ChildByFieldName("type"))
+		for range max(len(childrenByField(param, "name")), 1) {
+			out = append(out, typ)
 		}
 	}
-	return ""
+	return out
 }
 
 // goLocals returns the local variables of a function body whose type the
@@ -297,21 +309,32 @@ func (p *projection) goLocals(body *sitter.Node) []fileindex.Typed {
 }
 
 // goAssigned returns the typed names of an assignment. One call on the
-// right of more names gives its first result to the first name.
+// right of more names gives each name the result at its position, and the
+// blank name _ takes none.
 func (p *projection) goAssigned(names []*sitter.Node, right *sitter.Node) []fileindex.Typed {
 	if right == nil {
 		return nil
 	}
 	values := ts.NamedChildren(right)
 	if len(values) == 1 && len(names) > 1 && values[0].Type() == "call_expression" {
-		names = names[:1]
+		t, ok := p.goValueType(values[0])
+		if !ok || !t.Result {
+			return nil
+		}
+		var typed []fileindex.Typed
+		for i, name := range names {
+			if name.Type() == "identifier" && p.text(name) != "_" {
+				typed = append(typed, fileindex.Typed{Name: p.text(name), Type: t.Type, Result: true, Index: i})
+			}
+		}
+		return typed
 	}
 	if len(values) != len(names) {
 		return nil
 	}
 	var typed []fileindex.Typed
 	for i, name := range names {
-		if name.Type() != "identifier" {
+		if name.Type() != "identifier" || p.text(name) == "_" {
 			continue
 		}
 		if t, ok := p.goValueType(values[i]); ok {

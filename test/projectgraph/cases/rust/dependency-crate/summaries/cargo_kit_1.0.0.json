@@ -1,0 +1,74 @@
+{
+  "version": "2",
+  "index_version": "14",
+  "link_version": "16",
+  "unit": "cargo:kit@1.0.0",
+  "symbols": [
+    {
+      "key": "kit//Sink",
+      "definitions": [
+        "cargo:kit@1.0.0//src/lib.rs//Sink"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "kit//Store",
+      "definitions": [
+        "cargo:kit@1.0.0//src/store.rs//Store"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "kit//Store//flush",
+      "definitions": [
+        "cargo:kit@1.0.0//src/store.rs//Store//flush"
+      ],
+      "reaches": [],
+      "uncertainties": [
+        0
+      ]
+    },
+    {
+      "key": "kit//Store//open",
+      "definitions": [
+        "cargo:kit@1.0.0//src/store.rs//Store//open"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "kit//Store//save",
+      "definitions": [
+        "cargo:kit@1.0.0//src/store.rs//Store//save"
+      ],
+      "reaches": [],
+      "uncertainties": [
+        1
+      ]
+    }
+  ],
+  "targets": [],
+  "uncertainties": [
+    {
+      "kind": "unresolved-call",
+      "key": "cargo:kit@1.0.0//src/store.rs//Store//flush",
+      "site": {
+        "path": "cargo:kit@1.0.0//src/store.rs",
+        "line": 19,
+        "column": 9
+      },
+      "text": "std::fs::remove_file(\u0026self.path).unwrap (unknown-receiver)",
+      "method": "unwrap"
+    },
+    {
+      "kind": "unresolved-call",
+      "key": "cargo:kit@1.0.0//src/store.rs//Store//save",
+      "site": {
+        "path": "cargo:kit@1.0.0//src/store.rs",
+        "line": 13,
+        "column": 9
+      },
+      "text": "std::fs::write(\u0026self.path, \"data\").unwrap (unknown-receiver)",
+      "method": "unwrap"
+    }
+  ]
+}

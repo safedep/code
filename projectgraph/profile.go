@@ -47,6 +47,27 @@ type profile struct {
 	// surface adds the exported symbols of a unit of dependency code with
 	// the import that names each one. The profile of the family holds it.
 	surface func(s *surfacer)
+	// importedModule returns the module of the package that an import of a
+	// file names, as kit::serve for helper::serve when the Cargo.toml of
+	// the file renames the package kit to helper.
+	importedModule func(b *builder, ix *fileindex.Index, module string) string
+	// symbol returns the module that an importer of a definition of a unit
+	// of dependency code imports, and the names of the definition under
+	// it, as golang.org/x/net/html and Tokenizer. The profile of the family
+	// holds it.
+	symbol func(b *builder, sp *space, def string) (string, []string, bool)
+	// unitTypes marks a language with no subclass of a type of another
+	// crate, as Rust, so a declared type that a unit of dependency code
+	// gives narrows a call to the method of the type.
+	unitTypes bool
+	// sameTypeMethods name the methods that give a value of the type of
+	// the receiver, as clone of Rust, also when the type derives them and
+	// the code defines none.
+	sameTypeMethods map[string]bool
+	// abstractReceiver is the reason of the record of a call on a value of
+	// an interface or a trait that no type of the graph implements, as
+	// trait-receiver of Rust.
+	abstractReceiver fileindex.UnresolvedReason
 	// dependencies returns the packages that the manifests of the project
 	// declare for the ecosystem of the family, and the manifests that the
 	// reader could not read. The profile of the family holds it.
@@ -171,6 +192,11 @@ type profile struct {
 	// mainLoadsPackage marks a language whose program initializes the
 	// package of main before main runs, as Go.
 	mainLoadsPackage bool
+	// helperProgram reports whether the main of a file is a helper
+	// program of the project and not the program that its users run, as a
+	// build script or an example of a Rust crate. Its root stays, and it
+	// does not turn off the library-surface roots.
+	helperProgram func(path string) bool
 }
 
 // profiles are the languages of the link step, in a fixed order. The units

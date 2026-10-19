@@ -1,0 +1,4296 @@
+{
+ "cargo": {
+  "image": [
+   {
+    "functions": [
+     "image::hdr::HDRDecoder::read_image_transform"
+    ],
+    "id": "RUSTSEC-2019-0014",
+    "ranges": [
+     {
+      "introduced": "0.10.2"
+     },
+     {
+      "fixed": "0.21.3"
+     }
+    ]
+   },
+   {
+    "functions": [
+     "image::Bgr::from_slice_mut",
+     "image::Bgra::from_slice_mut",
+     "image::Luma::from_slice_mut",
+     "image::LumaA::from_slice_mut",
+     "image::Rgb::from_slice_mut",
+     "image::Rgba::from_slice_mut"
+    ],
+    "id": "RUSTSEC-2020-0073",
+    "ranges": [
+     {
+      "introduced": "0.0.0-0"
+     },
+     {
+      "fixed": "0.23.12"
+     }
+    ]
+   }
+  ],
+  "lettre": [
+   {
+    "functions": [
+     "lettre::sendmail::SendmailTransport::send",
+     "lettre::transport::sendmail::SendmailTransport::send",
+     "lettre::transport::sendmail::SendmailTransport::send_raw"
+    ],
+    "id": "RUSTSEC-2020-0069",
+    "ranges": [
+     {
+      "introduced": "0.7.0"
+     },
+     {
+      "fixed": "0.7.1"
+     },
+     {
+      "introduced": "0.8.0"
+     },
+     {
+      "fixed": "0.8.4"
+     },
+     {
+      "introduced": "0.9.0"
+     },
+     {
+      "fixed": "0.9.5"
+     },
+     {
+      "introduced": "0.10.0-alpha.1"
+     },
+     {
+      "fixed": "0.10.0-alpha.4"
+     }
+    ]
+   },
+   {
+    "functions": [
+     "lettre::smtp::SmtpTransport::send",
+     "lettre::transport::smtp::SmtpTransport::send",
+     "lettre::transport::smtp::SmtpTransport::send_raw"
+    ],
+    "id": "RUSTSEC-2021-0069",
+    "ranges": [
+     {
+      "introduced": "0.7.0"
+     },
+     {
+      "fixed": "0.9.6"
+     },
+     {
+      "introduced": "0.10.0-alpha.1"
+     },
+     {
+      "fixed": "0.10.0-rc.3"
+     }
+    ]
+   }
+  ],
+  "lock_api": [
+   {
+    "functions": [
+     "lock_api::MappedMutexGuard",
+     "lock_api::MappedRwLockReadGuard",
+     "lock_api::MappedRwLockWriteGuard",
+     "lock_api::RwLockReadGuard",
+     "lock_api::RwLockWriteGuard"
+    ],
+    "id": "RUSTSEC-2020-0070",
+    "ranges": [
+     {
+      "introduced": "0.0.0-0"
+     },
+     {
+      "fixed": "0.4.2"
+     }
+    ]
+   }
+  ],
+  "openssl": [
+   {
+    "functions": [
+     "openssl::x509::X509NameBuilder::build"
+    ],
+    "id": "RUSTSEC-2023-0022",
+    "ranges": [
+     {
+      "introduced": "0.0.0-0"
+     },
+     {
+      "fixed": "0.10.48"
+     }
+    ]
+   },
+   {
+    "functions": [
+     "openssl::x509::extension::ExtendedKeyUsage::other",
+     "openssl::x509::extension::SubjectAlternativeName::new"
+    ],
+    "id": "RUSTSEC-2023-0023",
+    "ranges": [
+     {
+      "introduced": "0.0.0-0"
+     },
+     {
+      "fixed": "0.10.48"
+     }
+    ]
+   },
+   {
+    "functions": [
+     "openssl::x509::X509Extension::new",
+     "openssl::x509::X509Extension::new_nid"
+    ],
+    "id": "RUSTSEC-2023-0024",
+    "ranges": [
+     {
+      "introduced": "0.0.0-0"
+     },
+     {
+      "fixed": "0.10.48"
+     }
+    ]
+   },
+   {
+    "functions": [
+     "openssl::x509::verify::X509VerifyParamRef::set_host"
+    ],
+    "id": "RUSTSEC-2023-0044",
+    "ranges": [
+     {
+      "introduced": "0.0.0-0"
+     },
+     {
+      "fixed": "0.10.55"
+     }
+    ]
+   },
+   {
+    "functions": [
+     "openssl::x509::store::X509StoreRef::objects"
+    ],
+    "id": "RUSTSEC-2023-0072",
+    "ranges": [
+     {
+      "introduced": "0.0.0-0"
+     },
+     {
+      "fixed": "0.10.60"
+     }
+    ]
+   },
+   {
+    "functions": [
+     "openssl::bio::MemBio::get_buf"
+    ],
+    "id": "RUSTSEC-2024-0357",
+    "ranges": [
+     {
+      "introduced": "0.0.0-0"
+     },
+     {
+      "fixed": "0.10.66"
+     }
+    ]
+   },
+   {
+    "functions": [
+     "openssl::ssl::select_next_proto"
+    ],
+    "id": "RUSTSEC-2025-0004",
+    "ranges": [
+     {
+      "introduced": "0.0.0-0"
+     },
+     {
+      "fixed": "0.10.70"
+     }
+    ]
+   },
+   {
+    "functions": [
+     "openssl::cipher::Cipher::fetch",
+     "openssl::md::Md::fetch"
+    ],
+    "id": "RUSTSEC-2025-0022",
+    "ranges": [
+     {
+      "introduced": "0.10.39"
+     },
+     {
+      "fixed": "0.10.72"
+     }
+    ]
+   }
+  ],
+  "postgres-protocol": [
+   {
+    "functions": [
+     "postgres_protocol::authentication::sasl::ScramSha256::update"
+    ],
+    "id": "RUSTSEC-2026-0179",
+    "ranges": [
+     {
+      "introduced": "0.3.0"
+     },
+     {
+      "fixed": "0.6.12"
+     }
+    ]
+   },
+   {
+    "functions": [
+     "postgres_protocol::types::hstore_from_sql"
+    ],
+    "id": "RUSTSEC-2026-0180",
+    "ranges": [
+     {
+      "introduced": "0.0.0-0"
+     },
+     {
+      "fixed": "0.6.12"
+     }
+    ]
+   }
+  ],
+  "rand": [
+   {
+    "functions": [
+     "rand::rng",
+     "rand::thread_rng"
+    ],
+    "id": "RUSTSEC-2026-0097",
+    "ranges": [
+     {
+      "introduced": "0.7.0"
+     },
+     {
+      "fixed": "0.8.6"
+     },
+     {
+      "introduced": "0.9.0"
+     },
+     {
+      "fixed": "0.9.3"
+     },
+     {
+      "introduced": "0.10.0"
+     },
+     {
+      "fixed": "0.10.1"
+     }
+    ]
+   }
+  ],
+  "rulinalg": [
+   {
+    "functions": [
+     "rulinalg::matrix::RowMut::raw_slice",
+     "rulinalg::matrix::RowMut::raw_slice_mut"
+    ],
+    "id": "RUSTSEC-2020-0023",
+    "ranges": [
+     {
+      "introduced": "0.4.0"
+     }
+    ]
+   }
+  ],
+  "rusqlite": [
+   {
+    "functions": [
+     "rusqlite::Connection::get_aux",
+     "rusqlite::Connection::set_aux",
+     "rusqlite::session::Session::attach",
+     "rusqlite::session::Session::diff",
+     "rusqlite::trace::log",
+     "rusqlite::vtab::create_module"
+    ],
+    "id": "RUSTSEC-2020-0014",
+    "ranges": [
+     {
+      "introduced": "0.0.0-0"
+     },
+     {
+      "fixed": "0.23.0"
+     }
+    ]
+   },
+   {
+    "functions": [
+     "rusqlite::Connection::commit_hook",
+     "rusqlite::Connection::create_aggregate_function",
+     "rusqlite::Connection::create_collation",
+     "rusqlite::Connection::create_scalar_function",
+     "rusqlite::Connection::create_window_function",
+     "rusqlite::Connection::rollback_hook",
+     "rusqlite::Connection::update_hook"
+    ],
+    "id": "RUSTSEC-2021-0128",
+    "ranges": [
+     {
+      "introduced": "0.25.0"
+     },
+     {
+      "fixed": "0.25.4"
+     },
+     {
+      "introduced": "0.26.0-0"
+     },
+     {
+      "fixed": "0.26.2"
+     }
+    ]
+   }
+  ],
+  "smallvec": [
+   {
+    "functions": [
+     "smallvec::SmallVec::grow"
+    ],
+    "id": "RUSTSEC-2019-0009",
+    "ranges": [
+     {
+      "introduced": "0.6.5"
+     },
+     {
+      "fixed": "0.6.10"
+     }
+    ]
+   },
+   {
+    "functions": [
+     "smallvec::SmallVec::grow"
+    ],
+    "id": "RUSTSEC-2019-0012",
+    "ranges": [
+     {
+      "introduced": "0.6.3"
+     },
+     {
+      "fixed": "0.6.10"
+     }
+    ]
+   },
+   {
+    "functions": [
+     "smallvec::SmallVec::insert_many"
+    ],
+    "id": "RUSTSEC-2021-0003",
+    "ranges": [
+     {
+      "introduced": "0.6.3"
+     },
+     {
+      "fixed": "0.6.14"
+     },
+     {
+      "introduced": "1.0.0"
+     },
+     {
+      "fixed": "1.6.1"
+     }
+    ]
+   }
+  ],
+  "time": [
+   {
+    "functions": [
+     "time::OffsetDateTime::now_local",
+     "time::OffsetDateTime::try_now_local",
+     "time::UtcOffset::current_local_offset",
+     "time::UtcOffset::local_offset_at",
+     "time::UtcOffset::try_current_local_offset",
+     "time::UtcOffset::try_local_offset_at",
+     "time::at",
+     "time::at_utc",
+     "time::now"
+    ],
+    "id": "RUSTSEC-2020-0071",
+    "ranges": [
+     {
+      "introduced": "0.0.0-0"
+     },
+     {
+      "fixed": "0.2.0"
+     },
+     {
+      "introduced": "0.2.1-0"
+     },
+     {
+      "fixed": "0.2.1"
+     },
+     {
+      "introduced": "0.2.2-0"
+     },
+     {
+      "fixed": "0.2.2"
+     },
+     {
+      "introduced": "0.2.3-0"
+     },
+     {
+      "fixed": "0.2.3"
+     },
+     {
+      "introduced": "0.2.4-0"
+     },
+     {
+      "fixed": "0.2.4"
+     },
+     {
+      "introduced": "0.2.5-0"
+     },
+     {
+      "fixed": "0.2.5"
+     },
+     {
+      "introduced": "0.2.6-0"
+     },
+     {
+      "fixed": "0.2.6"
+     },
+     {
+      "introduced": "0.2.7-0"
+     },
+     {
+      "fixed": "0.2.23"
+     }
+    ]
+   },
+   {
+    "functions": [
+     "time::Date::parse",
+     "time::OffsetDateTime::parse",
+     "time::PrimitiveDateTime::parse",
+     "time::Time::parse",
+     "time::UtcDateTime::parse",
+     "time::UtcOffset::parse",
+     "time::parsing::Parsed::parse_item"
+    ],
+    "id": "RUSTSEC-2026-0009",
+    "ranges": [
+     {
+      "introduced": "0.3.6"
+     },
+     {
+      "fixed": "0.3.47"
+     }
+    ]
+   }
+  ],
+  "tokio": [
+   {
+    "functions": [
+     "tokio::task::JoinHandle::abort"
+    ],
+    "id": "RUSTSEC-2021-0072",
+    "ranges": [
+     {
+      "introduced": "0.3.0"
+     },
+     {
+      "fixed": "1.5.1"
+     },
+     {
+      "introduced": "1.6.0"
+     },
+     {
+      "fixed": "1.6.3"
+     },
+     {
+      "introduced": "1.7.0"
+     },
+     {
+      "fixed": "1.7.2"
+     },
+     {
+      "introduced": "1.8.0"
+     },
+     {
+      "fixed": "1.8.1"
+     }
+    ]
+   },
+   {
+    "functions": [
+     "tokio::sync::oneshot::Receiver::close"
+    ],
+    "id": "RUSTSEC-2021-0124",
+    "ranges": [
+     {
+      "introduced": "0.1.14"
+     },
+     {
+      "fixed": "1.8.4"
+     },
+     {
+      "introduced": "1.9.0"
+     },
+     {
+      "fixed": "1.13.1"
+     }
+    ]
+   }
+  ],
+  "tokio-postgres": [
+   {
+    "functions": [
+     "tokio_postgres::Row::get",
+     "tokio_postgres::Row::try_get",
+     "tokio_postgres::SimpleQueryRow::get",
+     "tokio_postgres::SimpleQueryRow::try_get"
+    ],
+    "id": "RUSTSEC-2026-0178",
+    "ranges": [
+     {
+      "introduced": "0.4.0"
+     },
+     {
+      "fixed": "0.7.18"
+     }
+    ]
+   }
+  ]
+ },
+ "go": {
+  "github.com/antchfx/xmlquery": [
+   {
+    "id": "GO-2020-0048",
+    "imports": [
+     {
+      "path": "github.com/antchfx/xmlquery",
+      "symbols": [
+       "LoadURL"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.3.1"
+     }
+    ]
+   }
+  ],
+  "github.com/antchfx/xpath": [
+   {
+    "id": "GO-2026-4526",
+    "imports": [
+     {
+      "path": "github.com/antchfx/xpath",
+      "symbols": [
+       "Expr.Evaluate",
+       "NodeIterator.MoveNext",
+       "ancestorQuery.Evaluate",
+       "ancestorQuery.Select",
+       "attributeQuery.Evaluate",
+       "attributeQuery.Select",
+       "booleanQuery.Evaluate",
+       "booleanQuery.Select",
+       "cachedChildQuery.Evaluate",
+       "cachedChildQuery.Select",
+       "childQuery.Evaluate",
+       "childQuery.Select",
+       "descendantOverDescendantQuery.Evaluate",
+       "descendantOverDescendantQuery.Select",
+       "descendantQuery.Evaluate",
+       "descendantQuery.Select",
+       "filterQuery.Evaluate",
+       "filterQuery.Select",
+       "followingQuery.Evaluate",
+       "followingQuery.Select",
+       "functionQuery.Evaluate",
+       "groupQuery.Evaluate",
+       "groupQuery.Select",
+       "lastFuncQuery.Evaluate",
+       "logicalQuery.Evaluate",
+       "logicalQuery.Select",
+       "mergeQuery.Evaluate",
+       "mergeQuery.Select",
+       "numericQuery.Evaluate",
+       "parentQuery.Evaluate",
+       "parentQuery.Select",
+       "precedingQuery.Evaluate",
+       "precedingQuery.Select",
+       "selfQuery.Evaluate",
+       "selfQuery.Select",
+       "transformFunctionQuery.Evaluate",
+       "transformFunctionQuery.Select",
+       "unionQuery.Evaluate",
+       "unionQuery.Select"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.3.6"
+     }
+    ]
+   }
+  ],
+  "github.com/gorilla/websocket": [
+   {
+    "id": "GO-2020-0019",
+    "imports": [
+     {
+      "path": "github.com/gorilla/websocket",
+      "symbols": [
+       "Conn.Close",
+       "Conn.NextReader",
+       "Conn.NextWriter",
+       "Conn.ReadJSON",
+       "Conn.ReadMessage",
+       "Conn.WriteControl",
+       "Conn.WriteJSON",
+       "Conn.WriteMessage",
+       "Conn.WritePreparedMessage",
+       "Conn.advanceFrame",
+       "Dialer.Dial",
+       "Dialer.DialContext",
+       "NewClient",
+       "NewPreparedMessage",
+       "ReadJSON",
+       "Subprotocols",
+       "Upgrade",
+       "Upgrader.Upgrade",
+       "WriteJSON",
+       "flateReadWrapper.Read",
+       "flateWriteWrapper.Close",
+       "flateWriteWrapper.Write",
+       "httpProxyDialer.Dial",
+       "messageReader.Read",
+       "messageWriter.Close",
+       "messageWriter.ReadFrom",
+       "messageWriter.Write",
+       "messageWriter.WriteString",
+       "netDialerFunc.Dial",
+       "proxy_direct.Dial",
+       "proxy_envOnce.Get",
+       "proxy_socks5.Dial",
+       "truncWriter.Write"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.4.1"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6278",
+    "imports": [
+     {
+      "path": "github.com/gorilla/websocket",
+      "symbols": [
+       "Conn.Close",
+       "Conn.NextReader",
+       "Conn.NextWriter",
+       "Conn.ReadJSON",
+       "Conn.ReadMessage",
+       "Conn.WriteControl",
+       "Conn.WriteJSON",
+       "Conn.WriteMessage",
+       "Conn.WritePreparedMessage",
+       "Dialer.Dial",
+       "Dialer.DialContext",
+       "NewClient",
+       "NewPreparedMessage",
+       "ReadJSON",
+       "Subprotocols",
+       "Upgrade",
+       "Upgrader.Upgrade",
+       "WriteJSON",
+       "flateReadWrapper.Read",
+       "flateWriteWrapper.Close",
+       "flateWriteWrapper.Write",
+       "httpProxyDialer.Dial",
+       "joinReader.Read",
+       "messageReader.Read",
+       "messageWriter.Close",
+       "messageWriter.ReadFrom",
+       "messageWriter.Write",
+       "messageWriter.WriteString",
+       "netDialerFunc.Dial",
+       "newMaskKey",
+       "proxy_direct.Dial",
+       "proxy_envOnce.Get",
+       "proxy_socks5.Dial",
+       "truncWriter.Write"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.5.3"
+     }
+    ]
+   }
+  ],
+  "github.com/jackc/pgx/v5": [
+   {
+    "id": "GO-2024-2567",
+    "imports": [
+     {
+      "path": "github.com/jackc/pgx/v5/pgconn",
+      "symbols": [
+       "Pipeline.Sync"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "5.0.0-alpha.5"
+     },
+     {
+      "fixed": "5.5.2"
+     }
+    ]
+   },
+   {
+    "id": "GO-2024-2606",
+    "imports": [
+     {
+      "path": "github.com/jackc/pgx/v5/internal/sanitize",
+      "symbols": [
+       "Query.Sanitize",
+       "SanitizeSQL"
+      ]
+     },
+     {
+      "path": "github.com/jackc/pgx/v5/pgproto3",
+      "symbols": [
+       "AuthenticationCleartextPassword.Encode",
+       "AuthenticationGSS.Encode",
+       "AuthenticationGSSContinue.Encode",
+       "AuthenticationMD5Password.Encode",
+       "AuthenticationOk.Encode",
+       "AuthenticationSASL.Encode",
+       "AuthenticationSASLContinue.Encode",
+       "AuthenticationSASLFinal.Encode",
+       "Backend.Flush",
+       "Backend.Send",
+       "BackendKeyData.Encode",
+       "Bind.Encode",
+       "BindComplete.Encode",
+       "CancelRequest.Encode",
+       "Close.Encode",
+       "CloseComplete.Encode",
+       "CommandComplete.Encode",
+       "CopyBothResponse.Encode",
+       "CopyData.Encode",
+       "CopyDone.Encode",
+       "CopyFail.Encode",
+       "CopyInResponse.Encode",
+       "CopyOutResponse.Encode",
+       "DataRow.Encode",
+       "Describe.Encode",
+       "EmptyQueryResponse.Encode",
+       "ErrorResponse.Encode",
+       "ErrorResponse.marshalBinary",
+       "Execute.Encode",
+       "Flush.Encode",
+       "Frontend.Flush",
+       "Frontend.Send",
+       "Frontend.SendBind",
+       "Frontend.SendClose",
+       "Frontend.SendDescribe",
+       "Frontend.SendExecute",
+       "Frontend.SendParse",
+       "Frontend.SendQuery",
+       "Frontend.SendSync",
+       "Frontend.SendUnbufferedEncodedCopyData",
+       "FunctionCall.Encode",
+       "FunctionCallResponse.Encode",
+       "GSSEncRequest.Encode",
+       "GSSResponse.Encode",
+       "NoData.Encode",
+       "NoticeResponse.Encode",
+       "NotificationResponse.Encode",
+       "ParameterDescription.Encode",
+       "ParameterStatus.Encode",
+       "Parse.Encode",
+       "ParseComplete.Encode",
+       "PasswordMessage.Encode",
+       "PortalSuspended.Encode",
+       "Query.Encode",
+       "ReadyForQuery.Encode",
+       "RowDescription.Encode",
+       "SASLInitialResponse.Encode",
+       "SASLResponse.Encode",
+       "SSLRequest.Encode",
+       "StartupMessage.Encode",
+       "Sync.Encode",
+       "Terminate.Encode"
+      ]
+     },
+     {
+      "path": "github.com/jackc/pgx/v5/pgconn",
+      "symbols": [
+       "Batch.ExecParams",
+       "Batch.ExecPrepared",
+       "Connect",
+       "ConnectConfig",
+       "ConnectWithOptions",
+       "MultiResultReader.Close",
+       "MultiResultReader.NextResult",
+       "MultiResultReader.ReadAll",
+       "PgConn.CheckConn",
+       "PgConn.Close",
+       "PgConn.CopyFrom",
+       "PgConn.CopyTo",
+       "PgConn.Deallocate",
+       "PgConn.Exec",
+       "PgConn.ExecBatch",
+       "PgConn.ExecParams",
+       "PgConn.ExecPrepared",
+       "PgConn.Ping",
+       "PgConn.Prepare",
+       "PgConn.ReceiveMessage",
+       "PgConn.SyncConn",
+       "PgConn.WaitForNotification",
+       "Pipeline.Close",
+       "Pipeline.Flush",
+       "Pipeline.GetResults",
+       "Pipeline.SendDeallocate",
+       "Pipeline.SendPrepare",
+       "Pipeline.SendQueryParams",
+       "Pipeline.SendQueryPrepared",
+       "Pipeline.Sync",
+       "ResultReader.Close",
+       "ResultReader.NextRow",
+       "ResultReader.Read",
+       "ValidateConnectTargetSessionAttrsPreferStandby",
+       "ValidateConnectTargetSessionAttrsPrimary",
+       "ValidateConnectTargetSessionAttrsReadOnly",
+       "ValidateConnectTargetSessionAttrsReadWrite",
+       "ValidateConnectTargetSessionAttrsStandby"
+      ]
+     },
+     {
+      "path": "github.com/jackc/pgx/v5/pgproto3/example/pgfortune",
+      "symbols": [
+       "PgFortuneBackend.Run",
+       "PgFortuneBackend.handleStartup",
+       "main"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "5.0.0"
+     },
+     {
+      "fixed": "5.5.4"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-4771",
+    "imports": [
+     {
+      "path": "github.com/jackc/pgx/v5/pgproto3",
+      "symbols": [
+       "Backend.Receive",
+       "Bind.Decode"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "5.9.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-4772",
+    "imports": [
+     {
+      "path": "github.com/jackc/pgx/v5/pgproto3",
+      "symbols": [
+       "Backend.Receive",
+       "FunctionCall.Decode"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "5.9.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5004",
+    "imports": [
+     {
+      "path": "github.com/jackc/pgx/v5/internal/sanitize",
+      "symbols": [
+       "Query.Sanitize",
+       "SanitizeSQL"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "5.9.2"
+     }
+    ]
+   }
+  ],
+  "github.com/rabbitmq/amqp091-go": [
+   {
+    "id": "GO-2026-6372",
+    "imports": [],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.13.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6491",
+    "imports": [
+     {
+      "path": "github.com/rabbitmq/amqp091-go",
+      "symbols": [
+       "Connection.Reconnect",
+       "Connection.openComplete",
+       "DefaultConnectionRecovery.OnConnectionClose",
+       "Dial",
+       "DialConfig",
+       "DialTLS",
+       "DialTLS_ExternalAuth",
+       "Open"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.13.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6492",
+    "imports": [
+     {
+      "path": "github.com/rabbitmq/amqp091-go",
+      "symbols": [
+       "Dial",
+       "DialConfig",
+       "DialTLS",
+       "DialTLS_ExternalAuth",
+       "tlsConfigFromURI"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.13.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6493",
+    "imports": [
+     {
+      "path": "github.com/rabbitmq/amqp091-go",
+      "symbols": [
+       "URI.String"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.13.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6494",
+    "imports": [
+     {
+      "path": "github.com/rabbitmq/amqp091-go",
+      "symbols": [
+       "Connection.Reconnect",
+       "DefaultConnectionRecovery.OnConnectionClose",
+       "Dial",
+       "DialConfig",
+       "DialTLS",
+       "DialTLS_ExternalAuth",
+       "Open",
+       "readField",
+       "reader.ReadFrame"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.13.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6496",
+    "imports": [
+     {
+      "path": "github.com/rabbitmq/amqp091-go",
+      "symbols": [
+       "Connection.Reconnect",
+       "DefaultConnectionRecovery.OnConnectionClose",
+       "Dial",
+       "DialConfig",
+       "DialTLS",
+       "DialTLS_ExternalAuth",
+       "Open",
+       "readLongstr",
+       "reader.ReadFrame"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.13.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6498",
+    "imports": [
+     {
+      "path": "github.com/rabbitmq/amqp091-go",
+      "symbols": [
+       "AMQPlainAuth.Response",
+       "Channel.Ack",
+       "Channel.Cancel",
+       "Channel.Close",
+       "Channel.Confirm",
+       "Channel.Consume",
+       "Channel.ConsumeWithContext",
+       "Channel.ExchangeBind",
+       "Channel.ExchangeDeclare",
+       "Channel.ExchangeDeclarePassive",
+       "Channel.ExchangeDelete",
+       "Channel.ExchangeUnbind",
+       "Channel.Flow",
+       "Channel.Get",
+       "Channel.Nack",
+       "Channel.Publish",
+       "Channel.PublishWithContext",
+       "Channel.PublishWithDeferredConfirm",
+       "Channel.PublishWithDeferredConfirmWithContext",
+       "Channel.Qos",
+       "Channel.QueueBind",
+       "Channel.QueueDeclare",
+       "Channel.QueueDeclarePassive",
+       "Channel.QueueDelete",
+       "Channel.QueueInspect",
+       "Channel.QueuePurge",
+       "Channel.QueueUnbind",
+       "Channel.Reconnect",
+       "Channel.Recover",
+       "Channel.Reject",
+       "Channel.Tx",
+       "Channel.TxCommit",
+       "Channel.TxRollback",
+       "Connection.Channel",
+       "Connection.Close",
+       "Connection.CloseDeadline",
+       "Connection.Reconnect",
+       "Connection.UpdateSecret",
+       "DefaultConnectionRecovery.OnChannelClose",
+       "DefaultConnectionRecovery.OnConnectionClose",
+       "Delivery.Ack",
+       "Delivery.Nack",
+       "Delivery.Reject",
+       "Dial",
+       "DialConfig",
+       "DialTLS",
+       "DialTLS_ExternalAuth",
+       "Open",
+       "writeShortstr",
+       "writer.WriteFrame",
+       "writer.WriteFrameNoFlush"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.13.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6500",
+    "imports": [
+     {
+      "path": "github.com/rabbitmq/amqp091-go",
+      "symbols": [
+       "Channel.recvContent",
+       "Connection.Reconnect",
+       "DefaultConnectionRecovery.OnConnectionClose",
+       "Dial",
+       "DialConfig",
+       "DialTLS",
+       "DialTLS_ExternalAuth",
+       "Open"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.13.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6502",
+    "imports": [
+     {
+      "path": "github.com/rabbitmq/amqp091-go",
+      "symbols": [
+       "Channel.Qos"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.13.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6503",
+    "imports": [
+     {
+      "path": "github.com/rabbitmq/amqp091-go",
+      "symbols": [
+       "Connection.Reconnect",
+       "Connection.openTune",
+       "DefaultConnectionRecovery.OnConnectionClose",
+       "Dial",
+       "DialConfig",
+       "DialTLS",
+       "DialTLS_ExternalAuth",
+       "Open"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.13.0"
+     }
+    ]
+   }
+  ],
+  "github.com/sirupsen/logrus": [
+   {
+    "id": "GO-2025-4188",
+    "imports": [
+     {
+      "path": "github.com/sirupsen/logrus",
+      "symbols": [
+       "Entry.Writer",
+       "Entry.WriterLevel",
+       "Entry.writerScanner",
+       "Logger.Writer",
+       "Logger.WriterLevel"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.8.3"
+     },
+     {
+      "introduced": "1.9.0"
+     },
+     {
+      "fixed": "1.9.1"
+     },
+     {
+      "introduced": "1.9.2"
+     },
+     {
+      "fixed": "1.9.3"
+     }
+    ]
+   }
+  ],
+  "github.com/valyala/fasthttp": [
+   {
+    "id": "GO-2022-0355",
+    "imports": [
+     {
+      "path": "github.com/valyala/fasthttp",
+      "symbols": [
+       "AppendBrotliBytes",
+       "AppendBrotliBytesLevel",
+       "AppendDeflateBytes",
+       "AppendDeflateBytesLevel",
+       "AppendGunzipBytes",
+       "AppendGzipBytes",
+       "AppendGzipBytesLevel",
+       "AppendHTTPDate",
+       "AppendInflateBytes",
+       "AppendUnbrotliBytes",
+       "Args.WriteTo",
+       "Client.CloseIdleConnections",
+       "Client.Do",
+       "Client.DoDeadline",
+       "Client.DoRedirects",
+       "Client.DoTimeout",
+       "Client.Get",
+       "Client.GetDeadline",
+       "Client.GetTimeout",
+       "Client.Post",
+       "Cookie.AppendBytes",
+       "Cookie.Cookie",
+       "Cookie.Parse",
+       "Cookie.ParseBytes",
+       "Cookie.String",
+       "Cookie.WriteTo",
+       "Dial",
+       "DialDualStack",
+       "DialDualStackTimeout",
+       "DialTimeout",
+       "Do",
+       "DoDeadline",
+       "DoRedirects",
+       "DoTimeout",
+       "FS.NewRequestHandler",
+       "FSHandler",
+       "FileLastModified",
+       "GenerateTestCertificate",
+       "Get",
+       "GetDeadline",
+       "GetTimeout",
+       "HostClient.CloseIdleConnections",
+       "HostClient.Do",
+       "HostClient.DoDeadline",
+       "HostClient.DoRedirects",
+       "HostClient.DoTimeout",
+       "HostClient.Get",
+       "HostClient.GetDeadline",
+       "HostClient.GetTimeout",
+       "HostClient.Post",
+       "LBClient.Do",
+       "LBClient.DoDeadline",
+       "LBClient.DoTimeout",
+       "ListenAndServe",
+       "ListenAndServeTLS",
+       "ListenAndServeTLSEmbed",
+       "ListenAndServeUNIX",
+       "NewStreamReader",
+       "ParseByteRange",
+       "ParseHTTPDate",
+       "ParseIPv4",
+       "PipelineClient.Do",
+       "PipelineClient.DoDeadline",
+       "PipelineClient.DoTimeout",
+       "PipelineClient.PendingRequests",
+       "Post",
+       "Request.Body",
+       "Request.BodyGunzip",
+       "Request.BodyInflate",
+       "Request.BodyUnbrotli",
+       "Request.BodyWriteTo",
+       "Request.ContinueReadBody",
+       "Request.ContinueReadBodyStream",
+       "Request.Host",
+       "Request.MultipartForm",
+       "Request.PostArgs",
+       "Request.Read",
+       "Request.ReadBody",
+       "Request.ReadLimitBody",
+       "Request.SetBodyStreamWriter",
+       "Request.SetHost",
+       "Request.SetHostBytes",
+       "Request.String",
+       "Request.SwapBody",
+       "Request.URI",
+       "Request.Write",
+       "Request.WriteTo",
+       "RequestCtx.FormFile",
+       "RequestCtx.FormValue",
+       "RequestCtx.Host",
+       "RequestCtx.IfModifiedSince",
+       "RequestCtx.MultipartForm",
+       "RequestCtx.Path",
+       "RequestCtx.PostArgs",
+       "RequestCtx.PostBody",
+       "RequestCtx.QueryArgs",
+       "RequestCtx.Redirect",
+       "RequestCtx.RedirectBytes",
+       "RequestCtx.SendFile",
+       "RequestCtx.SendFileBytes",
+       "RequestCtx.SetBodyStreamWriter",
+       "RequestCtx.String",
+       "RequestCtx.URI",
+       "RequestHeader.Add",
+       "RequestHeader.AddBytesK",
+       "RequestHeader.AddBytesKV",
+       "RequestHeader.AddBytesV",
+       "RequestHeader.Read",
+       "RequestHeader.ReadTrailer",
+       "RequestHeader.Set",
+       "RequestHeader.SetByteRange",
+       "RequestHeader.SetBytesK",
+       "RequestHeader.SetBytesKV",
+       "RequestHeader.SetBytesV",
+       "RequestHeader.SetCanonical",
+       "RequestHeader.SetReferer",
+       "RequestHeader.SetRefererBytes",
+       "RequestHeader.Write",
+       "Response.Body",
+       "Response.BodyGunzip",
+       "Response.BodyInflate",
+       "Response.BodyUnbrotli",
+       "Response.BodyWriteTo",
+       "Response.Read",
+       "Response.ReadBody",
+       "Response.ReadLimitBody",
+       "Response.SendFile",
+       "Response.SetBodyStreamWriter",
+       "Response.String",
+       "Response.SwapBody",
+       "Response.Write",
+       "Response.WriteDeflate",
+       "Response.WriteDeflateLevel",
+       "Response.WriteGzip",
+       "Response.WriteGzipLevel",
+       "Response.WriteTo",
+       "ResponseHeader.Add",
+       "ResponseHeader.AddBytesK",
+       "ResponseHeader.AddBytesKV",
+       "ResponseHeader.AddBytesV",
+       "ResponseHeader.AppendBytes",
+       "ResponseHeader.Cookie",
+       "ResponseHeader.DelClientCookie",
+       "ResponseHeader.DelClientCookieBytes",
+       "ResponseHeader.Header",
+       "ResponseHeader.Read",
+       "ResponseHeader.ReadTrailer",
+       "ResponseHeader.Set",
+       "ResponseHeader.SetBytesK",
+       "ResponseHeader.SetBytesKV",
+       "ResponseHeader.SetBytesV",
+       "ResponseHeader.SetCanonical",
+       "ResponseHeader.SetContentRange",
+       "ResponseHeader.SetCookie",
+       "ResponseHeader.SetLastModified",
+       "ResponseHeader.String",
+       "ResponseHeader.Write",
+       "ResponseHeader.WriteTo",
+       "SaveMultipartFile",
+       "Serve",
+       "ServeConn",
+       "ServeFile",
+       "ServeFileBytes",
+       "ServeFileBytesUncompressed",
+       "ServeFileUncompressed",
+       "ServeTLS",
+       "ServeTLSEmbed",
+       "Server.AppendCert",
+       "Server.AppendCertEmbed",
+       "Server.ListenAndServe",
+       "Server.ListenAndServeTLS",
+       "Server.ListenAndServeTLSEmbed",
+       "Server.ListenAndServeUNIX",
+       "Server.Serve",
+       "Server.ServeConn",
+       "Server.ServeTLS",
+       "Server.ServeTLSEmbed",
+       "Server.Shutdown",
+       "TCPDialer.Dial",
+       "TCPDialer.DialDualStack",
+       "TCPDialer.DialDualStackTimeout",
+       "TCPDialer.DialTimeout",
+       "URI.Parse",
+       "URI.Update",
+       "URI.UpdateBytes",
+       "URI.WriteTo",
+       "WriteBrotli",
+       "WriteBrotliLevel",
+       "WriteDeflate",
+       "WriteDeflateLevel",
+       "WriteGunzip",
+       "WriteGzip",
+       "WriteGzipLevel",
+       "WriteInflate",
+       "WriteMultipartForm",
+       "WriteUnbrotli",
+       "bigFileReader.Read",
+       "bigFileReader.WriteTo",
+       "ctxLogger.Printf",
+       "firstByteReader.Read",
+       "flushWriter.Write",
+       "fsFile.NewReader",
+       "fsSmallFileReader.WriteTo",
+       "hijackConn.Close",
+       "hijackConn.Read",
+       "perIPConn.Close",
+       "perIPConnCounter.Unregister",
+       "pipelineConnClient.Do",
+       "pipelineConnClient.DoDeadline",
+       "pipelineConnClient.PendingRequests",
+       "requestStream.Read",
+       "statsWriter.Write",
+       "tcpKeepaliveListener.Accept",
+       "workerPool.Serve"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.34.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-4950",
+    "imports": [
+     {
+      "path": "github.com/valyala/fasthttp",
+      "symbols": [
+       "RequestCtx.SendFile",
+       "RequestCtx.SendFileBytes",
+       "ServeFS",
+       "ServeFile",
+       "ServeFileBytes",
+       "ServeFileBytesUncompressed",
+       "ServeFileUncompressed"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.70.0"
+     }
+    ]
+   }
+  ],
+  "golang.org/x/crypto": [
+   {
+    "id": "GO-2020-0012",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "CertChecker.Authenticate",
+       "CertChecker.CheckCert",
+       "CertChecker.CheckHostKey",
+       "Certificate.Verify",
+       "Dial",
+       "NewClientConn",
+       "NewPublicKey",
+       "NewServerConn",
+       "NewSignerFromKey",
+       "NewSignerFromSigner",
+       "ParseAuthorizedKey",
+       "ParseKnownHosts",
+       "ParsePrivateKey",
+       "ParsePrivateKeyWithPassphrase",
+       "ParsePublicKey",
+       "ParseRawPrivateKey",
+       "ParseRawPrivateKeyWithPassphrase",
+       "ed25519PublicKey.Verify",
+       "parseED25519",
+       "parseSKEd25519",
+       "skEd25519PublicKey.Verify"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20200220183623-bac4c82f6975"
+     }
+    ]
+   },
+   {
+    "id": "GO-2020-0013",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "Dial",
+       "NewClientConn"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20170330155735-e4e2799dd7aa"
+     }
+    ]
+   },
+   {
+    "id": "GO-2021-0227",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "NewServerConn",
+       "connection.serverAuthenticate"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20201216223049-8b5274cf687f"
+     }
+    ]
+   },
+   {
+    "id": "GO-2021-0356",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "ServerConfig.AddHostKey"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20220314234659-1baeb1ce4c0b"
+     }
+    ]
+   },
+   {
+    "id": "GO-2022-0209",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/salsa20/salsa",
+      "symbols": [
+       "XORKeyStream"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20190320223903-b7391e95e576"
+     }
+    ]
+   },
+   {
+    "id": "GO-2022-0229",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/cryptobyte",
+      "symbols": []
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20200124225646-8b5121be2f68"
+     }
+    ]
+   },
+   {
+    "id": "GO-2022-0968",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "Dial",
+       "NewClientConn",
+       "NewServerConn",
+       "chacha20Poly1305Cipher.readCipherPacket",
+       "curve25519sha256.Client",
+       "curve25519sha256.Server",
+       "dhGEXSHA.Client",
+       "dhGEXSHA.Server",
+       "dhGroup.Client",
+       "dhGroup.Server",
+       "ecdh.Client",
+       "ecdh.Server",
+       "gcmCipher.readCipherPacket"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20211202192323-5770296d904e"
+     }
+    ]
+   },
+   {
+    "id": "GO-2023-1992",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/openpgp/clearsign",
+      "symbols": [
+       "Decode"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20190424203555-c05e17bb3b2d"
+     }
+    ]
+   },
+   {
+    "id": "GO-2023-2402",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "Client.Dial",
+       "Client.DialContext",
+       "Client.DialTCP",
+       "Client.Listen",
+       "Client.ListenTCP",
+       "Client.ListenUnix",
+       "Client.NewSession",
+       "Dial",
+       "DiscardRequests",
+       "NewClient",
+       "NewClientConn",
+       "NewServerConn",
+       "Request.Reply",
+       "Session.Close",
+       "Session.CombinedOutput",
+       "Session.Output",
+       "Session.RequestPty",
+       "Session.RequestSubsystem",
+       "Session.Run",
+       "Session.SendRequest",
+       "Session.Setenv",
+       "Session.Shell",
+       "Session.Signal",
+       "Session.Start",
+       "Session.WindowChange",
+       "channel.Accept",
+       "channel.Close",
+       "channel.CloseWrite",
+       "channel.Read",
+       "channel.ReadExtended",
+       "channel.Reject",
+       "channel.SendRequest",
+       "channel.Write",
+       "channel.WriteExtended",
+       "connectionState.readPacket",
+       "connectionState.writePacket",
+       "curve25519sha256.Client",
+       "curve25519sha256.Server",
+       "dhGEXSHA.Client",
+       "dhGEXSHA.Server",
+       "dhGroup.Client",
+       "dhGroup.Server",
+       "ecdh.Client",
+       "ecdh.Server",
+       "extChannel.Read",
+       "extChannel.Write",
+       "handshakeTransport.enterKeyExchange",
+       "handshakeTransport.readLoop",
+       "handshakeTransport.sendKexInit",
+       "mux.OpenChannel",
+       "mux.SendRequest",
+       "sessionStdin.Close",
+       "sshClientKeyboardInteractive.Challenge",
+       "tcpListener.Accept",
+       "tcpListener.Close",
+       "transport.readPacket",
+       "transport.writePacket",
+       "unixListener.Accept",
+       "unixListener.Close"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.17.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2024-2961",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/acme/autocert",
+      "symbols": [
+       "DirCache.Delete",
+       "DirCache.Get",
+       "DirCache.Put",
+       "HostWhitelist",
+       "Manager.GetCertificate",
+       "Manager.Listener",
+       "NewListener",
+       "listener.Accept",
+       "listener.Close"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20220525230936-793ad666bf5e"
+     }
+    ]
+   },
+   {
+    "id": "GO-2024-3321",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "NewServerConn",
+       "ServerConfig.PublicKeyCallback",
+       "connection.serverAuthenticate"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.31.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2025-3487",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "Client.Dial",
+       "Client.DialContext",
+       "Client.DialTCP",
+       "Client.Listen",
+       "Client.ListenTCP",
+       "Client.ListenUnix",
+       "Client.NewSession",
+       "Dial",
+       "DiscardRequests",
+       "NewClient",
+       "NewClientConn",
+       "NewServerConn",
+       "Request.Reply",
+       "Session.Close",
+       "Session.CombinedOutput",
+       "Session.Output",
+       "Session.RequestPty",
+       "Session.RequestSubsystem",
+       "Session.Run",
+       "Session.SendRequest",
+       "Session.Setenv",
+       "Session.Shell",
+       "Session.Signal",
+       "Session.Start",
+       "Session.WindowChange",
+       "channel.Accept",
+       "channel.Close",
+       "channel.CloseWrite",
+       "channel.Read",
+       "channel.ReadExtended",
+       "channel.Reject",
+       "channel.SendRequest",
+       "channel.Write",
+       "channel.WriteExtended",
+       "connection.SendAuthBanner",
+       "curve25519sha256.Client",
+       "curve25519sha256.Server",
+       "dhGEXSHA.Client",
+       "dhGEXSHA.Server",
+       "dhGroup.Client",
+       "dhGroup.Server",
+       "ecdh.Client",
+       "ecdh.Server",
+       "extChannel.Read",
+       "extChannel.Write",
+       "handshakeTransport.kexLoop",
+       "handshakeTransport.recordWriteError",
+       "handshakeTransport.writePacket",
+       "mux.OpenChannel",
+       "mux.SendRequest",
+       "newHandshakeTransport",
+       "sessionStdin.Close",
+       "sshClientKeyboardInteractive.Challenge",
+       "tcpListener.Accept",
+       "tcpListener.Close",
+       "unixListener.Accept",
+       "unixListener.Close"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.35.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2025-4116",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh/agent",
+      "symbols": [
+       "agentKeyringSigner.Sign",
+       "agentKeyringSigner.SignWithAlgorithm",
+       "client.List",
+       "client.Sign",
+       "client.SignWithFlags",
+       "client.Signers"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.43.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2025-4134",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "NewServerConn",
+       "parseGSSAPIPayload"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.45.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2025-4135",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh/agent",
+      "symbols": [
+       "ForwardToAgent",
+       "ServeAgent",
+       "parseConstraints"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.45.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5005",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh/agent",
+      "symbols": [
+       "keyring.Add"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.52.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5006",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh/agent",
+      "symbols": [
+       "client.Add",
+       "keyring.Add"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.52.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5013",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "Dial",
+       "NewClientConn",
+       "NewServerConn",
+       "curve25519sha256.Client",
+       "curve25519sha256.Server",
+       "dhGEXSHA.Client",
+       "dhGEXSHA.Server",
+       "dhGroup.Client",
+       "dhGroup.Server",
+       "ecdh.Client",
+       "ecdh.Server",
+       "gcmCipher.readCipherPacket",
+       "mlkem768WithCurve25519sha256.Client",
+       "mlkem768WithCurve25519sha256.Server"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.52.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5014",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "NewServerConn",
+       "connection.serverAuthenticate"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.52.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5015",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "CertChecker.Authenticate",
+       "CertChecker.CheckHostKey"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.52.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5016",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "channel.Reject"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.52.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5017",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "Client.Listen",
+       "Client.ListenTCP",
+       "Client.ListenUnix",
+       "Dial",
+       "NewClientConn",
+       "NewServerConn",
+       "Session.CombinedOutput",
+       "Session.Output",
+       "Session.RequestPty",
+       "Session.RequestSubsystem",
+       "Session.Run",
+       "Session.SendRequest",
+       "Session.Setenv",
+       "Session.Shell",
+       "Session.Signal",
+       "Session.Start",
+       "Session.WindowChange",
+       "channel.SendRequest",
+       "channel.handlePacket",
+       "mux.SendRequest",
+       "mux.handleGlobalPacket",
+       "tcpListener.Close",
+       "unixListener.Close"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.52.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5018",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "Dial",
+       "NewClientConn",
+       "NewServerConn",
+       "NewSignerFromKey",
+       "ParseAuthorizedKey",
+       "ParseKnownHosts",
+       "ParsePrivateKey",
+       "ParsePrivateKeyWithPassphrase",
+       "ParsePublicKey",
+       "ParseRawPrivateKey",
+       "ParseRawPrivateKeyWithPassphrase",
+       "checkDSAParams",
+       "parseDSA",
+       "parseRSA"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.52.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5019",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "CertChecker.Authenticate",
+       "CertChecker.CheckCert",
+       "CertChecker.CheckHostKey",
+       "Certificate.Verify",
+       "Dial",
+       "NewClientConn",
+       "NewServerConn",
+       "connection.serverAuthenticate",
+       "skECDSAPublicKey.Verify",
+       "skEd25519PublicKey.Verify"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.52.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5020",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "Dial",
+       "NewClientConn",
+       "NewServerConn",
+       "Session.CombinedOutput",
+       "Session.Output",
+       "Session.Run",
+       "Session.Shell",
+       "Session.Start",
+       "channel.Write",
+       "channel.WriteExtended",
+       "curve25519sha256.Client",
+       "curve25519sha256.Server",
+       "dhGEXSHA.Client",
+       "dhGEXSHA.Server",
+       "dhGroup.Client",
+       "dhGroup.Server",
+       "ecdh.Client",
+       "ecdh.Server",
+       "extChannel.Write",
+       "mlkem768WithCurve25519sha256.Client",
+       "mlkem768WithCurve25519sha256.Server"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.52.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5021",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh/knownhosts",
+      "symbols": [
+       "hostKeyDB.IsRevoked"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.52.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5023",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "NewServerConn",
+       "connection.serverAuthenticate"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.52.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5033",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh/agent",
+      "symbols": [
+       "ForwardToAgent",
+       "ServeAgent",
+       "parseEd25519Cert",
+       "parseEd25519Key"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.52.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5932",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/openpgp",
+      "symbols": []
+     },
+     {
+      "path": "golang.org/x/crypto/openpgp/packet",
+      "symbols": []
+     },
+     {
+      "path": "golang.org/x/crypto/openpgp/armor",
+      "symbols": []
+     },
+     {
+      "path": "golang.org/x/crypto/openpgp/clearsign",
+      "symbols": []
+     },
+     {
+      "path": "golang.org/x/crypto/openpgp/errors",
+      "symbols": []
+     },
+     {
+      "path": "golang.org/x/crypto/openpgp/elgamal",
+      "symbols": []
+     },
+     {
+      "path": "golang.org/x/crypto/openpgp/s2k",
+      "symbols": []
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6303",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "NewServerConn",
+       "connection.serverAuthenticate"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.55.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6354",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "Dial",
+       "NewClientConn",
+       "NewControlClientConn",
+       "NewServerConn",
+       "channel.Accept",
+       "channel.handlePacket",
+       "channel.responseMessageReceived"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.56.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6355",
+    "imports": [
+     {
+      "path": "golang.org/x/crypto/ssh",
+      "symbols": [
+       "Dial",
+       "NewClientConn",
+       "NewControlClientConn",
+       "NewServerConn",
+       "channel.handlePacket"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.56.0"
+     }
+    ]
+   }
+  ],
+  "golang.org/x/net": [
+   {
+    "id": "GO-2020-0014",
+    "imports": [
+     {
+      "path": "golang.org/x/net/html",
+      "symbols": [
+       "Parse",
+       "ParseFragment",
+       "inSelectIM",
+       "inSelectInTableIM"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20190125091013-d26f9f9a57f3"
+     }
+    ]
+   },
+   {
+    "id": "GO-2021-0078",
+    "imports": [
+     {
+      "path": "golang.org/x/net/html",
+      "symbols": [
+       "Parse",
+       "ParseFragment",
+       "inBodyIM",
+       "inFramesetIM"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20180816102801-aaf60122140d"
+     }
+    ]
+   },
+   {
+    "id": "GO-2021-0238",
+    "imports": [
+     {
+      "path": "golang.org/x/net/html",
+      "symbols": [
+       "Parse",
+       "ParseFragment",
+       "ParseFragmentWithOptions",
+       "ParseWithOptions",
+       "inHeadIM"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20210520170846-37e1c6afe023"
+     }
+    ]
+   },
+   {
+    "id": "GO-2022-0192",
+    "imports": [
+     {
+      "path": "golang.org/x/net/html",
+      "symbols": [
+       "Parse",
+       "ParseFragment",
+       "parser.resetInsertionMode"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20180925071336-cf3bd585ca2a"
+     }
+    ]
+   },
+   {
+    "id": "GO-2022-0193",
+    "imports": [
+     {
+      "path": "golang.org/x/net/html",
+      "symbols": [
+       "Parse",
+       "ParseFragment",
+       "inBodyIM"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20180921000356-2f5d2388922f"
+     }
+    ]
+   },
+   {
+    "id": "GO-2022-0197",
+    "imports": [
+     {
+      "path": "golang.org/x/net/html",
+      "symbols": [
+       "Parse",
+       "ParseFragment",
+       "nodeStack.contains"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20190125002852-4b62a64f59f7"
+     }
+    ]
+   },
+   {
+    "id": "GO-2022-0236",
+    "imports": [
+     {
+      "path": "golang.org/x/net/http/httpguts",
+      "symbols": [
+       "HeaderValuesContainsToken",
+       "headerValueContainsToken"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20210428140749-89ef3d95e781"
+     }
+    ]
+   },
+   {
+    "id": "GO-2022-0288",
+    "imports": [
+     {
+      "path": "golang.org/x/net/http2",
+      "symbols": [
+       "Server.ServeConn",
+       "serverConn.canonicalHeader"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20211209124913-491a49abca63"
+     }
+    ]
+   },
+   {
+    "id": "GO-2022-0536",
+    "imports": [
+     {
+      "path": "golang.org/x/net/http2",
+      "symbols": [
+       "Server.ServeConn",
+       "serverConn.scheduleFrameWrite",
+       "serverConn.serve",
+       "serverConn.writeFrame"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20190813141303-74dc4d7220e7"
+     }
+    ]
+   },
+   {
+    "id": "GO-2022-0969",
+    "imports": [
+     {
+      "path": "golang.org/x/net/http2",
+      "symbols": [
+       "Server.ServeConn",
+       "serverConn.goAway"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20220906165146-f3363e06e74c"
+     }
+    ]
+   },
+   {
+    "id": "GO-2022-1144",
+    "imports": [
+     {
+      "path": "golang.org/x/net/http2",
+      "symbols": [
+       "Server.ServeConn",
+       "serverConn.canonicalHeader"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.4.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2023-1495",
+    "imports": [
+     {
+      "path": "golang.org/x/net/http2/h2c",
+      "symbols": [
+       "h2cHandler.ServeHTTP",
+       "h2cUpgrade"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0-20220524220425-1d687d428aca"
+     },
+     {
+      "fixed": "0.1.1-0.20221104162952-702349b0e862"
+     }
+    ]
+   },
+   {
+    "id": "GO-2023-1571",
+    "imports": [
+     {
+      "path": "golang.org/x/net/http2",
+      "symbols": [
+       "ClientConn.Close",
+       "ClientConn.Ping",
+       "ClientConn.RoundTrip",
+       "ClientConn.Shutdown",
+       "ConfigureServer",
+       "ConfigureTransport",
+       "ConfigureTransports",
+       "ConnectionError.Error",
+       "ErrCode.String",
+       "FrameHeader.String",
+       "FrameType.String",
+       "FrameWriteRequest.String",
+       "Framer.ReadFrame",
+       "Framer.WriteContinuation",
+       "Framer.WriteData",
+       "Framer.WriteDataPadded",
+       "Framer.WriteGoAway",
+       "Framer.WriteHeaders",
+       "Framer.WritePing",
+       "Framer.WritePriority",
+       "Framer.WritePushPromise",
+       "Framer.WriteRSTStream",
+       "Framer.WriteRawFrame",
+       "Framer.WriteSettings",
+       "Framer.WriteSettingsAck",
+       "Framer.WriteWindowUpdate",
+       "GoAwayError.Error",
+       "ReadFrameHeader",
+       "Server.ServeConn",
+       "Setting.String",
+       "SettingID.String",
+       "SettingsFrame.ForeachSetting",
+       "StreamError.Error",
+       "Transport.CloseIdleConnections",
+       "Transport.NewClientConn",
+       "Transport.RoundTrip",
+       "Transport.RoundTripOpt",
+       "bufferedWriter.Flush",
+       "bufferedWriter.Write",
+       "chunkWriter.Write",
+       "clientConnPool.GetClientConn",
+       "connError.Error",
+       "dataBuffer.Read",
+       "duplicatePseudoHeaderError.Error",
+       "gzipReader.Close",
+       "gzipReader.Read",
+       "headerFieldNameError.Error",
+       "headerFieldValueError.Error",
+       "noDialClientConnPool.GetClientConn",
+       "noDialH2RoundTripper.RoundTrip",
+       "pipe.Read",
+       "priorityWriteScheduler.CloseStream",
+       "priorityWriteScheduler.OpenStream",
+       "pseudoHeaderError.Error",
+       "requestBody.Close",
+       "requestBody.Read",
+       "responseWriter.Flush",
+       "responseWriter.FlushError",
+       "responseWriter.Push",
+       "responseWriter.SetReadDeadline",
+       "responseWriter.SetWriteDeadline",
+       "responseWriter.Write",
+       "responseWriter.WriteHeader",
+       "responseWriter.WriteString",
+       "serverConn.CloseConn",
+       "serverConn.Flush",
+       "stickyErrWriter.Write",
+       "transportResponseBody.Close",
+       "transportResponseBody.Read",
+       "writeData.String"
+      ]
+     },
+     {
+      "path": "golang.org/x/net/http2/hpack",
+      "symbols": [
+       "Decoder.DecodeFull",
+       "Decoder.Write",
+       "Decoder.parseFieldLiteral",
+       "Decoder.readString"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.7.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2023-1988",
+    "imports": [
+     {
+      "path": "golang.org/x/net/html",
+      "symbols": [
+       "Render",
+       "render1"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.13.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2023-2102",
+    "imports": [
+     {
+      "path": "golang.org/x/net/http2",
+      "symbols": [
+       "Server.ServeConn",
+       "serverConn.processHeaders",
+       "serverConn.runHandler",
+       "serverConn.serve",
+       "serverConn.upgradeRequest"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.17.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2024-2687",
+    "imports": [
+     {
+      "path": "golang.org/x/net/http2",
+      "symbols": [
+       "ClientConn.Close",
+       "ClientConn.Ping",
+       "ClientConn.RoundTrip",
+       "ClientConn.Shutdown",
+       "ConfigureServer",
+       "ConfigureTransport",
+       "ConfigureTransports",
+       "ConnectionError.Error",
+       "ErrCode.String",
+       "FrameHeader.String",
+       "FrameType.String",
+       "FrameWriteRequest.String",
+       "Framer.ReadFrame",
+       "Framer.WriteContinuation",
+       "Framer.WriteData",
+       "Framer.WriteDataPadded",
+       "Framer.WriteGoAway",
+       "Framer.WriteHeaders",
+       "Framer.WritePing",
+       "Framer.WritePriority",
+       "Framer.WritePushPromise",
+       "Framer.WriteRSTStream",
+       "Framer.WriteRawFrame",
+       "Framer.WriteSettings",
+       "Framer.WriteSettingsAck",
+       "Framer.WriteWindowUpdate",
+       "Framer.readMetaFrame",
+       "GoAwayError.Error",
+       "ReadFrameHeader",
+       "Server.ServeConn",
+       "Setting.String",
+       "SettingID.String",
+       "SettingsFrame.ForeachSetting",
+       "StreamError.Error",
+       "Transport.CloseIdleConnections",
+       "Transport.NewClientConn",
+       "Transport.RoundTrip",
+       "Transport.RoundTripOpt",
+       "bufferedWriter.Flush",
+       "bufferedWriter.Write",
+       "chunkWriter.Write",
+       "clientConnPool.GetClientConn",
+       "connError.Error",
+       "dataBuffer.Read",
+       "duplicatePseudoHeaderError.Error",
+       "gzipReader.Close",
+       "gzipReader.Read",
+       "headerFieldNameError.Error",
+       "headerFieldValueError.Error",
+       "noDialClientConnPool.GetClientConn",
+       "noDialH2RoundTripper.RoundTrip",
+       "pipe.Read",
+       "priorityWriteScheduler.CloseStream",
+       "priorityWriteScheduler.OpenStream",
+       "pseudoHeaderError.Error",
+       "requestBody.Close",
+       "requestBody.Read",
+       "responseWriter.Flush",
+       "responseWriter.FlushError",
+       "responseWriter.Push",
+       "responseWriter.SetReadDeadline",
+       "responseWriter.SetWriteDeadline",
+       "responseWriter.Write",
+       "responseWriter.WriteHeader",
+       "responseWriter.WriteString",
+       "roundRobinWriteScheduler.OpenStream",
+       "serverConn.CloseConn",
+       "serverConn.Flush",
+       "stickyErrWriter.Write",
+       "transportResponseBody.Close",
+       "transportResponseBody.Read",
+       "writeData.String"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.23.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2024-3333",
+    "imports": [
+     {
+      "path": "golang.org/x/net/html",
+      "symbols": [
+       "Parse",
+       "ParseFragment",
+       "ParseFragmentWithOptions",
+       "ParseWithOptions",
+       "htmlIntegrationPoint",
+       "inBodyIM",
+       "inTableIM",
+       "parseDoctype"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.33.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2025-3503",
+    "imports": [
+     {
+      "path": "golang.org/x/net/http/httpproxy",
+      "symbols": [
+       "config.useProxy",
+       "domainMatch.match"
+      ]
+     },
+     {
+      "path": "golang.org/x/net/proxy",
+      "symbols": [
+       "Dial",
+       "FromEnvironment",
+       "FromEnvironmentUsing",
+       "PerHost.AddFromString",
+       "PerHost.Dial",
+       "PerHost.DialContext",
+       "PerHost.dialerForRequest"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.36.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2025-3595",
+    "imports": [
+     {
+      "path": "golang.org/x/net/html",
+      "symbols": [
+       "Parse",
+       "ParseFragment",
+       "ParseFragmentWithOptions",
+       "ParseWithOptions",
+       "Tokenizer.Next",
+       "Tokenizer.readStartTag"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.38.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-4440",
+    "imports": [
+     {
+      "path": "golang.org/x/net/html",
+      "symbols": [
+       "Parse",
+       "ParseFragment",
+       "ParseFragmentWithOptions",
+       "ParseWithOptions",
+       "parser.parse"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.45.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-4441",
+    "imports": [
+     {
+      "path": "golang.org/x/net/html",
+      "symbols": [
+       "Parse",
+       "ParseFragment",
+       "ParseFragmentWithOptions",
+       "ParseWithOptions",
+       "inRowIM"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.45.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-4559",
+    "imports": [
+     {
+      "path": "golang.org/x/net/http2",
+      "symbols": [
+       "ClientConn.Close",
+       "ClientConn.Ping",
+       "ClientConn.RoundTrip",
+       "ClientConn.Shutdown",
+       "ConfigureServer",
+       "ConfigureTransport",
+       "ConfigureTransports",
+       "ConnectionError.Error",
+       "ErrCode.String",
+       "FrameHeader.String",
+       "FrameType.String",
+       "FrameWriteRequest.String",
+       "Framer.ReadFrame",
+       "Framer.ReadFrameForHeader",
+       "Framer.ReadFrameHeader",
+       "Framer.WriteContinuation",
+       "Framer.WriteData",
+       "Framer.WriteDataPadded",
+       "Framer.WriteGoAway",
+       "Framer.WriteHeaders",
+       "Framer.WritePing",
+       "Framer.WritePriority",
+       "Framer.WritePriorityUpdate",
+       "Framer.WritePushPromise",
+       "Framer.WriteRSTStream",
+       "Framer.WriteRawFrame",
+       "Framer.WriteSettings",
+       "Framer.WriteSettingsAck",
+       "Framer.WriteWindowUpdate",
+       "GoAwayError.Error",
+       "ReadFrameHeader",
+       "Server.ServeConn",
+       "Setting.String",
+       "SettingID.String",
+       "SettingsFrame.ForeachSetting",
+       "StreamError.Error",
+       "Transport.CloseIdleConnections",
+       "Transport.NewClientConn",
+       "Transport.RoundTrip",
+       "Transport.RoundTripOpt",
+       "bufferedWriter.Flush",
+       "bufferedWriter.Write",
+       "bufferedWriterTimeoutWriter.Write",
+       "chunkWriter.Write",
+       "clientConnPool.GetClientConn",
+       "connError.Error",
+       "dataBuffer.Read",
+       "duplicatePseudoHeaderError.Error",
+       "gzipReader.Close",
+       "gzipReader.Read",
+       "headerFieldNameError.Error",
+       "headerFieldValueError.Error",
+       "netHTTPClientConn.Close",
+       "netHTTPClientConn.RoundTrip",
+       "noDialClientConnPool.GetClientConn",
+       "noDialH2RoundTripper.NewClientConn",
+       "noDialH2RoundTripper.RoundTrip",
+       "pipe.Read",
+       "priorityWriteSchedulerRFC7540.CloseStream",
+       "priorityWriteSchedulerRFC7540.OpenStream",
+       "priorityWriteSchedulerRFC9218.OpenStream",
+       "pseudoHeaderError.Error",
+       "requestBody.Close",
+       "requestBody.Read",
+       "responseWriter.Flush",
+       "responseWriter.FlushError",
+       "responseWriter.Push",
+       "responseWriter.SetReadDeadline",
+       "responseWriter.SetWriteDeadline",
+       "responseWriter.Write",
+       "responseWriter.WriteHeader",
+       "responseWriter.WriteString",
+       "roundRobinWriteScheduler.OpenStream",
+       "serverConn.CloseConn",
+       "serverConn.Flush",
+       "stickyErrWriter.Write",
+       "transportResponseBody.Close",
+       "transportResponseBody.Read",
+       "typeFrameParser",
+       "unencryptedTransport.RoundTrip",
+       "writeData.String"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.50.0"
+     },
+     {
+      "fixed": "0.51.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-4918",
+    "imports": [
+     {
+      "path": "golang.org/x/net/http2",
+      "symbols": [
+       "Transport.NewClientConn",
+       "Transport.RoundTrip",
+       "Transport.RoundTripOpt",
+       "clientConnPool.GetClientConn",
+       "clientConnReadLoop.processSettingsNoWrite",
+       "noDialClientConnPool.GetClientConn",
+       "noDialH2RoundTripper.NewClientConn",
+       "noDialH2RoundTripper.RoundTrip",
+       "unencryptedTransport.RoundTrip"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.53.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5025",
+    "imports": [
+     {
+      "path": "golang.org/x/net/html",
+      "symbols": [
+       "Parse",
+       "ParseFragment",
+       "ParseFragmentWithOptions",
+       "ParseWithOptions",
+       "parser.parse"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.55.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5026",
+    "imports": [
+     {
+      "path": "golang.org/x/net/idna",
+      "symbols": [
+       "Profile.ToASCII",
+       "Profile.ToUnicode",
+       "Profile.process",
+       "ToASCII",
+       "ToUnicode"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.55.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5027",
+    "imports": [
+     {
+      "path": "golang.org/x/net/html",
+      "symbols": [
+       "Parse",
+       "ParseFragment",
+       "ParseFragmentWithOptions",
+       "ParseWithOptions",
+       "parser.parse"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.55.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5028",
+    "imports": [
+     {
+      "path": "golang.org/x/net/html",
+      "symbols": [
+       "Parse",
+       "ParseFragment",
+       "ParseFragmentWithOptions",
+       "ParseWithOptions",
+       "parser.parse"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.55.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5029",
+    "imports": [
+     {
+      "path": "golang.org/x/net/html",
+      "symbols": [
+       "Parse",
+       "ParseFragment",
+       "ParseFragmentWithOptions",
+       "ParseWithOptions",
+       "parser.parse"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.55.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5030",
+    "imports": [
+     {
+      "path": "golang.org/x/net/html",
+      "symbols": [
+       "Parse",
+       "ParseFragment",
+       "ParseFragmentWithOptions",
+       "ParseWithOptions",
+       "parser.parse"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.55.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5942",
+    "imports": [
+     {
+      "path": "golang.org/x/net/dns/dnsmessage",
+      "symbols": [
+       "Message.Unpack",
+       "Parser.Additional",
+       "Parser.AllAdditionals",
+       "Parser.AllAnswers",
+       "Parser.AllAuthorities",
+       "Parser.Answer",
+       "Parser.Authority",
+       "Parser.HTTPSResource",
+       "Parser.SVCBResource",
+       "unpackSVCBResource"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.56.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6603",
+    "imports": [
+     {
+      "path": "golang.org/x/net/http2",
+      "symbols": [
+       "ClientConn.Close",
+       "ClientConn.Ping",
+       "ClientConn.RoundTrip",
+       "ClientConn.Shutdown",
+       "ConfigureServer",
+       "ConfigureTransport",
+       "ConfigureTransports",
+       "ConnectionError.Error",
+       "ErrCode.String",
+       "FrameHeader.String",
+       "FrameType.String",
+       "FrameWriteRequest.String",
+       "Framer.ReadFrame",
+       "Framer.ReadFrameForHeader",
+       "Framer.ReadFrameHeader",
+       "Framer.WriteContinuation",
+       "Framer.WriteData",
+       "Framer.WriteDataPadded",
+       "Framer.WriteGoAway",
+       "Framer.WriteHeaders",
+       "Framer.WritePing",
+       "Framer.WritePriority",
+       "Framer.WritePriorityUpdate",
+       "Framer.WritePushPromise",
+       "Framer.WriteRSTStream",
+       "Framer.WriteRawFrame",
+       "Framer.WriteSettings",
+       "Framer.WriteSettingsAck",
+       "Framer.WriteWindowUpdate",
+       "Framer.readMetaFrame",
+       "GoAwayError.Error",
+       "ReadFrameHeader",
+       "Server.ServeConn",
+       "Setting.String",
+       "SettingID.String",
+       "SettingsFrame.ForeachSetting",
+       "StreamError.Error",
+       "Transport.CloseIdleConnections",
+       "Transport.NewClientConn",
+       "Transport.RoundTrip",
+       "Transport.RoundTripOpt",
+       "bufferedWriter.Flush",
+       "bufferedWriter.Write",
+       "bufferedWriterTimeoutWriter.Write",
+       "chunkWriter.Write",
+       "clientConnPool.GetClientConn",
+       "connError.Error",
+       "dataBuffer.Read",
+       "duplicatePseudoHeaderError.Error",
+       "gzipReader.Close",
+       "gzipReader.Read",
+       "headerFieldNameError.Error",
+       "headerFieldValueError.Error",
+       "netHTTPClientConn.Close",
+       "netHTTPClientConn.RoundTrip",
+       "noDialClientConnPool.GetClientConn",
+       "noDialH2RoundTripper.NewClientConn",
+       "noDialH2RoundTripper.RoundTrip",
+       "pipe.Read",
+       "priorityWriteSchedulerRFC7540.CloseStream",
+       "priorityWriteSchedulerRFC7540.OpenStream",
+       "priorityWriteSchedulerRFC9218.OpenStream",
+       "pseudoHeaderError.Error",
+       "requestBody.Close",
+       "requestBody.Read",
+       "responseWriter.Flush",
+       "responseWriter.FlushError",
+       "responseWriter.Push",
+       "responseWriter.SetReadDeadline",
+       "responseWriter.SetWriteDeadline",
+       "responseWriter.Write",
+       "responseWriter.WriteHeader",
+       "responseWriter.WriteString",
+       "roundRobinWriteScheduler.OpenStream",
+       "serverConn.CloseConn",
+       "serverConn.Flush",
+       "stickyErrWriter.Write",
+       "transportResponseBody.Close",
+       "transportResponseBody.Read",
+       "unencryptedTransport.RoundTrip",
+       "writeData.String"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.60.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6610",
+    "imports": [
+     {
+      "path": "golang.org/x/net/http2",
+      "symbols": [
+       "Transport.NewClientConn",
+       "Transport.RoundTrip",
+       "Transport.RoundTripOpt",
+       "clientConnPool.GetClientConn",
+       "clientConnReadLoop.handleResponse",
+       "noDialClientConnPool.GetClientConn",
+       "noDialH2RoundTripper.NewClientConn",
+       "noDialH2RoundTripper.RoundTrip",
+       "unencryptedTransport.RoundTrip"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.60.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6611",
+    "imports": [
+     {
+      "path": "golang.org/x/net/http2",
+      "symbols": [
+       "ClientConn.Close",
+       "ClientConn.Ping",
+       "ClientConn.RoundTrip",
+       "ClientConn.Shutdown",
+       "ClientConn.addStreamLocked",
+       "ConfigureServer",
+       "ConfigureTransport",
+       "ConfigureTransports",
+       "ConnectionError.Error",
+       "ErrCode.String",
+       "FrameHeader.String",
+       "FrameType.String",
+       "FrameWriteRequest.Consume",
+       "FrameWriteRequest.String",
+       "Framer.ReadFrame",
+       "Framer.ReadFrameForHeader",
+       "Framer.ReadFrameHeader",
+       "Framer.WriteContinuation",
+       "Framer.WriteData",
+       "Framer.WriteDataPadded",
+       "Framer.WriteGoAway",
+       "Framer.WriteHeaders",
+       "Framer.WritePing",
+       "Framer.WritePriority",
+       "Framer.WritePriorityUpdate",
+       "Framer.WritePushPromise",
+       "Framer.WriteRSTStream",
+       "Framer.WriteRawFrame",
+       "Framer.WriteSettings",
+       "Framer.WriteSettingsAck",
+       "Framer.WriteWindowUpdate",
+       "GoAwayError.Error",
+       "ReadFrameHeader",
+       "Server.ServeConn",
+       "Server.serveConn",
+       "Setting.String",
+       "SettingID.String",
+       "SettingsFrame.ForeachSetting",
+       "StreamError.Error",
+       "Transport.CloseIdleConnections",
+       "Transport.NewClientConn",
+       "Transport.RoundTrip",
+       "Transport.RoundTripOpt",
+       "Transport.newClientConn",
+       "bufferedWriter.Flush",
+       "bufferedWriter.Write",
+       "bufferedWriterTimeoutWriter.Write",
+       "chunkWriter.Write",
+       "clientConnPool.GetClientConn",
+       "clientConnReadLoop.processSettingsNoWrite",
+       "clientConnReadLoop.processWindowUpdate",
+       "clientConnReadLoop.streamByID",
+       "clientStream.awaitFlowControl",
+       "clientStream.cleanupWriteRequest",
+       "connError.Error",
+       "dataBuffer.Read",
+       "duplicatePseudoHeaderError.Error",
+       "gzipReader.Close",
+       "gzipReader.Read",
+       "headerFieldNameError.Error",
+       "headerFieldValueError.Error",
+       "netHTTPClientConn.Close",
+       "netHTTPClientConn.RoundTrip",
+       "noDialClientConnPool.GetClientConn",
+       "noDialH2RoundTripper.NewClientConn",
+       "noDialH2RoundTripper.RoundTrip",
+       "outflow.add",
+       "outflow.available",
+       "outflow.setConnFlow",
+       "outflow.take",
+       "pipe.Read",
+       "priorityWriteSchedulerRFC7540.CloseStream",
+       "priorityWriteSchedulerRFC7540.OpenStream",
+       "priorityWriteSchedulerRFC7540.Pop",
+       "priorityWriteSchedulerRFC9218.OpenStream",
+       "priorityWriteSchedulerRFC9218.Pop",
+       "pseudoHeaderError.Error",
+       "randomWriteScheduler.Pop",
+       "requestBody.Close",
+       "requestBody.Read",
+       "responseWriter.Flush",
+       "responseWriter.FlushError",
+       "responseWriter.Push",
+       "responseWriter.SetReadDeadline",
+       "responseWriter.SetWriteDeadline",
+       "responseWriter.Write",
+       "responseWriter.WriteHeader",
+       "responseWriter.WriteString",
+       "roundRobinWriteScheduler.OpenStream",
+       "roundRobinWriteScheduler.Pop",
+       "serverConn.CloseConn",
+       "serverConn.Flush",
+       "serverConn.newStream",
+       "serverConn.processSettingInitialWindowSize",
+       "serverConn.processWindowUpdate",
+       "serverConn.scheduleFrameWrite",
+       "stickyErrWriter.Write",
+       "transportResponseBody.Close",
+       "transportResponseBody.Read",
+       "unencryptedTransport.RoundTrip",
+       "writeData.String"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.60.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6612",
+    "imports": [
+     {
+      "path": "golang.org/x/net/http2",
+      "symbols": [
+       "ClientConn.Close",
+       "ClientConn.Ping",
+       "ClientConn.RoundTrip",
+       "ClientConn.Shutdown",
+       "ConfigureServer",
+       "ConfigureTransport",
+       "ConfigureTransports",
+       "ConnectionError.Error",
+       "ErrCode.String",
+       "FrameHeader.String",
+       "FrameType.String",
+       "FrameWriteRequest.String",
+       "Framer.ReadFrame",
+       "Framer.ReadFrameForHeader",
+       "Framer.ReadFrameHeader",
+       "Framer.WriteContinuation",
+       "Framer.WriteData",
+       "Framer.WriteDataPadded",
+       "Framer.WriteGoAway",
+       "Framer.WriteHeaders",
+       "Framer.WritePing",
+       "Framer.WritePriority",
+       "Framer.WritePriorityUpdate",
+       "Framer.WritePushPromise",
+       "Framer.WriteRSTStream",
+       "Framer.WriteRawFrame",
+       "Framer.WriteSettings",
+       "Framer.WriteSettingsAck",
+       "Framer.WriteWindowUpdate",
+       "GoAwayError.Error",
+       "ReadFrameHeader",
+       "Server.ServeConn",
+       "Setting.String",
+       "SettingID.String",
+       "SettingsFrame.ForeachSetting",
+       "StreamError.Error",
+       "Transport.CloseIdleConnections",
+       "Transport.NewClientConn",
+       "Transport.RoundTrip",
+       "Transport.RoundTripOpt",
+       "bufferedWriter.Flush",
+       "bufferedWriter.Write",
+       "bufferedWriterTimeoutWriter.Write",
+       "chunkWriter.Write",
+       "clientConnPool.GetClientConn",
+       "connError.Error",
+       "dataBuffer.Read",
+       "duplicatePseudoHeaderError.Error",
+       "gzipReader.Close",
+       "gzipReader.Read",
+       "headerFieldNameError.Error",
+       "headerFieldValueError.Error",
+       "netHTTPClientConn.Close",
+       "netHTTPClientConn.RoundTrip",
+       "noDialClientConnPool.GetClientConn",
+       "noDialH2RoundTripper.NewClientConn",
+       "noDialH2RoundTripper.RoundTrip",
+       "pipe.Read",
+       "priorityWriteSchedulerRFC7540.CloseStream",
+       "priorityWriteSchedulerRFC7540.OpenStream",
+       "priorityWriteSchedulerRFC9218.OpenStream",
+       "pseudoHeaderError.Error",
+       "requestBody.Close",
+       "requestBody.Read",
+       "responseWriter.Flush",
+       "responseWriter.FlushError",
+       "responseWriter.Push",
+       "responseWriter.SetReadDeadline",
+       "responseWriter.SetWriteDeadline",
+       "responseWriter.Write",
+       "responseWriter.WriteHeader",
+       "responseWriter.WriteString",
+       "roundRobinWriteScheduler.OpenStream",
+       "serverConn.CloseConn",
+       "serverConn.Flush",
+       "serverConn.closeStream",
+       "serverConn.handlerDone",
+       "serverConn.newWriterAndRequest",
+       "serverConn.newWriterAndRequestNoBody",
+       "serverConn.noteBodyRead",
+       "serverConn.processHeaders",
+       "serverConn.runHandler",
+       "serverConn.scheduleHandler",
+       "stickyErrWriter.Write",
+       "transportResponseBody.Close",
+       "transportResponseBody.Read",
+       "unencryptedTransport.RoundTrip",
+       "writeData.String"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.60.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6617",
+    "imports": [
+     {
+      "path": "golang.org/x/net/http2",
+      "symbols": [
+       "ClientConn.Close",
+       "ClientConn.Ping",
+       "ClientConn.RoundTrip",
+       "ClientConn.Shutdown",
+       "ConfigureServer",
+       "ConfigureTransport",
+       "ConfigureTransports",
+       "ConnectionError.Error",
+       "ErrCode.String",
+       "FrameHeader.String",
+       "FrameType.String",
+       "FrameWriteRequest.String",
+       "Framer.ReadFrame",
+       "Framer.ReadFrameForHeader",
+       "Framer.ReadFrameHeader",
+       "Framer.WriteContinuation",
+       "Framer.WriteData",
+       "Framer.WriteDataPadded",
+       "Framer.WriteGoAway",
+       "Framer.WriteHeaders",
+       "Framer.WritePing",
+       "Framer.WritePriority",
+       "Framer.WritePriorityUpdate",
+       "Framer.WritePushPromise",
+       "Framer.WriteRSTStream",
+       "Framer.WriteRawFrame",
+       "Framer.WriteSettings",
+       "Framer.WriteSettingsAck",
+       "Framer.WriteWindowUpdate",
+       "GoAwayError.Error",
+       "ReadFrameHeader",
+       "Server.ServeConn",
+       "Setting.String",
+       "SettingID.String",
+       "SettingsFrame.ForeachSetting",
+       "StreamError.Error",
+       "Transport.CloseIdleConnections",
+       "Transport.NewClientConn",
+       "Transport.RoundTrip",
+       "Transport.RoundTripOpt",
+       "bufferedWriter.Flush",
+       "bufferedWriter.Write",
+       "bufferedWriterTimeoutWriter.Write",
+       "chunkWriter.Write",
+       "clientConnPool.GetClientConn",
+       "connError.Error",
+       "dataBuffer.Read",
+       "duplicatePseudoHeaderError.Error",
+       "gzipReader.Close",
+       "gzipReader.Read",
+       "headerFieldNameError.Error",
+       "headerFieldValueError.Error",
+       "netHTTPClientConn.Close",
+       "netHTTPClientConn.RoundTrip",
+       "noDialClientConnPool.GetClientConn",
+       "noDialH2RoundTripper.NewClientConn",
+       "noDialH2RoundTripper.RoundTrip",
+       "pipe.Read",
+       "priorityWriteSchedulerRFC7540.CloseStream",
+       "priorityWriteSchedulerRFC7540.OpenStream",
+       "priorityWriteSchedulerRFC9218.OpenStream",
+       "pseudoHeaderError.Error",
+       "requestBody.Close",
+       "requestBody.Read",
+       "responseWriter.Flush",
+       "responseWriter.FlushError",
+       "responseWriter.Push",
+       "responseWriter.SetReadDeadline",
+       "responseWriter.SetWriteDeadline",
+       "responseWriter.Write",
+       "responseWriter.WriteHeader",
+       "responseWriter.WriteString",
+       "roundRobinWriteScheduler.OpenStream",
+       "serverConn.CloseConn",
+       "serverConn.Flush",
+       "serverConn.processSetting",
+       "serverConn.startFrameWrite",
+       "stickyErrWriter.Write",
+       "transportResponseBody.Close",
+       "transportResponseBody.Read",
+       "unencryptedTransport.RoundTrip",
+       "writeData.String"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.60.0"
+     }
+    ]
+   }
+  ],
+  "golang.org/x/oauth2": [
+   {
+    "id": "GO-2025-3488",
+    "imports": [
+     {
+      "path": "golang.org/x/oauth2/jws",
+      "symbols": [
+       "Verify"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.27.0"
+     }
+    ]
+   }
+  ],
+  "golang.org/x/sys": [
+   {
+    "id": "GO-2022-0493",
+    "imports": [
+     {
+      "path": "golang.org/x/sys/unix",
+      "symbols": [
+       "Faccessat"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.0.0-20220412211240-33da011f77ad"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5024",
+    "imports": [
+     {
+      "path": "golang.org/x/sys/windows",
+      "symbols": [
+       "NewNTUnicodeString"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.44.0"
+     }
+    ]
+   }
+  ],
+  "golang.org/x/text": [
+   {
+    "id": "GO-2020-0015",
+    "imports": [
+     {
+      "path": "golang.org/x/text/encoding/unicode",
+      "symbols": [
+       "bomOverride.Transform",
+       "utf16Decoder.Transform"
+      ]
+     },
+     {
+      "path": "golang.org/x/text/transform",
+      "symbols": [
+       "String"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.3.3"
+     }
+    ]
+   },
+   {
+    "id": "GO-2021-0113",
+    "imports": [
+     {
+      "path": "golang.org/x/text/language",
+      "symbols": [
+       "MatchStrings",
+       "MustParse",
+       "Parse",
+       "ParseAcceptLanguage"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.3.7"
+     }
+    ]
+   },
+   {
+    "id": "GO-2022-1059",
+    "imports": [
+     {
+      "path": "golang.org/x/text/language",
+      "symbols": [
+       "MatchStrings",
+       "ParseAcceptLanguage"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.3.8"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-5970",
+    "imports": [
+     {
+      "path": "golang.org/x/text/unicode/norm",
+      "symbols": [
+       "Form.Append",
+       "Form.AppendString",
+       "Form.Bytes",
+       "Form.FirstBoundary",
+       "Form.FirstBoundaryInString",
+       "Form.IsNormal",
+       "Form.IsNormalString",
+       "Form.LastBoundary",
+       "Form.NextBoundary",
+       "Form.NextBoundaryInString",
+       "Form.Properties",
+       "Form.PropertiesString",
+       "Form.QuickSpan",
+       "Form.QuickSpanString",
+       "Form.Span",
+       "Form.SpanString",
+       "Form.String",
+       "Form.Transform",
+       "Iter.Init",
+       "Iter.InitString",
+       "Iter.Next",
+       "Iter.Seek",
+       "nextComposed",
+       "normReader.Read",
+       "normWriter.Write"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.39.0"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6629",
+    "imports": [
+     {
+      "path": "golang.org/x/text/secure/precis",
+      "symbols": [
+       "Profile.Append",
+       "Profile.AppendCompareKey",
+       "Profile.Bytes",
+       "Profile.Compare",
+       "Profile.CompareKey",
+       "Profile.NewTransformer",
+       "Profile.String",
+       "Transformer.Bytes",
+       "Transformer.String",
+       "Transformer.Transform",
+       "nickAdditionalMapping.Transform"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "0.41.0"
+     }
+    ]
+   }
+  ],
+  "google.golang.org/grpc": [
+   {
+    "id": "GO-2023-2153",
+    "imports": [
+     {
+      "path": "google.golang.org/grpc/internal/transport",
+      "symbols": [
+       "NewServerTransport"
+      ]
+     },
+     {
+      "path": "google.golang.org/grpc",
+      "symbols": [
+       "NewServer",
+       "Server.Serve",
+       "Server.initServerWorkers"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.56.3"
+     },
+     {
+      "introduced": "1.57.0"
+     },
+     {
+      "fixed": "1.57.1"
+     },
+     {
+      "introduced": "1.58.0"
+     },
+     {
+      "fixed": "1.58.3"
+     }
+    ]
+   },
+   {
+    "id": "GO-2024-2978",
+    "imports": [
+     {
+      "path": "google.golang.org/grpc/metadata",
+      "symbols": [
+       "MD.String"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "1.64.0"
+     },
+     {
+      "fixed": "1.64.1"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-4762",
+    "imports": [
+     {
+      "path": "google.golang.org/grpc",
+      "symbols": [
+       "Server.Serve",
+       "Server.ServeHTTP",
+       "Server.handleStream"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.79.3"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6061",
+    "imports": [
+     {
+      "path": "google.golang.org/grpc/internal/transport",
+      "symbols": [
+       "ClientStream.Close",
+       "ClientStream.Header",
+       "ClientStream.Read",
+       "ClientStream.RecvCompress",
+       "ClientStream.TrailersOnly",
+       "ClientStream.Write",
+       "NewHTTP2Client",
+       "NewServerTransport",
+       "ServerStream.Read",
+       "ServerStream.SendHeader",
+       "ServerStream.Write",
+       "ServerStream.WriteStatus",
+       "Stream.ReadMessageHeader",
+       "controlBuffer.executeAndPut",
+       "controlBuffer.getOnceLocked",
+       "http2Client.Close",
+       "http2Client.GracefulClose",
+       "http2Client.NewStream",
+       "http2Server.Drain",
+       "http2Server.HandleStreams",
+       "recvBufferReader.Read",
+       "recvBufferReader.ReadMessageHeader",
+       "transportReader.Read",
+       "transportReader.ReadMessageHeader"
+      ]
+     },
+     {
+      "path": "google.golang.org/grpc/internal/xds/rbac",
+      "symbols": [
+       "ChainEngine.IsAuthorized",
+       "NewChainEngine",
+       "matchersFromPermissions",
+       "matchersFromPrincipals"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.82.1"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6348",
+    "imports": [
+     {
+      "path": "google.golang.org/grpc/internal/transport",
+      "symbols": [
+       "ClientStream.Close",
+       "ClientStream.Header",
+       "ClientStream.Read",
+       "ClientStream.RecvCompress",
+       "ClientStream.TrailersOnly",
+       "NewHTTP2Client",
+       "NewServerTransport",
+       "ServerStream.Read",
+       "Stream.ReadMessageHeader",
+       "http2Client.Close",
+       "http2Client.GracefulClose",
+       "http2Client.NewStream",
+       "http2Client.newStream",
+       "http2Server.Close",
+       "http2Server.HandleStreams",
+       "http2Server.operateHeaders",
+       "recvBuffer.init",
+       "recvBuffer.load",
+       "recvBuffer.put",
+       "recvBufferReader.Read",
+       "recvBufferReader.ReadMessageHeader",
+       "serverHandlerTransport.HandleStreams",
+       "transportReader.Read",
+       "transportReader.ReadMessageHeader"
+      ]
+     },
+     {
+      "path": "google.golang.org/grpc/mem",
+      "symbols": [
+       "BufferSlice.MaterializeToBuffer",
+       "Copy",
+       "IsBelowBufferPoolingThreshold",
+       "NewBuffer",
+       "ReadAll",
+       "writer.Write"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.83.1"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6441",
+    "imports": [
+     {
+      "path": "google.golang.org/grpc/internal/xds/httpfilter/rbac",
+      "symbols": [
+       "builder.ParseFilterConfig",
+       "builder.ParseFilterConfigOverride",
+       "parseConfig"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.83.1"
+     }
+    ]
+   },
+   {
+    "id": "GO-2026-6443",
+    "imports": [
+     {
+      "path": "google.golang.org/grpc/internal/transport",
+      "symbols": [
+       "http2Server.HandleStreams",
+       "http2Server.operateHeaders"
+      ]
+     },
+     {
+      "path": "google.golang.org/grpc/internal/xds/server",
+      "symbols": [
+       "RouteAndProcess"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.82.2"
+     },
+     {
+      "introduced": "1.83.0"
+     },
+     {
+      "fixed": "1.83.2"
+     },
+     {
+      "introduced": "1.84.0-dev"
+     },
+     {
+      "fixed": "1.84.0-dev.0.20260825144003-d5a41119e0e3"
+     },
+     {
+      "introduced": "1.85.0-dev"
+     },
+     {
+      "fixed": "1.85.0-dev.0.20260825072537-93e31b48545e"
+     }
+    ]
+   }
+  ],
+  "google.golang.org/protobuf": [
+   {
+    "id": "GO-2023-1631",
+    "imports": [
+     {
+      "path": "google.golang.org/protobuf/encoding/prototext",
+      "symbols": [
+       "Unmarshal",
+       "UnmarshalOptions.Unmarshal",
+       "UnmarshalOptions.unmarshal"
+      ]
+     },
+     {
+      "path": "google.golang.org/protobuf/internal/encoding/text",
+      "symbols": [
+       "Decoder.Peek",
+       "Decoder.Read",
+       "parseNumber"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "1.29.0"
+     },
+     {
+      "fixed": "1.29.1"
+     }
+    ]
+   },
+   {
+    "id": "GO-2024-2611",
+    "imports": [
+     {
+      "path": "google.golang.org/protobuf/encoding/protojson",
+      "symbols": [
+       "Unmarshal",
+       "UnmarshalOptions.Unmarshal",
+       "UnmarshalOptions.unmarshal"
+      ]
+     },
+     {
+      "path": "google.golang.org/protobuf/internal/encoding/json",
+      "symbols": [
+       "Decoder.Peek",
+       "Decoder.Read"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0"
+     },
+     {
+      "fixed": "1.33.0"
+     }
+    ]
+   }
+  ]
+ }
+}

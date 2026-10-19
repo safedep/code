@@ -18,10 +18,13 @@ type Cargo struct {
 	problems     problems
 }
 
-// Crate is one package of a Cargo.toml.
+// Crate is one package of a Cargo.toml. Renames maps the name that the
+// crate writes for a dependency to the name of its package, as helper to
+// kit for helper = { package = "kit" }.
 type Crate struct {
-	Dir  string
-	Name string
+	Dir     string
+	Name    string
+	Renames map[string]string
 }
 
 // NewCargo reads the Cargo.toml of each directory of the file set. The name
@@ -41,10 +44,11 @@ func NewCargo(files *Files, root fs.FS) *Cargo {
 			c.problems.add(name, err)
 			continue
 		}
+		pairs := ScanTOML(data)
 		if crate := cargoCrate(data); crate != "" {
-			c.crates = append(c.crates, Crate{Dir: d, Name: strings.ReplaceAll(crate, "-", "_")})
+			c.crates = append(c.crates, Crate{Dir: d, Name: crateName(crate), Renames: cargoRenames(pairs)})
 		}
-		for _, pair := range ScanTOML(data) {
+		for _, pair := range pairs {
 			if name, ok := cargoDependency(pair); ok && !slices.Contains(c.dependencies, name) {
 				c.dependencies = append(c.dependencies, name)
 			}
@@ -70,6 +74,43 @@ func cargoCrate(data []byte) string {
 	return cmp.Or(names["lib"], names["package"])
 }
 
+// cargoRenames returns the dependencies that a Cargo.toml renames with the
+// package key, inline as helper = { package = "kit" } or in a
+// [dependencies.helper] table. Both names are as a path writes them.
+func cargoRenames(pairs []TOMLPair) map[string]string {
+	var renames map[string]string
+	for _, pair := range pairs {
+		name, ok := cargoDependency(pair)
+		if !ok {
+			continue
+		}
+		pkg := ""
+		if inline, ok := TOMLInlineTable(pair.Value); ok && name == pair.Key {
+			for _, p := range inline {
+				if p.Key == "package" {
+					pkg = p.Value
+				}
+			}
+		} else if pair.Key == "package" && name != pair.Key {
+			pkg, _ = TOMLString(pair.Value)
+		}
+		if pkg == "" {
+			continue
+		}
+		if renames == nil {
+			renames = map[string]string{}
+		}
+		renames[crateName(name)] = crateName(pkg)
+	}
+	return renames
+}
+
+// crateName returns the name that a path writes for a package, as
+// serde_json for serde-json.
+func crateName(name string) string {
+	return strings.ReplaceAll(name, "-", "_")
+}
+
 // Problems returns the Cargo.toml files that the reader could not read.
 func (c *Cargo) Problems() []Problem { return c.problems }
 
@@ -84,6 +125,17 @@ func (c *Cargo) Crate(file string) (Crate, bool) {
 		}
 	}
 	return Crate{}, false
+}
+
+// Rename returns the package that a file names by a crate name: the
+// package of a rename in the Cargo.toml of the file, or else the name.
+func (c *Cargo) Rename(file, name string) string {
+	if crate, ok := c.Crate(file); ok {
+		if pkg, ok := crate.Renames[name]; ok {
+			return pkg
+		}
+	}
+	return name
 }
 
 // Has reports whether a crate of the project has the name.

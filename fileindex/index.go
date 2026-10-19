@@ -19,7 +19,7 @@ import (
 // Version is the version of the index records and of the rules that fill
 // them. Bump it when a field, a kind, an order or a fill rule changes. A
 // store keys an index by Version, so the bump makes every older index miss.
-const Version = "11"
+const Version = "14"
 
 // DefaultTestPaths are the globs that mark the test files of the common
 // layouts, as projectgraph.Options.TestPaths takes them. A glob with no "/"
@@ -88,6 +88,16 @@ const (
 	UnresolvedNoDefinition    UnresolvedReason = "no-definition"
 	UnresolvedAmbiguous       UnresolvedReason = "ambiguous"
 	UnresolvedLimit           UnresolvedReason = "limit"
+	// UnresolvedInterfaceReceiver is a call on a value of an interface
+	// type that no type of the graph implements, so its code is elsewhere.
+	UnresolvedInterfaceReceiver UnresolvedReason = "interface-receiver"
+	// UnresolvedTraitReceiver is a call on a Rust trait object or a value
+	// of a generic bound that no type of the graph implements.
+	UnresolvedTraitReceiver UnresolvedReason = "trait-receiver"
+	// UnresolvedNoDependencySource is a call on a value whose type comes
+	// from a package with no code in the graph, as the result of a
+	// function of a module that no unit gives.
+	UnresolvedNoDependencySource UnresolvedReason = "no-dependency-source"
 )
 
 type FlagKind string
@@ -204,8 +214,12 @@ type Export struct {
 //
 // Arity, Variadic and Returns hold the signature of a Go function or
 // method: the count of its parameters, a last parameter of the form ...T,
-// and the type name of its first result. Static marks a static method of
-// Java.
+// and the type name of its first result. Results holds the type name of
+// each result of a Go function with two or more results, by position, and
+// "" for a result with no named type. Wraps names the Option or the Result
+// that holds the result of a Rust function, and Returns then names the
+// type inside, as Thing for -> Option<Thing>. Static marks a static method
+// of Java.
 type Definition struct {
 	Key        string   `json:"key"`
 	Kind       DefKind  `json:"kind"`
@@ -221,6 +235,8 @@ type Definition struct {
 	Arity      int      `json:"arity,omitempty"`
 	Variadic   bool     `json:"variadic,omitempty"`
 	Returns    string   `json:"returns,omitempty"`
+	Results    []string `json:"results,omitempty"`
+	Wraps      string   `json:"wraps,omitempty"`
 	Static     bool     `json:"static,omitempty"`
 	Flags      []Flag   `json:"flags,omitempty"`
 }
@@ -250,12 +266,14 @@ type Signature struct {
 // Typed is a parameter, a field or a local variable with the type that it
 // declares, as parser in run(parser: Parser). Type is the type name as
 // written, with no type arguments and no pointer, as Parser or ns.Parser.
-// Result marks a name that holds the first result of a call. Type then
-// names the function, as NewParser in p := NewParser().
+// Result marks a name that holds a result of a call. Type then names the
+// function, as NewParser in p := NewParser(), and Index is the position of
+// the result, as 1 for err in p, err := NewParser().
 type Typed struct {
 	Name   string `json:"name"`
 	Type   string `json:"type"`
 	Result bool   `json:"result,omitempty"`
+	Index  int    `json:"index,omitempty"`
 }
 
 // Call is one call site. Caller is the definition key that holds the site.
@@ -600,6 +618,8 @@ func (ix *Index) EachString(fn func(string) string) {
 		typed(def.Params)
 		typed(def.Locals)
 		kind(&def.Returns)
+		strs(def.Results)
+		kind(&def.Wraps)
 		flags(def.Flags)
 	}
 	for i := range ix.Classes {

@@ -1,5 +1,5 @@
 source: safedep:hand
-description: src/main.js passes the imported load to Array.map and the first-party parse to Promise.then. Each reference makes its function possibly called.
+description: src/main.js passes the imported load to Array.map and the first-party parse to Promise.then. Each reference makes its function possibly called. The call of then is a call on the result of Promise.resolve, whose type the link step does not know with no code of Promise, so the site keeps a record with the reason no-dependency-source.
 roots:
   - key: src/main.js
     kind: manifest
@@ -15,7 +15,11 @@ edges:
     kind: reference
     confidence: low
     site: src/main.js:5
-unresolved: []
+unresolved:
+  - caller: src/main.js
+    site: src/main.js:5
+    reason: no-dependency-source
+    method: then
 results:
   - target: js-yaml//load
     status: found

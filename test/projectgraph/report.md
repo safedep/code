@@ -854,3 +854,186 @@ cases and 82.2% for Jelly on swarm-js. This report did not run PyCG or Jelly,
 and its exact-cases metric counts whole cases, so the numbers do not compare
 one to one. The recall gate of the design needs a run of PyCG and Jelly on
 the same cases.
+
+## Method targets
+
+This section measures how often a target of a vulnerable function or
+method of a dependency ends uncertain on real projects. `README.md` says
+how to run it. The "before" run is from the commit that adds this
+section, on 2026-10-19, on the machine above.
+
+### The corpus
+
+`public/methods/corpus.txt` lists 10 Go projects and 10 Rust projects.
+Each one depends on a module or a crate with function or method symbols
+in an advisory. `public/methods/advisories.json` holds the advisories of
+these dependencies: the Go vulndb (`vuln.go.dev`) and RustSec through
+OSV, as of 2026-10-19.
+
+| Language | Projects | Dependencies with an advisory |
+| --- | --- | --- |
+| Go | bluemonday v1.0.16, goquery v1.8.0, colly v2.1.0, hey v0.1.4, melody v1.1.1, scany v2.0.0, fiber v2.40.0, sftp v1.13.5, go-grpc-middleware v1.3.0, go-rabbitmq v0.12.1 | golang.org/x/net, golang.org/x/crypto, golang.org/x/text, golang.org/x/sys, golang.org/x/oauth2, github.com/antchfx/xpath, github.com/antchfx/xmlquery, google.golang.org/protobuf, google.golang.org/grpc, github.com/gorilla/websocket, github.com/jackc/pgx/v5, github.com/valyala/fasthttp, github.com/sirupsen/logrus, github.com/rabbitmq/amqp091-go |
+| Rust | postgres 0.19.7, parking_lot 0.11.0, native-tls 0.2.10, cookie 0.14.4, imageproc 0.21.0, cssparser 0.27.2, selectors 0.22.0, tokio-postgres 0.7.7, lettre_email 0.9.4, rusqlite_migration 0.5.0 | tokio, tokio-postgres, postgres-protocol, lock_api, openssl, time, rand, image, rulinalg, smallvec, lettre, rusqlite |
+
+A Go dependency has the version that the go.mod of the project names. A
+Rust dependency has the newest version that the requirement of the
+Cargo.toml admits and that an advisory affects, as a lock file at a
+vulnerable version would pin it. The code of each such dependency is a
+unit of the link step. Every symbol of an advisory that affects the
+version of a dependency is a target. A Go advisory with no symbol list
+covers its whole package and gives no target. A Rust name with type
+arguments is no key and gives no target. A Rust name whose last segment
+starts with an upper case letter is a type, and the table counts it as
+`other`.
+
+The test runs no network call and the corpus is not in the repository,
+so a run needs `scripts/fetch_method_corpus.sh` first. The real Go
+standard library is not in the corpus, so the measure has no target of
+the standard library.
+
+### What the columns mean
+
+A target ends as `found`, `not-found`, `no-such-target` or `uncertain`.
+An uncertain target has one cause. When the search from the roots
+reaches an unresolved call whose method name is the last segment of the
+target, the cause is the reason of that call, and `unknown-receiver`
+wins over another reason. Else the cause is the first uncertainty of the
+result, as `budget`, `ambiguous` or `computed-name`. A library project
+has no main, so every exported symbol is a root.
+
+### Results
+
+The "before" rows come from the commit of FOU-542, before any fix of this
+measure. The "FOU-543" rows come from the commit of FOU-543, which also
+holds the fixes of FOU-545, FOU-546 and FOU-547 before it. The "FOU-544"
+rows come from the commit of FOU-544. The Rust rows of FOU-543 and the Go
+function row of FOU-544 do not change, so the table leaves them out.
+
+| Language | Kind | Run | Targets | found | not-found | no-such-target | unknown-receiver | no-definition | interface-receiver | no-dependency-source | budget | ambiguous | computed-name |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Go | function | before | 256 | 13 | 0 | 7 | 3 | 1 | 0 | 0 | 145 | 53 | 34 |
+| Go | function | FOU-543 | 256 | 13 | 0 | 7 | 3 | 0 | 0 | 3 | 39 | 132 | 59 |
+| Go | method | before | 1298 | 29 | 2 | 15 | 294 | 119 | 0 | 0 | 576 | 158 | 105 |
+| Go | method | FOU-543 | 1298 | 30 | 2 | 15 | 319 | 112 | 3 | 2 | 123 | 459 | 233 |
+| Go | method | FOU-544 | 1298 | 30 | 2 | 15 | 320 | 112 | 3 | 2 | 123 | 459 | 232 |
+| Rust | function | before | 13 | 0 | 0 | 10 | 3 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Rust | function | FOU-544 | 13 | 1 | 0 | 5 | 0 | 5 | 0 | 0 | 0 | 2 | 0 |
+| Rust | method | before | 38 | 0 | 1 | 19 | 13 | 5 | 0 | 0 | 0 | 0 | 0 |
+| Rust | method | FOU-544 | 38 | 0 | 0 | 7 | 11 | 11 | 0 | 0 | 0 | 9 | 0 |
+| Rust | other | before | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Rust | other | FOU-544 | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+| Language | Run | Method targets that end as unknown-receiver |
+| --- | --- | --- |
+| Go | before | 0.227 (294/1298) |
+| Go | FOU-543 | 0.246 (319/1298) |
+| Go | FOU-544 | 0.247 (320/1298) |
+| Rust | before | 0.342 (13/38) |
+| Rust | FOU-544 | 0.289 (11/38) |
+
+Before:
+
+- Go: `budget` is the largest cause. The index of each
+  `idna/tables*.go` of x/net hits a limit, so the file is truncated. Each
+  `gen.go` of x/net has `//go:build ignore` and `package main`, so the
+  link step records a truncation for it. A `_test.go` file of x/crypto is
+  truncated too. The budget of a file of a unit concerns every target
+  once the search enters the unit. hey has 47 truncations and scany 55.
+- Go: an `ambiguous` or a `computed-name` call concerns every target.
+  These calls come from the code of a dependency unit, as pgx and
+  amqp091-go, and from the project, as fiber and go-grpc-middleware.
+- Rust: the link step does not link the code of a `cargo:` unit, so the
+  graph holds no edge into the crate. A target that no project file names
+  is `no-such-target`.
+
+After FOU-543:
+
+- Go: no project has a truncation of the link step. The graphs of the 10
+  Go projects hold 5,286 files, 68% of the 7,810 of before, because the
+  index step leaves out the test files and the files that no Go build
+  reads by default. It keeps the files of every platform. `budget`
+  falls from 576 to 123 method targets. The rest is scany: two
+  `tables.go` files of x/text are over the size limit of the index step,
+  so they fail.
+- Go: with less budget, the first uncertainty of a result is more often
+  an `ambiguous` or a `computed-name` call of the code of a unit, which
+  concerns every target. So these columns grow, and the share of
+  `unknown-receiver` grows a little. The search reaches more code of the
+  units through the new edges, and more call sites with an unknown
+  receiver.
+- Go: `found` moves from 29 to 30 method targets. Most symbols of an
+  advisory are methods that the code of the dependency calls inside its
+  own module, as the methods of the HTTP/2 server of x/net. A call inside
+  a unit goes to the definition of the method and not to its external key,
+  so the search reaches the definition and never meets the target, which
+  is the external key. The target reads as uncertain when an unresolved
+  call concerns it, and as not-found when a call of the project that no
+  root reaches names it. FOU-555 fixes the match. The receiver forms of FOU-543 make the
+  calls of the project find the method, as the receiver table and the
+  cases show. They do not change how a target matches code inside a unit.
+- The measure has no target of the standard library. The Go vulndb has
+  the most method symbols for it, and FOU-543 adds `GOROOT/src` as a unit,
+  but the corpus pins no Go release.
+
+After FOU-544:
+
+- Rust: the link step links the code of each crate. The 10 Rust graphs
+  hold 1,389 files, against 193 of before, and no project has a problem
+  of a crate that the link step does not link.
+- Rust: `no-such-target` falls from 19 to 7 method targets and from 10 to
+  5 function targets, because the graph now holds the keys of the crates.
+  lettre_email finds one function target. The other targets end
+  uncertain, with an unknown receiver, a call of a name with no
+  definition, or an `ambiguous` call that the search reaches. As for Go,
+  a target that only the code of its own crate calls reads as uncertain,
+  because a call inside a unit goes to the definition and not to the
+  external key.
+- Rust: the five `other` targets of parking_lot name types of lock_api,
+  as `lock_api::MappedMutexGuard`. A type has no call, so they stay
+  `no-such-target`.
+- Go: the rows move by one target between two causes, because a result
+  type of an external walk is now always its external key.
+
+After the review fixes of FOU-544 and FOU-547, the measure gives the same
+counts as the FOU-544 rows. The index now keeps the files of every
+platform and the bodies of generated files, which changes the graphs and
+not the first uncertainty of any result.
+
+The `unknown-receiver` share counts a target when any reached site has an
+unresolved receiver with the method name of the target, also a site
+inside a unit. More reached code of the units gives more name matches on
+`Next`, `Read` or `ServeHTTP`. So the share rises as the search reaches
+more code, and it is not a measure of the receiver forms. The receiver
+table of FOU-542 measures those, and every row of it is found.
+
+After FOU-555:
+
+| Language | Kind | Targets | found | not-found | no-such-target | unknown-receiver | no-definition | interface-receiver | no-dependency-source | budget | ambiguous | computed-name |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Go | function | 256 | 51 | 0 | 0 | 3 | 5 | 0 | 2 | 39 | 106 | 50 |
+| Go | method | 1298 | 331 | 0 | 0 | 154 | 71 | 2 | 2 | 109 | 416 | 213 |
+| Rust | function | 13 | 4 | 0 | 0 | 0 | 9 | 0 | 0 | 0 | 0 | 0 |
+| Rust | method | 38 | 16 | 0 | 0 | 0 | 13 | 0 | 0 | 9 | 0 | 0 |
+| Rust | other | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+- A target now matches each definition of a unit whose external key is the
+  target, so a target that only the code of its unit calls is found
+  through the definition. `found` moves from 30 to 331 Go method targets,
+  from 13 to 51 Go function targets, and from 0 to 16 Rust method targets.
+  The share of Go method targets that end as `unknown-receiver` falls from
+  0.247 to 0.119, and no target is `no-such-target` any more for Go.
+- The match first gave 8 Rust targets as `not-found`. cookie calls
+  `rand::thread_rng` from its public `Key::generate`, but its `build.rs`
+  was the only root, so the library-surface roots were off. A build
+  script, an example or a benchmark of a Rust crate is now a helper
+  program. Its root stays, and it does not turn off the library-surface
+  roots. No target of the measure is `not-found` now.
+- cookie reaches `rand::thread_rng` through the code of rand, not through
+  its own call `crate::secure::rand::thread_rng()`. The link step does not
+  read `extern crate rand;` in a submodule. The path is longer, and the
+  answer is the same.
+
+
+After the fixes for the review of PR 53, the measure gives the same
+numbers. No project of the corpus renames a Cargo dependency, and no
+function of a dependency has two platform twins with two result types.

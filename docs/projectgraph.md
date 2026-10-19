@@ -63,6 +63,22 @@ and no source text past a short call text.
 files of dependency code, and the report of the run. `Result.Unit` returns
 the indexes and the files of one unit of dependency code.
 
+A generated Go file of a unit, with a `// Code generated ... DO NOT EDIT.`
+line or a name that starts with `tables`, can hit a limit of the index,
+as a table of thousands of entries. Its index then comes from the file
+with each top-level var value that holds only data blanked. Function bodies
+and values with a call or a function literal stay, so the calls of a
+generated file, as a `.pb.go` file, stay in the graph. The index keeps the
+hash of the file. If the skeleton still hits a limit, the file stays
+truncated, and reach counts it as budget.
+
+The index leaves out a Go file of a unit only when no Go build reads it by
+default: a `_test.go` file, a file with `//go:build ignore`, and a file
+whose constraint needs a tag that the go command never sets, as `purego`.
+It keeps the files of every GOOS and GOARCH, so a reach answer holds for
+each platform that a project builds for. `Result.Excluded` lists the files
+that it leaves out.
+
 When the context ends, `Run` stops, marks each file that it did not index
 as `missing` and returns the result so far with the error of the context.
 The link step takes the partial result, and the reach query reports each
@@ -147,8 +163,70 @@ of the highest confidence.
 
 A call that the link step cannot resolve is an unresolved site with a
 reason: `computed-name`, `dynamic-import`, `unknown-receiver`,
-`no-definition`, `ambiguous` or `limit`. The site keeps the method name of
-the call, so the reach query can tell which targets it concerns.
+`no-definition`, `ambiguous`, `limit`, `interface-receiver`,
+`trait-receiver` or `no-dependency-source`. The site keeps the method name of the call, so the
+reach query can tell which targets it concerns.
+
+A call on the result of another call, as `html.NewTokenizer(r).Next()`,
+needs the type of that result. When the link step does not know it, the
+site is a record with the method name, so a target of that method is
+`uncertain` and not `no-such-target`.
+
+### Result types
+
+The Go index records the type name of each result of a function, by
+position, and each name that an assignment or a short variable declaration
+binds to a result, as `z` in `z := html.NewTokenizer(r)` and `err` in
+`n, err := html.Parse(r)`. The blank name `_` binds nothing. The link step
+reads the definition of the function, in the project or in the unit of
+dependency code that gives its package, and binds the type of the result
+to the name. A call on the name then gets the external key of the method
+of the type, as `golang.org//x//net//html//Tokenizer//Next`, and a package
+edge joins the key to the definition in the unit. A chained call, as
+`pkg.F().M()` or `a.B().C()`, takes the type of each result in turn.
+
+| Result | What the call gets |
+| --- | --- |
+| A type of a unit, or of the project | The edge to the method of the type |
+| An interface type | The `cha` edges to the implementations in the graph. An implementation in a unit gets its edge through its external key. With no implementation, the site is a record with the reason `interface-receiver` |
+| A function of a package that no unit gives | A record with the reason `no-dependency-source` |
+| A result with no named type, or a function that the unit does not define | A record with the reason `unknown-receiver` |
+| Two definitions of the function, as in two platform files of a Go package, with two result types | A record with the reason `unknown-receiver`. The walk follows one type, and a method of the other type would be `not-found` |
+
+Rust follows the same rules, with these additions.
+
+- The link step links the code of a `cargo:` unit, as the crate directory
+  in the cargo registry or in `vendor/`. The root module of the crate is
+  the unit, so two versions of one crate stay apart. The external key of
+  an item is the path that another crate writes, and an item of a private
+  module that the root gives on with `pub use` gets the shortest path, as
+  `smallvec//SmallVec`.
+- A Cargo.toml can rename a dependency, as `helper = { package = "kit" }`.
+  A path of the crate writes `helper`, and the link step reads it as the
+  crate `kit` of the unit. The external node keeps the written name, as
+  `helper//serve`, and the package edge goes on to the definition in the
+  unit, whose external key is `kit//serve`.
+- The index records the return type of each function and method, with
+  `Self` as the type of its `impl`. A type drops `&`, `&mut`, `Box<..>`,
+  `Rc<..>`, `Arc<..>` and its type arguments, so `&mut SmallVec<[u8; 4]>`
+  is `SmallVec`. An `Option<T>` or a `Result<T, E>` result keeps `T` in
+  `Returns` and its wrapper in `Wraps`. `unwrap` and `expect` give `T`,
+  and so does a `?`, which the index does not record. A call of another
+  method of the wrapper, as `map`, has no type.
+- A declared type of a parameter, a field or a local that a unit gives
+  binds the receiver. An associated function, as `Type::from_vec(v)`,
+  binds the type that it returns, and `clone`, `to_owned`, `default` and
+  `from` on a type of a unit keep the type also when the crate derives
+  them.
+- A trait object or a generic bound `T: Trait` of a unit gets the `cha`
+  edges to the implementations in the graph, through their external keys.
+  With no implementation, the site is a record with the reason
+  `trait-receiver`.
+
+The standard library is a unit too. Pass `GOROOT/src` as the unit
+`go:std@<version>`, as `-deps $(go env GOROOT)/src=go:std@go1.25.1`. It gives
+each import path whose first element has no dot, as `net/http`. The index
+step leaves out the `cmd` module of it, which no program imports.
 
 ## Overlay
 
@@ -263,6 +341,14 @@ the key, so a query never holds a key that no node can have.
 | `reach.TargetByKey("yaml//load")` | The key, as a configuration or a flag writes it | `yaml//load` |
 | `reach.TargetByImport(langcode.Go, "os/exec", "Command")` | The module as the source of the language writes it, and the names under it | `os//exec//Command` |
 
+A target also matches each function, method and constructor of a unit of
+dependency code whose `Node.External` is the key, as the unexported
+`go:golang.org/x/net@v0.61.0//html/render.go//render1` for
+`golang.org//x//net//html//render1`. A call inside a unit goes to the
+definition and not to the external key, so a target that only the code of
+its unit calls is found through the definition. The call sites of a
+target leave out the package edges, which join a key to its definition.
+
 `reach.TargetsByKey` reads a list of keys. `Target.Key` returns the key,
 and the JSON form of a target is its key. One breadth-first search from
 the roots, and from the sources of the query, serves every target of a
@@ -277,7 +363,7 @@ what the search did.
 | `found` | A path from a root reaches the target. `Path` holds the shortest one |
 | `not-found` | No path reaches the target, and no uncertainty concerns it |
 | `uncertain` | No path reaches the target, and an uncertainty concerns it |
-| `no-such-target` | The key names no external node of the graph, and no uncertainty could name it |
+| `no-such-target` | The key names no external node and no definition of a unit of the graph, and no uncertainty could name it |
 
 `reach.Result.String` writes a result as lines, and `reach.PathString`
 writes a path as `main.py:3 -> handlers.py:12 -> yaml//load`.

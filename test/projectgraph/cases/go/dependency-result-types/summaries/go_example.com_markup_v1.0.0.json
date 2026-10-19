@@ -1,0 +1,81 @@
+{
+  "version": "2",
+  "index_version": "14",
+  "link_version": "16",
+  "unit": "go:example.com/markup@v1.0.0",
+  "symbols": [
+    {
+      "key": "example.com//markup//NewTokenizer",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//token.go//NewTokenizer"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "example.com//markup//Node",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//node.go//Node"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "example.com//markup//Node//Render",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//node.go//Node//Render"
+      ],
+      "reaches": [
+        "os//Remove"
+      ]
+    },
+    {
+      "key": "example.com//markup//Parse",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//node.go//Parse"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "example.com//markup//Text",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//token.go//Text"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "example.com//markup//Text//Close",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//token.go//Text//Close"
+      ],
+      "reaches": [
+        "os//exec//Command"
+      ]
+    },
+    {
+      "key": "example.com//markup//Tokenizer",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//token.go//Tokenizer"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "example.com//markup//Tokenizer//Next",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//token.go//Tokenizer//Next"
+      ],
+      "reaches": [
+        "os//exec//Command"
+      ]
+    },
+    {
+      "key": "example.com//markup//Tokenizer//Raw",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//token.go//Tokenizer//Raw"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": [
+    "os//Remove",
+    "os//exec//Command"
+  ]
+}
