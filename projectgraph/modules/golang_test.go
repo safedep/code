@@ -67,3 +67,23 @@ func TestGolangWithNoModule(t *testing.T) {
 	assert.False(t, g.FirstParty("fmt"), "the root directory names no import path")
 	assert.Empty(t, g.Problems())
 }
+
+func TestGolangStandardLibrary(t *testing.T) {
+	paths := []string{"net/http/client.go", "internal/poll/fd.go", "cmd/go/main.go", "vendor/golang.org/x/net/http2/h2.go"}
+	root := fstest.MapFS{
+		"go.mod":     {Data: []byte("module std\n\ngo 1.25\n")},
+		"cmd/go.mod": {Data: []byte("module cmd\n\ngo 1.25\n")},
+	}
+	g := NewGolang(NewFiles(paths), root, []string{"net/http", "internal/poll", "cmd/go", "vendor/golang.org/x/net/http2"})
+
+	dir, ok := g.Resolve("net/http")
+	assert.True(t, ok)
+	assert.Equal(t, "net/http", dir, "a package of std has its directory as its import path")
+	dir, ok = g.Resolve("cmd/go")
+	assert.True(t, ok)
+	assert.Equal(t, "cmd/go", dir)
+	_, ok = g.Resolve("golang.org/x/net/http2")
+	assert.False(t, ok, "vendor stays external")
+	assert.True(t, g.FirstParty("net/url"))
+	assert.False(t, g.FirstParty("golang.org/x/net/html"))
+}

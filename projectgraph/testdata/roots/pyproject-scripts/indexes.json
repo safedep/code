@@ -1,6 +1,6 @@
 [
   {
-    "version": "12",
+    "version": "13",
     "path": "src/app/cli.py",
     "language": "python",
     "definitions": [
@@ -23,7 +23,7 @@
     ]
   },
   {
-    "version": "12",
+    "version": "13",
     "path": "src/app/tool.py",
     "language": "python",
     "definitions": [
@@ -46,7 +46,7 @@
     ]
   },
   {
-    "version": "12",
+    "version": "13",
     "path": "src/app/plugin.py",
     "language": "python",
     "definitions": [
@@ -78,7 +78,7 @@
     ]
   },
   {
-    "version": "12",
+    "version": "13",
     "path": "src/app/legacy.py",
     "language": "python",
     "definitions": [
@@ -93,7 +93,7 @@
     ]
   },
   {
-    "version": "12",
+    "version": "13",
     "path": "src/app/ignored.py",
     "language": "python",
     "definitions": [

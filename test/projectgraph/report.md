@@ -901,29 +901,67 @@ wins over another reason. Else the cause is the first uncertainty of the
 result, as `budget`, `ambiguous` or `computed-name`. A library project
 has no main, so every exported symbol is a root.
 
-### Before
+### Results
 
-| Language | Kind | Run | Targets | found | not-found | no-such-target | unknown-receiver | no-definition | budget | ambiguous | computed-name |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Go | function | before | 256 | 13 | 0 | 7 | 3 | 1 | 145 | 53 | 34 |
-| Go | method | before | 1298 | 29 | 2 | 15 | 294 | 119 | 576 | 158 | 105 |
-| Rust | function | before | 13 | 0 | 0 | 10 | 3 | 0 | 0 | 0 | 0 |
-| Rust | method | before | 38 | 0 | 1 | 19 | 13 | 5 | 0 | 0 | 0 |
-| Rust | other | before | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
+The "before" rows come from the commit of FOU-542, before any fix of this
+measure. The "FOU-543" rows come from the commit of FOU-543, which also
+holds the fixes of FOU-545, FOU-546 and FOU-547 before it. The Rust rows of
+FOU-543 do not change, so the table leaves them out.
 
-The share of the method targets that end as `unknown-receiver` is 0.227
-(294/1298) for Go and 0.342 (13/38) for Rust.
+| Language | Kind | Run | Targets | found | not-found | no-such-target | unknown-receiver | no-definition | interface-receiver | no-dependency-source | budget | ambiguous | computed-name |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Go | function | before | 256 | 13 | 0 | 7 | 3 | 1 | 0 | 0 | 145 | 53 | 34 |
+| Go | function | FOU-543 | 256 | 13 | 0 | 7 | 3 | 0 | 0 | 3 | 39 | 132 | 59 |
+| Go | method | before | 1298 | 29 | 2 | 15 | 294 | 119 | 0 | 0 | 576 | 158 | 105 |
+| Go | method | FOU-543 | 1298 | 30 | 2 | 15 | 319 | 112 | 3 | 2 | 123 | 459 | 233 |
+| Rust | function | before | 13 | 0 | 0 | 10 | 3 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Rust | method | before | 38 | 0 | 1 | 19 | 13 | 5 | 0 | 0 | 0 | 0 | 0 |
+| Rust | other | before | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+| Language | Run | Method targets that end as unknown-receiver |
+| --- | --- | --- |
+| Go | before | 0.227 (294/1298) |
+| Go | FOU-543 | 0.246 (319/1298) |
+| Rust | before | 0.342 (13/38) |
+
+Before:
 
 - Go: `budget` is the largest cause. The index of each
   `idna/tables*.go` of x/net hits a limit, so the file is truncated. Each
   `gen.go` of x/net has `//go:build ignore` and `package main`, so the
   link step records a truncation for it. A `_test.go` file of x/crypto is
   truncated too. The budget of a file of a unit concerns every target
-  once the search enters the unit.
-  hey has 47 truncations and scany 55.
+  once the search enters the unit. hey has 47 truncations and scany 55.
 - Go: an `ambiguous` or a `computed-name` call concerns every target.
   These calls come from the code of a dependency unit, as pgx and
   amqp091-go, and from the project, as fiber and go-grpc-middleware.
 - Rust: the link step does not link the code of a `cargo:` unit, so the
   graph holds no edge into the crate. A target that no project file names
   is `no-such-target`.
+
+After FOU-543:
+
+- Go: no project has a truncation of the link step. The graphs of the 10
+  Go projects hold 3,435 files, 44% of the 7,810 of before, because the
+  index step leaves out the test files and the files that the build of
+  linux/amd64 does not read. `budget`
+  falls from 576 to 123 method targets. The rest is scany: two
+  `tables.go` files of x/text are over the size limit of the index step,
+  so they fail.
+- Go: with less budget, the first uncertainty of a result is more often
+  an `ambiguous` or a `computed-name` call of the code of a unit, which
+  concerns every target. So these columns grow, and the share of
+  `unknown-receiver` grows a little. The search reaches more code of the
+  units through the new edges, and more call sites with an unknown
+  receiver.
+- Go: `found` moves from 29 to 30 method targets. Most symbols of an
+  advisory are methods that the code of the dependency calls inside its
+  own module, as the methods of the HTTP/2 server of x/net. A call inside
+  a unit goes to the definition of the method and not to its external key,
+  so the search reaches the definition and the target, which is the
+  external key, reads as uncertain. The receiver forms of FOU-543 make the
+  calls of the project find the method, as the receiver table and the
+  cases show. They do not change how a target matches code inside a unit.
+- The measure has no target of the standard library. The Go vulndb has
+  the most method symbols for it, and FOU-543 adds `GOROOT/src` as a unit,
+  but the corpus pins no Go release.

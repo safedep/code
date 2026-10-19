@@ -1,5 +1,5 @@
 source: safedep:hand
-description: program.command('convert <file>').action(convert) resolves to a key under commander, so convert is a root of the rule node.commander.action at the call. The call of action is a call on the result of command, whose type the link step does not know, so the site keeps a record.
+description: program.command('convert <file>').action(convert) resolves to a key under commander, so convert is a root of the rule node.commander.action at the call. The call of action is a call on the result of command, whose type the link step does not know with no unit of commander, so the site keeps a record with the reason no-dependency-source.
 roots:
   - key: bin/cli.js//convert
     kind: framework
@@ -14,7 +14,7 @@ edges:
 unresolved:
   - caller: bin/cli.js
     site: bin/cli.js:8
-    reason: unknown-receiver
+    reason: no-dependency-source
     method: action
 results:
   - target: js-yaml//load

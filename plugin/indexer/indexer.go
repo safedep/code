@@ -269,14 +269,17 @@ func (r *run) index(ctx context.Context, files []core.File, byExtension map[stri
 			r.result.Report.Skipped = append(r.result.Report.Skipped, file.Name())
 			continue
 		}
+		if goOutOfBuild(file) {
+			r.exclude(file)
+			continue
+		}
 		data, err := read(file, r.opts.MaxFileBytes)
 		if err != nil {
 			r.fail(ctx, file, core.StageRead, err)
 			continue
 		}
 		if goExcluded(file, data) {
-			r.excluded[file.Name()] = true
-			r.result.Excluded = append(r.result.Excluded, file.Name())
+			r.exclude(file)
 			continue
 		}
 
@@ -460,6 +463,13 @@ func (r *run) done(file core.File, ix *fileindex.Index, status fileindex.FileSta
 	r.strs.index(ix)
 	r.result.statuses(file.Name())[file.Name()] = status
 	r.result.Indexes = append(r.result.Indexes, ix)
+}
+
+// exclude records a file of dependency code that the build of the platform
+// does not read.
+func (r *run) exclude(file core.File) {
+	r.excluded[file.Name()] = true
+	r.result.Excluded = append(r.result.Excluded, file.Name())
 }
 
 func (r *run) fail(ctx context.Context, file core.File, stage core.Stage, err error) {

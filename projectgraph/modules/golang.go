@@ -12,6 +12,18 @@ import (
 
 var errNoModule = errors.New("go.mod has no module directive")
 
+// StdModule is the module path of the standard library in GOROOT/src. The
+// import path of each of its packages is the directory, as net/http, with
+// no module prefix.
+const StdModule = "std"
+
+// IsStdPath reports whether an import path can name a package of the
+// standard library: its first element has no dot.
+func IsStdPath(spec string) bool {
+	first, _, _ := strings.Cut(spec, "/")
+	return first != "" && !strings.Contains(first, ".")
+}
+
 // goIgnoredDirs hold Go code that is not a package of the module. vendor
 // holds the code of a dependency, which stays external, and the go command
 // skips testdata.
@@ -94,7 +106,9 @@ func (g *Golang) Resolve(spec string) (string, bool) {
 // directory of the project can name it.
 func (g *Golang) FirstParty(spec string) bool {
 	if len(g.modules) > 0 {
-		return slices.ContainsFunc(g.modules, func(m goModule) bool { return underPath(spec, m.path) })
+		return slices.ContainsFunc(g.modules, func(m goModule) bool {
+			return underPath(spec, m.path) || m.path == StdModule && IsStdPath(spec)
+		})
 	}
 	// Each suffix of the path after a slash is a lookup, because a scan of
 	// the directories at each import grows with the square of the project.
@@ -120,6 +134,9 @@ func (g *Golang) ImportPath(dir string) (string, bool) {
 		}
 		if slices.ContainsFunc(strings.Split(rel, "/"), func(part string) bool { return slices.Contains(goIgnoredDirs, part) }) {
 			return "", false
+		}
+		if m.path == StdModule {
+			return rel, rel != ""
 		}
 		return path.Join(m.path, rel), true
 	}

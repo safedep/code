@@ -65,6 +65,16 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 		case kind == NodeClass || kind == NodeInterface:
 			consumed, done = b.walkClass(&r, name, i+1 == len(names), &instance)
 		case kind == NodeExternal || kind == "" && b.g.IsExternal(r.key):
+			// A name before the last one under an external key is a call
+			// of a function or a method whose result has the next name,
+			// when a unit of dependency code gives the function.
+			if i+1 < len(names) {
+				if class, ok := b.externalResult(r.key, name); ok {
+					r.key, r.virtual, r.declared = class, true, true
+					i++
+					continue
+				}
+			}
 			r.key = b.deriveExternal(r.key, names[i:])
 			r.rule = cmp.Or(r.rule, ruleExternal)
 			return r
@@ -220,11 +230,12 @@ func (b *builder) walkClass(r *resolution, name string, last bool, instance *boo
 // variable or a parameter of the function, and the index does not know its
 // value.
 func (b *builder) walkFunction(r *resolution, name string) (consumed, done bool) {
-	if class, ok := b.resultType(r.key); ok {
+	class, reason, ok := b.resultType(fileindex.PackageOf(r.key), r.key, 0)
+	if ok {
 		r.key, r.virtual, r.declared = class, true, true
 		return false, false
 	}
-	r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+	r.fail = &failure{reason: reason, name: name}
 	return false, true
 }
 

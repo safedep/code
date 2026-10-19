@@ -1,0 +1,72 @@
+{
+  "version": "2",
+  "index_version": "13",
+  "link_version": "13",
+  "unit": "go:std@go1.25.1",
+  "symbols": [
+    {
+      "key": "io//Reader",
+      "definitions": [
+        "go:std@go1.25.1//io/io.go//Reader"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "io//Writer",
+      "definitions": [
+        "go:std@go1.25.1//io/io.go//Writer"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "net//http//NewRequest",
+      "definitions": [
+        "go:std@go1.25.1//net/http/request.go//NewRequest"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "net//http//Request",
+      "definitions": [
+        "go:std@go1.25.1//net/http/request.go//Request"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "net//http//Request//Write",
+      "definitions": [
+        "go:std@go1.25.1//net/http/request.go//Request//Write"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "os//Getenv",
+      "definitions": [
+        "go:std@go1.25.1//os/file.go//Getenv"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "os//Remove",
+      "definitions": [
+        "go:std@go1.25.1//os/file.go//Remove"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "os//exec//Cmd",
+      "definitions": [
+        "go:std@go1.25.1//os/exec/exec.go//Cmd"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "os//exec//Command",
+      "definitions": [
+        "go:std@go1.25.1//os/exec/exec.go//Command"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": []
+}

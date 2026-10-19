@@ -90,7 +90,7 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			if r.unbound && sc.profile.thisCalls {
 				r = b.thisCall(ix, caller, call, r)
 			}
-			b.linkCHA(call, r, from, site)
+			overrides := b.linkCHA(call, r, from, site)
 			// A declared type gives the class of the receiver, so the
 			// link step owns the record of the site and no name edge
 			// goes from it.
@@ -98,13 +98,19 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 				b.narrow(site, call.Callee)
 			}
 			if r.fail != nil {
+				reason := r.fail.reason
+				// A Go value of an interface type that no type of the
+				// graph implements holds a type of code elsewhere.
+				if reason == fileindex.UnresolvedNoDefinition && overrides == 0 && r.declared && sc.profile.implicitInterfaces && b.kindOf(r.class) == NodeInterface {
+					reason = fileindex.UnresolvedInterfaceReceiver
+				}
 				b.addUnresolved(UnresolvedSite{
 					Caller:   from,
 					Site:     site,
 					Text:     call.Callee,
 					Receiver: call.Receiver,
 					Method:   cmp.Or(call.Method, r.fail.name),
-					Reason:   r.fail.reason,
+					Reason:   reason,
 				})
 				continue
 			}
@@ -114,8 +120,10 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			if r.unbound && !b.unboundEdge(ix, call, from, site, r, unknown[[2]int{call.Line, call.Column}]) {
 				continue
 			}
-			if b.onCallResult(sc.profile, call, r) {
-				b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: call.Callee, Receiver: call.Receiver, Method: call.Method, Reason: fileindex.UnresolvedUnknownReceiver})
+			// The index of some languages records such a call itself, and
+			// that record stays the one record of the site.
+			if reason, ok := b.onCallResult(sc.profile, call, r); ok && !unknown[[2]int{call.Line, call.Column}] {
+				b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: call.Callee, Receiver: call.Receiver, Method: call.Method, Reason: reason})
 			}
 			switch {
 			case r.kind == EdgeDirect && isAssignment(sc, call, r.target):
@@ -131,27 +139,35 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 	}
 }
 
-// onCallResult reports whether a resolution took the method of a call on
-// the result of another call as a member of the external key of the called
-// name, as html//NewTokenizer//Next for html.NewTokenizer(r).Next(). The
-// link step does not know the type of that result, so the key can name no
-// symbol, and a target of the method of the real type would read as
-// no-such-target. The edge stays, because the called name can be a type,
-// as in a Go conversion http.HandlerFunc(f).ServeHTTP(w, r).
+// onCallResult returns the reason of the record of a call whose resolution
+// took its method as a member of the external key of the called name of a
+// call on a call result, as html//NewTokenizer//Next for
+// html.NewTokenizer(r).Next(). The link step does not know the type of
+// that result, so the key can name no symbol, and a target of the method
+// of the real type would read as no-such-target. The edge stays, because
+// the called name can be a type, as in a Go conversion
+// http.HandlerFunc(f).ServeHTTP(w, r). The reason is no-dependency-source
+// when no unit of dependency code gives the package of the key.
 //
 // A construction gives an instance of the called class, so the key is
 // right: new Yaml().load() in Java, or Yaml().load() in Python or Kotlin,
 // whose classes start with an upper case letter. A Go name starts with an
 // upper case letter when the package exports it, so it tells nothing.
-func (b *builder) onCallResult(p *profile, call fileindex.Call, r resolution) bool {
+func (b *builder) onCallResult(p *profile, call fileindex.Call, r resolution) (fileindex.UnresolvedReason, bool) {
 	called, ok := calledName(call.Receiver)
 	if !ok || r.fail != nil || call.Method == "" || b.kindOf(r.key) != NodeExternal {
-		return false
+		return "", false
 	}
 	if strings.HasPrefix(call.Receiver, "new ") || !p.typeConversions && startsUpper(called) {
-		return false
+		return "", false
 	}
-	return fileindex.Last(r.key) == call.Method && fileindex.Last(fileindex.Parent(r.key)) == called
+	if fileindex.Last(r.key) != call.Method || fileindex.Last(fileindex.Parent(r.key)) != called {
+		return "", false
+	}
+	if _, provided := b.unitDefinitions(b.origins[r.key]); !provided {
+		return fileindex.UnresolvedNoDependencySource, true
+	}
+	return fileindex.UnresolvedUnknownReceiver, true
 }
 
 // calledName returns the name of the call that ends a receiver as written,
@@ -254,8 +270,10 @@ func (b *builder) unboundEdge(ix *fileindex.Index, call fileindex.Call, from str
 // step.
 //
 // A receiver that a call of the class makes, as p = Parser(), holds an
-// instance of that class only, so it gets no cha edge.
-func (b *builder) linkCHA(call fileindex.Call, r resolution, from string, site Site) {
+// instance of that class only, so it gets no cha edge. An override in a
+// unit of dependency code gets its edge through its external key. It
+// returns the count of the overrides.
+func (b *builder) linkCHA(call fileindex.Call, r resolution, from string, site Site) int {
 	lang := b.byPath[site.Path].Language
 	class, virtual := r.class, r.virtual
 	// A Java call with no receiver runs on this.
@@ -276,11 +294,11 @@ func (b *builder) linkCHA(call fileindex.Call, r resolution, from string, site S
 	}
 	switch {
 	case !virtual || class == "" || call.Method == "" || !b.dispatches(lang, class):
-		return
+		return 0
 	case r.fail != nil && r.fail.name != call.Method:
-		return
+		return 0
 	case r.fail == nil && fileindex.Last(r.key) != call.Method:
-		return
+		return 0
 	}
 	b.narrow(site, call.Callee)
 	found := ""
@@ -289,7 +307,7 @@ func (b *builder) linkCHA(call fileindex.Call, r resolution, from string, site S
 	}
 	overrides := b.overrides(class, call, found)
 	for _, key := range overrides {
-		b.link(lang, from, key, site, EdgeCHA, ruleCHA)
+		b.link(lang, from, b.entryKey(from, key), site, EdgeCHA, ruleCHA)
 	}
 	// An ECMAScript type is structural. A value of an interface type can be
 	// an object literal or an instance of a class with no implements, and an
@@ -298,6 +316,7 @@ func (b *builder) linkCHA(call fileindex.Call, r resolution, from string, site S
 	if profileOf(lang).structuralTypes && (b.kindOf(class) == NodeInterface || r.fail != nil && len(overrides) == 0) {
 		b.structural[siteCall{site, call.Callee}] = true
 	}
+	return len(overrides)
 }
 
 // linkReferences adds a reference edge from the definition that holds each
@@ -359,7 +378,7 @@ func (b *builder) resolveTarget(sc *scope, caller, target string) []resolution {
 		return []resolution{b.resolveLocal(sc, caller, target)}
 	}
 	if name, rest, ok := strings.Cut(target, fileindex.Separator); ok {
-		if class, ok := b.memberType(sc, caller, name); ok {
+		if class, _, ok := b.memberType(sc, caller, name); ok {
 			return []resolution{b.walkTyped(class, strings.Split(rest, fileindex.Separator))}
 		}
 	}
@@ -368,7 +387,7 @@ func (b *builder) resolveTarget(sc *scope, caller, target string) []resolution {
 		names := append(lead, rest...)
 		mods := b.resolveModules(ix, module, formOf(imp))
 		if len(mods) == 0 {
-			return []resolution{{key: b.importedExternal(ix, target, module, formOf(imp), names), kind: EdgeDirect, rule: ruleExternal}}
+			return []resolution{b.importedWalk(ix, target, module, formOf(imp), names)}
 		}
 		if len(names) == 0 && sc.profile.defaultExport != "" {
 			names = []string{sc.profile.defaultExport}
@@ -526,8 +545,9 @@ func (b *builder) resolveLocal(sc *scope, caller, target string) resolution {
 		}
 		r := b.walk(prefix, segs[i:])
 		if fileindex.HasKeyPrefix(caller, prefix) && b.isFunction(prefix) {
-			r = resolution{fail: &failure{reason: fileindex.UnresolvedUnknownReceiver, name: segs[i]}}
-			if class, ok := b.memberType(sc, prefix, segs[i]); ok {
+			class, reason, ok := b.memberType(sc, prefix, segs[i])
+			r = resolution{fail: &failure{reason: reason, name: segs[i]}}
+			if ok {
 				r = b.walkTyped(class, segs[i+1:])
 			}
 		}

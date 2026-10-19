@@ -1,6 +1,6 @@
 [
   {
-    "version": "12", "path": "src/main.ts", "language": "typescript",
+    "version": "13", "path": "src/main.ts", "language": "typescript",
     "imports": [
       {"line": 1, "module": "@app/server", "item": "serve", "alias": "serve", "kind": "static", "namespace": "@app//server//serve"},
       {"line": 2, "module": "src/config", "item": "cfg", "alias": "cfg", "kind": "static", "namespace": "src//config//cfg"}
@@ -12,7 +12,7 @@
     ]
   },
   {
-    "version": "12", "path": "src/app/server.ts", "language": "typescript",
+    "version": "13", "path": "src/app/server.ts", "language": "typescript",
     "exports": [{"name": "serve", "target": "src/app/server.ts//serve", "line": 1}],
     "definitions": [
       {"key": "src/app/server.ts", "kind": "module", "name": "server", "start_line": 1, "end_line": 1, "exported": true},
@@ -20,7 +20,7 @@
     ]
   },
   {
-    "version": "12", "path": "src/config.ts", "language": "typescript",
+    "version": "13", "path": "src/config.ts", "language": "typescript",
     "exports": [{"name": "cfg", "target": "src/config.ts//cfg", "line": 1}],
     "definitions": [
       {"key": "src/config.ts", "kind": "module", "name": "config", "start_line": 1, "end_line": 1, "exported": true},

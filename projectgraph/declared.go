@@ -10,9 +10,10 @@ import (
 // typedName returns the class or interface that the declared type of a
 // parameter or a typed local variable of the name names. The name belongs
 // to the scope or to a function that holds the scope, as the parameter of a
-// method in an arrow function of the method. A Go local that holds the
-// result of a call has the type of the first result of the function.
-func (b *builder) typedName(sc *scope, scopeKey, name string) (string, bool) {
+// method in an arrow function of the method. A Go local that holds a
+// result of a call has the type of the result at its position. A name
+// with no known type gives the reason of the record of a call on it.
+func (b *builder) typedName(sc *scope, scopeKey, name string) (string, fileindex.UnresolvedReason, bool) {
 	for key := scopeKey; fileindex.HasKeyPrefix(key, sc.ix.Path) && key != sc.ix.Path; key = fileindex.Parent(key) {
 		def := b.defs[key]
 		if def == nil {
@@ -24,42 +25,35 @@ func (b *builder) typedName(sc *scope, scopeKey, name string) (string, bool) {
 					continue
 				}
 				if !t.Result {
-					return b.resolveType(sc, key, t.Type)
+					class, ok := b.resolveType(sc, key, t.Type)
+					return class, fileindex.UnresolvedUnknownReceiver, ok
 				}
 				fn, ok := b.resolveScopeName(sc, t.Type)
 				if !ok {
-					return "", false
+					return "", fileindex.UnresolvedUnknownReceiver, false
 				}
-				return b.resultType(fn)
+				return b.resultType(fileindex.PackageOf(sc.ix.Path), fn, t.Index)
 			}
 		}
 	}
-	return "", false
+	return "", fileindex.UnresolvedUnknownReceiver, false
 }
 
 // memberType returns the class of a name in a scope: a typed parameter or
 // local variable, or in Java a field of a class that holds the scope, which
-// a method names with no this.
-func (b *builder) memberType(sc *scope, scopeKey, name string) (string, bool) {
-	if class, ok := b.typedName(sc, scopeKey, name); ok || !sc.profile.implicitFields {
-		return class, ok
+// a method names with no this. A name with no known type gives the reason
+// of the record of a call on it.
+func (b *builder) memberType(sc *scope, scopeKey, name string) (string, fileindex.UnresolvedReason, bool) {
+	class, reason, ok := b.typedName(sc, scopeKey, name)
+	if ok || !sc.profile.implicitFields {
+		return class, reason, ok
 	}
 	for class, ok := b.enclosingClass(scopeKey); ok; class, ok = b.enclosingClass(fileindex.Parent(class)) {
 		if t, ok := b.fieldType(class, name); ok {
-			return t, true
+			return t, "", true
 		}
 	}
-	return "", false
-}
-
-// resultType returns the class or interface that the first result of a Go
-// function names.
-func (b *builder) resultType(fn string) (string, bool) {
-	def := b.defs[fn]
-	if def == nil || def.Returns == "" {
-		return "", false
-	}
-	return b.resolveType(b.scopes[fileindex.Unit(fn)], fn, def.Returns)
+	return "", reason, false
 }
 
 // fieldType returns the class or interface that the declared type of a

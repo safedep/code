@@ -123,8 +123,10 @@ type builder struct {
 	// defs holds the definition records by key.
 	defs map[string]*fileindex.Definition
 	// reading holds the variables whose value a walk reads now, so a cycle
-	// of variables across files stops.
-	reading map[string]bool
+	// of variables across files stops. stepping holds the names that a
+	// walk of a unit reads now for the result type of an external key.
+	reading  map[string]bool
+	stepping map[nameKey]bool
 
 	// groupMembers holds the members of each group of aliases by its first
 	// alias, and nodesByParent the keys of the nodes by their parent.
@@ -261,6 +263,7 @@ func newTables(indexes []*fileindex.Index, opts Options) *builder {
 		classes:      map[string]classRecord{},
 		defs:         make(map[string]*fileindex.Definition, defs),
 		reading:      map[string]bool{},
+		stepping:     map[nameKey]bool{},
 		findingBases: map[string]bool{},
 		state:        map[langcode.Code]any{},
 		units:        map[string]*unit{},

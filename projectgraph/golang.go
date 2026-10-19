@@ -22,6 +22,7 @@ var goProfile = profile{
 	provide:            goProvide,
 	narrowProviders:    goNarrowProviders,
 	surface:            goSurface,
+	symbol:             goSymbol,
 	dependencies:       func(b *builder) ([]string, []modules.Problem) { return b.project.golang.Dependencies(), nil },
 	implicitInterfaces: true,
 	typeConversions:    true,
@@ -30,10 +31,21 @@ var goProfile = profile{
 }
 
 // goProvide returns the package unit of a Go module that an import path
-// under its module path names.
+// under its module path names. The unit of the standard library of
+// GOROOT/src, as the unit go:std@go1.25.1, gives each import path whose
+// first element has no dot.
 func goProvide(_ *builder, sp *space, module string, _ modules.Form) []provision {
+	if sp.pkg.Ecosystem != "go" {
+		return nil
+	}
 	rel, ok := strings.CutPrefix(module, sp.pkg.Name)
-	if sp.pkg.Ecosystem != "go" || !ok || rel != "" && !strings.HasPrefix(rel, "/") {
+	switch {
+	case sp.pkg.Name == modules.StdModule:
+		if !modules.IsStdPath(module) {
+			return nil
+		}
+		rel = module
+	case !ok || rel != "" && !strings.HasPrefix(rel, "/"):
 		return nil
 	}
 	dir, ok := sp.golang.Resolve(module)
@@ -80,6 +92,18 @@ func goSurface(s *surfacer) {
 			}
 		}
 	}
+}
+
+// goSymbol returns the import path of the package of a Go definition of a
+// unit and the names of the definition, as golang.org/x/net/html and
+// Tokenizer, Next.
+func goSymbol(b *builder, sp *space, def string) (string, []string, bool) {
+	dir := modules.Dir(sp.inner(fileindex.Unit(def)))
+	if sp.goPackages[dir] == nil {
+		return "", nil, false
+	}
+	importPath, ok := b.goImportPath(sp, dir)
+	return importPath, fileindex.Segments(def), ok
 }
 
 // goImportPath returns the import path of a Go package of a unit. A package

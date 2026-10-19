@@ -163,13 +163,39 @@ of the highest confidence.
 
 A call that the link step cannot resolve is an unresolved site with a
 reason: `computed-name`, `dynamic-import`, `unknown-receiver`,
-`no-definition`, `ambiguous` or `limit`. The site keeps the method name of
-the call, so the reach query can tell which targets it concerns.
+`no-definition`, `ambiguous`, `limit`, `interface-receiver` or
+`no-dependency-source`. The site keeps the method name of the call, so the
+reach query can tell which targets it concerns.
 
 A call on the result of another call, as `html.NewTokenizer(r).Next()`,
 needs the type of that result. When the link step does not know it, the
-site is an `unknown-receiver` record with the method name, so a target of
-that method is `uncertain` and not `no-such-target`.
+site is a record with the method name, so a target of that method is
+`uncertain` and not `no-such-target`.
+
+### Result types
+
+The Go index records the type name of each result of a function, by
+position, and each name that an assignment or a short variable declaration
+binds to a result, as `z` in `z := html.NewTokenizer(r)` and `err` in
+`n, err := html.Parse(r)`. The blank name `_` binds nothing. The link step
+reads the definition of the function, in the project or in the unit of
+dependency code that gives its package, and binds the type of the result
+to the name. A call on the name then gets the external key of the method
+of the type, as `golang.org//x//net//html//Tokenizer//Next`, and a package
+edge joins the key to the definition in the unit. A chained call, as
+`pkg.F().M()` or `a.B().C()`, takes the type of each result in turn.
+
+| Result | What the call gets |
+| --- | --- |
+| A type of a unit, or of the project | The edge to the method of the type |
+| An interface type | The `cha` edges to the implementations in the graph. An implementation in a unit gets its edge through its external key. With no implementation, the site is a record with the reason `interface-receiver` |
+| A function of a package that no unit gives | A record with the reason `no-dependency-source` |
+| A result with no named type, or a function that the unit does not define | A record with the reason `unknown-receiver` |
+
+The standard library is a unit too. Pass `GOROOT/src` as the unit
+`go:std@<version>`, as `-deps $(go env GOROOT)/src=go:std@go1.25.1`. It gives
+each import path whose first element has no dot, as `net/http`. The index
+step leaves out the `cmd` module of it, which no program imports.
 
 ## Overlay
 

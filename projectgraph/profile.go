@@ -47,6 +47,11 @@ type profile struct {
 	// surface adds the exported symbols of a unit of dependency code with
 	// the import that names each one. The profile of the family holds it.
 	surface func(s *surfacer)
+	// symbol returns the module that an importer of a definition of a unit
+	// of dependency code imports, and the names of the definition under
+	// it, as golang.org/x/net/html and Tokenizer. The profile of the family
+	// holds it.
+	symbol func(b *builder, sp *space, def string) (string, []string, bool)
 	// dependencies returns the packages that the manifests of the project
 	// declare for the ecosystem of the family, and the manifests that the
 	// reader could not read. The profile of the family holds it.

@@ -101,6 +101,7 @@ var goldenHashes = map[string]string{
 	"10": "6053fe7c2b8fef2888806debc47372948eec366beb800419c1e435f021711fa0",
 	"11": "141e6d6a6f6d369635bf4f6781033acc269e59fe5f722558192b8e952c7e7bd9",
 	"12": "974943df4185f9c3070dcfdfedff8e91912e257d255a936f7c27608bb63a69f0",
+	"13": "97614d8b96782e65813ee409e4a3f33c4655157b5dfa58baf17cd3677958c619",
 }
 
 func TestFileIndexGoldenHashFollowsVersion(t *testing.T) {

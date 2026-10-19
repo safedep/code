@@ -1,7 +1,8 @@
 source: safedep:hand
 description: >-
   run calls Next on the result of html.NewTokenizer, with no dependency code. The link step does not know the
-  type of that result, so the site keeps a record with the method Next and the reason unknown-receiver. The
+  type of that result, so the site keeps a record with the method Next. No unit gives the package, so the
+  reason is no-dependency-source. The
   target Tokenizer.Next is then uncertain at the site, not no-such-target. The edge to the key
   html//NewTokenizer//Next stays, because a Go call of a type name converts a value, and a method of the type
   then runs.
@@ -40,7 +41,7 @@ edges:
 unresolved:
   - caller: tokens.go//run
     site: tokens.go:10
-    reason: unknown-receiver
+    reason: no-dependency-source
     method: Next
 results:
   - target: golang.org//x//net//html//Tokenizer//Next

@@ -1,0 +1,218 @@
+source: safedep:hand
+description: >-
+  tokens holds z := markup.NewTokenizer(nil) and calls z.Next, and calls Close on the result of Raw on the result
+  of NewTokenizer. tree calls Render on the first result of Parse, and send calls Write on the first result of
+  http.NewRequest. The unit of markup gives the result type of each function and method, and the unit of the
+  standard library, as GOROOT/src gives it, gives the type of NewRequest. So each call gets the external key of
+  the method of the type, as example.com//markup//Tokenizer//Next, and a package edge joins the key to the
+  definition of the unit.
+units:
+  gomod/example.com/markup@v1.0.0: go:example.com/markup@v1.0.0
+  goroot/src: go:std@go1.25.1
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+exact_edges: true
+edges:
+  - from: example.com//markup//NewTokenizer
+    to: go:example.com/markup@v1.0.0//token.go//NewTokenizer
+    kind: package
+    confidence: high
+    site: go:example.com/markup@v1.0.0//token.go:14
+  - from: example.com//markup//Node//Render
+    to: go:example.com/markup@v1.0.0//node.go//Node//Render
+    kind: package
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go:14
+  - from: example.com//markup//Parse
+    to: go:example.com/markup@v1.0.0//node.go//Parse
+    kind: package
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go:10
+  - from: example.com//markup//Text//Close
+    to: go:example.com/markup@v1.0.0//token.go//Text//Close
+    kind: package
+    confidence: high
+    site: go:example.com/markup@v1.0.0//token.go:27
+  - from: example.com//markup//Tokenizer//Next
+    to: go:example.com/markup@v1.0.0//token.go//Tokenizer//Next
+    kind: package
+    confidence: high
+    site: go:example.com/markup@v1.0.0//token.go:18
+  - from: example.com//markup//Tokenizer//Raw
+    to: go:example.com/markup@v1.0.0//token.go//Tokenizer//Raw
+    kind: package
+    confidence: high
+    site: go:example.com/markup@v1.0.0//token.go:23
+  - from: go:example.com/markup@v1.0.0//node.go//Node//Render
+    to: os//Remove
+    kind: direct
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go:15
+  - from: go:example.com/markup@v1.0.0//token.go//Text//Close
+    to: os//exec//Command
+    kind: direct
+    confidence: high
+    site: go:example.com/markup@v1.0.0//token.go:28
+  - from: go:example.com/markup@v1.0.0//token.go//Tokenizer//Next
+    to: os//exec//Command
+    kind: direct
+    confidence: high
+    site: go:example.com/markup@v1.0.0//token.go:19
+  - from: go:std@go1.25.1//net/http/request.go//Request//Write
+    to: go:std@go1.25.1//os/file.go//Getenv
+    kind: direct
+    confidence: high
+    site: go:std@go1.25.1//net/http/request.go:15
+  - from: main.go//main
+    to: main.go//tokens
+    kind: direct
+    confidence: high
+    site: main.go:10
+  - from: main.go//main
+    to: main.go//tree
+    kind: direct
+    confidence: high
+    site: main.go:11
+  - from: main.go//main
+    to: main.go//send
+    kind: direct
+    confidence: high
+    site: main.go:12
+  - from: main.go//send
+    to: net//http//NewRequest
+    kind: direct
+    confidence: high
+    site: main.go:30
+  - from: main.go//send
+    to: net//http//Request//Write
+    kind: direct
+    confidence: high
+    site: main.go:31
+  - from: main.go//tokens
+    to: example.com//markup//NewTokenizer
+    kind: direct
+    confidence: high
+    site: main.go:16
+  - from: main.go//tokens
+    to: example.com//markup//Tokenizer//Next
+    kind: direct
+    confidence: high
+    site: main.go:17
+  - from: main.go//tokens
+    to: example.com//markup//NewTokenizer
+    kind: direct
+    confidence: high
+    site: main.go:18
+  - from: main.go//tokens
+    to: example.com//markup//Text//Close
+    kind: direct
+    confidence: high
+    site: main.go:18
+  - from: main.go//tokens
+    to: example.com//markup//Tokenizer//Raw
+    kind: direct
+    confidence: high
+    site: main.go:18
+  - from: main.go//tree
+    to: example.com//markup//Parse
+    kind: direct
+    confidence: high
+    site: main.go:22
+  - from: main.go//tree
+    to: example.com//markup//Node//Render
+    kind: direct
+    confidence: high
+    site: main.go:26
+  - from: net//http//NewRequest
+    to: go:std@go1.25.1//net/http/request.go//NewRequest
+    kind: package
+    confidence: high
+    site: go:std@go1.25.1//net/http/request.go:10
+  - from: net//http//Request//Write
+    to: go:std@go1.25.1//net/http/request.go//Request//Write
+    kind: package
+    confidence: high
+    site: go:std@go1.25.1//net/http/request.go:14
+  - from: os//Remove
+    to: go:std@go1.25.1//os/file.go//Remove
+    kind: package
+    confidence: high
+    site: go:std@go1.25.1//os/file.go:7
+  - from: os//exec//Command
+    to: go:std@go1.25.1//os/exec/exec.go//Command
+    kind: package
+    confidence: high
+    site: go:std@go1.25.1//os/exec/exec.go:5
+unresolved: []
+results:
+  - target: example.com//markup//Tokenizer//Next
+    status: found
+    path:
+      - key: main.go//main
+      - key: main.go//tokens
+        site: main.go:10
+        kind: direct
+        confidence: high
+      - key: example.com//markup//Tokenizer//Next
+        site: main.go:17
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//tokens
+        site: main.go:17
+        reached: true
+  - target: example.com//markup//Text//Close
+    status: found
+    path:
+      - key: main.go//main
+      - key: main.go//tokens
+        site: main.go:10
+        kind: direct
+        confidence: high
+      - key: example.com//markup//Text//Close
+        site: main.go:18
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//tokens
+        site: main.go:18
+        reached: true
+  - target: example.com//markup//Node//Render
+    status: found
+    path:
+      - key: main.go//main
+      - key: main.go//tree
+        site: main.go:11
+        kind: direct
+        confidence: high
+      - key: example.com//markup//Node//Render
+        site: main.go:26
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//tree
+        site: main.go:26
+        reached: true
+  - target: net//http//Request//Write
+    status: found
+    path:
+      - key: main.go//main
+      - key: main.go//send
+        site: main.go:12
+        kind: direct
+        confidence: high
+      - key: net//http//Request//Write
+        site: main.go:31
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//send
+        site: main.go:31
+        reached: true
+  - target: example.com//markup//NewTokenizer//Next
+    status: no-such-target

@@ -2,7 +2,9 @@ source: safedep:hand
 description: >-
   main holds a value of the project interface Runner and calls Run on it. The value comes from New of the
   dependency dep, whose type Impl implements Runner and calls exec.Command in Run. The interface is
-  first-party, so Impl.Run of the unit is a cha candidate, and the site keeps its record. The record has
+  first-party, so Impl.Run of the unit is a cha candidate, and the site keeps its record. The cha edge goes to
+  the external key of Impl.Run, so a target of that key finds the path, and a package edge joins the key to
+  the definition. The record has
   the method Run, and Impl.Run reaches exec.Command, so the target is never not found.
 units:
   gomod/github.com/acme/dep@v1.0.0: go:github.com/acme/dep@v1.0.0
@@ -26,10 +28,15 @@ edges:
     confidence: high
     site: go:github.com/acme/dep@v1.0.0//dep.go:7
   - from: main.go//main
-    to: go:github.com/acme/dep@v1.0.0//dep.go//Impl//Run
+    to: github.com//acme//dep//Impl//Run
     kind: cha
     confidence: medium
     site: main.go:10
+  - from: github.com//acme//dep//Impl//Run
+    to: go:github.com/acme/dep@v1.0.0//dep.go//Impl//Run
+    kind: package
+    confidence: high
+    site: go:github.com/acme/dep@v1.0.0//dep.go:11
   - from: go:github.com/acme/dep@v1.0.0//dep.go//Impl//Run
     to: os//exec//Command
     kind: direct
@@ -45,10 +52,14 @@ results:
     status: found
     path:
       - key: main.go//main
-      - key: go:github.com/acme/dep@v1.0.0//dep.go//Impl//Run
+      - key: github.com//acme//dep//Impl//Run
         site: main.go:10
         kind: cha
         confidence: medium
+      - key: go:github.com/acme/dep@v1.0.0//dep.go//Impl//Run
+        site: go:github.com/acme/dep@v1.0.0//dep.go:11
+        kind: package
+        confidence: high
       - key: os//exec//Command
         site: go:github.com/acme/dep@v1.0.0//dep.go:12
         kind: direct
@@ -56,4 +67,16 @@ results:
     call_sites:
       - caller: go:github.com/acme/dep@v1.0.0//dep.go//Impl//Run
         site: go:github.com/acme/dep@v1.0.0//dep.go:12
+        reached: true
+  - target: github.com//acme//dep//Impl//Run
+    status: found
+    path:
+      - key: main.go//main
+      - key: github.com//acme//dep//Impl//Run
+        site: main.go:10
+        kind: cha
+        confidence: medium
+    call_sites:
+      - caller: main.go//main
+        site: main.go:10
         reached: true

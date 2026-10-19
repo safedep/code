@@ -105,7 +105,7 @@
     "views.py": "indexed"
   },
   "stats": {
-    "version": "12",
+    "version": "13",
     "files": 3,
     "nodes": 7,
     "edges": 0,

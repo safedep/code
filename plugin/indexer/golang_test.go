@@ -29,6 +29,7 @@ func TestFileIndexGo(t *testing.T) {
 		"  run(c.Add, k, f)",
 		"}",
 		"func Apply[T Saver, U any](t T, u U) { b := NewBox[int](1) }",
+		"func Pair() (_ *store.DB, ok, done bool) { _, x := New(\"y\"); return nil, x == nil, true }",
 	}, "\n") + "\n"
 	ix := indexSource(t, core.LanguageCodeGo, "shop.go", source)
 
@@ -51,6 +52,7 @@ func TestFileIndexGo(t *testing.T) {
 		assert.Equal(t, 2, def.Arity)
 		assert.True(t, def.Variadic)
 		assert.Equal(t, "Cart", def.Returns)
+		assert.Equal(t, []string{"Cart", ""}, def.Results, "a result of a predeclared type has no name")
 	})
 	t.Run("a method has its receiver first and its typed locals", func(t *testing.T) {
 		def := definitionOf(t, ix, "shop.go//Cart//Add")
@@ -60,11 +62,18 @@ func TestFileIndexGo(t *testing.T) {
 		assert.Equal(t, []fileindex.Typed{
 			{Name: "s", Type: "Saver"},
 			{Name: "d", Type: "New", Result: true},
+			{Name: "err", Type: "New", Result: true, Index: 1},
 			{Name: "e", Type: "store.DB"},
 			{Name: "f", Type: "Cart"},
 			{Name: "g", Type: "Cart"},
 			{Name: "h", Type: "store.Open", Result: true},
 		}, def.Locals)
+	})
+	t.Run("each result has its position and the blank name binds none", func(t *testing.T) {
+		def := definitionOf(t, ix, "shop.go//Pair")
+		assert.Equal(t, "store.DB", def.Returns)
+		assert.Equal(t, []string{"store.DB", "", ""}, def.Results)
+		assert.Equal(t, []fileindex.Typed{{Name: "x", Type: "New", Result: true, Index: 1}}, def.Locals)
 	})
 	t.Run("a type parameter stands for its constraint", func(t *testing.T) {
 		def := definitionOf(t, ix, "shop.go//Apply")
