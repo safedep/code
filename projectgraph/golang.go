@@ -23,6 +23,7 @@ var goProfile = profile{
 	narrowProviders:    goNarrowProviders,
 	surface:            goSurface,
 	symbol:             goSymbol,
+	abstractReceiver:   fileindex.UnresolvedInterfaceReceiver,
 	dependencies:       func(b *builder) ([]string, []modules.Problem) { return b.project.golang.Dependencies(), nil },
 	implicitInterfaces: true,
 	typeConversions:    true,

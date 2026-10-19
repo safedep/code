@@ -241,7 +241,13 @@ func (b *builder) recordOrigin(ix *fileindex.Index, key, module string, form mod
 // key. The origins of the key, with the names after their own, are the
 // origins of the new key.
 func (b *builder) deriveExternal(parent string, names []string) string {
-	key := b.external(fileindex.Join(parent, names...))
+	return b.external(b.deriveKey(parent, names))
+}
+
+// deriveKey returns the key of the names under an external key, with the
+// origins of the key and the names after their own, and makes no node.
+func (b *builder) deriveKey(parent string, names []string) string {
+	key := fileindex.Join(parent, names...)
 	for _, o := range b.origins[parent] {
 		o.names = append(slices.Clone(o.names), names...)
 		if !slices.ContainsFunc(b.origins[key], o.equal) {

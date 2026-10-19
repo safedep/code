@@ -1,6 +1,7 @@
 package projectgraph
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/safedep/code/fileindex"
@@ -16,12 +17,19 @@ import (
 // impl of a trait makes the trait a base.
 var rustProfile = profile{
 	code:              langcode.Rust,
-	resolver:          func(b *builder, _ *space) modules.Resolver { return rustResolver{b} },
+	resolver:          func(b *builder, sp *space) modules.Resolver { return rustResolver{b: b, sp: sp} },
 	units:             (*builder).addRustUnits,
+	dependencyCode:    true,
 	aliases:           (*builder).joinImplBlocks,
 	link:              (*builder).linkRust,
 	scopeFallback:     (*builder).rustScopeFallback,
-	dependencies:      func(b *builder) ([]string, []modules.Problem) { return b.rustState().cargo.Dependencies(), nil },
+	provide:           rustProvide,
+	symbol:            rustSymbol,
+	surface:           rustSurface,
+	unitTypes:         true,
+	sameTypeMethods:   map[string]bool{"clone": true, "to_owned": true, "default": true, "from": true},
+	abstractReceiver:  fileindex.UnresolvedTraitReceiver,
+	dependencies:      func(b *builder) ([]string, []modules.Problem) { return b.cargoOf(b.project).Dependencies(), nil },
 	instance:          []string{"self"},
 	superModule:       true,
 	unitImports:       true,
@@ -69,15 +77,53 @@ var rustImplicit = map[string]bool{
 	"call_once": true, "serialize": true, "deserialize": true,
 }
 
+// rustUnwraps are the methods of Option and Result that give the value
+// inside, and rustWrapperMethods the other methods of each one. A ?
+// gives the value inside too, and the index records no ?, so a name that
+// neither table holds takes the value inside.
+var (
+	rustUnwraps        = map[string]bool{"unwrap": true, "expect": true, "unwrap_unchecked": true}
+	rustWrapperMethods = map[string]map[string]bool{
+		"Option": setOf("and", "and_then", "as_deref", "as_deref_mut", "as_mut", "as_ref", "cloned", "copied", "filter",
+			"flatten", "get_or_insert", "get_or_insert_with", "insert", "is_none", "is_some", "is_some_and", "iter",
+			"iter_mut", "map", "map_or", "map_or_else", "ok_or", "ok_or_else", "or", "or_else", "replace", "take",
+			"unwrap_or", "unwrap_or_default", "unwrap_or_else", "xor", "zip"),
+		"Result": setOf("and", "and_then", "as_deref", "as_deref_mut", "as_mut", "as_ref", "cloned", "copied", "err",
+			"expect_err", "flatten", "is_err", "is_ok", "is_ok_and", "iter", "iter_mut", "map", "map_err", "map_or",
+			"map_or_else", "ok", "or", "or_else", "unwrap_err", "unwrap_or", "unwrap_or_default", "unwrap_or_else"),
+	}
+)
+
+func setOf(names ...string) map[string]bool {
+	out := make(map[string]bool, len(names))
+	for _, n := range names {
+		out[n] = true
+	}
+	return out
+}
+
+// rustUnwrap returns how many names a Rust result in the wrapper takes
+// before the next name: one for an unwrap, none for a name of the value
+// inside, and false for a method of the wrapper itself.
+func rustUnwrap(wraps, next string) (int, bool) {
+	switch {
+	case rustUnwraps[next]:
+		return 1, true
+	case rustWrapperMethods[wraps][next]:
+		return 0, false
+	}
+	return 0, true
+}
+
 // rustRoots are the first names of the paths of the crates of the
 // toolchain, which no crate of the project defines.
 var rustRoots = map[string]bool{"std": true, "core": true, "alloc": true}
 
-// rustState is the state of Rust in a build: the crates, the module path
-// of each Rust file, and the paths that a resolution reads now, by the file
-// that writes them.
+// rustState is the state of Rust in a build: the crates of each space, the
+// module path of each Rust file, and the paths that a resolution reads now,
+// by the file that writes them.
 type rustState struct {
-	cargo     *modules.Cargo
+	cargo     map[*space]*modules.Cargo
 	modules   map[string]string
 	resolving map[[2]string]bool
 }
@@ -86,12 +132,25 @@ func (b *builder) rustState() *rustState {
 	return langState[rustState](b, langcode.Rust)
 }
 
+// cargoOf returns the crates of the Cargo.toml files of a space.
+func (b *builder) cargoOf(sp *space) *modules.Cargo {
+	s := b.rustState()
+	if s.cargo == nil {
+		s.cargo = map[*space]*modules.Cargo{}
+	}
+	c, ok := s.cargo[sp]
+	if !ok {
+		c = modules.NewCargo(sp.files, sp.root)
+		s.cargo[sp] = c
+		b.addProblems(sp, c.Problems())
+	}
+	return c
+}
+
 // addRustUnits makes each Rust file the unit of its module, in the table of
 // the module paths.
 func (b *builder) addRustUnits() {
 	s := b.rustState()
-	s.cargo = modules.NewCargo(b.project.files, b.opts.Root)
-	b.problems = append(b.problems, s.cargo.Problems()...)
 	s.modules = map[string]string{}
 	s.resolving = map[[2]string]bool{}
 	files := map[string][]string{}
@@ -115,14 +174,24 @@ func (b *builder) addRustUnits() {
 // with no Cargo.toml. src/lib.rs and src/main.rs are the root of the crate.
 // A file of src/bin, tests, examples or benches, and build.rs, is the root
 // of a crate of its own, which no path of another file names.
+//
+// The root of a crate of a unit of dependency code is the unit, as
+// cargo:smallvec@1.13.2::alloc for src/alloc.rs of smallvec. So the
+// modules of two versions of one crate, or of a crate of the project with
+// the name of a dependency, stay apart.
 func (b *builder) rustModule(p string) string {
-	crate, ok := b.rustState().cargo.Crate(p)
-	name, rel := "crate", p
+	sp := b.spaceOf(p)
+	inner := sp.inner(p)
+	crate, ok := b.cargoOf(sp).Crate(inner)
+	name, rel := "crate", inner
 	if ok {
 		name = crate.Name
 		if crate.Dir != "" {
-			rel = strings.TrimPrefix(p, crate.Dir+"/")
+			rel = strings.TrimPrefix(inner, crate.Dir+"/")
 		}
+	}
+	if sp.unit != "" {
+		name = sp.unit
 	}
 	src, inSrc := strings.CutPrefix(rel, "src/")
 	first, _, _ := strings.Cut(rel, "/")
@@ -164,10 +233,100 @@ func (b *builder) rustPaths(module, written string) []string {
 		return []string{joinPath(module, parts)}
 	}
 	out := []string{joinPath(module, parts)}
-	if b.rustState().cargo.Has(parts[0]) {
+	switch sp := b.rustSpaceOf(module); {
+	case sp.unit != "" && b.rustCrateName(sp) == parts[0]:
+		out = append(out, joinPath(sp.unit, parts[1:]))
+	case sp.unit == "" && b.cargoOf(sp).Has(parts[0]):
 		out = append(out, written)
 	}
 	return out
+}
+
+// rustSpaceOf returns the space of a module path: the unit of its root, or
+// the project.
+func (b *builder) rustSpaceOf(module string) *space {
+	root, _, _ := strings.Cut(module, "::")
+	if sp := b.spaces[root]; sp != nil {
+		return sp
+	}
+	return b.project
+}
+
+// rustCrateName returns the name that a path of another crate writes for
+// the crate of a unit of dependency code, as tokio_postgres for the package
+// tokio-postgres: the name of its root Cargo.toml, or else the name of its
+// package.
+func (b *builder) rustCrateName(sp *space) string {
+	if crate, ok := b.cargoOf(sp).Crate("src/lib.rs"); ok && crate.Dir == "" {
+		return crate.Name
+	}
+	return strings.ReplaceAll(sp.pkg.Name, "-", "_")
+}
+
+// rustProvide returns the item of a crate of a unit of dependency code that
+// a path of another crate names, as the struct SmallVec of the unit
+// cargo:smallvec@1.13.2 for smallvec::SmallVec.
+func rustProvide(b *builder, sp *space, module string, _ modules.Form) []provision {
+	parts := strings.Split(strings.TrimPrefix(module, "::"), "::")
+	if sp.pkg.Ecosystem != "cargo" || b.rustCrateName(sp) != parts[0] {
+		return nil
+	}
+	if key, ok := b.resolveQualified(langcode.Rust, joinPath(sp.unit, parts[1:])); ok {
+		return []provision{{sp: sp, module: key, via: "crate"}}
+	}
+	return []provision{{sp: sp}}
+}
+
+// rustSurface adds each pub item of the crate of a unit and each pub
+// method of its types, under the path that another crate writes for it.
+func rustSurface(s *surfacer) {
+	b, sp := s.b, s.sp
+	if sp.pkg.Ecosystem != "cargo" {
+		return
+	}
+	for _, p := range b.paths {
+		ix := b.byPath[p]
+		if ix == nil || ix.Language != langcode.Rust || fileindex.PackageOf(p) != sp.unit {
+			continue
+		}
+		for _, def := range ix.Definitions {
+			segs := fileindex.Segments(def.Key)
+			if !def.Exported || len(segs) == 0 || len(segs) > 2 || len(segs) == 2 && def.Kind != fileindex.DefMethod {
+				continue
+			}
+			if module, names, ok := rustSymbol(b, sp, def.Key); ok {
+				s.add(langcode.Rust, module, modules.FormImport, names...)
+			}
+		}
+	}
+}
+
+// rustSymbol returns the path of the module of a Rust definition of a unit
+// as another crate writes it and the names of the definition, as smallvec
+// and SmallVec, insert. A type of a private module that the root of the
+// crate gives on with pub use gets the shortest path, as a user of the
+// crate writes it.
+func rustSymbol(b *builder, sp *space, def string) (string, []string, bool) {
+	module, ok := b.rustState().modules[fileindex.Unit(def)]
+	if !ok {
+		return "", nil, false
+	}
+	var segs []string
+	if _, rest, ok := strings.Cut(module, "::"); ok {
+		segs = strings.Split(rest, "::")
+	}
+	names := fileindex.Segments(def)
+	if len(names) == 0 {
+		return "", nil, false
+	}
+	top := fileindex.Join(fileindex.Unit(def), names[0])
+	for i := range segs {
+		if key, ok := b.resolveQualified(langcode.Rust, joinPath(sp.unit, append(slices.Clone(segs[:i]), names[0]))); ok && key == top {
+			segs = segs[:i]
+			break
+		}
+	}
+	return joinPath(b.rustCrateName(sp), segs), names, true
 }
 
 func joinPath(module string, parts []string) string {
@@ -200,8 +359,11 @@ func (b *builder) resolveRust(importer, written string) (string, bool) {
 }
 
 // rustResolver resolves a use, which names a module, a type or a function
-// with its path.
-type rustResolver struct{ b *builder }
+// with its path, in one space.
+type rustResolver struct {
+	b  *builder
+	sp *space
+}
 
 func (r rustResolver) Module(importer, spec string) (string, string, bool) {
 	if key, ok := r.b.resolveRust(importer, spec); ok {
@@ -221,13 +383,14 @@ func (r rustResolver) FirstParty(spec string) bool {
 	case rustRoots[first]:
 		return false
 	}
-	return r.b.rustState().cargo.Has(first) || r.b.project.files.HasName(first)
+	return r.b.cargoOf(r.sp).Has(first) || r.sp.files.HasName(first)
 }
 
 // rustScopeFallback resolves a path that no use and no item of the module
 // binds: a path of the crate, as crate::store::save or store::save for a
 // child module, or else a path of another crate, as serde_json::to_string,
-// whose external key the edge gets. A single name stays a record, because
+// whose external key the edge gets. The crate is the origin of the key, so a
+// unit of dependency code that gives the crate links it. A single name stays a record, because
 // a local closure can bind it.
 func (b *builder) rustScopeFallback(sc *scope, _, first string, rest []string, target string) []resolution {
 	written := strings.Join(append([]string{first}, rest...), "::")
@@ -235,7 +398,7 @@ func (b *builder) rustScopeFallback(sc *scope, _, first string, rest []string, t
 		return []resolution{b.walkNamespace(key)}
 	}
 	if len(rest) > 0 {
-		return []resolution{b.externalResolution(target)}
+		return []resolution{b.importedWalk(sc.ix, target, first, modules.FormImport, rest)}
 	}
 	return nil
 }

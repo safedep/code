@@ -60,7 +60,7 @@
     "lib.py": "indexed"
   },
   "stats": {
-    "version": "13",
+    "version": "14",
     "files": 2,
     "nodes": 4,
     "edges": 1,

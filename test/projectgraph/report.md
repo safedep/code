@@ -905,8 +905,9 @@ has no main, so every exported symbol is a root.
 
 The "before" rows come from the commit of FOU-542, before any fix of this
 measure. The "FOU-543" rows come from the commit of FOU-543, which also
-holds the fixes of FOU-545, FOU-546 and FOU-547 before it. The Rust rows of
-FOU-543 do not change, so the table leaves them out.
+holds the fixes of FOU-545, FOU-546 and FOU-547 before it. The "FOU-544"
+rows come from the commit of FOU-544. The Rust rows of FOU-543 and the Go
+function row of FOU-544 do not change, so the table leaves them out.
 
 | Language | Kind | Run | Targets | found | not-found | no-such-target | unknown-receiver | no-definition | interface-receiver | no-dependency-source | budget | ambiguous | computed-name |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -914,15 +915,21 @@ FOU-543 do not change, so the table leaves them out.
 | Go | function | FOU-543 | 256 | 13 | 0 | 7 | 3 | 0 | 0 | 3 | 39 | 132 | 59 |
 | Go | method | before | 1298 | 29 | 2 | 15 | 294 | 119 | 0 | 0 | 576 | 158 | 105 |
 | Go | method | FOU-543 | 1298 | 30 | 2 | 15 | 319 | 112 | 3 | 2 | 123 | 459 | 233 |
+| Go | method | FOU-544 | 1298 | 30 | 2 | 15 | 320 | 112 | 3 | 2 | 123 | 459 | 232 |
 | Rust | function | before | 13 | 0 | 0 | 10 | 3 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Rust | function | FOU-544 | 13 | 1 | 0 | 5 | 0 | 5 | 0 | 0 | 0 | 2 | 0 |
 | Rust | method | before | 38 | 0 | 1 | 19 | 13 | 5 | 0 | 0 | 0 | 0 | 0 |
+| Rust | method | FOU-544 | 38 | 0 | 0 | 7 | 11 | 11 | 0 | 0 | 0 | 9 | 0 |
 | Rust | other | before | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Rust | other | FOU-544 | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 
 | Language | Run | Method targets that end as unknown-receiver |
 | --- | --- | --- |
 | Go | before | 0.227 (294/1298) |
 | Go | FOU-543 | 0.246 (319/1298) |
+| Go | FOU-544 | 0.247 (320/1298) |
 | Rust | before | 0.342 (13/38) |
+| Rust | FOU-544 | 0.289 (11/38) |
 
 Before:
 
@@ -942,9 +949,9 @@ Before:
 After FOU-543:
 
 - Go: no project has a truncation of the link step. The graphs of the 10
-  Go projects hold 3,435 files, 44% of the 7,810 of before, because the
-  index step leaves out the test files and the files that the build of
-  linux/amd64 does not read. `budget`
+  Go projects hold 5,286 files, 68% of the 7,810 of before, because the
+  index step leaves out the test files and the files that no Go build
+  reads by default. It keeps the files of every platform. `budget`
   falls from 576 to 123 method targets. The rest is scany: two
   `tables.go` files of x/text are over the size limit of the index step,
   so they fail.
@@ -958,10 +965,44 @@ After FOU-543:
   advisory are methods that the code of the dependency calls inside its
   own module, as the methods of the HTTP/2 server of x/net. A call inside
   a unit goes to the definition of the method and not to its external key,
-  so the search reaches the definition and the target, which is the
-  external key, reads as uncertain. The receiver forms of FOU-543 make the
+  so the search reaches the definition and never meets the target, which
+  is the external key. The target reads as uncertain when an unresolved
+  call concerns it, and as not-found when a call of the project that no
+  root reaches names it. FOU-555 fixes the match. The receiver forms of FOU-543 make the
   calls of the project find the method, as the receiver table and the
   cases show. They do not change how a target matches code inside a unit.
 - The measure has no target of the standard library. The Go vulndb has
   the most method symbols for it, and FOU-543 adds `GOROOT/src` as a unit,
   but the corpus pins no Go release.
+
+After FOU-544:
+
+- Rust: the link step links the code of each crate. The 10 Rust graphs
+  hold 1,389 files, against 193 of before, and no project has a problem
+  of a crate that the link step does not link.
+- Rust: `no-such-target` falls from 19 to 7 method targets and from 10 to
+  5 function targets, because the graph now holds the keys of the crates.
+  lettre_email finds one function target. The other targets end
+  uncertain, with an unknown receiver, a call of a name with no
+  definition, or an `ambiguous` call that the search reaches. As for Go,
+  a target that only the code of its own crate calls reads as uncertain,
+  because a call inside a unit goes to the definition and not to the
+  external key.
+- Rust: the five `other` targets of parking_lot name types of lock_api,
+  as `lock_api::MappedMutexGuard`. A type has no call, so they stay
+  `no-such-target`.
+- Go: the rows move by one target between two causes, because a result
+  type of an external walk is now always its external key.
+
+After the review fixes of FOU-544 and FOU-547, the measure gives the same
+counts as the FOU-544 rows. The index now keeps the files of every
+platform and the bodies of generated files, which changes the graphs and
+not the first uncertainty of any result.
+
+The `unknown-receiver` share counts a target when any reached site has an
+unresolved receiver with the method name of the target, also a site
+inside a unit. More reached code of the units gives more name matches on
+`Next`, `Read` or `ServeHTTP`. So the share rises as the search reaches
+more code, and it is not a measure of the receiver forms. The receiver
+table of FOU-542 measures those, and every row of it is found.
+
