@@ -79,6 +79,12 @@ type Result struct {
 
 	// Report lists the files that the run parsed, skipped and failed.
 	Report *plugin.Report
+
+	// Excluded lists the Go files of dependency code that no Go build
+	// reads by default, in walk order: test files, files with //go:build
+	// ignore and files that need a tag the go command never sets. They have
+	// no status, as no program runs their code.
+	Excluded []string
 }
 
 // Statuses returns the status of each file of the run, of the project and
@@ -166,6 +172,8 @@ type run struct {
 	result *Result
 	pool   *pool
 	strs   interner
+	// excluded holds the names of Result.Excluded.
+	excluded map[string]bool
 }
 
 // Run indexes the app files of fsys, and its import files with
@@ -190,7 +198,8 @@ func (ix *Indexer) Run(ctx context.Context, fsys core.ImportAwareFileSystem) (*R
 	}
 
 	r := &run{
-		opts: ix.opts,
+		opts:     ix.opts,
+		excluded: map[string]bool{},
 		result: &Result{
 			Files:        make(map[string]fileindex.FileStatus, len(files)),
 			Dependencies: map[string]fileindex.FileStatus{},
@@ -206,7 +215,7 @@ func (ix *Indexer) Run(ctx context.Context, fsys core.ImportAwareFileSystem) (*R
 	for _, file := range files {
 		statuses := r.result.statuses(file.Name())
 		_, done := statuses[file.Name()]
-		if !done && !slices.Contains(r.result.Report.Skipped, file.Name()) {
+		if !done && !r.excluded[file.Name()] && !slices.Contains(r.result.Report.Skipped, file.Name()) {
 			statuses[file.Name()] = fileindex.FileMissing
 		}
 	}
@@ -263,6 +272,11 @@ func (r *run) index(ctx context.Context, files []core.File, byExtension map[stri
 		data, err := read(file, r.opts.MaxFileBytes)
 		if err != nil {
 			r.fail(ctx, file, core.StageRead, err)
+			continue
+		}
+		if goExcluded(file, data) {
+			r.excluded[file.Name()] = true
+			r.result.Excluded = append(r.result.Excluded, file.Name())
 			continue
 		}
 

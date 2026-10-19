@@ -63,6 +63,22 @@ and no source text past a short call text.
 files of dependency code, and the report of the run. `Result.Unit` returns
 the indexes and the files of one unit of dependency code.
 
+A generated Go file of a unit, with a `// Code generated ... DO NOT EDIT.`
+line or a name that starts with `tables`, can hit a limit of the index,
+as a table of thousands of entries. Its index then comes from the file
+with each top-level var value that holds only data blanked. Function bodies
+and values with a call or a function literal stay, so the calls of a
+generated file, as a `.pb.go` file, stay in the graph. The index keeps the
+hash of the file. If the skeleton still hits a limit, the file stays
+truncated, and reach counts it as budget.
+
+The index leaves out a Go file of a unit only when no Go build reads it by
+default: a `_test.go` file, a file with `//go:build ignore`, and a file
+whose constraint needs a tag that the go command never sets, as `purego`.
+It keeps the files of every GOOS and GOARCH, so a reach answer holds for
+each platform that a project builds for. `Result.Excluded` lists the files
+that it leaves out.
+
 When the context ends, `Run` stops, marks each file that it did not index
 as `missing` and returns the result so far with the error of the context.
 The link step takes the partial result, and the reach query reports each

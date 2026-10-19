@@ -1,0 +1,87 @@
+source: safedep:hand
+description: >-
+  main calls Run of the unit github.com/acme/kit. No Go build reads two files of the unit, so the index step
+  leaves them out. gen.go has //go:build ignore and package main, and kit_test.go is a test file. So the link
+  step records no truncation for a second package clause, and their calls reach no graph. kit_windows.go has
+  //go:build windows and stays, because a reach answer must hold for every platform: its call of
+  syscall.CloseHandle is in the graph, and no root reaches it. tables.go is a generated file whose var holds a
+  string of 60 parts, past the depth limit of the index. Its index blanks the data value and keeps the body of
+  lookup, so the file is complete, gives no budget and keeps its calls.
+units:
+  gomod/github.com/acme/kit@v1.0.0: go:github.com/acme/kit@v1.0.0
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+exact_edges: true
+edges:
+  - from: main.go//main
+    to: github.com//acme//kit//Run
+    kind: direct
+    confidence: high
+    site: main.go:6
+  - from: github.com//acme//kit//Run
+    to: go:github.com/acme/kit@v1.0.0//kit.go//Run
+    kind: package
+    confidence: high
+    site: go:github.com/acme/kit@v1.0.0//kit.go:5
+  - from: go:github.com/acme/kit@v1.0.0//kit.go//Run
+    to: os//exec//Command
+    kind: direct
+    confidence: high
+    site: go:github.com/acme/kit@v1.0.0//kit.go:6
+  - from: go:github.com/acme/kit@v1.0.0//kit.go//Run
+    to: go:github.com/acme/kit@v1.0.0//tables.go//lookup
+    kind: direct
+    confidence: high
+    site: go:github.com/acme/kit@v1.0.0//kit.go:7
+  - from: go:github.com/acme/kit@v1.0.0//kit_windows.go//Close
+    to: syscall//CloseHandle
+    kind: direct
+    confidence: high
+    site: go:github.com/acme/kit@v1.0.0//kit_windows.go:8
+  - from: go:github.com/acme/kit@v1.0.0//tables.go//lookup
+    to: len
+    kind: direct
+    confidence: high
+    site: go:github.com/acme/kit@v1.0.0//tables.go:6
+  - from: go:github.com/acme/kit@v1.0.0//tables.go//lookup
+    to: len
+    kind: direct
+    confidence: high
+    site: go:github.com/acme/kit@v1.0.0//tables.go:6
+unresolved: []
+results:
+  - target: os//exec//Command
+    status: found
+    path:
+      - key: main.go//main
+      - key: github.com//acme//kit//Run
+        site: main.go:6
+        kind: direct
+        confidence: high
+      - key: go:github.com/acme/kit@v1.0.0//kit.go//Run
+        site: go:github.com/acme/kit@v1.0.0//kit.go:5
+        kind: package
+        confidence: high
+      - key: os//exec//Command
+        site: go:github.com/acme/kit@v1.0.0//kit.go:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: go:github.com/acme/kit@v1.0.0//kit.go//Run
+        site: go:github.com/acme/kit@v1.0.0//kit.go:6
+        reached: true
+  - target: os//RemoveAll
+    status: no-such-target
+  - target: os//WriteFile
+    status: no-such-target
+  - target: syscall//CloseHandle
+    status: not-found
+    call_sites:
+      - caller: go:github.com/acme/kit@v1.0.0//kit_windows.go//Close
+        site: go:github.com/acme/kit@v1.0.0//kit_windows.go:8
+        reached: false

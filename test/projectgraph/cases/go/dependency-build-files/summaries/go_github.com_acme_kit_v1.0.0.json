@@ -1,0 +1,30 @@
+{
+  "version": "2",
+  "index_version": "12",
+  "link_version": "12",
+  "unit": "go:github.com/acme/kit@v1.0.0",
+  "symbols": [
+    {
+      "key": "github.com//acme//kit//Close",
+      "definitions": [
+        "go:github.com/acme/kit@v1.0.0//kit_windows.go//Close"
+      ],
+      "reaches": [
+        "syscall//CloseHandle"
+      ]
+    },
+    {
+      "key": "github.com//acme//kit//Run",
+      "definitions": [
+        "go:github.com/acme/kit@v1.0.0//kit.go//Run"
+      ],
+      "reaches": [
+        "os//exec//Command"
+      ]
+    }
+  ],
+  "targets": [
+    "os//exec//Command",
+    "syscall//CloseHandle"
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "version": "2",
-  "index_version": "11",
+  "index_version": "12",
   "link_version": "12",
   "unit": "go:github.com/acme/yamlish@v1.2.0",
   "symbols": [

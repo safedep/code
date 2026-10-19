@@ -1,6 +1,6 @@
 [
   {
-    "version": "11", "path": "main.py", "language": "python",
+    "version": "12", "path": "main.py", "language": "python",
     "imports": [{"line": 1, "module": "util", "wildcard": true, "kind": "static", "namespace": "util"}],
     "definitions": [{"key": "main.py", "kind": "module", "name": "main", "start_line": 1, "end_line": 3, "exported": true}],
     "calls": [
@@ -9,7 +9,7 @@
     ]
   },
   {
-    "version": "11", "path": "util.py", "language": "python",
+    "version": "12", "path": "util.py", "language": "python",
     "definitions": [
       {"key": "util.py", "kind": "module", "name": "util", "start_line": 1, "end_line": 4, "exported": true},
       {"key": "util.py//helper", "kind": "function", "name": "helper", "start_line": 1, "end_line": 2, "exported": true},

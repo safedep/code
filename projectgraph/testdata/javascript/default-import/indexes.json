@@ -1,6 +1,6 @@
 [
   {
-    "version": "11", "path": "main.js", "language": "javascript",
+    "version": "12", "path": "main.js", "language": "javascript",
     "imports": [
       {"line": 1, "module": "./log", "alias": "log", "kind": "static", "namespace": ".//log"},
       {"line": 2, "module": "./make", "alias": "make", "kind": "static", "namespace": ".//make"}
@@ -12,7 +12,7 @@
     ]
   },
   {
-    "version": "11", "path": "log.js", "language": "javascript",
+    "version": "12", "path": "log.js", "language": "javascript",
     "exports": [{"name": "default", "target": "log.js//log", "line": 1}],
     "definitions": [
       {"key": "log.js", "kind": "module", "name": "log", "start_line": 1, "end_line": 1, "exported": true},
@@ -20,7 +20,7 @@
     ]
   },
   {
-    "version": "11", "path": "make.js", "language": "javascript",
+    "version": "12", "path": "make.js", "language": "javascript",
     "exports": [{"name": "default", "target": "make.js//make", "line": 1}],
     "definitions": [
       {"key": "make.js", "kind": "module", "name": "make", "start_line": 1, "end_line": 1, "exported": true},
