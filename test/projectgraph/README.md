@@ -5,8 +5,8 @@ This directory tests the index step, the link step and the reach query of
 
 | Part | Files | Runs in |
 | --- | --- | --- |
-| Hand-written cases | `cases/<language>/<case>/`, `cases_test.go`, `workers_test.go` (one output for any number of workers), `version_test.go` (the hash of the graphs and the summaries per version) | `go test ./...` |
-| Public sets | `public/`, `public_test.go`, `govulncheck_test.go` | `go test -tags projectgraph` |
+| Hand-written cases | `cases/<language>/<case>/`, `cases_test.go`, `receivers_test.go` (the forms of a method receiver), `workers_test.go` (one output for any number of workers), `version_test.go` (the hash of the graphs and the summaries per version) | `go test ./...` |
+| Public sets | `public/`, `public_test.go`, `govulncheck_test.go`, `methods_test.go` | `go test -tags projectgraph` |
 | Benchmark | `bench_test.go`, `synth_test.go`, `synth_languages_test.go` (the C#, PHP, Ruby and Rust generators) | `go test -tags projectgraph -bench .` |
 
 `helpers_test.go` holds the index and link helpers that every part uses.
@@ -115,6 +115,31 @@ go test -tags projectgraph -run TestGovulncheckTraces -count=1 -v ./test/project
 
 Set `PROJECTGRAPH_PUBLIC_DUMP` to a case name, as `classes/self_call`, or to
 `all`, to log the edges, the extra pairs and the missed pairs of the case.
+
+## Run the method measure
+
+`methods_test.go` measures how often a target of a vulnerable function or
+method of a dependency ends uncertain on real projects.
+`public/methods/corpus.txt` lists the projects and the dependencies, and
+`public/methods/advisories.json` holds their advisories from the Go vulndb
+and from RustSec through OSV. The code is not in the repository, so fetch
+it first:
+
+```bash
+export PROJECTGRAPH_METHOD_CORPUS=$(bash scripts/fetch_method_corpus.sh "$(mktemp -d)")
+go test -tags projectgraph -run TestMethodTargets -count=1 -v ./test/projectgraph/
+```
+
+The test logs the count of each answer per language and per symbol kind,
+and the same per project. Set `PROJECTGRAPH_METHOD_REPORT` to a file path
+to write the block to that file. `report.md` says how the corpus was
+chosen and what each cause means.
+
+`receivers_test.go` holds one row per form of the receiver of a method
+call, for Go and for Rust, against the small dependency units under
+`testdata/receivers`. It runs in `go test ./...`. A row that the link step
+does not answer yet names the issue that fixes it and its answer before
+that fix, so the test stays green until the fix changes the answer.
 
 ## Run the benchmark
 

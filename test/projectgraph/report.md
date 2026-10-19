@@ -854,3 +854,76 @@ cases and 82.2% for Jelly on swarm-js. This report did not run PyCG or Jelly,
 and its exact-cases metric counts whole cases, so the numbers do not compare
 one to one. The recall gate of the design needs a run of PyCG and Jelly on
 the same cases.
+
+## Method targets
+
+This section measures how often a target of a vulnerable function or
+method of a dependency ends uncertain on real projects. `README.md` says
+how to run it. The "before" run is from the commit that adds this
+section, on 2026-10-19, on the machine above.
+
+### The corpus
+
+`public/methods/corpus.txt` lists 10 Go projects and 10 Rust projects.
+Each one depends on a module or a crate with function or method symbols
+in an advisory. `public/methods/advisories.json` holds the advisories of
+these dependencies: the Go vulndb (`vuln.go.dev`) and RustSec through
+OSV, as of 2026-10-19.
+
+| Language | Projects | Dependencies with an advisory |
+| --- | --- | --- |
+| Go | bluemonday v1.0.16, goquery v1.8.0, colly v2.1.0, hey v0.1.4, melody v1.1.1, scany v2.0.0, fiber v2.40.0, sftp v1.13.5, go-grpc-middleware v1.3.0, go-rabbitmq v0.12.1 | golang.org/x/net, golang.org/x/crypto, golang.org/x/text, golang.org/x/sys, golang.org/x/oauth2, github.com/antchfx/xpath, github.com/antchfx/xmlquery, google.golang.org/protobuf, google.golang.org/grpc, github.com/gorilla/websocket, github.com/jackc/pgx/v5, github.com/valyala/fasthttp, github.com/sirupsen/logrus, github.com/rabbitmq/amqp091-go |
+| Rust | postgres 0.19.7, parking_lot 0.11.0, native-tls 0.2.10, cookie 0.14.4, imageproc 0.21.0, cssparser 0.27.2, selectors 0.22.0, tokio-postgres 0.7.7, lettre_email 0.9.4, rusqlite_migration 0.5.0 | tokio, tokio-postgres, postgres-protocol, lock_api, openssl, time, rand, image, rulinalg, smallvec, lettre, rusqlite |
+
+A Go dependency has the version that the go.mod of the project names. A
+Rust dependency has the newest version that the requirement of the
+Cargo.toml admits and that an advisory affects, as a lock file at a
+vulnerable version would pin it. The code of each such dependency is a
+unit of the link step. Every symbol of an advisory that affects the
+version of a dependency is a target. A Go advisory with no symbol list
+covers its whole package and gives no target. A Rust name with type
+arguments is no key and gives no target. A Rust name whose last segment
+starts with an upper case letter is a type, and the table counts it as
+`other`.
+
+The test runs no network call and the corpus is not in the repository,
+so a run needs `scripts/fetch_method_corpus.sh` first. The real Go
+standard library is not in the corpus, so the measure has no target of
+the standard library.
+
+### What the columns mean
+
+A target ends as `found`, `not-found`, `no-such-target` or `uncertain`.
+An uncertain target has one cause. When the search from the roots
+reaches an unresolved call whose method name is the last segment of the
+target, the cause is the reason of that call, and `unknown-receiver`
+wins over another reason. Else the cause is the first uncertainty of the
+result, as `budget`, `ambiguous` or `computed-name`. A library project
+has no main, so every exported symbol is a root.
+
+### Before
+
+| Language | Kind | Run | Targets | found | not-found | no-such-target | unknown-receiver | no-definition | budget | ambiguous | computed-name |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Go | function | before | 256 | 13 | 0 | 7 | 3 | 1 | 145 | 53 | 34 |
+| Go | method | before | 1298 | 29 | 2 | 15 | 294 | 119 | 576 | 158 | 105 |
+| Rust | function | before | 13 | 0 | 0 | 10 | 3 | 0 | 0 | 0 | 0 |
+| Rust | method | before | 38 | 0 | 1 | 19 | 13 | 5 | 0 | 0 | 0 |
+| Rust | other | before | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 |
+
+The share of the method targets that end as `unknown-receiver` is 0.227
+(294/1298) for Go and 0.342 (13/38) for Rust.
+
+- Go: `budget` is the largest cause. The index of each
+  `idna/tables*.go` of x/net hits a limit, so the file is truncated. Each
+  `gen.go` of x/net has `//go:build ignore` and `package main`, so the
+  link step records a truncation for it. A `_test.go` file of x/crypto is
+  truncated too. The budget of a file of a unit concerns every target
+  once the search enters the unit.
+  hey has 47 truncations and scany 55.
+- Go: an `ambiguous` or a `computed-name` call concerns every target.
+  These calls come from the code of a dependency unit, as pgx and
+  amqp091-go, and from the project, as fiber and go-grpc-middleware.
+- Rust: the link step does not link the code of a `cargo:` unit, so the
+  graph holds no edge into the crate. A target that no project file names
+  is `no-such-target`.
