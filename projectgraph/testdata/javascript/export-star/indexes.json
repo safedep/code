@@ -1,6 +1,6 @@
 [
   {
-    "version": "13", "path": "main.js", "language": "javascript",
+    "version": "14", "path": "main.js", "language": "javascript",
     "imports": [
       {"line": 1, "module": "./all", "item": "a", "alias": "a", "kind": "static", "namespace": ".//all//a"},
       {"line": 1, "module": "./all", "item": "b", "alias": "b", "kind": "static", "namespace": ".//all//b"},
@@ -14,7 +14,7 @@
     ]
   },
   {
-    "version": "13", "path": "all.js", "language": "javascript",
+    "version": "14", "path": "all.js", "language": "javascript",
     "exports": [
       {"name": "*", "target": "", "from": "./a", "item": "*", "line": 1},
       {"name": "*", "target": "", "from": "./b", "item": "*", "line": 2},
@@ -23,7 +23,7 @@
     "definitions": [{"key": "all.js", "kind": "module", "name": "all", "start_line": 1, "end_line": 3, "exported": true}]
   },
   {
-    "version": "13", "path": "a.js", "language": "javascript",
+    "version": "14", "path": "a.js", "language": "javascript",
     "exports": [{"name": "a", "target": "a.js//a", "line": 1}],
     "definitions": [
       {"key": "a.js", "kind": "module", "name": "a", "start_line": 1, "end_line": 1, "exported": true},
@@ -31,7 +31,7 @@
     ]
   },
   {
-    "version": "13", "path": "b.js", "language": "javascript",
+    "version": "14", "path": "b.js", "language": "javascript",
     "exports": [{"name": "b", "target": "b.js//b", "line": 1}],
     "definitions": [
       {"key": "b.js", "kind": "module", "name": "b", "start_line": 1, "end_line": 1, "exported": true},
@@ -39,7 +39,7 @@
     ]
   },
   {
-    "version": "13", "path": "c.js", "language": "javascript",
+    "version": "14", "path": "c.js", "language": "javascript",
     "exports": [{"name": "c", "target": "c.js//c", "line": 1}],
     "definitions": [
       {"key": "c.js", "kind": "module", "name": "c", "start_line": 1, "end_line": 1, "exported": true},

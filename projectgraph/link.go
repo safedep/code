@@ -127,6 +127,9 @@ type builder struct {
 	// walk of a unit reads now for the result type of an external key.
 	reading  map[string]bool
 	stepping map[nameKey]bool
+	// unitTypes holds the type that a unit of dependency code gives for
+	// each external key, or "".
+	unitTypes map[string]string
 
 	// groupMembers holds the members of each group of aliases by its first
 	// alias, and nodesByParent the keys of the nodes by their parent.
@@ -264,6 +267,7 @@ func newTables(indexes []*fileindex.Index, opts Options) *builder {
 		defs:         make(map[string]*fileindex.Definition, defs),
 		reading:      map[string]bool{},
 		stepping:     map[nameKey]bool{},
+		unitTypes:    map[string]string{},
 		findingBases: map[string]bool{},
 		state:        map[langcode.Code]any{},
 		units:        map[string]*unit{},

@@ -69,8 +69,24 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 			// of a function or a method whose result has the next name,
 			// when a unit of dependency code gives the function.
 			if i+1 < len(names) {
-				if class, ok := b.externalResult(r.key, name); ok {
-					r.key, r.virtual, r.declared = class, true, true
+				// An unwrap that ends the names is the call of the method
+				// of the wrapper, so the walk takes it as a member.
+				if res, ok := b.externalResult(r.key, name); ok {
+					skip, typed := unwrap(res.wraps, names[i+1:])
+					switch {
+					case !typed:
+						r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: names[i+1]}
+						return r
+					case i+1+skip < len(names):
+						r.key, r.virtual, r.declared = res.class, true, true
+						i += 1 + skip
+						continue
+					}
+				}
+				// A type or a module of a unit gives the next name, as
+				// from_vec of smallvec::SmallVec::from_vec(v).
+				if defs, _ := b.unitDefinitions(derivedOrigins(b.origins[r.key], name)); len(defs) > 0 {
+					r.key = b.deriveKey(r.key, names[i:i+1])
 					i++
 					continue
 				}
@@ -79,7 +95,7 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 			r.rule = cmp.Or(r.rule, ruleExternal)
 			return r
 		case kind == NodeFunction || kind == NodeMethod || kind == NodeConstructor:
-			consumed, done = b.walkFunction(&r, name)
+			consumed, done = b.walkFunction(&r, names[i:])
 		default:
 			r.fail = noDefinition(name)
 			return r
@@ -225,17 +241,24 @@ func (b *builder) walkClass(r *resolution, name string, last bool, instance *boo
 	return false, true
 }
 
-// walkFunction reads a name of a function: a Go call of the function gives
-// a value of its first result, as New().Run(). Else the name is a local
-// variable or a parameter of the function, and the index does not know its
-// value.
-func (b *builder) walkFunction(r *resolution, name string) (consumed, done bool) {
-	class, reason, ok := b.resultType(fileindex.PackageOf(r.key), r.key, 0)
-	if ok {
-		r.key, r.virtual, r.declared = class, true, true
-		return false, false
+// walkFunction reads the names after a function: a call of the function
+// gives a value of its first result, as New().Run() in Go. A Rust result
+// in an Option or a Result takes unwrap or expect first. Else the name is a
+// local variable or a parameter of the function, and the index does not
+// know its value.
+func (b *builder) walkFunction(r *resolution, names []string) (consumed, done bool) {
+	res, reason, ok := b.resultType(fileindex.PackageOf(r.key), r.key, 0)
+	skip, typed := unwrap(res.wraps, names)
+	switch {
+	case ok && typed && skip == 1 && len(names) == 1:
+		// An unwrap that ends the names runs the code of the function
+		// and the unwrap of std, so the walk ends at the function.
+		return true, false
+	case ok && typed:
+		r.key, r.virtual, r.declared = res.class, true, true
+		return skip == 1, false
 	}
-	r.fail = &failure{reason: reason, name: name}
+	r.fail = &failure{reason: cmp.Or(reason, fileindex.UnresolvedUnknownReceiver), name: names[0]}
 	return false, true
 }
 

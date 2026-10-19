@@ -124,7 +124,7 @@
     "main.js": "indexed"
   },
   "stats": {
-    "version": "13",
+    "version": "14",
     "files": 1,
     "nodes": 5,
     "edges": 3,

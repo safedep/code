@@ -8,32 +8,53 @@ import (
 	"github.com/safedep/code/projectgraph/modules"
 )
 
-// resultType returns the class or interface of the result at a position of
-// a function, as a file of the unit of the importer sees it, "" for the
-// project. A function of a package
-// that the project imports is an external key, and the unit of dependency
-// code that gives the package gives its definition. A function of a
-// package that no unit gives has no known result, so a call on the result
-// is uncertain with the reason no-dependency-source.
-func (b *builder) resultType(unit, fn string, pos int) (string, fileindex.UnresolvedReason, bool) {
+// result is the class or the interface of a result of a function, as a
+// file of an importer names it, and the Option or the Result of std that
+// holds a Rust result.
+type result struct {
+	class string
+	wraps string
+}
+
+// resultType returns the result at a position of a function, as a file of
+// the unit of the importer sees it, "" for the project. A function of a
+// package that the project imports is an external key, and the unit of
+// dependency code that gives the package gives its definition. A function
+// of a package that no unit gives has no known result, so a call on the
+// result is uncertain with the reason no-dependency-source.
+func (b *builder) resultType(unit, fn string, pos int) (result, fileindex.UnresolvedReason, bool) {
 	defs := []string{fn}
 	if b.defs[fn] == nil && b.g.IsExternal(fn) {
 		var provided bool
 		defs, provided = b.unitDefinitions(b.origins[fn])
 		if !provided {
-			return "", fileindex.UnresolvedNoDependencySource, false
+			return result{}, fileindex.UnresolvedNoDependencySource, false
 		}
 	}
 	for _, d := range defs {
-		text := resultText(b.defs[d], pos)
+		def := b.defs[d]
+		text := resultText(def, pos)
 		if text == "" {
 			continue
 		}
 		if class, ok := b.resolveType(b.scopes[fileindex.Unit(d)], d, text); ok {
-			return b.typeFor(unit, class), "", true
+			return result{class: b.typeFor(unit, class), wraps: def.Wraps}, "", true
 		}
 	}
-	return "", fileindex.UnresolvedUnknownReceiver, false
+	return result{}, fileindex.UnresolvedUnknownReceiver, false
+}
+
+// unwrap returns how many of the names after a call a wrapped result
+// takes: one for unwrap or expect, which give the value inside, and none
+// for a name that the value inside takes after a ?, which the index does
+// not record. A method of the wrapper itself, as map of Option, gives no
+// type, so it reports false. A result with no wrapper takes no name. Only
+// a Rust result has a wrapper.
+func unwrap(wraps string, next []string) (int, bool) {
+	if wraps == "" || len(next) == 0 {
+		return 0, true
+	}
+	return rustUnwrap(wraps, next[0])
 }
 
 // resultText returns the type name of the result at a position of a
@@ -61,7 +82,14 @@ func (b *builder) unitDefinitions(origins []origin) ([]string, bool) {
 	for _, o := range origins {
 		for _, pv := range b.providers(o) {
 			provided = true
-			if pv.module == "" || len(o.names) == 0 {
+			switch {
+			case pv.module == "":
+				continue
+			case len(o.names) == 0:
+				// A Rust use can name the item itself, as use dep::Thing.
+				if b.defs[pv.module] != nil && !slices.Contains(defs, pv.module) {
+					defs = append(defs, pv.module)
+				}
 				continue
 			}
 			k := nameKey{module: pv.module, name: fileindex.Join("", o.names...)}
@@ -79,25 +107,35 @@ func (b *builder) unitDefinitions(origins []origin) ([]string, bool) {
 	return defs, provided
 }
 
-// externalResult returns the type of the result of the function or the
-// method of the name under an external key, as golang.org//x//net//html//Tokenizer
-// for NewTokenizer under golang.org//x//net//html. A unit of dependency
-// code gives the function, and the importer of the key sees the type.
-func (b *builder) externalResult(parent, name string) (string, bool) {
+// externalResult returns the result of the function or the method of the
+// name under an external key, as golang.org//x//net//html//Tokenizer for
+// NewTokenizer under golang.org//x//net//html. A unit of dependency code
+// gives the function, and the type is the external key of a class. A method
+// of the same-type methods of the language, as clone in Rust, on a type of
+// a unit keeps the type, also when the unit derives it and defines none.
+func (b *builder) externalResult(parent, name string) (result, bool) {
 	origins := derivedOrigins(b.origins[parent], name)
 	if len(origins) == 0 {
-		return "", false
+		return result{}, false
 	}
 	defs, _ := b.unitDefinitions(origins)
 	for _, d := range defs {
 		if !b.isFunction(d) {
 			continue
 		}
-		if class, _, ok := b.resultType(origins[0].unit, d, 0); ok {
-			return class, true
+		// The walk reads an external key, so the code that names it is
+		// in another space than the unit, and the type is its key.
+		if res, _, ok := b.resultType("", d, 0); ok {
+			return res, true
 		}
 	}
-	return "", false
+	if profileOf(origins[0].lang).sameTypeMethods[name] {
+		types, _ := b.unitDefinitions(b.origins[parent])
+		if slices.ContainsFunc(types, b.isType) {
+			return result{class: parent}, true
+		}
+	}
+	return result{}, false
 }
 
 // derivedOrigins returns the origins of the name under a key with the

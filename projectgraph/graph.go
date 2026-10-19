@@ -17,7 +17,7 @@ import (
 // Version is the version of the link rules. Bump it when a rule that makes a
 // node, an edge, a root or an unresolved site changes, so a diff of two
 // reports shows the change.
-const Version = "13"
+const Version = "14"
 
 type NodeKind string
 

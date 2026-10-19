@@ -163,8 +163,8 @@ of the highest confidence.
 
 A call that the link step cannot resolve is an unresolved site with a
 reason: `computed-name`, `dynamic-import`, `unknown-receiver`,
-`no-definition`, `ambiguous`, `limit`, `interface-receiver` or
-`no-dependency-source`. The site keeps the method name of the call, so the
+`no-definition`, `ambiguous`, `limit`, `interface-receiver`,
+`trait-receiver` or `no-dependency-source`. The site keeps the method name of the call, so the
 reach query can tell which targets it concerns.
 
 A call on the result of another call, as `html.NewTokenizer(r).Next()`,
@@ -191,6 +191,31 @@ edge joins the key to the definition in the unit. A chained call, as
 | An interface type | The `cha` edges to the implementations in the graph. An implementation in a unit gets its edge through its external key. With no implementation, the site is a record with the reason `interface-receiver` |
 | A function of a package that no unit gives | A record with the reason `no-dependency-source` |
 | A result with no named type, or a function that the unit does not define | A record with the reason `unknown-receiver` |
+
+Rust follows the same rules, with these additions.
+
+- The link step links the code of a `cargo:` unit, as the crate directory
+  in the cargo registry or in `vendor/`. The root module of the crate is
+  the unit, so two versions of one crate stay apart. The external key of
+  an item is the path that another crate writes, and an item of a private
+  module that the root gives on with `pub use` gets the shortest path, as
+  `smallvec//SmallVec`.
+- The index records the return type of each function and method, with
+  `Self` as the type of its `impl`. A type drops `&`, `&mut`, `Box<..>`,
+  `Rc<..>`, `Arc<..>` and its type arguments, so `&mut SmallVec<[u8; 4]>`
+  is `SmallVec`. An `Option<T>` or a `Result<T, E>` result keeps `T` in
+  `Returns` and its wrapper in `Wraps`. `unwrap` and `expect` give `T`,
+  and so does a `?`, which the index does not record. A call of another
+  method of the wrapper, as `map`, has no type.
+- A declared type of a parameter, a field or a local that a unit gives
+  binds the receiver. An associated function, as `Type::from_vec(v)`,
+  binds the type that it returns, and `clone`, `to_owned`, `default` and
+  `from` on a type of a unit keep the type also when the crate derives
+  them.
+- A trait object or a generic bound `T: Trait` of a unit gets the `cha`
+  edges to the implementations in the graph, through their external keys.
+  With no implementation, the site is a record with the reason
+  `trait-receiver`.
 
 The standard library is a unit too. Pass `GOROOT/src` as the unit
 `go:std@<version>`, as `-deps $(go env GOROOT)/src=go:std@go1.25.1`. It gives

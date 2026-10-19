@@ -99,10 +99,10 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			}
 			if r.fail != nil {
 				reason := r.fail.reason
-				// A Go value of an interface type that no type of the
+				// A value of an interface or a trait that no type of the
 				// graph implements holds a type of code elsewhere.
-				if reason == fileindex.UnresolvedNoDefinition && overrides == 0 && r.declared && sc.profile.implicitInterfaces && b.kindOf(r.class) == NodeInterface {
-					reason = fileindex.UnresolvedInterfaceReceiver
+				if reason == fileindex.UnresolvedNoDefinition && overrides == 0 && r.declared && sc.profile.abstractReceiver != "" && b.kindOf(r.class) == NodeInterface {
+					reason = sc.profile.abstractReceiver
 				}
 				b.addUnresolved(UnresolvedSite{
 					Caller:   from,

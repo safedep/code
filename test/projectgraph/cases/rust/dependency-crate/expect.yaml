@@ -1,0 +1,170 @@
+source: safedep:hand
+description: >-
+  main opens a kit::Store with Store::open().unwrap() and calls save on it, and flush::all calls flush on a value of
+  a generic type S: Sink. The code of the crate kit is the unit cargo:kit@1.0.0. open returns Result<Store, String>,
+  so unwrap gives a Store, and the call of save gets the external key kit//Store//save, which a package edge joins
+  to the method in the unit. The bound Sink is a trait of the unit, and Store implements it, so flush gets a cha
+  edge to kit//Store//flush, and the site keeps its record. Store is in a private module, and lib.rs gives it on
+  with pub use, so its key is kit//Store and not kit//store//Store.
+units:
+  vendor/kit: cargo:kit@1.0.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+exact_edges: true
+edges:
+  - from: cargo:kit@1.0.0//src/store.rs//Store//flush
+    to: cargo:kit@1.0.0//src/store.rs//Store
+    kind: direct
+    confidence: high
+    site: cargo:kit@1.0.0//src/store.rs:18
+  - from: cargo:kit@1.0.0//src/store.rs//Store//flush
+    to: std//fs//remove_file
+    kind: direct
+    confidence: high
+    site: cargo:kit@1.0.0//src/store.rs:19
+  - from: cargo:kit@1.0.0//src/store.rs//Store//flush
+    to: std//fs//remove_file//unwrap
+    kind: direct
+    confidence: high
+    site: cargo:kit@1.0.0//src/store.rs:19
+  - from: cargo:kit@1.0.0//src/store.rs//Store//open
+    to: Ok
+    kind: direct
+    confidence: high
+    site: cargo:kit@1.0.0//src/store.rs:9
+  - from: cargo:kit@1.0.0//src/store.rs//Store//open
+    to: cargo:kit@1.0.0//src/store.rs//Store
+    kind: direct
+    confidence: high
+    site: cargo:kit@1.0.0//src/store.rs:9
+  - from: cargo:kit@1.0.0//src/store.rs//Store//save
+    to: cargo:kit@1.0.0//src/store.rs//Store
+    kind: direct
+    confidence: high
+    site: cargo:kit@1.0.0//src/store.rs:12
+  - from: cargo:kit@1.0.0//src/store.rs//Store//save
+    to: std//fs//write
+    kind: direct
+    confidence: high
+    site: cargo:kit@1.0.0//src/store.rs:13
+  - from: cargo:kit@1.0.0//src/store.rs//Store//save
+    to: std//fs//write//unwrap
+    kind: direct
+    confidence: high
+    site: cargo:kit@1.0.0//src/store.rs:13
+  - from: kit//Store//flush
+    to: cargo:kit@1.0.0//src/store.rs//Store//flush
+    kind: package
+    confidence: high
+    site: cargo:kit@1.0.0//src/store.rs:18
+  - from: kit//Store//open
+    to: cargo:kit@1.0.0//src/store.rs//Store//open
+    kind: package
+    confidence: high
+    site: cargo:kit@1.0.0//src/store.rs:8
+  - from: kit//Store//open//unwrap
+    to: cargo:kit@1.0.0//src/store.rs//Store//open
+    kind: package
+    confidence: high
+    site: cargo:kit@1.0.0//src/store.rs:8
+  - from: kit//Store//save
+    to: cargo:kit@1.0.0//src/store.rs//Store//save
+    kind: package
+    confidence: high
+    site: cargo:kit@1.0.0//src/store.rs:12
+  - from: src/flush.rs//all
+    to: kit//Store//flush
+    kind: cha
+    confidence: medium
+    site: src/flush.rs:4
+  - from: src/main.rs//main
+    to: kit//Store//open
+    kind: direct
+    confidence: high
+    site: src/main.rs:6
+  - from: src/main.rs//main
+    to: kit//Store//open//unwrap
+    kind: direct
+    confidence: high
+    site: src/main.rs:6
+  - from: src/main.rs//main
+    to: kit//Store//save
+    kind: direct
+    confidence: high
+    site: src/main.rs:7
+  - from: src/main.rs//main
+    to: src/flush.rs//all
+    kind: direct
+    confidence: high
+    site: src/main.rs:8
+unresolved:
+  - caller: cargo:kit@1.0.0//src/store.rs//Store//save
+    site: cargo:kit@1.0.0//src/store.rs:13
+    reason: unknown-receiver
+    method: unwrap
+  - caller: cargo:kit@1.0.0//src/store.rs//Store//flush
+    site: cargo:kit@1.0.0//src/store.rs:19
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/flush.rs//all
+    site: src/flush.rs:4
+    reason: no-definition
+    method: flush
+  - caller: src/main.rs//main
+    site: src/main.rs:6
+    reason: unknown-receiver
+    method: unwrap
+results:
+  - target: kit//Store//save
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: kit//Store//save
+        site: src/main.rs:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.rs//main
+        site: src/main.rs:7
+        reached: true
+  - target: std//fs//write
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: kit//Store//save
+        site: src/main.rs:7
+        kind: direct
+        confidence: high
+      - key: cargo:kit@1.0.0//src/store.rs//Store//save
+        site: cargo:kit@1.0.0//src/store.rs:12
+        kind: package
+        confidence: high
+      - key: std//fs//write
+        site: cargo:kit@1.0.0//src/store.rs:13
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: cargo:kit@1.0.0//src/store.rs//Store//save
+        site: cargo:kit@1.0.0//src/store.rs:13
+        reached: true
+  - target: kit//Store//flush
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/flush.rs//all
+        site: src/main.rs:8
+        kind: direct
+        confidence: high
+      - key: kit//Store//flush
+        site: src/flush.rs:4
+        kind: cha
+        confidence: medium
+    call_sites:
+      - caller: src/flush.rs//all
+        site: src/flush.rs:4
+        reached: true

@@ -52,6 +52,18 @@ type profile struct {
 	// it, as golang.org/x/net/html and Tokenizer. The profile of the family
 	// holds it.
 	symbol func(b *builder, sp *space, def string) (string, []string, bool)
+	// unitTypes marks a language with no subclass of a type of another
+	// crate, as Rust, so a declared type that a unit of dependency code
+	// gives narrows a call to the method of the type.
+	unitTypes bool
+	// sameTypeMethods name the methods that give a value of the type of
+	// the receiver, as clone of Rust, also when the type derives them and
+	// the code defines none.
+	sameTypeMethods map[string]bool
+	// abstractReceiver is the reason of the record of a call on a value of
+	// an interface or a trait that no type of the graph implements, as
+	// trait-receiver of Rust.
+	abstractReceiver fileindex.UnresolvedReason
 	// dependencies returns the packages that the manifests of the project
 	// declare for the ecosystem of the family, and the manifests that the
 	// reader could not read. The profile of the family holds it.
