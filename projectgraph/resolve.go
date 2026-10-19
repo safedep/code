@@ -114,6 +114,9 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			if r.unbound && !b.unboundEdge(ix, call, from, site, r, unknown[[2]int{call.Line, call.Column}]) {
 				continue
 			}
+			if b.onCallResult(sc.profile, call, r) {
+				b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: call.Callee, Receiver: call.Receiver, Method: call.Method, Reason: fileindex.UnresolvedUnknownReceiver})
+			}
 			switch {
 			case r.kind == EdgeDirect && isAssignment(sc, call, r.target):
 				r.kind, r.rule = EdgeAssignment, ruleAssignment
@@ -126,6 +129,76 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			b.link(ix.Language, from, r.key, site, r.kind, r.rule)
 		}
 	}
+}
+
+// onCallResult reports whether a resolution took the method of a call on
+// the result of another call as a member of the external key of the called
+// name, as html//NewTokenizer//Next for html.NewTokenizer(r).Next(). The
+// link step does not know the type of that result, so the key can name no
+// symbol, and a target of the method of the real type would read as
+// no-such-target. The edge stays, because the called name can be a type,
+// as in a Go conversion http.HandlerFunc(f).ServeHTTP(w, r).
+//
+// A construction gives an instance of the called class, so the key is
+// right: new Yaml().load() in Java, or Yaml().load() in Python or Kotlin,
+// whose classes start with an upper case letter. A Go name starts with an
+// upper case letter when the package exports it, so it tells nothing.
+func (b *builder) onCallResult(p *profile, call fileindex.Call, r resolution) bool {
+	called, ok := calledName(call.Receiver)
+	if !ok || r.fail != nil || call.Method == "" || b.kindOf(r.key) != NodeExternal {
+		return false
+	}
+	if strings.HasPrefix(call.Receiver, "new ") || !p.typeConversions && startsUpper(called) {
+		return false
+	}
+	return fileindex.Last(r.key) == call.Method && fileindex.Last(fileindex.Parent(r.key)) == called
+}
+
+// calledName returns the name of the call that ends a receiver as written,
+// as NewTokenizer for html.NewTokenizer(r) and new for Vec::<u8>::new().
+func calledName(receiver string) (string, bool) {
+	head, ok := strings.CutSuffix(receiver, ")")
+	if !ok {
+		return "", false
+	}
+	for depth := 1; depth > 0; {
+		i := strings.LastIndexAny(head, "()")
+		if i < 0 {
+			return "", false
+		}
+		if head[i] == ')' {
+			depth++
+		} else {
+			depth--
+		}
+		head = head[:i]
+	}
+	head = strings.TrimSuffix(withoutTypeArguments(head), "::")
+	name := lastWritten(head)
+	return name, isIdentifier(name)
+}
+
+// withoutTypeArguments removes the type arguments that end a callee as
+// written, as [int] of New[int] in Go or <u8> of new::<u8> in Rust.
+func withoutTypeArguments(callee string) string {
+	closer := map[byte]byte{']': '[', '>': '<'}
+	if callee == "" || closer[callee[len(callee)-1]] == 0 {
+		return callee
+	}
+	end, open := callee[len(callee)-1], closer[callee[len(callee)-1]]
+	depth := 0
+	for i := len(callee) - 1; i >= 0; i-- {
+		switch callee[i] {
+		case end:
+			depth++
+		case open:
+			depth--
+			if depth == 0 {
+				return callee[:i]
+			}
+		}
+	}
+	return callee
 }
 
 // thisCall resolves a call of a name that nothing binds in a language where

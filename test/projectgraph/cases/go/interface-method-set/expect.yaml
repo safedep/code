@@ -1,5 +1,5 @@
 source: safedep:hand
-description: start calls Run on a parameter of the interface type Runner, which declares Run and Stop. Real has both methods, so it can hold the call. Script has Run with the arity of the call but no Stop, so it is no Runner and its Run gets no cha edge. The site keeps a record with the method Run, and a definition named Run reaches exec.Command, so exec.Command is uncertain and not proved unreached.
+description: start calls Run on a parameter of the interface type Runner, which declares Run and Stop. Real has both methods, so it can hold the call. Script has Run with the arity of the call but no Stop, so it is no Runner and its Run gets no cha edge. The site keeps a record with the method Run, and a definition named Run reaches exec.Command, so exec.Command is uncertain and not proved unreached. Script.Run calls Run on the result of exec.Command. The link step does not know the type of that result with no dependency code, so the site keeps a record.
 roots:
   - key: cmd/app/main.go
     kind: main
@@ -20,6 +20,10 @@ unresolved:
   - caller: cmd/app/main.go//start
     site: cmd/app/main.go:10
     reason: no-definition
+    method: Run
+  - caller: worker/script.go//Script//Run
+    site: worker/script.go:8
+    reason: unknown-receiver
     method: Run
 results:
   - target: net//http//Get

@@ -1,0 +1,68 @@
+source: safedep:hand
+description: >-
+  run calls Next on the result of html.NewTokenizer, with no dependency code. The link step does not know the
+  type of that result, so the site keeps a record with the method Next and the reason unknown-receiver. The
+  target Tokenizer.Next is then uncertain at the site, not no-such-target. The edge to the key
+  html//NewTokenizer//Next stays, because a Go call of a type name converts a value, and a method of the type
+  then runs.
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+  - key: tokens.go
+    kind: main
+    rule: go.main
+exact_edges: true
+edges:
+  - from: main.go//main
+    to: tokens.go//run
+    kind: direct
+    confidence: high
+    site: main.go:6
+  - from: main.go//main
+    to: os//Stdin
+    kind: reference
+    confidence: low
+    site: main.go:6
+  - from: tokens.go//run
+    to: golang.org//x//net//html//NewTokenizer
+    kind: direct
+    confidence: high
+    site: tokens.go:10
+  - from: tokens.go//run
+    to: golang.org//x//net//html//NewTokenizer//Next
+    kind: direct
+    confidence: high
+    site: tokens.go:10
+unresolved:
+  - caller: tokens.go//run
+    site: tokens.go:10
+    reason: unknown-receiver
+    method: Next
+results:
+  - target: golang.org//x//net//html//Tokenizer//Next
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: tokens.go:10
+  - target: golang.org//x//net//html//NewTokenizer
+    status: found
+    path:
+      - key: main.go//main
+      - key: tokens.go//run
+        site: main.go:6
+        kind: direct
+        confidence: high
+      - key: golang.org//x//net//html//NewTokenizer
+        site: tokens.go:10
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: tokens.go//run
+        site: tokens.go:10
+        reached: true
+  - target: golang.org//x//net//http2//Server//ServeConn
+    status: no-such-target

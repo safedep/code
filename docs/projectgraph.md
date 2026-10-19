@@ -150,6 +150,11 @@ reason: `computed-name`, `dynamic-import`, `unknown-receiver`,
 `no-definition`, `ambiguous` or `limit`. The site keeps the method name of
 the call, so the reach query can tell which targets it concerns.
 
+A call on the result of another call, as `html.NewTokenizer(r).Next()`,
+needs the type of that result. When the link step does not know it, the
+site is an `unknown-receiver` record with the method name, so a target of
+that method is `uncertain` and not `no-such-target`.
+
 ## Overlay
 
 An overlay is a file of `llm` edges that resolve unresolved sites of a

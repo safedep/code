@@ -174,7 +174,7 @@
     "pkg/a.py": "indexed"
   },
   "stats": {
-    "version": "11",
+    "version": "12",
     "files": 3,
     "nodes": 7,
     "edges": 6,

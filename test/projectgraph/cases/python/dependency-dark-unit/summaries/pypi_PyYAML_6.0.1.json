@@ -1,7 +1,7 @@
 {
   "version": "2",
   "index_version": "11",
-  "link_version": "11",
+  "link_version": "12",
   "unit": "pypi:PyYAML@6.0.1",
   "symbols": [
     {

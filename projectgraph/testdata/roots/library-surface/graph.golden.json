@@ -82,7 +82,7 @@
     "lib/test_api.py": "indexed"
   },
   "stats": {
-    "version": "11",
+    "version": "12",
     "files": 2,
     "nodes": 5,
     "edges": 0,

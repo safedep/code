@@ -194,7 +194,7 @@
     "app.py": "indexed"
   },
   "stats": {
-    "version": "11",
+    "version": "12",
     "files": 1,
     "nodes": 9,
     "edges": 5,
