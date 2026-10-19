@@ -131,9 +131,11 @@ type builder struct {
 	groupMembers  map[string]map[string]string
 	nodesByParent map[string][]string
 	// groupRecords holds the class records of each group of aliases, and
-	// externalBases the first external base of each class, or "".
+	// externalBases the first external base of each class, or "", and
+	// findingBases the classes whose external base a search reads now.
 	groupRecords  map[string][]classRecord
 	externalBases map[string]string
+	findingBases  map[string]bool
 	// state holds the state of each language that keeps one, as the crates
 	// of Rust. langState reads it.
 	state  map[langcode.Code]any
@@ -248,33 +250,34 @@ func newTables(indexes []*fileindex.Index, opts Options) *builder {
 			Nodes: make(map[string]*Node, defs),
 			Files: make(map[string]fileindex.FileStatus, len(indexes)),
 		},
-		byPath:      make(map[string]*fileindex.Index, len(indexes)),
-		scopes:      make(map[string]*scope, len(indexes)),
-		edges:       newEdgeSet(sites),
-		unresolved:  map[UnresolvedSite]bool{},
-		truncations: map[Truncation]bool{},
-		names:       map[nameKey]resolution{},
-		visiting:    map[nameKey]bool{},
-		bindings:    map[string]string{},
-		classes:     map[string]classRecord{},
-		defs:        make(map[string]*fileindex.Definition, defs),
-		reading:     map[string]bool{},
-		state:       map[langcode.Code]any{},
-		units:       map[string]*unit{},
-		unitOf:      map[string]*unit{},
-		spaces:      map[string]*space{},
-		origins:     map[string][]origin{},
-		provisions:  map[provisionKey][]provision{},
-		linked:      map[string]bool{},
-		named:       map[string]bool{},
-		namespaces:  map[langcode.Code]*namespaces{},
-		loads:       map[string]bool{},
-		mros:        map[string][]string{},
-		aliases:     map[string][]string{},
-		narrowed:    map[Site][]string{},
-		structural:  map[siteCall]bool{},
-		test:        map[string]bool{},
-		rules:       roots.Merge(roots.Default(), opts.Rules),
+		byPath:       make(map[string]*fileindex.Index, len(indexes)),
+		scopes:       make(map[string]*scope, len(indexes)),
+		edges:        newEdgeSet(sites),
+		unresolved:   map[UnresolvedSite]bool{},
+		truncations:  map[Truncation]bool{},
+		names:        map[nameKey]resolution{},
+		visiting:     map[nameKey]bool{},
+		bindings:     map[string]string{},
+		classes:      map[string]classRecord{},
+		defs:         make(map[string]*fileindex.Definition, defs),
+		reading:      map[string]bool{},
+		findingBases: map[string]bool{},
+		state:        map[langcode.Code]any{},
+		units:        map[string]*unit{},
+		unitOf:       map[string]*unit{},
+		spaces:       map[string]*space{},
+		origins:      map[string][]origin{},
+		provisions:   map[provisionKey][]provision{},
+		linked:       map[string]bool{},
+		named:        map[string]bool{},
+		namespaces:   map[langcode.Code]*namespaces{},
+		loads:        map[string]bool{},
+		mros:         map[string][]string{},
+		aliases:      map[string][]string{},
+		narrowed:     map[Site][]string{},
+		structural:   map[siteCall]bool{},
+		test:         map[string]bool{},
+		rules:        roots.Merge(roots.Default(), opts.Rules),
 	}
 }
 

@@ -1,0 +1,49 @@
+source: safedep:hand
+description: >-
+  main.rs has use smallvec::smallvec, a use whose last name is the name of its crate. Rust resolves the first
+  smallvec against the crates, not against the binding of the same use, so the link step ends. main calls
+  store::save, and save calls SmallVec::new of the crate smallvec. No call names the macro smallvec.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+exact_edges: true
+edges:
+  - from: src/main.rs//main
+    to: src/store.rs//save
+    kind: direct
+    confidence: high
+    site: src/main.rs:6
+  - from: src/store.rs//save
+    to: smallvec//SmallVec
+    kind: reference
+    confidence: low
+    site: src/store.rs:4
+  - from: src/store.rs//save
+    to: smallvec//SmallVec//new
+    kind: direct
+    confidence: high
+    site: src/store.rs:4
+unresolved: []
+results:
+  - target: smallvec//SmallVec//new
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/store.rs//save
+        site: src/main.rs:6
+        kind: direct
+        confidence: high
+      - key: smallvec//SmallVec//new
+        site: src/store.rs:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/store.rs//save
+        site: src/store.rs:4
+        reached: true
+  - target: smallvec//smallvec
+    status: no-such-target

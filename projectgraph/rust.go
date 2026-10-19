@@ -73,11 +73,13 @@ var rustImplicit = map[string]bool{
 // toolchain, which no crate of the project defines.
 var rustRoots = map[string]bool{"std": true, "core": true, "alloc": true}
 
-// rustState is the state of Rust in a build: the crates, and the module
-// path of each Rust file.
+// rustState is the state of Rust in a build: the crates, the module path
+// of each Rust file, and the paths that a resolution reads now, by the file
+// that writes them.
 type rustState struct {
-	cargo   *modules.Cargo
-	modules map[string]string
+	cargo     *modules.Cargo
+	modules   map[string]string
+	resolving map[[2]string]bool
 }
 
 func (b *builder) rustState() *rustState {
@@ -91,6 +93,7 @@ func (b *builder) addRustUnits() {
 	s.cargo = modules.NewCargo(b.project.files, b.opts.Root)
 	b.problems = append(b.problems, s.cargo.Problems()...)
 	s.modules = map[string]string{}
+	s.resolving = map[[2]string]bool{}
 	files := map[string][]string{}
 	for _, p := range b.paths {
 		if ix := b.byPath[p]; ix != nil && ix.Language == langcode.Rust {
@@ -173,8 +176,22 @@ func joinPath(module string, parts []string) string {
 
 // resolveRust resolves a path that a file of the module writes to a
 // definition or a module of the project.
+//
+// A use binds the last name of its path, and the walk of the path can read
+// that binding, as the first smallvec of use smallvec::smallvec. Rust
+// resolves the first name of a use path against the crates and the modules,
+// and never against the binding of the same use. So a path that the file
+// resolves now gives no answer on a repeat, and the walk tries the next
+// candidate. Without the check the walk does not end.
 func (b *builder) resolveRust(importer, written string) (string, bool) {
-	for _, p := range b.rustPaths(b.rustState().modules[importer], written) {
+	s := b.rustState()
+	k := [2]string{importer, written}
+	if s.resolving[k] {
+		return "", false
+	}
+	s.resolving[k] = true
+	defer delete(s.resolving, k)
+	for _, p := range b.rustPaths(s.modules[importer], written) {
 		if key, ok := b.resolveQualified(langcode.Rust, p); ok {
 			return key, true
 		}
