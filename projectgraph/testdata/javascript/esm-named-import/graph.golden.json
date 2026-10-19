@@ -166,7 +166,7 @@
     "src/util.js": "indexed"
   },
   "stats": {
-    "version": "14",
+    "version": "15",
     "files": 3,
     "nodes": 6,
     "edges": 5,

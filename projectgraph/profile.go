@@ -188,6 +188,11 @@ type profile struct {
 	// mainLoadsPackage marks a language whose program initializes the
 	// package of main before main runs, as Go.
 	mainLoadsPackage bool
+	// helperProgram reports whether the main of a file is a helper
+	// program of the project and not the program that its users run, as a
+	// build script or an example of a Rust crate. Its root stays, and it
+	// does not turn off the library-surface roots.
+	helperProgram func(path string) bool
 }
 
 // profiles are the languages of the link step, in a fixed order. The units

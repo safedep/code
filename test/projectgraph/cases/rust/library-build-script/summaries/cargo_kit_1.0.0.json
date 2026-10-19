@@ -1,0 +1,16 @@
+{
+  "version": "2",
+  "index_version": "14",
+  "link_version": "15",
+  "unit": "cargo:kit@1.0.0",
+  "symbols": [
+    {
+      "key": "kit//fill",
+      "definitions": [
+        "cargo:kit@1.0.0//src/lib.rs//fill"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": []
+}

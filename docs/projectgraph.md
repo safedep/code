@@ -335,6 +335,14 @@ the key, so a query never holds a key that no node can have.
 | `reach.TargetByKey("yaml//load")` | The key, as a configuration or a flag writes it | `yaml//load` |
 | `reach.TargetByImport(langcode.Go, "os/exec", "Command")` | The module as the source of the language writes it, and the names under it | `os//exec//Command` |
 
+A target also matches each function, method and constructor of a unit of
+dependency code whose `Node.External` is the key, as the unexported
+`go:golang.org/x/net@v0.61.0//html/render.go//render1` for
+`golang.org//x//net//html//render1`. A call inside a unit goes to the
+definition and not to the external key, so a target that only the code of
+its unit calls is found through the definition. The call sites of a
+target leave out the package edges, which join a key to its definition.
+
 `reach.TargetsByKey` reads a list of keys. `Target.Key` returns the key,
 and the JSON form of a target is its key. One breadth-first search from
 the roots, and from the sources of the query, serves every target of a
@@ -349,7 +357,7 @@ what the search did.
 | `found` | A path from a root reaches the target. `Path` holds the shortest one |
 | `not-found` | No path reaches the target, and no uncertainty concerns it |
 | `uncertain` | No path reaches the target, and an uncertainty concerns it |
-| `no-such-target` | The key names no external node of the graph, and no uncertainty could name it |
+| `no-such-target` | The key names no external node and no definition of a unit of the graph, and no uncertainty could name it |
 
 `reach.Result.String` writes a result as lines, and `reach.PathString`
 writes a path as `main.py:3 -> handlers.py:12 -> yaml//load`.

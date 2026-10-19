@@ -1006,3 +1006,30 @@ inside a unit. More reached code of the units gives more name matches on
 more code, and it is not a measure of the receiver forms. The receiver
 table of FOU-542 measures those, and every row of it is found.
 
+After FOU-555:
+
+| Language | Kind | Targets | found | not-found | no-such-target | unknown-receiver | no-definition | interface-receiver | no-dependency-source | budget | ambiguous | computed-name |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Go | function | 256 | 51 | 0 | 0 | 3 | 5 | 0 | 2 | 39 | 106 | 50 |
+| Go | method | 1298 | 331 | 0 | 0 | 154 | 71 | 2 | 2 | 109 | 416 | 213 |
+| Rust | function | 13 | 4 | 0 | 0 | 0 | 9 | 0 | 0 | 0 | 0 | 0 |
+| Rust | method | 38 | 16 | 0 | 0 | 0 | 13 | 0 | 0 | 9 | 0 | 0 |
+| Rust | other | 5 | 0 | 0 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+- A target now matches each definition of a unit whose external key is the
+  target, so a target that only the code of its unit calls is found
+  through the definition. `found` moves from 30 to 331 Go method targets,
+  from 13 to 51 Go function targets, and from 0 to 16 Rust method targets.
+  The share of Go method targets that end as `unknown-receiver` falls from
+  0.247 to 0.119, and no target is `no-such-target` any more for Go.
+- The match first gave 8 Rust targets as `not-found`. cookie calls
+  `rand::thread_rng` from its public `Key::generate`, but its `build.rs`
+  was the only root, so the library-surface roots were off. A build
+  script, an example or a benchmark of a Rust crate is now a helper
+  program. Its root stays, and it does not turn off the library-surface
+  roots. No target of the measure is `not-found` now.
+- cookie reaches `rand::thread_rng` through the code of rand, not through
+  its own call `crate::secure::rand::thread_rng()`. The link step does not
+  read `extern crate rand;` in a submodule. The path is longer, and the
+  answer is the same.
+

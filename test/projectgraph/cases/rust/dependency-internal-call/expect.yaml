@@ -1,0 +1,36 @@
+source: safedep:hand
+description: >-
+  main calls serve of the crate kit, the unit cargo:kit@1.0.0. serve calls the private parse_header. No file of the
+  project names parse_header, so the graph has no external node for it. The target kit//parse_header matches the
+  definition in the unit by its external key, so reach finds the path through serve.
+units:
+  vendor/kit: cargo:kit@1.0.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+unresolved: []
+results:
+  - target: kit//parse_header
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: kit//serve
+        site: src/main.rs:2
+        kind: direct
+        confidence: high
+      - key: cargo:kit@1.0.0//src/lib.rs//serve
+        site: cargo:kit@1.0.0//src/lib.rs:1
+        kind: package
+        confidence: high
+      - key: cargo:kit@1.0.0//src/lib.rs//parse_header
+        site: cargo:kit@1.0.0//src/lib.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: cargo:kit@1.0.0//src/lib.rs//serve
+        site: cargo:kit@1.0.0//src/lib.rs:2
+        reached: true

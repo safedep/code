@@ -41,6 +41,23 @@ var rustProfile = profile{
 	implicitMethods:   rustImplicit,
 	forwardMethod:     "deref",
 	methodAliases:     rustConversions,
+	helperProgram:     rustHelperProgram,
+}
+
+// rustHelperProgram reports whether a file is the build script, an example
+// or a benchmark of a crate. A library crate with a build.rs has a main,
+// but its users call its public items. Without this, the build script
+// made the only root of the crate, and a call of the library read as
+// not-found.
+func rustHelperProgram(path string) bool {
+	dir, file := "", path
+	if i := strings.LastIndex(path, "/"); i >= 0 {
+		dir, file = path[:i], path[i+1:]
+	}
+	if file == "build.rs" {
+		return true
+	}
+	return slices.ContainsFunc(strings.Split(dir, "/"), func(d string) bool { return d == "examples" || d == "benches" })
 }
 
 // rustConversions name the methods of the traits of std that a call of

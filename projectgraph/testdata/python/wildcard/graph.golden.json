@@ -112,7 +112,7 @@
     "util.py": "indexed"
   },
   "stats": {
-    "version": "14",
+    "version": "15",
     "files": 2,
     "nodes": 4,
     "edges": 3,

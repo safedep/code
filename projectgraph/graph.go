@@ -17,7 +17,7 @@ import (
 // Version is the version of the link rules. Bump it when a rule that makes a
 // node, an edge, a root or an unresolved site changes, so a diff of two
 // reports shows the change.
-const Version = "14"
+const Version = "15"
 
 type NodeKind string
 
@@ -163,7 +163,10 @@ func (s Site) String() string {
 }
 
 // Node is a definition, a module top level, a re-exported name or an
-// external target. An external node has only its key and kind.
+// external target. An external node has only its key and kind. External
+// is the key that an importer of the package writes for a function, a
+// method or a constructor of a unit of dependency code, as
+// golang.org//x//net//html//render1.
 type Node struct {
 	Key      string           `json:"key"`
 	Kind     NodeKind         `json:"kind"`
@@ -172,6 +175,7 @@ type Node struct {
 	Exported bool             `json:"exported,omitempty"`
 	Test     bool             `json:"test,omitempty"`
 	Flags    []fileindex.Flag `json:"flags,omitempty"`
+	External string           `json:"external,omitempty"`
 }
 
 // Edge is one resolved step from a caller to a callee. Resolver names the

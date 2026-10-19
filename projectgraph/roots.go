@@ -50,7 +50,8 @@ func (b *builder) markRoots(ctx context.Context) error {
 	entry := false
 	for _, r := range found {
 		b.addRootAt(r.Key, r.Kind, r.Rule, Site(r.Site))
-		entry = entry || r.Kind != RootTest
+		helper := b.profileAt(r.Key).helperProgram
+		entry = entry || r.Kind != RootTest && (helper == nil || !helper(fileindex.Unit(r.Key)))
 		// A Go program initializes its package before main runs, so the
 		// module top level of each file of the package is a root too.
 		if u := b.unitOf[fileindex.Unit(r.Key)]; r.Kind == RootMain && u != nil && b.profileAt(r.Key).mainLoadsPackage {

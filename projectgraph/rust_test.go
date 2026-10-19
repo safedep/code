@@ -83,3 +83,23 @@ func TestBuildRustWildcardUseOfTheClassInItsImpl(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, NodeClass, g.Nodes[class].Kind)
 }
+
+func TestRustHelperProgram(t *testing.T) {
+	for _, tt := range []struct {
+		path string
+		want bool
+	}{
+		{path: "build.rs", want: true},
+		{path: "kit/build.rs", want: true},
+		{path: "examples/demo.rs", want: true},
+		{path: "kit/examples/demo/main.rs", want: true},
+		{path: "benches/speed.rs", want: true},
+		{path: "src/main.rs", want: false},
+		{path: "src/bin/tool.rs", want: false},
+		{path: "src/examples.rs", want: false},
+	} {
+		t.Run(tt.path, func(t *testing.T) {
+			assert.Equal(t, tt.want, rustHelperProgram(tt.path))
+		})
+	}
+}

@@ -1,0 +1,40 @@
+source: safedep:hand
+description: >-
+  A library crate with a build script. build.rs has a main, and it stays a root. The build script is a helper
+  program, and the users of the crate call its public items, so the public generate of src/lib.rs is a root of kind
+  library-surface too. generate calls kit::fill of the unit cargo:kit@1.0.0, so reach finds it. When the build
+  script turned off the library-surface roots, the answer was not-found.
+units:
+  vendor/kit: cargo:kit@1.0.0
+roots:
+  - key: build.rs
+    kind: library-surface
+    rule: library-surface
+  - key: build.rs
+    kind: main
+    rule: rust.build-script
+  - key: build.rs//main
+    kind: main
+    rule: rust.main
+  - key: src/lib.rs
+    kind: library-surface
+    rule: library-surface
+  - key: src/lib.rs//generate
+    kind: library-surface
+    rule: library-surface
+unresolved: []
+results:
+  - target: kit//fill
+    status: found
+    path:
+      - key: src/lib.rs//generate
+      - key: kit//fill
+        site: src/lib.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/lib.rs//generate
+        site: src/lib.rs:2
+        reached: true
+    uncertainties:
+      - kind: root-fallback

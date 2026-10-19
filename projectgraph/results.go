@@ -185,26 +185,55 @@ func (b *builder) entryKey(from, def string) string {
 // dependency code, as an import of its package names it, and records the
 // import as an origin of the key for a file of the importer unit.
 func (b *builder) symbolKey(importer, def string) (string, bool) {
-	unit := fileindex.PackageOf(def)
-	sp := b.spaces[unit]
-	if unit == "" || sp == nil {
-		return "", false
-	}
-	lang := b.languageOf(def)
-	symbol := profileOf(lang.Family()).symbol
-	if symbol == nil {
-		return "", false
-	}
-	module, names, ok := symbol(b, sp, def)
+	key, o, ok := b.unitSymbol(def)
 	if !ok {
 		return "", false
 	}
-	key := fileindex.Join(fileindex.Namespace(lang, module), names...)
-	o := origin{lang: lang, unit: importer, module: module, form: modules.FormImport, names: names}
+	o.unit = importer
 	if !slices.ContainsFunc(b.origins[key], o.equal) {
 		b.origins[key] = append(b.origins[key], o)
 	}
 	return key, true
+}
+
+// unitSymbol returns the external key of a definition of a unit of
+// dependency code, and the origin of an import that names it, with no
+// importer unit.
+func (b *builder) unitSymbol(def string) (string, origin, bool) {
+	unit := fileindex.PackageOf(def)
+	sp := b.spaces[unit]
+	if unit == "" || sp == nil {
+		return "", origin{}, false
+	}
+	lang := b.languageOf(def)
+	symbol := profileOf(lang.Family()).symbol
+	if symbol == nil {
+		return "", origin{}, false
+	}
+	module, names, ok := symbol(b, sp, def)
+	if !ok {
+		return "", origin{}, false
+	}
+	return fileindex.Join(fileindex.Namespace(lang, module), names...), origin{lang: lang, module: module, form: modules.FormImport, names: names}, true
+}
+
+// markExternals sets the external key of each function, method and
+// constructor of a unit of dependency code. A call that the unit makes to
+// its own code goes to the definition and not to the external key, so
+// reach matches a target against the external key of the definition too.
+// Without it, a target that only the code of its unit calls reads as
+// not-found, as the methods of the HTTP/2 server of x/net.
+func (b *builder) markExternals() {
+	for _, n := range b.g.Nodes {
+		switch n.Kind {
+		case NodeFunction, NodeMethod, NodeConstructor:
+		default:
+			continue
+		}
+		if key, _, ok := b.unitSymbol(n.Key); ok {
+			n.External = key
+		}
+	}
 }
 
 // importedWalk resolves the names under an import that no file of the

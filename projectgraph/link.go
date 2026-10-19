@@ -447,6 +447,7 @@ func (b *builder) copyUnresolved(ix *fileindex.Index) {
 }
 
 func (b *builder) finish() *Graph {
+	b.markExternals()
 	g := b.g
 	g.Edges = b.edges.sorted()
 	g.Unresolved = sortedKeys(b.unresolved, compareUnresolved)

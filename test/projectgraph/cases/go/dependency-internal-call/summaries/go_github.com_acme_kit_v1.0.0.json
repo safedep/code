@@ -1,0 +1,23 @@
+{
+  "version": "2",
+  "index_version": "14",
+  "link_version": "15",
+  "unit": "go:github.com/acme/kit@v1.0.0",
+  "symbols": [
+    {
+      "key": "github.com//acme//kit//Dead",
+      "definitions": [
+        "go:github.com/acme/kit@v1.0.0//kit.go//Dead"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "github.com//acme//kit//Serve",
+      "definitions": [
+        "go:github.com/acme/kit@v1.0.0//kit.go//Serve"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": []
+}
