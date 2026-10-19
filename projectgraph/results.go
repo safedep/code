@@ -31,17 +31,40 @@ func (b *builder) resultType(unit, fn string, pos int) (result, fileindex.Unreso
 			return result{}, fileindex.UnresolvedNoDependencySource, false
 		}
 	}
+	if res, ok := b.oneResult(unit, defs, pos); ok {
+		return res, "", true
+	}
+	return result{}, fileindex.UnresolvedUnknownReceiver, false
+}
+
+// oneResult returns the result at a position that all the definitions and
+// their twins give. The platform files of a Go package can define one
+// function twice with two result types. The walk follows one type, and a
+// method of the other type would then be not-found, so two results give
+// none.
+func (b *builder) oneResult(unit string, defs []string, pos int) (result, bool) {
+	var all []string
 	for _, d := range defs {
+		all = append(append(all, d), b.twins(d)...)
+	}
+	var out result
+	for _, d := range all {
 		def := b.defs[d]
 		text := resultText(def, pos)
 		if text == "" {
 			continue
 		}
-		if class, ok := b.resolveType(b.scopes[fileindex.Unit(d)], d, text); ok {
-			return result{class: b.typeFor(unit, class), wraps: def.Wraps}, "", true
+		class, ok := b.resolveType(b.scopes[fileindex.Unit(d)], d, text)
+		if !ok {
+			return result{}, false
 		}
+		res := result{class: b.typeFor(unit, class), wraps: def.Wraps}
+		if out.class != "" && res != out {
+			return result{}, false
+		}
+		out = res
 	}
-	return result{}, fileindex.UnresolvedUnknownReceiver, false
+	return out, out.class != ""
 }
 
 // unwrap returns how many of the names after a call a wrapped result
@@ -119,15 +142,10 @@ func (b *builder) externalResult(parent, name string) (result, bool) {
 		return result{}, false
 	}
 	defs, _ := b.unitDefinitions(origins)
-	for _, d := range defs {
-		if !b.isFunction(d) {
-			continue
-		}
-		// The walk reads an external key, so the code that names it is
-		// in another space than the unit, and the type is its key.
-		if res, _, ok := b.resultType("", d, 0); ok {
-			return res, true
-		}
+	// The walk reads an external key, so the code that names it is in
+	// another space than the unit, and the type is its key.
+	if res, ok := b.oneResult("", slices.DeleteFunc(defs, func(d string) bool { return !b.isFunction(d) }), 0); ok {
+		return res, true
 	}
 	if profileOf(origins[0].lang).sameTypeMethods[name] {
 		types, _ := b.unitDefinitions(b.origins[parent])

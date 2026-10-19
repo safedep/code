@@ -32,3 +32,22 @@ func TestCargoReadsTheCratesOfTheManifests(t *testing.T) {
 	assert.False(t, c.Has("web_app"))
 	assert.Empty(t, c.Problems())
 }
+
+func TestCargoReadsTheRenamesOfADependency(t *testing.T) {
+	root := fstest.MapFS{
+		"Cargo.toml":  {Data: []byte("[package]\nname = \"app\"\n\n[dependencies]\nhelper = { package = \"kit-core\", version = \"1\" }\nserde = \"1\"\n\n[target.'cfg(unix)'.dependencies.sys]\npackage = \"kit-sys\"\nversion = \"1\"\n")},
+		"src/main.rs": {Data: []byte("")},
+	}
+	c := NewCargo(NewFiles([]string{"src/main.rs"}), root)
+
+	for _, tc := range []struct {
+		name, want string
+	}{
+		{"helper", "kit_core"},
+		{"sys", "kit_sys"},
+		{"serde", "serde"},
+		{"kit_core", "kit_core"},
+	} {
+		assert.Equal(t, tc.want, c.Rename("src/main.rs", tc.name), tc.name)
+	}
+}

@@ -1,0 +1,36 @@
+source: safedep:hand
+description: >-
+  The Cargo.toml of the project renames the package kit to helper, and main calls helper::serve. The link step
+  reads the rename, so the import names the crate kit of the unit cargo:kit@1.0.0, and reach finds the private
+  parse_header through serve. Before the link step read renames, the target was not-found.
+units:
+  vendor/kit: cargo:kit@1.0.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+unresolved: []
+results:
+  - target: kit//parse_header
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: helper//serve
+        site: src/main.rs:2
+        kind: direct
+        confidence: high
+      - key: cargo:kit@1.0.0//src/lib.rs//serve
+        site: cargo:kit@1.0.0//src/lib.rs:1
+        kind: package
+        confidence: high
+      - key: cargo:kit@1.0.0//src/lib.rs//parse_header
+        site: cargo:kit@1.0.0//src/lib.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: cargo:kit@1.0.0//src/lib.rs//serve
+        site: cargo:kit@1.0.0//src/lib.rs:2
+        reached: true

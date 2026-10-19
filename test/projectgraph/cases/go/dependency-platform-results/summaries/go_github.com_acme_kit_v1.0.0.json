@@ -1,0 +1,51 @@
+{
+  "version": "2",
+  "index_version": "14",
+  "link_version": "16",
+  "unit": "go:github.com/acme/kit@v1.0.0",
+  "symbols": [
+    {
+      "key": "github.com//acme//kit//Linux",
+      "definitions": [
+        "go:github.com/acme/kit@v1.0.0//new_linux.go//Linux"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "github.com//acme//kit//Linux//Common",
+      "definitions": [
+        "go:github.com/acme/kit@v1.0.0//new_linux.go//Linux//Common"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "github.com//acme//kit//New",
+      "definitions": [
+        "go:github.com/acme/kit@v1.0.0//new_linux.go//New"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "github.com//acme//kit//Windows",
+      "definitions": [
+        "go:github.com/acme/kit@v1.0.0//new_windows.go//Windows"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "github.com//acme//kit//Windows//Common",
+      "definitions": [
+        "go:github.com/acme/kit@v1.0.0//new_windows.go//Windows//Common"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "github.com//acme//kit//Windows//WindowsOnly",
+      "definitions": [
+        "go:github.com/acme/kit@v1.0.0//new_windows.go//Windows//WindowsOnly"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": []
+}

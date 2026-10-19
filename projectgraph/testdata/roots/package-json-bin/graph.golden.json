@@ -64,7 +64,7 @@
     "lib/run.js": "indexed"
   },
   "stats": {
-    "version": "15",
+    "version": "16",
     "files": 2,
     "nodes": 3,
     "edges": 2,

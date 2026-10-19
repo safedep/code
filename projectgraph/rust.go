@@ -24,6 +24,7 @@ var rustProfile = profile{
 	link:              (*builder).linkRust,
 	scopeFallback:     (*builder).rustScopeFallback,
 	provide:           rustProvide,
+	importedModule:    rustImportedModule,
 	symbol:            rustSymbol,
 	surface:           rustSurface,
 	unitTypes:         true,
@@ -292,6 +293,22 @@ func rustProvide(b *builder, sp *space, module string, _ modules.Form) []provisi
 		return []provision{{sp: sp, module: key, via: "crate"}}
 	}
 	return []provision{{sp: sp}}
+}
+
+// rustImportedModule returns the path of the package that a path of a file
+// names. A path writes the name that the Cargo.toml of its crate gives a
+// dependency, and the crate of the unit has the name of the package.
+func rustImportedModule(b *builder, ix *fileindex.Index, module string) string {
+	sp := b.spaceOf(ix.Path)
+	first, rest, nested := strings.Cut(strings.TrimPrefix(module, "::"), "::")
+	pkg := b.cargoOf(sp).Rename(sp.inner(ix.Path), first)
+	switch {
+	case pkg == first:
+		return module
+	case nested:
+		return pkg + "::" + rest
+	}
+	return pkg
 }
 
 // rustSurface adds each pub item of the crate of a unit and each pub

@@ -191,6 +191,7 @@ edge joins the key to the definition in the unit. A chained call, as
 | An interface type | The `cha` edges to the implementations in the graph. An implementation in a unit gets its edge through its external key. With no implementation, the site is a record with the reason `interface-receiver` |
 | A function of a package that no unit gives | A record with the reason `no-dependency-source` |
 | A result with no named type, or a function that the unit does not define | A record with the reason `unknown-receiver` |
+| Two definitions of the function, as in two platform files of a Go package, with two result types | A record with the reason `unknown-receiver`. The walk follows one type, and a method of the other type would be `not-found` |
 
 Rust follows the same rules, with these additions.
 
@@ -200,6 +201,11 @@ Rust follows the same rules, with these additions.
   an item is the path that another crate writes, and an item of a private
   module that the root gives on with `pub use` gets the shortest path, as
   `smallvec//SmallVec`.
+- A Cargo.toml can rename a dependency, as `helper = { package = "kit" }`.
+  A path of the crate writes `helper`, and the link step reads it as the
+  crate `kit` of the unit. The external node keeps the written name, as
+  `helper//serve`, and the package edge goes on to the definition in the
+  unit, whose external key is `kit//serve`.
 - The index records the return type of each function and method, with
   `Self` as the type of its `impl`. A type drops `&`, `&mut`, `Box<..>`,
   `Rc<..>`, `Arc<..>` and its type arguments, so `&mut SmallVec<[u8; 4]>`

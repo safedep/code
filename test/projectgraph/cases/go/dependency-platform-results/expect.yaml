@@ -1,0 +1,37 @@
+source: safedep:hand
+description: >-
+  new_linux.go and new_windows.go each define New, and they return the types Linux and Windows. Both types have
+  the method Common. The walk follows one result type, so the call New().Common() is a record with the reason
+  unknown-receiver. Before, the walk took the type of the first file, and Windows//Common was not-found.
+units:
+  gomod/github.com/acme/kit@v1.0.0: go:github.com/acme/kit@v1.0.0
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+unresolved:
+  - caller: github.com//acme//kit//New//Common
+    site: go:github.com/acme/kit@v1.0.0
+    reason: unknown-receiver
+  - caller: main.go//main
+    site: main.go:6
+    reason: unknown-receiver
+    method: Common
+results:
+  - target: github.com//acme//kit//Windows//Common
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:6
+      - kind: unresolved-call
+        site: go:github.com/acme/kit@v1.0.0
+  - target: github.com//acme//kit//Linux//Common
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:6
+      - kind: unresolved-call
+        site: go:github.com/acme/kit@v1.0.0

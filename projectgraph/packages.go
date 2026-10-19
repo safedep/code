@@ -231,10 +231,19 @@ func (b *builder) recordOrigin(ix *fileindex.Index, key, module string, form mod
 	if len(b.spaces) < 2 {
 		return
 	}
-	o := origin{lang: ix.Language, unit: ix.Unit, module: module, form: form, names: slices.Clone(names)}
+	o := origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, module), form: form, names: slices.Clone(names)}
 	if !slices.ContainsFunc(b.origins[key], o.equal) {
 		b.origins[key] = append(b.origins[key], o)
 	}
+}
+
+// packageModule returns the module of the package that an import of the
+// file names, by the profile of its family.
+func (b *builder) packageModule(ix *fileindex.Index, module string) string {
+	if imported := profileOf(ix.Language.Family()).importedModule; imported != nil {
+		return imported(b, ix, module)
+	}
+	return module
 }
 
 // deriveExternal returns the external node of the names under an external

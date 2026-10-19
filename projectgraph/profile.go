@@ -47,6 +47,10 @@ type profile struct {
 	// surface adds the exported symbols of a unit of dependency code with
 	// the import that names each one. The profile of the family holds it.
 	surface func(s *surfacer)
+	// importedModule returns the module of the package that an import of a
+	// file names, as kit::serve for helper::serve when the Cargo.toml of
+	// the file renames the package kit to helper.
+	importedModule func(b *builder, ix *fileindex.Index, module string) string
 	// symbol returns the module that an importer of a definition of a unit
 	// of dependency code imports, and the names of the definition under
 	// it, as golang.org/x/net/html and Tokenizer. The profile of the family

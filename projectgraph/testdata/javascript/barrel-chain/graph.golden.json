@@ -174,7 +174,7 @@
     "src/main.js": "indexed"
   },
   "stats": {
-    "version": "15",
+    "version": "16",
     "files": 4,
     "nodes": 7,
     "edges": 6,
