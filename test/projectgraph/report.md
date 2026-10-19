@@ -1033,3 +1033,7 @@ After FOU-555:
   read `extern crate rand;` in a submodule. The path is longer, and the
   answer is the same.
 
+
+After the fixes for the review of PR 53, the measure gives the same
+numbers. No project of the corpus renames a Cargo dependency, and no
+function of a dependency has two platform twins with two result types.
