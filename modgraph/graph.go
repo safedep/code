@@ -285,6 +285,8 @@ type module struct {
 	// walked is true when Build read a package of the module, so its edges
 	// are those of the packages that the build reaches.
 	walked bool
+	// expanded is true when Build added the require edges of its go.mod.
+	expanded bool
 }
 
 type pkgRef struct {
@@ -303,12 +305,11 @@ type builder struct {
 	main   *module
 	std    *module
 	byPath map[string]*module
-	// paths holds the module paths of the build list and of the main module,
-	// longest first, for the resolver.
-	paths []string
 
 	queue []pkgRef
 	seen  map[pkgRef]bool
+	// sweep is true once walkAll reads each package of the build list.
+	sweep bool
 	edges map[edgeKey]*Edge
 	stats Stats
 }
@@ -349,15 +350,6 @@ func newBuilder(ctx context.Context, in Input, mainPath string) (*builder, error
 		}
 		b.byPath[p] = m
 	}
-	for p := range b.byPath {
-		b.paths = append(b.paths, p)
-	}
-	slices.SortFunc(b.paths, func(x, y string) int {
-		if len(x) != len(y) {
-			return len(y) - len(x)
-		}
-		return strings.Compare(x, y)
-	})
 	return b, nil
 }
 
@@ -365,18 +357,27 @@ func (b *builder) run() (*Graph, error) {
 	if err := b.walkMain(); err != nil {
 		return nil, err
 	}
+	if err := b.drain(); err != nil {
+		return nil, err
+	}
+	if err := b.finish(); err != nil {
+		return nil, err
+	}
+	return b.graph(), nil
+}
+
+func (b *builder) drain() error {
 	for len(b.queue) > 0 {
 		if err := b.ctx.Err(); err != nil {
-			return nil, err
+			return err
 		}
 		ref := b.queue[0]
 		b.queue = b.queue[1:]
 		if err := b.walkPackage(ref); err != nil {
-			return nil, err
+			return err
 		}
 	}
-	b.finish()
-	return b.graph(), nil
+	return nil
 }
 
 // walkMain reads each package of the main module, with its test files. The
@@ -423,6 +424,9 @@ func (b *builder) readAndLink(ref pkgRef) error {
 		return err
 	case err != nil && b.ctx.Err() != nil:
 		return b.ctx.Err()
+	case errors.As(err, new(unbuildable)):
+		b.cannotBuild(ref.mod, err.Error())
+		return nil
 	case err != nil:
 		b.setOpen(ref.mod, err.Error())
 		return nil
@@ -440,7 +444,7 @@ func (b *builder) link(from *module, imp importRef) {
 	case imp.Path == "C":
 		return
 	case imp.Path == "" || strings.HasPrefix(imp.Path, ".") || strings.HasPrefix(imp.Path, "/"):
-		b.setOpen(from, fmt.Sprintf("%s imports the path %q, which the build cannot resolve", imp.File, imp.Path))
+		b.cannotBuild(from, fmt.Sprintf("%s imports the path %q, which the build cannot resolve", imp.File, imp.Path))
 		return
 	}
 	cands := b.resolve(imp.Path)
@@ -449,7 +453,7 @@ func (b *builder) link(from *module, imp importRef) {
 			b.addEdge(from, b.stdNode(), imp, StateImports)
 			return
 		}
-		b.setOpen(from, fmt.Sprintf("%s imports %s, which no module of the build list holds", imp.File, imp.Path))
+		b.cannotBuild(from, fmt.Sprintf("%s imports %s, which no module of the build list holds", imp.File, imp.Path))
 		return
 	}
 	for _, c := range cands {
@@ -494,6 +498,18 @@ func (b *builder) stdNode() *module {
 	return b.std
 }
 
+// cannotBuild records a package that the go command cannot build. In the
+// walk from the main module its module becomes open, because the build of
+// the project reads the package, and Build cannot tell its imports. In the
+// sweep no build reads the package: go mod tidy lists in the main go.mod
+// each module that a package of the build imports, and the package does not
+// parse or imports a path outside that list. So it adds nothing.
+func (b *builder) cannotBuild(m *module, reason string) {
+	if !b.sweep {
+		b.setOpen(m, reason)
+	}
+}
+
 func (b *builder) setOpen(m *module, reason string) {
 	if m.node.State == StateOpen {
 		return
@@ -502,41 +518,90 @@ func (b *builder) setOpen(m *module, reason string) {
 }
 
 // finish adds the require edges of each reached module with no source, then
-// sets Reached. Once a reached node is open, each node counts as reached,
-// and a module that no walk read becomes open, because its edges are not
-// known.
-func (b *builder) finish() {
-	expanded := map[*module]bool{}
-	for {
-		reached := b.reachable()
-		added := false
-		for _, p := range slices.Sorted(maps.Keys(b.byPath)) {
-			m := b.byPath[p]
-			if reached[m] && m.node.State == StateRequires && !expanded[m] {
-				expanded[m] = true
-				b.addRequires(m)
-				added = true
-			}
-		}
-		if !added {
-			anyOpen := false
-			for m := range reached {
-				anyOpen = anyOpen || m.node.Open()
-			}
-			for _, m := range b.byPath {
-				m.node.Reached = reached[m] || anyOpen
-				if anyOpen && !m.walked && m.node.State == StateImports {
-					b.setOpen(m, "only an open node reaches it, so the build read none of its packages")
-				}
-			}
-			return
-		}
+// sets Reached. Once a reached node is open, it can import any package of the
+// build list. So each node counts as reached, and Build reads each package of
+// each module with source, else a module of one read package would hide the
+// edges of the others.
+func (b *builder) finish() error {
+	reached := b.reachable()
+	for b.addRequires(reached) {
+		reached = b.reachable()
 	}
+	anyOpen := false
+	for m := range reached {
+		anyOpen = anyOpen || m.node.Open()
+	}
+	if !anyOpen {
+		for _, m := range b.byPath {
+			m.node.Reached = reached[m]
+		}
+		return nil
+	}
+	if err := b.walkAll(); err != nil {
+		return err
+	}
+	all := map[*module]bool{}
+	for _, m := range b.byPath {
+		m.node.Reached = true
+		all[m] = true
+	}
+	b.addRequires(all)
+	return nil
 }
 
-// addRequires adds an edge from a module with no source to each module of
-// the build list that its go.mod requires.
-func (b *builder) addRequires(m *module) {
+// walkAll reads each directory of each module with source that an import can
+// name, as a sweep. A test file of a dependency still never counts. The walk
+// does not follow a link to a directory, so a module with one is open.
+func (b *builder) walkAll() error {
+	b.sweep = true
+	for _, p := range slices.Sorted(maps.Keys(b.byPath)) {
+		m := b.byPath[p]
+		if m.main || m.src.FS == nil || m.node.State == StateOpen {
+			continue
+		}
+		err := fs.WalkDir(m.src.FS, ".", func(dir string, d fs.DirEntry, err error) error {
+			switch {
+			case err != nil:
+				b.setOpen(m, fmt.Sprintf("read %s: %v", dir, err))
+				return fs.SkipAll
+			case d.Type()&fs.ModeSymlink != 0:
+				if info, err := fs.Stat(m.src.FS, dir); err != nil || info.IsDir() {
+					b.setOpen(m, fmt.Sprintf("%s is a link that can lead to a package, and the walk does not follow it", dir))
+					return fs.SkipAll
+				}
+				return nil
+			case !d.IsDir():
+				return nil
+			case dir != "." && (d.Name() == "vendor" || strings.HasPrefix(d.Name(), ".") || nestedModule(m.src.FS, dir)):
+				return fs.SkipDir
+			}
+			b.enqueue(pkgRef{mod: m, dir: dir})
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return b.drain()
+}
+
+// addRequires adds an edge from each module of the set with no source to
+// each module of the build list that its go.mod requires. It reports whether
+// it read a go.mod that it had not read.
+func (b *builder) addRequires(set map[*module]bool) bool {
+	added := false
+	for _, p := range slices.Sorted(maps.Keys(b.byPath)) {
+		m := b.byPath[p]
+		if set[m] && m.node.State == StateRequires && !m.expanded {
+			m.expanded = true
+			b.addRequiresOf(m)
+			added = true
+		}
+	}
+	return added
+}
+
+func (b *builder) addRequiresOf(m *module) {
 	f, err := modfile.ParseLax("go.mod", m.src.GoMod, nil)
 	if err != nil {
 		b.setOpen(m, fmt.Sprintf("its go.mod does not parse: %v", err))

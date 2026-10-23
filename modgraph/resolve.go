@@ -1,7 +1,9 @@
 package modgraph
 
 import (
+	"errors"
 	"io/fs"
+	"iter"
 	"path"
 	"slices"
 	"strings"
@@ -20,24 +22,23 @@ type candidate struct {
 
 // resolve returns the modules that can hold the package of an import path.
 // The go command takes the module of the build list whose path is the
-// longest prefix of the import path and that has the package directory. A
-// module with no source may have the directory, so it is a candidate, and the
-// test goes on to the next prefix. The first module with source that has the
-// directory ends the list. A list with no module that has or may have the
-// directory is empty.
+// longest prefix of the import path and that has a Go file in the package
+// directory. A module with no source may have the file, so it is a candidate,
+// and the test goes on to the next prefix. So is a module whose directory
+// Build cannot read. The first module with source that has the file ends the
+// list. A list with no module that has or may have the file is empty.
 func (b *builder) resolve(importPath string) []candidate {
 	var out []candidate
-	for _, p := range b.paths {
-		dir, ok := under(importPath, p)
-		if !ok {
-			continue
-		}
-		m := b.byPath[p]
+	for m, dir := range b.prefixes(importPath) {
 		if m.src.FS == nil {
 			out = append(out, candidate{mod: m, dir: dir})
 			continue
 		}
-		if hasPackageDir(m.src.FS, dir) {
+		has, err := hasPackage(m.src.FS, dir)
+		switch {
+		case err != nil:
+			out = append(out, candidate{mod: m, dir: dir, provides: true})
+		case has:
 			return append(out, candidate{mod: m, dir: dir, provides: true})
 		}
 	}
@@ -49,39 +50,81 @@ func (b *builder) resolve(importPath string) []candidate {
 // of the standard library, even with no dot in its first element, as the
 // path corp/lib of a replaced module.
 func (b *builder) prefixed(importPath string) bool {
-	for _, p := range b.paths {
-		if _, ok := under(importPath, p); ok {
-			return true
-		}
+	for range b.prefixes(importPath) {
+		return true
 	}
 	return false
 }
 
-// under returns the path of a package below a module path, "." for the
-// module root, at a "/" boundary.
-func under(importPath, modPath string) (string, bool) {
-	switch {
-	case importPath == modPath:
-		return ".", true
-	case strings.HasPrefix(importPath, modPath+"/"):
-		return importPath[len(modPath)+1:], true
+// prefixes yields each module of the build list, and the main module, whose
+// path is the import path or a prefix of it at a "/" boundary, longest
+// first. It yields the directory of the package in the module with it, "."
+// for the module root.
+func (b *builder) prefixes(importPath string) iter.Seq2[*module, string] {
+	return func(yield func(*module, string) bool) {
+		for p := importPath; ; {
+			if m := b.byPath[p]; m != nil && m != b.std {
+				dir := "."
+				if p != importPath {
+					dir = importPath[len(p)+1:]
+				}
+				if !yield(m, dir) {
+					return
+				}
+			}
+			i := strings.LastIndexByte(p, '/')
+			if i < 0 {
+				return
+			}
+			p = p[:i]
+		}
 	}
-	return "", false
 }
 
-// hasPackageDir reports whether the source of a module has the directory of
-// a package that an importer can build. An import can name a testdata
-// directory or one whose name starts with _ or a dot, and the go command
-// builds it, though ./... skips it. A vendor directory, and a directory of a
-// module nested in this one, is not a package of the module.
-func hasPackageDir(fsys fs.FS, dir string) bool {
+// hasPackage reports whether the source of a module holds a package in a
+// directory, as the go command decides it: the directory has an entry whose
+// name ends in .go and that is a file or a link to a file. A build
+// constraint or a name that starts with _ does not matter here. An import can
+// name a testdata directory or one whose name starts with _ or a dot, and the
+// go command builds it, though ./... skips it. A vendor directory, and a
+// directory of a module nested in this one, is not a package of the module.
+// It returns an error when it cannot tell.
+func hasPackage(fsys fs.FS, dir string) (bool, error) {
 	if dir != "." {
 		if slices.Contains(strings.Split(dir, "/"), "vendor") || nestedModule(fsys, dir) {
-			return false
+			return false, nil
 		}
 	}
 	info, err := fs.Stat(fsys, dir)
-	return err == nil && info.IsDir()
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return false, nil
+	case err != nil:
+		return false, err
+	case !info.IsDir():
+		return false, nil
+	}
+	entries, err := fs.ReadDir(fsys, dir)
+	if err != nil {
+		return false, err
+	}
+	var firstErr error
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") {
+			continue
+		}
+		if e.Type().IsRegular() {
+			return true, nil
+		}
+		info, err := fs.Stat(fsys, path.Join(dir, e.Name()))
+		if err == nil && info.Mode().IsRegular() {
+			return true, nil
+		}
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return false, firstErr
 }
 
 // nestedModule reports whether a directory below the root of a module, or

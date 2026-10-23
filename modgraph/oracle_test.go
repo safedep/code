@@ -69,7 +69,7 @@ func TestBuildHoldsEachEdgeOfGoList(t *testing.T) {
 			t.Logf("Build: %d files, %d packages, %v; with the cache: %d files, %d cached packages, %v",
 				g.Stats.Files, g.Stats.Packages, cold.Round(time.Millisecond), warm.Stats.Files, warm.Stats.CachedPackages, time.Since(start).Round(time.Millisecond))
 			for _, n := range g.Nodes {
-				if n.Open() && n.Reached && !strings.HasPrefix(n.Reason, "only an open node") {
+				if n.Open() && n.Reached {
 					t.Logf("open: %s: %s", n.Module.Path, n.Reason)
 				}
 			}

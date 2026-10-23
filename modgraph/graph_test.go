@@ -200,6 +200,15 @@ func TestBuildResolvesAnImportPath(t *testing.T) {
 			want: []string{"example.com/app -> github.com/a/b/sub"},
 		},
 		{
+			name: "a longer module whose directory has no Go file",
+			imp:  "example.com/a/sub/pkg",
+			modules: []Source{
+				source("example.com/a", fstest.MapFS{"sub/pkg/p.go": goSrc("pkg")}),
+				source("example.com/a/sub", fstest.MapFS{"pkg/readme.txt": {Data: []byte("assets")}, "pkg/data.go/x.txt": {Data: []byte("a directory")}}),
+			},
+			want: []string{"example.com/app -> example.com/a"},
+		},
+		{
 			name:    "cgo",
 			imp:     "C",
 			modules: nil,
@@ -243,10 +252,56 @@ func TestBuildOpensAModuleThatImportsWhatItCannotResolve(t *testing.T) {
 			assert.Contains(t, a.Reason, tc.imp)
 			unused := node(t, g, "example.com/unused")
 			assert.True(t, unused.Reached, "an open node can reach each module")
-			assert.Equal(t, StateOpen, unused.State, "no walk read its packages")
+			assert.Equal(t, StateImports, unused.State, "Build reads each package that the open node can import")
+			assert.True(t, unused.Walked)
 			assert.True(t, g.Reaches([]string{mainPath}, "example.com/unused"))
 		})
 	}
+}
+
+func TestBuildReadsEachPackageOnceAReachedNodeIsOpen(t *testing.T) {
+	g := build(t, Input{
+		MainFS: mainFS(fstest.MapFS{"main.go": goSrc("main", "example.com/a/first", "example.com/gone")}),
+		Modules: []Source{
+			source("example.com/a", fstest.MapFS{
+				"first/f.go":       goSrc("first"),
+				"second/s.go":      goSrc("second", "example.com/b"),
+				"second/s_test.go": goSrc("second", "example.com/c"),
+				"vendor/v/v.go":    goSrc("v", "example.com/c"),
+				"testdata/bad.go":  {Data: []byte("package bad\nimport (\n")},
+				"stray/s.go":       goSrc("stray", "example.com/outside/x"),
+			}),
+			source("example.com/b", fstest.MapFS{"b.go": goSrc("b")}),
+			source("example.com/c", fstest.MapFS{"c.go": goSrc("c")}),
+			{Module: Module{Path: "example.com/gone", Version: "v1.0.0"}},
+		},
+	})
+	assert.True(t, node(t, g, "example.com/gone").Open())
+	assert.Equal(t, StateImports, node(t, g, "example.com/a").State,
+		"no build reads a package that does not parse or that imports a module outside the build list")
+	assert.Equal(t, []string{"example.com/a", "example.com/b"}, g.Path([]string{"example.com/a"}, "example.com/b"),
+		"the open node can import example.com/a/second, which no walk from the main module reaches")
+	assert.False(t, g.Reaches([]string{"example.com/a"}, "example.com/c"), "a test file and a vendor directory of a dependency never count")
+	assert.True(t, node(t, g, "example.com/c").Reached)
+}
+
+func TestBuildOpensAModuleWithALinkToADirectoryOnceAReachedNodeIsOpen(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/a\n"), 0o600))
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "real"), 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "real", "r.go"), []byte("package real\n"), 0o600))
+	require.NoError(t, os.Symlink("real", filepath.Join(dir, "linked")))
+
+	g := build(t, Input{
+		MainFS: mainFS(fstest.MapFS{"main.go": goSrc("main", "example.com/gone")}),
+		Modules: []Source{
+			{Module: Module{Path: "example.com/a", Version: "v1.0.0"}, FS: os.DirFS(dir)},
+			{Module: Module{Path: "example.com/gone", Version: "v1.0.0"}},
+		},
+	})
+	a := node(t, g, "example.com/a")
+	assert.Equal(t, StateOpen, a.State)
+	assert.Contains(t, a.Reason, "linked")
 }
 
 func TestBuildReadsTheGoModOfAModuleWithNoSource(t *testing.T) {

@@ -60,6 +60,12 @@ func countedFile(name string, tests bool) bool {
 	return tests || !strings.HasSuffix(name, "_test.go")
 }
 
+// unbuildable is the error of a package that the go command cannot build,
+// such as a package with a file that does not parse.
+type unbuildable struct{ error }
+
+func (e unbuildable) Unwrap() error { return e.error }
+
 // packageImports returns the imports of the Go files of one package. It
 // reads the cache first for an immutable source.
 func (b *builder) packageImports(ref pkgRef) ([]importRef, error) {
@@ -129,7 +135,7 @@ func (b *builder) fileImports(fsys fs.FS, file string) (_ []importRef, err error
 		f, err = parser.ParseFile(b.fset, file, src, parser.ImportsOnly)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("%s does not parse: %w", file, err)
+		return nil, unbuildable{fmt.Errorf("%s does not parse: %w", file, err)}
 	}
 	if excluded(src) {
 		return nil, nil
@@ -139,7 +145,7 @@ func (b *builder) fileImports(fsys fs.FS, file string) (_ []importRef, err error
 	for _, spec := range f.Imports {
 		p, err := strconv.Unquote(spec.Path.Value)
 		if err != nil {
-			return nil, fmt.Errorf("%s: import %s: %w", file, spec.Path.Value, err)
+			return nil, unbuildable{fmt.Errorf("%s: import %s: %w", file, spec.Path.Value, err)}
 		}
 		out = append(out, importRef{Path: p, File: file, Line: b.fset.Position(spec.Pos()).Line, Test: test})
 	}

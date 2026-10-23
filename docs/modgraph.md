@@ -36,8 +36,10 @@ module, and a path that meets it reaches each module.
    own. A link to a file is a file of its package.
 2. For each import, the resolver takes the modules of the build list whose
    path is a prefix of the import path, longest first. A module with source
-   holds the package when it has the directory. A module with no source may
-   hold it, so it gets an edge too, and the test goes on to a shorter prefix.
+   holds the package when its directory has an entry whose name ends in
+   `.go` and that is a file or a link to a file, as the go command decides
+   it. A module with no source may hold it, so it gets an edge too, and the
+   test goes on to a shorter prefix.
    A path that no module holds is the standard library when its first
    element has no dot. Else its importer is open.
 3. The walk reads each package that an import reaches, as `go list -deps`
@@ -51,8 +53,17 @@ module, and a path that meets it reaches each module.
    `//go:build purego` counts, because a project can build with
    `-tags purego`. A GOOS or GOARCH suffix of the file name never drops a
    file.
-5. Once a reached node is open, each node counts as reached, and a module
-   that the walk read no package of becomes open.
+5. Once a reached node is open, it can import any package of the build
+   list. So each node counts as reached, and `Build` reads each directory
+   of each module with source that an import can name, except `vendor` and
+   a nested module. Else a module of one read package would hide the edges
+   of its other packages. A module with a link to a directory is then open,
+   because the walk does not follow the link. A module zip holds no links.
+   This read skips a package that does not parse, or that imports a path
+   that no module of the build list holds. No build of the project reads
+   such a package, because `go mod tidy` lists in the main `go.mod` each
+   module that a package of the build imports. In the walk from the main
+   module, such a package makes its module open.
 
 A main `go.mod` with a `go` directive below 1.17, or with none, gives
 `ErrUnpruned`. Before module graph pruning, `go.mod` need not list each
@@ -116,7 +127,7 @@ with neither. It sets `GOPROXY=off`, so it downloads nothing.
 ## Not covered
 
 - `go.work` workspaces. A caller keeps no graph for a workspace.
-- A file larger than 16 MiB whose first 64 KiB does not parse makes its
+- A file larger than 32 MiB whose first 64 KiB does not parse makes its
   module open.
 - A file budget, 200,000 files by default, caps a run. Past it the module
   that is next is open, and `Stats.Truncated` is set.
