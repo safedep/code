@@ -13,3 +13,6 @@ See [docs/detection.md](./docs/detection.md) for the APIs that security detectio
 See [docs/projectgraph.md](./docs/projectgraph.md) for the project graph: the call graph of a
 whole project across its files and into its dependencies, with the index, link, roots, reach and
 summary steps.
+
+See [docs/modgraph.md](./docs/modgraph.md) for the module graph of a Go module: which module
+imports which, from the code on the disk, with no Go toolchain.
