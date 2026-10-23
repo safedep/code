@@ -81,7 +81,8 @@ func TestBuildHoldsEachEdgeOfGoList(t *testing.T) {
 				listed := goListEdges(t, dir, p[0], p[1])
 				t.Logf("%s/%s: go list has %d module edges, the graph %d, with %d nodes", p[0], p[1], len(listed), len(g.Edges), len(g.Nodes))
 				for e := range listed {
-					from, _ := g.Node(e[0])
+					from, ok := g.Node(e[0])
+					require.True(t, ok, "the graph has no node %s", e[0])
 					to, ok := g.Node(e[1])
 					assert.True(t, ok && to.Reached, "%s/%s: go list reaches %s, the graph does not", p[0], p[1], e[1])
 					assert.True(t, edges[e] || from.Open(), "%s/%s: go list has the edge %s -> %s", p[0], p[1], e[0], e[1])

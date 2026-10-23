@@ -111,6 +111,8 @@ replace example.com/exact v0.9.0 => example.com/never v1.0.0
 	forked := sourceOf(t, sources, "example.com/forked")
 	assert.True(t, hasFile(t, forked.FS, "f.go"))
 	assert.Equal(t, "example.com/forked", forked.Module.Path)
+	assert.Equal(t, Module{Path: "example.com/fork", Version: "v2.0.0"}, forked.Origin, "the cache keys the fork by its own module")
+	assert.Equal(t, Module{}, cached.Origin)
 
 	assert.True(t, hasFile(t, sourceOf(t, sources, "example.com/exact").FS, "e.go"), "a replace of another version does not apply")
 }
@@ -125,6 +127,33 @@ func TestDiscoverReadsAVendorDirectoryOnlyAtTheVersionOfGoMod(t *testing.T) {
 	sources, err := Discover(DiscoverOptions{Dir: root})
 	require.NoError(t, err)
 	assert.Nil(t, sources[0].FS, "a vendor copy of another version proves nothing")
+}
+
+func TestDiscoverReadsALocalReplacementFromVendorInVendorMode(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{
+		"app/go.mod":                        "module example.com/app\n\ngo 1.22\n\nrequire example.com/local v1.0.0\n\nreplace example.com/local => ../lib\n",
+		"app/vendor/modules.txt":            "# example.com/local v1.0.0 => ../lib\nexample.com/local\n",
+		"app/vendor/example.com/local/v.go": "package local\n",
+		"lib/l.go":                          "package local\n",
+	})
+	sources, err := Discover(DiscoverOptions{Dir: filepath.Join(root, "app"), LocalRoot: root})
+	require.NoError(t, err)
+	assert.True(t, hasFile(t, sources[0].FS, "v.go"))
+	assert.False(t, hasFile(t, sources[0].FS, "l.go"))
+}
+
+func TestDiscoverDoesNotFollowALinkOutOfTheLocalRoot(t *testing.T) {
+	root := t.TempDir()
+	outside := t.TempDir()
+	writeFiles(t, root, map[string]string{
+		"app/go.mod": "module example.com/app\n\ngo 1.22\n\nrequire example.com/local v1.0.0\n\nreplace example.com/local => ./lib\n",
+	})
+	writeFiles(t, outside, map[string]string{"l.go": "package local\n"})
+	require.NoError(t, os.Symlink(outside, filepath.Join(root, "app", "lib")))
+	sources, err := Discover(DiscoverOptions{Dir: filepath.Join(root, "app"), LocalRoot: root})
+	require.NoError(t, err)
+	assert.Nil(t, sources[0].FS)
 }
 
 func TestDiscoverNeedsAGoMod(t *testing.T) {

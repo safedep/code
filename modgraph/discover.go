@@ -50,11 +50,16 @@ func Discover(opts DiscoverOptions) ([]Source, error) {
 	for _, r := range f.Require {
 		s := Source{Module: Module{Path: r.Mod.Path, Version: r.Mod.Version}}
 		src := replacement(f, r.Mod)
+		if src != r.Mod {
+			s.Origin = Module{Path: src.Path, Version: src.Version}
+		}
+		// In vendor mode the go command reads each module from vendor, a
+		// local replacement too.
 		switch {
-		case src.Version == "":
-			s.FS, s.GoMod = localSource(opts, src.Path)
 		case vendored[r.Mod.Path] == src:
 			s.FS = os.DirFS(filepath.Join(opts.Dir, "vendor", filepath.FromSlash(r.Mod.Path)))
+		case src.Version == "":
+			s.FS, s.GoMod = localSource(opts, src.Path)
 		default:
 			s.FS, s.GoMod = cacheSource(opts.ModuleCache, src)
 			s.Immutable = s.FS != nil
@@ -86,7 +91,8 @@ func replacement(f *modfile.File, m gomodule.Version) gomodule.Version {
 }
 
 // localSource returns the source of a replacement with a local path, inside
-// LocalRoot only.
+// LocalRoot only. Both paths are resolved through links first, so a link
+// cannot lead the read out of LocalRoot.
 func localSource(opts DiscoverOptions, p string) (fs.FS, []byte) {
 	if opts.LocalRoot == "" {
 		return nil, nil
@@ -95,12 +101,11 @@ func localSource(opts DiscoverOptions, p string) (fs.FS, []byte) {
 	if !filepath.IsAbs(dir) {
 		dir = filepath.Join(opts.Dir, dir)
 	}
-	root, err := filepath.Abs(opts.LocalRoot)
+	root, err := filepath.EvalSymlinks(opts.LocalRoot)
 	if err != nil {
 		return nil, nil
 	}
-	dir, err = filepath.Abs(dir)
-	if err != nil {
+	if dir, err = filepath.EvalSymlinks(dir); err != nil {
 		return nil, nil
 	}
 	if rel, err := filepath.Rel(root, dir); err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {

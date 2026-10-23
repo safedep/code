@@ -18,12 +18,15 @@ import (
 	"go/token"
 	"go/version"
 	"io/fs"
+	"maps"
 	"slices"
 	"strings"
+	"sync"
 
 	"golang.org/x/mod/modfile"
 
 	"github.com/safedep/code/fileindex/store"
+	"github.com/safedep/code/projectgraph/modules"
 )
 
 // Version changes when Build gives another graph for the same input.
@@ -69,7 +72,12 @@ type Source struct {
 	// as a directory of the module cache. Build caches what it reads of an
 	// immutable source. A vendor directory can change, so it is not immutable.
 	Immutable bool
-	// Sum is the h1 hash of the module in go.sum, or "". It is a part of the
+	// Origin is the module version whose code FS holds, when it is not
+	// Module: the target of a replace directive. The cache keys a package
+	// by Origin, so a fork never serves the imports of the module it
+	// replaces.
+	Origin Module
+	// Sum is the h1 hash of Origin in go.sum, or "". It is a part of the
 	// cache key, so a module version that a private proxy serves again with
 	// other bytes gets a new entry.
 	Sum string
@@ -114,6 +122,9 @@ type Node struct {
 	Reached bool
 	// Reason says why the node is not StateImports.
 	Reason string
+	// Walked is true when Build read a package of the module. The edges of
+	// a module that Build did not walk are not known.
+	Walked bool
 }
 
 // Open reports whether the node can import a module that it has no edge to.
@@ -164,46 +175,79 @@ type Graph struct {
 	// Edges is sorted by the path of From, then of To.
 	Edges []Edge
 	Stats Stats
+
+	index     sync.Once
+	next      map[string][]string
+	nodeIndex map[string]int
+}
+
+func (g *Graph) build() {
+	g.index.Do(func() {
+		g.next = map[string][]string{}
+		for _, e := range g.Edges {
+			g.next[e.From.Path] = append(g.next[e.From.Path], e.To.Path)
+		}
+		g.nodeIndex = make(map[string]int, len(g.Nodes))
+		for i, n := range g.Nodes {
+			g.nodeIndex[n.Module.Path] = i
+		}
+	})
 }
 
 // Node returns the node of a module path.
 func (g *Graph) Node(path string) (Node, bool) {
-	i, ok := slices.BinarySearchFunc(g.Nodes, path, func(n Node, p string) int { return strings.Compare(n.Module.Path, p) })
+	g.build()
+	i, ok := g.nodeIndex[path]
 	if !ok {
 		return Node{}, false
 	}
 	return g.Nodes[i], true
 }
 
-// Reaches reports whether a path of edges from one module can reach
-// another. A path that meets an open node can reach each module.
-func (g *Graph) Reaches(from, to string) bool {
-	next := map[string][]string{}
-	for _, e := range g.Edges {
-		next[e.From.Path] = append(next[e.From.Path], e.To.Path)
+// Reaches reports whether a path from one of the modules can reach a
+// module. See Path.
+func (g *Graph) Reaches(from []string, to string) bool { return g.Path(from, to) != nil }
+
+// Path returns a shortest path of module paths from one of the modules to
+// a module, or nil. A path that meets a node whose edges are not known, an
+// open node or a module that Build did not walk, can reach each module:
+// the path ends at that node, and to follows it. A module is not on a path
+// from itself.
+func (g *Graph) Path(from []string, to string) []string {
+	g.build()
+	prev := map[string]string{}
+	var queue []string
+	for _, f := range from {
+		if _, ok := prev[f]; !ok && f != to {
+			prev[f] = ""
+			queue = append(queue, f)
+		}
 	}
-	seen := map[string]bool{from: true}
-	queue := []string{from}
+	back := func(p string) []string {
+		var out []string
+		for ; p != ""; p = prev[p] {
+			out = append(out, p)
+		}
+		slices.Reverse(out)
+		return out
+	}
 	for len(queue) > 0 {
 		p := queue[0]
 		queue = queue[1:]
-		if p == to && p != from {
-			return true
+		if n, ok := g.Node(p); !ok || n.Open() || !n.Walked {
+			return append(back(p), to)
 		}
-		if n, ok := g.Node(p); ok && n.Open() {
-			return true
-		}
-		for _, q := range next[p] {
+		for _, q := range g.next[p] {
 			if q == to {
-				return true
+				return append(back(p), to)
 			}
-			if !seen[q] {
-				seen[q] = true
+			if _, seen := prev[q]; !seen {
+				prev[q] = p
 				queue = append(queue, q)
 			}
 		}
 	}
-	return false
+	return nil
 }
 
 // Build reads the module graph of the main module in MainFS. It returns
@@ -335,7 +379,9 @@ func (b *builder) run() (*Graph, error) {
 	return b.graph(), nil
 }
 
-// walkMain reads each package of the main module, with its test files.
+// walkMain reads each package of the main module, with its test files. The
+// walk does not follow a link to a directory, so a package that an import
+// reaches through a link is queued as any other.
 func (b *builder) walkMain() error {
 	b.main.walked = true
 	return fs.WalkDir(b.in.MainFS, ".", func(dir string, d fs.DirEntry, err error) error {
@@ -352,7 +398,9 @@ func (b *builder) walkMain() error {
 		if err := b.ctx.Err(); err != nil {
 			return err
 		}
-		return b.readAndLink(pkgRef{mod: b.main, dir: dir})
+		ref := pkgRef{mod: b.main, dir: dir}
+		b.seen[ref] = true
+		return b.readAndLink(ref)
 	})
 }
 
@@ -397,7 +445,7 @@ func (b *builder) link(from *module, imp importRef) {
 	}
 	cands := b.resolve(imp.Path)
 	if len(cands) == 0 {
-		if isStdPath(imp.Path) && !b.prefixed(imp.Path) {
+		if modules.IsStdPath(imp.Path) && !b.prefixed(imp.Path) {
 			b.addEdge(from, b.stdNode(), imp, StateImports)
 			return
 		}
@@ -415,7 +463,7 @@ func (b *builder) link(from *module, imp importRef) {
 }
 
 func (b *builder) enqueue(ref pkgRef) {
-	if ref.mod.main || b.seen[ref] {
+	if b.seen[ref] {
 		return
 	}
 	b.seen[ref] = true
@@ -425,8 +473,9 @@ func (b *builder) enqueue(ref pkgRef) {
 func (b *builder) addEdge(from, to *module, imp importRef, kind State) {
 	k := edgeKey{from.node.Module.Path, to.node.Module.Path}
 	if e, ok := b.edges[k]; ok {
-		if !imp.Test {
+		if e.TestOnly && !imp.Test {
 			e.TestOnly = false
+			e.Evidence = Evidence{File: imp.File, Line: imp.Line}
 		}
 		return
 	}
@@ -461,7 +510,7 @@ func (b *builder) finish() {
 	for {
 		reached := b.reachable()
 		added := false
-		for _, p := range sortedKeys(b.byPath) {
+		for _, p := range slices.Sorted(maps.Keys(b.byPath)) {
 			m := b.byPath[p]
 			if reached[m] && m.node.State == StateRequires && !expanded[m] {
 				expanded[m] = true
@@ -529,8 +578,11 @@ func (b *builder) reachable() map[*module]bool {
 
 func (b *builder) graph() *Graph {
 	g := &Graph{Version: Version, Main: b.main.node.Module, Stats: b.stats}
-	for _, p := range sortedKeys(b.byPath) {
-		g.Nodes = append(g.Nodes, b.byPath[p].node)
+	for _, p := range slices.Sorted(maps.Keys(b.byPath)) {
+		m := b.byPath[p]
+		n := m.node
+		n.Walked = m.walked
+		g.Nodes = append(g.Nodes, n)
 	}
 	for _, e := range b.edges {
 		g.Edges = append(g.Edges, *e)
@@ -542,13 +594,4 @@ func (b *builder) graph() *Graph {
 		return strings.Compare(x.To.Path, y.To.Path)
 	})
 	return g
-}
-
-func sortedKeys[V any](m map[string]V) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	slices.Sort(keys)
-	return keys
 }

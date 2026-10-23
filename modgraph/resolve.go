@@ -3,6 +3,7 @@ package modgraph
 import (
 	"io/fs"
 	"path"
+	"slices"
 	"strings"
 )
 
@@ -68,25 +69,14 @@ func under(importPath, modPath string) (string, bool) {
 	return "", false
 }
 
-// isStdPath reports whether an import path can name a package of the
-// standard library: its first element has no dot.
-func isStdPath(importPath string) bool {
-	first, _, _ := strings.Cut(importPath, "/")
-	return first != "" && !strings.Contains(first, ".")
-}
-
 // hasPackageDir reports whether the source of a module has the directory of
-// a package that an importer can build. A directory that the go command
-// skips, or that belongs to a module nested in this one, is not a package of
-// the module.
+// a package that an importer can build. An import can name a testdata
+// directory or one whose name starts with _ or a dot, and the go command
+// builds it, though ./... skips it. A vendor directory, and a directory of a
+// module nested in this one, is not a package of the module.
 func hasPackageDir(fsys fs.FS, dir string) bool {
 	if dir != "." {
-		for _, part := range strings.Split(dir, "/") {
-			if skippedDir(part) {
-				return false
-			}
-		}
-		if nestedModule(fsys, dir) {
+		if slices.Contains(strings.Split(dir, "/"), "vendor") || nestedModule(fsys, dir) {
 			return false
 		}
 	}

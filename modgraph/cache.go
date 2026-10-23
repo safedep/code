@@ -28,7 +28,10 @@ type cacheEntry struct {
 // hash, when the caller has it, separates two copies of one version with
 // other bytes.
 func cacheKey(ref pkgRef) store.ArtifactKey {
-	m := ref.mod.src.Module
+	m := ref.mod.src.Origin
+	if m.Path == "" {
+		m = ref.mod.src.Module
+	}
 	unit := fileindex.PackageUnit{Ecosystem: "go", Name: m.Path, Version: m.Version}.String()
 	return store.ArtifactKey{
 		Key:     fileindex.Key{Path: fileindex.UnitPath(unit, ref.dir), ContentHash: ref.mod.src.Sum},
@@ -40,7 +43,14 @@ func cacheKey(ref pkgRef) store.ArtifactKey {
 // cacheable reports whether the imports of a package can come from, and go
 // to, the cache.
 func (b *builder) cacheable(ref pkgRef) bool {
-	return b.in.Store != nil && !ref.mod.main && ref.mod.src.Immutable && ref.mod.src.Module.Version != ""
+	if b.in.Store == nil || ref.mod.main || !ref.mod.src.Immutable {
+		return false
+	}
+	origin := ref.mod.src.Origin
+	if origin.Path == "" {
+		origin = ref.mod.src.Module
+	}
+	return origin.Version != ""
 }
 
 // cached returns the imports of a package from the cache.

@@ -3,6 +3,10 @@ package modgraph
 import (
 	"context"
 	"fmt"
+	"go/parser"
+	"go/token"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -240,7 +244,7 @@ func TestBuildOpensAModuleThatImportsWhatItCannotResolve(t *testing.T) {
 			unused := node(t, g, "example.com/unused")
 			assert.True(t, unused.Reached, "an open node can reach each module")
 			assert.Equal(t, StateOpen, unused.State, "no walk read its packages")
-			assert.True(t, g.Reaches(mainPath, "example.com/unused"))
+			assert.True(t, g.Reaches([]string{mainPath}, "example.com/unused"))
 		})
 	}
 }
@@ -293,7 +297,11 @@ func TestBuildKeepsAFileUnlessItsConstraintCanNeverHold(t *testing.T) {
 		{"+build lines that cannot hold together", "a.go", "// +build linux\n// +build !linux\n\npackage a\n\nimport _ \"example.com/dep\"\n", false},
 		{"a //go:build line wins over a +build line", "a.go", "//go:build linux\n// +build ignore\n\npackage a\n\nimport _ \"example.com/dep\"\n", true},
 		{"a +build line of the package doc comment", "a.go", "// +build ignore\npackage a\n\nimport _ \"example.com/dep\"\n", true},
-		{"a line of the package doc comment", "a.go", "//go:build ignore\npackage a\n\nimport _ \"example.com/dep\"\n", true},
+		{"a //go:build line of the package doc comment", "a.go", "//go:build ignore\npackage a\n\nimport _ \"example.com/dep\"\n", false},
+		{"a +build line after a block comment", "a.go", "/* license */\n\n// +build ignore\n\npackage a\n\nimport _ \"example.com/dep\"\n", true},
+		{"a +build line before a block comment", "a.go", "// +build ignore\n/* x */\n\npackage a\n\nimport _ \"example.com/dep\"\n", true},
+		{"a //go:build line after a block comment", "a.go", "/* license */\n//go:build ignore\n\npackage a\n\nimport _ \"example.com/dep\"\n", false},
+		{"two //go:build lines", "a.go", "//go:build ignore\n//go:build ignore\n\npackage a\n\nimport _ \"example.com/dep\"\n", true},
 		{"a constraint that does not parse", "a.go", "//go:build linux &&\n\npackage a\n\nimport _ \"example.com/dep\"\n", true},
 	}
 	for _, tc := range cases {
@@ -321,17 +329,53 @@ func TestSatisfiableCountsAConstraintWithManyTags(t *testing.T) {
 	assert.Contains(t, edgeList(g), "example.com/a -> example.com/dep", "past the tag cap the file counts")
 }
 
-func TestBuildReadsAnImportBlockPastTheHead(t *testing.T) {
-	long := "// " + strings.Repeat("x", headSize) + "\n\npackage a\n\nimport _ \"example.com/dep\"\n"
+func TestBuildReadsEachImportOfALongFile(t *testing.T) {
+	long := "package a\n\nimport _ \"example.com/first\"\n\n// " + strings.Repeat("x", 70<<10) + "\n\nimport _ \"example.com/dep\"\n"
 	g := build(t, Input{
 		MainFS: mainFS(fstest.MapFS{"main.go": goSrc("main", "example.com/a")}),
 		Modules: []Source{
 			source("example.com/a", fstest.MapFS{"a.go": {Data: []byte(long)}}),
+			source("example.com/first", fstest.MapFS{"f.go": goSrc("first")}),
 			source("example.com/dep", fstest.MapFS{"d.go": goSrc("dep")}),
 		},
 	})
-	assert.Contains(t, edgeList(g), "example.com/a -> example.com/dep")
-	assert.Equal(t, StateImports, node(t, g, "example.com/a").State)
+	assert.Contains(t, edgeList(g), "example.com/a -> example.com/dep", "an import after a long comment counts")
+	assert.Contains(t, edgeList(g), "example.com/a -> example.com/first")
+}
+
+func TestBuildReadsTheLinksOfTheMainModule(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{
+		"app/go.mod":       "module " + mainPath + "\n\ngo 1.22\n",
+		"app/main.go":      "package main\n\nimport _ \"" + mainPath + "/linked\"\n",
+		"shared/s.go":      "package real\n\nimport _ \"example.com/viafile\"\n",
+		"outside/o.go":     "package linked\n\nimport _ \"example.com/viadir\"\n",
+		"app/real/keep.go": "package real\n",
+	})
+	require.NoError(t, os.Symlink(filepath.Join(root, "shared", "s.go"), filepath.Join(root, "app", "real", "link.go")))
+	require.NoError(t, os.Symlink(filepath.Join(root, "outside"), filepath.Join(root, "app", "linked")))
+	g := build(t, Input{
+		MainFS: os.DirFS(filepath.Join(root, "app")),
+		Modules: []Source{
+			source("example.com/viafile", fstest.MapFS{"v.go": goSrc("viafile")}),
+			source("example.com/viadir", fstest.MapFS{"v.go": goSrc("viadir")}),
+		},
+	})
+	assert.Contains(t, edgeList(g), mainPath+" -> example.com/viafile", "a link to a file is a file of the package")
+	assert.Contains(t, edgeList(g), mainPath+" -> example.com/viadir", "a package that an import reaches through a link to a directory is read")
+	assert.Equal(t, StateImports, node(t, g, mainPath).State)
+}
+
+func TestBuildReadsATestdataPackageThatAnImportNames(t *testing.T) {
+	g := build(t, Input{
+		MainFS: mainFS(fstest.MapFS{
+			"main.go":               goSrc("main", mainPath+"/testdata/fixture"),
+			"testdata/fixture/f.go": goSrc("fixture", "example.com/dep"),
+		}),
+		Modules: []Source{source("example.com/dep", fstest.MapFS{"d.go": goSrc("dep")})},
+	})
+	assert.Equal(t, []string{mainPath + " -> example.com/dep"}, edgeList(g))
+	assert.Equal(t, StateImports, node(t, g, mainPath).State)
 }
 
 func TestBuildOpensAModuleWithAFileThatDoesNotParse(t *testing.T) {
@@ -447,6 +491,18 @@ func TestBuildCachesThePackagesOfAnImmutableSource(t *testing.T) {
 	assert.Empty(t, found, "a mutable source has no entry")
 }
 
+func TestBuildCachesAReplacementByItsOwnModule(t *testing.T) {
+	st := memstore.New()
+	original := Source{Module: Module{Path: "example.com/a", Version: "v1.0.0"}, FS: fstest.MapFS{"a.go": goSrc("a")}, Immutable: true}
+	fork := Source{Module: Module{Path: "example.com/a", Version: "v1.0.0"}, Origin: Module{Path: "example.com/fork", Version: "v1.0.0"}, FS: fstest.MapFS{"a.go": goSrc("a", "example.com/dep")}, Immutable: true}
+	dep := source("example.com/dep", fstest.MapFS{"d.go": goSrc("dep")})
+	main := mainFS(fstest.MapFS{"main.go": goSrc("main", "example.com/a")})
+
+	build(t, Input{MainFS: main, Modules: []Source{original, dep}, Store: st})
+	g := build(t, Input{MainFS: main, Modules: []Source{fork, dep}, Store: st})
+	assert.Contains(t, edgeList(g), "example.com/a -> example.com/dep", "the fork is not served the imports of the original")
+}
+
 func TestBuildCachesNoPackageThatFailed(t *testing.T) {
 	st := memstore.New()
 	bad := Source{Module: Module{Path: "example.com/a", Version: "v1.0.0"}, FS: fstest.MapFS{"a.go": {Data: []byte("package a\nimport (\n")}}, Immutable: true}
@@ -457,7 +513,7 @@ func TestBuildCachesNoPackageThatFailed(t *testing.T) {
 	assert.Equal(t, StateOpen, node(t, g, "example.com/a").State)
 }
 
-func TestGraphReaches(t *testing.T) {
+func TestGraphPath(t *testing.T) {
 	g := build(t, Input{
 		MainFS: mainFS(fstest.MapFS{"main.go": goSrc("main", "example.com/a")}),
 		Modules: []Source{
@@ -466,9 +522,56 @@ func TestGraphReaches(t *testing.T) {
 			source("example.com/c", fstest.MapFS{"c.go": goSrc("c", "example.com/b")}),
 		},
 	})
-	assert.True(t, g.Reaches(mainPath, "example.com/b"))
-	assert.True(t, g.Reaches("example.com/a", "example.com/b"))
-	assert.False(t, g.Reaches("example.com/b", "example.com/a"))
-	assert.False(t, g.Reaches(mainPath, "example.com/c"))
-	assert.False(t, g.Reaches("example.com/c", "example.com/b"), "the build reads no package of a module that nothing reaches")
+	assert.Equal(t, []string{mainPath, "example.com/a", "example.com/b"}, g.Path([]string{mainPath}, "example.com/b"))
+	assert.True(t, g.Reaches([]string{"example.com/a"}, "example.com/b"))
+	assert.False(t, g.Reaches([]string{"example.com/b"}, "example.com/a"))
+	assert.False(t, g.Reaches([]string{mainPath}, "example.com/c"))
+	assert.False(t, g.Reaches([]string{"example.com/b"}, "example.com/b"), "a module is not on a path from itself")
+	assert.Equal(t, []string{"example.com/c", "example.com/b"}, g.Path([]string{"example.com/c"}, "example.com/b"),
+		"Build read no package of c, so its edges are not known and it can reach each module")
+	assert.False(t, node(t, g, "example.com/c").Walked)
+	assert.True(t, node(t, g, "example.com/a").Walked)
+}
+
+func TestImportsEndNeedsAWholeTokenAfterTheImports(t *testing.T) {
+	cases := []struct {
+		name string
+		head string
+		want bool
+	}{
+		{"a declaration after the imports", "package a\n\nimport _ \"x\"\n\nfunc f() {}\n", true},
+		{"a cut inside a comment", "package a\n\nimport _ \"x\"\n\n// comment", false},
+		{"a cut inside the word import", "package a\n\nimport _ \"x\"\n\nimp", false},
+		{"a cut after the word import, which does not parse", "package a\n\nimport _ \"x\"\n\nimport", false},
+		{"a cut inside a word that is not import", "package a\n\nimport _ \"x\"\n\nfun", false},
+		{"no import and a declaration", "package a\n\nvar v = 1\n", true},
+		{"a cut inside a block comment, which does not parse", "package a\n\nimport _ \"x\"\n\n/* open", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			fset := token.NewFileSet()
+			f, err := parser.ParseFile(fset, "a.go", tc.head, parser.ImportsOnly)
+			if strings.Contains(tc.name, "does not parse") {
+				assert.Error(t, err, "Build reads the whole file")
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, importsEnd(fset, f, []byte(tc.head)))
+		})
+	}
+}
+
+func TestBuildReadsAnImportThatTheHeadCuts(t *testing.T) {
+	prefix := "package a\n\nimport _ \"example.com/first\"\n// "
+	src := prefix + strings.Repeat("x", headSize-3-len(prefix)-1) + "\nimport _ \"example.com/dep\"\n"
+	require.Equal(t, "imp", src[headSize-3:headSize], "the head ends inside the word import")
+	g := build(t, Input{
+		MainFS: mainFS(fstest.MapFS{"main.go": goSrc("main", "example.com/a")}),
+		Modules: []Source{
+			source("example.com/a", fstest.MapFS{"a.go": {Data: []byte(src)}}),
+			source("example.com/first", fstest.MapFS{"f.go": goSrc("first")}),
+			source("example.com/dep", fstest.MapFS{"d.go": goSrc("dep")}),
+		},
+	})
+	assert.Contains(t, edgeList(g), "example.com/a -> example.com/dep")
 }

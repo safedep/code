@@ -1,11 +1,14 @@
 package modgraph
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"go/ast"
 	"go/build/constraint"
 	"go/parser"
+	"go/scanner"
+	"go/token"
 	"io"
 	"io/fs"
 	"path"
@@ -18,8 +21,9 @@ const (
 	// block of a Go file is near its top, so the head almost always holds it.
 	headSize = 64 << 10
 	// maxFileSize caps a Go file that Build reads whole, when its head does
-	// not parse. A larger file makes its module open.
-	maxFileSize = 16 << 20
+	// not show the end of the import block. A larger file makes its module
+	// open.
+	maxFileSize = 32 << 20
 	// maxConstraintTags caps the tags of a build constraint that Build tests
 	// one by one. A constraint with more tags counts as one that can hold.
 	maxConstraintTags = 16
@@ -67,22 +71,32 @@ func (b *builder) packageImports(ref pkgRef) ([]importRef, error) {
 		return nil, fmt.Errorf("read the directory %s: %w", ref.dir, err)
 	}
 	var imps []importRef
+	files := 0
 	for _, e := range entries {
-		if !e.Type().IsRegular() || !countedFile(e.Name(), ref.mod.main) {
+		if e.IsDir() || !countedFile(e.Name(), ref.mod.main) {
 			continue
+		}
+		file := path.Join(ref.dir, e.Name())
+		// The go command reads a link to a file, as a file of the package.
+		if !e.Type().IsRegular() {
+			if info, err := fs.Stat(ref.mod.src.FS, file); err != nil || !info.Mode().IsRegular() {
+				continue
+			}
 		}
 		if b.stats.Files >= b.maxFiles {
 			return nil, errBudget
 		}
 		b.stats.Files++
-		file := path.Join(ref.dir, e.Name())
+		files++
 		fileImps, err := b.fileImports(ref.mod.src.FS, file)
 		if err != nil {
 			return nil, err
 		}
 		imps = append(imps, fileImps...)
 	}
-	b.stats.Packages++
+	if files > 0 {
+		b.stats.Packages++
+	}
 	if err := b.cache(ref, imps); err != nil {
 		return nil, err
 	}
@@ -90,13 +104,34 @@ func (b *builder) packageImports(ref pkgRef) ([]importRef, error) {
 }
 
 // fileImports returns the imports of one Go file, or none when its build
-// constraint can never hold.
-func (b *builder) fileImports(fsys fs.FS, file string) ([]importRef, error) {
-	f, err := b.parse(fsys, file)
+// constraint can never hold. It reads the head of the file first, and the
+// whole file when the head does not show the end of the import block.
+func (b *builder) fileImports(fsys fs.FS, file string) (_ []importRef, err error) {
+	fh, err := fsys.Open(file)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open %s: %w", file, err)
 	}
-	if excluded(f) {
+	defer func() { err = errors.Join(err, fh.Close()) }()
+	src, err := io.ReadAll(io.LimitReader(fh, headSize))
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", file, err)
+	}
+	f, err := parser.ParseFile(b.fset, file, src, parser.ImportsOnly)
+	if len(src) == headSize && (err != nil || !importsEnd(b.fset, f, src)) {
+		rest, rerr := io.ReadAll(io.LimitReader(fh, maxFileSize-headSize+1))
+		if rerr != nil {
+			return nil, fmt.Errorf("read %s: %w", file, rerr)
+		}
+		if len(src)+len(rest) > maxFileSize {
+			return nil, fmt.Errorf("%s is larger than %d bytes", file, maxFileSize)
+		}
+		src = append(src, rest...)
+		f, err = parser.ParseFile(b.fset, file, src, parser.ImportsOnly)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("%s does not parse: %w", file, err)
+	}
+	if excluded(src) {
 		return nil, nil
 	}
 	test := strings.HasSuffix(file, "_test.go")
@@ -111,82 +146,136 @@ func (b *builder) fileImports(fsys fs.FS, file string) ([]importRef, error) {
 	return out, nil
 }
 
-// parse reads the package clause, the comments before it and the import
-// block of a Go file. It parses the head of the file first, and the whole
-// file when the head does not parse.
-func (b *builder) parse(fsys fs.FS, file string) (_ *ast.File, err error) {
-	fh, err := fsys.Open(file)
-	if err != nil {
-		return nil, fmt.Errorf("open %s: %w", file, err)
+// importsEnd reports whether a head of a Go file holds the end of its import
+// block: after the last import declaration, a token that is not import and
+// that ends before the end of the head. A head can end inside a comment
+// between two import declarations, or inside the word import, and still
+// parse, so a parse of the head alone proves nothing.
+func importsEnd(fset *token.FileSet, f *ast.File, head []byte) bool {
+	end := f.Name.End()
+	if n := len(f.Decls); n > 0 {
+		end = f.Decls[n-1].End()
 	}
-	defer func() { err = errors.Join(err, fh.Close()) }()
-	head := make([]byte, headSize)
-	n, err := io.ReadFull(fh, head)
-	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
-		return nil, fmt.Errorf("read %s: %w", file, err)
-	}
-	whole := n < headSize
-	src := head[:n]
-	f, perr := parser.ParseFile(b.fset, file, src, parser.ImportsOnly|parser.ParseComments)
-	if perr == nil || whole {
-		if perr != nil {
-			return nil, fmt.Errorf("%s does not parse: %w", file, perr)
+	off := fset.File(f.Package).Offset(end)
+	rest := head[off:]
+	tf := token.NewFileSet().AddFile("", -1, len(rest))
+	var sc scanner.Scanner
+	bad := false
+	sc.Init(tf, rest, func(token.Position, string) { bad = true }, 0)
+	for {
+		pos, tok, lit := sc.Scan()
+		switch {
+		case bad || tok == token.EOF || tok == token.ILLEGAL || tok == token.IMPORT:
+			return false
+		case tok == token.SEMICOLON && lit == "\n":
+			continue
 		}
-		return f, nil
+		size := len(lit)
+		if size == 0 {
+			size = len(tok.String())
+		}
+		return tf.Offset(pos)+size < len(rest)
 	}
-	rest, err := io.ReadAll(io.LimitReader(fh, maxFileSize-headSize+1))
-	if err != nil {
-		return nil, fmt.Errorf("read %s: %w", file, err)
-	}
-	if len(src)+len(rest) > maxFileSize {
-		return nil, fmt.Errorf("%s is larger than %d bytes and its head does not parse", file, maxFileSize)
-	}
-	f, perr = parser.ParseFile(b.fset, file, append(src, rest...), parser.ImportsOnly|parser.ParseComments)
-	if perr != nil {
-		return nil, fmt.Errorf("%s does not parse: %w", file, perr)
-	}
-	return f, nil
 }
 
 // excluded reports whether no build reads a file: its build constraint can
-// never hold, with each tag free except ignore, which no build sets. A
-// //go:build line decides when the file has one. Else each // +build line
-// must hold, as the go command reads them. The go command reads a
-// constraint only in the comments before the blank line that ends them, so
-// a line of the doc comment of the package does not count. A constraint that
-// does not parse, or that has more than maxConstraintTags tags, leaves the
-// file in, so the graph loses no edge.
-func excluded(f *ast.File) bool {
-	var plus []constraint.Expr
-	for _, group := range f.Comments {
-		if group.End() >= f.Package {
-			break
-		}
-		if group == f.Doc {
-			continue
-		}
-		for _, c := range group.List {
-			switch {
-			case constraint.IsGoBuild(c.Text):
-				expr, err := constraint.Parse(c.Text)
-				return err == nil && !satisfiable(expr)
-			case constraint.IsPlusBuild(c.Text):
-				expr, err := constraint.Parse(c.Text)
-				if err != nil {
-					return false
-				}
-				plus = append(plus, expr)
-			}
-		}
-	}
-	if len(plus) == 0 {
+// never hold, with each tag free except ignore, which no build sets. It
+// reads the constraint as the go command does, in go/build shouldBuild: a
+// //go:build line in the leading comments decides, and else each // +build
+// line before the last blank line of the leading // comments must hold. A
+// constraint that does not parse, two //go:build lines, and a constraint
+// with more than maxConstraintTags tags leave the file in, so the graph
+// loses no edge.
+func excluded(src []byte) bool {
+	header, goBuild, ok := fileHeader(src)
+	if !ok {
 		return false
 	}
-	all := plus[0]
-	for _, e := range plus[1:] {
-		all = &constraint.AndExpr{X: all, Y: e}
+	if goBuild != "" {
+		expr, err := constraint.Parse(goBuild)
+		return err == nil && !satisfiable(expr)
 	}
-	return !satisfiable(all)
+	var all constraint.Expr
+	for line := range strings.Lines(string(header)) {
+		line = strings.TrimSpace(line)
+		if !constraint.IsPlusBuild(line) {
+			continue
+		}
+		expr, err := constraint.Parse(line)
+		if err != nil {
+			continue
+		}
+		if all == nil {
+			all = expr
+		} else {
+			all = &constraint.AndExpr{X: all, Y: expr}
+		}
+	}
+	return all != nil && !satisfiable(all)
+}
+
+// fileHeader is go/build parseFileHeader. It returns the part of the file
+// up to the last blank line of the leading run of // comments and blank
+// lines, where a // +build line counts, and the //go:build line of the
+// leading comments. ok is false for a file with two //go:build lines.
+func fileHeader(content []byte) (header []byte, goBuild string, ok bool) {
+	end := 0
+	p := content
+	ended := false
+	inSlashStar := false
+Lines:
+	for len(p) > 0 {
+		line := p
+		if i := bytes.IndexByte(line, '\n'); i >= 0 {
+			line, p = line[:i], p[i+1:]
+		} else {
+			p = p[len(p):]
+		}
+		line = bytes.TrimSpace(line)
+		if len(line) == 0 && !ended {
+			end = len(content) - len(p)
+			continue Lines
+		}
+		if !bytes.HasPrefix(line, []byte("//")) {
+			ended = true
+		}
+		if !inSlashStar && isGoBuildComment(line) {
+			if goBuild != "" {
+				return nil, "", false
+			}
+			goBuild = string(line)
+		}
+	Comments:
+		for len(line) > 0 {
+			if inSlashStar {
+				if i := bytes.Index(line, []byte("*/")); i >= 0 {
+					inSlashStar = false
+					line = bytes.TrimSpace(line[i+2:])
+					continue Comments
+				}
+				continue Lines
+			}
+			if bytes.HasPrefix(line, []byte("//")) {
+				continue Lines
+			}
+			if bytes.HasPrefix(line, []byte("/*")) {
+				inSlashStar = true
+				line = bytes.TrimSpace(line[2:])
+				continue Comments
+			}
+			break Lines
+		}
+	}
+	return content[:end], goBuild, true
+}
+
+// isGoBuildComment is go/build isGoBuildComment.
+func isGoBuildComment(line []byte) bool {
+	rest, ok := bytes.CutPrefix(line, []byte("//go:build"))
+	if !ok {
+		return false
+	}
+	return len(rest) == 0 || len(bytes.TrimSpace(rest)) < len(rest)
 }
 
 // satisfiable reports whether some set of tags makes a constraint hold,
