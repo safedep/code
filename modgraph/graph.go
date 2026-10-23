@@ -267,6 +267,9 @@ func Build(ctx context.Context, in Input) (*Graph, error) {
 	if mf.Module == nil || mf.Module.Mod.Path == "" {
 		return nil, errors.New("modgraph: the go.mod of the main module has no module directive")
 	}
+	if mf.Module.Mod.Path == StdPath {
+		return nil, fmt.Errorf("modgraph: the main module holds the reserved path %q", StdPath)
+	}
 	if mf.Go == nil || version.Compare("go"+mf.Go.Version, "go1.17") < 0 {
 		return nil, ErrUnpruned
 	}

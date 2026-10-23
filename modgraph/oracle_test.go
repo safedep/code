@@ -66,6 +66,7 @@ func TestBuildHoldsEachEdgeOfGoList(t *testing.T) {
 			warm, err := Build(context.Background(), Input{MainFS: os.DirFS(dir), Modules: sources, Store: st})
 			require.NoError(t, err)
 			assert.Equal(t, g.Edges, warm.Edges, "the cache gives the same graph")
+			assert.Equal(t, g.Nodes, warm.Nodes, "the cache gives the same nodes")
 			t.Logf("Build: %d files, %d packages, %v; with the cache: %d files, %d cached packages, %v",
 				g.Stats.Files, g.Stats.Packages, cold.Round(time.Millisecond), warm.Stats.Files, warm.Stats.CachedPackages, time.Since(start).Round(time.Millisecond))
 			for _, n := range g.Nodes {
@@ -95,6 +96,7 @@ func TestBuildHoldsEachEdgeOfGoList(t *testing.T) {
 					from, ok := g.Node(e[0])
 					require.True(t, ok, "the graph has no node %s", e[0])
 					require.True(t, sourced[e[0]], "go list reads %s, and Discover finds no source of it", e[0])
+					assert.True(t, from.Reached, "%s/%s: go list reaches %s, the graph does not", p[0], p[1], e[0])
 					to, ok := g.Node(e[1])
 					assert.True(t, ok && to.Reached, "%s/%s: go list reaches %s, the graph does not", p[0], p[1], e[1])
 					assert.True(t, edges[e] || from.Open(), "%s/%s: go list has the edge %s -> %s", p[0], p[1], e[0], e[1])

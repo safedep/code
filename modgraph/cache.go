@@ -20,7 +20,9 @@ var errCache = errors.New("modgraph: cache")
 // that count. Build stores an entry only after it read each file of the
 // package with no error, so an entry never stands for a part of a package.
 type cacheEntry struct {
-	Imports []importRef `json:"imports"`
+	// Imports is a pointer, so an entry with no imports field is a miss, not
+	// a package with no imports.
+	Imports *[]importRef `json:"imports"`
 }
 
 // cacheKey is the key of a package of an immutable source. Its path is the
@@ -68,13 +70,13 @@ func (b *builder) cached(ref pkgRef) ([]importRef, bool, error) {
 		return nil, false, nil
 	}
 	var e cacheEntry
-	if err := json.Unmarshal(data, &e); err != nil {
+	if err := json.Unmarshal(data, &e); err != nil || e.Imports == nil {
 		// A bad entry is a miss. The read that follows writes a good one.
 		return nil, false, nil
 	}
 	b.stats.Packages++
 	b.stats.CachedPackages++
-	return e.Imports, true, nil
+	return *e.Imports, true, nil
 }
 
 // cache stores the imports of a package that Build read whole.
@@ -82,7 +84,10 @@ func (b *builder) cache(ref pkgRef, imps []importRef) error {
 	if !b.cacheable(ref) {
 		return nil
 	}
-	data, err := json.Marshal(cacheEntry{Imports: imps})
+	if imps == nil {
+		imps = []importRef{}
+	}
+	data, err := json.Marshal(cacheEntry{Imports: &imps})
 	if err != nil {
 		return fmt.Errorf("encode the cache entry of %s: %w", ref.dir, err)
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/safedep/code/modgraph"
 )
 
 func TestRunPrintsTheGraph(t *testing.T) {
@@ -30,5 +33,12 @@ func TestRunPrintsTheGraph(t *testing.T) {
 
 	out.Reset()
 	require.NoError(t, run(&out, dir, cache, true))
-	assert.Contains(t, out.String(), `"Path": "example.com/dep"`)
+	var g modgraph.Graph
+	require.NoError(t, json.Unmarshal([]byte(out.String()), &g))
+	dep, ok := g.Node("example.com/dep")
+	require.True(t, ok)
+	assert.True(t, dep.Reached)
+	assert.Equal(t, modgraph.StateImports, dep.State)
+	assert.True(t, g.Reaches([]string{"example.com/app"}, modgraph.StdPath))
+	assert.Equal(t, []string{"example.com/app", "example.com/dep"}, g.Path([]string{"example.com/app"}, "example.com/dep"))
 }

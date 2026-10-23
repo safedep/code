@@ -491,6 +491,7 @@ func TestBuildRejectsABadInput(t *testing.T) {
 		{"no module directive", Input{MainFS: withGoMod(nil, "go 1.22\n")}, "no module directive"},
 		{"a module twice", Input{MainFS: mainFS(nil), Modules: []Source{source("example.com/a", nil), source("example.com/a", nil)}}, "twice"},
 		{"the reserved std path", Input{MainFS: mainFS(nil), Modules: []Source{source(StdPath, nil)}}, "reserved"},
+		{"the reserved std path as the main module", Input{MainFS: withGoMod(nil, "module std\n\ngo 1.22\n")}, "reserved"},
 		{"a module with no path", Input{MainFS: mainFS(nil), Modules: []Source{{}}}, "no path"},
 		{"the main module in the build list", Input{MainFS: mainFS(nil), Modules: []Source{source(mainPath, nil)}}, "twice"},
 	}
@@ -569,6 +570,33 @@ func TestBuildCachesAReplacementByItsOwnModule(t *testing.T) {
 	build(t, Input{MainFS: main, Modules: []Source{original, dep}, Store: st})
 	g := build(t, Input{MainFS: main, Modules: []Source{fork, dep}, Store: st})
 	assert.Contains(t, edgeList(g), "example.com/a -> example.com/dep", "the fork is not served the imports of the original")
+}
+
+func TestBuildReadsTheSourceForACacheEntryWithNoImports(t *testing.T) {
+	st := memstore.New()
+	a := Source{Module: Module{Path: "example.com/a", Version: "v1.0.0"}, FS: fstest.MapFS{"a.go": goSrc("a", "example.com/dep")}, Immutable: true}
+	in := Input{
+		MainFS:  mainFS(fstest.MapFS{"main.go": goSrc("main", "example.com/a")}),
+		Modules: []Source{a, source("example.com/dep", fstest.MapFS{"d.go": goSrc("dep")})},
+		Store:   st,
+	}
+	key := cacheKey(pkgRef{mod: &module{src: a}, dir: "."})
+	require.NoError(t, st.PutArtifacts(context.Background(), []store.Artifact{{Key: key, Data: []byte("{}")}}))
+
+	g := build(t, in)
+	assert.Contains(t, edgeList(g), "example.com/a -> example.com/dep")
+	assert.Equal(t, 0, g.Stats.CachedPackages)
+}
+
+func TestBuildCachesAPackageWithNoImports(t *testing.T) {
+	st := memstore.New()
+	in := Input{
+		MainFS:  mainFS(fstest.MapFS{"main.go": goSrc("main", "example.com/a")}),
+		Modules: []Source{{Module: Module{Path: "example.com/a", Version: "v1.0.0"}, FS: fstest.MapFS{"a.go": goSrc("a")}, Immutable: true}},
+		Store:   st,
+	}
+	build(t, in)
+	assert.Equal(t, 1, build(t, in).Stats.CachedPackages)
 }
 
 func TestBuildCachesNoPackageThatFailed(t *testing.T) {
