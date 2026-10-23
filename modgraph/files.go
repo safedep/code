@@ -27,6 +27,12 @@ const (
 	// maxConstraintTags caps the tags of a build constraint that Build tests
 	// one by one. A constraint with more tags counts as one that can hold.
 	maxConstraintTags = 16
+	// maxConstraintSets caps the tag sets that one Build tests, over each
+	// constraint of each file. Without it a module of many files with
+	// unsatisfiable constraints of maxConstraintTags tags each costs 2^16
+	// tests per file. Past the cap each constraint counts as one that can
+	// hold.
+	maxConstraintSets = 1 << 22
 )
 
 var errBudget = errors.New("the file budget ran out")
@@ -83,9 +89,17 @@ func (b *builder) packageImports(ref pkgRef) ([]importRef, error) {
 			continue
 		}
 		file := path.Join(ref.dir, e.Name())
-		// The go command reads a link to a file, as a file of the package.
+		// The go command reads a link to a file, as a file of the package. A
+		// link that leads nowhere holds no file. Another error, such as a
+		// link that leads out of the local root, leaves the imports unknown.
 		if !e.Type().IsRegular() {
-			if info, err := fs.Stat(ref.mod.src.FS, file); err != nil || !info.Mode().IsRegular() {
+			info, err := fs.Stat(ref.mod.src.FS, file)
+			switch {
+			case errors.Is(err, fs.ErrNotExist):
+				continue
+			case err != nil:
+				return nil, fmt.Errorf("stat %s: %w", file, err)
+			case !info.Mode().IsRegular():
 				continue
 			}
 		}
@@ -137,7 +151,7 @@ func (b *builder) fileImports(fsys fs.FS, file string) (_ []importRef, err error
 	if err != nil {
 		return nil, unbuildable{fmt.Errorf("%s does not parse: %w", file, err)}
 	}
-	if excluded(src) {
+	if excluded(src, &b.constraintSets) {
 		return nil, nil
 	}
 	test := strings.HasSuffix(file, "_test.go")
@@ -191,15 +205,15 @@ func importsEnd(fset *token.FileSet, f *ast.File, head []byte) bool {
 // line before the last blank line of the leading // comments must hold. A
 // constraint that does not parse, two //go:build lines, and a constraint
 // with more than maxConstraintTags tags leave the file in, so the graph
-// loses no edge.
-func excluded(src []byte) bool {
+// loses no edge. So does a constraint once the budget of tag sets runs out.
+func excluded(src []byte, budget *int) bool {
 	header, goBuild, ok := fileHeader(src)
 	if !ok {
 		return false
 	}
 	if goBuild != "" {
 		expr, err := constraint.Parse(goBuild)
-		return err == nil && !satisfiable(expr)
+		return err == nil && !satisfiable(expr, budget)
 	}
 	var all constraint.Expr
 	for line := range strings.Lines(string(header)) {
@@ -217,7 +231,7 @@ func excluded(src []byte) bool {
 			all = &constraint.AndExpr{X: all, Y: expr}
 		}
 	}
-	return all != nil && !satisfiable(all)
+	return all != nil && !satisfiable(all, budget)
 }
 
 // fileHeader is go/build parseFileHeader. It returns the part of the file
@@ -285,25 +299,24 @@ func isGoBuildComment(line []byte) bool {
 }
 
 // satisfiable reports whether some set of tags makes a constraint hold,
-// with ignore false.
-func satisfiable(expr constraint.Expr) bool {
-	var tags []string
-	seen := map[string]bool{}
+// with ignore false. Each set that it tests takes one unit of the budget,
+// and an empty budget reports true.
+func satisfiable(expr constraint.Expr, budget *int) bool {
+	bit := map[string]int{}
 	collectTags(expr, func(tag string) {
-		if tag != "ignore" && !seen[tag] {
-			seen[tag] = true
-			tags = append(tags, tag)
+		if _, ok := bit[tag]; !ok && tag != "ignore" {
+			bit[tag] = len(bit)
 		}
 	})
-	if len(tags) > maxConstraintTags {
+	if len(bit) > maxConstraintTags {
 		return true
 	}
-	for set := 0; set < 1<<len(tags); set++ {
-		on := map[string]bool{}
-		for i, t := range tags {
-			on[t] = set&(1<<i) != 0
+	for set := 0; set < 1<<len(bit); set++ {
+		if *budget <= 0 {
+			return true
 		}
-		if expr.Eval(func(tag string) bool { return on[tag] }) {
+		*budget--
+		if expr.Eval(func(tag string) bool { i, ok := bit[tag]; return ok && set&(1<<i) != 0 }) {
 			return true
 		}
 	}

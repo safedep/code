@@ -77,12 +77,24 @@ func TestBuildHoldsEachEdgeOfGoList(t *testing.T) {
 			for _, e := range g.Edges {
 				edges[[2]string{e.From.Path, e.To.Path}] = true
 			}
+			// An open node passes each edge, so an edge of go list must leave a
+			// module that has source, or the test compares nothing.
+			sourced := map[string]bool{g.Main.Path: true}
+			for _, s := range sources {
+				sourced[s.Module.Path] = s.FS != nil
+			}
 			for _, p := range oraclePlatforms {
-				listed := goListEdges(t, dir, p[0], p[1])
+				listed, dropped := goListEdges(t, dir, p[0], p[1])
 				t.Logf("%s/%s: go list has %d module edges, the graph %d, with %d nodes", p[0], p[1], len(listed), len(g.Edges), len(g.Nodes))
+				if dir == root {
+					assert.Empty(t, dropped, "%s/%s: go list resolves each import of this repository", p[0], p[1])
+				} else if len(dropped) > 0 {
+					t.Logf("%s/%s: go list resolves no module for %d imports, such as %s", p[0], p[1], len(dropped), dropped[0])
+				}
 				for e := range listed {
 					from, ok := g.Node(e[0])
 					require.True(t, ok, "the graph has no node %s", e[0])
+					require.True(t, sourced[e[0]], "go list reads %s, and Discover finds no source of it", e[0])
 					to, ok := g.Node(e[1])
 					assert.True(t, ok && to.Reached, "%s/%s: go list reaches %s, the graph does not", p[0], p[1], e[1])
 					assert.True(t, edges[e] || from.Open(), "%s/%s: go list has the edge %s -> %s", p[0], p[1], e[0], e[1])
@@ -96,7 +108,8 @@ func TestBuildHoldsEachEdgeOfGoList(t *testing.T) {
 			}
 			g, err = Build(context.Background(), Input{MainFS: os.DirFS(dir), Modules: sources})
 			require.NoError(t, err)
-			for e := range goListEdges(t, dir, "linux", "amd64") {
+			listed, _ := goListEdges(t, dir, "linux", "amd64")
+			for e := range listed {
 				to, ok := g.Node(e[1])
 				assert.True(t, ok && to.Reached, "go.mod only: go list reaches %s, the graph does not", e[1])
 			}
@@ -126,8 +139,10 @@ type listPackage struct {
 }
 
 // goListEdges returns the module edges of the packages that go list -deps
-// -test gives for a platform.
-func goListEdges(t *testing.T, dir, goos, goarch string) map[[2]string]bool {
+// -test gives for a platform, and each import that go list resolves to no
+// module. go list -e gives such an import with no package of a module, so
+// it leaves no edge to compare.
+func goListEdges(t *testing.T, dir, goos, goarch string) (map[[2]string]bool, []string) {
 	t.Helper()
 	out, err := goCommand(dir, []string{"GOOS=" + goos, "GOARCH=" + goarch, "CGO_ENABLED=1"}, "list", "-e", "-deps", "-test", "-json", "./...")
 	require.NoError(t, err, "go list -deps")
@@ -152,18 +167,24 @@ func goListEdges(t *testing.T, dir, goos, goarch string) map[[2]string]bool {
 		}
 	}
 	edges := map[[2]string]bool{}
+	var dropped []string
 	for _, p := range pkgs {
 		from, ok := moduleOf[p.ImportPath]
 		if !ok || from == StdPath {
 			continue
 		}
 		for _, imp := range p.Imports {
-			if to, ok := moduleOf[imp]; ok && to != from && imp != "C" {
+			to, ok := moduleOf[imp]
+			switch {
+			case imp == "C":
+			case !ok:
+				dropped = append(dropped, p.ImportPath+" -> "+imp)
+			case to != from:
 				edges[[2]string{from, to}] = true
 			}
 		}
 	}
-	return edges
+	return edges, dropped
 }
 
 func goCommand(dir string, env []string, args ...string) ([]byte, error) {

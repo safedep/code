@@ -1,6 +1,7 @@
 package modgraph
 
 import (
+	"context"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -154,6 +155,51 @@ func TestDiscoverDoesNotFollowALinkOutOfTheLocalRoot(t *testing.T) {
 	sources, err := Discover(DiscoverOptions{Dir: filepath.Join(root, "app"), LocalRoot: root})
 	require.NoError(t, err)
 	assert.Nil(t, sources[0].FS)
+}
+
+func TestDiscoverConfinesEachReadOfALocalReplacement(t *testing.T) {
+	cases := []struct {
+		name     string
+		imp      string
+		link     func(t *testing.T, lib, outside string)
+		wantOpen bool
+	}{
+		{"a link to a file outside the root", "example.com/local", func(t *testing.T, lib, outside string) {
+			require.NoError(t, os.Symlink(filepath.Join(outside, "o.go"), filepath.Join(lib, "o.go")))
+		}, true},
+		{"a link to a package outside the root", "example.com/local/sub", func(t *testing.T, lib, outside string) {
+			require.NoError(t, os.Symlink(outside, filepath.Join(lib, "sub")))
+		}, true},
+		{"a link inside the root", "example.com/local", func(t *testing.T, lib, _ string) {
+			require.NoError(t, os.Symlink(filepath.Join(lib, "real.go"), filepath.Join(lib, "o.go")))
+		}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			outside := t.TempDir()
+			writeFiles(t, root, map[string]string{
+				"app/go.mod":      "module example.com/app\n\ngo 1.22\n\nrequire example.com/local v1.0.0\n\nreplace example.com/local => ./lib\n",
+				"app/main.go":     "package main\n\nimport _ \"" + tc.imp + "\"\n",
+				"app/lib/go.mod":  "module example.com/local\n",
+				"app/lib/real.go": "package local\n",
+			})
+			writeFiles(t, outside, map[string]string{"o.go": "package local\n\nimport _ \"example.com/secret\"\n"})
+			tc.link(t, filepath.Join(root, "app", "lib"), outside)
+
+			dir := filepath.Join(root, "app")
+			sources, err := Discover(DiscoverOptions{Dir: dir, LocalRoot: root})
+			require.NoError(t, err)
+			require.NotNil(t, sources[0].FS)
+			g, err := Build(context.Background(), Input{MainFS: os.DirFS(dir), Modules: sources})
+			require.NoError(t, err)
+			n, ok := g.Node("example.com/local")
+			require.True(t, ok)
+			assert.Equal(t, tc.wantOpen, n.State == StateOpen, n.Reason)
+			assert.Equal(t, StateImports, node(t, g, "example.com/app").State)
+			assert.NotContains(t, n.Reason, "example.com/secret", "Build reads no file outside the root")
+		})
+	}
 }
 
 func TestDiscoverNeedsAGoMod(t *testing.T) {

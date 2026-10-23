@@ -3,6 +3,7 @@ package modgraph
 import (
 	"context"
 	"fmt"
+	"go/build/constraint"
 	"go/parser"
 	"go/token"
 	"os"
@@ -382,6 +383,18 @@ func TestSatisfiableCountsAConstraintWithManyTags(t *testing.T) {
 		},
 	})
 	assert.Contains(t, edgeList(g), "example.com/a -> example.com/dep", "past the tag cap the file counts")
+}
+
+func TestSatisfiableStopsAtTheBudget(t *testing.T) {
+	expr, err := constraint.Parse("//go:build a && b && c && !(a || b || c)")
+	require.NoError(t, err)
+	budget := 1 << 10
+	assert.False(t, satisfiable(expr, &budget))
+	assert.Equal(t, 1<<10-8, budget, "each of the 8 sets takes one unit")
+
+	budget = 3
+	assert.True(t, satisfiable(expr, &budget), "an empty budget keeps the file")
+	assert.Zero(t, budget)
 }
 
 func TestBuildReadsEachImportOfALongFile(t *testing.T) {

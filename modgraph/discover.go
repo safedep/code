@@ -3,6 +3,7 @@ package modgraph
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -91,8 +92,9 @@ func replacement(f *modfile.File, m gomodule.Version) gomodule.Version {
 }
 
 // localSource returns the source of a replacement with a local path, inside
-// LocalRoot only. Both paths are resolved through links first, so a link
-// cannot lead the read out of LocalRoot.
+// LocalRoot only. Both paths are resolved through links first, and each read
+// of the source resolves its links again, so a link cannot lead the read out
+// of LocalRoot.
 func localSource(opts DiscoverOptions, p string) (fs.FS, []byte) {
 	if opts.LocalRoot == "" {
 		return nil, nil
@@ -105,16 +107,39 @@ func localSource(opts DiscoverOptions, p string) (fs.FS, []byte) {
 	if err != nil {
 		return nil, nil
 	}
-	if dir, err = filepath.EvalSymlinks(dir); err != nil {
-		return nil, nil
-	}
-	if rel, err := filepath.Rel(root, dir); err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	if dir, err = filepath.EvalSymlinks(dir); err != nil || !within(root, dir) {
 		return nil, nil
 	}
 	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
 		return nil, nil
 	}
-	return os.DirFS(dir), readOptional(filepath.Join(dir, "go.mod"))
+	return rootedFS{dir: dir, root: root}, readOptional(filepath.Join(dir, "go.mod"))
+}
+
+var errOutsideRoot = errors.New("a link leads out of the local root")
+
+// rootedFS reads a directory as os.DirFS does, and refuses a name whose
+// links resolve outside root.
+type rootedFS struct{ dir, root string }
+
+func (r rootedFS) Open(name string) (fs.File, error) {
+	if !fs.ValidPath(name) {
+		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrInvalid}
+	}
+	resolved, err := filepath.EvalSymlinks(filepath.Join(r.dir, filepath.FromSlash(name)))
+	if err != nil {
+		return nil, &fs.PathError{Op: "open", Path: name, Err: err}
+	}
+	if !within(r.root, resolved) {
+		return nil, &fs.PathError{Op: "open", Path: name, Err: errOutsideRoot}
+	}
+	return os.Open(resolved)
+}
+
+// within reports whether a resolved path is root or below it.
+func within(root, p string) bool {
+	rel, err := filepath.Rel(root, p)
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 // cacheSource returns the extracted source of a module version in the

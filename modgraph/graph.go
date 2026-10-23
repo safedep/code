@@ -308,21 +308,24 @@ type builder struct {
 
 	queue []pkgRef
 	seen  map[pkgRef]bool
-	// sweep is true once walkAll reads each package of the build list.
-	sweep bool
 	edges map[edgeKey]*Edge
 	stats Stats
+	// sweep is true once walkAll reads each package of the build list.
+	sweep bool
+	// constraintSets is what is left of maxConstraintSets.
+	constraintSets int
 }
 
 func newBuilder(ctx context.Context, in Input, mainPath string) (*builder, error) {
 	b := &builder{
-		ctx:      ctx,
-		in:       in,
-		maxFiles: in.MaxFiles,
-		fset:     token.NewFileSet(),
-		byPath:   map[string]*module{},
-		seen:     map[pkgRef]bool{},
-		edges:    map[edgeKey]*Edge{},
+		ctx:            ctx,
+		in:             in,
+		maxFiles:       in.MaxFiles,
+		fset:           token.NewFileSet(),
+		byPath:         map[string]*module{},
+		seen:           map[pkgRef]bool{},
+		edges:          map[edgeKey]*Edge{},
+		constraintSets: maxConstraintSets,
 	}
 	if b.maxFiles <= 0 {
 		b.maxFiles = defaultMaxFiles

@@ -77,11 +77,17 @@ sources, err := modgraph.Discover(modgraph.DiscoverOptions{
     ModuleCache: moduleCache, // GOMODCACHE; the caller finds it
     LocalRoot:   scanRoot,    // a local replace directive is read only inside it
 })
+if err != nil {
+    return err
+}
 g, err := modgraph.Build(ctx, modgraph.Input{
     MainFS:  os.DirFS(projectDir),
     Modules: sources,
     Store:   store, // optional cache of the packages of the module cache
 })
+if err != nil {
+    return err
+}
 path := g.Path([]string{g.Main.Path}, "github.com/x/y") // nil when no path reaches it
 ```
 
@@ -93,6 +99,8 @@ false), can reach each module: the path ends at that node.
 `vendor/modules.txt` lists the module at its version, then the local
 directory of a `replace` directive, inside `LocalRoot` after links are
 resolved, then the module cache, then the `.mod` file of the module cache.
+Each read of a local replacement resolves its links again, and a link that
+leads out of `LocalRoot` makes the module open.
 A caller that finds the sources in another way can pass its own
 `[]Source`. `Module.Path` is the path that import statements use, also for
 a replaced module, and `Source.Origin` is the module that the source holds.
@@ -131,3 +139,7 @@ with neither. It sets `GOPROXY=off`, so it downloads nothing.
   module open.
 - A file budget, 200,000 files by default, caps a run. Past it the module
   that is next is open, and `Stats.Truncated` is set.
+- `Build` tests a build constraint one tag set at a time. A constraint of
+  more than 16 tags counts as one that can hold. After 4,194,304 tested
+  sets in one run, each constraint counts as one that can hold. So a
+  dependency of many such files cannot make a run slow.
