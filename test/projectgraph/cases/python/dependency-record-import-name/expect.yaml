@@ -1,0 +1,31 @@
+source: safedep:hand
+description: >-
+  The unit PyYAML holds the package yaml, and no import of the project names it. Its RECORD lists yaml as
+  the import name, so the link step knows that import yaml would load the unit, and no file imports yaml.
+  Compare dependency-dark-unit, where the unit has no RECORD and the link step records a problem. Here the
+  unit is linked and not reached, so marshal.loads is not found, and the definition yaml.load carries its
+  external key, so the target yaml//load names it and is not found either.
+units:
+  venv/site-packages/yaml: pypi:PyYAML@6.0.1
+import_dirs:
+  - venv/site-packages
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: pypi:PyYAML@6.0.1//yaml/__init__.py//load
+    to: marshal//loads
+    kind: direct
+    confidence: high
+    site: pypi:PyYAML@6.0.1//yaml/__init__.py:5
+unresolved: []
+results:
+  - target: marshal//loads
+    status: not-found
+    call_sites:
+      - caller: pypi:PyYAML@6.0.1//yaml/__init__.py//load
+        site: pypi:PyYAML@6.0.1//yaml/__init__.py:5
+        reached: false
+  - target: yaml//load
+    status: not-found

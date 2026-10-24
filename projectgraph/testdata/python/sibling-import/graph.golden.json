@@ -5,7 +5,8 @@
       "kind": "module",
       "path": "handlers.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "handlers.py//parse": {
       "key": "handlers.py//parse",
@@ -19,7 +20,8 @@
       "kind": "module",
       "path": "main.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "yaml//load": {
       "key": "yaml//load",
@@ -98,12 +100,15 @@
     "main.py": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 2,
     "nodes": 4,
     "edges": 3,
     "unresolved": 0,
     "roots": 3,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "python"
+    ]
   }
 }

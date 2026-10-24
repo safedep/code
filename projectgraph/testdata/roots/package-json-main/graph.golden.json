@@ -5,7 +5,8 @@
       "kind": "module",
       "path": "cli.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "cli.js//helper": {
       "key": "cli.js//helper",
@@ -19,7 +20,8 @@
       "kind": "module",
       "path": "fmt.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "fmt.js//format": {
       "key": "fmt.js//format",
@@ -33,7 +35,8 @@
       "kind": "module",
       "path": "index.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "index.js//parse": {
       "key": "index.js//parse",
@@ -54,7 +57,8 @@
       "kind": "module",
       "path": "parser.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "parser.js//parse": {
       "key": "parser.js//parse",
@@ -154,11 +158,14 @@
     "parser.js": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 4,
     "nodes": 9,
     "edges": 3,
     "unresolved": 0,
-    "roots": 5
+    "roots": 5,
+    "languages": [
+      "javascript"
+    ]
   }
 }

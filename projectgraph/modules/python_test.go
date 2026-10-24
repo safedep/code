@@ -141,3 +141,27 @@ func TestPythonRelativePath(t *testing.T) {
 		assert.Equal(t, want, PythonRelativePath(module), module)
 	}
 }
+
+func TestPythonFirstPartyFrom(t *testing.T) {
+	p := NewPython(NewFiles([]string{"main.py", "conf/__init__.py", "app/models/types.py", "scripts/run.py", "scripts/helper.py"}), nil, nil)
+	cases := []struct {
+		name     string
+		importer string
+		spec     string
+		want     bool
+	}{
+		{name: "a relative module", importer: "main.py", spec: ".missing", want: true},
+		{name: "a missing module of a package at a root", importer: "main.py", spec: "conf.loader", want: true},
+		{name: "a module of the directory of the importer", importer: "scripts/run.py", spec: "helper.missing", want: true},
+		{name: "a file of the name deep in the project", importer: "main.py", spec: "types", want: false},
+		{name: "a module of another directory", importer: "main.py", spec: "helper", want: false},
+		{name: "a dependency", importer: "main.py", spec: "yaml.loader", want: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, p.FirstPartyFrom(tc.importer, tc.spec))
+		})
+	}
+	assert.False(t, p.FirstParty("helper"), "with no importer, no directory of a script is a root")
+	assert.True(t, p.FirstParty("conf.loader"))
+}

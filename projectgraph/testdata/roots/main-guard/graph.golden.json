@@ -5,7 +5,8 @@
       "kind": "module",
       "path": "app.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "app.py//run": {
       "key": "app.py//run",
@@ -19,7 +20,8 @@
       "kind": "module",
       "path": "lib.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "lib.py//lib": {
       "key": "lib.py//lib",
@@ -60,11 +62,14 @@
     "lib.py": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 2,
     "nodes": 4,
     "edges": 1,
     "unresolved": 0,
-    "roots": 1
+    "roots": 1,
+    "languages": [
+      "python"
+    ]
   }
 }

@@ -229,13 +229,17 @@ func TestUnresolvedCallSites(t *testing.T) {
 			},
 		},
 		{
+			// A call of the value of a call, as f()(), runs code that the
+			// inner call gives, and the graph reaches it through the inner
+			// call. So it is no record, unless the inner call reflects.
 			name:     "python computed receiver and call result",
 			language: pythonLanguage(t),
 			file:     "recv.py",
-			source:   "handlers[name].run()\nf()()\n",
+			source:   "import operator\nhandlers[name].run()\nf()()\nmake(x)(y)\ngetattr(o, n)()\noperator.methodcaller(\"system\", cmd)(os)\n",
 			expected: []site{
 				{"handlers[name].run", "handlers[name]", "run", UnresolvedComputedName},
-				{"f()", "", "", UnresolvedComputedName},
+				{"getattr(o, n)", "", "", UnresolvedComputedName},
+				{"operator.methodcaller(\"system\", cmd)", "", "", UnresolvedComputedName},
 			},
 		},
 		{

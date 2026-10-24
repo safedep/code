@@ -19,7 +19,7 @@ import (
 // Version is the version of the index records and of the rules that fill
 // them. Bump it when a field, a kind, an order or a fill rule changes. A
 // store keys an index by Version, so the bump makes every older index miss.
-const Version = "14"
+const Version = "15"
 
 // DefaultTestPaths are the globs that mark the test files of the common
 // layouts, as projectgraph.Options.TestPaths takes them. A glob with no "/"
@@ -108,8 +108,12 @@ const (
 	FlagComputedImport    FlagKind = "computed-import"
 	FlagComputedAttribute FlagKind = "computed-attribute"
 	FlagMonkeyPatch       FlagKind = "monkey-patch"
-	FlagDecoratorWrap     FlagKind = "decorator-wrap"
-	FlagParseError        FlagKind = "parse-error"
+	// FlagDecoratorWrap marks a decorator whose code the graph cannot
+	// name, as @handlers[name] or @make()(). A decorator that is a name,
+	// a dotted name or a call of one, as @app.route("/"), is a call of
+	// the scope that defines the function, and the link step reads it.
+	FlagDecoratorWrap FlagKind = "decorator-wrap"
+	FlagParseError    FlagKind = "parse-error"
 	// FlagInjection marks a value that a container sets, as a Java field
 	// with @Autowired. The declared type of the value narrows a call on it.
 	FlagInjection FlagKind = "injection"

@@ -9,14 +9,18 @@ import (
 
 // typedName returns the class or interface that the declared type of a
 // parameter or a typed local variable of the name names. The name belongs
-// to the scope or to a function that holds the scope, as the parameter of a
-// method in an arrow function of the method. A Go local that holds a
+// to the scope, to a function that holds the scope, as the parameter of a
+// method in an arrow function of the method, or to the module, as a name
+// that a Python module binds at its top level. A Go local that holds a
 // result of a call has the type of the result at its position. A name
 // with no known type gives the reason of the record of a call on it.
 func (b *builder) typedName(sc *scope, scopeKey, name string) (string, fileindex.UnresolvedReason, bool) {
-	for key := scopeKey; fileindex.HasKeyPrefix(key, sc.ix.Path) && key != sc.ix.Path; key = fileindex.Parent(key) {
+	for key := scopeKey; fileindex.HasKeyPrefix(key, sc.ix.Path); key = fileindex.Parent(key) {
 		def := b.defs[key]
 		if def == nil {
+			if key == sc.ix.Path {
+				break
+			}
 			continue
 		}
 		for _, typed := range [][]fileindex.Typed{def.Params, def.Locals} {
@@ -32,6 +36,11 @@ func (b *builder) typedName(sc *scope, scopeKey, name string) (string, fileindex
 				if !ok {
 					return "", fileindex.UnresolvedUnknownReceiver, false
 				}
+				// A call of a class makes an instance of it, as
+				// t = Thing() in Python.
+				if class, ok := b.constructedType(sc, fn); ok && t.Index == 0 {
+					return class, "", true
+				}
 				res, reason, ok := b.resultType(fileindex.PackageOf(sc.ix.Path), fn, t.Index)
 				// A name that holds a whole Option or Result has no
 				// type of a method of the value inside.
@@ -40,6 +49,9 @@ func (b *builder) typedName(sc *scope, scopeKey, name string) (string, fileindex
 				}
 				return res.class, reason, ok
 			}
+		}
+		if key == sc.ix.Path {
+			break
 		}
 	}
 	return "", fileindex.UnresolvedUnknownReceiver, false
@@ -77,6 +89,28 @@ func (b *builder) fieldType(class, name string) (string, bool) {
 	return "", false
 }
 
+// constructedType returns the class whose instance a call of the key
+// makes, in a language where a call of a class constructs it, as Python: a
+// first-party class, or the type that a unit of dependency code gives for
+// an external key, or the external key itself with no unit.
+func (b *builder) constructedType(sc *scope, key string) (string, bool) {
+	if !sc.profile.declaredTypes || sc.profile.typeConversions {
+		return "", false
+	}
+	switch {
+	case b.kindOf(key) == NodeClass:
+		return key, true
+	case b.g.IsExternal(key) && strings.Contains(key, fileindex.Separator):
+		if t, ok := b.unitType(key); ok {
+			return t, true
+		}
+		if _, provided := b.unitDefinitions(b.origins[key]); !provided && startsUpper(fileindex.Last(key)) {
+			return key, true
+		}
+	}
+	return "", false
+}
+
 // resolveType resolves a type name as written at a key of the file to a
 // first-party class or interface. A type of a dependency narrows nothing, as an
 // instance of a project class can extend it. A Go value holds its declared
@@ -85,22 +119,25 @@ func (b *builder) fieldType(class, name string) (string, bool) {
 // dependency code gives narrows in any language with no subclass, as a
 // Rust struct: a class gives its external key, and an interface or a trait
 // gives its definition, whose implementations the class hierarchy analysis
-// reads.
+// reads. A language whose declared types the link step trusts, as the
+// type hints of Python, gives the external key too, and the class
+// hierarchy analysis adds the first-party subclasses.
 func (b *builder) resolveType(sc *scope, from, text string) (string, bool) {
 	if sc == nil {
 		return "", false
 	}
 	key, ok := b.resolveNameIn(sc, from, text)
+	trusted := sc.profile.implicitInterfaces || sc.profile.unitTypes || sc.profile.declaredTypes
 	switch {
 	case !ok:
 		return "", false
 	case b.isType(key):
 		return key, true
 	case b.g.IsExternal(key) && strings.Contains(key, fileindex.Separator):
-		if t, ok := b.unitType(key); ok && (sc.profile.implicitInterfaces || sc.profile.unitTypes) {
+		if t, ok := b.unitType(key); ok && trusted {
 			return t, true
 		}
-		return key, sc.profile.implicitInterfaces && b.kindOf(key) == ""
+		return key, (sc.profile.implicitInterfaces || sc.profile.declaredTypes) && b.kindOf(key) == ""
 	}
 	return "", false
 }

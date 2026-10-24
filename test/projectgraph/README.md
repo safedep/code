@@ -122,8 +122,11 @@ Set `PROJECTGRAPH_PUBLIC_DUMP` to a case name, as `classes/self_call`, or to
 method of a dependency ends uncertain on real projects.
 `public/methods/corpus.txt` lists the projects and the dependencies, and
 `public/methods/advisories.json` holds their advisories from the Go vulndb
-and from RustSec through OSV. The code is not in the repository, so fetch
-it first:
+and from RustSec through OSV. OSV lists no symbols for a PyPI advisory, so
+`scripts/pypi_advisories.py` holds the symbols of each PyPI advisory by
+hand, as the advisory text names them, and writes them with the ranges
+from OSV under `pypi`. Run it to refresh the ranges or after you add a row
+to its table. The code is not in the repository, so fetch it first:
 
 ```bash
 export PROJECTGRAPH_METHOD_CORPUS=$(bash scripts/fetch_method_corpus.sh "$(mktemp -d)")
@@ -131,12 +134,22 @@ go test -tags projectgraph -run TestMethodTargets -count=1 -v ./test/projectgrap
 ```
 
 The test logs the count of each answer per language and per symbol kind,
-and the same per project. Set `PROJECTGRAPH_METHOD_REPORT` to a file path
-to write the block to that file. `report.md` says how the corpus was
+and the same per project. An answer is `found`, `found/low` for a path with
+a hop of low confidence, `not-found`, `no-such-target`, or `uncertain` with
+its cause. Set `PROJECTGRAPH_METHOD_REPORT` to a file path
+to write the block to that file. Set `PROJECTGRAPH_METHOD_LANGUAGES` to a
+list of languages, as `python`, to index those alone. A Python project
+bundles the JavaScript of its web pages, and a run of `python` alone
+leaves that out. `report.md` says how the corpus was
 chosen and what each cause means.
 
+A Go project of the corpus comes from the module proxy, a crate from
+crates.io, and a PyPI package from pypi.org: a dependency as its wheel,
+unpacked, so its directory has the layout of site-packages, and a project
+as its sdist, so its directory has the manifests.
+
 `receivers_test.go` holds one row per form of the receiver of a method
-call, for Go and for Rust, against the small dependency units under
+call, for Go, for Rust and for Python, against the small dependency units under
 `testdata/receivers`. It runs in `go test ./...`. A row that the link step
 does not answer yet names the issue that fixes it and its answer before
 that fix, so the test stays green until the fix changes the answer.

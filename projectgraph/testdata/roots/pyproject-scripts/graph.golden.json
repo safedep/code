@@ -5,7 +5,8 @@
       "kind": "module",
       "path": "src/app/cli.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "src/app/cli.py//main": {
       "key": "src/app/cli.py//main",
@@ -19,7 +20,8 @@
       "kind": "module",
       "path": "src/app/ignored.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "src/app/ignored.py//x": {
       "key": "src/app/ignored.py//x",
@@ -33,14 +35,16 @@
       "kind": "module",
       "path": "src/app/legacy.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "src/app/plugin.py": {
       "key": "src/app/plugin.py",
       "kind": "module",
       "path": "src/app/plugin.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "src/app/plugin.py//Plugin": {
       "key": "src/app/plugin.py//Plugin",
@@ -61,7 +65,8 @@
       "kind": "module",
       "path": "src/app/tool.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "src/app/tool.py//run": {
       "key": "src/app/tool.py//run",
@@ -146,11 +151,14 @@
     "src/app/tool.py": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 5,
     "nodes": 10,
     "edges": 0,
     "unresolved": 0,
-    "roots": 7
+    "roots": 7,
+    "languages": [
+      "python"
+    ]
   }
 }

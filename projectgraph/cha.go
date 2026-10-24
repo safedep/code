@@ -255,6 +255,16 @@ func (b *builder) subclasses(class string) []string {
 				for _, base := range b.typeBases(c.Key) {
 					b.children[base] = append(b.children[base], c.Key)
 				}
+				// A class with a base of a dependency, as Worker(Thread), is
+				// a subclass of the external key of the base, so a call on
+				// a value of that declared type reaches its overrides.
+				if rec, ok := b.classes[c.Key]; ok {
+					for _, base := range b.bases(rec) {
+						if !b.isType(base) && b.g.IsExternal(base) && !slices.Contains(b.children[base], c.Key) {
+							b.children[base] = append(b.children[base], c.Key)
+						}
+					}
+				}
 			}
 		}
 	}
@@ -284,10 +294,12 @@ func (b *builder) overrides(class string, call fileindex.Call, found string) []s
 		return b.implementations(class, call)
 	}
 	var out []string
-	for _, sub := range b.subclasses(class) {
-		key, fail := b.method(sub, call.Method)
-		if fail == nil && key != found && b.isMethod(key) && !slices.Contains(out, key) {
-			out = append(out, key)
+	for _, c := range b.classDefinitions(class) {
+		for _, sub := range b.subclasses(c) {
+			key, fail := b.method(sub, call.Method)
+			if fail == nil && key != found && b.isMethod(key) && !slices.Contains(out, key) {
+				out = append(out, key)
+			}
 		}
 	}
 	family := b.languageOf(class).Family()
@@ -300,6 +312,28 @@ func (b *builder) overrides(class string, call fileindex.Call, found string) []s
 		}
 	}
 	slices.Sort(out)
+	return out
+}
+
+// classDefinitions returns the class itself, and for the external key of a
+// class of a unit of dependency code, as dep//Doer, the definitions that
+// the units give for it, so the subclasses inside the unit count too. A
+// class of a unit gives its external key, which a class of the project
+// names as its base, so a call of the unit on self reaches the override
+// of the project, as Thread.run of threading reaches the run of a Worker.
+func (b *builder) classDefinitions(class string) []string {
+	out := []string{class}
+	if b.g.IsExternal(class) {
+		defs, _ := b.unitDefinitions(b.origins[class])
+		for _, d := range defs {
+			if b.isType(d) {
+				out = append(out, d)
+			}
+		}
+	}
+	if key, _, ok := b.unitSymbol(class); ok && key != class {
+		out = append(out, key)
+	}
 	return out
 }
 

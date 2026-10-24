@@ -5,14 +5,16 @@
       "kind": "module",
       "path": "main.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "util.py": {
       "key": "util.py",
       "kind": "module",
       "path": "util.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "util.py//_private": {
       "key": "util.py//_private",
@@ -112,12 +114,15 @@
     "util.py": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 2,
     "nodes": 4,
     "edges": 3,
     "unresolved": 1,
     "roots": 3,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "python"
+    ]
   }
 }

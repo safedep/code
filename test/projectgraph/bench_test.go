@@ -172,7 +172,7 @@ func benchProject(b *testing.B, code core.LanguageCode, files int) {
 		require.Len(b, dependency.Indexes, written)
 		var s *summary.Summary
 		measure(b, written, func() any {
-			s, err = summary.Summarize(ctx, dependency.Indexes, projectgraph.Options{Files: dependency.Dependencies, Units: map[string]iofs.FS{unit: os.DirFS(root)}})
+			s, err = summary.Summarize(ctx, dependency.Indexes, projectgraph.Options{Files: dependency.Dependencies, Languages: dependency.Languages, Units: map[string]iofs.FS{unit: os.DirFS(root)}})
 			require.NoError(b, err)
 			return s
 		})
@@ -200,7 +200,7 @@ func TestSummaryStatusMatchesReachOnASyntheticPackage(t *testing.T) {
 	require.NoError(t, err)
 	dependency := indexProject(t, unitFS, indexer.Options{Languages: []core.Language{language}, Workers: 4, Imports: true})
 	require.Len(t, dependency.Indexes, written)
-	r, err := summary.Build(ctx, dependency.Indexes, projectgraph.Options{Files: dependency.Dependencies, Units: map[string]iofs.FS{unit: os.DirFS(root)}})
+	r, err := summary.Build(ctx, dependency.Indexes, projectgraph.Options{Files: dependency.Dependencies, Languages: dependency.Languages, Units: map[string]iofs.FS{unit: os.DirFS(root)}})
 	require.NoError(t, err)
 	require.NotEmpty(t, r.Summary.Uncertainties, "the generated package has dynamic calls")
 	summarytest.AssertStatusMatchesReach(t, r)

@@ -1,0 +1,60 @@
+source: safedep:hand
+description: >-
+  run has three decorators: a call of click.command, the first-party verbose_option, and a call of
+  click.option. verbose_option returns the value of click.option(...) applied to f. Each decorator names its
+  code, so none is a dynamic feature, and the call of the value of click.option(...) is no record of its own,
+  because the graph reaches the code of click through the call of click.option. The module top level runs
+  each decorator when it defines run. os.system is no such target, which only holds with no record and no
+  flag that concerns every target.
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+  - key: main.py//run
+    kind: framework
+    rule: python.click.command
+edges:
+  - from: main.py
+    to: click//command
+    kind: direct
+    confidence: high
+    site: main.py:9
+  - from: main.py
+    to: main.py//verbose_option
+    kind: direct
+    confidence: high
+    site: main.py:12
+  - from: main.py
+    to: click//option
+    kind: direct
+    confidence: high
+    site: main.py:11
+  - from: main.py//verbose_option
+    to: click//option
+    kind: direct
+    confidence: high
+    site: main.py:6
+  - from: main.py//run
+    to: yaml//load
+    kind: direct
+    confidence: high
+    site: main.py:13
+no_edges:
+  - from: main.py
+    to: os//system
+unresolved: []
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py//run
+      - key: yaml//load
+        site: main.py:13
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.py//run
+        site: main.py:13
+        reached: true
+  - target: os//system
+    status: no-such-target

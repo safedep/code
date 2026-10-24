@@ -5,14 +5,16 @@
       "kind": "module",
       "path": "src/main.ts",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "typescript"
     },
     "src/util.ts": {
       "key": "src/util.ts",
       "kind": "module",
       "path": "src/util.ts",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "typescript"
     },
     "src/util.ts//f": {
       "key": "src/util.ts//f",
@@ -82,12 +84,15 @@
     "src/util.ts": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 2,
     "nodes": 3,
     "edges": 2,
     "unresolved": 0,
     "roots": 3,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "typescript"
+    ]
   }
 }

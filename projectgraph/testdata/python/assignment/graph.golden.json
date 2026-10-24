@@ -5,7 +5,8 @@
       "kind": "module",
       "path": "main.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "main.py//helper": {
       "key": "main.py//helper",
@@ -70,12 +71,15 @@
     "main.py": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 1,
     "nodes": 3,
     "edges": 2,
     "unresolved": 0,
     "roots": 2,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "python"
+    ]
   }
 }

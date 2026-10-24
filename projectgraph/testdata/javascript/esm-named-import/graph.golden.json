@@ -9,14 +9,16 @@
       "kind": "module",
       "path": "src/main.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "src/parser.js": {
       "key": "src/parser.js",
       "kind": "module",
       "path": "src/parser.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "src/parser.js//parse": {
       "key": "src/parser.js//parse",
@@ -30,7 +32,8 @@
       "kind": "module",
       "path": "src/util.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "src/util.js//fmt": {
       "key": "src/util.js//fmt",
@@ -166,12 +169,15 @@
     "src/util.js": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 3,
     "nodes": 6,
     "edges": 5,
     "unresolved": 1,
     "roots": 5,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "javascript"
+    ]
   }
 }

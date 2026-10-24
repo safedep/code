@@ -28,6 +28,11 @@ def plain():
     pass
 
 
+@handlers[attr]
+def picked():
+    pass
+
+
 def __getattr__(name):
     return load
 

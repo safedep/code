@@ -47,14 +47,18 @@ type sources struct {
 	// that no import names. They count for every search.
 	global []Uncertainty
 	// budgets holds the file budgets of each unit of dependency code. A
-	// file of the project is a global budget.
-	budgets map[string][]Uncertainty
+	// file of the project is a global budget. testGlobal and testBudgets
+	// hold the same for the test files, which count only for a search
+	// that includes the tests.
+	budgets     map[string][]Uncertainty
+	testGlobal  []Uncertainty
+	testBudgets map[string][]Uncertainty
 	// units lists the units that a search can enter, in key order.
 	units []string
 }
 
 func newSources(g *projectgraph.Graph) *sources {
-	s := &sources{unresolved: map[string][]projectgraph.UnresolvedSite{}, prefixes: map[projectgraph.Site]string{}, truncated: map[string][]projectgraph.Truncation{}, budgets: map[string][]Uncertainty{}}
+	s := &sources{unresolved: map[string][]projectgraph.UnresolvedSite{}, prefixes: map[projectgraph.Site]string{}, truncated: map[string][]projectgraph.Truncation{}, budgets: map[string][]Uncertainty{}, testBudgets: map[string][]Uncertainty{}}
 	for _, u := range g.Unresolved {
 		s.unresolved[u.Caller] = append(s.unresolved[u.Caller], u)
 		if u.ImportPrefix != "" {
@@ -77,16 +81,26 @@ func newSources(g *projectgraph.Graph) *sources {
 	// does not know, so it counts where the search does not reach it. A
 	// file of dependency code holds no root, and its code runs only when a
 	// call enters its package. So it counts only for a search that
-	// reaches a node of its unit.
+	// reaches a node of its unit. A file that the program does not run, as
+	// the JavaScript of a web page in a Python project, holds no such
+	// caller. A test file holds only test roots, so it counts only for a
+	// search that includes the tests.
 	for _, p := range slices.Sorted(maps.Keys(g.Files)) {
 		status := g.Files[p]
-		if status.Complete() {
+		if status.Complete() || !g.Runs(p) {
 			continue
 		}
 		u := Uncertainty{Kind: Budget, Key: p, Site: projectgraph.Site{Path: p}, Text: "the file is " + string(status)}
-		if unit := fileindex.PackageOf(p); unit != "" {
+		test := g.Nodes[p] != nil && g.Nodes[p].Test
+		unit := fileindex.PackageOf(p)
+		switch {
+		case unit != "" && test:
+			s.testBudgets[unit] = append(s.testBudgets[unit], u)
+		case unit != "":
 			s.budgets[unit] = append(s.budgets[unit], u)
-		} else {
+		case test:
+			s.testGlobal = append(s.testGlobal, u)
+		default:
 			s.global = append(s.global, u)
 		}
 	}
@@ -172,6 +186,15 @@ func (a *adjacency) uncertainties(s *search, maxDepth int) *found {
 	f := &found{byMethod: map[string][]Uncertainty{}, reaches: a.unitReaches, methodReaches: a.methodReaches, units: src.budgets, entered: map[string]bool{}}
 	for _, u := range src.global {
 		f.add(u)
+	}
+	if a.includeTests {
+		for _, u := range src.testGlobal {
+			f.add(u)
+		}
+		f.units = maps.Clone(src.budgets)
+		for unit, us := range src.testBudgets {
+			f.units[unit] = append(f.units[unit], us...)
+		}
 	}
 	for _, id := range s.order {
 		key := a.keys[id]

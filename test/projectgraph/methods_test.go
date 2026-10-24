@@ -17,9 +17,11 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/safedep/code/core"
 	"github.com/safedep/code/fileindex"
 	codefs "github.com/safedep/code/fs"
 	"github.com/safedep/code/lang"
+	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/plugin/indexer"
 	"github.com/safedep/code/projectgraph"
 	"github.com/safedep/code/projectgraph/reach"
@@ -32,8 +34,15 @@ import (
 // fills with the projects and the dependencies of the method measure.
 const methodCorpusEnv = "PROJECTGRAPH_METHOD_CORPUS"
 
+// methodLanguagesEnv names the languages that the index step reads, as
+// python,javascript. Empty reads every language. A Python project bundles
+// the JavaScript of its web pages, and a minified file of it is truncated,
+// so a run of python alone shows the Python causes.
+const methodLanguagesEnv = "PROJECTGRAPH_METHOD_LANGUAGES"
+
 // methodsDir holds the list of the projects and the advisories of their
-// dependencies, from the Go vulndb and from RustSec through OSV.
+// dependencies, from the Go vulndb and from RustSec through OSV, and the
+// PyPI advisories with the symbols that scripts/pypi_advisories.py holds.
 var methodsDir = filepath.Join("public", "methods")
 
 // methodProject is one line of corpus.txt.
@@ -43,9 +52,13 @@ type methodProject struct {
 }
 
 // advisory is one advisory of a package: the events of its affected
-// ranges, and the symbols of Go or the functions of Rust that it names.
+// ranges, and the symbols of Go or the functions of Rust that it names. A
+// PyPI advisory has the Go shape, with a module path and its symbols, and
+// Source says that a person wrote the symbols from the advisory text,
+// because OSV lists none for PyPI. scripts/pypi_advisories.py holds them.
 type advisory struct {
 	ID     string `json:"id"`
+	Source string `json:"source,omitempty"`
 	Ranges []struct {
 		Introduced string `json:"introduced"`
 		Fixed      string `json:"fixed"`
@@ -123,8 +136,8 @@ func methodTargets(language, dep string, advisories map[string]map[string][]advi
 			out = append(out, methodTarget{key: key, kind: kind})
 		}
 	}
-	if language == "go" {
-		for _, a := range advisories["go"][name] {
+	if eco, lang := ecosystemOf(language); eco != "cargo" {
+		for _, a := range advisories[eco][name] {
 			if !a.affects(version) {
 				continue
 			}
@@ -134,7 +147,7 @@ func methodTargets(language, dep string, advisories map[string]map[string][]advi
 					if strings.Contains(sym, ".") {
 						kind = kindMethod
 					}
-					add(fileindex.Join(fileindex.Namespace("go", imp.Path), strings.Split(sym, ".")...), kind)
+					add(fileindex.Join(fileindex.Namespace(lang, imp.Path), strings.Split(sym, ".")...), kind)
 				}
 			}
 		}
@@ -167,14 +180,32 @@ func startsUpper(s string) bool {
 	return unicode.IsUpper(r)
 }
 
+// ecosystemOf returns the ecosystem of the packages of a language of the
+// corpus, as the keys of advisories.json and the units write it, and the
+// language code of the import namespaces of its keys.
+func ecosystemOf(language string) (string, langcode.Code) {
+	switch language {
+	case "go":
+		return "go", langcode.Go
+	case "python":
+		return "pypi", langcode.Python
+	}
+	return "cargo", langcode.Rust
+}
+
 // methodDir returns the directory of a project or a dependency in the
-// corpus, and its unit.
+// corpus, and its unit. A PyPI dependency is an unpacked wheel, so its
+// directory has the layout of site-packages, and the unit is rooted there.
 func methodDir(t *testing.T, corpus, language, item string) (string, string) {
 	name, version, _ := strings.Cut(item, "@")
-	if language == "go" {
+	eco, _ := ecosystemOf(language)
+	switch eco {
+	case "go":
 		escaped, err := module.EscapePath(name)
 		require.NoError(t, err)
 		return filepath.Join(corpus, "gomod", filepath.FromSlash(escaped)+"@"+version), "go:" + item
+	case "pypi":
+		return filepath.Join(corpus, "pypi", name+"-"+version), "pypi:" + item
 	}
 	return filepath.Join(corpus, "crates", name+"-"+version), "cargo:" + item
 }
@@ -239,10 +270,15 @@ func TestMethodTargets(t *testing.T) {
 	}
 	languages, err := lang.AllLanguages()
 	require.NoError(t, err)
+	if names := os.Getenv(methodLanguagesEnv); names != "" {
+		languages = slices.DeleteFunc(languages, func(l core.Language) bool {
+			return !slices.Contains(strings.Split(names, ","), string(l.Meta().Code))
+		})
+	}
 	projects, advisories := readMethodCorpus(t)
 
 	counts := methodCounts{}
-	var lines []string
+	var lines, details []string
 	for _, p := range projects {
 		dir, _ := methodDir(t, corpus, p.language, p.source)
 		cfg := codefs.LocalFileSystemConfig{AppDirectories: []string{dir}, ImportUnits: map[string]string{}, ExcludePatterns: codefs.DefaultSkipPatterns(dir)}
@@ -275,6 +311,7 @@ func TestMethodTargets(t *testing.T) {
 			o := outcome(r, methods)
 			counts.add(p.language, targets[i].kind, o)
 			project.add(p.language, targets[i].kind, o)
+			details = append(details, methodDetail(p.name, targets[i].key, o, r))
 		}
 		lines = append(lines, "project="+p.name+" files="+strconv.Itoa(len(g.Files))+" truncated="+strconv.Itoa(len(g.Truncated))+" problems="+strconv.Itoa(len(g.Problems)))
 		for _, row := range project.rows() {
@@ -287,4 +324,26 @@ func TestMethodTargets(t *testing.T) {
 	if out := os.Getenv("PROJECTGRAPH_METHOD_REPORT"); out != "" {
 		require.NoError(t, os.WriteFile(out, []byte(strings.Join(rows, "\n")+"\n"), 0o644))
 	}
+	if out := os.Getenv(methodDetailEnv); out != "" {
+		require.NoError(t, os.WriteFile(out, []byte(strings.Join(details, "\n")+"\n"), 0o644))
+	}
+}
+
+// methodDetailEnv names the file that gets one line per target: the
+// project, the target, the outcome, and the sites of the path or of the
+// uncertainties, so a reader can find the receiver form behind a number
+// of the report.
+const methodDetailEnv = "PROJECTGRAPH_METHOD_DETAIL"
+
+func methodDetail(project, target, outcome string, r reach.Result) string {
+	var sites []string
+	for _, h := range r.Path {
+		if h.Site.Path != "" {
+			sites = append(sites, h.Site.String()+":"+string(h.Confidence))
+		}
+	}
+	for _, u := range r.Uncertainties {
+		sites = append(sites, u.Site.String()+":"+string(u.Kind))
+	}
+	return "project=" + project + " target=" + target + " outcome=" + outcome + " sites=" + strings.Join(sites, ",")
 }

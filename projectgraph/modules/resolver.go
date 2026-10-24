@@ -14,6 +14,16 @@ type Resolver interface {
 	FirstParty(spec string) bool
 }
 
+// ImporterResolver is a Resolver whose first-party answer depends on the
+// importer, as the directory of a Python file is on the path of its
+// imports.
+type ImporterResolver interface {
+	Resolver
+	// FirstPartyFrom reports whether a spec that names no module can still
+	// name a file of the project when the importer imports it.
+	FirstPartyFrom(importer, spec string) bool
+}
+
 // FormResolver is a Resolver whose answer depends on the form of the
 // import, as the exports map of a package.json does.
 type FormResolver interface {
@@ -37,11 +47,29 @@ func (p *Python) Module(importer, spec string) (string, string, bool) {
 }
 
 // FirstParty reports whether a Python module is relative or starts with
-// the name of a file or a directory of the project, or with the name of
-// the package that the file set is.
+// the name of a module under an import root, or with the name of the
+// package that the file set is. It reads no importer, so the directory of
+// the importer is no root here.
 func (p *Python) FirstParty(spec string) bool {
+	return p.FirstPartyFrom("", spec)
+}
+
+// FirstPartyFrom reports whether a Python module is relative or starts
+// with the name of a module or a package under an import root or in the
+// directory of the importer, or with the name of the package that the
+// file set is. An extension module of the distribution counts as a module
+// too. A file of the name deep in the project, as a types.py in a
+// package, is no module of an absolute import, so import types names the
+// standard library and not the file.
+func (p *Python) FirstPartyFrom(importer, spec string) bool {
 	first, _, _ := strings.Cut(spec, ".")
-	return strings.HasPrefix(spec, ".") || p.files.HasName(first) || p.pkg != "" && first == p.pkg
+	if strings.HasPrefix(spec, ".") || p.pkg != "" && first == p.pkg {
+		return true
+	}
+	if _, ok := p.Absolute(importer, first); ok {
+		return true
+	}
+	return p.Compiled(importer, first)
 }
 
 // For returns the resolver of the JavaScript or the TypeScript importers.

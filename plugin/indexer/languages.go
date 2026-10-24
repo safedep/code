@@ -24,6 +24,11 @@ type languageRules struct {
 	// not define keeps the name as its target, as Box for new Box<>() in
 	// Java.
 	rawUnbound bool
+	// typedReceivers marks a language whose call graph does not type a
+	// receiver that a declared type of the scope names, as Python. A call
+	// on such a receiver gets the key of the name in its scope as its
+	// target, as main.py//run//t//do, so the link step reads the type.
+	typedReceivers bool
 
 	// packageOf returns the package or the namespace of the file, which the
 	// files of one unit share.

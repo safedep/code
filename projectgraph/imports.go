@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/projectgraph/modules"
 )
 
@@ -20,13 +21,14 @@ func (b *builder) linkImports(ix *fileindex.Index) {
 		from := b.runner(sc.enclosing(imp.Line))
 		site := Site{Path: ix.Path, Line: imp.Line}
 		mods, missing := b.importedModules(ix, imp.Module, formOf(imp))
-		for _, unit := range missing {
-			b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: imp.Module, Reason: fileindex.UnresolvedNoDefinition, Unit: unit})
+		for _, pv := range missing {
+			b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: imp.Module, Reason: missingReason(pv.compiled), Unit: pv.sp.unit})
 		}
 		// The record has no method, so it makes every target uncertain
-		// where the search reaches the import.
+		// where the search reaches the import. An extension module of the
+		// unit of the file has no source that the graph reads.
 		if len(mods) == 0 && len(missing) == 0 && b.mayBeFirstParty(ix, imp.Module) {
-			b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: imp.Module, Reason: fileindex.UnresolvedNoDefinition})
+			b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: imp.Module, Reason: missingReason(b.compiledModule(ix, imp.Module))})
 		}
 		for _, m := range mods {
 			for _, to := range b.moduleFiles(m.key) {
@@ -54,6 +56,36 @@ func (b *builder) linkImports(ix *fileindex.Index) {
 	}
 }
 
+// missingReason returns the reason of the record of an import that no file
+// gives: no-dependency-source for an extension module, whose code the
+// graph cannot read, and no-definition for any other module.
+func missingReason(compiled bool) fileindex.UnresolvedReason {
+	if compiled {
+		return fileindex.UnresolvedNoDependencySource
+	}
+	return fileindex.UnresolvedNoDefinition
+}
+
+// compiledModule reports whether an import of a file names an extension
+// module of its own space, as yaml/_yaml.so for from yaml import _yaml.
+func (b *builder) compiledModule(ix *fileindex.Index, spec string) bool {
+	sp := b.spaceOf(ix.Path)
+	if ix.Language != langcode.Python || sp.python == nil {
+		return false
+	}
+	module := spec
+	if strings.HasPrefix(spec, ".") {
+		// A relative module names a path from the directory of the file.
+		rel := modules.PythonRelativePath(spec)
+		base, ok := modules.Join(modules.Dir(sp.inner(ix.Path)), rel)
+		if !ok {
+			return false
+		}
+		module = strings.ReplaceAll(base, "/", ".")
+	}
+	return sp.python.Compiled(sp.inner(ix.Path), module)
+}
+
 // moduleRef is a module that an import names, and how the link step found
 // it.
 type moduleRef struct{ key, via string }
@@ -65,7 +97,7 @@ type moduleRef struct{ key, via string }
 // JavaScript module is also the key of its default export, and the import
 // does not call it. missing holds each unit that gives the package and not
 // the module.
-func (b *builder) importedModules(ix *fileindex.Index, spec string, form modules.Form) ([]moduleRef, []string) {
+func (b *builder) importedModules(ix *fileindex.Index, spec string, form modules.Form) ([]moduleRef, []provision) {
 	if mods := b.resolveModules(ix, spec, form); len(mods) > 0 {
 		return mods, nil
 	}
@@ -73,10 +105,10 @@ func (b *builder) importedModules(ix *fileindex.Index, spec string, form modules
 		return nil, nil
 	}
 	var mods []moduleRef
-	var missing []string
+	var missing []provision
 	for _, pv := range b.providers(origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, spec), form: form}) {
 		if pv.module == "" {
-			missing = append(missing, pv.sp.unit)
+			missing = append(missing, pv)
 			continue
 		}
 		b.named[pv.sp.unit] = true

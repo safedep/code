@@ -9,7 +9,8 @@
       "kind": "module",
       "path": "main.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "main.py//load_plugin": {
       "key": "main.py//load_plugin",
@@ -145,12 +146,15 @@
     "main.py": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 1,
     "nodes": 5,
     "edges": 3,
     "unresolved": 3,
     "roots": 3,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "python"
+    ]
   }
 }

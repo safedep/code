@@ -18,7 +18,10 @@ var pythonProfile = profile{
 	provide:            pythonProvide,
 	narrowProviders:    pythonNarrowProviders,
 	surface:            pythonSurface,
+	symbol:             pythonSymbol,
 	dependencies:       pythonDependencies,
+	declaredTypes:      true,
+	abstractReceiver:   fileindex.UnresolvedInterfaceReceiver,
 	instance:           []string{"self", "cls"},
 	objectBase:         "object",
 	literals:           map[string]bool{"None": true, "True": true, "False": true, "Ellipsis": true, "NotImplemented": true},
@@ -38,10 +41,14 @@ func pythonDependencies(b *builder) ([]string, []modules.Problem) {
 }
 
 // pythonProvide returns the module of a pypi unit that an absolute import
-// names.
+// names. An extension module of the unit has no Python source, so the unit
+// gives the package and not the module.
 func pythonProvide(_ *builder, sp *space, module string, _ modules.Form) []provision {
 	if strings.HasPrefix(module, ".") {
 		return nil
+	}
+	if sp.python.Compiled("", module) {
+		return []provision{{sp: sp, compiled: true}}
 	}
 	if _, ok := sp.python.Absolute("", firstDotted(module)); !ok {
 		return nil
@@ -51,6 +58,17 @@ func pythonProvide(_ *builder, sp *space, module string, _ modules.Form) []provi
 		return []provision{{sp: sp}}
 	}
 	return []provision{{sp: sp, module: sp.key(mod), via: "absolute"}}
+}
+
+// pythonSymbol returns the dotted module of a definition of a pypi unit, as
+// an importer writes it, and the names of the definition under it, as
+// requests.api and get for requests/api.py//get.
+func pythonSymbol(_ *builder, sp *space, def string) (string, []string, bool) {
+	module, ok := pythonModulePath(sp.inner(fileindex.Unit(def)), sp.python.RootPackage())
+	if !ok {
+		return "", nil, false
+	}
+	return module, fileindex.Segments(def), true
 }
 
 // pythonNarrowProviders keeps the units that give the module when one
@@ -81,11 +99,29 @@ func pythonSurface(s *surfacer) {
 	}
 }
 
-// pythonModuleName returns the dotted name of a Python module of a package,
-// as requests.api for requests/api.py, under the package that the file set
-// is, if any. A module with a part that starts with an underscore is
-// private, and a __main__ module is a script.
+// pythonModuleName returns the dotted name of a public Python module of a
+// package, as requests.api for requests/api.py, under the package that the
+// file set is, if any. A module with a part that starts with an underscore
+// is private, and a __main__ module is a script.
 func pythonModuleName(p, pkg string) (string, bool) {
+	module, ok := pythonModulePath(p, pkg)
+	if !ok {
+		return "", false
+	}
+	own := strings.Split(module, ".")
+	if pkg != "" {
+		own = own[1:]
+	}
+	if slices.ContainsFunc(own, func(part string) bool { return strings.HasPrefix(part, "_") }) {
+		return "", false
+	}
+	return module, true
+}
+
+// pythonModulePath returns the dotted name of a Python module of a package,
+// private or not, as yaml._internal for yaml/_internal.py, under the
+// package that the file set is, if any.
+func pythonModulePath(p, pkg string) (string, bool) {
 	rel, ok := strings.CutSuffix(p, ".py")
 	if !ok {
 		return "", false
@@ -98,7 +134,7 @@ func pythonModuleName(p, pkg string) (string, bool) {
 	if rel != "" {
 		parts = append(parts, strings.Split(rel, "/")...)
 	}
-	if len(parts) == 0 || slices.ContainsFunc(parts[len(parts)-len(strings.Split(rel, "/")):], func(part string) bool { return strings.HasPrefix(part, "_") }) {
+	if len(parts) == 0 {
 		return "", false
 	}
 	return strings.Join(parts, "."), true

@@ -5,14 +5,16 @@
       "kind": "module",
       "path": "app/users/route.ts",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "typescript"
     },
     "src/handler.js": {
       "key": "src/handler.js",
       "kind": "module",
       "path": "src/handler.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "src/handler.js//Handler": {
       "key": "src/handler.js//Handler",
@@ -40,7 +42,8 @@
       "kind": "module",
       "path": "views.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "views.py//index": {
       "key": "views.py//index",
@@ -105,11 +108,16 @@
     "views.py": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 3,
     "nodes": 7,
     "edges": 0,
     "unresolved": 0,
-    "roots": 5
+    "roots": 5,
+    "languages": [
+      "javascript",
+      "python",
+      "typescript"
+    ]
   }
 }

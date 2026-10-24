@@ -11,6 +11,25 @@ import (
 	"github.com/safedep/code/plugin/callgraph"
 )
 
+// retargetTyped gives a call on a receiver that a declared type of the
+// scope names the key of the name in its scope as its target, in a language
+// with typedReceivers. The call graph bound the receiver to the value of an
+// assignment, as dep//new_thing for t = dep.new_thing(), and a call on that
+// value, as dep//new_thing//do, names no method. The declared type or the
+// result type of the name does. A call that the call graph bound to a
+// method of a class of the file, as Parser//render for p = Parser(), keeps
+// that target.
+func (p *projection) retargetTyped(call *fileindex.Call) {
+	for _, t := range call.Targets {
+		if def, ok := p.defs[fileindex.Parent(t)]; ok && def.Kind == fileindex.DefClass {
+			return
+		}
+	}
+	if target, ok := p.typedTarget(call.Caller, call.Receiver, call.Method); ok {
+		call.Targets = []string{target}
+	}
+}
+
 func (p *projection) addCalls() {
 	for key, node := range p.cg.Nodes {
 		for _, ref := range node.CallsTo {
@@ -33,7 +52,7 @@ func (p *projection) addCalls() {
 				targets = local
 				p.members[[2]uint32{ref.Site.StartLine, ref.Site.StartColumn}] = true
 			}
-			p.ix.Calls = append(p.ix.Calls, fileindex.Call{
+			call := fileindex.Call{
 				Caller:   p.caller(key, ref.Site),
 				Line:     int(ref.Site.StartLine),
 				Column:   int(ref.Site.StartColumn),
@@ -43,7 +62,9 @@ func (p *projection) addCalls() {
 				Method:   ref.Method,
 				Kind:     kind,
 				Args:     p.arguments(key, ref.Site),
-			})
+			}
+			p.retargetTyped(&call)
+			p.ix.Calls = append(p.ix.Calls, call)
 		}
 	}
 }
@@ -210,8 +231,22 @@ func (p *projection) addUnresolved() {
 		if p.members[[2]uint32{u.Site.StartLine, u.Site.StartColumn}] && u.Reason == callgraph.UnresolvedUnknownReceiver {
 			continue
 		}
+		caller := p.caller(u.Caller, u.Site)
+		if target, ok := p.typedTarget(caller, u.Receiver, u.Method); ok && u.Reason == callgraph.UnresolvedUnknownReceiver {
+			p.ix.Calls = append(p.ix.Calls, fileindex.Call{
+				Caller:   caller,
+				Line:     int(u.Site.StartLine),
+				Column:   int(u.Site.StartColumn),
+				Callee:   u.Text,
+				Targets:  []string{target},
+				Receiver: u.Receiver,
+				Method:   u.Method,
+				Kind:     fileindex.CallCall,
+			})
+			continue
+		}
 		p.ix.Unresolved = append(p.ix.Unresolved, fileindex.Unresolved{
-			Caller:   p.caller(u.Caller, u.Site),
+			Caller:   caller,
 			Line:     int(u.Site.StartLine),
 			Column:   int(u.Site.StartColumn),
 			Text:     u.Text,
@@ -220,6 +255,27 @@ func (p *projection) addUnresolved() {
 			Reason:   fileindex.UnresolvedReason(u.Reason),
 		})
 	}
+}
+
+// typedTarget returns the target of a call on a receiver whose first name a
+// declared type of the scope chain of the caller types, as main.py//run//t//do
+// for t.do() in run(t: Thing), in a language with typedReceivers. The link
+// step reads the type of the name from the scope, as it does for Go.
+func (p *projection) typedTarget(caller, receiver, method string) (string, bool) {
+	if !p.rules().typedReceivers || receiver == "" || method == "" {
+		return "", false
+	}
+	names := strings.Split(receiver, ".")
+	for _, name := range names {
+		if !isIdentifier(name) {
+			return "", false
+		}
+	}
+	scope, ok := p.typedScope(caller, names[0])
+	if !ok {
+		return "", false
+	}
+	return fileindex.Join(scope, append(names, method)...), true
 }
 
 func (p *projection) addTruncations() {

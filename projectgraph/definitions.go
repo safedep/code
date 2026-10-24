@@ -15,7 +15,7 @@ func (b *builder) addDefinitions(ix *fileindex.Index) {
 			defFlags[f] = true
 		}
 	}
-	module := &Node{Key: ix.Path, Kind: NodeModule, Path: ix.Path, Line: 1, Exported: true, Test: b.test[ix.Path]}
+	module := &Node{Key: ix.Path, Kind: NodeModule, Path: ix.Path, Line: 1, Exported: true, Test: b.test[ix.Path], Language: ix.Language}
 	for _, f := range ix.Flags {
 		if !defFlags[f] {
 			module.Flags = append(module.Flags, f)

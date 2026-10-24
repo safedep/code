@@ -15,6 +15,7 @@ import (
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/fileindex/store"
 	"github.com/safedep/code/fs"
+	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/parser"
 	"github.com/safedep/code/plugin"
 )
@@ -77,13 +78,19 @@ type Result struct {
 	// two sets stay apart.
 	Dependencies map[string]fileindex.FileStatus
 
+	// Languages holds the language of each file that has a status, by
+	// name, as projectgraph.Options.Languages takes them. The link step
+	// reads it for a file with no index, so it knows the language of a
+	// failed or a missing file.
+	Languages map[string]langcode.Code
+
 	// Report lists the files that the run parsed, skipped and failed.
 	Report *plugin.Report
 
-	// Excluded lists the Go files of dependency code that no Go build
-	// reads by default, in walk order: test files, files with //go:build
-	// ignore and files that need a tag the go command never sets. They have
-	// no status, as no program runs their code.
+	// Excluded lists the files of dependency code that no program runs, in
+	// walk order: the Go test files, the Go files with //go:build ignore or
+	// a tag the go command never sets, and the test files and the wheel
+	// metadata of a pypi unit. They have no status.
 	Excluded []string
 }
 
@@ -203,6 +210,7 @@ func (ix *Indexer) Run(ctx context.Context, fsys core.ImportAwareFileSystem) (*R
 		result: &Result{
 			Files:        make(map[string]fileindex.FileStatus, len(files)),
 			Dependencies: map[string]fileindex.FileStatus{},
+			Languages:    make(map[string]langcode.Code, len(files)),
 			Report:       &plugin.Report{Skipped: skipped},
 		},
 		strs: interner{},
@@ -269,10 +277,11 @@ func (r *run) index(ctx context.Context, files []core.File, byExtension map[stri
 			r.result.Report.Skipped = append(r.result.Report.Skipped, file.Name())
 			continue
 		}
-		if goOutOfBuild(file) {
+		if goOutOfBuild(file) || pythonOutOfBuild(file) {
 			r.exclude(file)
 			continue
 		}
+		r.result.Languages[file.Name()] = language.Meta().Code
 		data, err := read(file, r.opts.MaxFileBytes)
 		if err != nil {
 			r.fail(ctx, file, core.StageRead, err)

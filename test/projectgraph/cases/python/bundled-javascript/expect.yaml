@@ -1,0 +1,41 @@
+source: safedep:hand
+description: >-
+  A Python project ships the JavaScript of a web page, and the index step fails static/vendor.min.js, which
+  is over the size limit of the case. The roots of the graph are in Python files alone, so no program of the
+  project runs JavaScript, and the failed file holds no caller that a search can reach. Its budget concerns
+  no target, and os.system is not found. Compare failed-file, where the failed file is Python.
+max_file_bytes: 200
+failed:
+  - static/vendor.min.js
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+exact_edges: true
+edges:
+  - from: main.py
+    to: yaml//load
+    kind: direct
+    confidence: high
+    site: main.py:4
+  - from: main.py
+    to: open
+    kind: direct
+    confidence: high
+    site: main.py:4
+unresolved: []
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: yaml//load
+        site: main.py:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.py
+        site: main.py:4
+        reached: true
+  - target: os//system
+    status: no-such-target

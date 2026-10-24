@@ -1,7 +1,7 @@
 {
   "version": "2",
-  "index_version": "14",
-  "link_version": "16",
+  "index_version": "15",
+  "link_version": "17",
   "unit": "npm:store-kit@1.0.0",
   "symbols": [
     {

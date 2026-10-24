@@ -16,3 +16,6 @@ summary steps.
 
 See [docs/modgraph.md](./docs/modgraph.md) for the module graph of a Go module: which module
 imports which, from the code on the disk, with no Go toolchain.
+
+See [docs/distgraph.md](./docs/distgraph.md) for the distribution graph of a Python project: which
+installed distribution imports which, from the code on the disk, with no Python.
