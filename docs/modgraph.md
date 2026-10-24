@@ -74,6 +74,7 @@ module of the build.
 ```go
 sources, err := modgraph.Discover(modgraph.DiscoverOptions{
     Dir:         projectDir,  // the directory of the main go.mod
+    Work:        workFile,    // the go.work that uses it, or "" outside a workspace
     ModuleCache: moduleCache, // GOMODCACHE; the caller finds it
     LocalRoot:   scanRoot,    // a local replace directive is read only inside it
 })
@@ -109,6 +110,44 @@ a replaced module, and `Source.Origin` is the module that the source holds.
 `replace` directives. A directive that `golang.org/x/mod` does not know
 fails the parse, and the caller keeps no graph.
 
+## Workspaces
+
+With `DiscoverOptions.Work`, `Discover` gives the build list of the
+workspace for the module in `Dir`, as the go command builds each module of
+a workspace. The caller finds the `go.work` file, as the go command does from
+`GOWORK` and the parents of the module directory.
+
+- The build list is the result of minimal version selection with module
+  graph pruning, as `readModGraph` of the go command builds it. The graph
+  holds the requirements of each module of the workspace and of the
+  `go.mod` of each such requirement. A `go.mod` below go 1.17, a module of
+  the workspace too, adds the requirements of each `go.mod` that it
+  requires, and so on down the chain. Then, while a module that the build
+  needs requires a module below its selected version, the `go.mod` of the
+  selected version joins the graph with each `go.mod` that it requires.
+  Each path takes its highest version in the graph.
+- A requirement on a module of the workspace at a version reads the
+  `go.mod` of that version. The build uses the code of the workspace.
+- Each other module of the workspace is a local source at no version. Its
+  code is read inside `LocalRoot`, and `Source.Origin` holds its directory.
+- A `replace` directive of `go.work` wins. Else the `replace` directive of a
+  module of the workspace applies. Two modules that replace one module with
+  other code make `Discover` fail, as they make the go command fail.
+- The go command reads the workspace from the `vendor` directory next to
+  `go.work` when the `go` directive of `go.work` is go 1.14 or later and
+  the first line of `vendor/modules.txt` holds the `## workspace`
+  annotation that `go work vendor` writes. Each module that `modules.txt`
+  lists with a package then comes from `vendor`, at the version of that
+  list. Outside a workspace, `Discover` reads no `vendor` directory that
+  holds this annotation.
+- `go.work.sum` and the `go.sum` of each module give the hashes.
+
+A wrong version can hide an edge. So `Discover` fails when it cannot know
+the build list: a `go.mod` that the graph needs is not on the disk, a module
+of the workspace is outside `LocalRoot`, or a `go.mod` has an `exclude`
+directive. The caller then keeps no graph. `go mod download` in the
+workspace fetches each `go.mod` that the graph needs.
+
 `examples/modgraph` prints the graph of a module. Run `go mod download`
 first: a module with no source on the disk is open, and one open node that
 the build reaches makes each module reached.
@@ -129,12 +168,18 @@ full.
 repository for four platforms and checks that the graph holds each module
 edge, or that the edge leaves an open node. `MODGRAPH_ORACLE_DIRS` adds more
 projects, and a project with `vendor/modules.txt` reads its dependencies
-from `vendor`. The test needs the `go` command and a module cache, and skips
+from `vendor`. `TestBuildHoldsEachEdgeOfGoListInAWorkspace` puts this
+repository in a workspace with a probe module. For a workspace, and for a
+project of `MODGRAPH_ORACLE_DIRS` with a `go.work`, the test checks each
+module that the workspace uses. It also checks that `Discover` gives each
+version of the build list that `go list -m all` gives.
+`TestDiscoverGivesTheBuildListOfTheGoCommand` serves synthetic modules
+from a proxy on the disk and compares `Discover` with `go list -m all` for
+workspaces where the versions of two modules differ. The test needs the `go` command and a module cache, and skips
 with neither. It sets `GOPROXY=off`, so it downloads nothing.
 
 ## Not covered
 
-- `go.work` workspaces. A caller keeps no graph for a workspace.
 - A file larger than 32 MiB whose first 64 KiB does not parse makes its
   module open.
 - A file budget, 200,000 files by default, caps a run. Past it the module

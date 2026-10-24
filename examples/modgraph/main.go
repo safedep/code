@@ -3,9 +3,12 @@
 // them. It finds the source of each module with modgraph.Discover in the
 // vendor directory and in the module cache, which -modcache names, or
 // $GOMODCACHE, or $GOPATH/pkg/mod. It runs no go command and downloads
-// nothing. Run go mod download first for a graph with no open node.
+// nothing. Run go mod download first for a graph with no open node. With
+// -work, the build list is that of the workspace, and the modules of the
+// workspace are read inside the directory of go.work.
 //
 //	go run ./examples/modgraph -dir ../vet
+//	go run ./examples/modgraph -dir ../vet -work ../vet/go.work
 //	go run ./examples/modgraph -dir ../vet -json
 package main
 
@@ -25,16 +28,21 @@ import (
 func main() {
 	dir := flag.String("dir", ".", "the directory of the main go.mod")
 	modcache := flag.String("modcache", "", "the module cache, else $GOMODCACHE, else $GOPATH/pkg/mod, else $HOME/go/pkg/mod")
+	work := flag.String("work", "", "the go.work file of a workspace that uses the module")
 	asJSON := flag.Bool("json", false, "print the graph as JSON")
 	flag.Parse()
-	if err := run(os.Stdout, *dir, *modcache, *asJSON); err != nil {
+	if err := run(os.Stdout, *dir, *work, *modcache, *asJSON); err != nil {
 		fmt.Fprintln(os.Stderr, "modgraph:", err)
 		os.Exit(1)
 	}
 }
 
-func run(w io.Writer, dir, modcache string, asJSON bool) error {
-	sources, err := modgraph.Discover(modgraph.DiscoverOptions{Dir: dir, ModuleCache: moduleCache(modcache), LocalRoot: dir})
+func run(w io.Writer, dir, work, modcache string, asJSON bool) error {
+	root := dir
+	if work != "" {
+		root = filepath.Dir(work)
+	}
+	sources, err := modgraph.Discover(modgraph.DiscoverOptions{Dir: dir, Work: work, ModuleCache: moduleCache(modcache), LocalRoot: root})
 	if err != nil {
 		return err
 	}
