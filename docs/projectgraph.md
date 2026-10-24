@@ -294,6 +294,18 @@ time and a wrong hint gives a wrong edge, not a crash. These rules apply.
 `examples/projectgraph` takes `-site-packages <dir>` and adds each
 distribution of the directory as a unit, by its `.dist-info`.
 
+The standard library of Python is a unit too. Pass the `Lib` directory of
+CPython as the unit `python:std@<version>`, as
+`-deps /usr/lib/python3.12=python:std@3.12.3`. A virtual environment names
+the installation in the `home` line of its `pyvenv.cfg`. The unit gives
+each module of the standard library that has Python source, as
+`threading` or `http.server`, so a call of the library on `self`, as
+`Thread.run` in `Thread.start`, reaches the override of the project with a
+`cha` edge, and a path into the library goes on to its calls. A module
+that only C gives, as `_thread`, stays an external key. The index step
+leaves out the test suite under `test`, the IDLE, the turtle demos and
+`lib2to3`, which no program imports.
+
 ## Overlay
 
 An overlay is a file of `llm` edges that resolve unresolved sites of a

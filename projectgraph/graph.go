@@ -300,9 +300,11 @@ func unitLanguages(unit string) []langcode.Code {
 // ecosystemLanguages are the languages of the code that a package of an
 // ecosystem installs. A package can ship files of other languages, as the
 // JavaScript of the admin pages of Django, and no program of the ecosystem
-// runs them.
+// runs them. The python ecosystem is the standard library of CPython, as
+// the unit python:std@3.12.3 of its Lib directory.
 var ecosystemLanguages = map[string][]langcode.Code{
 	"pypi":      {langcode.Python},
+	"python":    {langcode.Python},
 	"npm":       {langcode.Javascript, langcode.Typescript},
 	"go":        {langcode.Go},
 	"cargo":     {langcode.Rust},

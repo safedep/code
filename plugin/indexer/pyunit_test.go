@@ -58,3 +58,45 @@ func TestIndexerLeavesOutTheTestsOfAPypiUnit(t *testing.T) {
 		assert.Equal(t, fileindex.FileIndexed, status)
 	}
 }
+
+func TestIndexerLeavesOutTheTestSuiteOfTheStandardLibrary(t *testing.T) {
+	dir := t.TempDir()
+	writeFiles(t, dir, map[string]string{"main.py": "import threading\n"})
+	lib := filepath.Join(dir, "python", "Lib")
+	writeFiles(t, lib, map[string]string{
+		"threading.py":               "class Thread:\n    pass\n",
+		"http/__init__.py":           "",
+		"http/server.py":             "x = 1\n",
+		"test/test_threading.py":     "x = 1\n",
+		"test/support/__init__.py":   "x = 1\n",
+		"idlelib/editor.py":          "x = 1\n",
+		"turtledemo/clock.py":        "x = 1\n",
+		"lib2to3/main.py":            "x = 1\n",
+		"unittest/test/test_case.py": "x = 1\n",
+		"unittest/__init__.py":       "",
+		"ensurepip/__init__.py":      "",
+		"__phello__/__init__.py":     "",
+	})
+	fsys, err := fs.NewLocalFileSystem(fs.LocalFileSystemConfig{
+		AppDirectories:    []string{dir},
+		ImportDirectories: []string{lib},
+		ImportUnits:       map[string]string{lib: "python:std@3.12.3"},
+		ExcludePatterns:   []*regexp.Regexp{fs.SkipPattern(dir)},
+	})
+	require.NoError(t, err)
+	result, err := runIndexer(t, context.Background(), fsys, Options{Languages: languages(t, core.LanguageCodePython), Store: memstore.New(), Imports: true})
+	require.NoError(t, err)
+
+	var indexed, excluded []string
+	for p := range result.Dependencies {
+		_, inner := fileindex.SplitUnit(p)
+		indexed = append(indexed, inner)
+	}
+	for _, p := range result.Excluded {
+		_, inner := fileindex.SplitUnit(p)
+		excluded = append(excluded, inner)
+	}
+	assert.ElementsMatch(t, []string{"threading.py", "http/__init__.py", "http/server.py", "unittest/__init__.py", "ensurepip/__init__.py"}, indexed)
+	assert.ElementsMatch(t, []string{"test/test_threading.py", "test/support/__init__.py", "idlelib/editor.py", "turtledemo/clock.py", "lib2to3/main.py", "unittest/test/test_case.py", "__phello__/__init__.py"}, excluded,
+		"the test directory of a package of the standard library is a test suite, as unittest/test")
+}

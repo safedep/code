@@ -317,7 +317,10 @@ func (b *builder) overrides(class string, call fileindex.Call, found string) []s
 
 // classDefinitions returns the class itself, and for the external key of a
 // class of a unit of dependency code, as dep//Doer, the definitions that
-// the units give for it, so the subclasses inside the unit count too.
+// the units give for it, so the subclasses inside the unit count too. A
+// class of a unit gives its external key, which a class of the project
+// names as its base, so a call of the unit on self reaches the override
+// of the project, as Thread.run of threading reaches the run of a Worker.
 func (b *builder) classDefinitions(class string) []string {
 	out := []string{class}
 	if b.g.IsExternal(class) {
@@ -327,6 +330,9 @@ func (b *builder) classDefinitions(class string) []string {
 				out = append(out, d)
 			}
 		}
+	}
+	if key, _, ok := b.unitSymbol(class); ok && key != class {
+		out = append(out, key)
 	}
 	return out
 }

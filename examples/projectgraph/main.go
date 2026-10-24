@@ -14,9 +14,10 @@
 // keeps its path under the import directory, as yaml/__init__.py. Any
 // other -deps directory is an import directory of its own, and a pypi
 // package given that way is its package. The Go standard library is a unit
-// too, as -deps $(go env GOROOT)/src=go:std@go1.25.1, and so is a Rust
-// crate, as -deps vendor/smallvec=cargo:smallvec@1.13.2. With -summary it
-// prints the summary of each such unit as JSON.
+// too, as -deps $(go env GOROOT)/src=go:std@go1.25.1, and so are the Lib
+// directory of CPython, as -deps /usr/lib/python3.12=python:std@3.12.3, and
+// a Rust crate, as -deps vendor/smallvec=cargo:smallvec@1.13.2. With
+// -summary it prints the summary of each such unit as JSON.
 //
 // -site-packages dir reads the .dist-info of each distribution in a Python
 // site-packages directory and adds each one as a unit, with the import
