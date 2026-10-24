@@ -246,23 +246,25 @@ type listPackage struct {
 }
 
 // goListEdges returns the module edges of the packages that go list -deps
-// -test gives for a platform, and each import that go list resolves to no
-// module. go list -e gives such an import with no package of a module, so
-// it leaves no edge to compare.
+// gives for a platform, and each import that go list resolves to no
+// module. It lists the packages of the module with their tests, and the
+// tools of its go.mod without their tests. go list -e gives an import that
+// no module holds with no package of a module, so it leaves no edge to
+// compare.
 func goListEdges(t *testing.T, dir string, env []string, goos, goarch string) (map[[2]string]bool, []string) {
 	t.Helper()
-	out, err := goCommand(dir, append(slices.Clone(env), "GOOS="+goos, "GOARCH="+goarch, "CGO_ENABLED=1"), "list", "-e", "-deps", "-test", "-json", "./...")
-	require.NoError(t, err, "go list -deps")
-	var pkgs []listPackage
-	dec := json.NewDecoder(bytes.NewReader(out))
-	for {
-		var p listPackage
-		if err := dec.Decode(&p); errors.Is(err, io.EOF) {
-			break
-		} else {
-			require.NoError(t, err)
+	env = append(slices.Clone(env), "GOOS="+goos, "GOARCH="+goarch, "CGO_ENABLED=1")
+	pkgs := goListDeps(t, dir, env, "-test", "./...")
+	// The tool pattern of a workspace names the tools of each module of the
+	// workspace. The graph of a module holds the tools of its go.mod only.
+	mf, err := parseGoMod(filepath.Join(dir, "go.mod"))
+	require.NoError(t, err)
+	if len(mf.Tool) > 0 {
+		var tools []string
+		for _, tool := range mf.Tool {
+			tools = append(tools, tool.Path)
 		}
-		pkgs = append(pkgs, p)
+		pkgs = append(pkgs, goListDeps(t, dir, env, tools...)...)
 	}
 	moduleOf := map[string]string{}
 	for _, p := range pkgs {
@@ -292,6 +294,24 @@ func goListEdges(t *testing.T, dir string, env []string, goos, goarch string) (m
 		}
 	}
 	return edges, dropped
+}
+
+func goListDeps(t *testing.T, dir string, env []string, args ...string) []listPackage {
+	t.Helper()
+	out, err := goCommand(dir, env, append([]string{"list", "-e", "-deps", "-json"}, args...)...)
+	require.NoError(t, err, "go list -deps")
+	var pkgs []listPackage
+	dec := json.NewDecoder(bytes.NewReader(out))
+	for {
+		var p listPackage
+		if err := dec.Decode(&p); errors.Is(err, io.EOF) {
+			break
+		} else {
+			require.NoError(t, err)
+		}
+		pkgs = append(pkgs, p)
+	}
+	return pkgs
 }
 
 func goCommand(dir string, env []string, args ...string) ([]byte, error) {
