@@ -168,6 +168,12 @@ reason: `computed-name`, `dynamic-import`, `unknown-receiver`,
 `trait-receiver` or `no-dependency-source`. The site keeps the method name of the call, so the
 reach query can tell which targets it concerns.
 
+A site with more than 20 candidates of its method name, as `render` in a
+Django project, is `ambiguous` and keeps no method name. The site gets no
+edge, so the search cannot follow what the candidates call, and the record
+concerns every target. A record with a method name concerns the targets
+that a definition of the name reaches.
+
 A call on the result of another call, as `html.NewTokenizer(r).Next()`,
 needs the type of that result. When the link step does not know it, the
 site is a record with the method name, so a target of that method is
