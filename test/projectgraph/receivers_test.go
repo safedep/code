@@ -37,13 +37,15 @@ type receiverRow struct {
 // receiverUnits are the units of dependency code of the receiver rows, by
 // language: a directory under testdata/receivers and its unit.
 var receiverUnits = map[core.LanguageCode][2]string{
-	core.LanguageCodeGo:   {"go/dep", "go:example.com/dep@v1.0.0"},
-	core.LanguageCodeRust: {"rust/dep", "cargo:dep@1.0.0"},
+	core.LanguageCodeGo:     {"go/dep", "go:example.com/dep@v1.0.0"},
+	core.LanguageCodeRust:   {"rust/dep", "cargo:dep@1.0.0"},
+	core.LanguageCodePython: {"python/dep", "pypi:dep@1.0.0"},
 }
 
 const (
-	goReceiverManifest   = "module app\n\ngo 1.22\n\nrequire example.com/dep v1.0.0\n"
-	rustReceiverManifest = "[package]\nname = \"app\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\ndep = \"1.0.0\"\n"
+	goReceiverManifest     = "module app\n\ngo 1.22\n\nrequire example.com/dep v1.0.0\n"
+	rustReceiverManifest   = "[package]\nname = \"app\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\ndep = \"1.0.0\"\n"
+	pythonReceiverManifest = "[project]\nname = \"app\"\nversion = \"0.1.0\"\ndependencies = [\"dep\"]\n"
 )
 
 var goReceiverRows = []receiverRow{
@@ -209,6 +211,161 @@ var rustReceiverRows = []receiverRow{
 	},
 }
 
+// pythonTypeHints is the step of the Python plan that reads the type hints
+// of a parameter, a local, a field and a return into the index, and gives
+// a definition of a pypi unit its external key. Most Python rows wait on
+// it. Two forms of today show the gap: a call on a variable that holds
+// the result of an external call gets the false key dep//new_thing//do and
+// no record, so the method is no-such-target, and a call on an unknown
+// receiver is a record and a name edge, so the method is uncertain.
+const pythonTypeHints = "the type-hint step of the Python plan"
+
+// pythonReceiverRows are the forms of a Python receiver. A type hint is
+// the only declared type that Python has.
+var pythonReceiverRows = []receiverRow{
+	{
+		name:   "declared variable",
+		source: "def run():\n    t: Thing = dep.new_thing()\n    t.do()",
+		target: "dep//Thing//do",
+		want:   "found",
+		gap:    pythonTypeHints,
+		today:  "no-such-target",
+	},
+	{
+		name:   "parameter",
+		source: "def run(t: Thing):\n    t.do()",
+		target: "dep//Thing//do",
+		want:   "found",
+		gap:    pythonTypeHints,
+		today:  "uncertain/unknown-receiver",
+	},
+	{
+		name:   "optional parameter",
+		source: "def run(t: Optional[Thing]):\n    t.do()",
+		target: "dep//Thing//do",
+		want:   "found",
+		gap:    pythonTypeHints,
+		today:  "uncertain/unknown-receiver",
+	},
+	{
+		name:   "union with none parameter",
+		source: "def run(t: Thing | None):\n    t.do()",
+		target: "dep//Thing//do",
+		want:   "found",
+		gap:    pythonTypeHints,
+		today:  "uncertain/unknown-receiver",
+	},
+	{
+		name:   "untyped parameter",
+		source: "def run(t):\n    t.do()",
+		target: "dep//Thing//do",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "typed instance attribute",
+		source: "class App:\n    def __init__(self):\n        self.t: Thing = dep.new_thing()\n\n    def go(self):\n        self.t.do()\n\n\ndef run():\n    App().go()",
+		target: "dep//Thing//do",
+		want:   "found",
+		gap:    pythonTypeHints,
+		today:  "uncertain/no-definition",
+	},
+	{
+		name:   "instance attribute from the constructor",
+		source: "class App:\n    def __init__(self):\n        self.t = Thing()\n\n    def go(self):\n        self.t.do()\n\n\ndef run():\n    App().go()",
+		target: "dep//Thing//do",
+		want:   "found",
+		gap:    pythonTypeHints,
+		today:  "uncertain/no-definition",
+	},
+	{
+		name:   "dataclass field",
+		source: "@dataclass\nclass App:\n    t: Thing\n\n\ndef run(a: App):\n    a.t.do()",
+		target: "dep//Thing//do",
+		want:   "found",
+		gap:    pythonTypeHints,
+		today:  "uncertain/unknown-receiver",
+	},
+	{
+		name:   "first-party function return",
+		source: "def make() -> Thing:\n    return dep.new_thing()\n\n\ndef run():\n    t = make()\n    t.do()",
+		target: "dep//Thing//do",
+		want:   "found",
+		gap:    pythonTypeHints,
+		today:  "uncertain/unknown-receiver",
+	},
+	{
+		name:   "external function return",
+		source: "def run():\n    t = dep.new_thing()\n    t.do()",
+		target: "dep//Thing//do",
+		want:   "found",
+		gap:    pythonTypeHints,
+		today:  "no-such-target",
+	},
+	{
+		name:   "tuple return",
+		source: "def run():\n    t, n = dep.new_pair()\n    t.do()",
+		target: "dep//Thing//do",
+		want:   "found",
+		gap:    pythonTypeHints,
+		today:  "uncertain/unknown-receiver",
+	},
+	{
+		name:   "optional return",
+		source: "def run():\n    t = dep.try_thing()\n    if t is not None:\n        t.do()",
+		target: "dep//Thing//do",
+		want:   "found",
+		gap:    pythonTypeHints,
+		today:  "no-such-target",
+	},
+	{
+		name:   "chained call",
+		source: "def run():\n    dep.new_thing().do()",
+		target: "dep//Thing//do",
+		want:   "found",
+		gap:    pythonTypeHints,
+		today:  "uncertain/unknown-receiver",
+	},
+	{
+		name:   "chained method call",
+		source: "def run():\n    dep.new_thing().next().do()",
+		target: "dep//Thing//do",
+		want:   "found",
+		gap:    pythonTypeHints,
+		today:  "uncertain/unknown-receiver",
+	},
+	{
+		name:   "instance from the constructor",
+		source: "def run():\n    Thing().do()",
+		target: "dep//Thing//do",
+		want:   "found",
+	},
+	{
+		name:   "abstract base return",
+		source: "def run():\n    d = dep.new_doer()\n    d.do()",
+		target: "dep//Thing//do",
+		want:   "found",
+		gap:    pythonTypeHints,
+		today:  "no-such-target",
+	},
+	{
+		name:   "abstract base return with no implementation",
+		source: "def run():\n    r = dep.new_runner()\n    r.run()",
+		target: "other//Job//run",
+		want:   "uncertain/interface-receiver",
+		gap:    pythonTypeHints,
+		today:  "no-such-target",
+	},
+	{
+		name:   "external function return with no dependency code",
+		source: "def run():\n    t = dep.new_thing()\n    t.do()",
+		target: "dep//Thing//do",
+		want:   "uncertain/no-dependency-source",
+		noDeps: true,
+		gap:    pythonTypeHints,
+		today:  "no-such-target",
+	},
+}
+
 func TestReceiverForms(t *testing.T) {
 	languages := caseLanguages(t)
 	for _, tc := range []struct {
@@ -218,6 +375,7 @@ func TestReceiverForms(t *testing.T) {
 	}{
 		{core.LanguageCodeGo, goReceiverRows, goReceiverProject},
 		{core.LanguageCodeRust, rustReceiverRows, rustReceiverProject},
+		{core.LanguageCodePython, pythonReceiverRows, pythonReceiverProject},
 	} {
 		for _, row := range tc.rows {
 			t.Run(string(tc.language)+"/"+row.name, func(t *testing.T) {
@@ -247,6 +405,15 @@ func rustReceiverProject(source string) map[string]string {
 	return map[string]string{
 		"Cargo.toml":  rustReceiverManifest,
 		"src/main.rs": "use dep::{Doer, Runner, Thing};\n\n" + source + "\n\nfn main() {}\n",
+	}
+}
+
+// pythonReceiverProject is a Python project whose main.py holds the source
+// and the imports of the dependency.
+func pythonReceiverProject(source string) map[string]string {
+	return map[string]string{
+		"pyproject.toml": pythonReceiverManifest,
+		"main.py":        "from dataclasses import dataclass\nfrom typing import Optional\n\nimport dep\nfrom dep import Doer, Thing\n\n\n" + source + "\n\n\nif __name__ == \"__main__\":\n    run()\n",
 	}
 }
 
@@ -282,8 +449,11 @@ func receiverAnswer(t *testing.T, languages []core.Language, language core.Langu
 // which the search starts from.
 func receiverSource(t *testing.T, language core.LanguageCode) reach.Source {
 	p := "main.go"
-	if language == core.LanguageCodeRust {
+	switch language {
+	case core.LanguageCodeRust:
 		p = "src/main.rs"
+	case core.LanguageCodePython:
+		p = "main.py"
 	}
 	s, err := reach.SourceByKey(fileindex.Join(p, "run"))
 	require.NoError(t, err)

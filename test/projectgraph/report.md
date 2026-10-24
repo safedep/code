@@ -1037,3 +1037,116 @@ After FOU-555:
 After the fixes for the review of PR 53, the measure gives the same
 numbers. No project of the corpus renames a Cargo dependency, and no
 function of a dependency has two platform twins with two result types.
+
+### Python
+
+The Python rows of the corpus come from the first step of the Python
+plan, on 2026-10-24, on the machine above, at the commit that adds them.
+No fix of the Python link step is in this run. The numbers are the
+baseline that the later steps of the plan must move.
+
+| Project | Dependencies with an advisory |
+| --- | --- |
+| mkdocs 1.1.2 | PyYAML 5.3.1, Jinja2 2.11.3, tornado 6.3.1 |
+| httpie 3.2.1 | requests 2.28.2, urllib3 1.26.14, idna 3.6 |
+| requests-toolbelt 0.9.1 | requests 2.30.0, urllib3 1.26.16 |
+| flask-cors 3.0.10 | Flask 2.2.4, Werkzeug 2.2.2 |
+| fabric 2.7.1 | paramiko 2.9.2 |
+| imageio 2.9.0 | Pillow 9.2.0 |
+| pyopenssl 23.1.0 | cryptography 40.0.2 |
+| python-docx 0.8.11 | lxml 4.9.0 |
+| django-filter 23.1 | Django 4.2.0 |
+| django-debug-toolbar 3.8.1 | Django 4.1.7, sqlparse 0.4.3 |
+
+A Python dependency has a version that the requirement of the project
+admits and that an advisory affects, as the Rust rows do. OSV lists no
+symbols for a PyPI advisory, so `scripts/pypi_advisories.py` holds the
+symbols of 72 advisories of the 14 packages by hand, as the text of each
+advisory names them, with the ranges from OSV. The code of a dependency is
+its wheel, unpacked, so the unit has the layout of site-packages. A
+dependency whose code is compiled, as lxml, has only its `.so` files and
+its Python wrappers in the unit.
+
+The receiver table of `receivers_test.go` has 18 Python rows. 2 rows give
+their answer today: a call on an instance from a constructor is `found`,
+and a call on an untyped parameter is `uncertain/unknown-receiver`. The
+other 16 wait on the type-hint step of the plan. 8 of them are
+`uncertain/unknown-receiver` today, 2 are `uncertain/no-definition`, and 6
+are `no-such-target`: a call on a variable that holds the result of an
+external call, as `t = dep.new_thing()` then `t.do()`, gets the false key
+`dep//new_thing//do` and no record, so the method of the real type is
+`no-such-target`. A Python definition of a unit has no external key either,
+because the Python profile has no `symbol` rule, so a target that only the
+code of its unit calls cannot match a definition.
+
+| Language | Kind | Run | Targets | found | not-found | no-such-target | unknown-receiver | no-definition | dynamic-flag | budget |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Python | function | every language | 44 | 5 | 0 | 0 | 3 | 1 | 6 | 29 |
+| Python | method | every language | 63 | 0 | 0 | 0 | 27 | 5 | 13 | 18 |
+| Python | function | python alone | 44 | 5 | 0 | 0 | 3 | 13 | 14 | 9 |
+| Python | method | python alone | 63 | 0 | 0 | 0 | 27 | 14 | 17 | 5 |
+
+| Language | Run | Method targets that end as unknown-receiver |
+| --- | --- | --- |
+| Python | every language | 0.429 (27/63) |
+| Python | python alone | 0.429 (27/63) |
+
+The "every language" run indexes each language, as the Go and Rust rows
+do. The "python alone" run sets `PROJECTGRAPH_METHOD_LANGUAGES=python`.
+The 10 Python graphs hold 3,170 files in the first run and 2,956 in the
+second.
+
+- No target is `not-found` and no target is `no-such-target`. Every
+  search meets an uncertainty that concerns every target, so the measure
+  cannot yet tell a target that the code reaches from one that it does
+  not. The 5 found function targets are `yaml.load` in mkdocs,
+  `requests.utils.get_netrc_auth` and `idna.encode` in httpie, and
+  `sqlparse.parse` and `sqlparse.format` in django-debug-toolbar, each a
+  call of the project on an import.
+- `budget` is the largest cause of the first run, and most of it is
+  JavaScript. A Python project ships the JavaScript of its web pages, and
+  the index step truncates a minified file: `jquery-1.10.2.min.js`,
+  `bootstrap.min.js` and `lunr.js` in the themes of mkdocs, and
+  `jquery.js`, `jquery.min.js` and `select2.full.min.js` in the admin of
+  the Django unit. A truncated file of the project concerns every search,
+  and one of a unit concerns every search that enters the unit, so 32 of
+  the 32 Django targets of django-filter end as `budget`. No Python program
+  runs that JavaScript. The run of `python` alone has 14 budget targets
+  left: `_tifffile.py` of imageio, a module of 10,182 lines and 360 KiB
+  over a limit of the index, and the test files `tests/test_ssl.py` of pyopenssl and
+  `tests/opc/unitdata/rels.py` and `tests/oxml/test_xmlchemy.py` of
+  python-docx. The test paths mark them as test files, and a truncated
+  test file still concerns every search. A Werkzeug file,
+  `werkzeug/serving.py`, is truncated too.
+- `dynamic-flag` is the next cause, and `decorator-wrap` is most of it.
+  The index flags a decorator that is not a bare name, as
+  `@click.option(...)`, `@app.route(...)` and `@functools.wraps(f)`,
+  because the decorator can wrap the function in code that the graph does
+  not see. Every click, Flask or Django project has such a decorator on
+  the path from its roots, so the flag concerns every target of the
+  project. The other flags are `monkey-patch` in httpie, python-docx and
+  the Django unit, `reflection` in fabric and `computed-attribute` in
+  httpie. The `computed-name` records of `click.option(...)` come from the
+  same decorators: the call of a call result has no name.
+- `no-definition` is the first cause when no JavaScript is in the graph: a
+  call of a name that no file defines, as `http.client` in httpie and
+  `.packages.six.moves.http_client` in urllib3, both a module of the
+  standard library or a vendored copy that the graph has no unit for. The
+  Python standard library has no unit in this run.
+- `unknown-receiver` decides 27 of the 63 method targets, and the share is
+  the same in both runs. The receiver forms that the rows name are the
+  cause: a typed parameter, a typed attribute, a function result, and a
+  call on a value that a `for` loop or a comprehension binds.
+- fabric has no root of its own. It is a library, so every exported symbol
+  is a root, and the `root-fallback` uncertainty is on each result.
+- lxml gives no target of its own kind. Its `iterwalk`, `canonicalize` and
+  `iterparse` are compiled, and the unit holds no Python definition for
+  them, so each one ends in the uncertainty of the project.
+
+The numbers say what the plan must change first. The type-hint step moves
+`unknown-receiver`. Before it can show, a Python project needs three
+rules of the index and the link step: a JavaScript file that a Python
+project or a pypi unit ships for a web page is no code of the program, a
+truncated test file concerns only a search that counts the tests, and a
+decorator that a framework rule knows, as a route or a command, wraps the
+function in code that the rule already reads.
