@@ -118,18 +118,28 @@ a workspace. The caller finds the `go.work` file, as the go command does from
 `GOWORK` and the parents of the module directory.
 
 - The build list is the result of minimal version selection with module
-  graph pruning. The graph holds the requirements of each module of the
-  workspace and of the `go.mod` of each such requirement. A `go.mod` below
-  go 1.17 adds the requirements of each `go.mod` that it requires, and so on
-  down the chain. Each path takes its highest version in the graph.
+  graph pruning, as `readModGraph` of the go command builds it. The graph
+  holds the requirements of each module of the workspace and of the
+  `go.mod` of each such requirement. A `go.mod` below go 1.17, a module of
+  the workspace too, adds the requirements of each `go.mod` that it
+  requires, and so on down the chain. Then, while a module that the build
+  needs requires a module below its selected version, the `go.mod` of the
+  selected version joins the graph with each `go.mod` that it requires.
+  Each path takes its highest version in the graph.
+- A requirement on a module of the workspace at a version reads the
+  `go.mod` of that version. The build uses the code of the workspace.
 - Each other module of the workspace is a local source at no version. Its
   code is read inside `LocalRoot`, and `Source.Origin` holds its directory.
 - A `replace` directive of `go.work` wins. Else the `replace` directive of a
   module of the workspace applies. Two modules that replace one module with
   other code make `Discover` fail, as they make the go command fail.
-- With a `go.work` of go 1.22 or later and `vendor/modules.txt` next to it,
-  each module comes from that `vendor` directory, at the version that
-  `modules.txt` lists.
+- The go command reads the workspace from the `vendor` directory next to
+  `go.work` when the `go` directive of `go.work` is go 1.14 or later and
+  the first line of `vendor/modules.txt` holds the `## workspace`
+  annotation that `go work vendor` writes. Each module that `modules.txt`
+  lists with a package then comes from `vendor`, at the version of that
+  list. Outside a workspace, `Discover` reads no `vendor` directory that
+  holds this annotation.
 - `go.work.sum` and the `go.sum` of each module give the hashes.
 
 A wrong version can hide an edge. So `Discover` fails when it cannot know
@@ -162,7 +172,10 @@ from `vendor`. `TestBuildHoldsEachEdgeOfGoListInAWorkspace` puts this
 repository in a workspace with a probe module. For a workspace, and for a
 project of `MODGRAPH_ORACLE_DIRS` with a `go.work`, the test checks each
 module that the workspace uses. It also checks that `Discover` gives each
-version of the build list that `go list -m all` gives. The test needs the `go` command and a module cache, and skips
+version of the build list that `go list -m all` gives.
+`TestDiscoverGivesTheBuildListOfTheGoCommand` serves synthetic modules
+from a proxy on the disk and compares `Discover` with `go list -m all` for
+workspaces where the versions of two modules differ. The test needs the `go` command and a module cache, and skips
 with neither. It sets `GOPROXY=off`, so it downloads nothing.
 
 ## Not covered

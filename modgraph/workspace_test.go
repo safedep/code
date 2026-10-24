@@ -45,6 +45,7 @@ func TestDiscoverGivesTheBuildListOfTheWorkspace(t *testing.T) {
 		cachedModule("example.com/y", "v1.0.0", "module example.com/y\n\ngo 1.22\n\nrequire example.com/z v1.1.0\n", nil),
 		cachedModule("example.com/old", "v1.0.0", "module example.com/old\n\ngo 1.16\n\nrequire example.com/w v1.0.0\n", nil),
 		cachedModule("example.com/w", "v1.0.0", "module example.com/w\n\ngo 1.22\n\nrequire example.com/q v1.3.0\n", nil),
+		cachedModule("example.com/b", "v0.1.0", "module example.com/b\n\ngo 1.22\n", nil),
 		cachedModule("example.com/q", "v1.3.0", "module example.com/q\n\ngo 1.22\n", nil),
 		cachedModule("example.com/z", "v1.1.0", "module example.com/z\n\ngo 1.22\n", map[string]string{"z.go": "package z\n"}),
 	))
@@ -143,17 +144,23 @@ func TestDiscoverAppliesTheReplacementsOfTheWorkspace(t *testing.T) {
 }
 
 func TestDiscoverReadsTheVendorDirectoryOfTheWorkspace(t *testing.T) {
-	for _, tc := range []struct {
-		goVersion string
-		vendored  bool
-	}{{"1.22", true}, {"1.21", false}} {
-		t.Run("go "+tc.goVersion, func(t *testing.T) {
+	cases := []struct {
+		name     string
+		work     string
+		modules  string
+		vendored bool
+	}{
+		{"go work vendor wrote it", "go 1.21", "## workspace\n# example.com/v v1.0.0\n## explicit; go 1.21\nexample.com/v\n", true},
+		{"a vendor directory of one module", "go 1.22", "# example.com/v v1.0.0\n## explicit; go 1.21\nexample.com/v\n", false},
+		{"a go.work before go 1.14", "go 1.13", "## workspace\n# example.com/v v1.0.0\nexample.com/v\n", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
 			root, cache := t.TempDir(), t.TempDir()
 			writeFiles(t, root, map[string]string{
-				"go.work":                   "go " + tc.goVersion + "\n\nuse ./a\n",
+				"go.work":                   tc.work + "\n\nuse ./a\n",
 				"a/go.mod":                  "module example.com/a\n\ngo 1.21\n\nrequire example.com/v v1.0.0\n",
-				"a/vendor/modules.txt":      "# example.com/v v1.0.0\nexample.com/v\n",
-				"vendor/modules.txt":        "## workspace\n# example.com/v v1.0.0\n## explicit; go 1.21\nexample.com/v\n",
+				"vendor/modules.txt":        tc.modules,
 				"vendor/example.com/v/v.go": "package v\n",
 			})
 			writeFiles(t, cache, cachedModule("example.com/v", "v1.0.0", "module example.com/v\n\ngo 1.21\n", map[string]string{"c.go": "package v\n"}))
@@ -165,6 +172,38 @@ func TestDiscoverReadsTheVendorDirectoryOfTheWorkspace(t *testing.T) {
 			assert.Equal(t, !tc.vendored, hasFile(t, v.FS, "c.go"))
 		})
 	}
+}
+
+func TestDiscoverReadsAReplacedModuleFromTheVendorDirectoryOfTheWorkspace(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{
+		"go.work":  "go 1.22\n\nuse ./a\n",
+		"a/go.mod": "module example.com/a\n\ngo 1.22\n\nrequire example.com/x v1.0.0\n\nreplace example.com/x => ../fork\n",
+		// go work vendor writes the local path relative to go.work, and adds
+		// a line for the replace of each version.
+		"vendor/modules.txt":        "## workspace\n# example.com/x v1.0.0 => ./fork\n## explicit; go 1.22\nexample.com/x\n# example.com/x => ./fork\n",
+		"vendor/example.com/x/x.go": "package x\n",
+		"fork/go.mod":               "module example.com/x\n\ngo 1.22\n",
+		"fork/f.go":                 "package x\n",
+	})
+	sources, err := Discover(DiscoverOptions{Dir: filepath.Join(root, "a"), Work: filepath.Join(root, "go.work"), LocalRoot: root})
+	require.NoError(t, err)
+	x := sourceOf(t, sources, "example.com/x")
+	assert.Equal(t, "v1.0.0", x.Module.Version, "the wildcard line keeps the version")
+	assert.True(t, hasFile(t, x.FS, "x.go"), "the go command builds the vendor copy")
+}
+
+func TestDiscoverSkipsTheVendorDirectoryOfAWorkspaceOutsideWorkspaceMode(t *testing.T) {
+	root, cache := t.TempDir(), t.TempDir()
+	writeFiles(t, root, map[string]string{
+		"go.mod":                    "module example.com/a\n\ngo 1.22\n\nrequire example.com/v v1.0.0\n",
+		"vendor/modules.txt":        "## workspace\n# example.com/v v1.0.0\nexample.com/v\n",
+		"vendor/example.com/v/v.go": "package v\n",
+	})
+	writeFiles(t, cache, cachedModule("example.com/v", "v1.0.0", "module example.com/v\n", map[string]string{"c.go": "package v\n"}))
+	sources, err := Discover(DiscoverOptions{Dir: root, ModuleCache: cache})
+	require.NoError(t, err)
+	assert.True(t, hasFile(t, sources[0].FS, "c.go"))
 }
 
 func TestDiscoverRefusesAWorkspaceWhoseBuildListItCannotKnow(t *testing.T) {

@@ -48,6 +48,7 @@ func discoverWorkspace(opts DiscoverOptions) ([]Source, error) {
 
 	var list []gomodule.Version
 	if w.vendorMode() {
+		d.vendorMode = true
 		d.vendored = readVendorList(filepath.Join(w.dir, "vendor", "modules.txt"))
 		for path, v := range d.vendored {
 			list = append(list, gomodule.Version{Path: path, Version: v.version})
@@ -144,6 +145,9 @@ func (w *workspace) main(path string) *mainModule {
 }
 
 func (w *workspace) mainAt(dir string) *mainModule {
+	if abs, err := filepath.Abs(dir); err == nil {
+		dir = abs
+	}
 	dir = resolved(dir)
 	for i := range w.mains {
 		if w.mains[i].dir == dir {
@@ -154,14 +158,17 @@ func (w *workspace) mainAt(dir string) *mainModule {
 }
 
 // vendorMode reports whether the go command reads the workspace from its
-// vendor directory: vendor/modules.txt next to a go.work of go 1.22 or
-// later.
+// vendor directory: a vendor directory next to go.work, a go directive of
+// go 1.14 or later in go.work, and a vendor/modules.txt that go work vendor
+// wrote for a workspace.
 func (w *workspace) vendorMode() bool {
-	if w.file.Go == nil || version.Compare("go"+w.file.Go.Version, "go1.22") < 0 {
+	if w.file.Go == nil || version.Compare("go"+w.file.Go.Version, "go1.14") < 0 {
 		return false
 	}
-	_, err := os.Stat(filepath.Join(w.dir, "vendor", "modules.txt"))
-	return err == nil
+	if info, err := os.Stat(filepath.Join(w.dir, "vendor")); err != nil || !info.IsDir() {
+		return false
+	}
+	return vendorForWorkspace(filepath.Join(w.dir, "vendor", "modules.txt"))
 }
 
 // replacement returns the module that the go command builds for m: the
@@ -189,66 +196,181 @@ func (w *workspace) replacement(m gomodule.Version) (target, error) {
 	return target{mod: m}, nil
 }
 
-// buildList returns the build list of the workspace, as minimal version
-// selection with module graph pruning gives it: the highest version of
-// each path in a graph of the requirements of each module of the
-// workspace, of the go.mod of each such requirement, and of each go.mod
-// below go 1.17 that a go.mod below go 1.17 requires. A go.mod that the
-// graph needs and that the disk lacks leaves the build list unknown, so it
-// is an error. A wrong version can hide an edge.
+// buildList returns the build list of the workspace as readModGraph of the
+// go command gives it in workspace mode: the highest version of each path
+// in a graph of go.mod requirements. The graph holds the requirements of
+// each module of the workspace and of the go.mod of each such requirement.
+// A go.mod below go 1.17 adds the go.mod of each module that it requires,
+// and so on down the chain. Then, while a module that the build needs
+// requires a module below its selected version, the go.mod of the selected
+// version joins the graph with each go.mod that it requires. A go.mod that
+// the graph needs and that the disk lacks leaves the build list unknown, so
+// it is an error. A wrong version can hide an edge.
 func (w *workspace) buildList(opts DiscoverOptions) ([]gomodule.Version, error) {
-	selected := map[string]string{}
-	type item struct {
-		mod      gomodule.Version
-		unpruned bool
-	}
-	var queue []item
-	// node adds a requirement to the graph. A main module of the workspace
-	// is always the one that the build uses, at no version.
-	node := func(m gomodule.Version) bool {
-		if w.main(m.Path) != nil || m.Version == "none" {
-			return false
-		}
-		if v, ok := selected[m.Path]; !ok || semver.Compare(m.Version, v) > 0 {
-			selected[m.Path] = m.Version
-		}
-		return true
-	}
+	g := &modGraph{w: w, opts: opts, required: map[gomodule.Version][]gomodule.Version{}, loading: map[loadKey]bool{}, selected: map[string]string{}}
 	for _, mm := range w.mains {
-		for _, r := range mm.file.Require {
-			if node(r.Mod) {
-				queue = append(queue, item{mod: r.Mod})
+		g.enqueue(gomodule.Version{Path: mm.path}, loadWorkspace)
+	}
+	if err := g.drain(); err != nil {
+		return nil, err
+	}
+
+	// The reload pass of readModGraph.
+	needed := map[string]bool{}
+	for _, mm := range w.mains {
+		needed[mm.path] = true
+	}
+	seen := map[gomodule.Version]bool{}
+	for {
+		next := map[gomodule.Version]bool{}
+		for p := range needed {
+			m := gomodule.Version{Path: p, Version: g.selectedOf(p)}
+			if !seen[m] {
+				next[m] = true
+				continue
+			}
+			for _, r := range g.required[m] {
+				s := gomodule.Version{Path: r.Path, Version: g.selectedOf(r.Path)}
+				if laterVersion(s.Version, r.Version) && !seen[s] {
+					next[s] = true
+				}
 			}
 		}
-	}
-	loaded := map[item]bool{}
-	for len(queue) > 0 {
-		it := queue[0]
-		queue = queue[1:]
-		if loaded[it] {
-			continue
+		if len(next) == 0 {
+			break
 		}
-		loaded[it] = true
-		t, err := w.replacement(it.mod)
-		if err != nil {
+		for m := range next {
+			g.enqueue(m, loadWorkspace)
+			seen[m] = true
+			needed[m.Path] = true
+		}
+		if err := g.drain(); err != nil {
 			return nil, err
 		}
-		f, err := w.goModOf(opts, t)
-		if err != nil {
-			return nil, err
-		}
-		unpruned := it.unpruned || f.Go == nil || version.Compare("go"+f.Go.Version, "go1.17") < 0
-		for _, r := range f.Require {
-			if node(r.Mod) && unpruned {
-				queue = append(queue, item{mod: r.Mod, unpruned: true})
-			}
-		}
 	}
-	out := make([]gomodule.Version, 0, len(selected))
-	for path, v := range selected {
+
+	out := make([]gomodule.Version, 0, len(g.selected))
+	for path, v := range g.selected {
 		out = append(out, gomodule.Version{Path: path, Version: v})
 	}
 	return out, nil
+}
+
+// laterVersion compares two versions as the go command does, where "" is
+// the version of a module of the workspace, after each other version.
+func laterVersion(a, b string) bool {
+	switch {
+	case a == b:
+		return false
+	case a == "":
+		return true
+	case b == "":
+		return false
+	}
+	return semver.Compare(a, b) > 0
+}
+
+// loadMode is the pruning that a go.mod is loaded at, as in readModGraph.
+type loadMode int
+
+const (
+	// loadPruned loads the requirements of a go.mod and does not follow
+	// them, unless the go.mod is below go 1.17.
+	loadPruned loadMode = iota
+	// loadUnpruned follows each requirement down the chain.
+	loadUnpruned
+	// loadWorkspace loads a go.mod and each go.mod that it requires.
+	loadWorkspace
+)
+
+type loadKey struct {
+	mod  gomodule.Version
+	mode loadMode
+}
+
+// modGraph is the graph of go.mod requirements of a workspace.
+type modGraph struct {
+	w        *workspace
+	opts     DiscoverOptions
+	required map[gomodule.Version][]gomodule.Version
+	unpruned map[gomodule.Version]bool
+	loading  map[loadKey]bool
+	queue    []loadKey
+	selected map[string]string
+}
+
+// selectedOf returns the selected version of a path, "" for a module of
+// the workspace.
+func (g *modGraph) selectedOf(path string) string {
+	if g.w.main(path) != nil {
+		return ""
+	}
+	return g.selected[path]
+}
+
+func (g *modGraph) enqueue(m gomodule.Version, mode loadMode) {
+	if m.Version == "none" || g.loading[loadKey{m, mode}] {
+		return
+	}
+	g.loading[loadKey{m, mode}] = true
+	g.queue = append(g.queue, loadKey{m, mode})
+}
+
+func (g *modGraph) drain() error {
+	for len(g.queue) > 0 {
+		k := g.queue[0]
+		g.queue = g.queue[1:]
+		reqs, unpruned, err := g.load(k.mod)
+		if err != nil {
+			return err
+		}
+		next := loadPruned
+		if unpruned || k.mode == loadUnpruned {
+			next = loadUnpruned
+		}
+		for _, r := range reqs {
+			if k.mode != loadPruned || unpruned {
+				g.enqueue(r, next)
+			}
+		}
+	}
+	return nil
+}
+
+// load reads the requirements of a module version once, adds them to the
+// graph, and reports whether its go.mod is below go 1.17. A module of the
+// workspace at no version is its own go.mod. A versioned requirement on a
+// module of the workspace reads that version, as the go command does.
+func (g *modGraph) load(m gomodule.Version) ([]gomodule.Version, bool, error) {
+	if reqs, ok := g.required[m]; ok {
+		return reqs, g.unpruned[m], nil
+	}
+	var f *modfile.File
+	if mm := g.w.main(m.Path); mm != nil && m.Version == "" {
+		f = mm.file
+	} else {
+		t, err := g.w.replacement(m)
+		if err != nil {
+			return nil, false, err
+		}
+		if f, err = g.w.goModOf(g.opts, t); err != nil {
+			return nil, false, err
+		}
+	}
+	reqs := make([]gomodule.Version, 0, len(f.Require))
+	for _, r := range f.Require {
+		reqs = append(reqs, r.Mod)
+		if v, ok := g.selected[r.Mod.Path]; g.w.main(r.Mod.Path) == nil && r.Mod.Version != "none" && (!ok || laterVersion(r.Mod.Version, v)) {
+			g.selected[r.Mod.Path] = r.Mod.Version
+		}
+	}
+	unpruned := f.Go == nil || version.Compare("go"+f.Go.Version, "go1.17") < 0
+	g.required[m] = reqs
+	if g.unpruned == nil {
+		g.unpruned = map[gomodule.Version]bool{}
+	}
+	g.unpruned[m] = unpruned
+	return reqs, unpruned, nil
 }
 
 // goModOf reads the go.mod of the code of a target: a local directory

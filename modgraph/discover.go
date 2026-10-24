@@ -8,11 +8,11 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"golang.org/x/mod/modfile"
 	gomodule "golang.org/x/mod/module"
+	"golang.org/x/mod/semver"
 )
 
 // DiscoverOptions says where Discover looks for the source of each module.
@@ -51,8 +51,12 @@ func Discover(opts DiscoverOptions) ([]Source, error) {
 	d := finder{
 		opts:      opts,
 		vendorDir: filepath.Join(opts.Dir, "vendor"),
-		vendored:  readVendorList(filepath.Join(opts.Dir, "vendor", "modules.txt")),
 		sums:      readSums(filepath.Join(opts.Dir, "go.sum")),
+	}
+	// The go command reads no vendor directory of a workspace outside
+	// workspace mode.
+	if modules := filepath.Join(opts.Dir, "vendor", "modules.txt"); !vendorForWorkspace(modules) {
+		d.vendored = readVendorList(modules)
 	}
 	var out []Source
 	for _, r := range f.Require {
@@ -128,7 +132,11 @@ type finder struct {
 	opts      DiscoverOptions
 	vendorDir string
 	vendored  map[string]vendored
-	sums      map[gomodule.Version]string
+	// vendorMode reads each module that vendor lists from vendor, as the
+	// go command does for a workspace. Else vendor serves a module only
+	// when it holds the version and the replacement of go.mod.
+	vendorMode bool
+	sums       map[gomodule.Version]string
 }
 
 // source finds the source of the module m, which the go command builds
@@ -140,7 +148,7 @@ func (d finder) source(m gomodule.Version, t target) Source {
 		s.Origin = Module{Path: t.mod.Path, Version: t.mod.Version}
 	}
 	switch v, ok := d.vendored[m.Path]; {
-	case ok && v.holds == t.mod:
+	case ok && (d.vendorMode || v.holds(m.Path) == t.mod):
 		s.FS = os.DirFS(filepath.Join(d.vendorDir, filepath.FromSlash(m.Path)))
 	case t.local():
 		s.FS, s.GoMod = localSource(d.opts.LocalRoot, t.dir())
@@ -232,51 +240,97 @@ func readOptional(name string) []byte {
 	return data
 }
 
-// vendored is a module that vendor/modules.txt lists: the version that
-// the build list holds, and the module that the vendor directory holds for
-// it, the module itself or the target of its replace.
+// vendored is a module that vendor/modules.txt lists with a package: the
+// version that the build list holds, and the target of its replace
+// directive, or the zero module.
 type vendored struct {
-	version string
-	holds   gomodule.Version
+	version     string
+	replacement gomodule.Version
 }
 
-// readVendorList reads the modules that vendor/modules.txt lists. A missing
-// file lists none.
+// holds returns the module that the vendor directory holds for v.
+func (v vendored) holds(path string) gomodule.Version {
+	if v.replacement.Path != "" {
+		return v.replacement
+	}
+	return gomodule.Version{Path: path, Version: v.version}
+}
+
+// readVendorList reads vendor/modules.txt as the go command does. A module
+// enters the list only from a "# path version" line that package lines
+// follow. A line with "=> target" records the replacement of that version,
+// or of each version when the line has no version. A missing file lists
+// none.
 func readVendorList(name string) map[string]vendored {
 	data, err := os.ReadFile(name)
 	if err != nil {
 		return nil
 	}
 	out := map[string]vendored{}
+	replaced := map[gomodule.Version]gomodule.Version{}
+	var mod gomodule.Version
 	sc := bufio.NewScanner(bytes.NewReader(data))
 	for sc.Scan() {
-		// A module line is "# path version", or
-		// "# path [version] => target [version]".
-		fields := strings.Fields(sc.Text())
-		if len(fields) < 3 || fields[0] != "#" {
+		line := sc.Text()
+		if strings.HasPrefix(line, "# ") {
+			f := strings.Fields(line)
+			mod = gomodule.Version{}
+			switch {
+			case len(f) < 3:
+				continue
+			case semver.IsValid(f[2]):
+				mod, f = gomodule.Version{Path: f[1], Version: f[2]}, f[3:]
+			case f[2] == "=>":
+				mod, f = gomodule.Version{Path: f[1]}, f[2:]
+			default:
+				continue
+			}
+			switch {
+			case len(f) == 2 && f[0] == "=>":
+				replaced[mod] = gomodule.Version{Path: f[1]}
+			case len(f) == 3 && f[0] == "=>" && semver.IsValid(f[2]):
+				replaced[mod] = gomodule.Version{Path: f[1], Version: f[2]}
+			}
 			continue
 		}
-		path, rest := fields[1], fields[2:]
-		i := slices.Index(rest, "=>")
-		if i < 0 {
-			out[path] = vendored{version: rest[0], holds: gomodule.Version{Path: path, Version: rest[0]}}
+		f := strings.Fields(line)
+		if mod.Version == "" || len(f) != 1 || strings.HasPrefix(line, "## ") || gomodule.CheckImportPath(f[0]) != nil {
 			continue
 		}
-		v := vendored{}
-		if i == 1 {
-			v.version = rest[0]
+		if v, ok := out[mod.Path]; !ok || semver.Compare(v.version, mod.Version) < 0 {
+			out[mod.Path] = vendored{version: mod.Version}
 		}
-		switch target := rest[i+1:]; len(target) {
-		case 1:
-			v.holds = gomodule.Version{Path: target[0]}
-		case 2:
-			v.holds = gomodule.Version{Path: target[0], Version: target[1]}
-		default:
-			continue
+	}
+	for path, v := range out {
+		if r, ok := replaced[gomodule.Version{Path: path, Version: v.version}]; ok {
+			v.replacement = r
+		} else if r, ok := replaced[gomodule.Version{Path: path}]; ok {
+			v.replacement = r
 		}
 		out[path] = v
 	}
 	return out
+}
+
+// vendorForWorkspace reports whether the first line of vendor/modules.txt
+// marks it as the vendor directory of a workspace, as go work vendor
+// writes it.
+func vendorForWorkspace(name string) bool {
+	data, err := os.ReadFile(name)
+	if err != nil {
+		return false
+	}
+	line, _, _ := strings.Cut(string(data), "\n")
+	annotations, ok := strings.CutPrefix(line, "## ")
+	if !ok {
+		return false
+	}
+	for entry := range strings.SplitSeq(annotations, ";") {
+		if strings.TrimSpace(entry) == "workspace" {
+			return true
+		}
+	}
+	return false
 }
 
 // readSums reads the h1 hash of each module version in go.sum. A go.mod

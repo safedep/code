@@ -117,7 +117,10 @@ func checkWorkspace(t *testing.T, work string) {
 				t.Skip("the module cache does not hold the build list")
 			}
 			env := []string{"GOWORK=" + work}
-			assert.Equal(t, goListBuildList(t, m.dir, env), buildListOf(m.path, sources), "the build list of the workspace")
+			// go list -m all refuses vendor mode.
+			if !w.vendorMode() {
+				assert.Equal(t, goListBuildList(t, m.dir, env), buildListOf(m.path, sources), "the build list of the workspace")
+			}
 			checkAgainstGoList(t, m.dir, sources, env, false)
 		})
 	}
@@ -225,7 +228,9 @@ func oracleSources(t *testing.T, dir, work string) ([]Source, bool) {
 		root = string(filepath.Separator)
 	}
 	sources, err := Discover(DiscoverOptions{Dir: dir, Work: work, ModuleCache: strings.TrimSpace(string(out)), LocalRoot: root})
-	if work != "" && err != nil {
+	// A module cache that lacks a go.mod of the build list skips the test.
+	// Each other error is a defect.
+	if work != "" && err != nil && strings.Contains(err.Error(), "is on the disk") {
 		t.Logf("Discover: %v", err)
 		return nil, false
 	}
