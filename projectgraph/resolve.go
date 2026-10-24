@@ -97,6 +97,12 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			if r.declared && (r.fail == nil || r.fail.name == call.Method) && (r.fail == nil || !b.forwards(r.class)) {
 				b.narrow(site, call.Callee)
 			}
+			// A call of an abstract method of a declared type with no
+			// override in the graph runs the method of a class elsewhere,
+			// as a call of a Go interface with no implementation.
+			if r.fail == nil && r.declared && overrides == 0 && sc.profile.abstractReceiver != "" && b.abstractMethod(r.key) {
+				b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: call.Callee, Receiver: call.Receiver, Method: call.Method, Reason: sc.profile.abstractReceiver})
+			}
 			if r.fail != nil {
 				reason := r.fail.reason
 				// A value of an interface or a trait that no type of the
@@ -554,6 +560,15 @@ func (b *builder) resolveLocal(sc *scope, caller, target string) resolution {
 		r.rule = cmp.Or(r.rule, ruleLocal)
 		return r
 	}
+	// A typed name of the top level of the module, as q in q, n = pair(),
+	// has no node of its own, so its declared type gives its class.
+	if unit == sc.ix.Path && len(segs) > 1 {
+		if class, _, ok := b.typedName(sc, unit, segs[0]); ok {
+			r := b.walkTyped(class, segs[1:])
+			r.rule = cmp.Or(r.rule, ruleLocal)
+			return r
+		}
+	}
 	return b.walkAs(unit, segs, ruleLocal)
 }
 
@@ -685,6 +700,25 @@ func (b *builder) mayBeFirstParty(ix *fileindex.Index, spec string) bool {
 		return ir.FirstPartyFrom(ix.Path, spec)
 	}
 	return r == nil || r.FirstParty(spec)
+}
+
+// pythonAbstract names the decorators of a Python method with no body of
+// its own, which a subclass must give.
+var pythonAbstract = map[string]bool{"@abstractmethod": true, "@abc.abstractmethod": true}
+
+// abstractMethod reports whether a key names a method that a decorator
+// marks abstract, in the project or in a unit of dependency code.
+func (b *builder) abstractMethod(key string) bool {
+	defs := []string{key}
+	if b.defs[key] == nil && b.g.IsExternal(key) {
+		defs, _ = b.unitDefinitions(b.origins[key])
+	}
+	for _, d := range defs {
+		if def := b.defs[d]; def != nil && slices.ContainsFunc(def.Decorators, func(d string) bool { return pythonAbstract[d] }) {
+			return true
+		}
+	}
+	return false
 }
 
 func (b *builder) kindOf(key string) NodeKind {

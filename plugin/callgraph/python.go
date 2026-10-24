@@ -406,5 +406,11 @@ var pythonReflectiveCallees = map[string]bool{
 // pythonReflective reports whether a call reads its value by reflection.
 func pythonReflective(call *sitter.Node, treeData []byte) bool {
 	callee := call.ChildByFieldName("function")
-	return callee != nil && pythonReflectiveCallees[callee.Content(treeData)]
+	return callee != nil && PythonReflectiveCallee(callee.Content(treeData))
+}
+
+// PythonReflectiveCallee reports whether a call of the callee text reads
+// its value by reflection, so the value has no type that the code names.
+func PythonReflectiveCallee(callee string) bool {
+	return pythonReflectiveCallees[callee]
 }

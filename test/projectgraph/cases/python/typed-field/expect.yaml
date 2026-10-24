@@ -1,0 +1,41 @@
+source: safedep:hand
+description: >-
+  The dataclass Job declares the field parser with a hint, and App declares it in the class body and sets
+  it in the constructor. A call on self.parser in a method is a member call of Parser.parse with no record.
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: main.py//Job//work
+    to: factory.py//Parser//parse
+    kind: member
+    confidence: high
+    site: main.py:11
+  - from: main.py//App//go
+    to: factory.py//Parser//parse
+    kind: member
+    confidence: high
+    site: main.py:21
+unresolved: []
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: main.py//Job//work
+        site: main.py:25
+        kind: member
+        confidence: high
+      - key: factory.py//Parser//parse
+        site: main.py:11
+        kind: member
+        confidence: high
+      - key: yaml//load
+        site: factory.py:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: factory.py//Parser//parse
+        site: factory.py:6
+        reached: true

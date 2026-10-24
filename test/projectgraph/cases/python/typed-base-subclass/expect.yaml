@@ -1,0 +1,61 @@
+source: safedep:hand
+description: >-
+  Mine extends the abstract base Doer of the dependency. run types its parameter as Doer, so d.do() is a
+  call of Doer.do, and the class hierarchy analysis adds the override Mine.do of the project and Thing.do of
+  the dependency. Runner has no implementation in the project or in the dependency, so r.run() in other has
+  a record of an interface receiver, as a call of a Go interface with no implementation.
+units:
+  venv/site-packages/dep: pypi:dep@1.0.0
+import_dirs:
+  - venv/site-packages
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: main.py//run
+    to: dep//Doer//do
+    kind: direct
+    confidence: high
+    site: main.py:12
+  - from: main.py//run
+    to: main.py//Mine//do
+    kind: cha
+    confidence: medium
+    site: main.py:12
+  - from: main.py//run
+    to: dep//Thing//do
+    kind: cha
+    confidence: medium
+    site: main.py:12
+  - from: main.py//other
+    to: dep//Runner//run
+    kind: direct
+    confidence: high
+    site: main.py:16
+unresolved:
+  - caller: main.py//other
+    site: main.py:16
+    reason: interface-receiver
+    method: run
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: main.py//run
+        site: main.py:20
+        kind: direct
+        confidence: high
+      - key: main.py//Mine//do
+        site: main.py:12
+        kind: cha
+        confidence: medium
+      - key: yaml//load
+        site: main.py:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.py//Mine//do
+        site: main.py:8
+        reached: true

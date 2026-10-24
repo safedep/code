@@ -1,0 +1,83 @@
+{
+  "version": "2",
+  "index_version": "15",
+  "link_version": "17",
+  "unit": "pypi:dep@1.0.0",
+  "symbols": [
+    {
+      "key": "dep//Doer",
+      "definitions": [
+        "pypi:dep@1.0.0//dep/__init__.py//Doer"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "dep//Doer//do",
+      "definitions": [
+        "pypi:dep@1.0.0//dep/__init__.py//Doer//do"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "dep//Runner",
+      "definitions": [
+        "pypi:dep@1.0.0//dep/__init__.py//Runner"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "dep//Runner//run",
+      "definitions": [
+        "pypi:dep@1.0.0//dep/__init__.py//Runner//run"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "dep//Thing",
+      "definitions": [
+        "pypi:dep@1.0.0//dep/__init__.py//Thing"
+      ],
+      "reaches": [
+        "subprocess//run"
+      ]
+    },
+    {
+      "key": "dep//Thing//do",
+      "definitions": [
+        "pypi:dep@1.0.0//dep/__init__.py//Thing//do"
+      ],
+      "reaches": [
+        "subprocess//run"
+      ]
+    },
+    {
+      "key": "dep//new_doer",
+      "definitions": [
+        "pypi:dep@1.0.0//dep/__init__.py//new_doer"
+      ],
+      "reaches": [
+        "subprocess//run"
+      ]
+    },
+    {
+      "key": "dep//new_runner",
+      "definitions": [
+        "pypi:dep@1.0.0//dep/__init__.py//new_runner"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "dep//new_thing",
+      "definitions": [
+        "pypi:dep@1.0.0//dep/__init__.py//new_thing"
+      ],
+      "reaches": [
+        "subprocess//run"
+      ]
+    }
+  ],
+  "targets": [
+    "abc//abstractmethod",
+    "subprocess//run"
+  ]
+}

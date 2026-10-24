@@ -424,17 +424,18 @@ func childrenByField(node *sitter.Node, field string) []*sitter.Node {
 // typedScope returns the definition in the scope chain of the caller that
 // declares the type of a parameter or a local variable of the name.
 func (p *projection) typedScope(caller, name string) (string, bool) {
-	for scope := caller; fileindex.HasKeyPrefix(scope, p.cg.FileName) && scope != p.cg.FileName; scope = fileindex.Parent(scope) {
-		def, ok := p.defs[scope]
-		if !ok {
-			continue
-		}
-		for _, typed := range [][]fileindex.Typed{def.Params, def.Locals} {
-			for _, t := range typed {
-				if t.Name == name {
-					return scope, true
+	for scope := caller; fileindex.HasKeyPrefix(scope, p.cg.FileName); scope = fileindex.Parent(scope) {
+		if def, ok := p.defs[scope]; ok {
+			for _, typed := range [][]fileindex.Typed{def.Params, def.Locals} {
+				for _, t := range typed {
+					if t.Name == name {
+						return scope, true
+					}
 				}
 			}
+		}
+		if scope == p.cg.FileName {
+			break
 		}
 	}
 	return "", false

@@ -1,0 +1,61 @@
+source: safedep:hand
+description: >-
+  The dependency dep declares the return type of new_thing as Thing and of new_doer as the abstract base
+  Doer. A call on the result of new_thing is a call of Thing.do. A call on the result of new_doer is a call
+  of Doer.do, and the class hierarchy analysis adds Thing.do, the one override in the dependency. Neither
+  site has a record.
+units:
+  venv/site-packages/dep: pypi:dep@1.0.0
+import_dirs:
+  - venv/site-packages
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: main.py//run
+    to: dep//new_thing
+    kind: direct
+    confidence: high
+    site: main.py:5
+  - from: main.py//run
+    to: dep//Thing//do
+    kind: direct
+    confidence: high
+    site: main.py:6
+  - from: main.py//run
+    to: dep//Doer//do
+    kind: direct
+    confidence: high
+    site: main.py:8
+  - from: main.py//run
+    to: dep//Thing//do
+    kind: cha
+    confidence: medium
+    site: main.py:8
+unresolved: []
+results:
+  - target: subprocess//run
+    status: found
+    path:
+      - key: main.py
+      - key: main.py//run
+        site: main.py:12
+        kind: direct
+        confidence: high
+      - key: dep//Thing//do
+        site: main.py:6
+        kind: direct
+        confidence: high
+      - key: pypi:dep@1.0.0//dep/__init__.py//Thing//do
+        site: pypi:dep@1.0.0//dep/__init__.py:18
+        kind: package
+        confidence: high
+      - key: subprocess//run
+        site: pypi:dep@1.0.0//dep/__init__.py:19
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: pypi:dep@1.0.0//dep/__init__.py//Thing//do
+        site: pypi:dep@1.0.0//dep/__init__.py:19
+        reached: true

@@ -212,14 +212,6 @@ var rustReceiverRows = []receiverRow{
 	},
 }
 
-// pythonTypeHints is the step of the Python plan that reads the type hints
-// of a parameter, a local, a field and a return into the index. Most
-// Python rows wait on it. Today a row that reaches the method reaches it
-// through a low hop: the override rule joins the class Thing to its do,
-// so the constructor call in the unit reaches do, and a call on an unknown
-// receiver gets a name edge. The declared type must give the member edge.
-const pythonTypeHints = "the type-hint step of the Python plan"
-
 // pythonReceiverRows are the forms of a Python receiver. A type hint is
 // the only declared type that Python has.
 var pythonReceiverRows = []receiverRow{
@@ -228,32 +220,24 @@ var pythonReceiverRows = []receiverRow{
 		source: "def run():\n    t: Thing = dep.new_thing()\n    t.do()",
 		target: "dep//Thing//do",
 		want:   "found",
-		gap:    pythonTypeHints,
-		today:  "found/low",
 	},
 	{
 		name:   "parameter",
 		source: "def run(t: Thing):\n    t.do()",
 		target: "dep//Thing//do",
 		want:   "found",
-		gap:    pythonTypeHints,
-		today:  "uncertain/unknown-receiver",
 	},
 	{
 		name:   "optional parameter",
 		source: "def run(t: Optional[Thing]):\n    t.do()",
 		target: "dep//Thing//do",
 		want:   "found",
-		gap:    pythonTypeHints,
-		today:  "uncertain/unknown-receiver",
 	},
 	{
 		name:   "union with none parameter",
 		source: "def run(t: Thing | None):\n    t.do()",
 		target: "dep//Thing//do",
 		want:   "found",
-		gap:    pythonTypeHints,
-		today:  "uncertain/unknown-receiver",
 	},
 	{
 		name:   "untyped parameter",
@@ -266,72 +250,54 @@ var pythonReceiverRows = []receiverRow{
 		source: "class App:\n    def __init__(self):\n        self.t: Thing = dep.new_thing()\n\n    def go(self):\n        self.t.do()\n\n\ndef run():\n    App().go()",
 		target: "dep//Thing//do",
 		want:   "found",
-		gap:    pythonTypeHints,
-		today:  "found/low",
 	},
 	{
 		name:   "instance attribute from the constructor",
 		source: "class App:\n    def __init__(self):\n        self.t = Thing()\n\n    def go(self):\n        self.t.do()\n\n\ndef run():\n    App().go()",
 		target: "dep//Thing//do",
 		want:   "found",
-		gap:    pythonTypeHints,
-		today:  "found/low",
 	},
 	{
 		name:   "dataclass field",
 		source: "@dataclass\nclass App:\n    t: Thing\n\n\ndef run(a: App):\n    a.t.do()",
 		target: "dep//Thing//do",
 		want:   "found",
-		gap:    pythonTypeHints,
-		today:  "uncertain/unknown-receiver",
 	},
 	{
 		name:   "first-party function return",
 		source: "def make() -> Thing:\n    return dep.new_thing()\n\n\ndef run():\n    t = make()\n    t.do()",
 		target: "dep//Thing//do",
 		want:   "found",
-		gap:    pythonTypeHints,
-		today:  "found/low",
 	},
 	{
 		name:   "external function return",
 		source: "def run():\n    t = dep.new_thing()\n    t.do()",
 		target: "dep//Thing//do",
 		want:   "found",
-		gap:    pythonTypeHints,
-		today:  "found/low",
 	},
 	{
 		name:   "tuple return",
 		source: "def run():\n    t, n = dep.new_pair()\n    t.do()",
 		target: "dep//Thing//do",
 		want:   "found",
-		gap:    pythonTypeHints,
-		today:  "found/low",
 	},
 	{
 		name:   "optional return",
 		source: "def run():\n    t = dep.try_thing()\n    if t is not None:\n        t.do()",
 		target: "dep//Thing//do",
 		want:   "found",
-		gap:    pythonTypeHints,
-		today:  "found/low",
 	},
 	{
 		name:   "chained call",
 		source: "def run():\n    dep.new_thing().do()",
 		target: "dep//Thing//do",
 		want:   "found",
-		gap:    pythonTypeHints,
-		today:  "found/low",
 	},
 	{
 		name:   "chained method call",
 		source: "def run():\n    dep.new_thing().next().do()",
 		target: "dep//Thing//do",
 		want:   "found",
-		gap:    pythonTypeHints,
-		today:  "found/low",
 	},
 	{
 		name:   "instance from the constructor",
@@ -344,16 +310,12 @@ var pythonReceiverRows = []receiverRow{
 		source: "def run():\n    d = dep.new_doer()\n    d.do()",
 		target: "dep//Thing//do",
 		want:   "found",
-		gap:    pythonTypeHints,
-		today:  "found/low",
 	},
 	{
 		name:   "abstract base return with no implementation",
 		source: "def run():\n    r = dep.new_runner()\n    r.run()",
 		target: "other//Job//run",
 		want:   "uncertain/interface-receiver",
-		gap:    pythonTypeHints,
-		today:  "no-such-target",
 	},
 	{
 		name:   "external function return with no dependency code",
@@ -361,8 +323,6 @@ var pythonReceiverRows = []receiverRow{
 		target: "dep//Thing//do",
 		want:   "uncertain/no-dependency-source",
 		noDeps: true,
-		gap:    pythonTypeHints,
-		today:  "no-such-target",
 	},
 }
 

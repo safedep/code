@@ -20,6 +20,8 @@ var pythonProfile = profile{
 	surface:            pythonSurface,
 	symbol:             pythonSymbol,
 	dependencies:       pythonDependencies,
+	declaredTypes:      true,
+	abstractReceiver:   fileindex.UnresolvedInterfaceReceiver,
 	instance:           []string{"self", "cls"},
 	objectBase:         "object",
 	literals:           map[string]bool{"None": true, "True": true, "False": true, "Ellipsis": true, "NotImplemented": true},

@@ -256,6 +256,41 @@ unpacked wheel holds it. These rules apply to it.
   of the wheel. A `test` or a `testing` directory stays, because
   `django.test` and `numpy.testing` are modules that programs import.
 
+A type hint is the only declared type that Python has. The link step
+trusts it as it trusts a TypeScript type, because both are erased at run
+time and a wrong hint gives a wrong edge, not a crash. These rules apply.
+
+- The index records the class name of a hint of a parameter, as `Parser`
+  in `run(p: Parser)` or `run(p: Parser = None)`. `Optional[Parser]`,
+  `Union[Parser, None]` and `Parser | None` give `Parser`, and so does the
+  forward reference `"Parser"`. A builtin, as `int` or `str`, a container,
+  as `list[Parser]`, and a union of two classes give no type.
+- A return hint gives the result type of the function. A tuple hint, as
+  `tuple[Parser, int]`, gives the type of each position, so `p, n =
+  pair()` binds `Parser` to `p`.
+- A local with a hint, as `t: Thing = make()`, has that type. A name that
+  holds the result of a call, as `t = make()` or `a, b = make()`, has the
+  result type of the call at its position, as a Go short variable
+  declaration does. A name of the top level of a module that is no
+  variable of its own, as `q` in `q, n = pair()`, has it too. A call that
+  reads its value by reflection, as `importlib.import_module(name)` or
+  `getattr(o, name)`, gives no type.
+- A class has the fields that its body declares with a hint, as the field
+  of a dataclass, and the attributes of the instance that its methods set,
+  as `self.parser = Parser()` or `self.parser: Parser = p`. The first
+  setting of a name wins.
+- A call on a typed name is a `member` call of the method of its class,
+  with no record. A hint that names a class of a dependency gives the
+  external key of the method, as `dep//Thing//do`, and the class hierarchy
+  analysis adds the `cha` edges to the overrides in the project and in the
+  unit of the dependency. A method that `@abstractmethod` marks, with no
+  override in the graph, is a record with the reason `interface-receiver`,
+  as a Go interface with no implementation.
+- A call on the result of a function with no return hint keeps the rules
+  above the table: a record with the reason `unknown-receiver` and the
+  `name` edges of the method name. A function of a dependency that no unit
+  gives is a record with the reason `no-dependency-source`.
+
 `examples/projectgraph` takes `-site-packages <dir>` and adds each
 distribution of the directory as a unit, by its `.dist-info`.
 

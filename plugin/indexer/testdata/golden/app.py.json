@@ -124,6 +124,13 @@
       "start_line": 23,
       "end_line": 35,
       "exported": true,
+      "locals": [
+        {
+          "name": "p",
+          "type": "Parser",
+          "result": true
+        }
+      ],
       "flags": [
         {
           "kind": "reflection",

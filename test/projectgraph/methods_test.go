@@ -278,7 +278,7 @@ func TestMethodTargets(t *testing.T) {
 	projects, advisories := readMethodCorpus(t)
 
 	counts := methodCounts{}
-	var lines []string
+	var lines, details []string
 	for _, p := range projects {
 		dir, _ := methodDir(t, corpus, p.language, p.source)
 		cfg := codefs.LocalFileSystemConfig{AppDirectories: []string{dir}, ImportUnits: map[string]string{}, ExcludePatterns: codefs.DefaultSkipPatterns(dir)}
@@ -311,6 +311,7 @@ func TestMethodTargets(t *testing.T) {
 			o := outcome(r, methods)
 			counts.add(p.language, targets[i].kind, o)
 			project.add(p.language, targets[i].kind, o)
+			details = append(details, methodDetail(p.name, targets[i].key, o, r))
 		}
 		lines = append(lines, "project="+p.name+" files="+strconv.Itoa(len(g.Files))+" truncated="+strconv.Itoa(len(g.Truncated))+" problems="+strconv.Itoa(len(g.Problems)))
 		for _, row := range project.rows() {
@@ -323,4 +324,26 @@ func TestMethodTargets(t *testing.T) {
 	if out := os.Getenv("PROJECTGRAPH_METHOD_REPORT"); out != "" {
 		require.NoError(t, os.WriteFile(out, []byte(strings.Join(rows, "\n")+"\n"), 0o644))
 	}
+	if out := os.Getenv(methodDetailEnv); out != "" {
+		require.NoError(t, os.WriteFile(out, []byte(strings.Join(details, "\n")+"\n"), 0o644))
+	}
+}
+
+// methodDetailEnv names the file that gets one line per target: the
+// project, the target, the outcome, and the sites of the path or of the
+// uncertainties, so a reader can find the receiver form behind a number
+// of the report.
+const methodDetailEnv = "PROJECTGRAPH_METHOD_DETAIL"
+
+func methodDetail(project, target, outcome string, r reach.Result) string {
+	var sites []string
+	for _, h := range r.Path {
+		if h.Site.Path != "" {
+			sites = append(sites, h.Site.String()+":"+string(h.Confidence))
+		}
+	}
+	for _, u := range r.Uncertainties {
+		sites = append(sites, u.Site.String()+":"+string(u.Kind))
+	}
+	return "project=" + project + " target=" + target + " outcome=" + outcome + " sites=" + strings.Join(sites, ",")
 }
