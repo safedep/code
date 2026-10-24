@@ -62,8 +62,8 @@ func TestDynamicSites(t *testing.T) {
 			{Kind: fileindex.FlagComputedAttribute, Line: 17},
 			{Kind: fileindex.FlagMonkeyPatch, Line: 18},
 			{Kind: fileindex.FlagDecoratorWrap, Line: 31},
-			{Kind: fileindex.FlagModuleGetattr, Line: 37},
-			{Kind: fileindex.FlagParseError, Line: 41},
+			{Kind: fileindex.FlagModuleGetattr, Line: 36},
+			{Kind: fileindex.FlagParseError, Line: 40},
 		}, nil},
 	}
 	for _, tc := range cases {
@@ -100,7 +100,7 @@ func TestFlagLandsOnTheEnclosingDefinition(t *testing.T) {
 	assert.Empty(t, flags["flags.py//plain"])
 	assert.Contains(t, ix.Flags, fileindex.Flag{Kind: fileindex.FlagEval, Line: 13})
 
-	getattr := fileindex.Flag{Kind: fileindex.FlagModuleGetattr, Line: 31}
+	getattr := fileindex.Flag{Kind: fileindex.FlagModuleGetattr, Line: 36}
 	assert.Contains(t, flags["flags.py"], getattr, "a module __getattr__ flags the module")
 	assert.Empty(t, flags["flags.py//__getattr__"])
 	assert.Contains(t, ix.Flags, getattr)

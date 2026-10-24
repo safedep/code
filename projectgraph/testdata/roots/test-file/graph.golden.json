@@ -75,9 +75,6 @@
     "edges": 0,
     "unresolved": 0,
     "roots": 3,
-    "root_fallback": true,
-    "languages": [
-      "python"
-    ]
+    "root_fallback": true
   }
 }
