@@ -19,11 +19,16 @@ import (
 type DiscoverOptions struct {
 	// Dir is the directory of the main go.mod.
 	Dir string
+	// Work is the go.work file of a workspace that uses Dir, or "" for a
+	// module that the go command builds alone. The caller finds it, as the
+	// go command does from GOWORK and the parents of Dir.
+	Work string
 	// ModuleCache is the module cache of the go command, as GOMODCACHE, or ""
 	// for none. The caller finds it, so Discover reads no environment.
 	ModuleCache string
-	// LocalRoot bounds a replace directive with a local path: Discover reads
-	// a replacement only inside it, as the root of the scan. "" reads none.
+	// LocalRoot bounds a replace directive with a local path, and each module
+	// of a workspace: Discover reads such a directory only inside it, as the
+	// root of the scan. "" reads none.
 	LocalRoot string
 }
 
@@ -33,77 +38,128 @@ type DiscoverOptions struct {
 // module at its version, then the module cache. A module with no source
 // gets the go.mod of the module cache, when the cache has it. Discover never
 // downloads, and a module that it cannot find has no source and no go.mod,
-// so Build makes it open.
+// so Build makes it open. With Work, the build list is that of the
+// workspace, and each other module of the workspace is a local source.
 func Discover(opts DiscoverOptions) ([]Source, error) {
-	data, err := os.ReadFile(filepath.Join(opts.Dir, "go.mod"))
-	if err != nil {
-		return nil, fmt.Errorf("modgraph: read go.mod: %w", err)
+	if opts.Work != "" {
+		return discoverWorkspace(opts)
 	}
-	// A lax parse drops the replace directives, and a replaced module read
-	// from the module cache is other code. So go.mod must parse in full.
-	f, err := modfile.Parse("go.mod", data, nil)
+	f, err := parseGoMod(filepath.Join(opts.Dir, "go.mod"))
 	if err != nil {
-		return nil, fmt.Errorf("modgraph: parse go.mod: %w", err)
+		return nil, err
 	}
-	vendored := readVendorList(filepath.Join(opts.Dir, "vendor", "modules.txt"))
-	sums := readSums(filepath.Join(opts.Dir, "go.sum"))
+	d := finder{
+		opts:      opts,
+		vendorDir: filepath.Join(opts.Dir, "vendor"),
+		vendored:  readVendorList(filepath.Join(opts.Dir, "vendor", "modules.txt")),
+		sums:      readSums(filepath.Join(opts.Dir, "go.sum")),
+	}
 	var out []Source
 	for _, r := range f.Require {
-		s := Source{Module: Module{Path: r.Mod.Path, Version: r.Mod.Version}}
-		src := replacement(f, r.Mod)
-		if src != r.Mod {
-			s.Origin = Module{Path: src.Path, Version: src.Version}
+		t := target{base: opts.Dir, mod: r.Mod}
+		if rep := findReplace(f.Replace, r.Mod); rep != nil {
+			t.mod = rep.New
 		}
-		// In vendor mode the go command reads each module from vendor, a
-		// local replacement too.
-		switch {
-		case vendored[r.Mod.Path] == src:
-			s.FS = os.DirFS(filepath.Join(opts.Dir, "vendor", filepath.FromSlash(r.Mod.Path)))
-		case src.Version == "":
-			s.FS, s.GoMod = localSource(opts, src.Path)
-		default:
-			s.FS, s.GoMod = cacheSource(opts.ModuleCache, src)
-			s.Immutable = s.FS != nil
-			s.Sum = sums[src]
-		}
-		out = append(out, s)
+		out = append(out, d.source(r.Mod, t))
 	}
 	return out, nil
 }
 
-// replacement returns the module that the go command builds for a module of
-// the build list: the target of the replace directive of that version, else
-// of a replace directive of every version, else the module itself.
-func replacement(f *modfile.File, m gomodule.Version) gomodule.Version {
+// parseGoMod reads a go.mod in full. A lax parse drops the replace
+// directives, and a replaced module read from the module cache is other
+// code.
+func parseGoMod(name string) (*modfile.File, error) {
+	data, err := os.ReadFile(name)
+	if err != nil {
+		return nil, fmt.Errorf("modgraph: read go.mod: %w", err)
+	}
+	f, err := modfile.Parse(name, data, nil)
+	if err != nil {
+		return nil, fmt.Errorf("modgraph: parse go.mod: %w", err)
+	}
+	return f, nil
+}
+
+// target is the module that the go command builds for a module of the
+// build list, as a replace directive writes it. A local path is relative to
+// base.
+type target struct {
+	base string
+	mod  gomodule.Version
+}
+
+func (t target) local() bool { return t.mod.Version == "" }
+
+// dir is the directory of a local target.
+func (t target) dir() string {
+	dir := filepath.FromSlash(t.mod.Path)
+	if !filepath.IsAbs(dir) {
+		dir = filepath.Join(t.base, dir)
+	}
+	return filepath.Clean(dir)
+}
+
+// same reports whether two targets name the same code.
+func (t target) same(o target) bool {
+	if t.local() || o.local() {
+		return t.local() && o.local() && t.dir() == o.dir()
+	}
+	return t.mod == o.mod
+}
+
+// findReplace returns the replace directive of a module version, else the
+// one of each version of its path, else nil.
+func findReplace(rs []*modfile.Replace, m gomodule.Version) *modfile.Replace {
 	var all *modfile.Replace
-	for _, r := range f.Replace {
+	for _, r := range rs {
 		switch {
 		case r.Old.Path != m.Path:
 		case r.Old.Version == m.Version:
-			return r.New
+			return r
 		case r.Old.Version == "":
 			all = r
 		}
 	}
-	if all != nil {
-		return all.New
-	}
-	return m
+	return all
 }
 
-// localSource returns the source of a replacement with a local path, inside
-// LocalRoot only. Both paths are resolved through links first, and each read
-// of the source resolves its links again, so a link cannot lead the read out
-// of LocalRoot.
-func localSource(opts DiscoverOptions, p string) (fs.FS, []byte) {
-	if opts.LocalRoot == "" {
+// finder finds the source of each module of one build list.
+type finder struct {
+	opts      DiscoverOptions
+	vendorDir string
+	vendored  map[string]vendored
+	sums      map[gomodule.Version]string
+}
+
+// source finds the source of the module m, which the go command builds
+// from t. In vendor mode the go command reads each module from vendor, a
+// local replacement too.
+func (d finder) source(m gomodule.Version, t target) Source {
+	s := Source{Module: Module{Path: m.Path, Version: m.Version}}
+	if t.mod != m {
+		s.Origin = Module{Path: t.mod.Path, Version: t.mod.Version}
+	}
+	switch v, ok := d.vendored[m.Path]; {
+	case ok && v.holds == t.mod:
+		s.FS = os.DirFS(filepath.Join(d.vendorDir, filepath.FromSlash(m.Path)))
+	case t.local():
+		s.FS, s.GoMod = localSource(d.opts.LocalRoot, t.dir())
+	default:
+		s.FS, s.GoMod = cacheSource(d.opts.ModuleCache, t.mod)
+		s.Immutable = s.FS != nil
+		s.Sum = d.sums[t.mod]
+	}
+	return s
+}
+
+// localSource returns the source of a local directory, inside root only.
+// Both paths are resolved through links first, and each read of the source
+// resolves its links again, so a link cannot lead the read out of root.
+func localSource(root, dir string) (fs.FS, []byte) {
+	if root == "" {
 		return nil, nil
 	}
-	dir := filepath.FromSlash(p)
-	if !filepath.IsAbs(dir) {
-		dir = filepath.Join(opts.Dir, dir)
-	}
-	root, err := filepath.EvalSymlinks(opts.LocalRoot)
+	root, err := filepath.EvalSymlinks(root)
 	if err != nil {
 		return nil, nil
 	}
@@ -176,15 +232,22 @@ func readOptional(name string) []byte {
 	return data
 }
 
-// readVendorList reads the modules that vendor/modules.txt lists, each with
-// the module that the vendor directory holds for it: the module itself, or
-// the target of its replace. A missing file lists none.
-func readVendorList(name string) map[string]gomodule.Version {
+// vendored is a module that vendor/modules.txt lists: the version that
+// the build list holds, and the module that the vendor directory holds for
+// it, the module itself or the target of its replace.
+type vendored struct {
+	version string
+	holds   gomodule.Version
+}
+
+// readVendorList reads the modules that vendor/modules.txt lists. A missing
+// file lists none.
+func readVendorList(name string) map[string]vendored {
 	data, err := os.ReadFile(name)
 	if err != nil {
 		return nil
 	}
-	out := map[string]gomodule.Version{}
+	out := map[string]vendored{}
 	sc := bufio.NewScanner(bytes.NewReader(data))
 	for sc.Scan() {
 		// A module line is "# path version", or
@@ -194,17 +257,24 @@ func readVendorList(name string) map[string]gomodule.Version {
 			continue
 		}
 		path, rest := fields[1], fields[2:]
-		if i := slices.Index(rest, "=>"); i >= 0 {
-			target := rest[i+1:]
-			switch len(target) {
-			case 1:
-				out[path] = gomodule.Version{Path: target[0]}
-			case 2:
-				out[path] = gomodule.Version{Path: target[0], Version: target[1]}
-			}
+		i := slices.Index(rest, "=>")
+		if i < 0 {
+			out[path] = vendored{version: rest[0], holds: gomodule.Version{Path: path, Version: rest[0]}}
 			continue
 		}
-		out[path] = gomodule.Version{Path: path, Version: rest[0]}
+		v := vendored{}
+		if i == 1 {
+			v.version = rest[0]
+		}
+		switch target := rest[i+1:]; len(target) {
+		case 1:
+			v.holds = gomodule.Version{Path: target[0]}
+		case 2:
+			v.holds = gomodule.Version{Path: target[0], Version: target[1]}
+		default:
+			continue
+		}
+		out[path] = v
 	}
 	return out
 }

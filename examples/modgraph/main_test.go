@@ -26,13 +26,13 @@ func TestRunPrintsTheGraph(t *testing.T) {
 	}
 
 	var out strings.Builder
-	require.NoError(t, run(&out, dir, cache, false))
+	require.NoError(t, run(&out, dir, "", cache, false))
 	assert.Contains(t, out.String(), "reached   imports   example.com/dep@v1.0.0")
 	assert.Contains(t, out.String(), "example.com/app -> example.com/dep (imports, main.go:3)")
 	assert.Contains(t, out.String(), "example.com/dep -> std (imports, d.go:3)")
 
 	out.Reset()
-	require.NoError(t, run(&out, dir, cache, true))
+	require.NoError(t, run(&out, dir, "", cache, true))
 	var g modgraph.Graph
 	require.NoError(t, json.Unmarshal([]byte(out.String()), &g))
 	dep, ok := g.Node("example.com/dep")
