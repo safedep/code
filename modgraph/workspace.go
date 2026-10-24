@@ -145,9 +145,6 @@ func (w *workspace) main(path string) *mainModule {
 }
 
 func (w *workspace) mainAt(dir string) *mainModule {
-	if abs, err := filepath.Abs(dir); err == nil {
-		dir = abs
-	}
 	dir = resolved(dir)
 	for i := range w.mains {
 		if w.mains[i].dir == dir {

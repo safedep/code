@@ -259,3 +259,18 @@ func TestDiscoverReadsNoWorkspaceModuleOutsideTheLocalRoot(t *testing.T) {
 	_, err := Discover(DiscoverOptions{Dir: filepath.Join(root, "a"), Work: filepath.Join(root, "go.work"), LocalRoot: root})
 	assert.ErrorContains(t, err, "no go.mod inside the local root", "its requirements are part of the build list")
 }
+
+func TestDiscoverTakesRelativePaths(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{
+		"ws/go.work":  "go 1.22\n\nuse ./a\nuse ./b\n",
+		"ws/a/go.mod": "module example.com/a\n\ngo 1.22\n",
+		"ws/b/go.mod": "module example.com/b\n\ngo 1.22\n",
+		"ws/b/b.go":   "package b\n",
+		"other/x.txt": "",
+	})
+	t.Chdir(filepath.Join(root, "other"))
+	sources, err := Discover(DiscoverOptions{Dir: "../ws/a", Work: "../ws/go.work", LocalRoot: "../ws"})
+	require.NoError(t, err)
+	assert.True(t, hasFile(t, sourceOf(t, sources, "example.com/b").FS, "b.go"))
+}

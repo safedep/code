@@ -41,6 +41,18 @@ type DiscoverOptions struct {
 // so Build makes it open. With Work, the build list is that of the
 // workspace, and each other module of the workspace is a local source.
 func Discover(opts DiscoverOptions) ([]Source, error) {
+	// A relative path would meet the resolved, absolute paths of the
+	// workspace and of each local source.
+	for _, p := range []*string{&opts.Dir, &opts.Work, &opts.LocalRoot} {
+		if *p == "" {
+			continue
+		}
+		abs, err := filepath.Abs(*p)
+		if err != nil {
+			return nil, fmt.Errorf("modgraph: %w", err)
+		}
+		*p = abs
+	}
 	if opts.Work != "" {
 		return discoverWorkspace(opts)
 	}
