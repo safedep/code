@@ -1,0 +1,37 @@
+source: safedep:hand
+description: >-
+  The index step fails tests/test_big.py, which is over the size limit of the case. The file is a test file,
+  so it holds only test roots, and its budget counts only for a search that includes the tests. Without the
+  tests, os.system is no such target. With them, the failed file is a budget and os.system is uncertain. A
+  failed file has no index, so the test-path rule marks no root in it.
+max_file_bytes: 200
+test_paths:
+  - tests
+failed:
+  - tests/test_big.py
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+exact_edges: true
+edges:
+  - from: main.py
+    to: yaml//load
+    kind: direct
+    confidence: high
+    site: main.py:4
+  - from: main.py
+    to: open
+    kind: direct
+    confidence: high
+    site: main.py:4
+unresolved: []
+results:
+  - target: os//system
+    status: no-such-target
+  - target: os//system
+    include_tests: true
+    status: uncertain
+    uncertainties:
+      - kind: budget
+        site: tests/test_big.py

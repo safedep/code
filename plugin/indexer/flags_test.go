@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/safedep/code/core"
@@ -24,6 +25,11 @@ func TestDynamicSites(t *testing.T) {
 		file  string
 		code  core.LanguageCode
 		sites []fileindex.Flag
+		// missing names the kinds that no line of the fixture can set. The
+		// JavaScript and the TypeScript grammars read a decorator as a
+		// name, a dotted name or a call of one, so no decorator of theirs
+		// wraps a function in code that the graph cannot name.
+		missing []fileindex.FlagKind
 	}{
 		{"flags.js", core.LanguageCodeJavascript, []fileindex.Flag{
 			{Kind: fileindex.FlagComputedImport, Line: 2},
@@ -34,9 +40,8 @@ func TestDynamicSites(t *testing.T) {
 			{Kind: fileindex.FlagReflection, Line: 14},
 			{Kind: fileindex.FlagComputedAttribute, Line: 15},
 			{Kind: fileindex.FlagMonkeyPatch, Line: 16},
-			{Kind: fileindex.FlagDecoratorWrap, Line: 21},
 			{Kind: fileindex.FlagParseError, Line: 25},
-		}},
+		}, []fileindex.FlagKind{fileindex.FlagDecoratorWrap}},
 		{"flags.ts", core.LanguageCodeTypescript, []fileindex.Flag{
 			{Kind: fileindex.FlagComputedImport, Line: 2},
 			{Kind: fileindex.FlagComputedImport, Line: 6},
@@ -46,10 +51,8 @@ func TestDynamicSites(t *testing.T) {
 			{Kind: fileindex.FlagComputedAttribute, Line: 13},
 			{Kind: fileindex.FlagMonkeyPatch, Line: 14},
 			{Kind: fileindex.FlagMonkeyPatch, Line: 15},
-			{Kind: fileindex.FlagDecoratorWrap, Line: 19},
-			{Kind: fileindex.FlagDecoratorWrap, Line: 21},
 			{Kind: fileindex.FlagParseError, Line: 25},
-		}},
+		}, []fileindex.FlagKind{fileindex.FlagDecoratorWrap}},
 		{"flags.py", core.LanguageCodePython, []fileindex.Flag{
 			{Kind: fileindex.FlagComputedImport, Line: 6},
 			{Kind: fileindex.FlagComputedImport, Line: 8},
@@ -58,10 +61,10 @@ func TestDynamicSites(t *testing.T) {
 			{Kind: fileindex.FlagReflection, Line: 15},
 			{Kind: fileindex.FlagComputedAttribute, Line: 17},
 			{Kind: fileindex.FlagMonkeyPatch, Line: 18},
-			{Kind: fileindex.FlagDecoratorWrap, Line: 21},
-			{Kind: fileindex.FlagModuleGetattr, Line: 31},
-			{Kind: fileindex.FlagParseError, Line: 35},
-		}},
+			{Kind: fileindex.FlagDecoratorWrap, Line: 31},
+			{Kind: fileindex.FlagModuleGetattr, Line: 37},
+			{Kind: fileindex.FlagParseError, Line: 41},
+		}, nil},
 	}
 	for _, tc := range cases {
 		t.Run(tc.file, func(t *testing.T) {
@@ -74,6 +77,9 @@ func TestDynamicSites(t *testing.T) {
 				kinds[flag.Kind] = true
 			}
 			for _, kind := range flagKinds {
+				if slices.Contains(tc.missing, kind) {
+					continue
+				}
 				assert.True(t, kinds[kind], "no fixture line sets %s", kind)
 			}
 		})
@@ -89,7 +95,8 @@ func TestFlagLandsOnTheEnclosingDefinition(t *testing.T) {
 		flags[def.Key] = def.Flags
 	}
 	assert.Contains(t, flags["flags.py//run"], fileindex.Flag{Kind: fileindex.FlagEval, Line: 13})
-	assert.Equal(t, []fileindex.Flag{{Kind: fileindex.FlagDecoratorWrap, Line: 21}}, flags["flags.py//index"])
+	assert.Equal(t, []fileindex.Flag{{Kind: fileindex.FlagDecoratorWrap, Line: 31}}, flags["flags.py//picked"])
+	assert.Empty(t, flags["flags.py//index"], "a decorator that names its code, as @app.route, is no dynamic feature")
 	assert.Empty(t, flags["flags.py//plain"])
 	assert.Contains(t, ix.Flags, fileindex.Flag{Kind: fileindex.FlagEval, Line: 13})
 

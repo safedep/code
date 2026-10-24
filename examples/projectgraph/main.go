@@ -262,6 +262,7 @@ func printReach(ctx context.Context, cfg config, out io.Writer, root string, ind
 	g, err := projectgraph.Build(ctx, indexed.Indexes, projectgraph.Options{
 		Root:      os.DirFS(root),
 		Files:     indexed.Statuses(),
+		Languages: indexed.Languages,
 		TestPaths: fileindex.DefaultTestPaths,
 		Units:     units,
 	})
@@ -313,7 +314,7 @@ func printSummaries(ctx context.Context, out io.Writer, indexed *indexer.Result,
 		if len(indexes) == 0 && len(files) == 0 {
 			return fmt.Errorf("the unit %s has no file to summarize", unit)
 		}
-		s, err := summary.Summarize(ctx, indexes, projectgraph.Options{Files: files, Units: map[string]iofs.FS{unit: units[unit]}})
+		s, err := summary.Summarize(ctx, indexes, projectgraph.Options{Files: files, Languages: indexed.Languages, Units: map[string]iofs.FS{unit: units[unit]}})
 		if err != nil {
 			return fmt.Errorf("failed to summarize %s: %w", unit, err)
 		}

@@ -5,14 +5,16 @@
       "kind": "module",
       "path": "bin/cli.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "lib/run.js": {
       "key": "lib/run.js",
       "kind": "module",
       "path": "lib/run.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "lib/run.js//run": {
       "key": "lib/run.js//run",
@@ -64,11 +66,14 @@
     "lib/run.js": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 2,
     "nodes": 3,
     "edges": 2,
     "unresolved": 0,
-    "roots": 1
+    "roots": 1,
+    "languages": [
+      "javascript"
+    ]
   }
 }

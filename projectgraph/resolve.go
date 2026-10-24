@@ -674,12 +674,16 @@ func (b *builder) resolveModules(ix *fileindex.Index, spec string, form modules.
 // mayBeFirstParty reports whether a module that resolves to no file can be
 // a file of the project or the unit of the file. A search path root, an
 // alias or a build step can resolve a relative module, a module whose first
-// segment names a file or a directory of the project, or any module of a
-// language with no resolver. A Go import path under the path of a module of
-// the project, or a Java name under a package of the project, names a file
-// of the project.
+// segment names a module of the project, or any module of a language with
+// no resolver. A Go import path under the path of a module of the project,
+// or a Java name under a package of the project, names a file of the
+// project. A resolver that reads the importer, as Python does for the
+// directory of a script, gets it.
 func (b *builder) mayBeFirstParty(ix *fileindex.Index, spec string) bool {
 	r := b.spaceOf(ix.Path).resolvers[ix.Language]
+	if ir, ok := r.(modules.ImporterResolver); ok {
+		return ir.FirstPartyFrom(ix.Path, spec)
+	}
 	return r == nil || r.FirstParty(spec)
 }
 

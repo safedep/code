@@ -15,6 +15,7 @@ import (
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/fileindex/store"
 	"github.com/safedep/code/fs"
+	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/parser"
 	"github.com/safedep/code/plugin"
 )
@@ -76,6 +77,12 @@ type Result struct {
 	// package makes only the paths through that package uncertain, so the
 	// two sets stay apart.
 	Dependencies map[string]fileindex.FileStatus
+
+	// Languages holds the language of each file that has a status, by
+	// name, as projectgraph.Options.Languages takes them. The link step
+	// reads it for a file with no index, so it knows the language of a
+	// failed or a missing file.
+	Languages map[string]langcode.Code
 
 	// Report lists the files that the run parsed, skipped and failed.
 	Report *plugin.Report
@@ -203,6 +210,7 @@ func (ix *Indexer) Run(ctx context.Context, fsys core.ImportAwareFileSystem) (*R
 		result: &Result{
 			Files:        make(map[string]fileindex.FileStatus, len(files)),
 			Dependencies: map[string]fileindex.FileStatus{},
+			Languages:    make(map[string]langcode.Code, len(files)),
 			Report:       &plugin.Report{Skipped: skipped},
 		},
 		strs: interner{},
@@ -273,6 +281,7 @@ func (r *run) index(ctx context.Context, files []core.File, byExtension map[stri
 			r.exclude(file)
 			continue
 		}
+		r.result.Languages[file.Name()] = language.Meta().Code
 		data, err := read(file, r.opts.MaxFileBytes)
 		if err != nil {
 			r.fail(ctx, file, core.StageRead, err)

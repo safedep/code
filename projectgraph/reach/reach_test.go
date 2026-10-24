@@ -93,6 +93,16 @@ func graphOf(t *testing.T, spec string) *projectgraph.Graph {
 			n.Flags = append(n.Flags, fileindex.Flag{Kind: fileindex.FlagKind(f[2]), Line: l})
 		case "file":
 			g.Files[f[1]] = fileindex.FileStatus(f[2])
+			if _, ok := g.Nodes[f[1]]; !ok {
+				g.Nodes[f[1]] = &projectgraph.Node{Key: f[1], Kind: projectgraph.NodeModule, Path: f[1], Test: strings.HasPrefix(f[1], "tests/")}
+			}
+			if len(f) > 3 {
+				g.Nodes[f[1]].Language = langcode.Code(f[3])
+			}
+		case "program":
+			for _, code := range f[1:] {
+				g.Stats.Languages = append(g.Stats.Languages, langcode.Code(code))
+			}
 		case "truncated":
 			g.Truncated = append(g.Truncated, projectgraph.Truncation{Kind: projectgraph.TruncationKind(f[1]), Key: arg(f, 2, "")})
 		case "fallback":
@@ -236,6 +246,69 @@ func TestReachUncertainties(t *testing.T) {
 					assert.NotEmpty(t, u.Site.Path, "an uncertainty names its site")
 				}
 			}
+		})
+	}
+}
+
+// TestReachFileBudgets checks which incomplete files count for a search: a
+// file of a language that the program does not run holds no caller that a
+// search can reach, a test file counts only with the tests, and a file of
+// an unknown language counts.
+func TestReachFileBudgets(t *testing.T) {
+	cases := []struct {
+		name         string
+		spec         string
+		includeTests bool
+		want         []UncertaintyKind
+	}{
+		{
+			name: "a failed file of a language that the program runs",
+			spec: "root main.py//main\nfile server.py failed python\nprogram python",
+			want: []UncertaintyKind{Budget},
+		},
+		{
+			name: "a failed file of a language that the program does not run",
+			spec: "root main.py//main\nfile static/vendor.js failed javascript\nprogram python",
+		},
+		{
+			name: "a failed file of an unknown language",
+			spec: "root main.py//main\nfile static/vendor.js failed\nprogram python",
+			want: []UncertaintyKind{Budget},
+		},
+		{
+			name: "a failed file of a graph with no root language",
+			spec: "root main.py//main\nfile static/vendor.js failed javascript",
+			want: []UncertaintyKind{Budget},
+		},
+		{
+			name: "a failed test file without the tests",
+			spec: "root main.py//main\nfile tests/test_big.py failed python\nprogram python",
+		},
+		{
+			name:         "a failed test file with the tests",
+			spec:         "root main.py//main\nfile tests/test_big.py failed python\nprogram python",
+			includeTests: true,
+			want:         []UncertaintyKind{Budget},
+		},
+		{
+			name: "a failed file of a unit in a language that its ecosystem installs",
+			spec: "root main.py//main\nedge main.py//main pypi:dep@1.0.0//dep/a.py//f\nfile pypi:dep@1.0.0//dep/b.py failed python",
+			want: []UncertaintyKind{Budget},
+		},
+		{
+			name: "a failed file of a unit in another language",
+			spec: "root main.py//main\nedge main.py//main pypi:dep@1.0.0//dep/a.py//f\nfile pypi:dep@1.0.0//dep/static/app.js failed javascript",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := graphOf(t, tc.spec)
+			r := reachOne(t, g, Query{Targets: targetsOf(t, "os//system"), IncludeTests: tc.includeTests})
+			if len(tc.want) == 0 {
+				assert.Empty(t, r.Uncertainties)
+				return
+			}
+			assert.Equal(t, tc.want, kinds(r.Uncertainties))
 		})
 	}
 }

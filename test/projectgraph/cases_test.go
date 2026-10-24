@@ -301,7 +301,7 @@ func dumpCase(t *testing.T, dir string, g *projectgraph.Graph, results []caseRes
 func checkSummary(t *testing.T, dir, unit string, indexed *indexer.Result, roots map[string]iofs.FS) {
 	t.Helper()
 	indexes, files := indexed.Unit(unit)
-	r, err := summary.Build(context.Background(), indexes, projectgraph.Options{Files: files, Units: map[string]iofs.FS{unit: roots[unit]}})
+	r, err := summary.Build(context.Background(), indexes, projectgraph.Options{Files: files, Languages: indexed.Languages, Units: map[string]iofs.FS{unit: roots[unit]}})
 	require.NoError(t, err)
 	testutil.AssertGolden(t, filepath.Join(dir, strings.NewReplacer(":", "_", "/", "_", "@", "_").Replace(unit)+".json"), *update, r.Summary)
 	summarytest.AssertStatusMatchesReach(t, r)

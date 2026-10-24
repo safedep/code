@@ -5,7 +5,8 @@
       "kind": "module",
       "path": "lib/api.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "lib/api.py//_private": {
       "key": "lib/api.py//_private",
@@ -26,7 +27,8 @@
       "path": "lib/test_api.py",
       "line": 1,
       "exported": true,
-      "test": true
+      "test": true,
+      "language": "python"
     },
     "lib/test_api.py//test_public": {
       "key": "lib/test_api.py//test_public",
@@ -82,12 +84,15 @@
     "lib/test_api.py": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 2,
     "nodes": 5,
     "edges": 0,
     "unresolved": 0,
     "roots": 4,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "python"
+    ]
   }
 }

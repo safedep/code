@@ -32,6 +32,13 @@ type Options struct {
 	// with no index and a status that is not complete, as missing or
 	// failed, becomes a module node with that status.
 	Files map[string]fileindex.FileStatus
+	// Languages is the language of each file of the index step, by path,
+	// as indexer.Result.Languages gives it. A file with no index gets its
+	// language from here. The reach query leaves out the budget of a file
+	// of a language that the program does not run, as the JavaScript of a
+	// web page in a Python project. A nil map leaves the language of such
+	// a file unknown, and its budget counts.
+	Languages map[string]langcode.Code
 	// TestPaths marks the test files. A glob with no "/" matches one part
 	// of the path, as tests or test_*.py.
 	TestPaths []string
@@ -326,7 +333,7 @@ func (b *builder) linkAll(ctx context.Context) error {
 		ix := b.byPath[p]
 		if ix == nil {
 			b.g.Files[p] = b.opts.Files[p]
-			b.addNode(&Node{Key: p, Kind: NodeModule, Path: p, Test: b.test[p]})
+			b.addNode(&Node{Key: p, Kind: NodeModule, Path: p, Test: b.test[p], Language: b.opts.Languages[p]})
 			continue
 		}
 		b.g.Files[p] = b.status(ix)
@@ -460,6 +467,7 @@ func (b *builder) finish() *Graph {
 	}
 	g.Problems = b.problems
 	g.Stats.Version = Version
+	g.Stats.Languages = b.rootLanguages()
 	g.Stats.Files, g.Stats.Nodes, g.Stats.Edges = len(g.Files), len(g.Nodes), len(g.Edges)
 	g.Stats.Unresolved, g.Stats.Roots = len(g.Unresolved), len(g.Roots)
 	return g

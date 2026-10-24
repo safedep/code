@@ -111,8 +111,11 @@ func Build(ctx context.Context, indexes []*fileindex.Index, opts projectgraph.Op
 	}
 
 	s := &Summary{Version: Version, IndexVersion: fileindex.Version, LinkVersion: projectgraph.Version, Unit: unit, Symbols: []Symbol{}, Targets: []string{}, Problems: g.Problems}
+	// A file that the package does not run, as the JavaScript of a web
+	// page, and a test file of the package hold no code that a symbol
+	// reaches, so they are no budget of the summary.
 	for _, p := range slices.Sorted(maps.Keys(g.Files)) {
-		if !g.Files[p].Complete() {
+		if n := g.Nodes[p]; !g.Files[p].Complete() && g.Runs(p) && (n == nil || !n.Test) {
 			s.Incomplete = append(s.Incomplete, p)
 		}
 	}

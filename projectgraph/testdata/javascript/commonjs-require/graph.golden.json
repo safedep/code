@@ -5,7 +5,8 @@
       "kind": "module",
       "path": "helper.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "helper.js//helper": {
       "key": "helper.js//helper",
@@ -19,7 +20,8 @@
       "kind": "module",
       "path": "lib/index.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "lib/index.js//run": {
       "key": "lib/index.js//run",
@@ -33,7 +35,8 @@
       "kind": "module",
       "path": "main.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     }
   },
   "edges": [
@@ -138,12 +141,15 @@
     "main.js": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 3,
     "nodes": 5,
     "edges": 4,
     "unresolved": 0,
     "roots": 5,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "javascript"
+    ]
   }
 }

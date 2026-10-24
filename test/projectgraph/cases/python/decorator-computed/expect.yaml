@@ -1,0 +1,21 @@
+source: safedep:hand
+description: >-
+  The decorator of run is a lookup in a dict by a name, so the graph cannot name the code that wraps run. The
+  index flags the decorator as decorator-wrap, and the flag concerns every target, so os.system is uncertain.
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: main.py//run
+    to: yaml//load
+    kind: direct
+    confidence: high
+    site: main.py:9
+unresolved: []
+results:
+  - target: os//system
+    status: uncertain
+    uncertainties:
+      - kind: dynamic-flag
+        site: main.py:7

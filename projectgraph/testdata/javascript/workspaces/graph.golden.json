@@ -9,14 +9,16 @@
       "kind": "module",
       "path": "packages/app/src/main.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "packages/core/lib/index.js": {
       "key": "packages/core/lib/index.js",
       "kind": "module",
       "path": "packages/core/lib/index.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "packages/core/lib/index.js//start": {
       "key": "packages/core/lib/index.js//start",
@@ -30,7 +32,8 @@
       "kind": "module",
       "path": "packages/core/util.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "packages/core/util.js//tidy": {
       "key": "packages/core/util.js//tidy",
@@ -127,11 +130,14 @@
     "packages/core/util.js": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 3,
     "nodes": 6,
     "edges": 5,
     "unresolved": 0,
-    "roots": 2
+    "roots": 2,
+    "languages": [
+      "javascript"
+    ]
   }
 }

@@ -5,7 +5,8 @@
       "kind": "module",
       "path": "src/api/index.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "src/api/index.js//parse": {
       "key": "src/api/index.js//parse",
@@ -19,7 +20,8 @@
       "kind": "module",
       "path": "src/core/index.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "src/core/index.js//parse": {
       "key": "src/core/index.js//parse",
@@ -33,7 +35,8 @@
       "kind": "module",
       "path": "src/core/parse.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "src/core/parse.js//doParse": {
       "key": "src/core/parse.js//doParse",
@@ -47,7 +50,8 @@
       "kind": "module",
       "path": "src/main.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     }
   },
   "edges": [
@@ -174,12 +178,15 @@
     "src/main.js": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 4,
     "nodes": 7,
     "edges": 6,
     "unresolved": 0,
     "roots": 5,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "javascript"
+    ]
   }
 }

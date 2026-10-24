@@ -6,7 +6,8 @@
       "path": "tests/test_app.py",
       "line": 1,
       "exported": true,
-      "test": true
+      "test": true,
+      "language": "python"
     },
     "tests/test_app.py//TestApp": {
       "key": "tests/test_app.py//TestApp",
@@ -68,12 +69,15 @@
     "tests/test_app.py": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 1,
     "nodes": 4,
     "edges": 0,
     "unresolved": 0,
     "roots": 3,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "python"
+    ]
   }
 }

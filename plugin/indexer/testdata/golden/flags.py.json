@@ -1,8 +1,8 @@
 {
-  "version": "14",
+  "version": "15",
   "path": "flags.py",
   "language": "python",
-  "content_hash": "d3169e0c3c00508c3f9492866cf4db99ddd780d42dc9e4438558d1d4a22f2621",
+  "content_hash": "9d58772a61d2cb32039a7e81164d1cb50c3c63a536c2676c91e7a36fad954132",
   "imports": [
     {
       "line": 1,
@@ -43,12 +43,12 @@
       "kind": "module",
       "name": "flags",
       "start_line": 1,
-      "end_line": 37,
+      "end_line": 42,
       "exported": true,
       "flags": [
         {
           "kind": "module-getattr",
-          "line": 31
+          "line": 36
         }
       ]
     },
@@ -109,12 +109,6 @@
       "exported": true,
       "decorators": [
         "@app.route"
-      ],
-      "flags": [
-        {
-          "kind": "decorator-wrap",
-          "line": 21
-        }
       ]
     },
     {
@@ -129,24 +123,41 @@
       ]
     },
     {
+      "key": "flags.py//picked",
+      "kind": "function",
+      "name": "picked",
+      "start_line": 32,
+      "end_line": 33,
+      "exported": true,
+      "decorators": [
+        "@handlers[attr]"
+      ],
+      "flags": [
+        {
+          "kind": "decorator-wrap",
+          "line": 31
+        }
+      ]
+    },
+    {
       "key": "flags.py//__getattr__",
       "kind": "function",
       "name": "__getattr__",
-      "start_line": 31,
-      "end_line": 32,
+      "start_line": 36,
+      "end_line": 37,
       "exported": true
     },
     {
       "key": "flags.py//broken",
       "kind": "function",
       "name": "broken",
-      "start_line": 35,
-      "end_line": 36,
+      "start_line": 40,
+      "end_line": 41,
       "exported": true,
       "flags": [
         {
           "kind": "parse-error",
-          "line": 35
+          "line": 40
         }
       ]
     }
@@ -294,7 +305,7 @@
   "references": [
     {
       "caller": "flags.py//__getattr__",
-      "line": 32,
+      "line": 37,
       "column": 12,
       "text": "load",
       "targets": [
@@ -376,15 +387,15 @@
     },
     {
       "kind": "decorator-wrap",
-      "line": 21
-    },
-    {
-      "kind": "module-getattr",
       "line": 31
     },
     {
+      "kind": "module-getattr",
+      "line": 36
+    },
+    {
       "kind": "parse-error",
-      "line": 35
+      "line": 40
     }
   ]
 }

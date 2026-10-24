@@ -130,6 +130,7 @@ order of the indexes.
 | `Root` | The manifests of the project, as `pyproject.toml`. A nil root reads no manifest |
 | `SysPath` | More Python import roots, relative to the project root |
 | `Files` | The status of each file of the index step. A file with no complete index becomes a module node with that status |
+| `Languages` | The language of each file of the index step, as `indexer.Result.Languages` gives it. The module node of a file with no index gets its language from here, so the reach query can tell a file that the program does not run |
 | `TestPaths` | Globs that mark the test files. `fileindex.DefaultTestPaths` holds the common ones |
 | `Rules` | Root rules that go over the embedded ones by id |
 | `Units` | The files of each unit of dependency code, by unit. The link step links each unit as a project of its own |
@@ -414,7 +415,7 @@ causes it.
 | --- | --- |
 | `unresolved-call` | A call that the link step could not resolve, on a path from a root |
 | `dynamic-flag` | A dynamic feature, as `eval` or a computed attribute, in code on a path from a root |
-| `budget` | A missing, failed or truncated file, a limit of the link step, or a search that the depth cap or the deadline stopped |
+| `budget` | A missing, failed or truncated file that the program runs, a limit of the link step, or a search that the depth cap or the deadline stopped |
 | `root-fallback` | No root rule matched, so every exported symbol is a root |
 
 An uncertainty concerns every target, unless its site says less. A call
@@ -428,6 +429,40 @@ it lists at three per kind and keeps the full count in `Searched`.
 A file of dependency code that the index step did not complete counts
 only for a search that enters its package. A file of the project counts
 for every search, because it can hold a root.
+
+Two kinds of incomplete file count for no search, because no search can
+reach a caller in them. `Graph.Runs` decides the first.
+
+- A file of a language that the program does not run. The languages that
+  the program runs are the languages of the files that hold a root other
+  than a test root, in `Graph.Stats.Languages`, and for a unit of dependency code the
+  languages that its ecosystem installs, as Python for `pypi`. A Python
+  project ships the JavaScript of its web pages, and the index step
+  truncates a minified file of it. No Python program runs that file. A
+  file of an unknown language counts, and so does every file of a graph
+  with no root.
+- A test file, which holds only test roots. It counts for a search with
+  `Query.IncludeTests`.
+
+An import that no file of the project or of the unit gives is an external
+node, unless the module can still be first party: a relative module, or a
+module whose first segment a search path root or a build step can give.
+Such an import is a record with the reason `no-definition`, and it
+concerns every target, because the module can hold any code. In Python
+the first segment must be a module or a package under an import root or
+in the directory of the importer, as the import system reads it. A file
+of the name deep in a package, as a `types.py`, is no module of
+`import types`, so that import names the standard library and is external.
+
+A decorator counts as a dynamic feature, with the flag `decorator-wrap`,
+only when the graph cannot name its code, as `@handlers[name]`. A
+decorator that is a name, a dotted name or a call of one, as
+`@app.route("/")` or `@click.option("-v")`, is a call of the scope that
+defines the function, and the link step reads it. A call of the value of
+a call, as `click.option("-v")(f)` in a decorator factory, is no record
+of its own: the graph reaches the code that the inner call gives through
+the inner call. A reflective inner call, as `getattr(o, n)()`, keeps its
+record.
 
 A summary keeps every uncertainty of a symbol in a table, with the targets
 that its scope concerns, so `Status` applies the same rule with no graph.

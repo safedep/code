@@ -1150,3 +1150,59 @@ project or a pypi unit ships for a web page is no code of the program, a
 truncated test file concerns only a search that counts the tests, and a
 decorator that a framework rule knows, as a route or a command, wraps the
 function in code that the rule already reads.
+
+#### After the four rules of the budget, the decorators and the imports
+
+The commit after the baseline adds four rules. `docs/projectgraph.md`
+holds each one.
+
+1. An incomplete file counts for a search only when the program runs its
+   language: a root other than a test root is in a file of that language,
+   or the ecosystem of its unit installs that language. `Graph.Runs`
+   decides it, from `Node.Language` and `Stats.Languages`.
+2. An incomplete test file counts only for a search that includes the
+   tests.
+3. A decorator is a dynamic feature only when the graph cannot name its
+   code, as `@handlers[name]`. A decorator that is a name, a dotted name
+   or a call of one is a call of the scope that defines the function. A
+   call of the value of a call, as `click.option("-v")(f)`, is no record
+   of its own, unless the inner call reflects.
+4. A Python import whose first segment is no module under an import root
+   or in the directory of the importer is external, not a record. Before,
+   `import types` in cryptography was a record because a `types.py` is
+   deep in a package of it, and `from collections import defaultdict` in
+   Django for the same reason. Each such record concerned every target.
+
+The run of the two languages gives the same numbers as the run of
+`python` alone now, so the table has one row per kind.
+
+| Language | Kind | Run | Targets | found | not-found | no-such-target | unknown-receiver | no-definition | ambiguous | computed-name | dynamic-flag | budget |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Python | function | four rules | 44 | 5 | 0 | 0 | 3 | 2 | 14 | 8 | 11 | 1 |
+| Python | method | four rules | 63 | 0 | 0 | 0 | 27 | 6 | 14 | 4 | 8 | 4 |
+
+- `budget` falls from 47 to 5 targets, all of imageio: `_tifffile.py` is a
+  module of 10,182 lines that the index truncates, and it is Python code
+  that the program runs.
+- `dynamic-flag` falls from 19 to 19 targets in the first run and from 31
+  to 19 in the run of `python` alone. What is left is real: `getattr` on a
+  computed name in flask-cors, fabric and pyopenssl, and the monkey patch
+  of python-docx.
+- `no-definition` falls from 31 to 8 in the run of `python` alone. The
+  rest is `.packages.six.moves.http_client` in urllib3, a module that six
+  makes at run time, and three imports of imageio.
+- `ambiguous` and `computed-name` are the first cause now that nothing
+  hides them. Django has `template.render` on an unknown receiver with
+  more than 20 candidate methods, and a definition named `render` reaches
+  most of Django, so the record concerns every target of the corpus that
+  Django code reaches. mkdocs has `config['plugins'].run_event`, a call on
+  a subscript, which computes its name.
+- `found` stays at 5 and `unknown-receiver` at 27 of 63 methods. The
+  rules remove uncertainty that hid these causes. They add no path, as
+  the type-hint step will.
+- pycg-micro keeps its precision of 0.954 and its recall of 0.708. Its
+  unresolved rate falls from 0.340 to 0.312, because an import whose first
+  segment names a file deep in a case is external now. govulncheck stays
+  at 9 of 9 stacks.
+- The receiver table does not change. The 16 Python rows still wait on
+  the type-hint step.

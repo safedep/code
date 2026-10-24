@@ -1,5 +1,5 @@
 source: safedep:hand
-description: api is a Flask app under another name. The decorator @api.route resolves to flask//Flask//route, so config is a root of the rule python.flask.route. helper has no route. The decorator call of config can wrap the function, so the answer for yaml.load is uncertain and not a dead call.
+description: api is a Flask app under another name. The decorator @api.route resolves to flask//Flask//route, so config is a root of the rule python.flask.route. helper has no route and no caller. The decorator of config names its code, so it is no dynamic feature, and yaml.load in helper is a dead call.
 roots:
   - key: app.py//config
     kind: framework
@@ -26,11 +26,8 @@ results:
         site: app.py:9
         reached: true
   - target: yaml//load
-    status: uncertain
+    status: not-found
     call_sites:
       - caller: app.py//helper
         site: app.py:13
         reached: false
-    uncertainties:
-      - kind: dynamic-flag
-        site: app.py:7

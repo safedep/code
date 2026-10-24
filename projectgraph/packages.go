@@ -90,6 +90,14 @@ func (k spaceResolver) FirstParty(spec string) bool {
 	return k.r.FirstParty(spec)
 }
 
+// FirstPartyFrom reads the importer when the resolver of the paths does.
+func (k spaceResolver) FirstPartyFrom(importer, spec string) bool {
+	if ir, ok := k.r.(modules.ImporterResolver); ok {
+		return ir.FirstPartyFrom(k.sp.inner(importer), spec)
+	}
+	return k.r.FirstParty(spec)
+}
+
 // addSpaces makes the space of the project and the space of each unit that
 // has a file. A pypi unit with an __init__.py at its root is its package
 // directory, and its root is the package of the name of the unit.

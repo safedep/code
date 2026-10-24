@@ -42,7 +42,7 @@ func targetsOf(t testing.TB, keys ...string) []reach.Target {
 // go to the link step, so a failed file of either kind is a budget cause.
 func linkProject(t testing.TB, root string, indexed *indexer.Result, opts projectgraph.Options) *projectgraph.Graph {
 	t.Helper()
-	opts.Root, opts.Files = os.DirFS(root), indexed.Statuses()
+	opts.Root, opts.Files, opts.Languages = os.DirFS(root), indexed.Statuses(), indexed.Languages
 	g, err := projectgraph.Build(context.Background(), indexed.Indexes, opts)
 	require.NoError(t, err)
 	return g

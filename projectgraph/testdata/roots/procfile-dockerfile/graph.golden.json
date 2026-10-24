@@ -5,21 +5,24 @@
       "kind": "module",
       "path": "app/__init__.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "app/cli.py": {
       "key": "app/cli.py",
       "kind": "module",
       "path": "app/cli.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "app/wsgi.py": {
       "key": "app/wsgi.py",
       "kind": "module",
       "path": "app/wsgi.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "app/wsgi.py//app": {
       "key": "app/wsgi.py//app",
@@ -33,21 +36,24 @@
       "kind": "module",
       "path": "ignored.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "web/server.js": {
       "key": "web/server.js",
       "kind": "module",
       "path": "web/server.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "worker.py": {
       "key": "worker.py",
       "kind": "module",
       "path": "worker.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     }
   },
   "edges": [],
@@ -108,11 +114,15 @@
     "worker.py": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 6,
     "nodes": 7,
     "edges": 0,
     "unresolved": 0,
-    "roots": 5
+    "roots": 5,
+    "languages": [
+      "javascript",
+      "python"
+    ]
   }
 }

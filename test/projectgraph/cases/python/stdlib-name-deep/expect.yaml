@@ -1,0 +1,51 @@
+source: safedep:hand
+description: >-
+  main.py imports types, a module of the standard library, and the project has a file app/models/types.py. An
+  absolute import resolves against the import roots and the directory of the importer, so the deep file is no
+  module named types, and the import is external and no record. os.system is then no such target. Compare
+  missing-module, where the package of the missing module is at a root.
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: main.py
+    to: app/models/types.py
+    kind: import
+    confidence: high
+    site: main.py:5
+  - from: main.py//run
+    to: types//SimpleNamespace
+    kind: direct
+    confidence: high
+    site: main.py:9
+  - from: main.py//run
+    to: app/models/types.py//Record
+    kind: direct
+    confidence: high
+    site: main.py:10
+  - from: main.py//run
+    to: yaml//load
+    kind: direct
+    confidence: high
+    site: main.py:10
+unresolved: []
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: main.py//run
+        site: main.py:14
+        kind: direct
+        confidence: high
+      - key: yaml//load
+        site: main.py:10
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.py//run
+        site: main.py:10
+        reached: true
+  - target: os//system
+    status: no-such-target

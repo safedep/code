@@ -5,7 +5,8 @@
       "kind": "module",
       "path": "pkg/c.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "pkg/c.py//g": {
       "key": "pkg/c.py//g",
@@ -19,7 +20,8 @@
       "kind": "module",
       "path": "pkg/sub/a.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "pkg/sub/a.py//run": {
       "key": "pkg/sub/a.py//run",
@@ -33,7 +35,8 @@
       "kind": "module",
       "path": "pkg/sub/b.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "pkg/sub/b.py//f": {
       "key": "pkg/sub/b.py//f",
@@ -154,12 +157,15 @@
     "pkg/sub/b.py": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 3,
     "nodes": 6,
     "edges": 4,
     "unresolved": 0,
     "roots": 6,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "python"
+    ]
   }
 }

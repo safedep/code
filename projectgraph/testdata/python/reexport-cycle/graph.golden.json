@@ -5,21 +5,24 @@
       "kind": "module",
       "path": "a/__init__.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "b/__init__.py": {
       "key": "b/__init__.py",
       "kind": "module",
       "path": "b/__init__.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "main.py": {
       "key": "main.py",
       "kind": "module",
       "path": "main.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     }
   },
   "edges": [
@@ -105,12 +108,15 @@
     "main.py": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 3,
     "nodes": 3,
     "edges": 3,
     "unresolved": 1,
     "roots": 3,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "python"
+    ]
   }
 }

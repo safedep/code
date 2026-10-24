@@ -5,14 +5,16 @@
       "kind": "module",
       "path": "app/main.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "lib/shared.py": {
       "key": "lib/shared.py",
       "kind": "module",
       "path": "lib/shared.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "lib/shared.py//go": {
       "key": "lib/shared.py//go",
@@ -82,12 +84,15 @@
     "lib/shared.py": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 2,
     "nodes": 3,
     "edges": 2,
     "unresolved": 0,
     "roots": 3,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "python"
+    ]
   }
 }

@@ -5,7 +5,8 @@
       "kind": "module",
       "path": "src/app/server.ts",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "typescript"
     },
     "src/app/server.ts//serve": {
       "key": "src/app/server.ts//serve",
@@ -19,7 +20,8 @@
       "kind": "module",
       "path": "src/config.ts",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "typescript"
     },
     "src/config.ts//cfg": {
       "key": "src/config.ts//cfg",
@@ -33,7 +35,8 @@
       "kind": "module",
       "path": "src/main.ts",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "typescript"
     }
   },
   "edges": [
@@ -138,12 +141,15 @@
     "src/main.ts": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 3,
     "nodes": 5,
     "edges": 4,
     "unresolved": 0,
     "roots": 5,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "typescript"
+    ]
   }
 }
