@@ -1321,3 +1321,42 @@ TypeScript types. `docs/projectgraph.md` holds the rules.
 - `PROJECTGRAPH_METHOD_DETAIL` now writes one line per target with its
   outcome and the sites of its path or of its uncertainties, so the next
   step can read the cause of each number.
+
+#### After the distribution graph and the standard library unit
+
+The commits after step 3 add steps 5 and 6 of the plan. Neither moves the
+method measure: its corpus names no standard library unit, and the
+distribution graph is a graph of its own.
+
+`distgraph` builds the distribution graph of a Python project, as
+`modgraph` builds the module graph of a Go module. `docs/distgraph.md`
+holds the rules. A run of `examples/distgraph` on httpie 3.2.1 of the
+corpus, with requests 2.28.2, urllib3 1.26.14, idna 3.6 and PyYAML 5.3.1
+unpacked into one site-packages directory, reads 200 files and gives these
+nodes.
+
+| Node | State | Reason |
+| --- | --- | --- |
+| httpie | open | `httpie/cli/argparser.py:576` imports `rich.text`, which the directory does not hold |
+| requests | open | `requests/certs.py:14` imports `certifi`, which the directory does not hold |
+| urllib3 | open | `urllib3/contrib/ntlmpool.py:11` imports `ntlm` outside a guard |
+| PyYAML | open | the extension module `_yaml` can import any module |
+| idna | imports | |
+
+The first two reasons are true of the directory: the environment of the run
+lacks rich and certifi, and a real install has them. The third is the
+rule at work on a `contrib` module whose optional import has no `try`
+guard. The fourth is the rule on an extension module, which
+`TrustCompiled` turns off for a caller that reads the graph for a path and
+not for the absence of one. The edges that the run reads are the ones a
+reader expects: httpie imports requests and urllib3, requests imports idna
+and urllib3, and urllib3 imports idna in `contrib/pyopenssl.py`.
+
+The unit `python:std@<version>` of the `Lib` directory of CPython gives
+the standard library to the project graph. The case
+`python/dependency-stdlib` shows `Thread.start` of the unit reaching the
+`run` of a project class with a `cha` edge, through the external key of
+`Thread` that the class names as its base, and a path into `subprocess`
+that goes on to `os.execvp`. The reach result still reports the shorter
+path through the reference edge of the override rule, because the search
+returns a shortest path.
