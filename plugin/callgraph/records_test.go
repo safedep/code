@@ -235,10 +235,11 @@ func TestUnresolvedCallSites(t *testing.T) {
 			name:     "python computed receiver and call result",
 			language: pythonLanguage(t),
 			file:     "recv.py",
-			source:   "handlers[name].run()\nf()()\nmake(x)(y)\ngetattr(o, n)()\n",
+			source:   "import operator\nhandlers[name].run()\nf()()\nmake(x)(y)\ngetattr(o, n)()\noperator.methodcaller(\"system\", cmd)(os)\n",
 			expected: []site{
 				{"handlers[name].run", "handlers[name]", "run", UnresolvedComputedName},
 				{"getattr(o, n)", "", "", UnresolvedComputedName},
+				{"operator.methodcaller(\"system\", cmd)", "", "", UnresolvedComputedName},
 			},
 		},
 		{

@@ -228,8 +228,9 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 		// decorator factory, runs code that the inner call gives. The
 		// graph reaches that code through the inner call and the
 		// reference edges from its callee, so the outer call is no record
-		// of its own. A reflective inner call, as getattr(o, n), gives a
-		// value that no edge names, so it keeps the record. Any other
+		// of its own. A reflective inner call, as getattr(o, n) or
+		// operator.methodcaller("system"), gives a callable that runs a
+		// name that no edge names, so it keeps the record. Any other
 		// callee computes its name.
 		if function.Type() == "call" && !pythonReflective(function, treeData) {
 			return result
@@ -393,11 +394,13 @@ func dissectAttributeQualifierWithDepth(node *sitter.Node, treeData []byte, curr
 }
 
 // pythonReflectiveCallees name the calls whose value the graph cannot
-// name: a lookup of an attribute or a module by a name, and a run of code
-// in a string.
+// name: a lookup of an attribute or a module by a name, a run of code in
+// a string, and a callable of the operator module that calls a method or
+// reads an attribute by a name, as operator.methodcaller("system")(os).
 var pythonReflectiveCallees = map[string]bool{
 	"getattr": true, "__import__": true, "importlib.import_module": true, "import_module": true,
 	"eval": true, "exec": true, "compile": true,
+	"operator.methodcaller": true, "methodcaller": true, "operator.attrgetter": true, "attrgetter": true,
 }
 
 // pythonReflective reports whether a call reads its value by reflection.
