@@ -145,6 +145,10 @@ a workspace. The caller finds the `go.work` file, as the go command does from
   list. Outside a workspace, `Discover` reads no `vendor` directory that
   holds this annotation.
 - `go.work.sum` and the `go.sum` of each module give the hashes.
+- `go tool` in a workspace runs the tools of each module of the workspace.
+  The graph of a module holds the `tool` directives of its own `go.mod`
+  only. So a caller reads the graph of each module of the workspace before
+  it says that the workspace does not use a module.
 
 A wrong version can hide an edge. So `Discover` fails when it cannot know
 the build list: a `go.mod` that the graph needs is not on the disk, a module
@@ -170,8 +174,8 @@ full.
 
 `TestBuildHoldsEachEdgeOfGoList` runs `go list -deps -test` on this
 repository and the tools of its `go.mod` for four platforms. It checks that
-the graph holds each module edge, or that the edge leaves an open node. `MODGRAPH_ORACLE_DIRS` adds more
-projects, and a project with `vendor/modules.txt` reads its dependencies
+the graph holds each module edge, or that the edge leaves an open node.
+`MODGRAPH_ORACLE_DIRS` adds more projects, and a project with `vendor/modules.txt` reads its dependencies
 from `vendor`. `TestBuildHoldsEachEdgeOfGoListInAWorkspace` puts this
 repository in a workspace with a probe module. For a workspace, and for a
 project of `MODGRAPH_ORACLE_DIRS` with a `go.work`, the test checks each

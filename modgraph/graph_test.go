@@ -157,23 +157,28 @@ func TestBuildReadsTheToolsOfTheMainModule(t *testing.T) {
 		edges []string
 		open  bool
 	}{
-		{"a tool of a dependency", "example.com/gen/cmd/gen", []string{"example.com/app -> example.com/gen", "example.com/gen -> example.com/y"}, false},
-		{"a package of the main module", mainPath, nil, false},
+		{"a tool of a dependency", "example.com/gen/cmd/gen", []string{"example.com/app -> example.com/gen", "example.com/app -> example.com/z (test)", "example.com/gen -> example.com/y"}, false},
+		{"a tool in a directory that the walk of the main module skips", mainPath + "/testdata/gen", []string{"example.com/app -> example.com/gen (test)", "example.com/app -> example.com/y", "example.com/app -> example.com/z (test)", "example.com/gen -> example.com/y"}, false},
 		{"a tool that no module holds", "example.com/missing/cmd", nil, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := build(t, Input{
-				MainFS: withGoMod(fstest.MapFS{"main.go": goSrc("main")}, "module "+mainPath+"\n\ngo 1.24\n\ntool "+tc.tool+"\n"),
+				MainFS: withGoMod(fstest.MapFS{
+					"main.go":             goSrc("main"),
+					"main_test.go":        goSrc("main", "example.com/gen/cmd/gen", "example.com/z"),
+					"testdata/gen/gen.go": goSrc("main", "example.com/y"),
+				}, "module "+mainPath+"\n\ngo 1.24\n\ntool "+tc.tool+"\n"),
 				Modules: []Source{
 					source("example.com/gen", fstest.MapFS{"cmd/gen/gen.go": goSrc("main", "example.com/y")}),
 					source("example.com/y", fstest.MapFS{"y.go": goSrc("y")}),
+					source("example.com/z", fstest.MapFS{"z.go": goSrc("z")}),
 				},
 			})
 			app := node(t, g, mainPath)
 			assert.Equal(t, tc.open, app.Open(), app.Reason)
 			if !tc.open {
-				assert.Equal(t, tc.edges, edgeList(g))
+				assert.Equal(t, tc.edges, edgeList(g), "a tool edge is not test-only, though a test file imports the tool too")
 			}
 		})
 	}
@@ -523,6 +528,7 @@ func TestBuildRejectsABadInput(t *testing.T) {
 		{"the reserved std path as the main module", Input{MainFS: withGoMod(nil, "module std\n\ngo 1.22\n")}, "reserved"},
 		{"a module with no path", Input{MainFS: mainFS(nil), Modules: []Source{{}}}, "no path"},
 		{"the main module in the build list", Input{MainFS: mainFS(nil), Modules: []Source{source(mainPath, nil)}}, "twice"},
+		{"a directive that the go command rejects", Input{MainFS: withGoMod(nil, "module "+mainPath+"\n\ngo 1.22\n\nfuture x\n")}, "parse the go.mod"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
