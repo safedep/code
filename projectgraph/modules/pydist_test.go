@@ -10,7 +10,9 @@ import (
 
 func TestPythonDistributions(t *testing.T) {
 	root := fstest.MapFS{
-		"PyYAML-6.0.1.dist-info/METADATA": {Data: []byte("Metadata-Version: 2.1\nName: PyYAML\nVersion: 6.0.1\nSummary: YAML\n\nThe body.\nName: not this\n")},
+		"PyYAML-6.0.1.dist-info/METADATA": {Data: []byte("Metadata-Version: 2.1\nName: PyYAML\nVersion: 6.0.1\nSummary: YAML\n" +
+			"Requires-Dist: six (>=1.0)\nRequires-Dist: typing_extensions>=4; python_version < \"3.11\"\nRequires-Dist: six\n" +
+			"Requires-Dist: pytest ; extra == 'test'\nRequires-Dist: google-auth[aiohttp]\n\nThe body.\nName: not this\n")},
 		"PyYAML-6.0.1.dist-info/RECORD": {Data: []byte("PyYAML-6.0.1.dist-info/METADATA,sha256=abc,1730\n" +
 			"_yaml/__init__.py,sha256=abc,10\n" +
 			"yaml/__init__.py,sha256=abc,13340\n" +
@@ -39,6 +41,7 @@ func TestPythonDistributions(t *testing.T) {
 	assert.Equal(t, []string{"yaml/_yaml"}, yaml.Compiled)
 	assert.NotContains(t, yaml.Files, "../../bin/yamlc", "a path that leaves the root is no file of the package")
 	assert.Equal(t, []string{"_yaml", "yaml"}, yaml.Roots())
+	assert.Equal(t, []string{"six", "typing_extensions", "google-auth"}, yaml.Requires, "a requirement with an extra marker is no requirement of a plain install")
 
 	google := dists[1]
 	assert.Equal(t, []string{"google"}, google.TopLevel)
@@ -57,4 +60,21 @@ func TestPythonDistributionsWithNoRoot(t *testing.T) {
 	dists, problems := PythonDistributions(nil)
 	assert.Empty(t, dists)
 	assert.Empty(t, problems)
+}
+
+func TestPythonTestPath(t *testing.T) {
+	for p, want := range map[string]bool{
+		"yaml/loader.py":                false,
+		"django/test/client.py":         false,
+		"numpy/testing/__init__.py":     false,
+		"requests/tests/test_api.py":    true,
+		"pkg/test_util.py":              true,
+		"pkg/util_test.py":              true,
+		"pkg/conftest.py":               true,
+		"pkg/__pycache__/mod.py":        true,
+		"six-1.16.0.dist-info/METADATA": true,
+		"pkg-1.0.data/scripts/run.py":   true,
+	} {
+		assert.Equal(t, want, PythonTestPath(p), p)
+	}
 }

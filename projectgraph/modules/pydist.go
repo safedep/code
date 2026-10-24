@@ -26,6 +26,9 @@ type Distribution struct {
 	TopLevel []string
 	Files    []string
 	Compiled []string
+	// Requires holds the names of the distributions that the Requires-Dist
+	// lines of METADATA name with no extra marker, in order, each once.
+	Requires []string
 }
 
 // Unit returns the package unit of the distribution, as pypi:PyYAML@6.0.1.
@@ -81,6 +84,39 @@ func (d Distribution) Roots() []string {
 	}
 	slices.Sort(roots)
 	return slices.Compact(roots)
+}
+
+// requiredName returns the distribution name of a Requires-Dist value, as
+// requests of "requests (>=2.0); python_version >= '3.8'" or of
+// "requests[socks]>=2.0". A requirement with an extra marker, as
+// "; extra == 'socks'", is no requirement of a plain install.
+func requiredName(req string) (string, bool) {
+	spec, marker, _ := strings.Cut(req, ";")
+	if strings.Contains(marker, "extra") {
+		return "", false
+	}
+	end := strings.IndexAny(spec, " [(<>=!~;@")
+	if end < 0 {
+		end = len(spec)
+	}
+	name := strings.TrimSpace(spec[:end])
+	return name, name != ""
+}
+
+// PythonTestPath reports whether no program imports a Python file of a
+// package, by its path under the root of the package: a file under a tests
+// directory, a test file by its name, a conftest.py, a file under a
+// __pycache__, and a file under the .dist-info, .egg-info or .data
+// directory of a wheel. A test or a testing directory stays, because
+// django.test and numpy.testing are modules that programs import.
+func PythonTestPath(p string) bool {
+	base := path.Base(p)
+	if base == "conftest.py" || strings.HasPrefix(base, "test_") || strings.HasSuffix(base, "_test.py") {
+		return true
+	}
+	return slices.ContainsFunc(strings.Split(path.Dir(p), "/"), func(d string) bool {
+		return d == "tests" || d == "__pycache__" || strings.HasSuffix(d, ".dist-info") || strings.HasSuffix(d, ".egg-info") || strings.HasSuffix(d, ".data")
+	})
 }
 
 var pythonNameRun = regexp.MustCompile(`[-_.]+`)
@@ -145,6 +181,11 @@ func readDistribution(root fs.FS, dir string) (Distribution, error) {
 		}
 		if version, ok := strings.CutPrefix(line, "Version: "); ok && d.Version == "" {
 			d.Version = strings.TrimSpace(version)
+		}
+		if req, ok := strings.CutPrefix(line, "Requires-Dist: "); ok {
+			if name, ok := requiredName(req); ok && !slices.Contains(d.Requires, name) {
+				d.Requires = append(d.Requires, name)
+			}
 		}
 	}
 	if d.Name == "" {
