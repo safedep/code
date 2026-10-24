@@ -1256,3 +1256,68 @@ The commit after the four rules adds the rest of step 2 of the plan.
   corpus has a dependency it never imports.
 - pycg-micro keeps 0.954 precision and 0.708 recall, with the unresolved
   rate at 0.312. govulncheck stays at 9 of 9 stacks.
+
+#### After the type hints
+
+The commit after step 2 adds step 3 of the plan: the index reads the
+type hints of Python, and the link step trusts them as it trusts
+TypeScript types. `docs/projectgraph.md` holds the rules.
+
+1. The index records the class of a hint of a parameter, with
+   `Optional`, `Union` and `| None` unwrapped, the return type and the
+   tuple positions of a function, an annotated local, a name that holds
+   the result of a call, a typed name of the top level of a module, and
+   the fields of a class from its annotations and from the attributes
+   that its methods set.
+2. A call on a typed name gets the key of the name in its scope as its
+   target, as the Go index does, so the link step reads the type. A call
+   that the call graph bound to a method of a class of the file keeps
+   that target. A result of a reflective call, as `import_module`, has
+   no type.
+3. A hint that names a dependency class gives the external key of the
+   method. The class hierarchy analysis adds the overrides in the project
+   and in the unit, and an abstract method with no override is a record
+   with the reason `interface-receiver`.
+
+| Language | Kind | Run | Targets | found | found/low | not-found | no-such-target | unknown-receiver | no-definition | ambiguous | computed-name | dynamic-flag | budget |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Python | function | step 3 | 44 | 2 | 17 | 0 | 0 | 0 | 0 | 10 | 4 | 10 | 1 |
+| Python | method | step 3 | 63 | 0 | 35 | 0 | 0 | 4 | 1 | 12 | 2 | 6 | 3 |
+
+| Language | Run | Method targets that end as unknown-receiver |
+| --- | --- | --- |
+| Python | step 3 | 0.063 (4/63) |
+
+- All 16 Python receiver rows that waited on this step give their wanted
+  answer: 14 are `found` with a `member` edge of high confidence or a
+  `cha` edge of medium confidence, the abstract base with no
+  implementation is `uncertain/interface-receiver`, and the external
+  result with no dependency code is `uncertain/no-dependency-source`.
+  The rows have no gap left.
+- The corpus moves two targets. `requests.utils.get_netrc_auth` in httpie
+  goes from `found/low` to `found`. `MultiPartParser.parse` in
+  django-filter goes from `found/low` to `uncertain/ambiguous`: the path
+  before went through `parser.parse()` in `django/template/base.py`,
+  where the call graph did not bind `parser` to the `Parser(...)` call
+  over several lines, so a `name` edge joined the site to every `parse`
+  method of Django. The hint-free assignment now types `parser` as the
+  template `Parser`, and the false path is gone.
+- The other numbers do not move, and the reason is the corpus, not the
+  rules. The paths of the Python targets run through requests, Django
+  4.2 and urllib3 1.26, and that code has no type hints on the receivers
+  that the paths cross: `conn.urlopen(...)` in `requests/adapters.py`
+  binds `conn` to the result of an untyped method, and Django reads
+  `self.request` with no annotation. A project of the corpus that types
+  its own code, as httpie, calls these dependencies through their
+  untyped API. The receiver rows and the six cases of this step prove the
+  mechanism, and the corpus shows how much of the Python ecosystem of
+  2023 the mechanism can read: little, until a dependency ships hints.
+- The 4 `unknown-receiver` method targets of httpie and requests-toolbelt
+  are `urlopen` of urllib3, which requests calls on `conn`, a result of
+  `self.get_connection_with_tls_context(...)` with no hint.
+- pycg-micro keeps 0.954 precision and 0.708 recall, with the unresolved
+  rate at 0.312. Its cases have no type hints. govulncheck stays at 9 of 9
+  stacks.
+- `PROJECTGRAPH_METHOD_DETAIL` now writes one line per target with its
+  outcome and the sites of its path or of its uncertainties, so the next
+  step can read the cause of each number.
