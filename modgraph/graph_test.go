@@ -150,6 +150,35 @@ func TestBuildMarksTheTestOnlyEdgesOfTheMainModule(t *testing.T) {
 	assert.False(t, node(t, g, "example.com/onlytests").Reached)
 }
 
+func TestBuildReadsTheToolsOfTheMainModule(t *testing.T) {
+	cases := []struct {
+		name  string
+		tool  string
+		edges []string
+		open  bool
+	}{
+		{"a tool of a dependency", "example.com/gen/cmd/gen", []string{"example.com/app -> example.com/gen", "example.com/gen -> example.com/y"}, false},
+		{"a package of the main module", mainPath, nil, false},
+		{"a tool that no module holds", "example.com/missing/cmd", nil, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := build(t, Input{
+				MainFS: withGoMod(fstest.MapFS{"main.go": goSrc("main")}, "module "+mainPath+"\n\ngo 1.24\n\ntool "+tc.tool+"\n"),
+				Modules: []Source{
+					source("example.com/gen", fstest.MapFS{"cmd/gen/gen.go": goSrc("main", "example.com/y")}),
+					source("example.com/y", fstest.MapFS{"y.go": goSrc("y")}),
+				},
+			})
+			app := node(t, g, mainPath)
+			assert.Equal(t, tc.open, app.Open(), app.Reason)
+			if !tc.open {
+				assert.Equal(t, tc.edges, edgeList(g))
+			}
+		})
+	}
+}
+
 func TestBuildResolvesAnImportPath(t *testing.T) {
 	cases := []struct {
 		name    string

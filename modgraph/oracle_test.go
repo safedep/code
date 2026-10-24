@@ -246,12 +246,20 @@ type listPackage struct {
 }
 
 // goListEdges returns the module edges of the packages that go list -deps
-// -test gives for a platform, and each import that go list resolves to no
+// -test gives for a platform, for the packages of the module and its tools, and each import that go list resolves to no
 // module. go list -e gives such an import with no package of a module, so
 // it leaves no edge to compare.
 func goListEdges(t *testing.T, dir string, env []string, goos, goarch string) (map[[2]string]bool, []string) {
 	t.Helper()
-	out, err := goCommand(dir, append(slices.Clone(env), "GOOS="+goos, "GOARCH="+goarch, "CGO_ENABLED=1"), "list", "-e", "-deps", "-test", "-json", "./...")
+	args := []string{"list", "-e", "-deps", "-test", "-json", "./..."}
+	// The tool pattern of a workspace names the tools of each module of the
+	// workspace. The graph of a module holds the tools of its go.mod only.
+	mf, err := parseGoMod(filepath.Join(dir, "go.mod"))
+	require.NoError(t, err)
+	for _, tool := range mf.Tool {
+		args = append(args, tool.Path)
+	}
+	out, err := goCommand(dir, append(slices.Clone(env), "GOOS="+goos, "GOARCH="+goarch, "CGO_ENABLED=1"), args...)
 	require.NoError(t, err, "go list -deps")
 	var pkgs []listPackage
 	dec := json.NewDecoder(bytes.NewReader(out))

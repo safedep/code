@@ -30,7 +30,7 @@ import (
 )
 
 // Version changes when Build gives another graph for the same input.
-const Version = "1"
+const Version = "2"
 
 // StdPath is the module path of the node of the standard library. The
 // standard library imports no module of a build list, so the node is a leaf.
@@ -260,7 +260,7 @@ func Build(ctx context.Context, in Input) (*Graph, error) {
 	if err != nil {
 		return nil, fmt.Errorf("modgraph: read the go.mod of the main module: %w", err)
 	}
-	mf, err := modfile.ParseLax("go.mod", data, nil)
+	mf, err := modfile.Parse("go.mod", data, nil)
 	if err != nil {
 		return nil, fmt.Errorf("modgraph: parse the go.mod of the main module: %w", err)
 	}
@@ -277,7 +277,23 @@ func Build(ctx context.Context, in Input) (*Graph, error) {
 	if err != nil {
 		return nil, err
 	}
+	b.tools = toolImports(mf)
 	return b.run()
+}
+
+// toolImports returns the tool directives of a go.mod as imports of the main
+// module. The go command builds a tool with the build list of the module and
+// runs it with go tool, so the module of a tool is a part of the build.
+func toolImports(mf *modfile.File) []importRef {
+	out := make([]importRef, 0, len(mf.Tool))
+	for _, t := range mf.Tool {
+		line := 0
+		if t.Syntax != nil {
+			line = t.Syntax.Start.Line
+		}
+		out = append(out, importRef{Path: t.Path, File: "go.mod", Line: line})
+	}
+	return out
 }
 
 // module is the state of one node during a build.
@@ -308,6 +324,7 @@ type builder struct {
 	main   *module
 	std    *module
 	byPath map[string]*module
+	tools  []importRef
 
 	queue []pkgRef
 	seen  map[pkgRef]bool
@@ -362,6 +379,9 @@ func newBuilder(ctx context.Context, in Input, mainPath string) (*builder, error
 func (b *builder) run() (*Graph, error) {
 	if err := b.walkMain(); err != nil {
 		return nil, err
+	}
+	for _, t := range b.tools {
+		b.link(b.main, t)
 	}
 	if err := b.drain(); err != nil {
 		return nil, err
