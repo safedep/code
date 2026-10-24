@@ -1,0 +1,40 @@
+{
+  "version": "2",
+  "index_version": "15",
+  "link_version": "17",
+  "unit": "pypi:speedy@1.0.0",
+  "symbols": [
+    {
+      "key": "speedy//loads",
+      "definitions": [
+        "pypi:speedy@1.0.0//speedy/__init__.py//loads"
+      ],
+      "reaches": [
+        "json//loads"
+      ]
+    },
+    {
+      "key": "speedy//pure//loads",
+      "definitions": [
+        "pypi:speedy@1.0.0//speedy/pure.py//loads"
+      ],
+      "reaches": [
+        "json//loads"
+      ]
+    }
+  ],
+  "targets": [
+    "json//loads"
+  ],
+  "uncertainties": [
+    {
+      "kind": "unresolved-call",
+      "key": "pypi:speedy@1.0.0//speedy/__init__.py",
+      "site": {
+        "path": "pypi:speedy@1.0.0//speedy/__init__.py",
+        "line": 2
+      },
+      "text": "._speedups (no-dependency-source)"
+    }
+  ]
+}

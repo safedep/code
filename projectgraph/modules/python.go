@@ -19,6 +19,11 @@ type Python struct {
 	roots    []string
 	pkg      string
 	problems problems
+	// topLevel holds the import names that the distribution of the file
+	// set installs, and compiled its modules with no Python source, by
+	// module path, as the .dist-info of a wheel lists them.
+	topLevel []string
+	compiled map[string]bool
 }
 
 // NewPython returns the resolver of a project. The roots are the project
@@ -68,6 +73,40 @@ func (p *Python) SetRootPackage(name string) { p.pkg = name }
 
 // RootPackage returns the name of the package that the file set is, or "".
 func (p *Python) RootPackage() string { return p.pkg }
+
+// SetDistribution gives the resolver the import names and the extension
+// modules of the distribution that the file set is.
+func (p *Python) SetDistribution(d Distribution) {
+	p.topLevel = d.TopLevel
+	p.compiled = make(map[string]bool, len(d.Compiled))
+	for _, m := range d.Compiled {
+		p.compiled[m] = true
+	}
+}
+
+// TopLevel returns the import names that the distribution of the file set
+// installs, or nil when no .dist-info told them.
+func (p *Python) TopLevel() []string { return p.topLevel }
+
+// Compiled reports whether an absolute module that the importer names is
+// an extension module of the distribution, with no Python source. Such a
+// module resolves to no file, and the code that runs in it is unknown.
+func (p *Python) Compiled(importer, module string) bool {
+	if len(p.compiled) == 0 || module == "" || strings.HasPrefix(module, ".") {
+		return false
+	}
+	rel := strings.ReplaceAll(module, ".", "/")
+	roots := p.searchOrder(importer)
+	if dir := Dir(importer); !slices.Contains(roots, dir) {
+		roots = append(roots, dir)
+	}
+	for _, r := range roots {
+		if base, ok := Join(r, rel); ok && p.compiled[base] {
+			return true
+		}
+	}
+	return false
+}
 
 // Problems returns the manifests that the resolver could not read.
 func (p *Python) Problems() []Problem { return p.problems }

@@ -229,6 +229,36 @@ The standard library is a unit too. Pass `GOROOT/src` as the unit
 each import path whose first element has no dot, as `net/http`. The index
 step leaves out the `cmd` module of it, which no program imports.
 
+A `pypi:` unit is a distribution, as a site-packages directory or an
+unpacked wheel holds it. These rules apply to it.
+
+- The root of the unit is the directory that holds its code, so a path
+  inside the unit is the path that Python imports, as `yaml/__init__.py`.
+  A unit whose root is its package directory, with an `__init__.py` at the
+  root, is that package.
+- The link step reads the `.dist-info` directory of the package at the
+  root, when there is one, and matches it by the normalized name. The
+  `top_level.txt` or the `RECORD` gives the import names, so `PyYAML`
+  gives `yaml` and a distribution with several top-level packages gives
+  each one. Without it, the import name is the package name in lower
+  case, with `_` for `-` and `.`.
+- The `RECORD` lists the extension modules, as `yaml/_yaml.so`. Such a
+  module has no Python source, so an import of it is a record with the
+  reason `no-dependency-source`, and the record concerns every target
+  where a search reaches the import.
+- A definition of the unit carries the external key that an importer of
+  its module writes, as `requests//api//get` for `requests/api.py//get`,
+  so a target of a module of the package matches the definition also when
+  only the code of the package calls it.
+- The index step leaves out the test files of the unit: a file under a
+  `tests` directory, a `test_*.py` or `*_test.py` file, a `conftest.py`,
+  and the files of the `.dist-info`, `.egg-info` and `.data` directories
+  of the wheel. A `test` or a `testing` directory stays, because
+  `django.test` and `numpy.testing` are modules that programs import.
+
+`examples/projectgraph` takes `-site-packages <dir>` and adds each
+distribution of the directory as a unit, by its `.dist-info`.
+
 ## Overlay
 
 An overlay is a file of `llm` edges that resolve unresolved sites of a

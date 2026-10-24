@@ -1206,3 +1206,53 @@ The run of the two languages gives the same numbers as the run of
   at 9 of 9 stacks.
 - The receiver table does not change. The 16 Python rows still wait on
   the type-hint step.
+
+#### After the distribution reader, the compiled-module record and the external keys
+
+The commit after the four rules adds the rest of step 2 of the plan.
+
+1. The index step leaves out the test files and the wheel metadata of a
+   pypi unit, as it leaves out the test files of a Go unit.
+2. The link step reads the `.dist-info` at the root of a pypi unit: the
+   import names of `top_level.txt` or `RECORD`, and the extension modules
+   of `RECORD`. An import of an extension module is a record with the
+   reason `no-dependency-source`, because the graph cannot read its code.
+3. A definition of a pypi unit carries the external key that an importer
+   of its module writes, as `requests//api//get`, through the `symbol`
+   rule that Go and Rust had. A target that only the code of its package
+   calls matches the definition.
+4. `outcome` of the measure and of the receiver rows now says `found/low`
+   for a path with a hop of low confidence, as a `name` edge or a
+   `reference` edge of the override rule, and `found` only for a path
+   that the calls and the declared types prove.
+
+| Language | Kind | Run | Targets | found | found/low | not-found | no-such-target | unknown-receiver | no-definition | ambiguous | computed-name | dynamic-flag | budget |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Python | function | step 2 | 44 | 1 | 18 | 0 | 0 | 0 | 0 | 10 | 4 | 10 | 1 |
+| Python | method | step 2 | 63 | 0 | 36 | 0 | 0 | 4 | 1 | 11 | 2 | 6 | 3 |
+
+| Language | Run | Method targets that end as unknown-receiver |
+| --- | --- | --- |
+| Python | step 2 | 0.063 (4/63) |
+
+- The external keys move 54 targets from uncertain to `found/low`. As for
+  Go after FOU-555, most symbols of an advisory are methods that the code
+  of the dependency calls inside its own package, and the match on the
+  definition finds them. Each of these paths has a `name` edge or a
+  `reference` edge. The `name` edges come from calls on unknown receivers
+  inside the unit, as `self.request.GET.get` in Django, which the type
+  hints of step 3 and the instance attributes of the unit must narrow
+  before a path reads as `found`.
+- `unknown-receiver` falls from 27 to 4 method targets, because a reached
+  record with the method name of the target no longer decides the answer
+  when a path reaches the definition. The 4 that stay are requests
+  methods in httpie and requests-toolbelt whose paths the search does not
+  find.
+- The 10 Python receiver rows that reach their method today reach it as
+  `found/low`: the override rule joins the class `Thing` to its `do`, so
+  the constructor call in the unit reaches `do`. The rows keep their gap,
+  because they want the member edge of the declared type.
+- `no-such-target` stays at 0, and `not-found` at 0. No project of the
+  corpus has a dependency it never imports.
+- pycg-micro keeps 0.954 precision and 0.708 recall, with the unresolved
+  rate at 0.312. govulncheck stays at 9 of 9 stacks.

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"testing"
 
 	"github.com/safedep/code/core"
@@ -212,12 +213,11 @@ var rustReceiverRows = []receiverRow{
 }
 
 // pythonTypeHints is the step of the Python plan that reads the type hints
-// of a parameter, a local, a field and a return into the index, and gives
-// a definition of a pypi unit its external key. Most Python rows wait on
-// it. Two forms of today show the gap: a call on a variable that holds
-// the result of an external call gets the false key dep//new_thing//do and
-// no record, so the method is no-such-target, and a call on an unknown
-// receiver is a record and a name edge, so the method is uncertain.
+// of a parameter, a local, a field and a return into the index. Most
+// Python rows wait on it. Today a row that reaches the method reaches it
+// through a low hop: the override rule joins the class Thing to its do,
+// so the constructor call in the unit reaches do, and a call on an unknown
+// receiver gets a name edge. The declared type must give the member edge.
 const pythonTypeHints = "the type-hint step of the Python plan"
 
 // pythonReceiverRows are the forms of a Python receiver. A type hint is
@@ -229,7 +229,7 @@ var pythonReceiverRows = []receiverRow{
 		target: "dep//Thing//do",
 		want:   "found",
 		gap:    pythonTypeHints,
-		today:  "no-such-target",
+		today:  "found/low",
 	},
 	{
 		name:   "parameter",
@@ -267,7 +267,7 @@ var pythonReceiverRows = []receiverRow{
 		target: "dep//Thing//do",
 		want:   "found",
 		gap:    pythonTypeHints,
-		today:  "uncertain/no-definition",
+		today:  "found/low",
 	},
 	{
 		name:   "instance attribute from the constructor",
@@ -275,7 +275,7 @@ var pythonReceiverRows = []receiverRow{
 		target: "dep//Thing//do",
 		want:   "found",
 		gap:    pythonTypeHints,
-		today:  "uncertain/no-definition",
+		today:  "found/low",
 	},
 	{
 		name:   "dataclass field",
@@ -291,7 +291,7 @@ var pythonReceiverRows = []receiverRow{
 		target: "dep//Thing//do",
 		want:   "found",
 		gap:    pythonTypeHints,
-		today:  "uncertain/unknown-receiver",
+		today:  "found/low",
 	},
 	{
 		name:   "external function return",
@@ -299,7 +299,7 @@ var pythonReceiverRows = []receiverRow{
 		target: "dep//Thing//do",
 		want:   "found",
 		gap:    pythonTypeHints,
-		today:  "no-such-target",
+		today:  "found/low",
 	},
 	{
 		name:   "tuple return",
@@ -307,7 +307,7 @@ var pythonReceiverRows = []receiverRow{
 		target: "dep//Thing//do",
 		want:   "found",
 		gap:    pythonTypeHints,
-		today:  "uncertain/unknown-receiver",
+		today:  "found/low",
 	},
 	{
 		name:   "optional return",
@@ -315,7 +315,7 @@ var pythonReceiverRows = []receiverRow{
 		target: "dep//Thing//do",
 		want:   "found",
 		gap:    pythonTypeHints,
-		today:  "no-such-target",
+		today:  "found/low",
 	},
 	{
 		name:   "chained call",
@@ -323,7 +323,7 @@ var pythonReceiverRows = []receiverRow{
 		target: "dep//Thing//do",
 		want:   "found",
 		gap:    pythonTypeHints,
-		today:  "uncertain/unknown-receiver",
+		today:  "found/low",
 	},
 	{
 		name:   "chained method call",
@@ -331,7 +331,7 @@ var pythonReceiverRows = []receiverRow{
 		target: "dep//Thing//do",
 		want:   "found",
 		gap:    pythonTypeHints,
-		today:  "uncertain/unknown-receiver",
+		today:  "found/low",
 	},
 	{
 		name:   "instance from the constructor",
@@ -345,7 +345,7 @@ var pythonReceiverRows = []receiverRow{
 		target: "dep//Thing//do",
 		want:   "found",
 		gap:    pythonTypeHints,
-		today:  "no-such-target",
+		today:  "found/low",
 	},
 	{
 		name:   "abstract base return with no implementation",
@@ -460,10 +460,15 @@ func receiverSource(t *testing.T, language core.LanguageCode) reach.Source {
 	return s
 }
 
-// outcome is the answer for one target: found, not-found, no-such-target,
-// or uncertain with its cause.
+// outcome is the answer for one target: found, found/low when a hop of the
+// path has low confidence, as a reference edge of the override rule,
+// not-found, no-such-target, or uncertain with its cause. A row that wants
+// found asks for a path that the declared types and the calls prove.
 func outcome(r reach.Result, methods map[string]string) string {
-	if r.Status != reach.Uncertain {
+	switch {
+	case r.Status == reach.Found && slices.ContainsFunc(r.Path, func(h reach.Hop) bool { return h.Confidence == projectgraph.ConfidenceLow }):
+		return "found/low"
+	case r.Status != reach.Uncertain:
 		return string(r.Status)
 	}
 	return "uncertain/" + uncertainCause(r, methods)

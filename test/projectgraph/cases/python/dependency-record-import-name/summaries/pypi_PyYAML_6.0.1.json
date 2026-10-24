@@ -1,0 +1,20 @@
+{
+  "version": "2",
+  "index_version": "15",
+  "link_version": "17",
+  "unit": "pypi:PyYAML@6.0.1",
+  "symbols": [
+    {
+      "key": "yaml//load",
+      "definitions": [
+        "pypi:PyYAML@6.0.1//yaml/__init__.py//load"
+      ],
+      "reaches": [
+        "marshal//loads"
+      ]
+    }
+  ],
+  "targets": [
+    "marshal//loads"
+  ]
+}

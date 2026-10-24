@@ -57,7 +57,8 @@ func (p *Python) FirstParty(spec string) bool {
 // FirstPartyFrom reports whether a Python module is relative or starts
 // with the name of a module or a package under an import root or in the
 // directory of the importer, or with the name of the package that the
-// file set is. A file of the name deep in the project, as a types.py in a
+// file set is. An extension module of the distribution counts as a module
+// too. A file of the name deep in the project, as a types.py in a
 // package, is no module of an absolute import, so import types names the
 // standard library and not the file.
 func (p *Python) FirstPartyFrom(importer, spec string) bool {
@@ -65,8 +66,10 @@ func (p *Python) FirstPartyFrom(importer, spec string) bool {
 	if strings.HasPrefix(spec, ".") || p.pkg != "" && first == p.pkg {
 		return true
 	}
-	_, ok := p.Absolute(importer, first)
-	return ok
+	if _, ok := p.Absolute(importer, first); ok {
+		return true
+	}
+	return p.Compiled(importer, first)
 }
 
 // For returns the resolver of the JavaScript or the TypeScript importers.

@@ -87,10 +87,10 @@ type Result struct {
 	// Report lists the files that the run parsed, skipped and failed.
 	Report *plugin.Report
 
-	// Excluded lists the Go files of dependency code that no Go build
-	// reads by default, in walk order: test files, files with //go:build
-	// ignore and files that need a tag the go command never sets. They have
-	// no status, as no program runs their code.
+	// Excluded lists the files of dependency code that no program runs, in
+	// walk order: the Go test files, the Go files with //go:build ignore or
+	// a tag the go command never sets, and the test files and the wheel
+	// metadata of a pypi unit. They have no status.
 	Excluded []string
 }
 
@@ -277,7 +277,7 @@ func (r *run) index(ctx context.Context, files []core.File, byExtension map[stri
 			r.result.Report.Skipped = append(r.result.Report.Skipped, file.Name())
 			continue
 		}
-		if goOutOfBuild(file) {
+		if goOutOfBuild(file) || pythonOutOfBuild(file) {
 			r.exclude(file)
 			continue
 		}

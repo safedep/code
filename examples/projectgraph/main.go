@@ -17,6 +17,11 @@
 // too, as -deps $(go env GOROOT)/src=go:std@go1.25.1, and so is a Rust
 // crate, as -deps vendor/smallvec=cargo:smallvec@1.13.2. With -summary it
 // prints the summary of each such unit as JSON.
+//
+// -site-packages dir reads the .dist-info of each distribution in a Python
+// site-packages directory and adds each one as a unit, with the import
+// names that its RECORD lists. It stands for one -import-dir and one -deps
+// per distribution.
 package main
 
 import (
@@ -41,6 +46,7 @@ import (
 	"github.com/safedep/code/lang"
 	"github.com/safedep/code/plugin/indexer"
 	"github.com/safedep/code/projectgraph"
+	"github.com/safedep/code/projectgraph/modules"
 	"github.com/safedep/code/projectgraph/overlay"
 	"github.com/safedep/code/projectgraph/reach"
 	"github.com/safedep/code/projectgraph/summary"
@@ -111,6 +117,35 @@ func (l *sourceList) Set(value string) error {
 	return nil
 }
 
+// addSitePackages adds each distribution of each -site-packages directory
+// to the -deps and the import directories. A distribution with no Python
+// code, as one that installs only data, adds no unit. The .dist-info of a
+// distribution names the directories and the files that hold its code, so
+// a distribution whose import name differs from its package name, as yaml
+// for PyYAML, and a namespace package that several distributions share
+// both get their units.
+func addSitePackages(cfg config, importDirs *[]string) error {
+	for _, dir := range cfg.sitePackages {
+		abs, err := filepath.Abs(dir)
+		if err != nil {
+			return err
+		}
+		dists, problems := modules.PythonDistributions(os.DirFS(abs))
+		for _, p := range problems {
+			if _, err := fmt.Fprintln(os.Stderr, "site-packages:", p.Path, p.Text); err != nil {
+				return err
+			}
+		}
+		for _, d := range dists {
+			for _, root := range d.Roots() {
+				cfg.deps[filepath.Join(abs, filepath.FromSlash(root))] = d.Unit()
+			}
+		}
+		*importDirs = append(*importDirs, abs)
+	}
+	return nil
+}
+
 // depList is the -deps flags: the unit of each directory of dependency
 // code.
 type depList map[string]string
@@ -141,6 +176,7 @@ type config struct {
 	sourcesOnly  bool
 	importDirs   stringList
 	deps         depList
+	sitePackages stringList
 	summary      bool
 	includeTests bool
 	json         bool
@@ -157,6 +193,7 @@ func main() {
 	flag.BoolVar(&cfg.sourcesOnly, "sources-only", false, "search from the -source entry points alone, not from the roots that the rules mark")
 	flag.Var(cfg.deps, "deps", "directory of a dependency and its unit, as node_modules/lodash=npm:lodash@4.17.21 (repeatable)")
 	flag.Var(&cfg.importDirs, "import-dir", "directory that holds -deps directories, as venv/site-packages (repeatable)")
+	flag.Var(&cfg.sitePackages, "site-packages", "Python site-packages directory whose distributions become units, by their .dist-info (repeatable)")
 	flag.BoolVar(&cfg.summary, "summary", false, "print the summary of each unit of -deps as JSON")
 	flag.BoolVar(&cfg.includeTests, "include-tests", false, "count the test files as roots")
 	flag.BoolVar(&cfg.json, "json", false, "print the reach results as JSON")
@@ -192,6 +229,9 @@ func run(ctx context.Context, cfg config, out io.Writer) (err error) {
 			return err
 		}
 		importDirs = append(importDirs, abs)
+	}
+	if err := addSitePackages(cfg, &importDirs); err != nil {
+		return err
 	}
 	units := map[string]iofs.FS{}
 	for dir, unit := range cfg.deps {

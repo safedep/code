@@ -1,0 +1,66 @@
+source: safedep:hand
+description: >-
+  The unit speedy has an extension module _speedups, which its RECORD lists as a .so file, and a pure Python
+  fallback. The import of the extension module resolves to no file, and the graph cannot read its code, so
+  the import is a record with the reason no-dependency-source, where the import of a module that no file
+  gives would be no-definition. The record concerns every target where a search reaches the import, so
+  os.system is uncertain and not no-such-target. The fallback gives loads, and json.loads is found through
+  it.
+units:
+  venv/site-packages/speedy: pypi:speedy@1.0.0
+import_dirs:
+  - venv/site-packages
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: main.py
+    to: pypi:speedy@1.0.0//speedy/__init__.py
+    kind: import
+    confidence: high
+    site: main.py:1
+  - from: main.py
+    to: speedy//loads
+    kind: direct
+    confidence: high
+    site: main.py:4
+  - from: pypi:speedy@1.0.0//speedy/__init__.py
+    to: pypi:speedy@1.0.0//speedy/pure.py
+    kind: import
+    confidence: high
+    site: pypi:speedy@1.0.0//speedy/__init__.py:4
+unresolved:
+  - caller: pypi:speedy@1.0.0//speedy/__init__.py
+    site: pypi:speedy@1.0.0//speedy/__init__.py:2
+    reason: no-dependency-source
+results:
+  - target: json//loads
+    status: found
+    path:
+      - key: main.py
+      - key: speedy//loads
+        site: main.py:4
+        kind: direct
+        confidence: high
+      - key: pypi:speedy@1.0.0//speedy/__init__.py//loads
+        site: pypi:speedy@1.0.0//speedy/__init__.py:4
+        kind: package
+        confidence: high
+      - key: pypi:speedy@1.0.0//speedy/pure.py//loads
+        site: pypi:speedy@1.0.0//speedy/__init__.py:4
+        kind: export
+        confidence: high
+      - key: json//loads
+        site: pypi:speedy@1.0.0//speedy/pure.py:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: pypi:speedy@1.0.0//speedy/pure.py//loads
+        site: pypi:speedy@1.0.0//speedy/pure.py:5
+        reached: true
+  - target: os//system
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: pypi:speedy@1.0.0//speedy/__init__.py:2

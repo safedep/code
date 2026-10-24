@@ -134,7 +134,9 @@ go test -tags projectgraph -run TestMethodTargets -count=1 -v ./test/projectgrap
 ```
 
 The test logs the count of each answer per language and per symbol kind,
-and the same per project. Set `PROJECTGRAPH_METHOD_REPORT` to a file path
+and the same per project. An answer is `found`, `found/low` for a path with
+a hop of low confidence, `not-found`, `no-such-target`, or `uncertain` with
+its cause. Set `PROJECTGRAPH_METHOD_REPORT` to a file path
 to write the block to that file. Set `PROJECTGRAPH_METHOD_LANGUAGES` to a
 list of languages, as `python`, to index those alone. A Python project
 bundles the JavaScript of its web pages, and a run of `python` alone

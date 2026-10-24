@@ -123,6 +123,9 @@ func (b *builder) addSpaces() error {
 		if sp.pkg.Ecosystem == pypi && sp.files.Has(pythonInit) {
 			sp.python.SetRootPackage(pythonImportName(sp.pkg.Name))
 		}
+		if sp.pkg.Ecosystem == pypi {
+			b.readDistribution(sp)
+		}
 		sp.js = modules.NewJavaScript(sp.files, sp.root)
 		b.addProblems(sp, sp.python.Problems())
 		b.addProblems(sp, sp.js.Problems())
@@ -141,15 +144,50 @@ const (
 // pythonImportName returns the import name that the name of a pypi package
 // gives with no other knowledge: in lower case, with _ for - and for ., as
 // typing_extensions for typing-extensions. A package whose import name
-// differs, as yaml for PyYAML, needs its package directory under an
-// import directory.
+// differs, as yaml for PyYAML, needs the .dist-info of its wheel at the
+// root of the unit, or its package directory under an import directory.
 func pythonImportName(name string) string {
 	return strings.NewReplacer("-", "_", ".", "_").Replace(strings.ToLower(name))
 }
 
+// readDistribution reads the .dist-info directories at the root of a pypi
+// unit, as a site-packages directory or an unpacked wheel holds them, and
+// gives the resolver of the unit the one of its package: the import names
+// that it installs and its extension modules. A root with several
+// distributions, as site-packages, matches by the normalized name, and by
+// the version when two share the name.
+func (b *builder) readDistribution(sp *space) {
+	dists, problems := modules.PythonDistributions(sp.root)
+	b.addProblems(sp, problems)
+	name := modules.NormalizePythonName(sp.pkg.Name)
+	var found *modules.Distribution
+	for i := range dists {
+		d := &dists[i]
+		if modules.NormalizePythonName(d.Name) != name {
+			continue
+		}
+		if found == nil || d.Version == sp.pkg.Version {
+			found = d
+		}
+	}
+	if found != nil {
+		sp.python.SetDistribution(*found)
+	}
+}
+
+// pythonTopLevel returns the import names that a pypi unit installs: the
+// names of its .dist-info, or else the name of the package as an import
+// writes it.
+func pythonTopLevel(sp *space) []string {
+	if names := sp.python.TopLevel(); len(names) > 0 {
+		return names
+	}
+	return []string{pythonImportName(sp.pkg.Name)}
+}
+
 // checkUnits records a problem and a record of each pypi unit that no
-// import names and that gives no module for its package name. The link
-// step cannot tell which import would load such a unit, so the record
+// import names and that gives no module for any of its import names. The
+// link step cannot tell which import would load such a unit, so the record
 // holds for every search, and it makes uncertain every target that the
 // code of the unit reaches. A build with no project file, as a summary,
 // has no importer, so it skips the check.
@@ -161,12 +199,15 @@ func (b *builder) checkUnits() {
 		if sp.unit == "" || sp.pkg.Ecosystem != pypi || b.named[sp.unit] {
 			continue
 		}
-		name := pythonImportName(sp.pkg.Name)
-		if slices.ContainsFunc(b.provide(sp, langcode.Python, name, modules.FormImport), func(pv provision) bool { return pv.module != "" }) {
+		names := pythonTopLevel(sp)
+		if slices.ContainsFunc(names, func(name string) bool {
+			return slices.ContainsFunc(b.provide(sp, langcode.Python, name, modules.FormImport), func(pv provision) bool { return pv.module != "" })
+		}) {
 			continue
 		}
-		b.problems = append(b.problems, modules.Problem{Path: sp.unit, Text: "no import names the unit, and it gives no module for the package " + name})
-		b.addUnresolved(UnresolvedSite{Site: Site{Path: sp.unit}, Text: name, Reason: fileindex.UnresolvedNoDefinition, Unit: sp.unit})
+		text := strings.Join(names, ", ")
+		b.problems = append(b.problems, modules.Problem{Path: sp.unit, Text: "no import names the unit, and it gives no module for the package " + text})
+		b.addUnresolved(UnresolvedSite{Site: Site{Path: sp.unit}, Text: text, Reason: fileindex.UnresolvedNoDefinition, Unit: sp.unit})
 	}
 }
 
@@ -276,11 +317,13 @@ func (b *builder) deriveKey(parent string, names []string) string {
 
 // provision is the module of a unit that gives the module of an origin. An
 // empty module is a unit that gives the package but not the module, as a
-// subpath that the package does not have.
+// subpath that the package does not have, or an extension module with no
+// Python source, which compiled marks.
 type provision struct {
-	sp     *space
-	module string
-	via    string
+	sp       *space
+	module   string
+	via      string
+	compiled bool
 }
 
 // provisionKey is what the providers of an origin depend on.
