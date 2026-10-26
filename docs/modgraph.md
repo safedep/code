@@ -33,7 +33,11 @@ module, and a path that meets it reaches each module.
 1. `Build` reads each package of the main module, its test files too, as
    `./...` names them. It skips `testdata`, `vendor`, a directory or file
    whose name starts with `_` or `.`, and a directory with a `go.mod` of its
-   own. A link to a file is a file of its package.
+   own. A link to a file is a file of its package. Each `tool` directive of
+   the main `go.mod` is an import of the main module from `go.mod`, because
+   `go tool` builds the tool with the build list of the module. `Build`
+   parses the main `go.mod` as the go command does, so a `go.mod` that the
+   go command rejects is an error.
 2. For each import, the resolver takes the modules of the build list whose
    path is a prefix of the import path, longest first. A module with source
    holds the package when its directory has an entry whose name ends in
@@ -141,6 +145,10 @@ a workspace. The caller finds the `go.work` file, as the go command does from
   list. Outside a workspace, `Discover` reads no `vendor` directory that
   holds this annotation.
 - `go.work.sum` and the `go.sum` of each module give the hashes.
+- `go tool` in a workspace runs the tools of each module of the workspace.
+  The graph of a module holds the `tool` directives of its own `go.mod`
+  only. So a caller reads the graph of each module of the workspace before
+  it says that the workspace does not use a module.
 
 A wrong version can hide an edge. So `Discover` fails when it cannot know
 the build list: a `go.mod` that the graph needs is not on the disk, a module
@@ -165,9 +173,9 @@ full.
 ## Oracle test
 
 `TestBuildHoldsEachEdgeOfGoList` runs `go list -deps -test` on this
-repository for four platforms and checks that the graph holds each module
-edge, or that the edge leaves an open node. `MODGRAPH_ORACLE_DIRS` adds more
-projects, and a project with `vendor/modules.txt` reads its dependencies
+repository and the tools of its `go.mod` for four platforms. It checks that
+the graph holds each module edge, or that the edge leaves an open node.
+`MODGRAPH_ORACLE_DIRS` adds more projects, and a project with `vendor/modules.txt` reads its dependencies
 from `vendor`. `TestBuildHoldsEachEdgeOfGoListInAWorkspace` puts this
 repository in a workspace with a probe module. For a workspace, and for a
 project of `MODGRAPH_ORACLE_DIRS` with a `go.work`, the test checks each

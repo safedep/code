@@ -1,6 +1,7 @@
 package modgraph
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,9 +14,11 @@ import (
 	modzip "golang.org/x/mod/zip"
 )
 
-// proxyModule is one module version of a test proxy, with its go.mod.
+// proxyModule is one module version of a test proxy, with its go.mod and
+// the imports of its one package.
 type proxyModule struct {
 	path, version, gomod string
+	imports              []string
 }
 
 // writeProxy writes a module proxy that a file:// GOPROXY serves: a list,
@@ -29,7 +32,11 @@ func writeProxy(t *testing.T, dir string, mods []proxyModule) {
 		at := filepath.Join(dir, filepath.FromSlash(esc), "@v")
 		src := t.TempDir()
 		name := m.path[strings.LastIndex(m.path, "/")+1:]
-		writeFiles(t, src, map[string]string{"go.mod": m.gomod, name + ".go": "package " + name + "\n"})
+		code := "package " + name + "\n"
+		for _, imp := range m.imports {
+			code += "\nimport _ \"" + imp + "\"\n"
+		}
+		writeFiles(t, src, map[string]string{"go.mod": m.gomod, name + ".go": code})
 		writeFiles(t, at, map[string]string{
 			m.version + ".info": `{"Version":"` + m.version + `","Time":"2026-01-01T00:00:00Z"}`,
 			m.version + ".mod":  m.gomod,
@@ -130,4 +137,36 @@ func TestDiscoverGivesTheBuildListOfTheGoCommand(t *testing.T) {
 			assert.Equal(t, want, got)
 		})
 	}
+}
+
+// A tool directive names a package that go tool builds with the build list
+// of the module. The graph reaches its module and the modules that it
+// imports, as go list -deps tool does.
+func TestBuildReachesTheModulesOfATool(t *testing.T) {
+	if testing.Short() {
+		t.Skip("the test runs the go command")
+	}
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("no go command")
+	}
+	dir, proxy, cache := t.TempDir(), t.TempDir(), t.TempDir()
+	writeFiles(t, dir, map[string]string{
+		"go.mod": "module example.com/a\n\ngo 1.24\n\nrequire (\n\texample.com/gen v1.0.0\n\texample.com/y v1.0.0\n)\n\ntool example.com/gen\n",
+		"a.go":   "package a\n",
+	})
+	gen := mod("example.com/gen", "v1.0.0", "example.com/y v1.0.0")
+	gen.imports = []string{"example.com/y"}
+	writeProxy(t, proxy, []proxyModule{gen, mod("example.com/y", "v1.0.0")})
+	env := []string{"GOMODCACHE=" + cache, "GOPROXY=file://" + filepath.ToSlash(proxy), "GOSUMDB=off", "GONOSUMDB=*", "GOFLAGS=-modcacherw"}
+	_, err := goCommand(dir, env, "mod", "download", "all")
+	require.NoError(t, err)
+	sources, err := Discover(DiscoverOptions{Dir: dir, ModuleCache: cache})
+	require.NoError(t, err)
+
+	g, err := Build(context.Background(), Input{MainFS: os.DirFS(dir), Modules: sources})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"example.com/a -> example.com/gen", "example.com/gen -> example.com/y"}, edgeList(g))
+	assert.True(t, node(t, g, "example.com/y").Reached)
+	assert.Equal(t, Evidence{File: "go.mod", Line: 10}, g.Edges[0].Evidence)
+	checkAgainstGoList(t, dir, sources, env, true)
 }
