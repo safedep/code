@@ -10,6 +10,7 @@ import (
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/fileindex/store/memstore"
+	"github.com/safedep/code/plugin/callgraph"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -34,11 +35,15 @@ func (p *countingPlugin) SupportedLanguages() []core.LanguageCode {
 }
 
 func (p *countingPlugin) Analyze(_ context.Context, file core.File, tree core.ParseTree) ([]byte, error) {
+	p.analyzed = append(p.analyzed, file.Name())
+	return lineCount(tree)
+}
+
+func lineCount(tree core.ParseTree) ([]byte, error) {
 	data, err := tree.Data()
 	if err != nil {
 		return nil, err
 	}
-	p.analyzed = append(p.analyzed, file.Name())
 	return []byte(strconv.Itoa(strings.Count(string(*data), "\n"))), nil
 }
 
@@ -130,4 +135,39 @@ func TestIndexerServesACachedPluginFromTheStore(t *testing.T) {
 		assert.Empty(t, good.analyzed, "the plugin that took its artifact does not see main.js twice")
 		assert.Equal(t, []string{"main.js"}, broken.analyzed)
 	})
+}
+
+// graphCountingPlugin is a countingPlugin that reads the call graph of the
+// index. It records the file of each graph that it got.
+type graphCountingPlugin struct {
+	*countingPlugin
+	graphs []string
+}
+
+func (p *graphCountingPlugin) AnalyzeGraph(_ context.Context, file core.File, tree core.ParseTree, cg *callgraph.CallGraph) ([]byte, error) {
+	if cg.FileName != file.Name() || len(cg.Nodes) == 0 {
+		return nil, errors.New("not the call graph of the file")
+	}
+	p.graphs = append(p.graphs, file.Name())
+	return lineCount(tree)
+}
+
+func TestIndexerGivesAGraphPluginTheCallGraphOfTheIndex(t *testing.T) {
+	dir := t.TempDir()
+	writeFiles(t, dir, projectFiles)
+	fsys := appFileSystem(t, dir)
+	s := memstore.New()
+
+	pl := &graphCountingPlugin{countingPlugin: newCountingPlugin("1")}
+	result, err := runIndexer(t, context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Plugins: []core.Plugin{pl}})
+	require.NoError(t, err)
+	assert.Empty(t, result.Report.Failed)
+	assert.Equal(t, ecmascriptNames, pl.graphs)
+	assert.Empty(t, pl.analyzed, "the run builds no second call graph through Analyze")
+
+	warm := &graphCountingPlugin{countingPlugin: newCountingPlugin("1")}
+	_, err = runIndexer(t, context.Background(), fsys, Options{Languages: projectLanguages(t), Store: s, Plugins: []core.Plugin{warm}})
+	require.NoError(t, err)
+	assert.Equal(t, ecmascriptNames, warm.restored, "the artifact of AnalyzeGraph serves the next run")
+	assert.Equal(t, map[string]string{"app/util.ts": "1", "lib/helper.js": "1", "main.js": "2"}, warm.lines)
 }

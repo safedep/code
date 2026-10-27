@@ -37,7 +37,13 @@ func (p *callgraphPlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) 
 	if err != nil {
 		return fmt.Errorf("failed to build call graph: %w", err)
 	}
+	return p.AnalyzeGraph(ctx, cg)
+}
 
+// AnalyzeGraph runs the callback on a call graph that the caller built, as
+// the indexer builds one for the index of each file. It fails on a partial
+// graph, as AnalyzeTree does.
+func (p *callgraphPlugin) AnalyzeGraph(ctx context.Context, cg *CallGraph) error {
 	if err := p.callgraphCallback(ctx, cg); err != nil {
 		return err
 	}

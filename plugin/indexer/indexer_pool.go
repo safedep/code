@@ -9,6 +9,7 @@ import (
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/parser"
 	"github.com/safedep/code/plugin"
+	"github.com/safedep/code/plugin/callgraph"
 )
 
 // contentParser parses the bytes of a file that the run already read.
@@ -37,6 +38,8 @@ type job struct {
 type outcome struct {
 	tree  core.ParseTree
 	index *fileindex.Index
+	// graph is the call graph that the index plugin built, or nil.
+	graph *callgraph.CallGraph
 
 	// indexErr is the failure of the index plugin, at the stage stage.
 	indexErr error
@@ -114,10 +117,10 @@ func analyze(ctx context.Context, p contentParser, file pending) outcome {
 	}
 
 	var index *fileindex.Index
-	indexPlugin := NewFileIndexPlugin(func(_ context.Context, ix *fileindex.Index) error {
+	indexPlugin := &fileIndexPlugin{callback: func(_ context.Context, ix *fileindex.Index) error {
 		index = ix
 		return nil
-	})
+	}}
 	if !slices.Contains(indexPlugin.SupportedLanguages(), file.language.Meta().Code) {
 		return outcome{tree: tree}
 	}
@@ -125,5 +128,5 @@ func analyze(ctx context.Context, p contentParser, file pending) outcome {
 	if err == nil {
 		index, err = skeletonIndex(ctx, p, file, tree, index)
 	}
-	return outcome{tree: tree, index: index, indexErr: err, stage: core.Stage(indexPlugin.Name())}
+	return outcome{tree: tree, index: index, graph: indexPlugin.graph, indexErr: err, stage: core.Stage(indexPlugin.Name())}
 }

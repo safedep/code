@@ -6,6 +6,7 @@ import (
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/fileindex/store"
+	"github.com/safedep/code/plugin/callgraph"
 	"github.com/safedep/dry/log"
 )
 
@@ -31,6 +32,23 @@ type CachedPlugin interface {
 	// Restore runs the plugin on the stored artifact of a file, with the
 	// effect that Analyze has.
 	Restore(ctx context.Context, file core.File, data []byte) error
+}
+
+// GraphPlugin is a CachedPlugin that reads the call graph of a file. The
+// run builds the call graph of each file once, for the index, and gives it
+// to AnalyzeGraph, so the plugin does not build it again. A file with no
+// call graph, as one whose index failed, goes to Analyze.
+//
+// The index of the file is complete before AnalyzeGraph runs, so the
+// plugin cannot change the index through cg. The graph of a file that the
+// deadline cut is partial, as the graph that Analyze would build is.
+type GraphPlugin interface {
+	CachedPlugin
+
+	// AnalyzeGraph runs the plugin on the tree and the call graph of a
+	// file, and returns the artifact to store. It must return the artifact
+	// that Analyze returns for the tree.
+	AnalyzeGraph(ctx context.Context, file core.File, tree core.ParseTree, cg *callgraph.CallGraph) ([]byte, error)
 }
 
 // artifactKey returns the key of the artifact of a cached plugin for a

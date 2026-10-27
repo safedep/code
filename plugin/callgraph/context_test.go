@@ -119,3 +119,29 @@ func TestDoneContextStopsBuildCallGraphAtTheImports(t *testing.T) {
 	_, err = Build(ctx, tree)
 	assert.ErrorIs(t, err, context.Canceled)
 }
+
+func TestAnalyzeGraphFailsOnAPartialGraphAsAnalyzeTreeDoes(t *testing.T) {
+	python, err := lang.NewPythonLanguage()
+	require.NoError(t, err)
+	tree, err := parser.ParseBytes(t.Context(), python, []byte(deadlineSource), parser.WithFileName("calls.py"))
+	require.NoError(t, err)
+	defer tree.Close()
+	imports, err := python.Resolvers().ResolveImports(t.Context(), tree)
+	require.NoError(t, err)
+	treeData, err := tree.Data()
+	require.NoError(t, err)
+	partial := newCallGraph("calls.py", python.Meta().Code)
+	partial.build(&nodeDeadline{Context: t.Context(), graph: partial, nodes: 2 * ctxCheckInterval}, tree.Tree().RootNode(), imports, *treeData)
+	full, err := Build(t.Context(), tree)
+	require.NoError(t, err)
+
+	var got []*CallGraph
+	pl := NewCallGraphPlugin(func(_ context.Context, cg *CallGraph) error {
+		got = append(got, cg)
+		return nil
+	})
+	require.NoError(t, pl.AnalyzeGraph(t.Context(), full))
+	err = pl.AnalyzeGraph(t.Context(), partial)
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.Equal(t, []*CallGraph{full, partial}, got, "the callback gets the graph of the caller, the partial one too")
+}
