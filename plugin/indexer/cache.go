@@ -36,12 +36,14 @@ type CachedPlugin interface {
 
 // GraphPlugin is a CachedPlugin that reads the call graph of a file. The
 // run builds the call graph of each file once, for the index, and gives it
-// to AnalyzeGraph, so the plugin does not build it again. A file with no
-// call graph, as one whose index failed, goes to Analyze.
+// to AnalyzeGraph, so the plugin does not build it again. A file whose call
+// graph did not build goes to Analyze.
 //
 // The index of the file is complete before AnalyzeGraph runs, so the
 // plugin cannot change the index through cg. The graph of a file that the
-// deadline cut is partial, as the graph that Analyze would build is.
+// deadline cut is partial. A file that the workers finished before the
+// deadline passed gets its full graph, where Analyze would have built
+// none with a done ctx.
 type GraphPlugin interface {
 	CachedPlugin
 

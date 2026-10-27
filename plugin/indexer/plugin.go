@@ -18,7 +18,7 @@ import (
 type fileIndexPlugin struct {
 	callback core.PluginCallback[*fileindex.Index]
 
-	// graph is the call graph of the last tree, which the run gives to a
+	// graph is the call graph of the tree, which the run gives to a
 	// GraphPlugin.
 	graph *callgraph.CallGraph
 }

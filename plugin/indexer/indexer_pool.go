@@ -48,7 +48,10 @@ type outcome struct {
 	err error
 }
 
-func newPool(ctx context.Context, languages []core.Language, maxBytes, size int) (*pool, error) {
+// newPool starts the workers. keepGraphs keeps the call graph of each file
+// in its outcome for a GraphPlugin. A run with none drops each graph after
+// the index, so the files in flight do not hold it.
+func newPool(ctx context.Context, languages []core.Language, maxBytes, size int, keepGraphs bool) (*pool, error) {
 	parsers := make([]contentParser, 0, max(size, 1))
 	for range cap(parsers) {
 		p, err := parser.NewParser(languages, parser.WithMaxBytes(maxBytes))
@@ -68,7 +71,7 @@ func newPool(ctx context.Context, languages []core.Language, maxBytes, size int)
 			defer pl.wg.Done()
 			defer p.Close()
 			for j := range pl.jobs {
-				j.out <- analyze(ctx, p, j.file)
+				j.out <- analyze(ctx, p, j.file, keepGraphs)
 			}
 		}()
 	}
@@ -107,7 +110,7 @@ func (pl *pool) each(ctx context.Context, files []pending, fn func(pending, outc
 }
 
 // analyze parses one file and runs the index plugin on its tree.
-func analyze(ctx context.Context, p contentParser, file pending) outcome {
+func analyze(ctx context.Context, p contentParser, file pending, keepGraph bool) outcome {
 	if ctx.Err() != nil {
 		return outcome{}
 	}
@@ -128,5 +131,9 @@ func analyze(ctx context.Context, p contentParser, file pending) outcome {
 	if err == nil {
 		index, err = skeletonIndex(ctx, p, file, tree, index)
 	}
-	return outcome{tree: tree, index: index, graph: indexPlugin.graph, indexErr: err, stage: core.Stage(indexPlugin.Name())}
+	o := outcome{tree: tree, index: index, indexErr: err, stage: core.Stage(indexPlugin.Name())}
+	if keepGraph {
+		o.graph = indexPlugin.graph
+	}
+	return o
 }

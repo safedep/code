@@ -207,7 +207,11 @@ func (ix *Indexer) Run(ctx context.Context, fsys core.ImportAwareFileSystem) (*R
 		},
 		strs: interner{},
 	}
-	if r.pool, err = newPool(ctx, ix.opts.Languages, ix.opts.MaxFileBytes, ix.opts.Workers); err != nil {
+	keepGraphs := slices.ContainsFunc(ix.opts.Plugins, func(pl core.Plugin) bool {
+		_, ok := pl.(GraphPlugin)
+		return ok
+	})
+	if r.pool, err = newPool(ctx, ix.opts.Languages, ix.opts.MaxFileBytes, ix.opts.Workers, keepGraphs); err != nil {
 		return nil, err
 	}
 	defer r.pool.close()

@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/fileindex/store/memstore"
+	"github.com/safedep/code/parser"
 	"github.com/safedep/code/plugin/callgraph"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -144,8 +146,19 @@ type graphCountingPlugin struct {
 	graphs []string
 }
 
-func (p *graphCountingPlugin) AnalyzeGraph(_ context.Context, file core.File, tree core.ParseTree, cg *callgraph.CallGraph) ([]byte, error) {
-	if cg.FileName != file.Name() || len(cg.Nodes) == 0 {
+func (p *graphCountingPlugin) AnalyzeGraph(ctx context.Context, file core.File, tree core.ParseTree, cg *callgraph.CallGraph) ([]byte, error) {
+	built, err := callgraph.Build(ctx, tree)
+	if err != nil {
+		return nil, err
+	}
+	var got, want bytes.Buffer
+	if err := cg.Dump(&got); err != nil {
+		return nil, err
+	}
+	if err := built.Dump(&want); err != nil {
+		return nil, err
+	}
+	if cg.FileName != file.Name() || len(cg.Nodes) == 0 || got.String() != want.String() {
 		return nil, errors.New("not the call graph of the file")
 	}
 	p.graphs = append(p.graphs, file.Name())
@@ -170,4 +183,30 @@ func TestIndexerGivesAGraphPluginTheCallGraphOfTheIndex(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, ecmascriptNames, warm.restored, "the artifact of AnalyzeGraph serves the next run")
 	assert.Equal(t, map[string]string{"app/util.ts": "1", "lib/helper.js": "1", "main.js": "2"}, warm.lines)
+}
+
+func TestAnalyzeKeepsTheCallGraphOnlyForAGraphPlugin(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	writeFiles(t, dir, map[string]string{"main.js": projectFiles["main.js"]})
+	langs := projectLanguages(t)
+	files, _, err := enumerate(ctx, appFileSystem(t, dir), Options{Languages: langs})
+	require.NoError(t, err)
+	require.Len(t, files, 1)
+	byExtension, err := parser.LanguagesByExtension(langs)
+	require.NoError(t, err)
+	data, err := read(files[0], parser.DefaultMaxBytes)
+	require.NoError(t, err)
+	p, err := parser.NewParser(langs)
+	require.NoError(t, err)
+	defer p.Close()
+
+	file := pending{file: files[0], language: byExtension[".js"], data: data}
+	for _, keep := range []bool{false, true} {
+		o := analyze(ctx, p, file, keep)
+		require.NoError(t, o.err)
+		require.NotNil(t, o.index)
+		o.tree.Close()
+		assert.Equal(t, keep, o.graph != nil, "a run with no GraphPlugin drops the graph after the index")
+	}
 }

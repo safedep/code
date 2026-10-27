@@ -110,7 +110,8 @@ A cached plugin that reads the call graph of a file implements
 `indexer.GraphPlugin`. The run builds the call graph once for the index, and
 gives it to `AnalyzeGraph` with the tree. The plugin does not build the graph
 again. The extra plugins run on one goroutine, so a second build would slow
-the whole run.
+the whole run. A file that the workers finished before the deadline passed
+gets its full graph. With a done context, `Analyze` would build none.
 
 ## Link
 
