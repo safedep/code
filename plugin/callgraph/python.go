@@ -167,7 +167,6 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 		case classAssignmentNode == nil:
 		case callGraph.classConstructors[classAssignmentNode.Namespace]:
 			result.ImmediateAssignments = append(result.ImmediateAssignments, classAssignmentNode)
-			log.Debugf("Class constructed - %s in fncall for %s\n", classAssignmentNode.Namespace, functionName)
 		case callGraph.imported(classAssignmentNode.Namespace) && !callGraph.isPythonDynamicImport(classAssignmentNode.Namespace):
 			// The file cannot tell an imported class from an imported
 			// function. The value of the call is the callee, as for new X()
@@ -196,7 +195,6 @@ func functionCallProcessor(functionCallNode *sitter.Node, argumentsNode *sitter.
 	switch function.Type() {
 	case "identifier":
 		if assignment, found := searchSymbolInScopeChain(functionName, currentNamespace, callGraph); found {
-			log.Debugf("Call %s searched (direct) & resolved to %s\n", functionName, assignment.Namespace)
 			addEdge(assignment.Namespace, nil)
 			markClassAssignment(assignment)
 			return result

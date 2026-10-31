@@ -215,7 +215,11 @@ func (ix *Indexer) Run(ctx context.Context, fsys core.ImportAwareFileSystem) (*R
 		},
 		strs: interner{},
 	}
-	if r.pool, err = newPool(ctx, ix.opts.Languages, ix.opts.MaxFileBytes, ix.opts.Workers); err != nil {
+	keepGraphs := slices.ContainsFunc(ix.opts.Plugins, func(pl core.Plugin) bool {
+		_, ok := pl.(GraphPlugin)
+		return ok
+	})
+	if r.pool, err = newPool(ctx, ix.opts.Languages, ix.opts.MaxFileBytes, ix.opts.Workers, keepGraphs); err != nil {
 		return nil, err
 	}
 	defer r.pool.close()
@@ -442,7 +446,7 @@ func (r *run) collect(ctx context.Context, p pending, o outcome) (*fileindex.Ind
 			if p.restored[pl.Name()] {
 				continue
 			}
-			data, err := cached.Analyze(ctx, p.file, o.tree)
+			data, err := analyzeCached(ctx, cached, p.file, o)
 			if err != nil {
 				report.Failed = append(report.Failed, failure(p.file, pl, err))
 			} else {
@@ -461,6 +465,15 @@ func (r *run) collect(ctx context.Context, p pending, o outcome) (*fileindex.Ind
 	}
 	r.done(p.file, o.index, fileindex.FileIndexed)
 	return o.index, artifacts
+}
+
+// analyzeCached runs a cached plugin on the tree of a file, and gives a
+// GraphPlugin the call graph of the index.
+func analyzeCached(ctx context.Context, pl CachedPlugin, file core.File, o outcome) ([]byte, error) {
+	if gp, ok := pl.(GraphPlugin); ok && o.graph != nil {
+		return gp.AnalyzeGraph(ctx, file, o.tree, o.graph)
+	}
+	return pl.Analyze(ctx, file, o.tree)
 }
 
 // failure is the report entry of a plugin that failed on a file.

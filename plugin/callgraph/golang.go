@@ -106,7 +106,6 @@ func goCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 		ref := callGraph.reference(callee, CallCall, functionNode, callArguments)
 		ref.Unbound = unbound
 		callGraph.addCall(currentNamespace, nil, ref)
-		log.Debugf("Go call: %s -> %s", currentNamespace, callee)
 	}
 
 	return result
@@ -279,9 +278,7 @@ func goMethodDeclarationProcessor(methodDefNode *sitter.Node, treeData []byte, c
 		methodNamespace = currentNamespace + namespaceSeparator + receiverType + namespaceSeparator + methodName
 	}
 
-	if callGraph.addDefinition(methodNamespace, methodDefNode) {
-		log.Debugf("Register Go method definition for %s on %s - %s", methodName, receiverType, methodNamespace)
-	}
+	callGraph.addDefinition(methodNamespace, methodDefNode)
 	return processFunctionBody(methodDefNode, treeData, methodNamespace, callGraph, metadata)
 }
 

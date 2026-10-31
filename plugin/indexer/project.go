@@ -53,19 +53,20 @@ type projection struct {
 	exportStatements []*sitter.Node
 }
 
-// project builds the call graph of tree and projects it into an index.
-func project(ctx context.Context, tree core.ParseTree) (*fileindex.Index, error) {
+// project builds the call graph of tree and projects it into an index. It
+// returns the call graph too, so the run can give it to a GraphPlugin.
+func project(ctx context.Context, tree core.ParseTree) (*fileindex.Index, *callgraph.CallGraph, error) {
 	language, err := tree.Language()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get language: %w", err)
+		return nil, nil, fmt.Errorf("failed to get language: %w", err)
 	}
 	data, err := tree.Data()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get tree data: %w", err)
+		return nil, nil, fmt.Errorf("failed to get tree data: %w", err)
 	}
 	cg, err := callgraph.Build(ctx, tree)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	p := &projection{
@@ -106,7 +107,7 @@ func project(ctx context.Context, tree core.ParseTree) (*fileindex.Index, error)
 	p.addUnresolved()
 	p.run(rules.prune)
 	if err := p.addClasses(ctx); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	for _, def := range p.defs {
 		def.Exported = p.exported(def)
@@ -114,7 +115,7 @@ func project(ctx context.Context, tree core.ParseTree) (*fileindex.Index, error)
 	}
 
 	p.ix.Sort()
-	return p.ix, nil
+	return p.ix, cg, nil
 }
 
 // run runs a pass of the rules of the language, when the language has it.

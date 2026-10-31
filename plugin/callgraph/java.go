@@ -222,8 +222,6 @@ func objectCreationExpressionProcessor(objectCreationNode *sitter.Node, treeData
 
 		classNode, classResolvedBySearch := searchSymbolInScopeChain(constructedClassName, currentNamespace, callGraph)
 		if classResolvedBySearch {
-			log.Debugf("Constructor %s searched (direct) & resolved to %s\n", constructedClassName, classNode.Namespace)
-
 			callGraph.addEdge(currentNamespace, CallNew, constructedClassNode, classNode.Namespace, nil, argsResult)
 			markClassAssignment(classNode)
 		} else if constructedClassNode.Type() == "scoped_type_identifier" {
@@ -289,7 +287,6 @@ func methodInvocationProcessor(methodInvocationNode *sitter.Node, treeData []byt
 
 	functionAssignmentNode, functionResolvedBySearch := searchSymbolInScopeChain(methodName, currentNamespace, callGraph)
 	if functionResolvedBySearch {
-		log.Debugf("Method invocation %s searched (direct) & resolved to %s\n", methodName, functionAssignmentNode.Namespace)
 		callGraph.addEdge(
 			currentNamespace, CallCall, methodInvocationNode,
 			functionAssignmentNode.Namespace, nil,
@@ -341,7 +338,6 @@ func resolveQualifiedInvocation(invocation, object *sitter.Node, methodName stri
 		if !chained {
 			callee = receiver + namespaceSeparator + methodName
 		}
-		log.Debugf("Method invocation %s searched (object qualified) & resolved to - %s\n", methodName, callee)
 		callGraph.addEdge(currentNamespace, CallCall, invocation, callee, nil, args)
 	}
 }
