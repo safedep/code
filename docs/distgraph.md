@@ -63,7 +63,8 @@ A distribution is open when:
    of `METADATA`, the import names of `top_level.txt` or `RECORD`, the
    extension modules of `RECORD` and the `Requires-Dist` lines with no
    `extra` marker. A `.dist-info` that it cannot read is a problem of the
-   graph, not a node.
+   graph, not a node. An editable install, whose `direct_url.json` says
+   so, is the project itself, so it is no node either.
 2. It reads each Python file of the project, its test files too, except
    under a hidden directory, a `__pycache__`, a `node_modules`, a
    `site-packages` or a virtual environment, which holds a `pyvenv.cfg`.

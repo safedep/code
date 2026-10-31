@@ -317,7 +317,11 @@ func newBuilder(ctx context.Context, in Input) (*builder, error) {
 		found, problems := modules.PythonDistributions(sp)
 		b.problems = append(b.problems, problems...)
 		for _, d := range found {
-			b.addDistribution(sp, d)
+			// The code of an editable install is the project, which the
+			// walk of the project reads.
+			if !d.Editable {
+				b.addDistribution(sp, d)
+			}
 		}
 	}
 	b.stats.Distributions = len(b.order) - 1

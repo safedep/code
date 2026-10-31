@@ -292,6 +292,17 @@ func TestBuildSkipsTheEnvironmentInsideTheProject(t *testing.T) {
 	assert.Equal(t, 2, g.Stats.Files)
 }
 
+func TestBuildLeavesOutAnEditableInstall(t *testing.T) {
+	project := fstest.MapFS{"app/__init__.py": py("requests"), "main.py": py("app")}
+	sp := sitePackages(nil, distInfo{name: "requests", version: "2.31.0", files: []string{"requests/__init__.py"}}, distInfo{name: "app", version: "0.1.0", files: []string{"__editable__.app-0.1.0.pth"}})
+	sp["app-0.1.0.dist-info/direct_url.json"] = text(`{"url": "file:///src/app", "dir_info": {"editable": true}}`)
+	g := build(t, Input{ProjectFS: project, SitePackages: []fs.FS{sp}})
+	_, ok := g.Node("app")
+	assert.False(t, ok, "the editable install is the project")
+	assert.Equal(t, []string{"project -> requests"}, edgeList(g))
+	assert.Equal(t, 1, g.Stats.Distributions)
+}
+
 func TestBuildRejectsABadInput(t *testing.T) {
 	_, err := Build(context.Background(), Input{})
 	assert.EqualError(t, err, "distgraph: no project")
