@@ -217,7 +217,6 @@ func defineClass(classDefNode *sitter.Node, treeData []byte, classNamespace stri
 
 	metadata.insideClass = true
 	processChildren(classBody, treeData, classNamespace, callGraph, metadata)
-	log.Debugf("Register class definition %s", classNamespace)
 }
 
 // functionDefinitionProcessor processes a function or a method in its own
@@ -245,8 +244,6 @@ func functionDefinitionProcessor(functionDefNode *sitter.Node, treeData []byte, 
 	}
 
 	if callGraph.addDefinition(functionNamespace, functionDefNode) {
-		log.Debugf("Register function definition for %s - %s", funcName, functionNamespace)
-
 		if metadata.insideClass {
 			if keyword := profile.instanceKeyword; keyword != "" {
 				instanceNamespace := currentNamespace + namespaceSeparator + keyword + namespaceSeparator + funcName

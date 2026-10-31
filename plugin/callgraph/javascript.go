@@ -209,7 +209,6 @@ func jsCallExpressionProcessor(callNode *sitter.Node, treeData []byte, currentNa
 		ref := callGraph.reference(callee, kind, functionNode, callArguments)
 		ref.Unbound = unbound
 		callGraph.addCall(currentNamespace, nil, ref)
-		log.Debugf("JS call: %s -> %s", currentNamespace, callee)
 		// The file cannot tell a factory of a dependency from a function of
 		// it. The value of the call is the callee, as for new X(), so
 		// app.get() in const app = express() keeps the import, as Python
@@ -463,9 +462,7 @@ func arrowFunctionProcessor(arrowNode *sitter.Node, treeData []byte, currentName
 	if functionName != "" {
 		arrowFunctionNamespace = currentNamespace + namespaceSeparator + functionName
 
-		if callGraph.addDefinition(arrowFunctionNamespace, arrowNode) {
-			log.Debugf("Register arrow function definition for %s - %s", functionName, arrowFunctionNamespace)
-		}
+		callGraph.addDefinition(arrowFunctionNamespace, arrowNode)
 	}
 
 	results.addResults(processFunctionBody(arrowNode, treeData, arrowFunctionNamespace, callGraph, metadata))
@@ -652,8 +649,6 @@ func jsNewExpressionProcessor(newNode *sitter.Node, treeData []byte, currentName
 	}
 
 	for _, constructor := range constructors {
-		log.Debugf("JS constructor resolved to %s", constructor)
-
 		ref := callGraph.reference(constructor, CallNew, constructorNode, callArguments)
 		ref.Unbound = unbound
 		callGraph.addCall(currentNamespace, nil, ref)

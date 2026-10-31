@@ -17,6 +17,10 @@ import (
 
 type fileIndexPlugin struct {
 	callback core.PluginCallback[*fileindex.Index]
+
+	// graph is the call graph of the tree, which the run gives to a
+	// GraphPlugin.
+	graph *callgraph.CallGraph
 }
 
 var _ core.TreePlugin = (*fileIndexPlugin)(nil)
@@ -37,10 +41,11 @@ func (p *fileIndexPlugin) SupportedLanguages() []core.LanguageCode {
 }
 
 func (p *fileIndexPlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) error {
-	ix, err := project(ctx, tree)
+	ix, cg, err := project(ctx, tree)
 	if err != nil {
 		return fmt.Errorf("failed to index file: %w", err)
 	}
+	p.graph = cg
 
 	if err := p.callback(ctx, ix); err != nil {
 		return err

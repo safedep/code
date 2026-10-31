@@ -169,7 +169,7 @@ func skeletonIndex(ctx context.Context, p contentParser, file pending, tree core
 		return nil, err
 	}
 	defer skeleton.Close()
-	out, err := project(ctx, skeleton)
+	out, _, err := project(ctx, skeleton)
 	if err != nil {
 		return nil, err
 	}
