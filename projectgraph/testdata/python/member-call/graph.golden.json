@@ -5,7 +5,8 @@
       "kind": "module",
       "path": "base.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "base.py//Base": {
       "key": "base.py//Base",
@@ -30,14 +31,16 @@
       "kind": "module",
       "path": "main.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "parser.py": {
       "key": "parser.py",
       "kind": "module",
       "path": "parser.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "parser.py//Parser": {
       "key": "parser.py//Parser",
@@ -258,12 +261,15 @@
     "parser.py": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 3,
     "nodes": 9,
     "edges": 10,
     "unresolved": 0,
     "roots": 8,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "python"
+    ]
   }
 }

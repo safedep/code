@@ -1,5 +1,5 @@
 {
-  "version": "14",
+  "version": "15",
   "path": "app.py",
   "language": "python",
   "content_hash": "a9cdb5fb012d2a29970c07deda9cc8360983015e2360cb9091bca7bfce5c801d",
@@ -124,6 +124,13 @@
       "start_line": 23,
       "end_line": 35,
       "exported": true,
+      "locals": [
+        {
+          "name": "p",
+          "type": "Parser",
+          "result": true
+        }
+      ],
       "flags": [
         {
           "kind": "reflection",

@@ -1037,3 +1037,326 @@ After FOU-555:
 After the fixes for the review of PR 53, the measure gives the same
 numbers. No project of the corpus renames a Cargo dependency, and no
 function of a dependency has two platform twins with two result types.
+
+### Python
+
+The Python rows of the corpus come from the first step of the Python
+plan, on 2026-10-24, on the machine above, at the commit that adds them.
+No fix of the Python link step is in this run. The numbers are the
+baseline that the later steps of the plan must move.
+
+| Project | Dependencies with an advisory |
+| --- | --- |
+| mkdocs 1.1.2 | PyYAML 5.3.1, Jinja2 2.11.3, tornado 6.3.1 |
+| httpie 3.2.1 | requests 2.28.2, urllib3 1.26.14, idna 3.6 |
+| requests-toolbelt 0.9.1 | requests 2.30.0, urllib3 1.26.16 |
+| flask-cors 3.0.10 | Flask 2.2.4, Werkzeug 2.2.2 |
+| fabric 2.7.1 | paramiko 2.9.2 |
+| imageio 2.9.0 | Pillow 9.2.0 |
+| pyopenssl 23.1.0 | cryptography 40.0.2 |
+| python-docx 0.8.11 | lxml 4.9.0 |
+| django-filter 23.1 | Django 4.2.0 |
+| django-debug-toolbar 3.8.1 | Django 4.1.7, sqlparse 0.4.3 |
+
+A Python dependency has a version that the requirement of the project
+admits and that an advisory affects, as the Rust rows do. OSV lists no
+symbols for a PyPI advisory, so `scripts/pypi_advisories.py` holds the
+symbols of 72 advisories of the 14 packages by hand, as the text of each
+advisory names them, with the ranges from OSV. The code of a dependency is
+its wheel, unpacked, so the unit has the layout of site-packages. A
+dependency whose code is compiled, as lxml, has only its `.so` files and
+its Python wrappers in the unit.
+
+The receiver table of `receivers_test.go` has 18 Python rows. 2 rows give
+their answer today: a call on an instance from a constructor is `found`,
+and a call on an untyped parameter is `uncertain/unknown-receiver`. The
+other 16 wait on the type-hint step of the plan. 8 of them are
+`uncertain/unknown-receiver` today, 2 are `uncertain/no-definition`, and 6
+are `no-such-target`: a call on a variable that holds the result of an
+external call, as `t = dep.new_thing()` then `t.do()`, gets the false key
+`dep//new_thing//do` and no record, so the method of the real type is
+`no-such-target`. A Python definition of a unit has no external key either,
+because the Python profile has no `symbol` rule, so a target that only the
+code of its unit calls cannot match a definition.
+
+| Language | Kind | Run | Targets | found | not-found | no-such-target | unknown-receiver | no-definition | dynamic-flag | budget |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Python | function | every language | 44 | 5 | 0 | 0 | 3 | 1 | 6 | 29 |
+| Python | method | every language | 63 | 0 | 0 | 0 | 27 | 5 | 13 | 18 |
+| Python | function | python alone | 44 | 5 | 0 | 0 | 3 | 13 | 14 | 9 |
+| Python | method | python alone | 63 | 0 | 0 | 0 | 27 | 14 | 17 | 5 |
+
+| Language | Run | Method targets that end as unknown-receiver |
+| --- | --- | --- |
+| Python | every language | 0.429 (27/63) |
+| Python | python alone | 0.429 (27/63) |
+
+The "every language" run indexes each language, as the Go and Rust rows
+do. The "python alone" run sets `PROJECTGRAPH_METHOD_LANGUAGES=python`.
+The 10 Python graphs hold 3,170 files in the first run and 2,956 in the
+second.
+
+- No target is `not-found` and no target is `no-such-target`. Every
+  search meets an uncertainty that concerns every target, so the measure
+  cannot yet tell a target that the code reaches from one that it does
+  not. The 5 found function targets are `yaml.load` in mkdocs,
+  `requests.utils.get_netrc_auth` and `idna.encode` in httpie, and
+  `sqlparse.parse` and `sqlparse.format` in django-debug-toolbar, each a
+  call of the project on an import.
+- `budget` is the largest cause of the first run, and most of it is
+  JavaScript. A Python project ships the JavaScript of its web pages, and
+  the index step truncates a minified file: `jquery-1.10.2.min.js`,
+  `bootstrap.min.js` and `lunr.js` in the themes of mkdocs, and
+  `jquery.js`, `jquery.min.js` and `select2.full.min.js` in the admin of
+  the Django unit. A truncated file of the project concerns every search,
+  and one of a unit concerns every search that enters the unit, so 32 of
+  the 32 Django targets of django-filter end as `budget`. No Python program
+  runs that JavaScript. The run of `python` alone has 14 budget targets
+  left: `_tifffile.py` of imageio, a module of 10,182 lines and 360 KiB
+  over a limit of the index, and the test files `tests/test_ssl.py` of pyopenssl and
+  `tests/opc/unitdata/rels.py` and `tests/oxml/test_xmlchemy.py` of
+  python-docx. The test paths mark them as test files, and a truncated
+  test file still concerns every search. A Werkzeug file,
+  `werkzeug/serving.py`, is truncated too.
+- `dynamic-flag` is the next cause, and `decorator-wrap` is most of it.
+  The index flags a decorator that is not a bare name, as
+  `@click.option(...)`, `@app.route(...)` and `@functools.wraps(f)`,
+  because the decorator can wrap the function in code that the graph does
+  not see. Every click, Flask or Django project has such a decorator on
+  the path from its roots, so the flag concerns every target of the
+  project. The other flags are `monkey-patch` in httpie, python-docx and
+  the Django unit, `reflection` in fabric and `computed-attribute` in
+  httpie. The `computed-name` records of `click.option(...)` come from the
+  same decorators: the call of a call result has no name.
+- `no-definition` is the first cause when no JavaScript is in the graph: a
+  call of a name that no file defines, as `http.client` in httpie and
+  `.packages.six.moves.http_client` in urllib3, both a module of the
+  standard library or a vendored copy that the graph has no unit for. The
+  Python standard library has no unit in this run.
+- `unknown-receiver` decides 27 of the 63 method targets, and the share is
+  the same in both runs. The receiver forms that the rows name are the
+  cause: a typed parameter, a typed attribute, a function result, and a
+  call on a value that a `for` loop or a comprehension binds.
+- fabric has no root of its own. It is a library, so every exported symbol
+  is a root, and the `root-fallback` uncertainty is on each result.
+- lxml gives no target of its own kind. Its `iterwalk`, `canonicalize` and
+  `iterparse` are compiled, and the unit holds no Python definition for
+  them, so each one ends in the uncertainty of the project.
+
+The numbers say what the plan must change first. The type-hint step moves
+`unknown-receiver`. Before it can show, a Python project needs three
+rules of the index and the link step: a JavaScript file that a Python
+project or a pypi unit ships for a web page is no code of the program, a
+truncated test file concerns only a search that counts the tests, and a
+decorator that a framework rule knows, as a route or a command, wraps the
+function in code that the rule already reads.
+
+#### After the four rules of the budget, the decorators and the imports
+
+The commit after the baseline adds four rules. `docs/projectgraph.md`
+holds each one.
+
+1. An incomplete file counts for a search only when the program runs its
+   language: a root other than a test root is in a file of that language,
+   or the ecosystem of its unit installs that language. `Graph.Runs`
+   decides it, from `Node.Language` and `Stats.Languages`.
+2. An incomplete test file counts only for a search that includes the
+   tests.
+3. A decorator is a dynamic feature only when the graph cannot name its
+   code, as `@handlers[name]`. A decorator that is a name, a dotted name
+   or a call of one is a call of the scope that defines the function. A
+   call of the value of a call, as `click.option("-v")(f)`, is no record
+   of its own, unless the inner call reflects.
+4. A Python import whose first segment is no module under an import root
+   or in the directory of the importer is external, not a record. Before,
+   `import types` in cryptography was a record because a `types.py` is
+   deep in a package of it, and `from collections import defaultdict` in
+   Django for the same reason. Each such record concerned every target.
+
+The run of the two languages gives the same numbers as the run of
+`python` alone now, so the table has one row per kind.
+
+| Language | Kind | Run | Targets | found | not-found | no-such-target | unknown-receiver | no-definition | ambiguous | computed-name | dynamic-flag | budget |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Python | function | four rules | 44 | 5 | 0 | 0 | 3 | 2 | 14 | 8 | 11 | 1 |
+| Python | method | four rules | 63 | 0 | 0 | 0 | 27 | 6 | 14 | 4 | 8 | 4 |
+
+- `budget` falls from 47 to 5 targets, all of imageio: `_tifffile.py` is a
+  module of 10,182 lines that the index truncates, and it is Python code
+  that the program runs.
+- `dynamic-flag` falls from 19 to 19 targets in the first run and from 31
+  to 19 in the run of `python` alone. What is left is real: `getattr` on a
+  computed name in flask-cors, fabric and pyopenssl, and the monkey patch
+  of python-docx.
+- `no-definition` falls from 31 to 8 in the run of `python` alone. The
+  rest is `.packages.six.moves.http_client` in urllib3, a module that six
+  makes at run time, and three imports of imageio.
+- `ambiguous` and `computed-name` are the first cause now that nothing
+  hides them. Django has `template.render` on an unknown receiver with
+  more than 20 candidate methods, and a definition named `render` reaches
+  most of Django, so the record concerns every target of the corpus that
+  Django code reaches. mkdocs has `config['plugins'].run_event`, a call on
+  a subscript, which computes its name.
+- `found` stays at 5 and `unknown-receiver` at 27 of 63 methods. The
+  rules remove uncertainty that hid these causes. They add no path, as
+  the type-hint step will.
+- pycg-micro keeps its precision of 0.954 and its recall of 0.708. Its
+  unresolved rate falls from 0.340 to 0.312, because an import whose first
+  segment names a file deep in a case is external now. govulncheck stays
+  at 9 of 9 stacks.
+- The receiver table does not change. The 16 Python rows still wait on
+  the type-hint step.
+
+#### After the distribution reader, the compiled-module record and the external keys
+
+The commit after the four rules adds the rest of step 2 of the plan.
+
+1. The index step leaves out the test files and the wheel metadata of a
+   pypi unit, as it leaves out the test files of a Go unit.
+2. The link step reads the `.dist-info` at the root of a pypi unit: the
+   import names of `top_level.txt` or `RECORD`, and the extension modules
+   of `RECORD`. An import of an extension module is a record with the
+   reason `no-dependency-source`, because the graph cannot read its code.
+3. A definition of a pypi unit carries the external key that an importer
+   of its module writes, as `requests//api//get`, through the `symbol`
+   rule that Go and Rust had. A target that only the code of its package
+   calls matches the definition.
+4. `outcome` of the measure and of the receiver rows now says `found/low`
+   for a path with a hop of low confidence, as a `name` edge or a
+   `reference` edge of the override rule, and `found` only for a path
+   that the calls and the declared types prove.
+
+| Language | Kind | Run | Targets | found | found/low | not-found | no-such-target | unknown-receiver | no-definition | ambiguous | computed-name | dynamic-flag | budget |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Python | function | step 2 | 44 | 1 | 18 | 0 | 0 | 0 | 0 | 10 | 4 | 10 | 1 |
+| Python | method | step 2 | 63 | 0 | 36 | 0 | 0 | 4 | 1 | 11 | 2 | 6 | 3 |
+
+| Language | Run | Method targets that end as unknown-receiver |
+| --- | --- | --- |
+| Python | step 2 | 0.063 (4/63) |
+
+- The external keys move 54 targets from uncertain to `found/low`. As for
+  Go after FOU-555, most symbols of an advisory are methods that the code
+  of the dependency calls inside its own package, and the match on the
+  definition finds them. Each of these paths has a `name` edge or a
+  `reference` edge. The `name` edges come from calls on unknown receivers
+  inside the unit, as `self.request.GET.get` in Django, which the type
+  hints of step 3 and the instance attributes of the unit must narrow
+  before a path reads as `found`.
+- `unknown-receiver` falls from 27 to 4 method targets, because a reached
+  record with the method name of the target no longer decides the answer
+  when a path reaches the definition. The 4 that stay are requests
+  methods in httpie and requests-toolbelt whose paths the search does not
+  find.
+- The 10 Python receiver rows that reach their method today reach it as
+  `found/low`: the override rule joins the class `Thing` to its `do`, so
+  the constructor call in the unit reaches `do`. The rows keep their gap,
+  because they want the member edge of the declared type.
+- `no-such-target` stays at 0, and `not-found` at 0. No project of the
+  corpus has a dependency it never imports.
+- pycg-micro keeps 0.954 precision and 0.708 recall, with the unresolved
+  rate at 0.312. govulncheck stays at 9 of 9 stacks.
+
+#### After the type hints
+
+The commit after step 2 adds step 3 of the plan: the index reads the
+type hints of Python, and the link step trusts them as it trusts
+TypeScript types. `docs/projectgraph.md` holds the rules.
+
+1. The index records the class of a hint of a parameter, with
+   `Optional`, `Union` and `| None` unwrapped, the return type and the
+   tuple positions of a function, an annotated local, a name that holds
+   the result of a call, a typed name of the top level of a module, and
+   the fields of a class from its annotations and from the attributes
+   that its methods set.
+2. A call on a typed name gets the key of the name in its scope as its
+   target, as the Go index does, so the link step reads the type. A call
+   that the call graph bound to a method of a class of the file keeps
+   that target. A result of a reflective call, as `import_module`, has
+   no type.
+3. A hint that names a dependency class gives the external key of the
+   method. The class hierarchy analysis adds the overrides in the project
+   and in the unit, and an abstract method with no override is a record
+   with the reason `interface-receiver`.
+
+| Language | Kind | Run | Targets | found | found/low | not-found | no-such-target | unknown-receiver | no-definition | ambiguous | computed-name | dynamic-flag | budget |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Python | function | step 3 | 44 | 2 | 17 | 0 | 0 | 0 | 0 | 10 | 4 | 10 | 1 |
+| Python | method | step 3 | 63 | 0 | 35 | 0 | 0 | 4 | 1 | 12 | 2 | 6 | 3 |
+
+| Language | Run | Method targets that end as unknown-receiver |
+| --- | --- | --- |
+| Python | step 3 | 0.063 (4/63) |
+
+- All 16 Python receiver rows that waited on this step give their wanted
+  answer: 14 are `found` with a `member` edge of high confidence or a
+  `cha` edge of medium confidence, the abstract base with no
+  implementation is `uncertain/interface-receiver`, and the external
+  result with no dependency code is `uncertain/no-dependency-source`.
+  The rows have no gap left.
+- The corpus moves two targets. `requests.utils.get_netrc_auth` in httpie
+  goes from `found/low` to `found`. `MultiPartParser.parse` in
+  django-filter goes from `found/low` to `uncertain/ambiguous`: the path
+  before went through `parser.parse()` in `django/template/base.py`,
+  where the call graph did not bind `parser` to the `Parser(...)` call
+  over several lines, so a `name` edge joined the site to every `parse`
+  method of Django. The hint-free assignment now types `parser` as the
+  template `Parser`, and the false path is gone.
+- The other numbers do not move, and the reason is the corpus, not the
+  rules. The paths of the Python targets run through requests, Django
+  4.2 and urllib3 1.26, and that code has no type hints on the receivers
+  that the paths cross: `conn.urlopen(...)` in `requests/adapters.py`
+  binds `conn` to the result of an untyped method, and Django reads
+  `self.request` with no annotation. A project of the corpus that types
+  its own code, as httpie, calls these dependencies through their
+  untyped API. The receiver rows and the six cases of this step prove the
+  mechanism, and the corpus shows how much of the Python ecosystem of
+  2023 the mechanism can read: little, until a dependency ships hints.
+- The 4 `unknown-receiver` method targets of httpie and requests-toolbelt
+  are `urlopen` of urllib3, which requests calls on `conn`, a result of
+  `self.get_connection_with_tls_context(...)` with no hint.
+- pycg-micro keeps 0.954 precision and 0.708 recall, with the unresolved
+  rate at 0.312. Its cases have no type hints. govulncheck stays at 9 of 9
+  stacks.
+- `PROJECTGRAPH_METHOD_DETAIL` now writes one line per target with its
+  outcome and the sites of its path or of its uncertainties, so the next
+  step can read the cause of each number.
+
+#### After the distribution graph and the standard library unit
+
+The commits after step 3 add steps 5 and 6 of the plan. Neither moves the
+method measure: its corpus names no standard library unit, and the
+distribution graph is a graph of its own.
+
+`distgraph` builds the distribution graph of a Python project, as
+`modgraph` builds the module graph of a Go module. `docs/distgraph.md`
+holds the rules. A run of `examples/distgraph` on httpie 3.2.1 of the
+corpus, with requests 2.28.2, urllib3 1.26.14, idna 3.6 and PyYAML 5.3.1
+unpacked into one site-packages directory, reads 200 files and gives these
+nodes.
+
+| Node | State | Reason |
+| --- | --- | --- |
+| httpie | open | `httpie/cli/argparser.py:576` imports `rich.text`, which the directory does not hold |
+| requests | open | `requests/certs.py:14` imports `certifi`, which the directory does not hold |
+| urllib3 | open | `urllib3/contrib/ntlmpool.py:11` imports `ntlm` outside a guard |
+| PyYAML | open | the extension module `_yaml` can import any module |
+| idna | imports | |
+
+The first two reasons are true of the directory: the environment of the run
+lacks rich and certifi, and a real install has them. The third is the
+rule at work on a `contrib` module whose optional import has no `try`
+guard. The fourth is the rule on an extension module, which
+`TrustCompiled` turns off for a caller that reads the graph for a path and
+not for the absence of one. The edges that the run reads are the ones a
+reader expects: httpie imports requests and urllib3, requests imports idna
+and urllib3, and urllib3 imports idna in `contrib/pyopenssl.py`.
+
+The unit `python:std@<version>` of the `Lib` directory of CPython gives
+the standard library to the project graph. The case
+`python/dependency-stdlib` shows `Thread.start` of the unit reaching the
+`run` of a project class with a `cha` edge, through the external key of
+`Thread` that the class names as its base, and a path into `subprocess`
+that goes on to `os.execvp`. The reach result still reports the shorter
+path through the reference edge of the override rule, because the search
+returns a shortest path.

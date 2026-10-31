@@ -5,7 +5,8 @@
       "kind": "module",
       "path": "log.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "log.js//log": {
       "key": "log.js//log",
@@ -19,14 +20,16 @@
       "kind": "module",
       "path": "main.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "make.js": {
       "key": "make.js",
       "kind": "module",
       "path": "make.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "make.js//make": {
       "key": "make.js//make",
@@ -138,12 +141,15 @@
     "make.js": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 3,
     "nodes": 5,
     "edges": 4,
     "unresolved": 0,
     "roots": 5,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "javascript"
+    ]
   }
 }

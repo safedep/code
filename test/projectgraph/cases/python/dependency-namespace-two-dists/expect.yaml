@@ -1,0 +1,79 @@
+source: safedep:hand
+description: >-
+  google-auth and google-cloud-storage share the namespace package google in one site-packages
+  directory. Each unit is the package directory that its RECORD gives under the namespace. An import of
+  google.auth.crypt resolves into google-auth alone, and one of google.cloud.storage into
+  google-cloud-storage alone, so neither unit misses a module of the other, and no record names a unit
+  that no import loads.
+units:
+  venv/site-packages/google/auth: pypi:google-auth@2.0.0
+  venv/site-packages/google/cloud/storage: pypi:google-cloud-storage@2.1.0
+import_dirs:
+  - venv/site-packages
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+edges:
+  - from: main.py
+    to: google//auth//crypt//sign
+    kind: direct
+    confidence: high
+    site: main.py:4
+  - from: google//auth//crypt//sign
+    to: pypi:google-auth@2.0.0//google/auth/crypt.py//sign
+    kind: package
+    confidence: high
+    site: pypi:google-auth@2.0.0//google/auth/crypt.py:4
+  - from: main.py
+    to: google//cloud//storage//upload
+    kind: direct
+    confidence: high
+    site: main.py:5
+  - from: google//cloud//storage//upload
+    to: pypi:google-cloud-storage@2.1.0//google/cloud/storage/__init__.py//upload
+    kind: package
+    confidence: high
+    site: pypi:google-cloud-storage@2.1.0//google/cloud/storage/__init__.py:4
+unresolved: []
+results:
+  - target: hashlib//sha256
+    status: found
+    path:
+      - key: main.py
+      - key: google//auth//crypt//sign
+        site: main.py:4
+        kind: direct
+        confidence: high
+      - key: pypi:google-auth@2.0.0//google/auth/crypt.py//sign
+        site: pypi:google-auth@2.0.0//google/auth/crypt.py:4
+        kind: package
+        confidence: high
+      - key: hashlib//sha256
+        site: pypi:google-auth@2.0.0//google/auth/crypt.py:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: pypi:google-auth@2.0.0//google/auth/crypt.py//sign
+        site: pypi:google-auth@2.0.0//google/auth/crypt.py:5
+        reached: true
+  - target: socket//create_connection
+    status: found
+    path:
+      - key: main.py
+      - key: google//cloud//storage//upload
+        site: main.py:5
+        kind: direct
+        confidence: high
+      - key: pypi:google-cloud-storage@2.1.0//google/cloud/storage/__init__.py//upload
+        site: pypi:google-cloud-storage@2.1.0//google/cloud/storage/__init__.py:4
+        kind: package
+        confidence: high
+      - key: socket//create_connection
+        site: pypi:google-cloud-storage@2.1.0//google/cloud/storage/__init__.py:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: pypi:google-cloud-storage@2.1.0//google/cloud/storage/__init__.py//upload
+        site: pypi:google-cloud-storage@2.1.0//google/cloud/storage/__init__.py:5
+        reached: true

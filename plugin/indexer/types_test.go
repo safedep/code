@@ -79,9 +79,9 @@ func TestFileIndexDeclaredTypes(t *testing.T) {
 	})
 }
 
-func TestFileIndexDeclaredTypesOnlyInTypeScript(t *testing.T) {
-	ix := indexSource(t, core.LanguageCodePython, "a.py", "def run(p: Parser):\n    p.parse()\n")
-	assert.Empty(t, definitionOf(t, ix, "a.py//run").Params)
+func TestFileIndexDeclaredTypesOnlyInTypedLanguages(t *testing.T) {
+	ix := indexSource(t, core.LanguageCodeRuby, "a.rb", "def run(p)\n  p.parse\nend\n")
+	assert.Empty(t, definitionOf(t, ix, "a.rb//run").Params)
 }
 
 func TestFileIndexPropertyFunctions(t *testing.T) {

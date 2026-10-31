@@ -11,13 +11,14 @@ import (
 
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/fileindex/roots"
+	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/projectgraph/modules"
 )
 
 // Version is the version of the link rules. Bump it when a rule that makes a
 // node, an edge, a root or an unresolved site changes, so a diff of two
 // reports shows the change.
-const Version = "16"
+const Version = "17"
 
 type NodeKind string
 
@@ -166,7 +167,9 @@ func (s Site) String() string {
 // external target. An external node has only its key and kind. External
 // is the key that an importer of the package writes for a function, a
 // method or a constructor of a unit of dependency code, as
-// golang.org//x//net//html//render1.
+// golang.org//x//net//html//render1. Language is the language of the file
+// of a module top level, also of a file with no index, when the index step
+// told it.
 type Node struct {
 	Key      string           `json:"key"`
 	Kind     NodeKind         `json:"kind"`
@@ -174,6 +177,7 @@ type Node struct {
 	Line     int              `json:"line,omitempty"`
 	Exported bool             `json:"exported,omitempty"`
 	Test     bool             `json:"test,omitempty"`
+	Language langcode.Code    `json:"language,omitempty"`
 	Flags    []fileindex.Flag `json:"flags,omitempty"`
 	External string           `json:"external,omitempty"`
 }
@@ -230,14 +234,18 @@ type Truncation struct {
 // Stats holds the counts of a graph. Duration is not in the JSON form, so two
 // builds of one input give one JSON form.
 type Stats struct {
-	Version      string        `json:"version"`
-	Files        int           `json:"files"`
-	Nodes        int           `json:"nodes"`
-	Edges        int           `json:"edges"`
-	Unresolved   int           `json:"unresolved"`
-	Roots        int           `json:"roots"`
-	RootFallback bool          `json:"root_fallback,omitempty"`
-	Duration     time.Duration `json:"-"`
+	Version      string `json:"version"`
+	Files        int    `json:"files"`
+	Nodes        int    `json:"nodes"`
+	Edges        int    `json:"edges"`
+	Unresolved   int    `json:"unresolved"`
+	Roots        int    `json:"roots"`
+	RootFallback bool   `json:"root_fallback,omitempty"`
+	// Languages are the languages of the files that hold a root other than
+	// a test root, in a fixed order: the languages that the program runs.
+	// Runs reads it.
+	Languages []langcode.Code `json:"languages,omitempty"`
+	Duration  time.Duration   `json:"-"`
 }
 
 // Graph is the call graph of one project. Edges, Unresolved, Roots and
@@ -256,6 +264,54 @@ type Graph struct {
 	// edges is the set of Edges, which AddEdge makes on its first call and
 	// keeps for the next ones.
 	edges *edgeSet
+}
+
+// Runs reports whether the program of the graph runs a file, by the
+// language of the file. A file of the project runs when a root of the
+// graph is in a file of its language. A file of a unit of dependency code
+// runs when the ecosystem of the unit installs code of its language, as
+// pypi installs Python. A file with no known language runs, and so does
+// every file of a graph with no root. A truncated or a failed file that
+// does not run, as the JavaScript of a web page that a Python project
+// ships, holds no caller that a search can reach, so its budget concerns
+// no target.
+func (g *Graph) Runs(path string) bool {
+	n := g.Nodes[path]
+	if n == nil || n.Language == "" {
+		return true
+	}
+	if unit := fileindex.PackageOf(path); unit != "" {
+		langs := unitLanguages(unit)
+		return langs == nil || slices.Contains(langs, n.Language)
+	}
+	return len(g.Stats.Languages) == 0 || slices.Contains(g.Stats.Languages, n.Language)
+}
+
+// unitLanguages returns the languages of the code that the ecosystem of a
+// unit installs, or nil for an ecosystem that the link step does not know.
+func unitLanguages(unit string) []langcode.Code {
+	pkg, err := fileindex.ParseUnit(unit)
+	if err != nil {
+		return nil
+	}
+	return ecosystemLanguages[pkg.Ecosystem]
+}
+
+// ecosystemLanguages are the languages of the code that a package of an
+// ecosystem installs. A package can ship files of other languages, as the
+// JavaScript of the admin pages of Django, and no program of the ecosystem
+// runs them. The python ecosystem is the standard library of CPython, as
+// the unit python:std@3.12.3 of its Lib directory.
+var ecosystemLanguages = map[string][]langcode.Code{
+	"pypi":      {langcode.Python},
+	"python":    {langcode.Python},
+	"npm":       {langcode.Javascript, langcode.Typescript},
+	"go":        {langcode.Go},
+	"cargo":     {langcode.Rust},
+	"maven":     {langcode.Java, langcode.Kotlin},
+	"nuget":     {langcode.CSharp},
+	"packagist": {langcode.PHP},
+	"rubygems":  {langcode.Ruby},
 }
 
 // IsExternal reports whether the key names a node outside the project.

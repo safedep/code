@@ -1,0 +1,20 @@
+{
+  "version": "2",
+  "index_version": "15",
+  "link_version": "17",
+  "unit": "pypi:google-cloud-storage@2.1.0",
+  "symbols": [
+    {
+      "key": "google//cloud//storage//upload",
+      "definitions": [
+        "pypi:google-cloud-storage@2.1.0//google/cloud/storage/__init__.py//upload"
+      ],
+      "reaches": [
+        "socket//create_connection"
+      ]
+    }
+  ],
+  "targets": [
+    "socket//create_connection"
+  ]
+}

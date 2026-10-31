@@ -4292,5 +4292,1953 @@
     ]
    }
   ]
+ },
+ "pypi": {
+  "cryptography": [
+   {
+    "id": "PYSEC-2023-112",
+    "imports": [
+     {
+      "path": "cryptography.hazmat.primitives.serialization.ssh",
+      "symbols": [
+       "load_ssh_public_identity",
+       "SSHCertificateBuilder.sign"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "40.0.0"
+     },
+     {
+      "fixed": "41.0.2"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2023-254",
+    "imports": [
+     {
+      "path": "cryptography.hazmat.primitives.serialization.pkcs7",
+      "symbols": [
+       "load_pem_pkcs7_certificates",
+       "load_der_pkcs7_certificates"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "3.1.0"
+     },
+     {
+      "fixed": "41.0.6"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2024-225",
+    "imports": [
+     {
+      "path": "cryptography.hazmat.primitives.serialization.pkcs12",
+      "symbols": [
+       "serialize_key_and_certificates"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "38.0.0"
+     },
+     {
+      "fixed": "42.0.4"
+     }
+    ],
+    "source": "safedep:hand"
+   }
+  ],
+  "django": [
+   {
+    "id": "PYSEC-2023-100",
+    "imports": [
+     {
+      "path": "django.core.validators",
+      "symbols": [
+       "EmailValidator.__call__",
+       "URLValidator.__call__"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.3"
+     },
+     {
+      "introduced": "4.0.0"
+     },
+     {
+      "fixed": "4.1.10"
+     },
+     {
+      "introduced": "3.2.0"
+     },
+     {
+      "fixed": "3.2.20"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2023-222",
+    "imports": [
+     {
+      "path": "django.contrib.auth.forms",
+      "symbols": [
+       "UsernameField.to_python"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "3.2.0"
+     },
+     {
+      "fixed": "3.2.23"
+     },
+     {
+      "introduced": "4.1.0"
+     },
+     {
+      "fixed": "4.1.13"
+     },
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.7"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2023-225",
+    "imports": [
+     {
+      "path": "django.utils.encoding",
+      "symbols": [
+       "uri_to_iri"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "3.2.0"
+     },
+     {
+      "fixed": "3.2.21"
+     },
+     {
+      "introduced": "4.1.0"
+     },
+     {
+      "fixed": "4.1.11"
+     },
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.5"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2023-226",
+    "imports": [
+     {
+      "path": "django.utils.text",
+      "symbols": [
+       "Truncator.chars",
+       "Truncator.words"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "3.2.0"
+     },
+     {
+      "fixed": "3.2.22"
+     },
+     {
+      "introduced": "4.1.0"
+     },
+     {
+      "fixed": "4.1.12"
+     },
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.6"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2023-61",
+    "imports": [
+     {
+      "path": "django.forms.fields",
+      "symbols": [
+       "FileField.clean"
+      ]
+     },
+     {
+      "path": "django.forms.widgets",
+      "symbols": [
+       "ClearableFileInput.value_from_datadict"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "3.2.0"
+     },
+     {
+      "fixed": "3.2.19"
+     },
+     {
+      "introduced": "4.0.0"
+     },
+     {
+      "fixed": "4.1.9"
+     },
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.1"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2024-102",
+    "imports": [
+     {
+      "path": "django.utils.html",
+      "symbols": [
+       "urlize",
+       "Urlizer.__call__"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "5.1.0"
+     },
+     {
+      "fixed": "5.1.1"
+     },
+     {
+      "introduced": "5.0.0"
+     },
+     {
+      "fixed": "5.0.9"
+     },
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.16"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2024-156",
+    "imports": [
+     {
+      "path": "django.utils.html",
+      "symbols": [
+       "strip_tags"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "5.1.0"
+     },
+     {
+      "fixed": "5.1.4"
+     },
+     {
+      "introduced": "5.0.0"
+     },
+     {
+      "fixed": "5.0.10"
+     },
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.17"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2024-157",
+    "imports": [
+     {
+      "path": "django.db.models.fields.json",
+      "symbols": [
+       "HasKey.as_oracle"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "5.1.0"
+     },
+     {
+      "fixed": "5.1.4"
+     },
+     {
+      "introduced": "5.0.0"
+     },
+     {
+      "fixed": "5.0.10"
+     },
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.17"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2024-28",
+    "imports": [
+     {
+      "path": "django.contrib.humanize.templatetags.humanize",
+      "symbols": [
+       "intcomma"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "3.2.0"
+     },
+     {
+      "fixed": "3.2.24"
+     },
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.10"
+     },
+     {
+      "introduced": "5.0.0"
+     },
+     {
+      "fixed": "5.0.2"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2024-47",
+    "imports": [
+     {
+      "path": "django.utils.text",
+      "symbols": [
+       "Truncator.words"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "3.2.0"
+     },
+     {
+      "fixed": "3.2.25"
+     },
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.11"
+     },
+     {
+      "introduced": "5.0.0"
+     },
+     {
+      "fixed": "5.0.3"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2024-56",
+    "imports": [
+     {
+      "path": "django.template.defaultfilters",
+      "symbols": [
+       "urlize",
+       "urlizetrunc"
+      ]
+     },
+     {
+      "path": "django.utils.html",
+      "symbols": [
+       "urlize"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.14"
+     },
+     {
+      "introduced": "5.0.0"
+     },
+     {
+      "fixed": "5.0.7"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2024-57",
+    "imports": [
+     {
+      "path": "django.contrib.auth.backends",
+      "symbols": [
+       "ModelBackend.authenticate"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "5.0.0"
+     },
+     {
+      "fixed": "5.0.7"
+     },
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.14"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2024-58",
+    "imports": [
+     {
+      "path": "django.core.files.storage.base",
+      "symbols": [
+       "Storage.save"
+      ]
+     },
+     {
+      "path": "django.db.models.fields.files",
+      "symbols": [
+       "FieldFile.save"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "5.0.0"
+     },
+     {
+      "fixed": "5.0.7"
+     },
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.14"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2024-59",
+    "imports": [
+     {
+      "path": "django.utils.translation",
+      "symbols": [
+       "get_supported_language_variant"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "5.0.0"
+     },
+     {
+      "fixed": "5.0.7"
+     },
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.14"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2024-67",
+    "imports": [
+     {
+      "path": "django.template.defaultfilters",
+      "symbols": [
+       "floatformat"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "5.0.0"
+     },
+     {
+      "fixed": "5.0.8"
+     },
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.15"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2024-68",
+    "imports": [
+     {
+      "path": "django.utils.html",
+      "symbols": [
+       "urlize",
+       "Urlizer.__call__"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "5.0.0"
+     },
+     {
+      "fixed": "5.0.8"
+     },
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.15"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2024-69",
+    "imports": [
+     {
+      "path": "django.utils.html",
+      "symbols": [
+       "urlize",
+       "Urlizer.__call__"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "5.0.0"
+     },
+     {
+      "fixed": "5.0.8"
+     },
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.15"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2024-70",
+    "imports": [
+     {
+      "path": "django.db.models.query",
+      "symbols": [
+       "QuerySet.values",
+       "QuerySet.values_list"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "5.0.0"
+     },
+     {
+      "fixed": "5.0.8"
+     },
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.15"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2025-1",
+    "imports": [
+     {
+      "path": "django.core.validators",
+      "symbols": [
+       "validate_ipv6_address"
+      ]
+     },
+     {
+      "path": "django.utils.ipv6",
+      "symbols": [
+       "is_valid_ipv6_address"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "5.1.0"
+     },
+     {
+      "fixed": "5.1.5"
+     },
+     {
+      "introduced": "5.0.0"
+     },
+     {
+      "fixed": "5.0.11"
+     },
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.18"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2025-106",
+    "imports": [
+     {
+      "path": "django.db.models.query",
+      "symbols": [
+       "QuerySet.annotate",
+       "QuerySet.alias"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.25"
+     },
+     {
+      "introduced": "5.1.0"
+     },
+     {
+      "fixed": "5.1.13"
+     },
+     {
+      "introduced": "5.2.0"
+     },
+     {
+      "fixed": "5.2.7"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2025-108",
+    "imports": [
+     {
+      "path": "django.db.models.query",
+      "symbols": [
+       "QuerySet.filter",
+       "QuerySet.exclude",
+       "QuerySet.get"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.26"
+     },
+     {
+      "introduced": "5.1.0"
+     },
+     {
+      "fixed": "5.1.14"
+     },
+     {
+      "introduced": "5.2.0"
+     },
+     {
+      "fixed": "5.2.8"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2025-13",
+    "imports": [
+     {
+      "path": "django.template.defaultfilters",
+      "symbols": [
+       "wordwrap"
+      ]
+     },
+     {
+      "path": "django.utils.text",
+      "symbols": [
+       "wrap"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "5.1.0"
+     },
+     {
+      "fixed": "5.1.7"
+     },
+     {
+      "introduced": "5.0.0"
+     },
+     {
+      "fixed": "5.0.13"
+     },
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.20"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2025-37",
+    "imports": [
+     {
+      "path": "django.utils.html",
+      "symbols": [
+       "strip_tags"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.21"
+     },
+     {
+      "introduced": "5.1.0"
+     },
+     {
+      "fixed": "5.1.9"
+     },
+     {
+      "introduced": "5.2.0"
+     },
+     {
+      "fixed": "5.2.1"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2025-47",
+    "imports": [
+     {
+      "path": "django.utils.log",
+      "symbols": [
+       "log_response"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "5.2.0"
+     },
+     {
+      "fixed": "5.2.2"
+     },
+     {
+      "introduced": "5.1.0"
+     },
+     {
+      "fixed": "5.1.10"
+     },
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.22"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2026-45",
+    "imports": [
+     {
+      "path": "django.utils.text",
+      "symbols": [
+       "Truncator.chars",
+       "Truncator.words"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.28"
+     },
+     {
+      "introduced": "5.2.0"
+     },
+     {
+      "fixed": "5.2.11"
+     },
+     {
+      "introduced": "6.0.0"
+     },
+     {
+      "fixed": "6.0.2"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2026-47",
+    "imports": [
+     {
+      "path": "django.db.models.query",
+      "symbols": [
+       "QuerySet.order_by"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.28"
+     },
+     {
+      "introduced": "5.2.0"
+     },
+     {
+      "fixed": "5.2.11"
+     },
+     {
+      "introduced": "6.0.0"
+     },
+     {
+      "fixed": "6.0.2"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2026-48",
+    "imports": [
+     {
+      "path": "django.http.multipartparser",
+      "symbols": [
+       "MultiPartParser.parse"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "4.2.0"
+     },
+     {
+      "fixed": "4.2.30"
+     },
+     {
+      "introduced": "5.2.0"
+     },
+     {
+      "fixed": "5.2.13"
+     },
+     {
+      "introduced": "6.0.0"
+     },
+     {
+      "fixed": "6.0.4"
+     }
+    ],
+    "source": "safedep:hand"
+   }
+  ],
+  "flask": [
+   {
+    "id": "PYSEC-2023-62",
+    "imports": [
+     {
+      "path": "flask.sessions",
+      "symbols": [
+       "SecureCookieSessionInterface.save_session"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "2.2.5"
+     },
+     {
+      "introduced": "2.3.0"
+     },
+     {
+      "fixed": "2.3.2"
+     }
+    ],
+    "source": "safedep:hand"
+   }
+  ],
+  "idna": [
+   {
+    "id": "PYSEC-2024-60",
+    "imports": [
+     {
+      "path": "idna",
+      "symbols": [
+       "encode"
+      ]
+     },
+     {
+      "path": "idna.core",
+      "symbols": [
+       "encode"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.1.0"
+     },
+     {
+      "fixed": "3.7.0"
+     }
+    ],
+    "source": "safedep:hand"
+   }
+  ],
+  "jinja2": [
+   {
+    "id": "GHSA-cpwx-vrp4-4pq7",
+    "imports": [
+     {
+      "path": "jinja2.filters",
+      "symbols": [
+       "do_attr"
+      ]
+     },
+     {
+      "path": "jinja2.sandbox",
+      "symbols": [
+       "SandboxedEnvironment.call",
+       "SandboxedEnvironment.is_safe_attribute"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "3.1.6"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "GHSA-h5c8-rqwp-cp95",
+    "imports": [
+     {
+      "path": "jinja2.filters",
+      "symbols": [
+       "do_xmlattr"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "3.1.3"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "GHSA-h75v-3vvj-5mfj",
+    "imports": [
+     {
+      "path": "jinja2.filters",
+      "symbols": [
+       "do_xmlattr"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "3.1.4"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "GHSA-q2x7-8rv6-6q7h",
+    "imports": [
+     {
+      "path": "jinja2.sandbox",
+      "symbols": [
+       "SandboxedEnvironment.call",
+       "SandboxedEnvironment.format_string"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "3.1.5"
+     }
+    ],
+    "source": "safedep:hand"
+   }
+  ],
+  "lxml": [
+   {
+    "id": "GHSA-vfmq-68hx-4jfw",
+    "imports": [
+     {
+      "path": "lxml.etree",
+      "symbols": [
+       "iterparse",
+       "ETCompatXMLParser"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "6.1.0"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2022-230",
+    "imports": [
+     {
+      "path": "lxml.etree",
+      "symbols": [
+       "iterwalk",
+       "canonicalize"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "4.9.1"
+     }
+    ],
+    "source": "safedep:hand"
+   }
+  ],
+  "paramiko": [
+   {
+    "id": "PYSEC-2022-166",
+    "imports": [
+     {
+      "path": "paramiko.pkey",
+      "symbols": [
+       "PKey.write_private_key_file",
+       "PKey._write_private_key_file"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "2.9.3"
+     },
+     {
+      "introduced": "2.10.0"
+     },
+     {
+      "fixed": "2.10.1"
+     }
+    ],
+    "source": "safedep:hand"
+   }
+  ],
+  "pillow": [
+   {
+    "id": "GHSA-74r2-7ff9-mjj2",
+    "imports": [
+     {
+      "path": "PIL.GifImagePlugin",
+      "symbols": [
+       "GifImageFile._open"
+      ]
+     },
+     {
+      "path": "PIL.Image",
+      "symbols": [
+       "open"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "5.4.0"
+     },
+     {
+      "fixed": "13.0.0"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "GHSA-xgh8-jp6q-p5x8",
+    "imports": [
+     {
+      "path": "PIL.Image",
+      "symbols": [
+       "open"
+      ]
+     },
+     {
+      "path": "PIL.XbmImagePlugin",
+      "symbols": [
+       "XbmImageFile._open"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "13.0.0"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2022-42980",
+    "imports": [
+     {
+      "path": "PIL.Image",
+      "symbols": [
+       "open"
+      ]
+     },
+     {
+      "path": "PIL.TiffImagePlugin",
+      "symbols": [
+       "TiffImageFile._setup"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "9.2.0"
+     },
+     {
+      "fixed": "9.3.0"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2023-227",
+    "imports": [
+     {
+      "path": "PIL.ImageDraw",
+      "symbols": [
+       "ImageDraw.text"
+      ]
+     },
+     {
+      "path": "PIL.ImageFont",
+      "symbols": [
+       "FreeTypeFont.getmask2"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "10.0.0"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2026-2257",
+    "imports": [
+     {
+      "path": "PIL.ImageShow",
+      "symbols": [
+       "WindowsViewer.get_command"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "12.3.0"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2026-3453",
+    "imports": [
+     {
+      "path": "PIL.ImageCms",
+      "symbols": [
+       "ImageCmsTransform.apply"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "12.3.0"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2026-457",
+    "imports": [
+     {
+      "path": "PIL.ImageMath",
+      "symbols": [
+       "eval"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "10.2.0"
+     }
+    ],
+    "source": "safedep:hand"
+   }
+  ],
+  "pyyaml": [
+   {
+    "id": "PYSEC-2021-142",
+    "imports": [
+     {
+      "path": "yaml",
+      "symbols": [
+       "load",
+       "load_all",
+       "full_load",
+       "full_load_all"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "5.4.0"
+     }
+    ],
+    "source": "safedep:hand"
+   }
+  ],
+  "requests": [
+   {
+    "id": "GHSA-9hjg-9r4m-mvj7",
+    "imports": [
+     {
+      "path": "requests.sessions",
+      "symbols": [
+       "Session.prepare_request"
+      ]
+     },
+     {
+      "path": "requests.utils",
+      "symbols": [
+       "get_netrc_auth"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "2.32.4"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "GHSA-9wx4-h78v-vm56",
+    "imports": [
+     {
+      "path": "requests.adapters",
+      "symbols": [
+       "HTTPAdapter.send",
+       "HTTPAdapter.get_connection"
+      ]
+     },
+     {
+      "path": "requests.sessions",
+      "symbols": [
+       "Session.request"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "2.32.0"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2023-74",
+    "imports": [
+     {
+      "path": "requests.adapters",
+      "symbols": [
+       "HTTPAdapter.send"
+      ]
+     },
+     {
+      "path": "requests.sessions",
+      "symbols": [
+       "Session.rebuild_proxies",
+       "Session.send"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "2.3.0"
+     },
+     {
+      "fixed": "2.31.0"
+     }
+    ],
+    "source": "safedep:hand"
+   }
+  ],
+  "sqlparse": [
+   {
+    "id": "GHSA-27jp-wm6q-gp25",
+    "imports": [
+     {
+      "path": "sqlparse",
+      "symbols": [
+       "format"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "0.5.4"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "GHSA-2m57-hf25-phgg",
+    "imports": [
+     {
+      "path": "sqlparse",
+      "symbols": [
+       "parse"
+      ]
+     },
+     {
+      "path": "sqlparse.engine.grouping",
+      "symbols": [
+       "group"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "0.5.0"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "GHSA-cfqr-cjx5-5jcm",
+    "imports": [
+     {
+      "path": "sqlparse",
+      "symbols": [
+       "format"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "0.6.0"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "GHSA-f2ff-p2ww-7p4p",
+    "imports": [
+     {
+      "path": "sqlparse",
+      "symbols": [
+       "parse"
+      ]
+     },
+     {
+      "path": "sqlparse.engine.grouping",
+      "symbols": [
+       "group_comments"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "0.6.0"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2023-87",
+    "imports": [
+     {
+      "path": "sqlparse",
+      "symbols": [
+       "parse",
+       "format"
+      ]
+     },
+     {
+      "path": "sqlparse.lexer",
+      "symbols": [
+       "Lexer.get_tokens"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.1.15"
+     },
+     {
+      "fixed": "0.4.4"
+     }
+    ],
+    "source": "safedep:hand"
+   }
+  ],
+  "tornado": [
+   {
+    "id": "GHSA-7cx3-6m66-7c5m",
+    "imports": [
+     {
+      "path": "tornado.httputil",
+      "symbols": [
+       "parse_multipart_form_data",
+       "parse_body_arguments"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "6.5.0"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "GHSA-8w49-h785-mj3c",
+    "imports": [
+     {
+      "path": "tornado.httputil",
+      "symbols": [
+       "parse_cookie"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "6.4.2"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "GHSA-c2m8-h5v5-343r",
+    "imports": [
+     {
+      "path": "tornado.web",
+      "symbols": [
+       "StaticFileHandler.get",
+       "StaticFileHandler.validate_absolute_path"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "6.5.9"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "GHSA-fqwm-6jpj-5wxc",
+    "imports": [
+     {
+      "path": "tornado.web",
+      "symbols": [
+       "RequestHandler.set_cookie"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "6.5.5"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "GHSA-pr2v-jx2c-wg9f",
+    "imports": [
+     {
+      "path": "tornado.web",
+      "symbols": [
+       "RequestHandler.set_status"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "6.5.3"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "GHSA-qjxf-f2mg-c6mc",
+    "imports": [
+     {
+      "path": "tornado.httputil",
+      "symbols": [
+       "parse_multipart_form_data"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "6.5.5"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2023-75",
+    "imports": [
+     {
+      "path": "tornado.web",
+      "symbols": [
+       "StaticFileHandler.get",
+       "StaticFileHandler.validate_absolute_path"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "6.3.2"
+     }
+    ],
+    "source": "safedep:hand"
+   }
+  ],
+  "urllib3": [
+   {
+    "id": "GHSA-34jh-p97f-mpxf",
+    "imports": [
+     {
+      "path": "urllib3.connectionpool",
+      "symbols": [
+       "HTTPConnectionPool.urlopen"
+      ]
+     },
+     {
+      "path": "urllib3.poolmanager",
+      "symbols": [
+       "PoolManager.urlopen"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "1.26.19"
+     },
+     {
+      "introduced": "2.0.0"
+     },
+     {
+      "fixed": "2.2.2"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2023-192",
+    "imports": [
+     {
+      "path": "urllib3.connectionpool",
+      "symbols": [
+       "HTTPConnectionPool.urlopen"
+      ]
+     },
+     {
+      "path": "urllib3.poolmanager",
+      "symbols": [
+       "PoolManager.urlopen"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "2.0.0"
+     },
+     {
+      "fixed": "2.0.6"
+     },
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "1.26.17"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2023-212",
+    "imports": [
+     {
+      "path": "urllib3.connectionpool",
+      "symbols": [
+       "HTTPConnectionPool.urlopen"
+      ]
+     },
+     {
+      "path": "urllib3.poolmanager",
+      "symbols": [
+       "PoolManager.urlopen"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "2.0.0"
+     },
+     {
+      "fixed": "2.0.7"
+     },
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "1.26.18"
+     }
+    ],
+    "source": "safedep:hand"
+   }
+  ],
+  "werkzeug": [
+   {
+    "id": "GHSA-2g68-c3qc-8985",
+    "imports": [
+     {
+      "path": "werkzeug.debug",
+      "symbols": [
+       "DebuggedApplication.__call__"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "3.0.3"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "GHSA-f9vj-2wh5-fj8j",
+    "imports": [
+     {
+      "path": "werkzeug.security",
+      "symbols": [
+       "safe_join"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "3.0.6"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "GHSA-q34m-jh98-gwm2",
+    "imports": [
+     {
+      "path": "werkzeug.formparser",
+      "symbols": [
+       "MultiPartParser.parse"
+      ]
+     },
+     {
+      "path": "werkzeug.sansio.multipart",
+      "symbols": [
+       "MultipartDecoder.next_event"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "2.0.0-rc1"
+     },
+     {
+      "fixed": "3.0.6"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2023-221",
+    "imports": [
+     {
+      "path": "werkzeug.formparser",
+      "symbols": [
+       "MultiPartParser.parse"
+      ]
+     },
+     {
+      "path": "werkzeug.sansio.multipart",
+      "symbols": [
+       "MultipartDecoder.next_event"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "2.3.8"
+     },
+     {
+      "introduced": "3.0.0"
+     },
+     {
+      "fixed": "3.0.1"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2023-57",
+    "imports": [
+     {
+      "path": "werkzeug._internal",
+      "symbols": [
+       "_cookie_parse_impl"
+      ]
+     },
+     {
+      "path": "werkzeug.http",
+      "symbols": [
+       "parse_cookie"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "2.2.3"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2023-58",
+    "imports": [
+     {
+      "path": "werkzeug.formparser",
+      "symbols": [
+       "MultiPartParser.parse",
+       "FormDataParser.parse"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "2.2.3"
+     }
+    ],
+    "source": "safedep:hand"
+   },
+   {
+    "id": "PYSEC-2026-4312",
+    "imports": [
+     {
+      "path": "werkzeug.security",
+      "symbols": [
+       "safe_join"
+      ]
+     }
+    ],
+    "ranges": [
+     {
+      "introduced": "0.0.0"
+     },
+     {
+      "fixed": "3.1.9"
+     }
+    ],
+    "source": "safedep:hand"
+   }
+  ]
  }
 }

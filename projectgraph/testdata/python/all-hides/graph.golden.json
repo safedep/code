@@ -5,14 +5,16 @@
       "kind": "module",
       "path": "main.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "pkg/__init__.py": {
       "key": "pkg/__init__.py",
       "kind": "module",
       "path": "pkg/__init__.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "pkg/__init__.py//f": {
       "key": "pkg/__init__.py//f",
@@ -33,7 +35,8 @@
       "kind": "module",
       "path": "pkg/a.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "pkg/a.py//f": {
       "key": "pkg/a.py//f",
@@ -174,12 +177,15 @@
     "pkg/a.py": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 3,
     "nodes": 7,
     "edges": 6,
     "unresolved": 0,
     "roots": 5,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "python"
+    ]
   }
 }

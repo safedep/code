@@ -5,7 +5,8 @@
       "kind": "module",
       "path": "src/decl.d.ts",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "typescript"
     },
     "src/decl.d.ts//decl": {
       "key": "src/decl.d.ts//decl",
@@ -19,14 +20,16 @@
       "kind": "module",
       "path": "src/main.ts",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "typescript"
     },
     "src/types.ts": {
       "key": "src/types.ts",
       "kind": "module",
       "path": "src/types.ts",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "typescript"
     },
     "src/types.ts//Opts": {
       "key": "src/types.ts//Opts",
@@ -97,12 +100,15 @@
     "src/types.ts": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 3,
     "nodes": 5,
     "edges": 2,
     "unresolved": 0,
     "roots": 3,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "typescript"
+    ]
   }
 }

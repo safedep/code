@@ -1,6 +1,6 @@
 [
   {
-    "version": "14", "path": "tests/test_app.py", "language": "python",
+    "version": "15", "path": "tests/test_app.py", "language": "python",
     "definitions": [
       {"key": "tests/test_app.py", "kind": "module", "name": "test_app", "start_line": 1, "end_line": 6, "exported": true},
       {"key": "tests/test_app.py//TestApp", "kind": "class", "name": "TestApp", "start_line": 1, "end_line": 4, "exported": true},

@@ -1,0 +1,48 @@
+source: safedep:hand
+description: >-
+  make, maybe and pair declare a return type. A call on the result of make(), on a name that holds the
+  result of make() or maybe(), and on the first name of a tuple from pair() is a member call of
+  Parser.parse. The Optional and the tuple hint give the class of the value. No site has a record.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+edges:
+  - from: main.py
+    to: factory.py//Parser//parse
+    kind: member
+    confidence: high
+    site: main.py:3
+  - from: main.py
+    to: factory.py//Parser//parse
+    kind: member
+    confidence: high
+    site: main.py:5
+  - from: main.py
+    to: factory.py//Parser//parse
+    kind: member
+    confidence: high
+    site: main.py:7
+  - from: main.py
+    to: factory.py//Parser//parse
+    kind: member
+    confidence: high
+    site: main.py:9
+unresolved: []
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: factory.py//Parser//parse
+        site: main.py:3
+        kind: member
+        confidence: high
+      - key: yaml//load
+        site: factory.py:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: factory.py//Parser//parse
+        site: factory.py:8
+        reached: true

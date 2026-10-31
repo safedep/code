@@ -19,6 +19,7 @@ const (
 	overlayCase    = "../../test/projectgraph/cases/python/llm-overlay"
 	deadCallCase   = "../../test/projectgraph/cases/python/dead-call/project"
 	dependencyCase = "../../test/projectgraph/cases/javascript/dependency-transitive/project"
+	compiledCase   = "../../test/projectgraph/cases/python/dependency-compiled-module/project"
 )
 
 // dependencyFlags name the two packages of the dependency case.
@@ -182,4 +183,14 @@ func TestDependencyFlag(t *testing.T) {
 	assert.Equal(t, "node_modules/lodash=npm:lodash@4.17.21", deps.String())
 	assert.Error(t, deps.Set("node_modules/lodash"))
 	assert.Error(t, deps.Set("=npm:lodash@4.17.21"))
+}
+
+func TestExampleReadsASitePackagesDirectory(t *testing.T) {
+	out, err := exec.Command(buildExample(t), "-dir", compiledCase, "-site-packages", compiledCase+"/venv/site-packages", "-target", "json//loads", "-target", "os//system").CombinedOutput()
+	require.NoError(t, err, string(out))
+	text := string(out)
+	assert.Contains(t, text, "json//loads: found\n")
+	assert.Contains(t, text, "pypi:speedy@1.0.0//speedy/pure.py", "the path goes into the unit that the .dist-info names")
+	assert.Contains(t, text, "os//system: uncertain\n")
+	assert.Contains(t, text, "no-dependency-source", "the extension module of the unit is a record")
 }

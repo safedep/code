@@ -60,6 +60,11 @@ type profile struct {
 	// crate, as Rust, so a declared type that a unit of dependency code
 	// gives narrows a call to the method of the type.
 	unitTypes bool
+	// declaredTypes marks a language whose declared types the link step
+	// trusts although the run time erases them, as the type hints of
+	// Python. A declared type of a dependency gives the method of the type
+	// and, with openBases, the cha edges to the first-party subclasses.
+	declaredTypes bool
 	// sameTypeMethods name the methods that give a value of the type of
 	// the receiver, as clone of Rust, also when the type derives them and
 	// the code defines none.

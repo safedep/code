@@ -1,0 +1,53 @@
+{
+  "version": "2",
+  "index_version": "15",
+  "link_version": "17",
+  "unit": "python:std@3.12.3",
+  "symbols": [
+    {
+      "key": "subprocess//Popen",
+      "definitions": [
+        "python:std@3.12.3//subprocess.py//Popen"
+      ],
+      "reaches": [
+        "os//execvp"
+      ]
+    },
+    {
+      "key": "subprocess//run",
+      "definitions": [
+        "python:std@3.12.3//subprocess.py//run"
+      ],
+      "reaches": [
+        "os//execvp"
+      ]
+    },
+    {
+      "key": "threading//Thread",
+      "definitions": [
+        "python:std@3.12.3//threading.py//Thread"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "threading//Thread//run",
+      "definitions": [
+        "python:std@3.12.3//threading.py//Thread//run"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "threading//Thread//start",
+      "definitions": [
+        "python:std@3.12.3//threading.py//Thread//start"
+      ],
+      "reaches": [
+        "_thread//start_new_thread"
+      ]
+    }
+  ],
+  "targets": [
+    "_thread//start_new_thread",
+    "os//execvp"
+  ]
+}

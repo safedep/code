@@ -130,6 +130,7 @@ order of the indexes.
 | `Root` | The manifests of the project, as `pyproject.toml`. A nil root reads no manifest |
 | `SysPath` | More Python import roots, relative to the project root |
 | `Files` | The status of each file of the index step. A file with no complete index becomes a module node with that status |
+| `Languages` | The language of each file of the index step, as `indexer.Result.Languages` gives it. The module node of a file with no index gets its language from here, so the reach query can tell a file that the program does not run |
 | `TestPaths` | Globs that mark the test files. `fileindex.DefaultTestPaths` holds the common ones |
 | `Rules` | Root rules that go over the embedded ones by id |
 | `Units` | The files of each unit of dependency code, by unit. The link step links each unit as a project of its own |
@@ -166,6 +167,12 @@ reason: `computed-name`, `dynamic-import`, `unknown-receiver`,
 `no-definition`, `ambiguous`, `limit`, `interface-receiver`,
 `trait-receiver` or `no-dependency-source`. The site keeps the method name of the call, so the
 reach query can tell which targets it concerns.
+
+A site with more than 20 candidates of its method name, as `render` in a
+Django project, is `ambiguous` and keeps no method name. The site gets no
+edge, so the search cannot follow what the candidates call, and the record
+concerns every target. A record with a method name concerns the targets
+that a definition of the name reaches.
 
 A call on the result of another call, as `html.NewTokenizer(r).Next()`,
 needs the type of that result. When the link step does not know it, the
@@ -227,6 +234,83 @@ The standard library is a unit too. Pass `GOROOT/src` as the unit
 `go:std@<version>`, as `-deps $(go env GOROOT)/src=go:std@go1.25.1`. It gives
 each import path whose first element has no dot, as `net/http`. The index
 step leaves out the `cmd` module of it, which no program imports.
+
+A `pypi:` unit is a distribution, as a site-packages directory or an
+unpacked wheel holds it. These rules apply to it.
+
+- The root of the unit is the directory that holds its code, so a path
+  inside the unit is the path that Python imports, as `yaml/__init__.py`.
+  A unit whose root is its package directory, with an `__init__.py` at the
+  root, is that package.
+- The link step reads the `.dist-info` directory of the package at the
+  root, when there is one, and matches it by the normalized name. The
+  `top_level.txt` or the `RECORD` gives the import names, so `PyYAML`
+  gives `yaml` and a distribution with several top-level packages gives
+  each one. Without it, the import name is the package name in lower
+  case, with `_` for `-` and `.`.
+- The `RECORD` lists the extension modules, as `yaml/_yaml.so`. Such a
+  module has no Python source, so an import of it is a record with the
+  reason `no-dependency-source`, and the record concerns every target
+  where a search reaches the import.
+- A definition of the unit carries the external key that an importer of
+  its module writes, as `requests//api//get` for `requests/api.py//get`,
+  so a target of a module of the package matches the definition also when
+  only the code of the package calls it.
+- The index step leaves out the test files of the unit: a file under a
+  `tests` directory, a `test_*.py` or `*_test.py` file, a `conftest.py`,
+  and the files of the `.dist-info`, `.egg-info` and `.data` directories
+  of the wheel. A `test` or a `testing` directory stays, because
+  `django.test` and `numpy.testing` are modules that programs import.
+
+A type hint is the only declared type that Python has. The link step
+trusts it as it trusts a TypeScript type, because both are erased at run
+time and a wrong hint gives a wrong edge, not a crash. These rules apply.
+
+- The index records the class name of a hint of a parameter, as `Parser`
+  in `run(p: Parser)` or `run(p: Parser = None)`. `Optional[Parser]`,
+  `Union[Parser, None]` and `Parser | None` give `Parser`, and so does the
+  forward reference `"Parser"`. A builtin, as `int` or `str`, a container,
+  as `list[Parser]`, and a union of two classes give no type.
+- A return hint gives the result type of the function. A tuple hint, as
+  `tuple[Parser, int]`, gives the type of each position, so `p, n =
+  pair()` binds `Parser` to `p`.
+- A local with a hint, as `t: Thing = make()`, has that type. A name that
+  holds the result of a call, as `t = make()` or `a, b = make()`, has the
+  result type of the call at its position, as a Go short variable
+  declaration does. A name of the top level of a module that is no
+  variable of its own, as `q` in `q, n = pair()`, has it too. A call that
+  reads its value by reflection, as `importlib.import_module(name)` or
+  `getattr(o, name)`, gives no type.
+- A class has the fields that its body declares with a hint, as the field
+  of a dataclass, and the attributes of the instance that its methods set,
+  as `self.parser = Parser()` or `self.parser: Parser = p`. The first
+  setting of a name wins.
+- A call on a typed name is a `member` call of the method of its class,
+  with no record. A hint that names a class of a dependency gives the
+  external key of the method, as `dep//Thing//do`, and the class hierarchy
+  analysis adds the `cha` edges to the overrides in the project and in the
+  unit of the dependency. A method that `@abstractmethod` marks, with no
+  override in the graph, is a record with the reason `interface-receiver`,
+  as a Go interface with no implementation.
+- A call on the result of a function with no return hint keeps the rules
+  above the table: a record with the reason `unknown-receiver` and the
+  `name` edges of the method name. A function of a dependency that no unit
+  gives is a record with the reason `no-dependency-source`.
+
+`examples/projectgraph` takes `-site-packages <dir>` and adds each
+distribution of the directory as a unit, by its `.dist-info`.
+
+The standard library of Python is a unit too. Pass the `Lib` directory of
+CPython as the unit `python:std@<version>`, as
+`-deps /usr/lib/python3.12=python:std@3.12.3`. A virtual environment names
+the installation in the `home` line of its `pyvenv.cfg`. The unit gives
+each module of the standard library that has Python source, as
+`threading` or `http.server`, so a call of the library on `self`, as
+`Thread.run` in `Thread.start`, reaches the override of the project with a
+`cha` edge, and a path into the library goes on to its calls. A module
+that only C gives, as `_thread`, stays an external key. The index step
+leaves out the test suite under `test`, the IDLE, the turtle demos and
+`lib2to3`, which no program imports.
 
 ## Overlay
 
@@ -414,7 +498,7 @@ causes it.
 | --- | --- |
 | `unresolved-call` | A call that the link step could not resolve, on a path from a root |
 | `dynamic-flag` | A dynamic feature, as `eval` or a computed attribute, in code on a path from a root |
-| `budget` | A missing, failed or truncated file, a limit of the link step, or a search that the depth cap or the deadline stopped |
+| `budget` | A missing, failed or truncated file that the program runs, a limit of the link step, or a search that the depth cap or the deadline stopped |
 | `root-fallback` | No root rule matched, so every exported symbol is a root |
 
 An uncertainty concerns every target, unless its site says less. A call
@@ -428,6 +512,40 @@ it lists at three per kind and keeps the full count in `Searched`.
 A file of dependency code that the index step did not complete counts
 only for a search that enters its package. A file of the project counts
 for every search, because it can hold a root.
+
+Two kinds of incomplete file count for no search, because no search can
+reach a caller in them. `Graph.Runs` decides the first.
+
+- A file of a language that the program does not run. The languages that
+  the program runs are the languages of the files that hold a root other
+  than a test root, in `Graph.Stats.Languages`, and for a unit of dependency code the
+  languages that its ecosystem installs, as Python for `pypi`. A Python
+  project ships the JavaScript of its web pages, and the index step
+  truncates a minified file of it. No Python program runs that file. A
+  file of an unknown language counts, and so does every file of a graph
+  with no root.
+- A test file, which holds only test roots. It counts for a search with
+  `Query.IncludeTests`.
+
+An import that no file of the project or of the unit gives is an external
+node, unless the module can still be first party: a relative module, or a
+module whose first segment a search path root or a build step can give.
+Such an import is a record with the reason `no-definition`, and it
+concerns every target, because the module can hold any code. In Python
+the first segment must be a module or a package under an import root or
+in the directory of the importer, as the import system reads it. A file
+of the name deep in a package, as a `types.py`, is no module of
+`import types`, so that import names the standard library and is external.
+
+A decorator counts as a dynamic feature, with the flag `decorator-wrap`,
+only when the graph cannot name its code, as `@handlers[name]`. A
+decorator that is a name, a dotted name or a call of one, as
+`@app.route("/")` or `@click.option("-v")`, is a call of the scope that
+defines the function, and the link step reads it. A call of the value of
+a call, as `click.option("-v")(f)` in a decorator factory, is no record
+of its own: the graph reaches the code that the inner call gives through
+the inner call. A reflective inner call, as `getattr(o, n)()`, keeps its
+record.
 
 A summary keeps every uncertainty of a symbol in a table, with the targets
 that its scope concerns, so `Status` applies the same rule with no graph.

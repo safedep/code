@@ -10,7 +10,8 @@
       "kind": "module",
       "path": "main.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     }
   },
   "edges": [
@@ -55,12 +56,15 @@
     "main.py": "cached"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 2,
     "nodes": 2,
     "edges": 2,
     "unresolved": 0,
     "roots": 1,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "python"
+    ]
   }
 }

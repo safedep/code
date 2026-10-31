@@ -5,14 +5,16 @@
       "kind": "module",
       "path": "app/main.mjs",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "lib/cjs/index.cjs": {
       "key": "lib/cjs/index.cjs",
       "kind": "module",
       "path": "lib/cjs/index.cjs",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "lib/cjs/index.cjs//x": {
       "key": "lib/cjs/index.cjs//x",
@@ -26,7 +28,8 @@
       "kind": "module",
       "path": "lib/esm/index.mjs",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "lib/esm/index.mjs//x": {
       "key": "lib/esm/index.mjs//x",
@@ -40,7 +43,8 @@
       "kind": "module",
       "path": "lib/src/feature/y.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "lib/src/feature/y.js//y": {
       "key": "lib/src/feature/y.js//y",
@@ -144,11 +148,14 @@
     "lib/src/feature/y.js": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 4,
     "nodes": 7,
     "edges": 4,
     "unresolved": 0,
-    "roots": 4
+    "roots": 4,
+    "languages": [
+      "javascript"
+    ]
   }
 }

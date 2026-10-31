@@ -1,5 +1,5 @@
 {
-  "version": "14",
+  "version": "15",
   "path": "flags.ts",
   "language": "typescript",
   "content_hash": "a84c4ad21735c1c250e33317463237749489ea1f220a93f97e2bea3f07b040c4",
@@ -130,13 +130,7 @@
       "name": "View",
       "start_line": 18,
       "end_line": 23,
-      "exported": false,
-      "flags": [
-        {
-          "kind": "decorator-wrap",
-          "line": 19
-        }
-      ]
+      "exported": false
     },
     {
       "key": "flags.ts//View//render",
@@ -148,12 +142,6 @@
       "parent": "flags.ts//View",
       "decorators": [
         "@observe"
-      ],
-      "flags": [
-        {
-          "kind": "decorator-wrap",
-          "line": 21
-        }
       ]
     }
   ],
@@ -305,14 +293,6 @@
     {
       "kind": "monkey-patch",
       "line": 15
-    },
-    {
-      "kind": "decorator-wrap",
-      "line": 19
-    },
-    {
-      "kind": "decorator-wrap",
-      "line": 21
     },
     {
       "kind": "parse-error",

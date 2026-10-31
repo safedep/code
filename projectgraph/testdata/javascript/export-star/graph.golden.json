@@ -5,7 +5,8 @@
       "kind": "module",
       "path": "a.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "a.js//a": {
       "key": "a.js//a",
@@ -19,7 +20,8 @@
       "kind": "module",
       "path": "all.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "all.js//a": {
       "key": "all.js//a",
@@ -47,7 +49,8 @@
       "kind": "module",
       "path": "b.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "b.js//b": {
       "key": "b.js//b",
@@ -61,7 +64,8 @@
       "kind": "module",
       "path": "c.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     },
     "c.js//c": {
       "key": "c.js//c",
@@ -75,7 +79,8 @@
       "kind": "module",
       "path": "main.js",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "javascript"
     }
   },
   "edges": [
@@ -276,12 +281,15 @@
     "main.js": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 5,
     "nodes": 11,
     "edges": 10,
     "unresolved": 0,
     "roots": 8,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "javascript"
+    ]
   }
 }

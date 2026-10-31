@@ -2,6 +2,7 @@ package projectgraph
 
 import (
 	"context"
+	"maps"
 	"slices"
 	"strings"
 
@@ -168,4 +169,19 @@ func (b *builder) exportKeys(p string, seen map[string]bool) []string {
 	}
 	slices.Sort(keys)
 	return slices.Compact(keys)
+}
+
+// rootLanguages returns the languages of the files that hold a root other
+// than a test root, in the order of the codes. A test root runs only a
+// test, as the JavaScript test of a Python project, so it names no
+// language of the program. A file with no index has the language that the
+// index step told. With no root, the program runs every language.
+func (b *builder) rootLanguages() []langcode.Code {
+	set := map[langcode.Code]bool{}
+	for _, r := range b.g.Roots {
+		if n := b.g.Nodes[fileindex.Unit(r.Key)]; r.Kind != RootTest && n != nil && n.Language != "" {
+			set[n.Language] = true
+		}
+	}
+	return slices.Sorted(maps.Keys(set))
 }

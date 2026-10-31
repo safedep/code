@@ -5,7 +5,8 @@
       "kind": "module",
       "path": "app.py",
       "line": 1,
-      "exported": true
+      "exported": true,
+      "language": "python"
     },
     "app.py//Point": {
       "key": "app.py//Point",
@@ -194,12 +195,15 @@
     "app.py": "indexed"
   },
   "stats": {
-    "version": "16",
+    "version": "17",
     "files": 1,
     "nodes": 9,
     "edges": 5,
     "unresolved": 1,
     "roots": 6,
-    "root_fallback": true
+    "root_fallback": true,
+    "languages": [
+      "python"
+    ]
   }
 }

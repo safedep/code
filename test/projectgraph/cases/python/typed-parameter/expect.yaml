@@ -1,0 +1,56 @@
+source: safedep:hand
+description: >-
+  run types three parameters with a hint, as Parser, Optional[Parser] and Parser | None, so a call on each
+  one is a member call of Parser.parse with no record. The parameter raw has no hint, so the call on it has
+  a record of an unknown receiver and a name edge.
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: main.py//run
+    to: factory.py//Parser//parse
+    kind: member
+    confidence: high
+    site: main.py:7
+  - from: main.py//run
+    to: factory.py//Parser//parse
+    kind: member
+    confidence: high
+    site: main.py:8
+  - from: main.py//run
+    to: factory.py//Parser//parse
+    kind: member
+    confidence: high
+    site: main.py:9
+  - from: main.py//run
+    to: factory.py//Parser//parse
+    kind: name
+    confidence: low
+    site: main.py:10
+unresolved:
+  - caller: main.py//run
+    site: main.py:10
+    reason: unknown-receiver
+    method: parse
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: main.py
+      - key: main.py//run
+        site: main.py:14
+        kind: direct
+        confidence: high
+      - key: factory.py//Parser//parse
+        site: main.py:7
+        kind: member
+        confidence: high
+      - key: yaml//load
+        site: factory.py:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: factory.py//Parser//parse
+        site: factory.py:6
+        reached: true

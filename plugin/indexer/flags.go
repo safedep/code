@@ -107,7 +107,7 @@ func flagVisitor(p *projection) visitor {
 		case syntax.assignment:
 			p.flagMonkeyPatch(*syntax, node.ChildByFieldName("left"))
 		case "decorator":
-			if node.NamedChildCount() > 0 && node.NamedChild(0).Type() != "identifier" {
+			if node.NamedChildCount() > 0 && !namedDecorator(node.NamedChild(0)) {
 				p.flagAt(fileindex.FlagDecoratorWrap, decorated(node).StartByte(), lineOf(node))
 			}
 		}
@@ -136,6 +136,31 @@ func mainGuardVisitor(p *projection) visitor {
 			p.ix.MainGuard = true
 		}
 	}
+}
+
+// namedDecorator reports whether the expression of a decorator names its
+// code: a name, a dotted name, or a call of one, as @app.route("/"). The
+// link step resolves such a decorator as a call of the scope that defines
+// the function. Any other expression, as @handlers[name] or @make()(),
+// gives code that the graph cannot name.
+func namedDecorator(expression *sitter.Node) bool {
+	for expression != nil {
+		switch expression.Type() {
+		case "identifier":
+			return true
+		case "attribute", "member_expression":
+			expression = expression.ChildByFieldName("object")
+		case "call", "call_expression":
+			callee := expression.ChildByFieldName("function")
+			if callee == nil || callee.Type() == "call" || callee.Type() == "call_expression" {
+				return false
+			}
+			expression = callee
+		default:
+			return false
+		}
+	}
+	return false
 }
 
 // decorated returns the node that a decorator wraps. A TypeScript class

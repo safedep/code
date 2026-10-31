@@ -1,0 +1,95 @@
+source: safedep:hand
+description: >-
+  The Lib directory of CPython is the unit python:std@3.12.3. Worker extends threading.Thread, and the
+  main guard calls start, which the unit gives. start runs _bootstrap, _bootstrap calls self.run, and the
+  class hierarchy analysis adds the override Worker.run of the project, through the external key of
+  Thread that Worker names as its base. The override rule keeps its reference edge from Worker to run, and
+  the search reports that shorter path. subprocess.run resolves into the unit, and its path goes on to
+  os.execvp, a module that the unit does not hold. The test suite of the unit is left out.
+units:
+  python/Lib: python:std@3.12.3
+roots:
+  - key: server.py
+    kind: main
+    rule: python.main-guard
+edges:
+  - from: server.py
+    to: threading//Thread//start
+    kind: member
+    confidence: high
+    site: server.py:13
+  - from: threading//Thread//start
+    to: python:std@3.12.3//threading.py//Thread//start
+    kind: package
+    confidence: high
+    site: python:std@3.12.3//threading.py:5
+  - from: python:std@3.12.3//threading.py//Thread//_bootstrap
+    to: python:std@3.12.3//threading.py//Thread//run
+    kind: member
+    confidence: high
+    site: python:std@3.12.3//threading.py:9
+  - from: python:std@3.12.3//threading.py//Thread//_bootstrap
+    to: server.py//Worker//run
+    kind: cha
+    confidence: medium
+    site: python:std@3.12.3//threading.py:9
+  - from: server.py
+    to: subprocess//run
+    kind: direct
+    confidence: high
+    site: server.py:14
+  - from: python:std@3.12.3//subprocess.py//Popen//__init__
+    to: os//execvp
+    kind: direct
+    confidence: high
+    site: python:std@3.12.3//subprocess.py:6
+unresolved: []
+results:
+  - target: yaml//safe_load
+    status: found
+    path:
+      - key: server.py
+      - key: server.py//Worker
+        site: server.py:13
+        kind: direct
+        confidence: high
+      - key: server.py//Worker//run
+        site: server.py:8
+        kind: reference
+        confidence: low
+      - key: yaml//safe_load
+        site: server.py:9
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: server.py//Worker//run
+        site: server.py:9
+        reached: true
+  - target: os//execvp
+    status: found
+    path:
+      - key: server.py
+      - key: subprocess//run
+        site: server.py:14
+        kind: direct
+        confidence: high
+      - key: python:std@3.12.3//subprocess.py//run
+        site: python:std@3.12.3//subprocess.py:9
+        kind: package
+        confidence: high
+      - key: python:std@3.12.3//subprocess.py//Popen
+        site: python:std@3.12.3//subprocess.py:10
+        kind: direct
+        confidence: high
+      - key: python:std@3.12.3//subprocess.py//Popen//__init__
+        site: python:std@3.12.3//subprocess.py:5
+        kind: direct
+        confidence: high
+      - key: os//execvp
+        site: python:std@3.12.3//subprocess.py:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: python:std@3.12.3//subprocess.py//Popen//__init__
+        site: python:std@3.12.3//subprocess.py:6
+        reached: true

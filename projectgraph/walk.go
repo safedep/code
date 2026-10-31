@@ -91,6 +91,12 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 					continue
 				}
 			}
+			// The last name on an instance of an external class is a
+			// method of the class, whose subclasses the class hierarchy
+			// analysis reads.
+			if r.virtual && i+1 == len(names) {
+				r.class = r.key
+			}
 			r.key = b.deriveExternal(r.key, names[i:])
 			r.rule = cmp.Or(r.rule, ruleExternal)
 			return r

@@ -1,0 +1,20 @@
+{
+  "version": "2",
+  "index_version": "15",
+  "link_version": "17",
+  "unit": "pypi:google-auth@2.0.0",
+  "symbols": [
+    {
+      "key": "google//auth//crypt//sign",
+      "definitions": [
+        "pypi:google-auth@2.0.0//google/auth/crypt.py//sign"
+      ],
+      "reaches": [
+        "hashlib//sha256"
+      ]
+    }
+  ],
+  "targets": [
+    "hashlib//sha256"
+  ]
+}
