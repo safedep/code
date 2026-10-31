@@ -23,6 +23,11 @@ func TestPythonDistributions(t *testing.T) {
 		"six-1.16.0.dist-info/RECORD":          {Data: []byte("six.py,sha256=abc,34549\nsix-1.16.0.dist-info/RECORD,,\n")},
 		"six-1.16.0.dist-info/top_level.txt":   {Data: []byte("six\n")},
 		"google_auth-2.0.0.dist-info/METADATA": {Data: []byte("Name: google-auth\nVersion: 2.0.0\n")},
+		"app-0.1.0.dist-info/METADATA":         {Data: []byte("Name: app\nVersion: 0.1.0\n")},
+		"app-0.1.0.dist-info/direct_url.json":  {Data: []byte(`{"url": "file:///src/app", "dir_info": {"editable": true}}`)},
+		"app-0.1.0.dist-info/RECORD":           {Data: []byte("__editable__.app-0.1.0.pth,,\n")},
+		"lib-0.2.0.dist-info/METADATA":         {Data: []byte("Name: lib\nVersion: 0.2.0\n")},
+		"lib-0.2.0.dist-info/direct_url.json":  {Data: []byte(`{"url": "https://example.com/lib.git", "vcs_info": {"vcs": "git"}}`)},
 		"google_auth-2.0.0.dist-info/RECORD":   {Data: []byte("google/auth/__init__.py,,\ngoogle/auth/crypt.py,,\ngoogle/oauth2/__init__.py,,\n")},
 		"nometa.dist-info/RECORD":              {Data: []byte("x.py,,\n")},
 		"broken.dist-info/METADATA":            {Data: []byte("Version: 1\n")},
@@ -31,7 +36,7 @@ func TestPythonDistributions(t *testing.T) {
 	dists, problems := PythonDistributions(root)
 	require.Len(t, problems, 1, "a .dist-info with no METADATA is no distribution, and one with no Name is a problem")
 	assert.Equal(t, "broken.dist-info", problems[0].Path)
-	require.Len(t, dists, 3)
+	require.Len(t, dists, 5)
 
 	yaml := dists[0]
 	assert.Equal(t, "PyYAML", yaml.Name)
@@ -43,11 +48,15 @@ func TestPythonDistributions(t *testing.T) {
 	assert.Equal(t, []string{"_yaml", "yaml"}, yaml.Roots())
 	assert.Equal(t, []string{"six", "typing_extensions", "google-auth"}, yaml.Requires, "a requirement with an extra marker is no requirement of a plain install")
 
-	google := dists[1]
+	assert.True(t, dists[1].Editable, "app is an editable install")
+	assert.False(t, dists[3].Editable, "an install from a git URL is no editable install")
+	assert.False(t, yaml.Editable)
+
+	google := dists[2]
 	assert.Equal(t, []string{"google"}, google.TopLevel)
 	assert.Equal(t, []string{"google/auth", "google/oauth2"}, google.Roots(), "a namespace package gives the packages under it")
 
-	six := dists[2]
+	six := dists[4]
 	assert.Equal(t, []string{"six"}, six.TopLevel)
 	assert.Equal(t, []string{"six.py"}, six.Roots())
 

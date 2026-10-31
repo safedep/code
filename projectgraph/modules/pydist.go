@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/csv"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"path"
@@ -29,6 +31,10 @@ type Distribution struct {
 	// Requires holds the names of the distributions that the Requires-Dist
 	// lines of METADATA name with no extra marker, in order, each once.
 	Requires []string
+	// Editable marks an editable install, whose direct_url.json says so.
+	// Its code is the project that pip or uv installed from, not a copy
+	// under the root.
+	Editable bool
 }
 
 // Unit returns the package unit of the distribution, as pypi:PyYAML@6.0.1.
@@ -215,7 +221,30 @@ func readDistribution(root fs.FS, dir string) (Distribution, error) {
 	if len(d.TopLevel) == 0 {
 		d.TopLevel = topLevelOf(d.Files, d.Compiled)
 	}
-	return d, nil
+	d.Editable, err = editableInstall(root, dir)
+	return d, err
+}
+
+// editableInstall reads the direct_url.json of a .dist-info, which PEP 610
+// writes for an install from a directory or a URL, and reports an editable
+// install. A .dist-info with no such file is a regular install.
+func editableInstall(root fs.FS, dir string) (bool, error) {
+	data, err := fs.ReadFile(root, path.Join(dir, "direct_url.json"))
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	var u struct {
+		DirInfo struct {
+			Editable bool `json:"editable"`
+		} `json:"dir_info"`
+	}
+	if err := json.Unmarshal(data, &u); err != nil {
+		return false, fmt.Errorf("direct_url.json: %w", err)
+	}
+	return u.DirInfo.Editable, nil
 }
 
 // readRecord returns the files of a RECORD under the root, and the module
