@@ -148,6 +148,15 @@ crates.io, and a PyPI package from pypi.org: a dependency as its wheel,
 unpacked, so its directory has the layout of site-packages, and a project
 as its sdist, so its directory has the manifests.
 
+The script also fetches the `src` tree of the Go release of each Go
+project from go.dev into `gostd/<release>/src`, and writes the release of
+each project to `gostd/releases.txt`. The release comes from the `go` line
+of the go.mod of the project, as `go1.16` for `go 1.16`. The measure links
+the tree as the unit `go:std@<release>`, as vet links GOROOT. Set
+`PROJECTGRAPH_METHOD_NO_STD=1` to leave the unit out and see what it
+changes.
+
+
 `receivers_test.go` holds one row per form of the receiver of a method
 call, for Go, for Rust and for Python, against the small dependency units under
 `testdata/receivers`. It runs in `go test ./...`. A row that the link step

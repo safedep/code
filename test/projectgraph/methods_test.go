@@ -24,6 +24,7 @@ import (
 	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/plugin/indexer"
 	"github.com/safedep/code/projectgraph"
+	"github.com/safedep/code/projectgraph/modules"
 	"github.com/safedep/code/projectgraph/reach"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/mod/module"
@@ -193,14 +194,38 @@ func ecosystemOf(language string) (string, langcode.Code) {
 	return "cargo", langcode.Rust
 }
 
+// methodNoStdEnv names a switch that leaves out the unit of the Go
+// standard library, so a run shows what the unit changes.
+const methodNoStdEnv = "PROJECTGRAPH_METHOD_NO_STD"
+
+// goReleases returns the Go release of each Go project of the corpus, as
+// scripts/fetch_method_corpus.sh records it from the go line of the
+// go.mod of the project.
+func goReleases(t *testing.T, corpus string) map[string]string {
+	data, err := os.ReadFile(filepath.Join(corpus, "gostd", "releases.txt"))
+	require.NoError(t, err, "run scripts/fetch_method_corpus.sh again to fetch the Go standard library")
+	releases := map[string]string{}
+	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+		project, release, ok := strings.Cut(line, " ")
+		require.True(t, ok, line)
+		releases[project] = release
+	}
+	return releases
+}
+
 // methodDir returns the directory of a project or a dependency in the
 // corpus, and its unit. A PyPI dependency is an unpacked wheel, so its
 // directory has the layout of site-packages, and the unit is rooted there.
+// The Go standard library is the dependency std@<release>, as std@go1.16,
+// and its directory is the src tree of the release.
 func methodDir(t *testing.T, corpus, language, item string) (string, string) {
 	name, version, _ := strings.Cut(item, "@")
 	eco, _ := ecosystemOf(language)
 	switch eco {
 	case "go":
+		if name == modules.StdModule {
+			return filepath.Join(corpus, "gostd", version, "src"), "go:" + item
+		}
 		escaped, err := module.EscapePath(name)
 		require.NoError(t, err)
 		return filepath.Join(corpus, "gomod", filepath.FromSlash(escaped)+"@"+version), "go:" + item
@@ -276,6 +301,11 @@ func TestMethodTargets(t *testing.T) {
 		})
 	}
 	projects, advisories := readMethodCorpus(t)
+	measureGo := slices.ContainsFunc(languages, func(l core.Language) bool { return l.Meta().Code == langcode.Go })
+	var releases map[string]string
+	if measureGo && os.Getenv(methodNoStdEnv) == "" {
+		releases = goReleases(t, corpus)
+	}
 
 	counts := methodCounts{}
 	var lines, details []string
@@ -284,7 +314,13 @@ func TestMethodTargets(t *testing.T) {
 		cfg := codefs.LocalFileSystemConfig{AppDirectories: []string{dir}, ImportUnits: map[string]string{}, ExcludePatterns: codefs.DefaultSkipPatterns(dir)}
 		units := map[string]iofs.FS{}
 		var targets []methodTarget
-		for _, dep := range p.deps {
+		deps := p.deps
+		if p.language == "go" && releases != nil {
+			release, ok := releases[p.source]
+			require.True(t, ok, "gostd/releases.txt has no Go release of %s", p.source)
+			deps = append(slices.Clone(deps), modules.StdModule+"@"+release)
+		}
+		for _, dep := range deps {
 			depDir, unit := methodDir(t, corpus, p.language, dep)
 			cfg.ImportDirectories = append(cfg.ImportDirectories, depDir)
 			cfg.ImportUnits[depDir] = unit
