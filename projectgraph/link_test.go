@@ -862,7 +862,7 @@ func TestBuildNameEdges(t *testing.T) {
 	assert.Equal(t, []string{
 		"main.py:2 main.py unknown-receiver cb",
 		"main.py:4 main.py unknown-receiver run",
-		"main.py:5 main.py ambiguous get",
+		"main.py:5 main.py ambiguous ",
 		"main.py:6 main.py computed-name ",
 	}, unresolvedStrings(g), "a bare name with no binding is a record, and too many candidates make the site ambiguous")
 	assert.Contains(t, g.Nodes, "print", "a builtin stays external")

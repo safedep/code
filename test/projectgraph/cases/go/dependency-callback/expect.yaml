@@ -5,7 +5,8 @@ description: >-
   a value of the interface Handler, and Bind calls the method value c.Close on a value of the interface
   Closer. A function that main passes is a reference of main, and the calls of a literal belong to main, so
   os.Getwd and os.Getenv are found. The call fs[0]() in Each is a function-value record that concerns no
-  target. The call h.Handle() in Serve has no implementation in the graph, so it is an interface-receiver
+  target in a search from the roots. The summary of srv counts it for every target, because a search of any
+  kind reads the summary. The call h.Handle() in Serve has no implementation in the graph, so it is an interface-receiver
   record with the method Handle, and os/exec.LookPath, which mine.Handle calls, is uncertain. The link step
   cannot name the method of c.Close, so the reference is a record with the method Close, which gets a name
   edge to conn.Close. So os.Chdir is found. No target that a callback reaches is not found. No unit gives

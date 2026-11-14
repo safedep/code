@@ -27,7 +27,10 @@
       "definitions": [
         "go:github.com/acme/srv@v1.0.0//srv.go//Each"
       ],
-      "reaches": []
+      "reaches": [],
+      "uncertainties": [
+        2
+      ]
     },
     {
       "key": "github.com//acme//srv//Handler",
@@ -44,7 +47,7 @@
       "reaches": [],
       "uncertainties": [
         0,
-        2
+        3
       ]
     },
     {
@@ -55,7 +58,7 @@
       "reaches": [],
       "uncertainties": [
         0,
-        3
+        4
       ]
     }
   ],
@@ -79,6 +82,16 @@
       },
       "text": "f (unknown-receiver)",
       "method": "f"
+    },
+    {
+      "kind": "unresolved-call",
+      "key": "go:github.com/acme/srv@v1.0.0//srv.go//Each",
+      "site": {
+        "path": "go:github.com/acme/srv@v1.0.0//srv.go",
+        "line": 16,
+        "column": 2
+      },
+      "text": "fs[0] (function-value)"
     },
     {
       "kind": "unresolved-call",

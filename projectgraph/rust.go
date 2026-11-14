@@ -29,6 +29,7 @@ var rustProfile = profile{
 	symbol:            rustSymbol,
 	surface:           rustSurface,
 	unitTypes:         true,
+	receiverMethods:   true,
 	sameTypeMethods:   map[string]bool{"clone": true, "to_owned": true, "default": true, "from": true},
 	abstractReceiver:  fileindex.UnresolvedTraitReceiver,
 	dependencies:      func(b *builder) ([]string, []modules.Problem) { return b.cargoOf(b.project).Dependencies(), nil },

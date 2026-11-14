@@ -383,12 +383,12 @@ unresolved handlers.py//parse 5 unknown-receiver f
 
 // TestReachSpanCountsTheRecordsOfItsCode checks that an unresolved call of a
 // method concerns what its candidates run through their own unresolved
-// calls, as the ambiguous call handle whose candidate calls load on a value
-// of an unknown type. Reach and the table of ExploreAll give one answer.
+// calls, as the call handle whose candidate calls load on a value of an
+// unknown type. Reach and the table of ExploreAll give one answer.
 func TestReachSpanCountsTheRecordsOfItsCode(t *testing.T) {
 	const spec = `
 root main.py//run
-unresolved main.py//run 3 ambiguous handle
+unresolved main.py//run 3 unknown-receiver handle
 edge lib.py//H//handle lib.py//helper direct 4
 edge lib.py//Codec//load pickle//loads direct 8
 edge lib.py//dead os//exit direct 12

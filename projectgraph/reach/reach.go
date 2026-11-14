@@ -252,6 +252,12 @@ func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error
 			}
 		}
 	}
+	// The caller of a root of kind query can run code before it that no
+	// root reaches, as a main that fills a table of handlers and then
+	// calls the source. That code can store a function value. So only a
+	// search from the roots that the rules marked reaches each function
+	// that a call of a value can run.
+	a.valueEdges = !slices.ContainsFunc(roots, func(r projectgraph.Root) bool { return r.Kind == RootQuery })
 	kinds := a.rootKinds(roots)
 	s := a.search(ctx, a.ids(roots), depth, targets, a.loads)
 	unc := a.uncertainties(s, depth)
@@ -329,7 +335,11 @@ type Explorer struct {
 	a *adjacency
 }
 
-// NewExplorer builds the adjacency of the graph for the searches of an Explorer.
+// NewExplorer builds the adjacency of the graph for the searches of an
+// Explorer. A summary is the main user of an Explorer, and a search of any
+// kind reads it, from a project that the summary does not see. So the
+// searches of an Explorer do not have valueEdges, as a search from a
+// source does not.
 func NewExplorer(g *projectgraph.Graph) *Explorer {
 	return &Explorer{a: newAdjacency(g)}
 }
@@ -370,7 +380,8 @@ func (x *Explorer) Explore(ctx context.Context, from []string, maxDepth int) (*E
 // of a test file start the span of a method name or of the callback. loads
 // makes the search of a query and each span enter the load group of each
 // node that they reach, and loadGroups holds the module top levels of each
-// group.
+// group. valueEdges marks a search that reaches each code that can store a
+// function value, as sources.valueEdges says.
 type adjacency struct {
 	g         *projectgraph.Graph
 	keys      []string
@@ -385,6 +396,7 @@ type adjacency struct {
 
 	includeTests bool
 	loads        bool
+	valueEdges   bool
 
 	src        *sources
 	loadGroups map[string]*loadGroup
@@ -398,7 +410,7 @@ type adjacency struct {
 // node, read once.
 func (a *adjacency) sources() *sources {
 	if a.src == nil {
-		a.src = newSources(a.g)
+		a.src = newSources(a.g, a.valueEdges)
 	}
 	return a.src
 }

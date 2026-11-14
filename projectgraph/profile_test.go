@@ -35,3 +35,23 @@ func TestLangStateIsOnePerLanguage(t *testing.T) {
 	assert.Same(t, b.rustState(), langState[rustState](b, langcode.Rust))
 	assert.Nil(t, b.goState().methods, "a table that no lookup filled is empty")
 }
+
+func TestAmbiguousSitesKeepTheMethodNameWhereOnlyAMethodRuns(t *testing.T) {
+	for _, tt := range []struct {
+		lang     langcode.Code
+		receiver string
+		want     bool
+	}{
+		{lang: langcode.Go, receiver: "s", want: true},
+		{lang: langcode.Go, receiver: "", want: true},
+		{lang: langcode.Rust, receiver: "s", want: true},
+		{lang: langcode.Rust, receiver: "", want: false},
+		{lang: langcode.Python, receiver: "s", want: false},
+		{lang: langcode.Javascript, receiver: "s", want: false},
+		{lang: langcode.Typescript, receiver: "s", want: false},
+		{lang: langcode.Ruby, receiver: "s", want: false},
+		{lang: langcode.PHP, receiver: "s", want: false},
+	} {
+		assert.Equal(t, tt.want, profileOf(tt.lang).keepsAmbiguousMethod(tt.receiver), "%s with the receiver %q", tt.lang, tt.receiver)
+	}
+}

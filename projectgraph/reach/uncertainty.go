@@ -60,10 +60,14 @@ type sources struct {
 	// so the search counts it once.
 	callbacks map[string]bool
 	callback  *Uncertainty
+	// valueEdges marks a search that reaches each code that can store a
+	// function value, so a reference edge leads it to each function that
+	// a call of a value can run.
+	valueEdges bool
 }
 
-func newSources(g *projectgraph.Graph) *sources {
-	s := &sources{unresolved: map[string][]projectgraph.UnresolvedSite{}, prefixes: map[projectgraph.Site]string{}, truncated: map[string][]projectgraph.Truncation{}, budgets: map[string][]Uncertainty{}, testBudgets: map[string][]Uncertainty{}, callbacks: map[string]bool{}}
+func newSources(g *projectgraph.Graph, valueEdges bool) *sources {
+	s := &sources{valueEdges: valueEdges, unresolved: map[string][]projectgraph.UnresolvedSite{}, prefixes: map[projectgraph.Site]string{}, truncated: map[string][]projectgraph.Truncation{}, budgets: map[string][]Uncertainty{}, testBudgets: map[string][]Uncertainty{}, callbacks: map[string]bool{}}
 	for _, u := range g.Unresolved {
 		if u.Callback {
 			s.callbacks[u.Caller] = true
@@ -163,7 +167,7 @@ func (s *sources) at(key string, n *projectgraph.Node) []Uncertainty {
 	for _, r := range s.unresolved[key] {
 		// A call of a function value runs a function that the search
 		// reaches through the code that holds the value.
-		if r.Reason == fileindex.UnresolvedFunctionValue {
+		if r.Reason == fileindex.UnresolvedFunctionValue && s.valueEdges {
 			continue
 		}
 		u := Uncertainty{Kind: UnresolvedCall, Key: key, Site: r.Site, Text: fmt.Sprintf("%s (%s)", r.Text, r.Reason)}
@@ -172,7 +176,10 @@ func (s *sources) at(key string, n *projectgraph.Node) []Uncertainty {
 			u.Unit = r.Unit
 		case r.ImportPrefix != "":
 			u.ImportPrefix = r.ImportPrefix
-		case r.Method != "" && !projectgraph.ReachesAny(r.Reason):
+		case r.Method != "" && !projectgraph.ReachesAny(r.Reason) && (s.valueEdges || r.Reason != fileindex.UnresolvedAmbiguous):
+			// An ambiguous site that keeps its method name can call a
+			// function value, as a Go field of a function type, so only
+			// a search with valueEdges scopes it by the name.
 			u.Method = r.Method
 		}
 		out = append(out, u)

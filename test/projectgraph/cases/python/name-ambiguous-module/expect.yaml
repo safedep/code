@@ -1,0 +1,20 @@
+source: safedep:hand
+description: >-
+  dispatch calls handle on the parameter handler. 24 classes define a method handle, so the site is over
+  the cap of 20 and is ambiguous. main passes the module plug, which binds os.remove to the name handle by
+  an import. No definition of the name handle runs. So the site keeps no method name and concerns every
+  target, and os.remove is uncertain and not no-such-target.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+unresolved:
+  - caller: main.py//dispatch
+    site: main.py:4
+    reason: ambiguous
+results:
+  - target: os//remove
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: main.py:4
