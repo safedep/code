@@ -35,6 +35,11 @@ type syntaxShapes struct {
 	// receiver, as in OpenAI::Client.new. A variable that gets the result is
 	// an instance of the receiver.
 	constructorMethods []string
+	// pointer reports whether a type is a pointer whose constructor method
+	// holds its argument, as Box in Box::new(Html {}). A method call on the
+	// value runs a method of the argument, so the value is no instance of
+	// the pointer.
+	pointer func(name string) bool
 
 	// classKeywords name the class that holds the code, as Self in Rust or
 	// static in PHP. superKeywords name its base class, as parent in PHP.
@@ -650,11 +655,15 @@ func cleanSegment(segment string) string {
 // call of its name makes in a language of class calls, as Parser().
 func (p *shapedProcessors) instanceOf(callee string) (string, bool) {
 	receiver, method, found := cutLast(callee, namespaceSeparator)
-	if found && slices.Contains(p.shapes.constructorMethods, method) {
+	if found && slices.Contains(p.shapes.constructorMethods, method) && !p.isPointer(lastOf(receiver)) {
 		return receiver, true
 	}
 	first, _ := utf8.DecodeRuneInString(lastOf(callee))
 	return callee, p.shapes.classCalls && unicode.IsUpper(first)
+}
+
+func (p *shapedProcessors) isPointer(name string) bool {
+	return p.shapes.pointer != nil && p.shapes.pointer(name)
 }
 
 // lastOf returns the last segment of a namespace.

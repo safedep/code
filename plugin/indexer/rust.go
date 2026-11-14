@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"context"
 	"slices"
 	"strings"
 
@@ -25,6 +26,7 @@ var rustRules = languageRules{
 	exported:    rustPublic,
 	definitions: rustTypes,
 	visitors:    []func(p *projection) visitor{referenceVisitor, rustVisitor},
+	typedResult: rustDeclaredAt,
 	// A Rust path to a function, as handler in get(handler) or
 	// Self::visit in items.iter().for_each(Self::visit), is a value that
 	// the code that gets it calls.
@@ -49,10 +51,6 @@ var rustRules = languageRules{
 // rustTypeItems are the items that define a type, whose methods an impl
 // block of the same name holds.
 var rustTypeItems = []string{"struct_item", "enum_item", "union_item"}
-
-// rustPointers hold a value whose methods a call reaches through them, as
-// s.save() on a Box<dyn Store>.
-var rustPointers = []string{"Box", "Rc", "Arc"}
 
 // rustTypes adds each struct, enum and union that no impl block of its
 // scope names, so that a path names the type. An impl block of the type
@@ -176,7 +174,7 @@ func (p *projection) rustTypeName(node *sitter.Node, bounds map[string]string) s
 		return p.text(node)
 	case "generic_type":
 		name := p.rustTypeName(node.ChildByFieldName("type"), bounds)
-		if args := ts.NamedChildren(node.ChildByFieldName("type_arguments")); slices.Contains(rustPointers, name) && len(args) > 0 {
+		if args := ts.NamedChildren(node.ChildByFieldName("type_arguments")); langcode.IsRustPointer(name) && len(args) > 0 {
 			return p.rustTypeName(args[0], bounds)
 		}
 		return name
@@ -319,6 +317,65 @@ func (p *projection) rustLocals(body *sitter.Node, bounds map[string]string) []f
 		}
 	})
 	return locals
+}
+
+// rustDeclaredAt reports whether the declared type of a name of a function
+// holds at a line and a column of the function: the function binds the name
+// once, as a parameter or a let with a type, before that place. A let, a
+// match arm, an if let, a for or a closure can bind the name again with
+// another type. Without the check, a call on such a name took the method of
+// the declared type and lost its record, so a method of the real type read
+// as not-found.
+func rustDeclaredAt(p *projection, caller, name string, line, column int) bool {
+	fn := p.syntax[caller]
+	if fn == nil || fn.Type() != "function_item" {
+		return false
+	}
+	var binders []*sitter.Node
+	err := ts.Walk(context.Background(), fn, ts.WalkOptions{}, func(node *sitter.Node) bool {
+		if node.Type() == "function_item" && !ts.SameNode(node, fn) {
+			return false
+		}
+		if (node.Type() == "identifier" || node.Type() == "shorthand_field_identifier") && p.text(node) == name {
+			if binder := rustBinder(node); binder != nil {
+				binders = append(binders, binder)
+			}
+		}
+		return true
+	})
+	if err != nil || len(binders) != 1 {
+		return false
+	}
+	binder := binders[0]
+	if at := binder.StartPoint(); int(at.Row)+1 > line || int(at.Row)+1 == line && int(at.Column)+1 >= column {
+		return false
+	}
+	return binder.Type() == "parameter" || binder.Type() == "let_declaration" && binder.ChildByFieldName("type") != nil
+}
+
+// rustBinder returns the node that binds an identifier of a pattern, as the
+// let, the parameter or the match pattern, or nil for an identifier that is
+// no binding.
+func rustBinder(id *sitter.Node) *sitter.Node {
+	child, parent := id, id.Parent()
+	for parent != nil && strings.HasSuffix(parent.Type(), "_pattern") && parent.Type() != "match_pattern" {
+		if typ := parent.ChildByFieldName("type"); typ != nil && ts.SameNode(typ, child) {
+			return nil
+		}
+		child, parent = parent, parent.Parent()
+	}
+	if parent == nil {
+		return nil
+	}
+	switch parent.Type() {
+	case "match_pattern", "closure_parameters":
+		return parent
+	case "let_declaration", "for_expression", "let_condition", "parameter":
+		if pattern := parent.ChildByFieldName("pattern"); pattern != nil && ts.SameNode(pattern, child) {
+			return parent
+		}
+	}
+	return nil
 }
 
 // rustPublic reports whether an item is pub. A method of a trait impl is

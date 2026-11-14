@@ -1,0 +1,30 @@
+{
+  "version": "2",
+  "index_version": "15",
+  "link_version": "17",
+  "unit": "cargo:dep@1.2.0",
+  "symbols": [
+    {
+      "key": "dep//Html",
+      "definitions": [
+        "cargo:dep@1.2.0//src/lib.rs//Html"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "dep//Html//write",
+      "definitions": [
+        "cargo:dep@1.2.0//src/lib.rs//Html//write"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "dep//Write",
+      "definitions": [
+        "cargo:dep@1.2.0//src/lib.rs//Write"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": []
+}

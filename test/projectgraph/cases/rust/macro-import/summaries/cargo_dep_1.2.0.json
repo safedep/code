@@ -1,0 +1,16 @@
+{
+  "version": "2",
+  "index_version": "15",
+  "link_version": "17",
+  "unit": "cargo:dep@1.2.0",
+  "symbols": [
+    {
+      "key": "dep//render",
+      "definitions": [
+        "cargo:dep@1.2.0//src/lib.rs//render"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": []
+}
