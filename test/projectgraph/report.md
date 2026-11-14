@@ -1484,14 +1484,14 @@ same corpus on origin/main at 39cf1e2, without the unit.
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Go | function | main | 256 | 51 | 0 | 0 | 2 | 3 | 5 | 0 | 106 | 39 | 50 |
 | Go | function | without | 256 | 58 | 0 | 0 | 193 | 5 | 0 | 0 | 0 | 0 | 0 |
-| Go | function | with | 256 | 59 | 0 | 0 | 187 | 8 | 1 | 0 | 1 | 0 | 0 |
+| Go | function | with | 256 | 59 | 0 | 0 | 187 | 8 | 2 | 0 | 0 | 0 | 0 |
 | Go | method | main | 1298 | 331 | 0 | 0 | 2 | 154 | 71 | 2 | 416 | 109 | 213 |
 | Go | method | without | 1298 | 343 | 0 | 7 | 776 | 156 | 15 | 1 | 0 | 0 | 0 |
-| Go | method | with | 1298 | 384 | 0 | 0 | 432 | 253 | 184 | 14 | 31 | 0 | 0 |
+| Go | method | with | 1298 | 384 | 0 | 0 | 442 | 253 | 205 | 14 | 0 | 0 | 0 |
 | Rust | function | main | 13 | 4 | 0 | 0 | 0 | 0 | 9 | 0 | 0 | 0 | 0 |
-| Rust | function | branch | 13 | 5 | 0 | 0 | 0 | 7 | 1 | 0 | 0 | 0 | 0 |
+| Rust | function | branch | 13 | 5 | 0 | 0 | 0 | 5 | 1 | 0 | 2 | 0 | 0 |
 | Rust | method | main | 38 | 16 | 0 | 0 | 0 | 0 | 13 | 0 | 0 | 9 | 0 |
-| Rust | method | branch | 38 | 16 | 0 | 0 | 0 | 12 | 1 | 0 | 0 | 9 | 0 |
+| Rust | method | branch | 38 | 16 | 0 | 0 | 0 | 8 | 1 | 0 | 4 | 9 | 0 |
 
 | Run | govulncheck reaches | reach found | reach uncertain | false negative | govulncheck does not reach | reach not-found or no-such-target | reach found (review) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -1500,7 +1500,7 @@ same corpus on origin/main at 39cf1e2, without the unit.
 
 - No target is a false negative in either run. A measure run fails on one.
 - Reach finds 71 of the 115 targets that govulncheck reaches. Main found 60.
-- The global causes of main are gone: `ambiguous`, `budget` and
+- The global causes of main are gone for Go: `ambiguous`, `budget` and
   `computed-name`. Most of their targets now read `no-dependency-source`.
   That record marks code outside the graph that can call back into it: a
   module with no unit, or the standard library with no unit. The corpus
@@ -1508,6 +1508,12 @@ same corpus on origin/main at 39cf1e2, without the unit.
   modules of a build have no unit. A consumer that gives a unit to each
   module with source on the disk, and to GOROOT, removes most of these
   records.
-- Python does not change. The Rust `no-definition` records of main fall
-  from 22 to 2. The rest are `unknown-receiver` records of calls that the
-  link step does not type yet, as a turbofish or a `<T as Trait>::m` call.
+- The answers of Python do not change. An ambiguous site of Python,
+  JavaScript, TypeScript, Ruby and PHP concerns every target, as on main,
+  because a call by name there can run a callable object, a
+  `__getattr__` value or a module attribute. Go keeps the method name of an
+  ambiguous site in a search from the roots, and Rust keeps it for a call
+  on a receiver.
+- The Rust `no-definition` records of main fall from 22 to 2. The rest are
+  `unknown-receiver` and `ambiguous` records of calls that the link step
+  does not type yet, as a turbofish or a `<T as Trait>::m` call.
