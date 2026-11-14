@@ -265,6 +265,20 @@ func profileOf(lang langcode.Code) *profile {
 	return noProfile
 }
 
+// MethodAliases returns the names of the methods that a call of the method
+// name can run by another name, as from for into of Rust. The reach query
+// does not read the language of a site, so it takes the aliases of every
+// language. Without them, a call of into whose From impl calls a target
+// concerns only the targets that a method into reaches, and the target
+// reads as not-found.
+func MethodAliases(method string) []string {
+	var out []string
+	for _, p := range profiles {
+		out = append(out, p.methodAliases[method]...)
+	}
+	return out
+}
+
 // keepsAmbiguousMethod reports whether an ambiguous site with the receiver
 // keeps its method name, so the reach query scopes it by the name. A call
 // on a receiver of a language with receiverMethods runs only a method of

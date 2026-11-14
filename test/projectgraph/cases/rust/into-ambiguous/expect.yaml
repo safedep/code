@@ -1,0 +1,36 @@
+source: safedep:hand
+description: >-
+  dispatch calls into on an element of a vector of a generic type, which the link step does not know. A call
+  of into runs the from of an impl of From, so the method from gives the candidates too. 22 types implement
+  From<In>. That is over the cap of 20, so the site gets no name edge and is ambiguous, and it keeps the
+  method name into. The from of D0 calls std::env::var. The record concerns what a method of the name or of
+  an alias of the name reaches, so std::env::var is uncertain and not not-found. std::fs::remove_file, which
+  only the uncalled cleanup calls, is not found.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+unresolved:
+  - caller: src/main.rs//dispatch
+    site: src/main.rs:10
+    reason: ambiguous
+    method: into
+results:
+  - target: std//env//var
+    status: uncertain
+    call_sites:
+      - caller: src/convert.rs//D0//from
+        site: src/convert.rs:7
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/main.rs:10
+  - target: std//fs//remove_file
+    status: not-found
+    call_sites:
+      - caller: src/main.rs//cleanup
+        site: src/main.rs:4
+        reached: false

@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/projectgraph"
 )
 
 // scopeKey names the code that a scoped uncertainty can run: the nodes
@@ -123,6 +124,9 @@ func (w *spanWalk) enter(k scopeKey) {
 		w.s.methods = append(w.s.methods, k.method)
 		for _, id := range w.a.definitionsOf(k.method) {
 			w.add(id, false)
+		}
+		for _, alias := range projectgraph.MethodAliases(k.method) {
+			w.enter(scopeKey{method: alias})
 		}
 	}
 }

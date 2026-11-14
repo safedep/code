@@ -1,0 +1,40 @@
+source: safedep:hand
+description: >-
+  dispatch calls into on an element of a vector of a generic type, which the link step does not know. The
+  crate kit implements From<Raw> for Store, and that from calls std::fs::remove_file. The site gets name
+  edges only to the candidates of the project, and the project has none, so the site is a record with the
+  method into. A call of into runs the from of an impl of From. So the record concerns what a method from
+  reaches, and kit//Store//from and std::fs::remove_file are uncertain and not not-found.
+units:
+  vendor/kit: cargo:kit@1.0.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+unresolved:
+  - caller: src/main.rs//dispatch
+    site: src/main.rs:4
+    reason: unknown-receiver
+    method: into
+results:
+  - target: kit//Store//from
+    status: uncertain
+    call_sites:
+      - caller: cargo:kit@1.0.0//src/lib.rs//Store
+        site: cargo:kit@1.0.0//src/lib.rs:6
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/main.rs:4
+  - target: std//fs//remove_file
+    status: uncertain
+    call_sites:
+      - caller: cargo:kit@1.0.0//src/lib.rs//Store//from
+        site: cargo:kit@1.0.0//src/lib.rs:7
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/main.rs:4

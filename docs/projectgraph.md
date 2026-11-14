@@ -730,6 +730,12 @@ causes it.
 An uncertainty concerns every target, unless its site says less. A call
 with an unknown receiver and a method name concerns the targets with that
 last segment, and the targets that any definition of that name reaches. A
+call of a Rust conversion runs a method of another name, as `into` runs the
+`from` of an impl of `From`. So the record concerns the method names that
+the profile of Rust gives for the name too. The reach query does not read
+the language of a site, so a call of the name in another language concerns
+them too. The cases `rust/into-ambiguous` and `rust/into-dependency` show
+it. A
 computed import with a static prefix concerns the targets under the
 prefix. A call into a package at no known definition concerns the targets
 that the code of the package reaches. Code of the Go standard library that
