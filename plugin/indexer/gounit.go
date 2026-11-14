@@ -173,6 +173,9 @@ func skeletonIndex(ctx context.Context, p contentParser, file pending, tree core
 	if err != nil {
 		return nil, err
 	}
+	if err := complete(ctx, out); err != nil {
+		return nil, err
+	}
 	out.ContentHash = file.key.ContentHash
 	return out, nil
 }

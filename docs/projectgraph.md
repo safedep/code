@@ -94,6 +94,14 @@ as `missing` and returns the result so far with the error of the context.
 The link step takes the partial result, and the reach query reports each
 missing file as a budget cause.
 
+Before it returns, `Run` puts the indexes and the artifacts of the files that
+it finished in the store. A run with the same deadline then reads them from
+the store and gets further into the project. The store gets no index and no
+artifact of a file that the deadline cut. An index with a deadline
+truncation fails its file. A cached plugin that returns after the end of
+the context can have stopped early with no error, so the store gets no
+artifact from such a call. The next run parses that file again.
+
 ### Store
 
 A `store.Store` keeps each index by `fileindex.Key`: the hash of the bytes
