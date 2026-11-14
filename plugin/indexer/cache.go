@@ -15,7 +15,8 @@ import (
 // the run gives each plugin its stored artifact in place of a tree. The
 // run keys an artifact by the fileindex.Key of the file and the Name and
 // the Version of the plugin, so a new Version makes every older artifact
-// miss.
+// miss. The run stores no artifact that the plugin returns after ctx is
+// done, because the end of ctx can have cut it.
 type CachedPlugin interface {
 	core.Plugin
 
