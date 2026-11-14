@@ -57,8 +57,9 @@ var rustTypeItems = []string{"struct_item", "enum_item", "union_item"}
 var rustPointers = []string{"Box", "Rc", "Arc"}
 
 // rustTypes adds each struct, enum and union that no impl block of its
-// scope names, so that a path names the type. An impl block of the type
-// is the class of the type, and its node gives the methods.
+// scope names, so that a path names the type, and each type alias. An impl
+// block of the type is the class of the type, and its node gives the
+// methods.
 func rustTypes(p *projection) {
 	var walk func(scope string, list *sitter.Node)
 	walk = func(scope string, list *sitter.Node) {
@@ -79,6 +80,17 @@ func rustTypes(p *projection) {
 					Name:      fileindex.Last(key),
 					StartLine: lineOf(item),
 					EndLine:   int(item.EndPoint().Row) + 1,
+				}
+				p.addSyntax(key, item)
+			case item.Type() == "type_item":
+				key := fileindex.Join(scope, p.text(item.ChildByFieldName("name")))
+				p.defs[key] = &fileindex.Definition{
+					Key:       key,
+					Kind:      fileindex.DefAlias,
+					Name:      fileindex.Last(key),
+					StartLine: lineOf(item),
+					EndLine:   int(item.EndPoint().Row) + 1,
+					Alias:     p.rustTypeName(item.ChildByFieldName("type"), nil),
 				}
 				p.addSyntax(key, item)
 			}

@@ -96,3 +96,21 @@ func TestFileIndexRustTry(t *testing.T) {
 	assert.Equal(t, "Job", read.Returns)
 	assert.Equal(t, "Result", read.Wraps)
 }
+
+func TestFileIndexRustTypeAlias(t *testing.T) {
+	source := strings.Join([]string{
+		"use image::ImageBuffer;",
+		"pub type Image<P> = ImageBuffer<P, Vec<u8>>;",
+		"mod inner { type Store = crate::store::Store; }",
+	}, "\n") + "\n"
+	ix := indexSource(t, core.LanguageCodeRust, "defs.rs", source)
+
+	image := definitionOf(t, ix, "defs.rs//Image")
+	assert.Equal(t, fileindex.DefAlias, image.Kind)
+	assert.Equal(t, "ImageBuffer", image.Alias)
+	assert.True(t, image.Exported)
+	store := definitionOf(t, ix, "defs.rs//inner//Store")
+	assert.Equal(t, fileindex.DefAlias, store.Kind)
+	assert.Equal(t, "crate::store::Store", store.Alias)
+	assert.False(t, store.Exported)
+}

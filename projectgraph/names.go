@@ -181,7 +181,46 @@ func (b *builder) bind(sc *scope, name string, line int, target string, r rule) 
 
 func (b *builder) deref(key string) string {
 	for b.kindOf(key) == NodeExport {
-		key = b.bindings[key]
+		target, ok := b.bound(key)
+		if !ok {
+			return key
+		}
+		key = target
 	}
 	return key
+}
+
+// bound returns the key that an export node stands for. A type alias
+// binds the type that it names, as the file of the alias resolves it, when
+// a walk first reads it, so an alias can name an alias of another file. An
+// alias of a type that the file does not resolve, as a primitive type,
+// binds nothing.
+func (b *builder) bound(key string) (string, bool) {
+	if target, ok := b.bindings[key]; ok {
+		return target, true
+	}
+	def := b.defs[key]
+	if def == nil || def.Kind != fileindex.DefAlias || b.reading[key] {
+		return "", false
+	}
+	b.reading[key] = true
+	defer delete(b.reading, key)
+	sc := b.scopes[fileindex.Unit(key)]
+	if def.Alias == "" || sc == nil {
+		return "", false
+	}
+	target, ok := b.resolveNameIn(sc, key, def.Alias)
+	if !ok && sc.profile.typePath != nil {
+		target, ok = sc.profile.typePath(b, sc, def.Alias)
+	}
+	// A failure can come from the cycle guard of an outer walk, so only a
+	// target stays.
+	if !ok || target == key {
+		return "", false
+	}
+	b.bindings[key] = target
+	if b.g.Nodes[target] != nil {
+		b.link(sc.ix.Language, key, target, b.siteOf(key), EdgeExport, ruleAlias)
+	}
+	return target, true
 }

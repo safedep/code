@@ -86,6 +86,8 @@ func nodeKind(k fileindex.DefKind) NodeKind {
 		return NodeVariable
 	case fileindex.DefInterface:
 		return NodeInterface
+	case fileindex.DefAlias:
+		return NodeExport
 	default:
 		return NodeModule
 	}

@@ -57,6 +57,9 @@ const (
 	// DefInterface is a TypeScript or Go interface. It has no code, but a
 	// declared type can name it and a class can implement it.
 	DefInterface DefKind = "interface"
+	// DefAlias is a type alias, as type A = B of Rust. It has no code. A
+	// path through it goes on to the type that it names.
+	DefAlias DefKind = "alias"
 )
 
 // TryName is the name that a ? of Rust takes in a call target, as
@@ -248,6 +251,9 @@ type Definition struct {
 	Wraps      string   `json:"wraps,omitempty"`
 	Static     bool     `json:"static,omitempty"`
 	Flags      []Flag   `json:"flags,omitempty"`
+	// Alias is the type that a DefAlias names, as written, with no type
+	// arguments, as B for type A = B<u8>.
+	Alias string `json:"alias,omitempty"`
 }
 
 // Class is one class or interface of the file. Bases are as written, in
@@ -629,6 +635,7 @@ func (ix *Index) EachString(fn func(string) string) {
 		kind(&def.Returns)
 		strs(def.Results)
 		kind(&def.Wraps)
+		kind(&def.Alias)
 		flags(def.Flags)
 	}
 	for i := range ix.Classes {

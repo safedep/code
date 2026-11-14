@@ -60,7 +60,12 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 		case isNamespacePackage(r.key) || kind == NodeModule:
 			consumed, done = b.walkModule(&r, name)
 		case kind == NodeExport:
-			r.key = b.bindings[r.key]
+			target, ok := b.bound(r.key)
+			if !ok {
+				r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+				return r
+			}
+			r.key = target
 		case kind == NodeVariable:
 			consumed, done = b.walkVariable(&r, name)
 		case kind == NodeClass || kind == NodeInterface:

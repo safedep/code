@@ -241,6 +241,28 @@ Rust follows the same rules, with these additions.
   binds the type that it returns, and `clone`, `to_owned`, `default` and
   `from` on a type of a unit keep the type also when the crate derives
   them.
+- `extern crate x;`, `extern crate x as y;`, `use x;` and `pub use x as y;`
+  of a whole crate bind `x` or `y` in their module to the crate. A path
+  through the binding is a path of the crate, so
+  `crate::secure::rand::thread_rng()` after `extern crate rand;` in the
+  module `secure` calls `rand//thread_rng`, and `crate::ffi::ErrorCode`
+  after `pub use libsqlite3_sys as ffi;` names
+  `libsqlite3_sys//ErrorCode`. A `use` of such a path into a crate that no
+  unit gives is a record with the reason `no-dependency-source` and the
+  crate as its import prefix, so only a target of that crate sees it. A
+  first name that names no module that the file sees, as a child module or
+  a module of the root, names a crate, also when a file of the project has
+  that name, as `extern crate schannel;` in `src/imp/schannel.rs`.
+- The index records a type alias, as `pub type Image<P> = ImageBuffer<P>;`,
+  as a definition of the kind `alias`. The link step resolves the type
+  that it names, as the file of the alias names it, when a walk first
+  reads the alias. A type of the graph gets an `export` edge from the
+  alias. A type of another crate is its external key, with no node, so a
+  target of the type stays `no-such-target` and does not turn into
+  `not-found`. A path, a call or a declared type through the alias then
+  reads the type.
+  An alias of a type that the file does not resolve, as a primitive type,
+  gives the record `unknown-receiver` for a name after it.
 - A trait object or a generic bound `T: Trait` of a unit gets the `cha`
   edges to the implementations in the graph, through their external keys.
   With no implementation, the site is a record with the reason
