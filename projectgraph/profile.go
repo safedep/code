@@ -230,10 +230,10 @@ type profile struct {
 	// x.m(), runs only a method of the name m, as Rust. A Rust field that
 	// holds a function needs another form, as (x.f)().
 	receiverMethods bool
-	// reflection names the package of the language that can run any
-	// function by a value or by a name, and its methods that do it, as
+	// reflection names the packages of the language that give or run a
+	// function that no reference names, and their methods that do it, as
 	// Call of reflect.Value in Go.
-	reflection *reflection
+	reflection []reflection
 	// helperProgram reports whether the main of a file is a helper
 	// program of the project and not the program that its users run, as a
 	// build script or an example of a Rust crate. Its root stays, and it

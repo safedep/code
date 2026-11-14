@@ -35,8 +35,13 @@ var goProfile = profile{
 	importsBindAlias:   true,
 	functionValues:     true,
 	// Call and CallSlice call a function value, and Method and MethodByName
-	// give a method by its index or its name.
-	reflection: &reflection{module: "reflect", methods: map[string]bool{"Call": true, "CallSlice": true, "Method": true, "MethodByName": true}},
+	// give a method by its index or its name. Open of plugin runs the init
+	// of a plugin, and Lookup gives a function of it. The plugin is code of
+	// another build.
+	reflection: []reflection{
+		{module: "reflect", methods: map[string]bool{"Call": true, "CallSlice": true, "Method": true, "MethodByName": true}},
+		{module: "plugin", methods: map[string]bool{"Open": true, "Lookup": true}},
+	},
 }
 
 // goProvide returns the package unit of a Go module that an import path

@@ -24,8 +24,8 @@ func (b *builder) linkUnknownValue(sc *scope, ref fileindex.Reference, from stri
 	b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: ref.Text, Method: lastWritten(ref.Text), Reason: reason})
 }
 
-// reflection is the package of a language that can run any function by a
-// value or by a name, and the methods of it that do it.
+// reflection is a package of a language that gives or runs a function
+// that no reference names, and the methods of it that do it.
 type reflection struct {
 	module  string
 	methods map[string]bool
@@ -36,7 +36,7 @@ type reflection struct {
 // The link step does not always know that the receiver is a value of the
 // package, as when no unit gives the standard library. So any receiver
 // counts.
-func (r *reflection) reflective(ix *fileindex.Index, method string) bool {
+func (r reflection) reflective(ix *fileindex.Index, method string) bool {
 	return r.methods[method] && slices.ContainsFunc(ix.Imports, func(imp fileindex.Import) bool { return imp.Module == r.module })
 }
 
@@ -47,10 +47,15 @@ func (r *reflection) reflective(ix *fileindex.Index, method string) bool {
 // every target resolves to a definition outside the package of reflection,
 // as stream.Method() on a type of the project, gets no record.
 func (b *builder) linkReflection(ix *fileindex.Index) {
-	refl := profileOf(ix.Language).reflection
-	if refl == nil || isDeclarationFile(ix.Path) {
+	if isDeclarationFile(ix.Path) {
 		return
 	}
+	for _, refl := range profileOf(ix.Language).reflection {
+		b.linkReflectionOf(ix, refl)
+	}
+}
+
+func (b *builder) linkReflectionOf(ix *fileindex.Index, refl reflection) {
 	sc := b.scopes[ix.Path]
 	for _, call := range ix.Calls {
 		if call.Kind == fileindex.CallImport || !refl.reflective(ix, cmp.Or(call.Method, lastWritten(call.Callee))) {

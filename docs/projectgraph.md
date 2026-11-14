@@ -844,7 +844,25 @@ a call can run. A Go function value is one of these:
   `CallSlice`, `Method` or `MethodByName` in a file that imports `reflect`
   gets a `computed-name` record, which concerns every target. The link step
   does not always know that the receiver is a `reflect.Value`, so the rule
-  takes any receiver.
+  takes any receiver. Each other form of `reflect` gives back a value that
+  code stored with a reference, or a method that these methods give. So
+  `Value.Interface().(func())` needs no record of its own. `MakeFunc` makes
+  a function that calls the function of its argument, and the argument is
+  a reference.
+- A value that a plugin gives, as `sym.(func())()` after `plugin.Open`
+  and `Plugin.Lookup`. The plugin is code of another build. `Open` runs
+  its init, and `Lookup` gives its functions and variables. No reference
+  of the graph names them, also when a unit gives the standard library. So
+  a call or a reference of `Open` or `Lookup` in a file that imports
+  `plugin` gets a `computed-name` record too, in both modes. The cases
+  `go/plugin-lookup` and `go/plugin-lookup-std` show it.
+
+No other package of the standard library gives a function that no
+reference names. A callback that the standard library stores, as the
+function of `syscall.NewCallback`, `sync.OnceFunc` or `runtime.SetFinalizer`,
+is an argument, so a reference names it. `runtime.FuncForPC` gives no
+function that code can call. A conversion with `unsafe` of a pointer to a
+function value needs that value first, and a reference names it.
 
 A function value that code outside the graph makes, as the result of
 `sync.OnceFunc(g)`, runs code outside the graph. A call of that code makes
@@ -974,7 +992,9 @@ depends on what the code can call.
   run code of another module only through a value that it holds: a function
   value, or a method of a value. A function value has a reference edge from
   the code that makes it, so the search reaches the function without the
-  standard library. See [A call of a function value](#a-call-of-a-function-value).
+  standard library. A function of a plugin has no such edge, so a call of
+  `plugin.Open` or `Lookup` concerns every target. See
+  [A call of a function value](#a-call-of-a-function-value).
   A method of a value runs through an interface or through reflection. A
   type outside the standard library cannot declare a method of an
   unexported name of an interface of the standard library. It can only
