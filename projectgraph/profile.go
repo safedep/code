@@ -197,6 +197,16 @@ type profile struct {
 	// mainLoadsPackage marks a language whose program initializes the
 	// package of main before main runs, as Go.
 	mainLoadsPackage bool
+	// functionValues marks a language whose function values the link step
+	// joins to the code that holds them, as Go. A call of a function value
+	// gets the reason function-value in place of computed-name, and it
+	// concerns no target. A reference to a method that the link step cannot
+	// name, as h.Handle on an interface, gets a record with the method name.
+	functionValues bool
+	// reflective reports whether a call or a reference of the file, by its
+	// method name, can run a function that reflection gives, as
+	// reflect.Value.Call. Such a site gets a computed-name record.
+	reflective func(ix *fileindex.Index, method string) bool
 	// helperProgram reports whether the main of a file is a helper
 	// program of the project and not the program that its users run, as a
 	// build script or an example of a Rust crate. Its root stays, and it

@@ -172,8 +172,10 @@ of the highest confidence.
 A call that the link step cannot resolve is an unresolved site with a
 reason: `computed-name`, `dynamic-import`, `unknown-receiver`,
 `no-definition`, `ambiguous`, `limit`, `interface-receiver`,
-`trait-receiver` or `no-dependency-source`. The site keeps the method name of the call, so the
-reach query can tell which targets it concerns.
+`trait-receiver`, `no-dependency-source` or `function-value`. The site keeps the method name of the call, so the
+reach query can tell which targets it concerns. A `function-value`
+record concerns no target. [A call of a function value](#a-call-of-a-function-value)
+gives the reason.
 
 A site with more than 20 candidates of its method name, as `render` in a
 Django project, is `ambiguous`. The site gets no edge, so the search cannot
@@ -558,3 +560,50 @@ record.
 
 A summary keeps every uncertainty of a symbol in a table, with the targets
 that its scope concerns, so `Status` applies the same rule with no graph.
+
+### A call of a function value
+
+A Go call of a function value, as `BackoffLinearWithJitter(d, j)(attempt)`
+or `route.Handlers[0](c)`, is a record with the reason `function-value`.
+The record concerns no target. This is sound because the search reaches
+each function that such a call can run. A Go function value is one of
+these:
+
+- A function or a method that code uses as a value: an argument, the
+  right side of an assignment or a declaration, a return value, an element
+  of a composite literal, or the value of a send on a channel. The index
+  records a reference there, and the link step adds a `reference` edge from
+  the code that holds the value. The value exists only after that code
+  runs, so the search reaches that code and then the function.
+- A method value whose method the link step cannot name, as `h.Handle` on a
+  value of an interface. The link step records the reference with the
+  method name. That record concerns the targets that a method of the name
+  reaches, as a call `h.Handle()` does.
+- A function literal. The index gives the calls of the literal to the
+  definition or the module top level that holds it. So a function that
+  returns a literal reaches the calls of the literal.
+- A package-level value, as a map of handlers. Its references start at the
+  module top level of its file. The program loads each package that it
+  imports before any code of the package runs. So a file that imports a
+  package that runs code at load runs code at load too, also when the
+  package is in a unit of dependency code. An import edge joins the
+  importer to the module top level, and a search from `main` reaches it.
+  An external key also has an import edge to each module top level of its
+  package that runs code at load, so the search of a summary reaches it.
+- A value that reflection gives, as `reflect.Value.Call`,
+  `reflect.Value.MethodByName` or `reflect.Value.Method`. No reference
+  leads to such a function. A call or a reference of the methods `Call`,
+  `CallSlice`, `Method` or `MethodByName` in a file that imports `reflect`
+  gets a `computed-name` record, which concerns every target. The link step
+  does not always know that the receiver is a `reflect.Value`, so the rule
+  takes any receiver.
+
+A function value that code outside the graph makes runs code outside the
+graph, which the search does not see for any call.
+
+The rule does not apply to Rust. The Rust index records a function that an
+argument, a `let`, an assignment, a `return`, a field initializer or an
+array names. It does not record a function that the tail expression of a
+block, a match arm, a shorthand field or a tuple holds, and a Rust function
+returns its tail expression. So a call of a Rust function value stays a
+`computed-name` record.
