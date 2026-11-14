@@ -108,6 +108,14 @@ that only such a name reaches would read `not-found`. A project of
 component files thus reads `uncertain` for each target that it does not
 find, as it did when the index did not read component files.
 
+A JSX element renders the component that its name holds, so the name is a
+reference, as a function value is. `<Child />` gives a `reference` edge
+to `Child`, and `<table.Row />` to `table.Row`. A lower case name, as
+`div`, is a tag of the host, which JSX gives as a string, so it gives no
+edge. A function in a JSX expression, as `handle` in
+`<button onClick={handle}>`, is a reference too. This holds in `.jsx`,
+`.tsx` and `.js` files.
+
 The index leaves out a Go file of a unit only when no Go build reads it by
 default: a `_test.go` file, a file with `//go:build ignore`, and a file
 whose constraint needs a tag that the go command never sets, as `purego`.

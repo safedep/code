@@ -32,6 +32,9 @@ type referenceSyntax struct {
 	// of a, b := f, g. The last child of each list holds the value, so the
 	// key of a keyed element is no value.
 	lists map[string]bool
+	// intrinsic reports whether a value of the holder names no code of the
+	// file by a rule of the language, as the tag div of a JSX element.
+	intrinsic func(p *projection, holder, value *sitter.Node) bool
 	// rawNames marks a language whose files name the classes of other
 	// files of a unit with no import, as C#. A name that the file does not
 	// bind keeps its text, and the link step resolves it or drops it.
@@ -89,6 +92,9 @@ func referenceVisitor(p *projection) visitor {
 		}
 		caller := stack[len(stack)-1].key
 		for _, value := range syntax.unlist(values) {
+			if syntax.intrinsic != nil && syntax.intrinsic(p, node, value) {
+				continue
+			}
 			// A read of a field, a constant or a variable of data runs
 			// no code and gives the reader no function.
 			target, ok := p.reference(*syntax, caller, value)
@@ -147,7 +153,9 @@ func (syntax referenceSyntax) unlist(values []*sitter.Node) []*sitter.Node {
 // or a member chain, and a definition, an import or the instance of a
 // class binds its first name.
 func (p *projection) reference(syntax referenceSyntax, caller string, value *sitter.Node) (string, bool) {
-	if value == nil || p.inExport(value) && syntax.identifiers[value.Type()] {
+	// A name in the body of a function that an export statement declares
+	// is a value of that function, not the export.
+	if value == nil || caller == p.cg.FileName && p.inExport(value) && syntax.identifiers[value.Type()] {
 		return "", false
 	}
 	var names []string
