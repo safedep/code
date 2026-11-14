@@ -21,9 +21,7 @@ func goReference(p *projection, caller string, value *sitter.Node) (string, *sit
 	}
 	switch value.Type() {
 	case "identifier":
-		// A Go parameter or local of a declared type holds a value of
-		// the type, and a value is no function.
-		if _, typed := p.typedScope(caller, p.text(value)); typed {
+		if p.goTypedLocal(caller, value) {
 			return "", nil
 		}
 		target, _ := p.goName(caller, value)
@@ -147,23 +145,41 @@ func (p *projection) goTypeTarget(caller string, node *sitter.Node) (string, boo
 
 // goName returns the per-file target of a name: the definition that the
 // scope chain binds, a typed local, or an import. A name that no local of
-// the caller declares keeps its text, as a function of another file of
-// the package, and the link step resolves it or drops it. A predeclared
-// name keeps its text too, because a function of another file of the
-// package can shadow it, as func clear(). A local that the index does not
-// type gives none.
+// the caller declares in scope keeps its text, as a function of another
+// file of the package, and the link step resolves it or drops it. A typed
+// local of a closed block does not bind the name. A predeclared name keeps
+// its text too, because a function of another file of the package can
+// shadow it, as func clear(). A local that the index does not type gives
+// none.
 func (p *projection) goName(caller string, node *sitter.Node) (string, bool) {
 	if node == nil {
 		return "", false
 	}
 	name := p.text(node)
+	inScope := p.goLocal(caller, name, node.StartByte())
+	if _, typed := p.typedScope(caller, name); typed && !inScope {
+		return name, true
+	}
 	if target, ok := p.valueOf(*p.rules().references, caller, name); ok {
 		return target, true
 	}
-	if name == "_" || p.goLocal(caller, name, node.StartByte()) {
+	if name == "_" || inScope {
 		return "", false
 	}
 	return name, true
+}
+
+// goTypedLocal reports whether a name is a parameter or a local of a
+// declared type that is in scope at the node. Such a name holds a value of
+// the type, and a value is no function. The index records the typed locals
+// of a function with no extent. So a local of a closed block can hide a
+// function of the package with the same name. A call of the value is a
+// function-value record that concerns no target, and the reference to the
+// function is then the only edge to it.
+func (p *projection) goTypedLocal(caller string, node *sitter.Node) bool {
+	name := p.text(node)
+	_, typed := p.typedScope(caller, name)
+	return typed && p.goLocal(caller, name, node.StartByte())
 }
 
 // goPredeclared reports whether a name is a predeclared name of Go, as int

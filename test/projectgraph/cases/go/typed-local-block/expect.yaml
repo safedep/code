@@ -1,0 +1,56 @@
+source: safedep:hand
+description: >-
+  main declares the typed local helper in a block that closes before line 10. So helper on line 10 names
+  the function helper of other.go, and the link step resolves it there. The call fs[0]() is a
+  function-value record that concerns no target, so the reference edge is what makes os.Remove found.
+  The typed local cleanup is in scope where gs stores it, so it names no function, and os.Getwd is not
+  found.
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+  - key: other.go
+    kind: main
+    rule: go.main
+no_edges:
+  - from: main.go//main
+    to: other.go//cleanup
+unresolved:
+  - caller: os//Getwd
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Remove
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//main
+    site: main.go:11
+    reason: function-value
+  - caller: main.go//main
+    site: main.go:15
+    reason: function-value
+results:
+  - target: os//Remove
+    status: found
+    path:
+      - key: main.go//main
+      - key: other.go//helper
+        site: main.go:10
+        kind: reference
+        confidence: low
+      - key: os//Remove
+        site: other.go:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: other.go//helper
+        site: other.go:6
+        reached: true
+  - target: os//Getwd
+    status: not-found
+    call_sites:
+      - caller: other.go//cleanup
+        site: other.go:10
+        reached: false

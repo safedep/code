@@ -821,7 +821,11 @@ a call can run. A Go function value is one of these:
   file of the package can shadow it, and the index of one file does not
   see that file. The link step resolves the name in the package, or drops
   it when no declaration binds it. The case `go/predeclared-shadow` shows
-  it.
+  it. A parameter or a local of a declared type holds a value of the
+  type, so its name gives no reference. The index takes the name as that
+  local only where the declaration is in scope. So a typed local of a
+  closed block does not hide a function of the package with the same name.
+  The case `go/typed-local-block` shows it.
 - A method value whose method the index or the link step cannot name, as
   `ts[0].Close` or `h.Handle` on a value of an interface. The index or the
   link step records the reference with the method name. That record
