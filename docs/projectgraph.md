@@ -511,6 +511,11 @@ dependency code whose `Node.External` is the key, as the unexported
 definition and not to the external key, so a target that only the code of
 its unit calls is found through the definition. The call sites of a
 target leave out the package edges, which join a key to its definition.
+A definition of an internal package of a Go unit has an external key too,
+as `google.golang.org//grpc//internal//transport//NewServerTransport`. Only
+the module can import such a package, so no importer writes the key, but
+an advisory names the symbol by it. An internal package gives no symbol
+to a summary.
 
 `reach.TargetsByKey` reads a list of keys. `Target.Key` returns the key,
 and the JSON form of a target is its key. One breadth-first search from

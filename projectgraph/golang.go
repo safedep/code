@@ -86,12 +86,13 @@ func goNarrowProviders(out []provision) []provision {
 }
 
 // goSurface adds the exported names and methods of each Go package of a
-// unit that is not internal.
+// unit that is not internal. Only the module can import an internal
+// package.
 func goSurface(s *surfacer) {
 	b, sp := s.b, s.sp
 	for _, dir := range slices.Sorted(maps.Keys(sp.goPackages)) {
 		importPath, ok := b.goImportPath(sp, dir)
-		if !ok {
+		if !ok || slices.Contains(strings.Split(dir, "/"), "internal") {
 			continue
 		}
 		for _, p := range sp.goPackages[dir].files {
@@ -124,12 +125,15 @@ func goSymbol(b *builder, sp *space, def string) (string, []string, bool) {
 	return importPath, fileindex.Segments(def), ok
 }
 
-// goImportPath returns the import path of a Go package of a unit. A package
-// under an internal directory and a main package have no importer outside
-// the module.
+// goImportPath returns the import path of a Go package of a unit. A main
+// package has none, because no program imports it. A package under an
+// internal directory keeps its path. The code of its module calls it, and
+// an advisory names a symbol of it by that path, as
+// google.golang.org/grpc/internal/transport.NewServerTransport. Without the
+// path, such a target matches no definition and reads as no-such-target.
 func (b *builder) goImportPath(sp *space, dir string) (string, bool) {
 	u := sp.goPackages[dir]
-	if slices.Contains(strings.Split(dir, "/"), "internal") || slices.ContainsFunc(u.files, func(p string) bool {
+	if slices.ContainsFunc(u.files, func(p string) bool {
 		ix := b.byPath[p]
 		return ix != nil && ix.Package == "main"
 	}) {
