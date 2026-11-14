@@ -63,7 +63,9 @@ const (
 	// DefConstant is a constant of a Go package. It holds data and no code.
 	DefConstant DefKind = "constant"
 	// DefAlias is a type alias, as type A = B of Rust. It has no code. A
-	// path through it goes on to the type that it names.
+	// path through it goes on to the type that it names. A Go alias stays
+	// a class with the type that it names as its base, because a Go method
+	// can name the alias as its receiver, so the alias holds methods.
 	DefAlias DefKind = "alias"
 )
 

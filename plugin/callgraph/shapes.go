@@ -8,7 +8,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/safedep/code/core"
 	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/pkg/ts"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -35,11 +37,6 @@ type syntaxShapes struct {
 	// receiver, as in OpenAI::Client.new. A variable that gets the result is
 	// an instance of the receiver.
 	constructorMethods []string
-	// pointer reports whether a type is a pointer whose constructor method
-	// holds its argument, as Box in Box::new(Html {}). A method call on the
-	// value runs a method of the argument, so the value is no instance of
-	// the pointer.
-	pointer func(name string) bool
 
 	// classKeywords name the class that holds the code, as Self in Rust or
 	// static in PHP. superKeywords name its base class, as parent in PHP.
@@ -194,6 +191,7 @@ const maxKeywordBytes = 16
 var assignableNamePattern = regexp.MustCompile(`^[$@]*[A-Za-z_][A-Za-z0-9_]*$`)
 
 type shapedProcessors struct {
+	code       core.LanguageCode
 	shapes     syntaxShapes
 	separators []string
 }
@@ -202,7 +200,7 @@ type shapedProcessors struct {
 // the reachable scopes. A shape replaces a processor of profile for the same
 // node type.
 func shapedProfile(profile languageProfile, shapes syntaxShapes) languageProfile {
-	p := &shapedProcessors{shapes: shapes, separators: profile.separators}
+	p := &shapedProcessors{code: profile.code, shapes: shapes, separators: profile.separators}
 
 	processors := maps.Clone(profile.processors)
 	if processors == nil {
@@ -662,8 +660,12 @@ func (p *shapedProcessors) instanceOf(callee string) (string, bool) {
 	return callee, p.shapes.classCalls && unicode.IsUpper(first)
 }
 
+// isPointer reports whether a type is a smart pointer whose constructor
+// method holds its argument, as Box in Box::new(Html {}). A method call on
+// the value runs a method of the argument, so the value is no instance of
+// the pointer.
 func (p *shapedProcessors) isPointer(name string) bool {
-	return p.shapes.pointer != nil && p.shapes.pointer(name)
+	return langcode.IsPointer(p.code, name)
 }
 
 // lastOf returns the last segment of a namespace.

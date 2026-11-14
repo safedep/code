@@ -90,6 +90,12 @@ func (b *builder) unitMember(key, name string) (string, bool) {
 		if imp, ok := sc.bindings[name]; ok {
 			module, lead := importedModule(sc.ix.Language, imp)
 			if mod, _, found := b.resolveModule(sc.ix, module); found {
+				// A use of a module binds the module, as helpers of use
+				// crate::deep::helpers. A walk that ends on a unit fails,
+				// so the unit itself is the member.
+				if len(lead) == 0 && b.units[mod] != nil {
+					return mod, true
+				}
 				if r := b.walk(mod, lead); r.fail == nil {
 					return r.key, true
 				}

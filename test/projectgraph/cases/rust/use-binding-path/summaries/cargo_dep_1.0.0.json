@@ -1,0 +1,44 @@
+{
+  "version": "3",
+  "index_version": "16",
+  "link_version": "18",
+  "unit": "cargo:dep@1.0.0",
+  "symbols": [
+    {
+      "key": "dep//flush",
+      "definitions": [
+        "cargo:dep@1.0.0//src/lib.rs//flush"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "dep//load_thing",
+      "definitions": [
+        "cargo:dep@1.0.0//src/lib.rs//load_thing"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "dep//new_thing",
+      "definitions": [
+        "cargo:dep@1.0.0//src/lib.rs//new_thing"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "dep//sink",
+      "definitions": [
+        "cargo:dep@1.0.0//src/lib.rs//sink"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "dep//sub//f",
+      "definitions": [
+        "cargo:dep@1.0.0//src/sub.rs//f"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": []
+}

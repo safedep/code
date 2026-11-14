@@ -247,10 +247,11 @@ A call on the result of another call, as `html.NewTokenizer(r).Next()`,
 needs the type of that result. When the link step does not know it, the
 site is a record with the method name, so a target of that method is
 `uncertain` and not `no-such-target`. A call on the result of a builtin of
-the language, as `Promise.resolve(x).then(f)`, makes no record. The code
-of the runtime calls the code of the project or of a dependency only
-through a value that the call passes, as `f`, and a `reference` edge holds
-that value.
+the language, as `Promise.resolve(x).then(f)`, is a record too. Some
+builtins give back a value that the call passes, or an element of it, as
+`new(thing)` in Go, `max(t, t)` in Python or `Object.assign(p, o)` in
+JavaScript. The method then runs on a value of the project or of a
+dependency.
 
 ### Result types
 
@@ -310,11 +311,21 @@ Rust follows the same rules, with these additions.
   the local, as `let w: Box<dyn Write> = Box::new(Html {})`, binds the
   receiver. A declared type binds the receiver only where the index of the
   file knows no type of the value. So `let s: String = String::new()` keeps
-  the target `String//shout` of `s.shout()`. The function must also bind
-  the name once, as a parameter or a typed `let`, before the call. A `let`,
-  a `match` arm, an `if let`, a `for` or a closure can bind the name again
-  with another type. A call on such a name keeps its record, so a method of
-  the real type does not read as `not-found`.
+  the target `String//shout` of `s.shout()`.
+- A declared type holds at a call only when the function binds the name
+  once, as a parameter or a typed `let`, before the call. The index checks
+  this for a receiver that the call graph does not type and for a target
+  that goes through a declared type, as `run//t//inspect` for `t.inspect()`
+  in `fn run(t: Local)`. The call graph reads a parameter and a `let` of
+  one name, and no other binder. A `match` arm, an `if let`, a `for`, a
+  closure, another pattern, a `static`, a `const` or a macro can bind the
+  name again with another type. The hygiene of Rust keeps a `let` of a
+  macro body apart from the names of the caller, so a macro binds only a
+  name that its call passes as a token. A macro of std binds no such name,
+  except `thread_local!`, which makes a `static`. So a call on a name that such a binder binds
+  before the call is a record with the reason `unknown-receiver`, and so is
+  a call whose declared type does not hold. A method of the real type then
+  reads as `uncertain` and not as `not-found`.
 - `extern crate x;`, `extern crate x as y;`, `use x;` and `pub use x as y;`
   of a whole crate bind `x` or `y` in their module to the crate. A path
   through the binding is a path of the crate, so
@@ -327,6 +338,11 @@ Rust follows the same rules, with these additions.
   first name that names no module that the file sees, as a child module or
   a module of the root, names a crate, also when a file of the project has
   that name, as `extern crate schannel;` in `src/imp/schannel.rs`.
+- A path can start with a name that another `use` of the module binds. So
+  `helpers::run` after `use crate::deep::helpers;` names the function of
+  the module `deep::helpers`, and `sub::f` after `use dep::sub;` names
+  `dep//sub//f`. A `use` never reads its own binding, so
+  `use smallvec::smallvec;` names the crate `smallvec`.
 - The index records a type alias, as `pub type Image<P> = ImageBuffer<P>;`,
   as a definition of the kind `alias`. The link step resolves the type
   that it names, as the file of the alias names it, when a walk first

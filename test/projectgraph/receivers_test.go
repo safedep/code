@@ -117,6 +117,12 @@ var goReceiverRows = []receiverRow{
 		want:   "uncertain/no-dependency-source",
 		noDeps: true,
 	},
+	{
+		name:   "method of a first-party type on new",
+		source: "type thing struct{}\n\nfunc (t *thing) vuln() {\n\tdep.NewRunner()\n}\n\nfunc run() {\n\tnew(thing).vuln()\n}",
+		target: "example.com//dep//NewRunner",
+		want:   "found/low",
+	},
 }
 
 var rustReceiverRows = []receiverRow{
@@ -252,6 +258,66 @@ var rustReceiverRows = []receiverRow{
 		target: "dep//Job//start",
 		want:   "uncertain/trait-receiver",
 	},
+	{
+		name:   "parameter that a let shadows",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn run(t: Local) {\n    let t = dep::new_thing();\n    t.inspect();\n}",
+		target: "dep//Thing//inspect",
+		want:   "found",
+	},
+	{
+		name:   "parameter that a macro of std reads",
+		source: "fn run(t: Thing<u8>) {\n    println!(\"{}\", t.len());\n    t.inspect();\n}",
+		target: "dep//Thing//inspect",
+		want:   "found",
+	},
+	{
+		name:   "parameter that an if let shadows",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn run(t: Local) {\n    if let Some(t) = dep::try_thing() {\n        t.inspect();\n    }\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "parameter that a match arm shadows",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn run(t: Local) {\n    match dep::try_thing() {\n        Some(t) => t.inspect(),\n        None => {}\n    }\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "parameter that a closure parameter shadows",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn run(t: Local) {\n    let f = |t: Thing<u8>| t.inspect();\n    f(dep::new_thing());\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "parameter that a let of a macro shadows",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nmacro_rules! bind {\n    ($n:ident) => {\n        let $n = dep::new_thing();\n    };\n}\n\nfn run(t: Local) {\n    bind!(t);\n    t.inspect();\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "typed let that a static shadows",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn run(l: Local) {\n    let t: Local = l;\n    {\n        static t: Thing<u8> = Thing::new();\n        t.inspect();\n    }\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "let that a static after the call shadows",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn mk() -> Local {\n    Local\n}\n\nfn run() {\n    let t = mk();\n    {\n        t.inspect();\n        static t: Thing<u8> = Thing::new();\n    }\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "let that an if let shadows",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn mk() -> Local {\n    Local\n}\n\nfn run() {\n    let t = mk();\n    if let Some(t) = dep::try_thing() {\n        t.inspect();\n    }\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "std function that returns its argument",
+		source: "fn run(t: Thing<u8>) {\n    std::convert::identity(t).inspect();\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
 }
 
 // pythonReceiverRows are the forms of a Python receiver. A type hint is
@@ -365,6 +431,18 @@ var pythonReceiverRows = []receiverRow{
 		target: "dep//Thing//do",
 		want:   "uncertain/no-dependency-source",
 		noDeps: true,
+	},
+	{
+		name:   "builtin that returns an argument",
+		source: "def run(t):\n    max(t, t).do()",
+		target: "dep//Thing//do",
+		want:   "uncertain/no-dependency-source",
+	},
+	{
+		name:   "builtin that returns an element of an argument",
+		source: "def run(ts):\n    next(iter(ts)).do()",
+		target: "dep//Thing//do",
+		want:   "uncertain/no-dependency-source",
 	},
 }
 

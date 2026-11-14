@@ -1,0 +1,132 @@
+source: safedep:hand
+description: >-
+  A use path starts with a name that another use of the module binds. In src/a.rs, use crate::deep::helpers binds
+  helpers to the module src/deep/helpers.rs, so helpers::run and helpers::Mode name its items. In src/b.rs, use
+  dep::sub binds sub to the module sub of the crate dep, the unit cargo:dep@1.0.0, so sub::f is dep::sub::f. A
+  crate named helpers or sub does not exist, and the code of each item calls a target. In src/c.rs, use
+  crate::ffi::flush as fl names dep::flush through pub use dep as ffi of src/main.rs, and a call of fl reaches the
+  external node dep//flush.
+units:
+  vendor/dep: cargo:dep@1.0.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/a.rs//go
+    to: src/deep/helpers.rs//run
+    kind: direct
+    confidence: high
+    site: src/a.rs:6
+  - from: src/a.rs//go
+    to: src/deep/helpers.rs//Mode//start
+    kind: member
+    confidence: high
+    site: src/a.rs:7
+  - from: src/b.rs//go
+    to: dep//sub//f
+    kind: direct
+    confidence: high
+    site: src/b.rs:5
+  - from: dep//sub//f
+    to: cargo:dep@1.0.0//src/sub.rs//f
+    kind: package
+    confidence: high
+    site: cargo:dep@1.0.0//src/sub.rs:1
+  - from: src/c.rs//go
+    to: dep//flush
+    kind: direct
+    confidence: high
+    site: src/c.rs:4
+no_edges:
+  - from: src/a.rs//go
+    to: helpers//run
+  - from: src/a.rs//go
+    to: helpers//Mode//start
+  - from: src/b.rs//go
+    to: sub//f
+unresolved: []
+results:
+  - target: dep//new_thing
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/a.rs//go
+        site: src/main.rs:9
+        kind: direct
+        confidence: high
+      - key: src/deep/helpers.rs//run
+        site: src/a.rs:6
+        kind: direct
+        confidence: high
+      - key: dep//new_thing
+        site: src/deep/helpers.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/deep/helpers.rs//run
+        site: src/deep/helpers.rs:2
+        reached: true
+  - target: dep//load_thing
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/a.rs//go
+        site: src/main.rs:9
+        kind: direct
+        confidence: high
+      - key: src/deep/helpers.rs//Mode//start
+        site: src/a.rs:7
+        kind: member
+        confidence: high
+      - key: dep//load_thing
+        site: src/deep/helpers.rs:11
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/deep/helpers.rs//Mode//start
+        site: src/deep/helpers.rs:11
+        reached: true
+  - target: dep//sink
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/b.rs//go
+        site: src/main.rs:10
+        kind: direct
+        confidence: high
+      - key: dep//sub//f
+        site: src/b.rs:5
+        kind: direct
+        confidence: high
+      - key: cargo:dep@1.0.0//src/sub.rs//f
+        site: cargo:dep@1.0.0//src/sub.rs:1
+        kind: package
+        confidence: high
+      - key: cargo:dep@1.0.0//src/lib.rs//sink
+        site: cargo:dep@1.0.0//src/sub.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: cargo:dep@1.0.0//src/sub.rs//f
+        site: cargo:dep@1.0.0//src/sub.rs:2
+        reached: true
+  - target: dep//flush
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/c.rs//go
+        site: src/main.rs:11
+        kind: direct
+        confidence: high
+      - key: dep//flush
+        site: src/c.rs:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/c.rs//go
+        site: src/c.rs:4
+        reached: true
