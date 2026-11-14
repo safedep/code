@@ -19,6 +19,9 @@ var goProfile = profile{
 	units:              (*builder).addGoUnits,
 	dependencyCode:     true,
 	link:               (*builder).linkInits,
+	outsideCode:        (*builder).recordGoOutsideCode,
+	callbackMethod:     func(n *Node) bool { return n.Kind == NodeMethod && n.Exported },
+	structMember:       goStructMember,
 	provide:            goProvide,
 	narrowProviders:    goNarrowProviders,
 	surface:            goSurface,
@@ -28,23 +31,12 @@ var goProfile = profile{
 	implicitInterfaces: true,
 	typeConversions:    true,
 	scopeWildcards:     true,
-	mainLoadsPackage:   true,
+	loadsPackages:      true,
 	importsBindAlias:   true,
 	functionValues:     true,
-	reflective:         goReflective,
-}
-
-// goReflectMethods are the methods of package reflect that call a function
-// value or give a method by its name or its index. Each one can run any
-// function of the program.
-var goReflectMethods = map[string]bool{"Call": true, "CallSlice": true, "Method": true, "MethodByName": true}
-
-// goReflective reports whether a call or a reference of the method in a Go
-// file that imports reflect can run a function that reflect gives. The
-// link step does not always know that the receiver is a reflect.Value, as
-// when no unit gives the standard library. So any receiver counts.
-func goReflective(ix *fileindex.Index, method string) bool {
-	return goReflectMethods[method] && slices.ContainsFunc(ix.Imports, func(imp fileindex.Import) bool { return imp.Module == "reflect" })
+	// Call and CallSlice call a function value, and Method and MethodByName
+	// give a method by its index or its name.
+	reflection: &reflection{module: "reflect", methods: map[string]bool{"Call": true, "CallSlice": true, "Method": true, "MethodByName": true}},
 }
 
 // goProvide returns the package unit of a Go module that an import path
@@ -354,6 +346,27 @@ func (b *builder) abstract(iface string, depth int) []fileindex.Signature {
 	return sigs
 }
 
+// goStructMember reads a name of a Go struct that is no method of it. A
+// read of a field runs no code, and a name on a field whose type the walk
+// does not know is unknown. A method that an embedded interface declares
+// runs on the value that the field holds, as a call on a value of the
+// interface does.
+func goStructMember(b *builder, r *resolution, name string, last bool) (consumed, done, ok bool) {
+	if field, ok := b.goField(r.key, name); ok {
+		if !last {
+			r.fail = unknownReceiver(name)
+			return false, true, true
+		}
+		r.key = field
+		return true, false, true
+	}
+	if iface, ok := b.declaringInterface(r.key, name); ok {
+		r.class, r.virtual, r.fail = iface, true, noDefinition(name)
+		return false, true, true
+	}
+	return false, false, false
+}
+
 // goField returns the field of the name that a struct of the MRO of the
 // class declares: the struct, or a struct that it embeds.
 func (b *builder) goField(class, name string) (string, bool) {
@@ -382,54 +395,49 @@ func (b *builder) declaringInterface(class, name string) (string, bool) {
 // panic that no recover stops, to print it.
 var goPanicMethods = []string{"Error", "String"}
 
-// recordOutsideCode adds a record on each external key that Go code calls
-// or uses as a value and whose package no unit gives. The graph holds no
-// code of such a key, and that code can call back into code that the
-// graph holds. docs/projectgraph.md gives the argument for the scope of
-// each record:
-//
-//   - The standard library can call back only a method of an exported name
-//     of a value that it holds, so its record is a Callback.
-//   - C code that cgo calls can call any function that an export comment
-//     names, and another module can call any function of a package that it
-//     imports. Their records concern every target. A build with no project
-//     file, as a summary, gives no record for another module, because the
-//     reader of a summary joins the summary of each module that it calls.
-//   - A builtin runs no code of the program, except panic.
-func (b *builder) recordOutsideCode() {
+// goStdText is the text of a record of the Go standard library with no
+// unit.
+const goStdText = "the Go standard library, which no unit gives"
+
+// recordGoOutsideCode adds a record for Go code that the graph does not
+// hold. docs/projectgraph.md, "Code outside the graph", gives the argument
+// for the scope of each record.
+func (b *builder) recordGoOutsideCode() {
 	for from, to := range b.edges.pairs {
 		if b.kindOf(to) == NodeExternal && b.languageOf(from) == langcode.Go && !b.provided(to) {
-			for _, r := range b.outsideRecords(to) {
+			for _, r := range b.goOutsideRecords(to) {
 				b.addUnresolved(r)
 			}
 		}
 	}
 }
 
-func (b *builder) outsideRecords(key string) []UnresolvedSite {
-	r := UnresolvedSite{Caller: key, Text: key, Reason: fileindex.UnresolvedNoDependencySource}
-	first := fileindex.Unit(key)
+// goOutsideRecords returns the records of an external key whose package no
+// unit gives.
+//
+//   - The standard library calls back only a method of an exported name, so
+//     its record is a Callback.
+//   - C code and the code of another module can call any function, so their
+//     records concern every target. A summary gets no record for another
+//     module, because its reader joins the summary of that module.
+//   - A builtin runs no code of the program, except panic, which calls Error
+//     or String.
+func (b *builder) goOutsideRecords(key string) []UnresolvedSite {
+	pkg := fileindex.Unit(key)
 	switch {
 	case key == "panic":
-		var out []UnresolvedSite
+		out := make([]UnresolvedSite, 0, len(goPanicMethods))
 		for _, m := range goPanicMethods {
-			r.Method = m
-			out = append(out, r)
+			out = append(out, UnresolvedSite{Caller: key, Text: key, Method: m, Reason: fileindex.UnresolvedNoDependencySource})
 		}
 		return out
 	case langcode.IsBuiltin(langcode.Go, key):
 		return nil
-	case first == "C":
-	case modules.IsStdPath(first):
-		r.Text, r.Callback = "the Go standard library, which no unit gives", true
+	case pkg == "C":
+	case modules.IsStdPath(pkg):
+		return []UnresolvedSite{{Caller: key, Text: goStdText, Reason: fileindex.UnresolvedNoDependencySource, Callback: true}}
 	case !b.hasProject:
 		return nil
 	}
-	return []UnresolvedSite{r}
-}
-
-// provided reports whether a unit of dependency code gives the package of
-// an external key.
-func (b *builder) provided(key string) bool {
-	return slices.ContainsFunc(b.origins[key], func(o origin) bool { return len(b.providers(o)) > 0 })
+	return []UnresolvedSite{{Caller: key, Text: key, Reason: fileindex.UnresolvedNoDependencySource}}
 }

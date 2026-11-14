@@ -27,7 +27,7 @@ type found struct {
 	methods  []string
 	prefixed []prefixed
 	byUnit   []Uncertainty
-	callback []Uncertainty
+	callback *Uncertainty
 	// reaches reports whether the code of a unit reaches a target,
 	// methodReaches whether a node with the last segment reaches one, and
 	// exportedReaches whether a method of an exported name reaches one.
@@ -229,7 +229,7 @@ func (a *adjacency) uncertainties(s *search, maxDepth int) *found {
 		for _, u := range src.at(key, n) {
 			f.add(u)
 		}
-		if src.callbacks[key] && len(f.callback) == 0 {
+		if src.callbacks[key] {
 			f.add(*src.callback)
 		}
 	}
@@ -247,7 +247,10 @@ func (a *adjacency) uncertainties(s *search, maxDepth int) *found {
 func (f *found) add(u Uncertainty) {
 	switch {
 	case u.Callback:
-		f.callback = append(f.callback, u)
+		// Each callback has the same scope, so a result lists it once.
+		if f.callback == nil {
+			f.callback = &u
+		}
 	case u.Unit != "":
 		f.byUnit = append(f.byUnit, u)
 	case u.ImportPrefix != "":
@@ -282,7 +285,11 @@ func (f *found) all() []Uncertainty {
 	for _, p := range f.prefixed {
 		out = append(out, p.u)
 	}
-	return append(append(out, f.byUnit...), f.callback...)
+	out = append(out, f.byUnit...)
+	if f.callback != nil {
+		out = append(out, *f.callback)
+	}
+	return out
 }
 
 // forTarget returns the uncertainties of a target, at most maxPerKind of
@@ -301,8 +308,8 @@ func (f *found) forTarget(target Target) ([]Uncertainty, []Uncertainty, int) {
 			all = append(all, u)
 		}
 	}
-	if len(f.callback) > 0 && f.exportedReaches(target) {
-		all = append(all, f.callback...)
+	if f.callback != nil && f.exportedReaches(target) {
+		all = append(all, *f.callback)
 	}
 
 	var setAside []Uncertainty

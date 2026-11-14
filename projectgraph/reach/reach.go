@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"github.com/safedep/code/fileindex"
-	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/projectgraph"
 )
 
@@ -527,20 +526,15 @@ func (a *adjacency) methodReaches(name string, target Target) bool {
 	return slices.ContainsFunc(a.match(target), func(id int) bool { return c[id] })
 }
 
-// exportedClosure returns the nodes that the Go methods of an exported
-// name reach, in the project and in each unit of dependency code. Code
-// outside the graph can call such a method on a value that it holds. A
-// method of a test file is a source only when the query includes the
-// tests.
+// exportedClosure returns the nodes that the methods that code outside the
+// graph can call back reach, as the graph names them, in the project and in
+// each unit of dependency code. A method of a test file is a source only
+// when the query includes the tests.
 func (a *adjacency) exportedClosure() []bool {
 	if a.exported == nil {
 		var methods []int
 		for id, key := range a.keys {
-			n := a.g.Nodes[key]
-			if n == nil || n.Kind != projectgraph.NodeMethod || !n.Exported || n.Test && !a.includeTests {
-				continue
-			}
-			if file := a.g.Nodes[n.Path]; file != nil && file.Language == langcode.Go {
+			if n := a.g.Nodes[key]; n != nil && (a.includeTests || !n.Test) && a.g.CallbackMethod(key) {
 				methods = append(methods, id)
 			}
 		}
@@ -549,8 +543,8 @@ func (a *adjacency) exportedClosure() []bool {
 	return a.exported
 }
 
-// exportedReaches reports whether a Go method of an exported name reaches
-// a node of the target.
+// exportedReaches reports whether a method that code outside the graph can
+// call back reaches a node of the target.
 func (a *adjacency) exportedReaches(target Target) bool {
 	c := a.exportedClosure()
 	return slices.ContainsFunc(a.match(target), func(id int) bool { return c[id] })
