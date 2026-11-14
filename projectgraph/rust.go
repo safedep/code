@@ -88,7 +88,7 @@ func (b *builder) linkRust(ix *fileindex.Index) {
 // has the crate as its import prefix, and only a target of the crate sees
 // it. A graph with no unit links no crate, so it records nothing.
 func (b *builder) linkCrateRoutes(ix *fileindex.Index) {
-	if len(b.spaces) < 2 {
+	if !b.hasUnits() {
 		return
 	}
 	sc := b.scopes[ix.Path]
@@ -102,7 +102,7 @@ func (b *builder) linkCrateRoutes(ix *fileindex.Index) {
 			continue
 		}
 		crate, _ := rustCrateNames(path)
-		if len(b.providers(origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(b.byPath[file], crate), form: modules.FormImport})) > 0 {
+		if b.provides(origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(b.byPath[file], crate), form: modules.FormImport}) {
 			continue
 		}
 		b.addUnresolved(UnresolvedSite{

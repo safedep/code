@@ -1,0 +1,36 @@
+source: safedep:hand
+description: >-
+  dispatch calls handle on the parameter handler. 25 classes define handle, so the site is ambiguous and gets
+  no name edge. H0.handle calls load on its field codec, whose value the index does not know, so that site is
+  a record with the method load. main passes the module yaml as the codec, so the program runs yaml.load. No
+  edge leads from a candidate of handle to yaml.load. The ambiguous record concerns what each candidate can
+  run, through its own records too, so yaml.load is uncertain and not no-such-target. os.remove, which only
+  the uncalled cleanup calls, is not found.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+no_edges:
+  - from: main.py//dispatch
+    to: handlers.py//H0//handle
+unresolved:
+  - caller: handlers.py//H0//handle
+    site: handlers.py:9
+    reason: no-definition
+    method: load
+  - caller: main.py//dispatch
+    site: main.py:6
+    reason: ambiguous
+    method: handle
+results:
+  - target: yaml//load
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: main.py:6
+  - target: os//remove
+    status: not-found
+    call_sites:
+      - caller: handlers.py//cleanup
+        site: handlers.py:133
+        reached: false

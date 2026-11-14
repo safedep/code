@@ -381,6 +381,51 @@ unresolved handlers.py//parse 5 unknown-receiver f
 	assert.Equal(t, Uncertain, r.Status)
 }
 
+// TestReachSpanCountsTheRecordsOfItsCode checks that an unresolved call of a
+// method concerns what its candidates run through their own unresolved
+// calls, as the ambiguous call handle whose candidate calls load on a value
+// of an unknown type. Reach and the table of ExploreAll give one answer.
+func TestReachSpanCountsTheRecordsOfItsCode(t *testing.T) {
+	const spec = `
+root main.py//run
+unresolved main.py//run 3 ambiguous handle
+edge lib.py//H//handle lib.py//helper direct 4
+edge lib.py//Codec//load pickle//loads direct 8
+edge lib.py//dead os//exit direct 12
+`
+	tests := []struct {
+		name   string
+		record string
+		want   map[string]Status
+	}{
+		{
+			name:   "a call of a method in a candidate",
+			record: "unresolved lib.py//helper 5 unknown-receiver load",
+			want:   map[string]Status{"pickle//loads": Uncertain, "json//load": Uncertain, "os//exit": NotFound},
+		},
+		{
+			name:   "a computed call in a candidate",
+			record: "unresolved lib.py//helper 5 computed-name",
+			want:   map[string]Status{"pickle//loads": Uncertain, "json//load": Uncertain, "os//exit": Uncertain},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := graphOf(t, spec+tt.record)
+			sets, err := NewExplorer(g).ExploreAll(context.Background(), []string{"main.py//run"})
+			require.NoError(t, err)
+			require.Len(t, sets.Sources[0].Uncertainties, 1)
+			handle := sets.Uncertainties[sets.Sources[0].Uncertainties[0]]
+			require.Equal(t, "handle", handle.Method)
+			for target, status := range tt.want {
+				r := reachOne(t, g, Query{Targets: targetsOf(t, target)})
+				assert.Equal(t, status, r.Status, target)
+				assert.Equal(t, status == Uncertain, handle.Concerns(targetOf(t, target)), target)
+			}
+		})
+	}
+}
+
 func TestReachCapsUncertaintiesPerKind(t *testing.T) {
 	spec := basic
 	for i := range 5 {
@@ -628,7 +673,7 @@ func TestReachDependencyCode(t *testing.T) {
 		{
 			name:   "an entry into a unit with a failed file",
 			extra:  "edge main.py//run kit//load//close direct 4\nentry kit//load//close npm:kit@1.0.0\nfile npm:kit@1.0.0//big.js failed",
-			target: "fs//rm", status: Uncertain, kinds: []UncertaintyKind{Budget},
+			target: "fs//rm", status: Uncertain, kinds: []UncertaintyKind{Budget, UnresolvedCall},
 		},
 	}
 	for _, tt := range tests {

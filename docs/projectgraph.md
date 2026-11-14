@@ -235,7 +235,13 @@ follow what the candidates call. The site keeps its method name, because
 the call can run only a method of that name. A record with a method name
 concerns the targets with that last segment and the targets that a
 definition of the name reaches, so it concerns what each candidate
-reaches.
+reaches. A candidate can also run code that no edge leads to, through an
+unresolved site of its own. So the record also concerns what each
+uncertainty of the code that a candidate reaches concerns, as
+[The honesty rule](#the-honesty-rule) says. In the case
+`python/name-ambiguous-record`, `H0.handle` calls `load` on a field whose
+value the index does not know, and `yaml.load` is `uncertain` and not
+`no-such-target`.
 
 A call on the result of another call, as `html.NewTokenizer(r).Next()`,
 needs the type of that result. When the link step does not know it, the
@@ -661,6 +667,19 @@ reaches, as [Code outside the graph](#code-outside-the-graph) argues. A
 result caps the uncertainties that it lists at three per kind and keeps
 the full count in `Searched`.
 
+The code of such a scope can hold uncertainties of its own: an unresolved
+site, a dynamic flag, a truncation, or a file of a unit that the index
+step did not complete. That code can run code that no edge leads to. So
+the scope also concerns what each of them concerns, as the search of a
+query counts them, and the scope of a method name, a unit or a callback
+that one of them names goes on into that code too. Without that, a target
+that only such code reaches reads as `not-found`. The cases
+`python/name-ambiguous-record` for a method name,
+`python/dependency-dark-unit-record` for a unit and
+`go/stdlib-callback-record` for a callback show it. A summary keeps the
+same scope: `reach.Scoped` holds the method names and the import prefixes
+of those uncertainties, and `Every` marks one that concerns every target.
+
 A file of dependency code that the index step did not complete counts
 only for a search that enters its package. A file of the project counts
 for every search, because it can hold a root.
@@ -739,8 +758,18 @@ these:
   does not always know that the receiver is a `reflect.Value`, so the rule
   takes any receiver.
 
-A function value that code outside the graph makes runs code outside the
-graph, which the search does not see for any call.
+A function value that code outside the graph makes, as the result of
+`sync.OnceFunc(g)`, runs code outside the graph. A call of that code makes
+the value, and the call has the record that
+[Code outside the graph](#code-outside-the-graph) gives. The search
+reaches that record where it reaches the code that makes the value.
+
+The argument holds for a search from the roots, which reaches the module
+top level of each package that the program loads. A search from the
+sources alone, as `reach.SourcesOnly` asks, starts at the sources and not
+at the module top levels of their packages. So a call of a function value
+that only a package-level value holds can run a function that such a
+search does not reach, and the target can read as `not-found`.
 
 The rule does not apply to Rust. The Rust index records a function that an
 argument, a `let`, an assignment, a `return`, a field initializer or an
@@ -755,7 +784,7 @@ A failed or truncated file of a unit of dependency code counts for every
 target when the search enters the unit. An unresolved site in the code of a
 unit with no method name, as an import that no file of the unit gives,
 counts for every target too. The closure of the edges of the unit, which
-`unitReaches` reads, does not bound such code, for two reasons.
+the scope of a unit reads, does not bound such code, for two reasons.
 
 - The unknown code can call a package that no known code of the unit
   calls. A failed file has no index, so its imports are not known. The
@@ -802,7 +831,8 @@ depends on what the code can call.
   exported name. So the record of a key of the standard library is a
   callback, as `Callback` marks it. It concerns the targets that a Go
   method of an exported name reaches, in the project and in each unit, as
-  the closure of a method name does. Each key of the standard library gives
+  the scope of a method name does, and what the uncertainties of that code
+  concern. Each key of the standard library gives
   the same scope, so a result lists the callback once, with no key.
 - A package of another module can import the package of any target and
   call any function of it. So its record concerns every target. A summary
@@ -814,6 +844,27 @@ depends on what the code can call.
 - A builtin runs no code of the program, except `panic`. The runtime prints
   the value of a panic that no `recover` stops with its method `Error` or
   `String`. So `panic` has a record for each of the two methods.
+
+A Go call of a method on a value whose type the link step does not know is
+a record with the method name, as `srv.ListenAndServe()` on a
+package-level variable, on an element of a slice, on a range variable, on a
+parameter of an interface type, or after a dot import of `net/http`. Such a
+call can run a method of a type of a package that no unit gives, and no
+edge leads to that code. So the link step gives the caller of each such
+record the record of that code too.
+
+- When no unit gives the standard library, the caller gets a callback
+  record. Code of the standard library can give a value of its type to any
+  code, as an `error`, so the rule does not ask for an import.
+- When a Go file imports a package of another module that no unit gives,
+  in a build with a project file, the caller gets a record that concerns
+  every target. Only code that imports the module, or code of the module,
+  makes a value of its type, so such an import names the module.
+- A record of the reason `no-dependency-source` names its package, and
+  that package has its own record. It gets no other record.
+
+The cases `go/stdlib-callback-method-record` and
+`go/dependency-no-unit-method` show it.
 
 A target that no Go method of an exported name reaches keeps its answer.
 In the case `go/stdlib-callback-scope`, only the function `Dial` calls
@@ -831,4 +882,5 @@ Two gaps stay.
   `no-such-target`.
 - The rule applies to Go only. Code of another language that no unit gives,
   as the standard library of Python with no `python:std` unit, can call a
-  method of a value too, and no record shows it.
+  method of a value too, and a call of a method on a value of an unknown
+  type can run such code. No record shows it.

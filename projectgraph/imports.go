@@ -101,7 +101,7 @@ func (b *builder) importedModules(ix *fileindex.Index, spec string, form modules
 	if mods := b.resolveModules(ix, spec, form); len(mods) > 0 {
 		return mods, nil
 	}
-	if len(b.spaces) < 2 {
+	if !b.hasUnits() {
 		return nil, nil
 	}
 	var mods []moduleRef

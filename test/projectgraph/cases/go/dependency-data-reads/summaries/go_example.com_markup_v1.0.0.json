@@ -207,6 +207,9 @@
         "errors//New",
         "os//Remove",
         "os//exec//Command"
+      ],
+      "methods": [
+        "Handler"
       ]
     },
     {
@@ -218,7 +221,12 @@
         "column": 2
       },
       "text": "Handler (unknown-receiver)",
-      "method": "Handler"
+      "method": "Handler",
+      "targets": [
+        "errors//New",
+        "os//Remove",
+        "os//exec//Command"
+      ]
     }
   ]
 }

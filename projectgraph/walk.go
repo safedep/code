@@ -9,6 +9,12 @@ import (
 	"github.com/safedep/code/langcode"
 )
 
+// unknownReceiver is the failure of a name on a value whose type the walk
+// does not know.
+func unknownReceiver(name string) *failure {
+	return &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+}
+
 // walkTyped resolves the names on a receiver of a declared type.
 func (b *builder) walkTyped(class string, names []string) resolution {
 	r := b.walkFrom(resolution{key: class, kind: EdgeDirect, virtual: true}, names)
@@ -62,7 +68,7 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 		case kind == NodeExport:
 			target, ok := b.bound(r.key)
 			if !ok {
-				r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+				r.fail = unknownReceiver(name)
 				return r
 			}
 			r.key = target
@@ -73,7 +79,7 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 		case b.holdsData(r.key):
 			// The walk does not know the type of a field, a constant or
 			// a variable of data, so it does not know a name on it.
-			r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+			r.fail = unknownReceiver(name)
 			return r
 		case kind == NodeExternal || kind == "" && b.g.IsExternal(r.key):
 			// A name before the last one under an external key is a call
@@ -86,7 +92,7 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 					skip, typed := unwrap(res.wraps, names[i+1:])
 					switch {
 					case !typed:
-						r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: names[i+1]}
+						r.fail = unknownReceiver(names[i+1])
 						return r
 					case i+1+skip < len(names):
 						r.key, r.virtual, r.declared = res.class, true, true
@@ -135,7 +141,7 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 	if b.kindOf(r.key) == NodeVariable {
 		value, ok := b.variableValue(r.key)
 		if !ok {
-			r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: fileindex.Last(r.key)}
+			r.fail = unknownReceiver(fileindex.Last(r.key))
 			return r
 		}
 		r.key = value
@@ -190,7 +196,7 @@ func (b *builder) walkVariable(r *resolution, name string) (consumed, done bool)
 	}
 	value, ok := b.variableValue(r.key)
 	if !ok {
-		r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+		r.fail = unknownReceiver(name)
 		return false, true
 	}
 	r.key = value
@@ -245,31 +251,20 @@ func (b *builder) walkClass(r *resolution, name string, last bool, instance *boo
 			return true, false
 		}
 	}
-	// A read of a field runs no code. A name on a field whose type the
-	// walk does not know is unknown.
-	if field, ok := b.goField(r.key, name); ok {
-		if !last {
-			r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
-			return false, true
+	if member := p.structMember; member != nil {
+		if consumed, done, ok := member(b, r, name, last); ok {
+			return consumed, done
 		}
-		r.key = field
-		return true, false
-	}
-	// A method that an embedded interface declares runs on the value that
-	// the field holds, as a call on a value of the interface does.
-	if iface, ok := b.declaringInterface(r.key, name); ok {
-		r.class, r.virtual, r.fail = iface, true, noDefinition(name)
-		return false, true
 	}
 	base, external := b.externalBase(r.key)
 	switch {
 	case b.forwards(r.key):
-		r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+		r.fail = unknownReceiver(name)
 	case external && last:
 		r.key, r.kind, r.rule = b.deriveExternal(base, []string{name}), EdgeMember, ruleMember
 		return true, false
 	case external:
-		r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+		r.fail = unknownReceiver(name)
 	default:
 		r.fail = noDefinition(name)
 	}

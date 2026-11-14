@@ -8,20 +8,6 @@ import (
 	"github.com/safedep/code/fileindex"
 )
 
-// functionValue gives a call of a function value the reason function-value
-// in a language whose function values the link step joins to the code
-// that holds them. The function that such a call runs is a function that
-// some code uses as a value, with a reference edge from that code, or a
-// function literal, whose calls belong to the code that holds it. The
-// search reaches that code before the value exists, so the record names no
-// target.
-func functionValue(p *profile, reason fileindex.UnresolvedReason) fileindex.UnresolvedReason {
-	if p.functionValues && reason == fileindex.UnresolvedComputedName {
-		return fileindex.UnresolvedFunctionValue
-	}
-	return reason
-}
-
 // linkUnknownValue records a reference to a member that the link step
 // cannot name, as the method value h.Handle on a value of an interface. The
 // code that gets the value can call any method of the name, so the record
@@ -38,34 +24,50 @@ func (b *builder) linkUnknownValue(sc *scope, ref fileindex.Reference, from stri
 	b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: ref.Text, Method: lastWritten(ref.Text), Reason: reason})
 }
 
+// reflection is the package of a language that can run any function by a
+// value or by a name, and the methods of it that do it.
+type reflection struct {
+	module  string
+	methods map[string]bool
+}
+
+// reflective reports whether a call or a reference of the method in a file
+// that imports the package of reflection can run a function that it gives.
+// The link step does not always know that the receiver is a value of the
+// package, as when no unit gives the standard library. So any receiver
+// counts.
+func (r *reflection) reflective(ix *fileindex.Index, method string) bool {
+	return r.methods[method] && slices.ContainsFunc(ix.Imports, func(imp fileindex.Import) bool { return imp.Module == r.module })
+}
+
 // linkReflection adds a computed-name record at each call and each
 // reference of a file that can run a function that reflection gives, as
 // reflect.ValueOf(f).Call(nil). Such a call can run any function, and a
 // function value that reflection gives has no reference edge. A site whose
-// every target resolves to a definition outside package reflect, as
-// stream.Method() on a type of the project, gets no record.
+// every target resolves to a definition outside the package of reflection,
+// as stream.Method() on a type of the project, gets no record.
 func (b *builder) linkReflection(ix *fileindex.Index) {
-	reflective := profileOf(ix.Language).reflective
-	if reflective == nil || isDeclarationFile(ix.Path) {
+	refl := profileOf(ix.Language).reflection
+	if refl == nil || isDeclarationFile(ix.Path) {
 		return
 	}
 	sc := b.scopes[ix.Path]
 	for _, call := range ix.Calls {
-		if call.Kind == fileindex.CallImport || !reflective(ix, cmp.Or(call.Method, lastWritten(call.Callee))) {
+		if call.Kind == fileindex.CallImport || !refl.reflective(ix, cmp.Or(call.Method, lastWritten(call.Callee))) {
 			continue
 		}
 		caller := call.Caller
 		if b.g.Nodes[caller] == nil {
 			caller = sc.enclosing(call.Line)
 		}
-		if b.resolvesOutsideReflect(sc, caller, call.Targets) {
+		if b.resolvesOutside(refl.module, sc, caller, call.Targets) {
 			continue
 		}
 		site := Site{Path: ix.Path, Line: call.Line, Column: call.Column}
 		b.addUnresolved(UnresolvedSite{Caller: b.runner(caller), Site: site, Text: call.Callee, Receiver: call.Receiver, Reason: fileindex.UnresolvedComputedName})
 	}
 	for _, ref := range ix.References {
-		if !reflective(ix, lastWritten(ref.Text)) || b.resolvesOutsideReflect(sc, ref.Caller, ref.Targets) {
+		if !refl.reflective(ix, lastWritten(ref.Text)) || b.resolvesOutside(refl.module, sc, ref.Caller, ref.Targets) {
 			continue
 		}
 		site := Site{Path: ix.Path, Line: ref.Line, Column: ref.Column}
@@ -73,10 +75,9 @@ func (b *builder) linkReflection(ix *fileindex.Index) {
 	}
 }
 
-// resolvesOutsideReflect reports whether each target of a site resolves to
-// a key that is not in package reflect, in the graph or under its external
-// key.
-func (b *builder) resolvesOutsideReflect(sc *scope, caller string, targets []string) bool {
+// resolvesOutside reports whether each target of a site resolves to a key
+// that is not in the module, in the graph or under its external key.
+func (b *builder) resolvesOutside(module string, sc *scope, caller string, targets []string) bool {
 	rs := b.resolveTargets(sc, caller, targets)
 	return len(rs) > 0 && !slices.ContainsFunc(rs, func(r resolution) bool {
 		key := r.key
@@ -91,6 +92,6 @@ func (b *builder) resolvesOutsideReflect(sc *scope, caller string, targets []str
 		if external, _, ok := b.unitSymbol(key); ok {
 			key = external
 		}
-		return fileindex.Unit(key) == "reflect"
+		return fileindex.Unit(key) == module
 	})
 }

@@ -44,10 +44,11 @@ func (b *builder) lookupName(module, name string, hops int) (string, *failure) {
 	if sc == nil {
 		return module, nil
 	}
-	if n := b.g.Nodes[fileindex.Join(module, name)]; n != nil && n.Kind != NodeExport {
-		return n.Key, nil
+	key := fileindex.Join(module, name)
+	if n := b.g.Nodes[key]; n != nil && n.Kind != NodeExport {
+		return key, nil
 	}
-	if key := fileindex.Join(module, name); b.holdsData(key) {
+	if b.holdsData(key) {
 		return key, nil
 	}
 

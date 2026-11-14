@@ -219,6 +219,24 @@ func (b *builder) addProblems(sp *space, problems []modules.Problem) {
 	}
 }
 
+// hasUnits reports whether the build links a unit of dependency code. A
+// build with no unit links no external key.
+func (b *builder) hasUnits() bool {
+	return len(b.spaces) > 1
+}
+
+// provided reports whether a unit of dependency code gives the package of
+// an external key.
+func (b *builder) provided(key string) bool {
+	return slices.ContainsFunc(b.origins[key], b.provides)
+}
+
+// provides reports whether a unit of dependency code gives the package
+// that an import names.
+func (b *builder) provides(o origin) bool {
+	return len(b.providers(o)) > 0
+}
+
 // spaceOf returns the space of a key: the space of its unit, or the space
 // of the project.
 func (b *builder) spaceOf(key string) *space {
@@ -277,7 +295,7 @@ func (b *builder) importedExternal(ix *fileindex.Index, key, module string, form
 // recordOrigin records an import as an origin of the key. A graph with no
 // unit of dependency code links no external key, so it records nothing.
 func (b *builder) recordOrigin(ix *fileindex.Index, key, module string, form modules.Form, names []string) {
-	if len(b.spaces) < 2 {
+	if !b.hasUnits() {
 		return
 	}
 	o := origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, module), form: form, names: slices.Clone(names)}
@@ -378,7 +396,7 @@ func (b *builder) provide(sp *space, family langcode.Code, module string, form m
 // package makes at run time, is a record of the unit on the external node.
 // Any code of the unit can run there.
 func (b *builder) linkPackages(ctx context.Context) error {
-	if len(b.spaces) < 2 {
+	if !b.hasUnits() {
 		return nil
 	}
 	for {
@@ -446,13 +464,12 @@ func (b *builder) linkProvision(key string, o origin, pv provision) {
 
 // linkPackageLoad adds an import edge from an external key to each module
 // top level of its package that runs code at load, in a language whose
-// function values the link step joins to the code that holds them. The
 // program loads a package before a symbol of it runs. A search that enters
 // the package by the key, as the search of a summary does, then reaches the
 // init functions and the package-level values. A call of a function value
 // that a package-level value holds finds its function only through them.
 func (b *builder) linkPackageLoad(lang langcode.Code, key, module string) {
-	if !profileOf(lang).functionValues {
+	if !profileOf(lang).loadsPackages {
 		return
 	}
 	for _, p := range b.moduleFiles(module) {

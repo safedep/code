@@ -28,6 +28,19 @@ type profile struct {
 	// link adds the edges that the loader of the language runs, as the
 	// init functions of Go.
 	link func(b *builder, ix *fileindex.Index)
+	// outsideCode adds the records of code outside the graph that code of
+	// the language can run, as the Go standard library with no unit. It
+	// runs once, when every other record of the build is known.
+	outsideCode func(b *builder)
+	// callbackMethod reports whether code outside the graph can call a
+	// definition of the language back on a value that it holds, as a Go
+	// method of an exported name. A record that Callback marks concerns
+	// what such a definition reaches.
+	callbackMethod func(n *Node) bool
+	// structMember reads a name of a class that is no method of it, as a
+	// field of a Go struct or a method that an embedded interface
+	// declares. ok reports whether the class has such a member.
+	structMember func(b *builder, r *resolution, name string, last bool) (consumed, done, ok bool)
 	// qualified resolves a qualified name, as com.x.Service in Java.
 	qualified func(b *builder, name string) (string, bool)
 	// typePath resolves a type path that a file writes and that its scope
@@ -201,19 +214,20 @@ type profile struct {
 	// exactWildcards marks a language whose wildcard import of a package of
 	// the project names a class exactly, so its edge is direct.
 	exactWildcards bool
-	// mainLoadsPackage marks a language whose program initializes the
-	// package of main before main runs, as Go.
-	mainLoadsPackage bool
+	// loadsPackages marks a language whose program initializes a package
+	// before any code of the package runs, as Go: the package of main
+	// before main, and the package of an external key before the symbol.
+	loadsPackages bool
 	// functionValues marks a language whose function values the link step
 	// joins to the code that holds them, as Go. A call of a function value
 	// gets the reason function-value in place of computed-name, and it
 	// concerns no target. A reference to a method that the link step cannot
 	// name, as h.Handle on an interface, gets a record with the method name.
 	functionValues bool
-	// reflective reports whether a call or a reference of the file, by its
-	// method name, can run a function that reflection gives, as
-	// reflect.Value.Call. Such a site gets a computed-name record.
-	reflective func(ix *fileindex.Index, method string) bool
+	// reflection names the package of the language that can run any
+	// function by a value or by a name, and its methods that do it, as
+	// Call of reflect.Value in Go.
+	reflection *reflection
 	// helperProgram reports whether the main of a file is a helper
 	// program of the project and not the program that its users run, as a
 	// build script or an example of a Rust crate. Its root stays, and it

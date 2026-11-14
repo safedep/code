@@ -1,0 +1,170 @@
+source: safedep:hand
+description: >-
+  No unit gives the standard library. handler.ServeHTTP calls os.Remove, and each via function calls
+  ListenAndServe of an http.Server, or of http, on a value whose type the link step does not know: a
+  package-level variable, an element of a slice, a range variable, a parameter of a first-party interface, a
+  method value, and a dot import. viaField calls a function value that a field holds. Each call is a record
+  with a method name, and such a call can run a method of the standard library, which calls back ServeHTTP.
+  So the caller of each record also has a callback record, and os.Remove is uncertain from each via
+  function. idle calls nothing, so os.Remove is not found from it.
+roots:
+  - key: dot.go
+    kind: main
+    rule: go.main
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+unresolved:
+  - caller: dot.go//viaDotImport
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//viaField
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//viaIndex
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//viaInterface
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//viaMethodValue
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//viaRange
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//viaVariable
+    reason: no-dependency-source
+    callback: true
+  - caller: net//http//ListenAndServe
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Remove
+    reason: no-dependency-source
+    callback: true
+  - caller: dot.go//viaDotImport
+    site: dot.go:6
+    reason: unknown-receiver
+    method: ListenAndServe
+  - caller: main.go//viaVariable
+    site: main.go:29
+    reason: unknown-receiver
+    method: ListenAndServe
+  - caller: main.go//viaIndex
+    site: main.go:33
+    reason: unknown-receiver
+    method: ListenAndServe
+  - caller: main.go//viaRange
+    site: main.go:38
+    reason: unknown-receiver
+    method: ListenAndServe
+  - caller: main.go//viaInterface
+    site: main.go:43
+    reason: interface-receiver
+    method: ListenAndServe
+  - caller: main.go//viaField
+    site: main.go:47
+    reason: unknown-receiver
+    method: serve
+  - caller: main.go//viaMethodValue
+    site: main.go:51
+    reason: unknown-receiver
+    method: ListenAndServe
+  - caller: main.go//viaMethodValue
+    site: main.go:52
+    reason: no-definition
+    method: serve
+results:
+  - target: os//Remove
+    sources: [main.go//viaVariable]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//handler//ServeHTTP
+        site: main.go:11
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:29
+      - kind: unresolved-call
+  - target: os//Remove
+    sources: [main.go//viaIndex]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//handler//ServeHTTP
+        site: main.go:11
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:33
+      - kind: unresolved-call
+  - target: os//Remove
+    sources: [main.go//viaRange]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//handler//ServeHTTP
+        site: main.go:11
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:38
+      - kind: unresolved-call
+  - target: os//Remove
+    sources: [main.go//viaInterface]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//handler//ServeHTTP
+        site: main.go:11
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:43
+      - kind: unresolved-call
+  - target: os//Remove
+    sources: [main.go//viaField]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//handler//ServeHTTP
+        site: main.go:11
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+  - target: os//Remove
+    sources: [main.go//viaMethodValue]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//handler//ServeHTTP
+        site: main.go:11
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:51
+      - kind: unresolved-call
+  - target: os//Remove
+    sources: [dot.go//viaDotImport]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//handler//ServeHTTP
+        site: main.go:11
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: dot.go:6
+      - kind: unresolved-call
+  - target: os//Remove
+    sources: [main.go//idle]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: main.go//handler//ServeHTTP
+        site: main.go:11
+        reached: false

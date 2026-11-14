@@ -19,21 +19,17 @@ type prefixed struct {
 
 // found collects the uncertainties of the nodes that a search reached, in
 // the order of the search. A record with a method name concerns only the
-// targets with that last segment and the targets that a node with that
-// last segment reaches, unless its reason can name any target.
+// targets with that last segment and the targets that the span of the
+// name concerns, unless its reason can name any target.
 type found struct {
 	global   []Uncertainty
 	byMethod map[string][]Uncertainty
 	methods  []string
 	prefixed []prefixed
 	byUnit   []Uncertainty
-	callback []Uncertainty
-	// reaches reports whether the code of a unit reaches a target,
-	// methodReaches whether a node with the last segment reaches one, and
-	// exportedReaches whether a method of an exported name reaches one.
-	reaches         func(unit string, target Target) bool
-	methodReaches   func(name string, target Target) bool
-	exportedReaches func(target Target) bool
+	callback *Uncertainty
+	// concerns reports whether the span of a scope concerns a target.
+	concerns func(k scopeKey, target Target) bool
 	// units holds the file budgets of each unit of dependency code, and
 	// entered the units that the search entered.
 	units   map[string][]Uncertainty
@@ -58,10 +54,10 @@ type sources struct {
 	testBudgets map[string][]Uncertainty
 	// units lists the units that a search can enter, in key order.
 	units []string
-	// callbacks holds the external keys whose code is outside the graph and
-	// can call a method of a value that it holds, and callback the one
-	// uncertainty that they share. Each such key gives the same scope, so
-	// the search counts it once.
+	// callbacks holds the callers of the records of code outside the graph
+	// that can call a method of a value that it holds, and callback the one
+	// uncertainty that they share. Each such record gives the same scope,
+	// so the search counts it once.
 	callbacks map[string]bool
 	callback  *Uncertainty
 }
@@ -204,7 +200,7 @@ func (s *sources) unitsOf(n *projectgraph.Node, key string) []string {
 func (a *adjacency) uncertainties(s *search, maxDepth int) *found {
 	g := a.g
 	src := a.sources()
-	f := &found{byMethod: map[string][]Uncertainty{}, reaches: a.unitReaches, methodReaches: a.methodReaches, exportedReaches: a.exportedReaches, units: src.budgets, entered: map[string]bool{}}
+	f := &found{byMethod: map[string][]Uncertainty{}, concerns: a.concerns, units: src.budgets, entered: map[string]bool{}}
 	for _, u := range src.global {
 		f.add(u)
 	}
@@ -229,7 +225,7 @@ func (a *adjacency) uncertainties(s *search, maxDepth int) *found {
 		for _, u := range src.at(key, n) {
 			f.add(u)
 		}
-		if src.callbacks[key] && len(f.callback) == 0 {
+		if src.callbacks[key] {
 			f.add(*src.callback)
 		}
 	}
@@ -247,7 +243,10 @@ func (a *adjacency) uncertainties(s *search, maxDepth int) *found {
 func (f *found) add(u Uncertainty) {
 	switch {
 	case u.Callback:
-		f.callback = append(f.callback, u)
+		// Each callback has the same scope, so a result lists it once.
+		if f.callback == nil {
+			f.callback = &u
+		}
 	case u.Unit != "":
 		f.byUnit = append(f.byUnit, u)
 	case u.ImportPrefix != "":
@@ -282,7 +281,11 @@ func (f *found) all() []Uncertainty {
 	for _, p := range f.prefixed {
 		out = append(out, p.u)
 	}
-	return append(append(out, f.byUnit...), f.callback...)
+	out = append(out, f.byUnit...)
+	if f.callback != nil {
+		out = append(out, *f.callback)
+	}
+	return out
 }
 
 // forTarget returns the uncertainties of a target, at most maxPerKind of
@@ -291,18 +294,17 @@ func (f *found) all() []Uncertainty {
 func (f *found) forTarget(target Target) ([]Uncertainty, []Uncertainty, int) {
 	all := slices.Clone(f.global)
 	for _, m := range f.methods {
-		if target.hasMethod(m) || f.methodReaches(m, target) {
+		if f.concerns(scopeKey{method: m}, target) {
 			all = append(all, f.byMethod[m]...)
 		}
 	}
-
 	for _, u := range f.byUnit {
-		if f.reaches(u.Unit, target) {
+		if f.concerns(scopeKey{unit: u.Unit}, target) {
 			all = append(all, u)
 		}
 	}
-	if len(f.callback) > 0 && f.exportedReaches(target) {
-		all = append(all, f.callback...)
+	if f.callback != nil && f.concerns(scopeKey{callback: true}, target) {
+		all = append(all, *f.callback)
 	}
 
 	var setAside []Uncertainty

@@ -1,0 +1,34 @@
+source: safedep:hand
+description: >-
+  The unit PyYAML holds the package yaml, and no import of the project names it, so a record of the unit that
+  no node holds concerns what the code of the unit can run in every search. construct of the unit calls a
+  function that getattr gives, which can be any function. The scope of the unit counts the records of its
+  code, so os.system, which only the uncalled cleanup of the project calls, is uncertain and not not-found.
+units:
+  venv/site-packages/yaml: pypi:PyYAML@6.0.1
+import_dirs:
+  - venv/site-packages
+problems:
+  - path: pypi:PyYAML@6.0.1
+    text: no import names the unit, and it gives no module for the package pyyaml
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+unresolved:
+  - caller: ""
+    site: pypi:PyYAML@6.0.1
+    reason: no-definition
+  - caller: pypi:PyYAML@6.0.1//yaml/__init__.py//construct
+    site: pypi:PyYAML@6.0.1//yaml/__init__.py:9
+    reason: computed-name
+results:
+  - target: os//system
+    status: uncertain
+    call_sites:
+      - caller: main.py//cleanup
+        site: main.py:5
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: pypi:PyYAML@6.0.1
