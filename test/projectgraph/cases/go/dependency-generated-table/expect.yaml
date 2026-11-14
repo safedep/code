@@ -23,6 +23,9 @@ unresolved:
   - caller: os//exec//Command
     reason: no-dependency-source
     callback: true
+  - caller: go:github.com/acme/kit@v1.0.0//kit.go//Dispatch
+    site: go:github.com/acme/kit@v1.0.0//kit.go:5
+    reason: function-value
 results:
   - target: os//Remove
     status: found

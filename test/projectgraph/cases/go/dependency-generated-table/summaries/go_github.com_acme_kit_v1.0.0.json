@@ -14,7 +14,8 @@
         "os//exec//Command"
       ],
       "uncertainties": [
-        0
+        0,
+        1
       ]
     }
   ],
@@ -30,6 +31,16 @@
       },
       "text": "the Go standard library, which no unit gives (no-dependency-source)",
       "callback": true
+    },
+    {
+      "kind": "unresolved-call",
+      "key": "go:github.com/acme/kit@v1.0.0//kit.go//Dispatch",
+      "site": {
+        "path": "go:github.com/acme/kit@v1.0.0//kit.go",
+        "line": 5,
+        "column": 30
+      },
+      "text": "handlers (function-value)"
     }
   ]
 }

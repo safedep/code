@@ -123,6 +123,9 @@ unresolved:
     reason: function-value
   - caller: main.go//runHook
     site: main.go:23
+    reason: function-value
+  - caller: main.go//runHook
+    site: main.go:23
     reason: unknown-receiver
     method: Hook
 results:

@@ -427,7 +427,12 @@ Such a definition of data has no node. A read of it, as `n.Data` or
 `pgx.ErrNoRows`, gives no edge and no record, in the project and in the
 walk of an external key into a unit. A name on it, as `bufPool.Get()`,
 is a record with the reason `unknown-receiver`, because the walk does not
-know its type.
+know its type. A call of it, as `s.cfg.Remove("x")` for a field of a
+function type, runs the function value that it holds. No edge names that
+function, so the call is a record with the reason `function-value`, as
+[A call of a function value](#a-call-of-a-function-value) says. A search
+from a source that does not reach the code that stores the value keeps the
+target `uncertain`. The case `go/source-field-func` shows it.
 
 A call of any other variable keeps its edge or its record. A variable that
 holds a name gives the edge to that name, as a call of `Run` gives the

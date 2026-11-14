@@ -84,7 +84,16 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			continue
 		}
 		for _, r := range resolutions {
-			if r.unbound && sc.profile.literals[r.key] || r.fail == nil && b.holdsData(r.key) {
+			if r.unbound && sc.profile.literals[r.key] {
+				continue
+			}
+			// A call of a field or a variable runs the function value that
+			// it holds, and no edge names that function. A search from a
+			// source does not reach the code that stores the value.
+			if r.fail == nil && b.holdsData(r.key) {
+				if sc.profile.functionValues {
+					b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: call.Callee, Receiver: call.Receiver, Reason: fileindex.UnresolvedFunctionValue})
+				}
 				continue
 			}
 			if r.unbound && sc.profile.thisCalls {

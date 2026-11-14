@@ -52,6 +52,9 @@ unresolved:
     callback: true
   - caller: main.go//server//serve
     site: main.go:14
+    reason: function-value
+  - caller: main.go//server//serve
+    site: main.go:14
     reason: ambiguous
     method: Handle
 results:
@@ -94,6 +97,8 @@ results:
     uncertainties:
       - kind: unresolved-call
         site: main.go:14
+      - kind: unresolved-call
+        site: main.go:14
   - target: os//Remove
     sources: [main.go//server//serve]
     sources_only: true
@@ -103,5 +108,7 @@ results:
         site: handlers/handlers.go:108
         reached: false
     uncertainties:
+      - kind: unresolved-call
+        site: main.go:14
       - kind: unresolved-call
         site: main.go:14

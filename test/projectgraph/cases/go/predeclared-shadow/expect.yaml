@@ -34,6 +34,9 @@ unresolved:
   - caller: main.go//main
     site: main.go:13
     reason: function-value
+  - caller: main.go//main
+    site: main.go:14
+    reason: function-value
 results:
   - target: os//Remove
     status: found
