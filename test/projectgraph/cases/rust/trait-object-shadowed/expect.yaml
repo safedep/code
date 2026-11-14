@@ -1,0 +1,88 @@
+source: safedep:hand
+description: >-
+  print takes a Box<dyn Write>, then a let binds the name w again to the dep::Plain that dep::plain returns, and
+  calls write on it. The code of the crate dep is the unit cargo:dep@1.2.0. The declared type of the parameter does
+  not hold after the let, so the call keeps the result type of dep::plain and goes to dep//Plain//write. If the
+  declared type typed the call, it would get the default write of the trait and the cha edge to Html::write, and
+  dep//Plain//write would read as not-found. Nothing calls write on an Html, so dep//Html//write is not-found.
+units:
+  vendor/dep: cargo:dep@1.2.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+exact_edges: true
+edges:
+  - from: cargo:dep@1.2.0//src/lib.rs//Html//write
+    to: cargo:dep@1.2.0//src/lib.rs//Html
+    kind: direct
+    confidence: high
+    site: cargo:dep@1.2.0//src/lib.rs:8
+  - from: cargo:dep@1.2.0//src/lib.rs//Plain//write
+    to: cargo:dep@1.2.0//src/lib.rs//Plain
+    kind: direct
+    confidence: high
+    site: cargo:dep@1.2.0//src/lib.rs:14
+  - from: cargo:dep@1.2.0//src/lib.rs//plain
+    to: cargo:dep@1.2.0//src/lib.rs//Plain
+    kind: direct
+    confidence: high
+    site: cargo:dep@1.2.0//src/lib.rs:18
+  - from: dep//Plain//write
+    to: cargo:dep@1.2.0//src/lib.rs//Plain//write
+    kind: package
+    confidence: high
+    site: cargo:dep@1.2.0//src/lib.rs:14
+  - from: dep//plain
+    to: cargo:dep@1.2.0//src/lib.rs//plain
+    kind: package
+    confidence: high
+    site: cargo:dep@1.2.0//src/lib.rs:17
+  - from: src/main.rs//main
+    to: src/main.rs//print
+    kind: direct
+    confidence: high
+    site: src/main.rs:4
+  - from: src/main.rs//main
+    to: Box//new
+    kind: direct
+    confidence: high
+    site: src/main.rs:4
+  - from: src/main.rs//main
+    to: dep//Html
+    kind: direct
+    confidence: high
+    site: src/main.rs:4
+  - from: src/main.rs//print
+    to: dep//plain
+    kind: direct
+    confidence: high
+    site: src/main.rs:8
+  - from: src/main.rs//print
+    to: dep//Plain//write
+    kind: direct
+    confidence: high
+    site: src/main.rs:9
+unresolved: []
+results:
+  - target: dep//Plain//write
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//print
+        site: src/main.rs:4
+        kind: direct
+        confidence: high
+      - key: dep//Plain//write
+        site: src/main.rs:9
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.rs//print
+        site: src/main.rs:9
+        reached: true
+  - target: dep//Html//write
+    status: not-found

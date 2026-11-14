@@ -29,6 +29,13 @@ type languageRules struct {
 	// on such a receiver gets the key of the name in its scope as its
 	// target, as main.py//run//t//do, so the link step reads the type.
 	typedReceivers bool
+	// typedResult reports whether the declared type of a name types a call
+	// on it at a line and a column where the call graph knows no type of
+	// its value, as Rust for w.write() after
+	// let w: Box<dyn Write> = Box::new(Html {}). A value that the call graph
+	// makes, as String::new(), is an instance of that type alone, so a call
+	// on it keeps its target.
+	typedResult func(p *projection, caller, name string, line, column int) bool
 
 	// packageOf returns the package or the namespace of the file, which the
 	// files of one unit share.

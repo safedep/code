@@ -1,0 +1,29 @@
+source: safedep:hand
+description: >-
+  The case of the vet reach corpus rust/glob-use. main brings in every item of the module dep::html with a glob use
+  and calls render. The code of the crate dep is the unit cargo:dep@1.2.0. The link step does not resolve a name
+  that a glob use of a module of a unit brings in, so the call stays a record of the method render. The record makes
+  render uncertain, and not not-found. No record names escape, so escape is not-found.
+units:
+  vendor/dep: cargo:dep@1.2.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+exact_edges: true
+unresolved:
+  - caller: src/main.rs//main
+    site: src/main.rs:4
+    reason: unknown-receiver
+    method: render
+results:
+  - target: dep//html//render
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: src/main.rs:4
+  - target: dep//html//escape
+    status: not-found

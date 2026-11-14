@@ -1,0 +1,65 @@
+source: safedep:hand
+description: >-
+  The case of the vet reach corpus rust/trait-object. main calls write on a Box<dyn Write> that holds a dep::Html. The
+  code of the crate dep is the unit cargo:dep@1.2.0. Box::new holds its argument, so the value of the call is no
+  instance of Box, and the declared type of w gives the trait Write of the unit. Html implements Write, so the call
+  gets a cha edge to dep//Html//write. A type of another crate can implement Write too, so the site keeps its record.
+units:
+  vendor/dep: cargo:dep@1.2.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+exact_edges: true
+edges:
+  - from: cargo:dep@1.2.0//src/lib.rs//Html//write
+    to: cargo:dep@1.2.0//src/lib.rs//Html
+    kind: direct
+    confidence: high
+    site: cargo:dep@1.2.0//src/lib.rs:8
+  - from: dep//Html//write
+    to: cargo:dep@1.2.0//src/lib.rs//Html//write
+    kind: package
+    confidence: high
+    site: cargo:dep@1.2.0//src/lib.rs:8
+  - from: src/main.rs//main
+    to: dep//Write
+    kind: reference
+    confidence: low
+    site: src/main.rs:4
+  - from: src/main.rs//main
+    to: Box//new
+    kind: direct
+    confidence: high
+    site: src/main.rs:4
+  - from: src/main.rs//main
+    to: dep//Html
+    kind: direct
+    confidence: high
+    site: src/main.rs:4
+  - from: src/main.rs//main
+    to: dep//Html//write
+    kind: cha
+    confidence: medium
+    site: src/main.rs:5
+unresolved:
+  - caller: src/main.rs//main
+    site: src/main.rs:5
+    reason: no-definition
+    method: write
+results:
+  - target: dep//Html//write
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: dep//Html//write
+        site: src/main.rs:5
+        kind: cha
+        confidence: medium
+    call_sites:
+      - caller: src/main.rs//main
+        site: src/main.rs:5
+        reached: true

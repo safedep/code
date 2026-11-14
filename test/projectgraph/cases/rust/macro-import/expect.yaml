@@ -1,0 +1,37 @@
+source: safedep:hand
+description: >-
+  The case of the vet reach corpus rust/macro-import. main uses the macro render_now of the crate dep, which
+  #[macro_use] extern crate dep brings in. The macro expands to a call of dep::render. The code of the crate dep is
+  the unit cargo:dep@1.2.0. The link step does not resolve a macro that #[macro_export] gives at the root of a crate
+  of a unit, so the call of render_now stays a record. The record makes render uncertain, and not not-found.
+units:
+  vendor/dep: cargo:dep@1.2.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+exact_edges: true
+edges:
+  - from: cargo:dep@1.2.0//src/lib.rs//render_now
+    to: cargo:dep@1.2.0//src/lib.rs//render
+    kind: direct
+    confidence: high
+    site: cargo:dep@1.2.0//src/lib.rs:6
+unresolved:
+  - caller: src/main.rs//main
+    site: src/main.rs:5
+    reason: unknown-receiver
+    method: render_now
+results:
+  - target: dep//render
+    status: uncertain
+    call_sites:
+      - caller: cargo:dep@1.2.0//src/lib.rs//render_now
+        site: cargo:dep@1.2.0//src/lib.rs:6
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/main.rs:5

@@ -250,6 +250,18 @@ Rust follows the same rules, with these additions.
   binds the type that it returns, and `clone`, `to_owned`, `default` and
   `from` on a type of a unit keep the type also when the crate derives
   them.
+- `Box::new`, `Rc::new` and `Arc::new` hold their argument, so their
+  value is no instance of the pointer. A method call on it runs a method of
+  the argument. With no declared type, as `let w = Box::new(Html {})`, the
+  call is a record with the reason `unknown-receiver`. A declared type of
+  the local, as `let w: Box<dyn Write> = Box::new(Html {})`, binds the
+  receiver. A declared type binds the receiver only where the index of the
+  file knows no type of the value. So `let s: String = String::new()` keeps
+  the target `String//shout` of `s.shout()`. The function must also bind
+  the name once, as a parameter or a typed `let`, before the call. A `let`,
+  a `match` arm, an `if let`, a `for` or a closure can bind the name again
+  with another type. A call on such a name keeps its record, so a method of
+  the real type does not read as `not-found`.
 - A trait object or a generic bound `T: Trait` of a unit gets the `cha`
   edges to the implementations in the graph, through their external keys.
   With no implementation, the site is a record with the reason

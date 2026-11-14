@@ -199,6 +199,24 @@ var rustReceiverRows = []receiverRow{
 		want:   "found",
 	},
 	{
+		name:   "boxed trait object",
+		source: "fn run() {\n    let d: Box<dyn Doer> = Box::new(Thing::<u8>::new());\n    d.run();\n}",
+		target: "dep//Thing//run",
+		want:   "found",
+	},
+	{
+		name:   "reference-counted trait object",
+		source: "use std::rc::Rc;\n\nfn run() {\n    let d: Rc<dyn Doer> = Rc::new(Thing::<u8>::new());\n    d.run();\n}",
+		target: "dep//Thing//run",
+		want:   "found",
+	},
+	{
+		name:   "boxed value with no declared type",
+		source: "fn run() {\n    let d = Box::new(Thing::<u8>::new());\n    d.run();\n}",
+		target: "dep//Thing//run",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
 		name:   "generic bound",
 		source: "fn run<T: Doer>(d: &T) {\n    d.run();\n}",
 		target: "dep//Thing//run",
