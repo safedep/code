@@ -99,10 +99,9 @@ func goSurface(s *surfacer) {
 			if strings.HasSuffix(p, "_test.go") || b.byPath[p] == nil {
 				continue
 			}
-			for _, def := range b.byPath[p].Definitions {
+			for def := range b.byPath[p].CodeDefinitions() {
 				segs := fileindex.Segments(def.Key)
 				switch {
-				case def.HoldsData():
 				case len(segs) == 1 && isGoExported(segs[0]):
 					s.add(langcode.Go, importPath, modules.FormImport, segs[0])
 				case len(segs) == 2 && def.Kind == fileindex.DefMethod && isGoExported(segs[0]) && isGoExported(segs[1]):
