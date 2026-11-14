@@ -21,6 +21,18 @@ no_edges:
   - from: main.go//main
     to: os//Remove
 unresolved:
+  - caller: os//Getenv
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Getwd
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Remove
+    reason: no-dependency-source
+    callback: true
+  - caller: os//exec//LookPath
+    reason: no-dependency-source
+    callback: true
   - caller: main.go//main
     site: main.go:29
     reason: function-value

@@ -202,7 +202,10 @@ type Edge struct {
 // caller and the unit as its site. The code that runs there is code of the
 // unit, so it can reach only what the code of the unit can reach. A site
 // with no caller is a unit that no import names, and it holds for every
-// search.
+// search. Callback marks the site of an external key whose code can call
+// into the graph only through a method of a value that it holds, as the
+// Go standard library with no unit. The reach query applies it to the
+// targets that a method of an exported name reaches.
 type UnresolvedSite struct {
 	Caller       string                     `json:"caller"`
 	Site         Site                       `json:"site"`
@@ -212,6 +215,7 @@ type UnresolvedSite struct {
 	Reason       fileindex.UnresolvedReason `json:"reason"`
 	ImportPrefix string                     `json:"import_prefix,omitempty"`
 	Unit         string                     `json:"unit,omitempty"`
+	Callback     bool                       `json:"callback,omitempty"`
 }
 
 // Root is a node that runs with no caller in the graph. Rule is the id of the

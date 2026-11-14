@@ -1,5 +1,5 @@
 source: safedep:hand
-description: main calls store.Save through the import path that go.mod gives the directory. Save calls encode, which another file of the package defines, and encode calls yaml.Marshal. No root reaches unused. No file of store runs code at load, so the import makes no edge.
+description: main calls store.Save through the import path that go.mod gives the directory. Save calls encode, which another file of the package defines, and encode calls yaml.Marshal. No root reaches unused. No file of store runs code at load, so the import makes no edge. No unit gives yaml.v3, so the code of Marshal is outside the graph and can call Unmarshal. Unmarshal is uncertain, not not-found.
 roots:
   - key: cmd/app/main.go
     kind: main
@@ -21,7 +21,11 @@ edges:
 no_edges:
   - from: cmd/app/main.go
     to: internal/store/store.go
-unresolved: []
+unresolved:
+  - caller: gopkg.in//yaml.v3//Marshal
+    reason: no-dependency-source
+  - caller: gopkg.in//yaml.v3//Unmarshal
+    reason: no-dependency-source
 results:
   - target: gopkg.in//yaml.v3//Marshal
     status: found
@@ -44,8 +48,10 @@ results:
         site: internal/store/encode.go:6
         reached: true
   - target: gopkg.in//yaml.v3//Unmarshal
-    status: not-found
+    status: uncertain
     call_sites:
       - caller: internal/store/encode.go//unused
         site: internal/store/encode.go:10
         reached: false
+    uncertainties:
+      - kind: unresolved-call

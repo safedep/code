@@ -11,10 +11,23 @@
       ],
       "reaches": [
         "os//exec//Command"
+      ],
+      "uncertainties": [
+        0
       ]
     }
   ],
   "targets": [
     "os//exec//Command"
+  ],
+  "uncertainties": [
+    {
+      "kind": "unresolved-call",
+      "site": {
+        "path": ""
+      },
+      "text": "the Go standard library, which no unit gives (no-dependency-source)",
+      "callback": true
+    }
   ]
 }

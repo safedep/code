@@ -1,0 +1,27 @@
+source: safedep:hand
+description: >-
+  main calls Run of the unit github.com/acme/kit and Start of example.com/legacy. No unit gives legacy, and
+  Run calls legacy.Log. The code of legacy is outside the graph. It can import kit and call any function of
+  it, so each key of legacy has a record that concerns every target, and Purge is uncertain, not not-found.
+  The summary of kit links the unit alone and has no such record, because the reader of a summary joins the
+  summary of each module that the unit calls.
+units:
+  gomod/github.com/acme/kit@v1.0.0: go:github.com/acme/kit@v1.0.0
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+unresolved:
+  - caller: example.com//legacy//Log
+    reason: no-dependency-source
+  - caller: example.com//legacy//Start
+    reason: no-dependency-source
+results:
+  - target: github.com//acme//kit//Purge
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+      - kind: unresolved-call

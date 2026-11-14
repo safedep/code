@@ -1,5 +1,5 @@
 source: safedep:hand
-description: s holds the result of store.New, whose first result is *Store, so s.Put resolves to the method of Store. Put calls Encode on the field enc, whose declared type is *Encoder, and another file of the package defines the method. No root calls Drop.
+description: s holds the result of store.New, whose first result is *Store, so s.Put resolves to the method of Store. Put calls Encode on the field enc, whose declared type is *Encoder, and another file of the package defines the method. No root calls Drop. No unit gives yaml.v3, so the code that the project calls in it is outside the graph and can call Unmarshal. Unmarshal is uncertain, not not-found.
 roots:
   - key: cmd/app/main.go
     kind: main
@@ -28,7 +28,11 @@ no_edges:
     to: store/store.go//Store//Drop
   - from: store/store.go//Store//Put
     to: store/encoder.go//Encoder//Remove
-unresolved: []
+unresolved:
+  - caller: gopkg.in//yaml.v3//Marshal
+    reason: no-dependency-source
+  - caller: gopkg.in//yaml.v3//Unmarshal
+    reason: no-dependency-source
 results:
   - target: gopkg.in//yaml.v3//Marshal
     status: found
@@ -51,8 +55,10 @@ results:
         site: store/encoder.go:8
         reached: true
   - target: gopkg.in//yaml.v3//Unmarshal
-    status: not-found
+    status: uncertain
     call_sites:
       - caller: store/encoder.go//Encoder//Remove
         site: store/encoder.go:12
         reached: false
+    uncertainties:
+      - kind: unresolved-call

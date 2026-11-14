@@ -12,7 +12,10 @@ roots:
   - key: main.go//main
     kind: main
     rule: go.main
-unresolved: []
+unresolved:
+  - caller: os//exec//Command
+    reason: no-dependency-source
+    callback: true
 results:
   - target: os//exec//Command
     status: found

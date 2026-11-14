@@ -53,7 +53,13 @@ edges:
     kind: direct
     confidence: high
     site: go:github.com/acme/kit@v1.0.0//tables.go:6
-unresolved: []
+unresolved:
+  - caller: os//exec//Command
+    reason: no-dependency-source
+    callback: true
+  - caller: syscall//CloseHandle
+    reason: no-dependency-source
+    callback: true
 results:
   - target: os//exec//Command
     status: found

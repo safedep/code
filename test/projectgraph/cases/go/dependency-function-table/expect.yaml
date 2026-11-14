@@ -20,6 +20,15 @@ no_edges:
   - from: go:github.com/acme/b@v1.0.0//b.go
     to: go:github.com/acme/b@v1.0.0//b.go//doB
 unresolved:
+  - caller: os//Getwd
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Remove
+    reason: no-dependency-source
+    callback: true
+  - caller: os//exec//Command
+    reason: no-dependency-source
+    callback: true
   - caller: go:github.com/acme/a@v1.0.0//a.go//F
     site: go:github.com/acme/a@v1.0.0//a.go:6
     reason: function-value

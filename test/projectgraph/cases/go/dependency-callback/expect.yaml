@@ -22,6 +22,18 @@ no_edges:
   - from: main.go//main
     to: main.go//mine//Handle
 unresolved:
+  - caller: os//Chdir
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Getenv
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Getwd
+    reason: no-dependency-source
+    callback: true
+  - caller: os//exec//LookPath
+    reason: no-dependency-source
+    callback: true
   - caller: go:github.com/acme/srv@v1.0.0//srv.go//Run
     site: go:github.com/acme/srv@v1.0.0//srv.go:12
     reason: unknown-receiver
@@ -79,6 +91,7 @@ results:
     uncertainties:
       - kind: unresolved-call
         site: go:github.com/acme/srv@v1.0.0//srv.go:20
+      - kind: unresolved-call
   - target: os//Chdir
     status: found
     path:

@@ -103,10 +103,11 @@ type edge struct {
 }
 
 type unresolved struct {
-	Caller string `yaml:"caller"`
-	Site   string `yaml:"site"`
-	Reason string `yaml:"reason"`
-	Method string `yaml:"method,omitempty"`
+	Caller   string `yaml:"caller"`
+	Site     string `yaml:"site"`
+	Reason   string `yaml:"reason"`
+	Method   string `yaml:"method,omitempty"`
+	Callback bool   `yaml:"callback,omitempty"`
 }
 
 // result is one reach query of a case and its result. Sources are the
@@ -363,7 +364,7 @@ func edgesOf(g *projectgraph.Graph) []edge {
 func unresolvedOf(g *projectgraph.Graph) []unresolved {
 	out := []unresolved{}
 	for _, u := range g.Unresolved {
-		out = append(out, unresolved{Caller: u.Caller, Site: site(u.Site), Reason: string(u.Reason), Method: u.Method})
+		out = append(out, unresolved{Caller: u.Caller, Site: site(u.Site), Reason: string(u.Reason), Method: u.Method, Callback: u.Callback})
 	}
 	return out
 }

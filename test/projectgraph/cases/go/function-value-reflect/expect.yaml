@@ -13,6 +13,15 @@ roots:
     kind: main
     rule: go.main
 unresolved:
+  - caller: os//Remove
+    reason: no-dependency-source
+    callback: true
+  - caller: os//exec//Command
+    reason: no-dependency-source
+    callback: true
+  - caller: reflect//ValueOf
+    reason: no-dependency-source
+    callback: true
   - caller: main.go//main
     site: main.go:25
     reason: computed-name
@@ -39,6 +48,7 @@ results:
         site: main.go:25
       - kind: unresolved-call
         site: main.go:25
+      - kind: unresolved-call
   - target: os//exec//Command
     status: uncertain
     call_sites:
