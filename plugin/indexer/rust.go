@@ -26,9 +26,10 @@ var rustRules = languageRules{
 	signature:   rustSignature,
 	exported:    rustPublic,
 	definitions: rustTypes,
-	retarget:    rustRetarget,
+	markTries:   rustMarkTries,
 	visitors:    []func(p *projection) visitor{referenceVisitor, rustVisitor},
-	typedResult: rustDeclaredAt,
+	declaredAt:  rustDeclaredAt,
+	rebound:     rustRebound,
 	// A Rust path to a function, as handler in get(handler) or
 	// Self::visit in items.iter().for_each(Self::visit), is a value that
 	// the code that gets it calls.
@@ -215,10 +216,7 @@ var rustWrappers = []string{"Option", "Result"}
 // Result that holds it, as Thing and Option for Option<Thing<u8>>.
 func (p *projection) rustResult(node *sitter.Node, bounds map[string]string) (string, string) {
 	if node != nil && node.Type() == "generic_type" {
-		name := p.rustTypeName(node.ChildByFieldName("type"), bounds)
-		if i := strings.LastIndex(name, "::"); i >= 0 {
-			name = name[i+len("::"):]
-		}
+		name := rustLastName(p.rustTypeName(node.ChildByFieldName("type"), bounds))
 		if args := ts.NamedChildren(node.ChildByFieldName("type_arguments")); slices.Contains(rustWrappers, name) && len(args) > 0 {
 			return p.rustTypeName(args[0], bounds), name
 		}
@@ -331,44 +329,107 @@ func (p *projection) rustLocals(body *sitter.Node, bounds map[string]string) []f
 	return locals
 }
 
-// rustDeclaredAt reports whether the declared type of a name of a function
-// holds at a line and a column of the function: the function binds the name
-// once, as a parameter or a let with a type, before that place. A let, a
-// match arm, an if let, a for or a closure can bind the name again with
-// another type. Without the check, a call on such a name took the method of
-// the declared type and lost its record, so a method of the real type read
-// as not-found.
-func rustDeclaredAt(p *projection, caller, name string, line, column int) bool {
-	fn := p.syntax[caller]
-	if fn == nil || fn.Type() != "function_item" {
+// rustLastName returns the last name of a path, as Result for
+// std::io::Result.
+func rustLastName(path string) string {
+	if i := strings.LastIndex(path, "::"); i >= 0 {
+		return path[i+len("::"):]
+	}
+	return path
+}
+
+// rustDeclaredAt reports whether the declared type of a name holds at a
+// call: the function binds the name once, as a parameter or a let with a
+// type, before the call. A let, a match arm, an if let, a for, a closure, a
+// static, a const or a macro can bind the name again with another type.
+func rustDeclaredAt(ctx context.Context, p *projection, call fileindex.Call, name string) bool {
+	binders, _ := p.rustBinders(ctx, call.Caller)
+	if len(binders[name]) != 1 {
 		return false
 	}
-	var binders []*sitter.Node
-	err := ts.Walk(context.Background(), fn, ts.WalkOptions{}, func(node *sitter.Node) bool {
+	binder := binders[name][0]
+	if !startsBefore(binder, call) || !rustPlainBinder(binder) {
+		return false
+	}
+	return binder.Type() == "parameter" || binder.ChildByFieldName("type") != nil
+}
+
+// rustRebound reports whether the function binds a name before a call by a
+// binder that the call graph does not read. A function whose walk stopped
+// early can bind any name.
+func rustRebound(ctx context.Context, p *projection, call fileindex.Call, name string) bool {
+	binders, ok := p.rustBinders(ctx, call.Caller)
+	if !ok {
+		return true
+	}
+	return slices.ContainsFunc(binders[name], func(binder *sitter.Node) bool {
+		return startsBefore(binder, call) && !rustPlainBinder(binder)
+	})
+}
+
+// startsBefore reports whether a node starts before the site of a call.
+func startsBefore(node *sitter.Node, call fileindex.Call) bool {
+	at := node.StartPoint()
+	line, column := int(at.Row)+1, int(at.Column)+1
+	return line < call.Line || line == call.Line && column < call.Column
+}
+
+// rustPlainBinder reports whether the call graph reads a binder: a
+// parameter of the function or a let, that binds one name.
+func rustPlainBinder(binder *sitter.Node) bool {
+	switch binder.Type() {
+	case "parameter":
+		if parent := binder.Parent(); parent == nil || parent.Type() != "parameters" {
+			return false
+		}
+	case "let_declaration":
+	default:
+		return false
+	}
+	return rustBoundName(binder.ChildByFieldName("pattern")) != nil
+}
+
+// rustBinders returns the binders of each name of the function of a caller,
+// in source order. A nested function binds its own names. It returns false
+// when the walk of the function stops early, so its binders are not known.
+// A caller that is no function binds no name.
+func (p *projection) rustBinders(ctx context.Context, caller string) (map[string][]*sitter.Node, bool) {
+	fn := p.syntax[caller]
+	if fn == nil || fn.Type() != "function_item" {
+		return nil, true
+	}
+	if binders, ok := p.binders[fn.StartByte()]; ok {
+		return binders, binders != nil
+	}
+	binders := map[string][]*sitter.Node{}
+	err := ts.Walk(ctx, fn, ts.WalkOptions{}, func(node *sitter.Node) bool {
 		if node.Type() == "function_item" && !ts.SameNode(node, fn) {
 			return false
 		}
-		if (node.Type() == "identifier" || node.Type() == "shorthand_field_identifier") && p.text(node) == name {
-			if binder := rustBinder(node); binder != nil {
-				binders = append(binders, binder)
-			}
+		if binder := p.rustBinder(node); binder != nil {
+			binders[p.text(node)] = append(binders[p.text(node)], binder)
 		}
 		return true
 	})
-	if err != nil || len(binders) != 1 {
-		return false
+	if err != nil {
+		p.truncateWalk(err)
+		binders = nil
 	}
-	binder := binders[0]
-	if at := binder.StartPoint(); int(at.Row)+1 > line || int(at.Row)+1 == line && int(at.Column)+1 >= column {
-		return false
+	if p.binders == nil {
+		p.binders = map[uint32]map[string][]*sitter.Node{}
 	}
-	return binder.Type() == "parameter" || binder.Type() == "let_declaration" && binder.ChildByFieldName("type") != nil
+	p.binders[fn.StartByte()] = binders
+	return binders, binders != nil
 }
 
-// rustBinder returns the node that binds an identifier of a pattern, as the
-// let, the parameter or the match pattern, or nil for an identifier that is
-// no binding.
-func rustBinder(id *sitter.Node) *sitter.Node {
+// rustBinder returns the node that binds an identifier: the let, the
+// parameter, the match pattern or another pattern, the static or the
+// const, or the call of a macro whose tokens hold it. It returns nil for an
+// identifier that binds nothing and for any other node.
+func (p *projection) rustBinder(id *sitter.Node) *sitter.Node {
+	if id.Type() != "identifier" && id.Type() != "shorthand_field_identifier" {
+		return nil
+	}
 	child, parent := id, id.Parent()
 	for parent != nil && strings.HasSuffix(parent.Type(), "_pattern") && parent.Type() != "match_pattern" {
 		if typ := parent.ChildByFieldName("type"); typ != nil && ts.SameNode(typ, child) {
@@ -386,8 +447,31 @@ func rustBinder(id *sitter.Node) *sitter.Node {
 		if pattern := parent.ChildByFieldName("pattern"); pattern != nil && ts.SameNode(pattern, child) {
 			return parent
 		}
+	case "static_item", "const_item":
+		if name := parent.ChildByFieldName("name"); name != nil && ts.SameNode(name, child) {
+			return parent
+		}
+	case "token_tree":
+		return p.rustBindingMacro(parent)
 	}
 	return nil
+}
+
+// rustBindingMacro returns the call of the macro that holds a token tree,
+// when the macro can bind a name of its caller, as bind!(t) with the rule
+// ($n:ident) => { let $n = dep::new_thing(); }. A macro of std binds no
+// name of its caller, except thread_local!, which makes a static.
+func (p *projection) rustBindingMacro(tree *sitter.Node) *sitter.Node {
+	for tree != nil && tree.Type() == "token_tree" {
+		tree = tree.Parent()
+	}
+	if tree == nil || tree.Type() != "macro_invocation" {
+		return nil
+	}
+	if name := rustLastName(p.text(tree.ChildByFieldName("macro"))); langcode.IsBuiltin(langcode.Rust, name) && name != "thread_local" {
+		return nil
+	}
+	return tree
 }
 
 // rustBoundName returns the name that a pattern binds, as t for t or for
@@ -402,58 +486,65 @@ func rustBoundName(pattern *sitter.Node) *sitter.Node {
 	return pattern
 }
 
-// rustRetarget marks each ? in the receiver of a method call in the
+// rustMarkTries marks each ? in the receiver of a method call in the
 // targets of the call, as dep//load//?//run for dep::load()?.run() and for
 // t.run() after let t = dep::load()?. The call graph reads through a ?, so
 // without the mark the link step cannot tell a method of the value inside
 // an Option or a Result from a method of the wrapper, as inspect of
 // Option.
-func rustRetarget(p *projection) func(call *fileindex.Call, callee ast.NodePosition) {
-	var lets map[string][]*sitter.Node
-	letOf := func(name *sitter.Node) *sitter.Node {
-		if lets == nil {
-			lets = p.rustLets()
-		}
-		fn := rustFunction(name)
-		var out *sitter.Node
-		for _, let := range lets[p.text(name)] {
-			block := let.Parent()
-			if let.EndByte() <= name.StartByte() && block != nil && name.EndByte() <= block.EndByte() && rustFunction(let) == fn {
-				out = let
-			}
-		}
-		return out
+func rustMarkTries(ctx context.Context, p *projection, call *fileindex.Call, callee ast.NodePosition) {
+	node := p.descendant(callee)
+	if node == nil || node.StartByte() != callee.StartByte || node.EndByte() != callee.EndByte {
+		return
 	}
-	var tries func(node *sitter.Node) []int
-	tries = func(node *sitter.Node) []int {
-		switch node.Type() {
-		case "try_expression":
-			return append(tries(node.NamedChild(0)), 0)
-		case "parenthesized_expression", "await_expression", "reference_expression":
-			return tries(node.NamedChild(0))
-		case "identifier":
-			if let := letOf(node); let != nil && let.ChildByFieldName("value") != nil {
-				return tries(let.ChildByFieldName("value"))
-			}
-		case "call_expression":
-			if method := rustMethod(node.ChildByFieldName("function")); method != nil {
-				return rustAfter(tries(method.ChildByFieldName("value")))
-			}
-		}
+	method := rustMethod(node)
+	if method == nil {
+		return
+	}
+	binders, _ := p.rustBinders(ctx, call.Caller)
+	marks := rustAfter(p.rustTries(binders, method.ChildByFieldName("value")))
+	for i, target := range call.Targets {
+		call.Targets[i] = withTries(target, marks)
+	}
+}
+
+// rustTries returns a mark for each ? of a receiver: the count of method
+// names after it. A name reads the value of its let.
+func (p *projection) rustTries(binders map[string][]*sitter.Node, node *sitter.Node) []int {
+	if node == nil {
 		return nil
 	}
-	return func(call *fileindex.Call, callee ast.NodePosition) {
-		node := p.descendant(callee)
-		if node == nil || node.StartByte() != callee.StartByte || node.EndByte() != callee.EndByte {
-			return
+	switch node.Type() {
+	case "try_expression":
+		return append(p.rustTries(binders, node.NamedChild(0)), 0)
+	case "parenthesized_expression", "await_expression", "reference_expression":
+		return p.rustTries(binders, node.NamedChild(0))
+	case "identifier":
+		if let := rustLetOf(binders[p.text(node)], node); let != nil {
+			return p.rustTries(binders, let.ChildByFieldName("value"))
 		}
-		if method := rustMethod(node); method != nil {
-			marks := rustAfter(tries(method.ChildByFieldName("value")))
-			for i, target := range call.Targets {
-				call.Targets[i] = withTries(target, marks)
-			}
+	case "call_expression":
+		if method := rustMethod(node.ChildByFieldName("function")); method != nil {
+			return rustAfter(p.rustTries(binders, method.ChildByFieldName("value")))
 		}
 	}
+	return nil
+}
+
+// rustLetOf returns the let of one name, among the binders of the name,
+// that binds it at a use: the last one that ends before the use, in a
+// block that holds the use.
+func rustLetOf(binders []*sitter.Node, use *sitter.Node) *sitter.Node {
+	var out *sitter.Node
+	for _, let := range binders {
+		if let.Type() != "let_declaration" || rustBoundName(let.ChildByFieldName("pattern")) == nil {
+			continue
+		}
+		if block := let.Parent(); let.EndByte() <= use.StartByte() && block != nil && use.EndByte() <= block.EndByte() {
+			out = let
+		}
+	}
+	return out
 }
 
 // rustMethod returns the field expression of a method call, as
@@ -495,33 +586,6 @@ func withTries(target string, marks []int) string {
 		}
 	}
 	return strings.Join(names, fileindex.Separator)
-}
-
-// rustLets returns the let declarations of the file that bind one name, by
-// the name, in source order.
-func (p *projection) rustLets() map[string][]*sitter.Node {
-	lets := map[string][]*sitter.Node{}
-	walkBody(p.tree.Tree().RootNode(), nil, func(node *sitter.Node) {
-		if node.Type() != "let_declaration" {
-			return
-		}
-		if name := rustBoundName(node.ChildByFieldName("pattern")); name != nil {
-			lets[p.text(name)] = append(lets[p.text(name)], node)
-		}
-	})
-	return lets
-}
-
-// rustFunction returns the start of the function that holds a node. A let
-// binds its name for the rest of its block, and a closure in the block
-// sees it, but a nested function does not.
-func rustFunction(node *sitter.Node) uint32 {
-	for n := node.Parent(); n != nil; n = n.Parent() {
-		if n.Type() == "function_item" {
-			return n.StartByte()
-		}
-	}
-	return 0
 }
 
 // rustPublic reports whether an item is pub. A method of a trait impl is

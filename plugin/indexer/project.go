@@ -47,6 +47,10 @@ type projection struct {
 	// members holds the line and the column of each call that names a
 	// member of an object of the file.
 	members map[[2]uint32]bool
+	// binders holds the nodes that bind each name of a function, by the
+	// start of the function, for a language with declaredAt. A nil map is
+	// a function whose walk stopped early.
+	binders map[uint32]map[string][]*sitter.Node
 
 	// exportStatements are the export statements and the CommonJS export
 	// assignments of the file.
@@ -103,8 +107,8 @@ func project(ctx context.Context, tree core.ParseTree) (*fileindex.Index, *callg
 	p.run(rules.inits)
 	p.walkTree(ctx)
 	p.run(rules.afterWalk)
-	p.addCalls()
-	p.addUnresolved()
+	p.addCalls(ctx)
+	p.addUnresolved(ctx)
 	p.run(rules.prune)
 	if err := p.addClasses(ctx); err != nil {
 		return nil, nil, err

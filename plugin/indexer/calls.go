@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"context"
 	"regexp"
 	"slices"
 	"strings"
@@ -13,29 +14,68 @@ import (
 
 // retargetTyped gives a call on a receiver that a declared type of the
 // scope names the key of the name in its scope as its target, in a language
-// with typedReceivers, or with typedResult at an untyped site. The call
+// with typedReceivers, or with declaredAt at an untyped site. The call
 // graph bound the receiver to the value of an assignment, as dep//new_thing
 // for t = dep.new_thing(), and a call on that value, as dep//new_thing//do,
 // names no method. The declared type or the result type of the name does.
 // A call that the call graph bound to a method of a class of the file, as
 // Parser//render for p = Parser(), keeps that target.
-func (p *projection) retargetTyped(call *fileindex.Call, untyped bool) {
+func (p *projection) retargetTyped(ctx context.Context, call *fileindex.Call, untyped bool) {
 	for _, t := range call.Targets {
 		if def, ok := p.defs[fileindex.Parent(t)]; ok && def.Kind == fileindex.DefClass {
 			return
 		}
 	}
-	if target, ok := p.typedTarget(call.Caller, call.Receiver, call.Method, call.Line, call.Column, untyped); ok {
+	if target, ok := p.typedTarget(ctx, *call, untyped); ok {
 		call.Targets = []string{target}
 	}
 }
 
-func (p *projection) addCalls() {
-	untyped := p.untypedSites()
-	var retarget func(call *fileindex.Call, callee ast.NodePosition)
-	if r := p.rules().retarget; r != nil {
-		retarget = r(p)
+// bindsAsWritten reports whether the call graph binds the names of a call
+// as the code does, in a language with declaredAt. The call graph reads
+// only some binders of a name, so it can bind a receiver to a parameter or
+// to the value of a let while a pattern binds the name again, as t in
+// fn run(t: Local) { if let Some(t) = dep::try_thing() { t.inspect() } }.
+// The target then names a method of the wrong type, and a method of the
+// real type reads as not-found. So the receiver must have no binder that
+// the call graph does not read, and a target through a declared type of a
+// name must have its declared type at the call.
+func (p *projection) bindsAsWritten(ctx context.Context, call fileindex.Call) bool {
+	rules := p.rules()
+	if rules.declaredAt == nil {
+		return true
 	}
+	if name, _, _ := strings.Cut(call.Receiver, "."); isIdentifier(name) && rules.rebound(ctx, p, call, name) {
+		return false
+	}
+	for _, target := range call.Targets {
+		if name, ok := p.typedName(call.Caller, target); ok && !rules.declaredAt(ctx, p, call, name) {
+			return false
+		}
+	}
+	return true
+}
+
+// typedName returns the name of a parameter or a typed local of the scope
+// chain of the caller whose key starts a target, as t for run//t//inspect.
+func (p *projection) typedName(caller, target string) (string, bool) {
+	for scope := caller; fileindex.HasKeyPrefix(scope, p.cg.FileName); scope = fileindex.Parent(scope) {
+		if rest, ok := strings.CutPrefix(target, scope+fileindex.Separator); ok {
+			name, _, _ := strings.Cut(rest, fileindex.Separator)
+			if typed, ok := p.typedScope(caller, name); ok && typed == scope {
+				return name, true
+			}
+		}
+		if scope == p.cg.FileName {
+			break
+		}
+	}
+	return "", false
+}
+
+func (p *projection) addCalls(ctx context.Context) {
+	untyped := p.untypedSites()
+	markTries := p.rules().markTries
 	for key, node := range p.cg.Nodes {
 		for _, ref := range node.CallsTo {
 			kind, ok := callKind(ref.Kind)
@@ -68,9 +108,13 @@ func (p *projection) addCalls() {
 				Kind:     kind,
 				Args:     p.arguments(key, ref.Site),
 			}
-			p.retargetTyped(&call, untyped[[2]uint32{ref.Site.StartLine, ref.Site.StartColumn}])
-			if retarget != nil {
-				retarget(&call, ref.Site)
+			p.retargetTyped(ctx, &call, untyped[[2]uint32{ref.Site.StartLine, ref.Site.StartColumn}])
+			if !p.bindsAsWritten(ctx, call) {
+				p.addRecord(call, fileindex.UnresolvedUnknownReceiver)
+				continue
+			}
+			if markTries != nil {
+				markTries(ctx, p, &call, ref.Site)
 			}
 			p.ix.Calls = append(p.ix.Calls, call)
 		}
@@ -79,9 +123,9 @@ func (p *projection) addCalls() {
 
 // untypedSites returns the line and the column of each call on a receiver
 // whose value the call graph does not type, as the value of a call, in a
-// language with typedResult.
+// language with declaredAt.
 func (p *projection) untypedSites() map[[2]uint32]bool {
-	if p.rules().typedResult == nil {
+	if p.rules().declaredAt == nil {
 		return nil
 	}
 	sites := map[[2]uint32]bool{}
@@ -250,63 +294,68 @@ func (p *projection) rebind(caller, name string) []string {
 	}
 }
 
-func (p *projection) addUnresolved() {
+func (p *projection) addUnresolved(ctx context.Context) {
 	for _, u := range p.cg.Unresolved() {
 		if p.members[[2]uint32{u.Site.StartLine, u.Site.StartColumn}] && u.Reason == callgraph.UnresolvedUnknownReceiver {
 			continue
 		}
-		caller := p.caller(u.Caller, u.Site)
-		untyped := u.Reason == callgraph.UnresolvedUnknownReceiver
-		if target, ok := p.typedTarget(caller, u.Receiver, u.Method, int(u.Site.StartLine), int(u.Site.StartColumn), untyped); ok && untyped {
-			p.ix.Calls = append(p.ix.Calls, fileindex.Call{
-				Caller:   caller,
-				Line:     int(u.Site.StartLine),
-				Column:   int(u.Site.StartColumn),
-				Callee:   u.Text,
-				Targets:  []string{target},
-				Receiver: u.Receiver,
-				Method:   u.Method,
-				Kind:     fileindex.CallCall,
-			})
-			continue
-		}
-		p.ix.Unresolved = append(p.ix.Unresolved, fileindex.Unresolved{
-			Caller:   caller,
+		call := fileindex.Call{
+			Caller:   p.caller(u.Caller, u.Site),
 			Line:     int(u.Site.StartLine),
 			Column:   int(u.Site.StartColumn),
-			Text:     u.Text,
+			Callee:   u.Text,
 			Receiver: u.Receiver,
 			Method:   u.Method,
-			Reason:   fileindex.UnresolvedReason(u.Reason),
-		})
+			Kind:     fileindex.CallCall,
+		}
+		untyped := u.Reason == callgraph.UnresolvedUnknownReceiver
+		if target, ok := p.typedTarget(ctx, call, untyped); ok && untyped {
+			call.Targets = []string{target}
+			p.ix.Calls = append(p.ix.Calls, call)
+			continue
+		}
+		p.addRecord(call, fileindex.UnresolvedReason(u.Reason))
 	}
+}
+
+// addRecord records a call site whose target the index does not know.
+func (p *projection) addRecord(call fileindex.Call, reason fileindex.UnresolvedReason) {
+	p.ix.Unresolved = append(p.ix.Unresolved, fileindex.Unresolved{
+		Caller:   call.Caller,
+		Line:     call.Line,
+		Column:   call.Column,
+		Text:     call.Callee,
+		Receiver: call.Receiver,
+		Method:   call.Method,
+		Reason:   reason,
+	})
 }
 
 // typedTarget returns the target of a call on a receiver whose first name a
 // declared type of the scope chain of the caller types, as main.py//run//t//do
 // for t.do() in run(t: Thing), in a language with typedReceivers, or with
-// typedResult at an untyped site. The link step reads the type of the name
+// declaredAt at an untyped site. The link step reads the type of the name
 // from the scope, as it does for Go.
-func (p *projection) typedTarget(caller, receiver, method string, line, column int, untyped bool) (string, bool) {
-	if receiver == "" || method == "" {
+func (p *projection) typedTarget(ctx context.Context, call fileindex.Call, untyped bool) (string, bool) {
+	if call.Receiver == "" || call.Method == "" {
 		return "", false
 	}
-	names := strings.Split(receiver, ".")
+	names := strings.Split(call.Receiver, ".")
 	for _, name := range names {
 		if !isIdentifier(name) {
 			return "", false
 		}
 	}
 	rules := p.rules()
-	typed := rules.typedReceivers || untyped && rules.typedResult != nil && rules.typedResult(p, caller, names[0], line, column)
+	typed := rules.typedReceivers || untyped && rules.declaredAt != nil && rules.declaredAt(ctx, p, call, names[0])
 	if !typed {
 		return "", false
 	}
-	scope, ok := p.typedScope(caller, names[0])
+	scope, ok := p.typedScope(call.Caller, names[0])
 	if !ok {
 		return "", false
 	}
-	return fileindex.Join(scope, append(names, method)...), true
+	return fileindex.Join(scope, append(names, call.Method)...), true
 }
 
 func (p *projection) addTruncations() {

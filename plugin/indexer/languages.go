@@ -1,6 +1,8 @@
 package indexer
 
 import (
+	"context"
+
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
 	"github.com/safedep/code/fileindex"
@@ -30,13 +32,19 @@ type languageRules struct {
 	// on such a receiver gets the key of the name in its scope as its
 	// target, as main.py//run//t//do, so the link step reads the type.
 	typedReceivers bool
-	// typedResult reports whether the declared type of a name types a call
-	// on it at a line and a column where the call graph knows no type of
-	// its value, as Rust for w.write() after
-	// let w: Box<dyn Write> = Box::new(Html {}). A value that the call graph
-	// makes, as String::new(), is an instance of that type alone, so a call
-	// on it keeps its target.
-	typedResult func(p *projection, caller, name string, line, column int) bool
+	// declaredAt reports whether the declared type of a name holds at a
+	// call: the caller binds the name once, as a parameter or a typed
+	// local, before the call. Rust reads it for w.write() after
+	// let w: Box<dyn Write> = Box::new(Html {}), where the call graph knows
+	// no type of the value, and for a call that the call graph binds to a
+	// parameter. A value that the call graph makes, as String::new(), is an
+	// instance of that type alone, so a call on it keeps its target.
+	declaredAt func(ctx context.Context, p *projection, call fileindex.Call, name string) bool
+	// rebound reports whether the caller binds a name before a call by a
+	// syntax that the call graph does not read, as Some(t) in
+	// if let Some(t) = x. The call graph then binds a call on the name to
+	// the value of another binding.
+	rebound func(ctx context.Context, p *projection, call fileindex.Call, name string) bool
 
 	// packageOf returns the package or the namespace of the file, which the
 	// files of one unit share.
@@ -78,10 +86,10 @@ type languageRules struct {
 	// prune drops the definitions that hold no record, after the records.
 	prune func(p *projection)
 
-	// retarget returns the function that rewrites the targets of a call
-	// from the syntax of its callee, as the ? of Rust in dep//load//?//run.
-	// The call graph keeps no such mark.
-	retarget func(p *projection) func(call *fileindex.Call, callee ast.NodePosition)
+	// markTries marks each ? in the targets of a call from the syntax of
+	// its callee, as the ? of Rust in dep//load//?//run. The call graph
+	// keeps no such mark.
+	markTries func(ctx context.Context, p *projection, call *fileindex.Call, callee ast.NodePosition)
 
 	// visitors read the walk of the tree, as for the references and the
 	// flags of the language, in this order.
