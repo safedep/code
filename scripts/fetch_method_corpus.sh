@@ -3,8 +3,9 @@
 # directory of the first argument. Go modules come from the module proxy
 # into <dir>/gomod, crates from crates.io into <dir>/crates, and PyPI
 # packages from pypi.org into <dir>/pypi/<name>-<version>. Each Go project
-# also gets the src tree of the Go release of the go line of its go.mod
-# into <dir>/gostd/<release>/src. The file
+# also gets the modules of its build list into <dir>/gomod, so govulncheck
+# can load it with no network, and the src tree of the Go release of the
+# go line of its go.mod into <dir>/gostd/<release>/src. The file
 # <dir>/gostd/releases.txt gives the release of each Go project. A dependency
 # comes as a wheel, unpacked, so its directory has the layout of
 # site-packages with the .dist-info of the package. A project comes as its
@@ -91,8 +92,8 @@ go_release() {
 	echo "go$version"
 }
 
-# go_project fetches the src tree of the Go release of a Go project, and
-# records the release.
+# go_project fetches the build list of a Go project and the src tree of its
+# Go release, and records the release.
 go_project() {
 	local project="$1" src release tmp
 	src="$(go mod download -json "$project" | jq -r .Dir)"
@@ -104,6 +105,13 @@ go_project() {
 		mv "$tmp/go" "$dir/gostd/$release"
 		rm -rf "$tmp"
 	fi
+	# The module cache holds the project read-only, and the go command can
+	# add missing go.sum lines, so it runs on a copy.
+	tmp="$(mktemp -d)"
+	cp -R "$src/." "$tmp"
+	chmod -R u+w "$tmp"
+	(cd "$tmp" && GOFLAGS="$GOFLAGS -mod=mod" go list -deps ./... >/dev/null && GOFLAGS="$GOFLAGS -mod=mod" go list -m all >/dev/null)
+	rm -rf "$tmp"
 }
 
 grep -v '^#' "$list" | while read -r language _ project deps; do

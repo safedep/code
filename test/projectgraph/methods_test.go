@@ -26,6 +26,7 @@ import (
 	"github.com/safedep/code/projectgraph"
 	"github.com/safedep/code/projectgraph/modules"
 	"github.com/safedep/code/projectgraph/reach"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/mod/module"
 	"golang.org/x/mod/semver"
@@ -61,8 +62,8 @@ type advisory struct {
 	ID     string `json:"id"`
 	Source string `json:"source,omitempty"`
 	Ranges []struct {
-		Introduced string `json:"introduced"`
-		Fixed      string `json:"fixed"`
+		Introduced string `json:"introduced,omitempty"`
+		Fixed      string `json:"fixed,omitempty"`
 	} `json:"ranges"`
 	Imports []struct {
 		Path    string   `json:"path"`
@@ -306,6 +307,7 @@ func TestMethodTargets(t *testing.T) {
 	if measureGo && os.Getenv(methodNoStdEnv) == "" {
 		releases = goReleases(t, corpus)
 	}
+	vulncheck := newVulnCheck(t, corpus, advisories["go"], measureGo)
 
 	counts := methodCounts{}
 	var lines, details []string
@@ -343,11 +345,16 @@ func TestMethodTargets(t *testing.T) {
 		require.NoError(t, err)
 		methods := receiverReasons(t, g, nonTestRoots(g))
 		project := methodCounts{}
+		answers := make([]methodAnswer, len(results))
 		for i, r := range results {
 			o := outcome(r, methods)
 			counts.add(p.language, targets[i].kind, o)
 			project.add(p.language, targets[i].kind, o)
-			details = append(details, methodDetail(p.name, targets[i].key, o, r))
+			answers[i] = methodAnswer{key: targets[i].key, outcome: o, detail: methodDetail(p.name, targets[i].key, o, r)}
+			details = append(details, answers[i].detail)
+		}
+		if p.language == "go" {
+			vulncheck.compare(t, p.name, dir, answers)
 		}
 		lines = append(lines, "project="+p.name+" files="+strconv.Itoa(len(g.Files))+" truncated="+strconv.Itoa(len(g.Truncated))+" problems="+strconv.Itoa(len(g.Problems)))
 		for _, row := range project.rows() {
@@ -356,6 +363,7 @@ func TestMethodTargets(t *testing.T) {
 	}
 	rows := append([]string{"set=methods projects=" + strconv.Itoa(len(projects))}, counts.rows()...)
 	rows = append(rows, lines...)
+	rows = append(rows, vulncheck.rows()...)
 	t.Log("\n" + strings.Join(rows, "\n"))
 	if out := os.Getenv("PROJECTGRAPH_METHOD_REPORT"); out != "" {
 		require.NoError(t, os.WriteFile(out, []byte(strings.Join(rows, "\n")+"\n"), 0o644))
@@ -363,6 +371,13 @@ func TestMethodTargets(t *testing.T) {
 	if out := os.Getenv(methodDetailEnv); out != "" {
 		require.NoError(t, os.WriteFile(out, []byte(strings.Join(details, "\n")+"\n"), 0o644))
 	}
+	assert.Empty(t, vulncheck.agreement.falseNegatives, "govulncheck reaches these targets, and reach says that no path exists")
+}
+
+// methodAnswer is the answer of reach for one target of a project, and
+// the detail line of the target.
+type methodAnswer struct {
+	key, outcome, detail string
 }
 
 // methodDetailEnv names the file that gets one line per target: the
