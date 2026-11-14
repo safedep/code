@@ -287,6 +287,10 @@ Rust follows the same rules, with these additions.
   crate `kit` of the unit. The external node keeps the written name, as
   `helper//serve`, and the package edge goes on to the definition in the
   unit, whose external key is `kit//serve`.
+- A `use` path names a module or an item, so the link step reads all of
+  the path of `use dep::top` as a module. The unit gives the function `top`
+  for that path, and a call of `top()` gets the package edge to it, as a
+  call of `dep::top()` does.
 - The index records the return type of each function and method, with
   `Self` as the type of its `impl`. A type drops `&`, `&mut`, `Box<..>`,
   `Rc<..>`, `Arc<..>` and its type arguments, so `&mut SmallVec<[u8; 4]>`
