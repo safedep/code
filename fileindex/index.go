@@ -19,7 +19,7 @@ import (
 // Version is the version of the index records and of the rules that fill
 // them. Bump it when a field, a kind, an order or a fill rule changes. A
 // store keys an index by Version, so the bump makes every older index miss.
-const Version = "15"
+const Version = "16"
 
 // DefaultTestPaths are the globs that mark the test files of the common
 // layouts, as projectgraph.Options.TestPaths takes them. A glob with no "/"

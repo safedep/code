@@ -69,7 +69,7 @@
     "tests/test_app.py": "indexed"
   },
   "stats": {
-    "version": "17",
+    "version": "18",
     "files": 1,
     "nodes": 4,
     "edges": 0,

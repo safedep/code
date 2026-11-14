@@ -27,7 +27,7 @@ import (
 // Version is the version of the summary format and of the rules that fill
 // it. Bump it when a field or a rule changes. A store keys a summary by
 // Version, IndexVersion and LinkVersion.
-const Version = "2"
+const Version = "3"
 
 // Summary is the summary of one package unit. Symbols are in key order.
 // Targets holds every external symbol that the code of the unit calls,
