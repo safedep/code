@@ -18,14 +18,14 @@ unresolved:
     reason: computed-name
   - caller: main.go//main
     site: main.go:25
-    reason: unknown-receiver
+    reason: no-dependency-source
     method: MethodByName
   - caller: main.go//main
     site: main.go:25
     reason: computed-name
   - caller: main.go//main
     site: main.go:25
-    reason: unknown-receiver
+    reason: no-dependency-source
     method: Call
 results:
   - target: os//Remove

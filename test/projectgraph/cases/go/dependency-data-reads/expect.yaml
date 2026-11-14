@@ -228,6 +228,36 @@ edges:
     kind: package
     confidence: high
     site: go:std@go1.25.1//os/exec/exec.go:5
+  - from: example.com//markup//Dial
+    to: go:example.com/markup@v1.0.0//node.go
+    kind: import
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go
+  - from: example.com//markup//NewWriter
+    to: go:example.com/markup@v1.0.0//node.go
+    kind: import
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go
+  - from: example.com//markup//Print
+    to: go:example.com/markup@v1.0.0//node.go
+    kind: import
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go
+  - from: example.com//markup//Render
+    to: go:example.com/markup@v1.0.0//node.go
+    kind: import
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go
+  - from: example.com//markup//Run
+    to: go:example.com/markup@v1.0.0//node.go
+    kind: import
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go
+  - from: example.com//markup//Writer//Flush
+    to: go:example.com/markup@v1.0.0//node.go
+    kind: import
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go
 unresolved:
   - caller: example.com//markup//Client//Close
     site: go:example.com/markup@v1.0.0

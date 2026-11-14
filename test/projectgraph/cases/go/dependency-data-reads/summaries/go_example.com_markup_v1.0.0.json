@@ -9,14 +9,20 @@
       "definitions": [
         "go:example.com/markup@v1.0.0//node.go//Attribute"
       ],
-      "reaches": []
+      "reaches": [
+        "errors//New",
+        "os//exec//Command"
+      ]
     },
     {
       "key": "example.com//markup//Base",
       "definitions": [
         "go:example.com/markup@v1.0.0//client.go//Base"
       ],
-      "reaches": []
+      "reaches": [
+        "errors//New",
+        "os//exec//Command"
+      ]
     },
     {
       "key": "example.com//markup//Base//Flush",
@@ -24,6 +30,7 @@
         "go:example.com/markup@v1.0.0//client.go//Base//Flush"
       ],
       "reaches": [
+        "errors//New",
         "os//exec//Command"
       ]
     },
@@ -32,21 +39,30 @@
       "definitions": [
         "go:example.com/markup@v1.0.0//client.go//Client"
       ],
-      "reaches": []
+      "reaches": [
+        "errors//New",
+        "os//exec//Command"
+      ]
     },
     {
       "key": "example.com//markup//Conn",
       "definitions": [
         "go:example.com/markup@v1.0.0//client.go//Conn"
       ],
-      "reaches": []
+      "reaches": [
+        "errors//New",
+        "os//exec//Command"
+      ]
     },
     {
       "key": "example.com//markup//Dial",
       "definitions": [
         "go:example.com/markup@v1.0.0//client.go//Dial"
       ],
-      "reaches": []
+      "reaches": [
+        "errors//New",
+        "os//exec//Command"
+      ]
     },
     {
       "key": "example.com//markup//Handler",
@@ -61,14 +77,20 @@
       "definitions": [
         "go:example.com/markup@v1.0.0//client.go//NewWriter"
       ],
-      "reaches": []
+      "reaches": [
+        "errors//New",
+        "os//exec//Command"
+      ]
     },
     {
       "key": "example.com//markup//Node",
       "definitions": [
         "go:example.com/markup@v1.0.0//node.go//Node"
       ],
-      "reaches": []
+      "reaches": [
+        "errors//New",
+        "os//exec//Command"
+      ]
     },
     {
       "key": "example.com//markup//Print",
@@ -76,6 +98,7 @@
         "go:example.com/markup@v1.0.0//node.go//Print"
       ],
       "reaches": [
+        "errors//New",
         "os//exec//Command"
       ]
     },
@@ -85,6 +108,7 @@
         "go:example.com/markup@v1.0.0//node.go//Render"
       ],
       "reaches": [
+        "errors//New",
         "os//exec//Command"
       ],
       "uncertainties": [
@@ -97,6 +121,7 @@
         "go:example.com/markup@v1.0.0//node.go//run"
       ],
       "reaches": [
+        "errors//New",
         "os//exec//Command"
       ]
     },
@@ -105,7 +130,10 @@
       "definitions": [
         "go:example.com/markup@v1.0.0//client.go//Writer"
       ],
-      "reaches": []
+      "reaches": [
+        "errors//New",
+        "os//exec//Command"
+      ]
     },
     {
       "key": "example.com//markup//netctx//Context",
