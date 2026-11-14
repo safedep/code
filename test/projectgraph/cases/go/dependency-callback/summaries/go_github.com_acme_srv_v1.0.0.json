@@ -1,0 +1,95 @@
+{
+  "version": "2",
+  "index_version": "15",
+  "link_version": "17",
+  "unit": "go:github.com/acme/srv@v1.0.0",
+  "symbols": [
+    {
+      "key": "github.com//acme//srv//Bind",
+      "definitions": [
+        "go:github.com/acme/srv@v1.0.0//srv.go//Bind"
+      ],
+      "reaches": [],
+      "uncertainties": [
+        0
+      ]
+    },
+    {
+      "key": "github.com//acme//srv//Closer",
+      "definitions": [
+        "go:github.com/acme/srv@v1.0.0//srv.go//Closer"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "github.com//acme//srv//Each",
+      "definitions": [
+        "go:github.com/acme/srv@v1.0.0//srv.go//Each"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "github.com//acme//srv//Handler",
+      "definitions": [
+        "go:github.com/acme/srv@v1.0.0//srv.go//Handler"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "github.com//acme//srv//Run",
+      "definitions": [
+        "go:github.com/acme/srv@v1.0.0//srv.go//Run"
+      ],
+      "reaches": [],
+      "uncertainties": [
+        1
+      ]
+    },
+    {
+      "key": "github.com//acme//srv//Serve",
+      "definitions": [
+        "go:github.com/acme/srv@v1.0.0//srv.go//Serve"
+      ],
+      "reaches": [],
+      "uncertainties": [
+        2
+      ]
+    }
+  ],
+  "targets": [],
+  "uncertainties": [
+    {
+      "kind": "unresolved-call",
+      "key": "go:github.com/acme/srv@v1.0.0//srv.go//Bind",
+      "site": {
+        "path": "go:github.com/acme/srv@v1.0.0//srv.go",
+        "line": 24,
+        "column": 2
+      },
+      "text": "f (unknown-receiver)",
+      "method": "f"
+    },
+    {
+      "kind": "unresolved-call",
+      "key": "go:github.com/acme/srv@v1.0.0//srv.go//Run",
+      "site": {
+        "path": "go:github.com/acme/srv@v1.0.0//srv.go",
+        "line": 12,
+        "column": 2
+      },
+      "text": "f (unknown-receiver)",
+      "method": "f"
+    },
+    {
+      "kind": "unresolved-call",
+      "key": "go:github.com/acme/srv@v1.0.0//srv.go//Serve",
+      "site": {
+        "path": "go:github.com/acme/srv@v1.0.0//srv.go",
+        "line": 20,
+        "column": 2
+      },
+      "text": "h.Handle (interface-receiver)",
+      "method": "Handle"
+    }
+  ]
+}

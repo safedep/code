@@ -607,3 +607,31 @@ array names. It does not record a function that the tail expression of a
 block, a match arm, a shorthand field or a tuple holds, and a Rust function
 returns its tail expression. So a call of a Rust function value stays a
 `computed-name` record.
+
+### Unknown code of a unit of dependency code
+
+A failed or truncated file of a unit of dependency code counts for every
+target when the search enters the unit. An unresolved site in the code of a
+unit with no method name, as an import that no file of the unit gives,
+counts for every target too. The closure of the edges of the unit, which
+`unitReaches` reads, does not bound such code, for two reasons.
+
+- The unknown code can call a package that no known code of the unit
+  calls. A failed file has no index, so its imports are not known. The
+  imports of the other files of the unit do not bound them, and neither does
+  the closure of the imports of the packages of the unit, because the
+  import closure reads the same files. Only the manifest of the unit, as the
+  `require` list of a `go.mod`, bounds them. The link step does not record
+  it.
+- The project can give the unit a value of an interface, as a handler. The
+  unknown code can call a method of that value, and the method can call any
+  code of the program. A function value has a reference edge from the code
+  of the project that holds it, so the search reaches the function without
+  the unit. A value of an interface has no such edge. Known code of the unit
+  records such a call with its method name, and the record concerns every
+  target of the name. The unknown code can hold such a call for any name.
+
+So a scope narrower than every target can make a target `not-found` that
+the program reaches. The case `go/dependency-failed-callback` shows it:
+`os/exec.LookPath` stays uncertain only through the budget of the failed
+file.
