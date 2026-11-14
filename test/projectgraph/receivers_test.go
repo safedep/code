@@ -301,6 +301,12 @@ var rustReceiverRows = []receiverRow{
 		want:   "uncertain/unknown-receiver",
 	},
 	{
+		name:   "let that a static after the call shadows",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn mk() -> Local {\n    Local\n}\n\nfn run() {\n    let t = mk();\n    {\n        t.inspect();\n        static t: Thing<u8> = Thing::new();\n    }\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
 		name:   "let that an if let shadows",
 		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn mk() -> Local {\n    Local\n}\n\nfn run() {\n    let t = mk();\n    if let Some(t) = dep::try_thing() {\n        t.inspect();\n    }\n}",
 		target: "dep//Thing//inspect",
