@@ -148,8 +148,10 @@ func (p *projection) goTypeTarget(caller string, node *sitter.Node) (string, boo
 // goName returns the per-file target of a name: the definition that the
 // scope chain binds, a typed local, or an import. A name that no local of
 // the caller declares keeps its text, as a function of another file of
-// the package, and the link step resolves it or drops it. A local that the
-// index does not type, or a predeclared name, gives none.
+// the package, and the link step resolves it or drops it. A predeclared
+// name keeps its text too, because a function of another file of the
+// package can shadow it, as func clear(). A local that the index does not
+// type gives none.
 func (p *projection) goName(caller string, node *sitter.Node) (string, bool) {
 	if node == nil {
 		return "", false
@@ -158,14 +160,19 @@ func (p *projection) goName(caller string, node *sitter.Node) (string, bool) {
 	if target, ok := p.valueOf(*p.rules().references, caller, name); ok {
 		return target, true
 	}
-	if name == "_" || p.goPredeclared(name) || p.goLocal(caller, name, node.StartByte()) {
+	if name == "_" || p.goLocal(caller, name, node.StartByte()) {
 		return "", false
 	}
 	return name, true
 }
 
 // goPredeclared reports whether a name is a predeclared name of Go, as int
-// or len, that no definition of the file shadows.
+// or len, that no definition of the file shadows. A declaration of another
+// file of the package can still shadow it. So a reference keeps the name,
+// and only two rules read this. The Data mark of a package variable hides
+// no function, because its value is a reference of its file, and a search
+// reaches the file with the variable. new and make take a type argument
+// only as the builtins.
 func (p *projection) goPredeclared(name string) bool {
 	return langcode.IsBuiltin(langcode.Go, name) && p.defs[p.local(name)] == nil
 }

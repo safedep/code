@@ -816,7 +816,12 @@ a call can run. A Go function value is one of these:
   another file of the package, a member chain, a method expression, as
   `(*T).M`, a method value on a call, a composite literal, a type assertion,
   `new` or a dereference, as `f().M`, or a generic instantiation, as `F[int]`.
-  Each of them can be in parentheses or behind `&`.
+  Each of them can be in parentheses or behind `&`. The index keeps a
+  predeclared name, as `clear`, as a name too. A declaration of another
+  file of the package can shadow it, and the index of one file does not
+  see that file. The link step resolves the name in the package, or drops
+  it when no declaration binds it. The case `go/predeclared-shadow` shows
+  it.
 - A method value whose method the index or the link step cannot name, as
   `ts[0].Close` or `h.Handle` on a value of an interface. The index or the
   link step records the reference with the method name. That record
