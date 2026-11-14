@@ -98,11 +98,17 @@ type GrammarSelector interface {
 
 // SourceSelector is an optional interface of a Language whose files of some
 // extensions hold their code in blocks among markup, as the script blocks
-// of a Vue component. Source returns the language of the code and the bytes
-// that its grammar parses: data with each byte outside the code replaced by
-// a space. The bytes keep the offsets and the line ends of data, so a node
-// reports its line and column in the file, and its content in data. A file
-// of another extension gives the Language and data.
+// of a Vue component. Source returns the source of the data of a file of
+// the extension. A file of another extension gives the Language and data.
 type SourceSelector interface {
-	Source(ext string, data []byte) (Language, []byte)
+	Source(ext string, data []byte) Source
+}
+
+// Source is what the grammar of a file parses.
+type Source struct {
+	Language Language
+	// Code is data with each byte outside the code replaced by a space. It
+	// keeps the offsets and the line ends of data, so a node reports its
+	// line and column in the file, and its content in data.
+	Code []byte
 }

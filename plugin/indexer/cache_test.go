@@ -206,7 +206,7 @@ func TestAnalyzeKeepsTheCallGraphOnlyForAGraphPlugin(t *testing.T) {
 	require.NoError(t, err)
 	defer p.Close()
 
-	file := pending{file: files[0], language: byExtension[".js"], data: data}
+	file := pending{file: files[0], source: parser.Source(byExtension[".js"], files[0].Name(), data), data: data}
 	for _, keep := range []bool{false, true} {
 		o := analyze(ctx, p, file, keep)
 		require.NoError(t, o.err)
