@@ -471,3 +471,88 @@ func TestNewValidatesTheOptions(t *testing.T) {
 	caller[0] = nil
 	assert.Equal(t, languages, ix.opts.Languages, "a change of the caller's slice after New does not reach the indexer")
 }
+
+func TestIndexerReadsJSXAndTheScriptsOfComponentFiles(t *testing.T) {
+	type importAt struct {
+		Module string
+		Line   int
+	}
+	type callAt struct {
+		Callee string
+		Line   int
+		Column int
+	}
+	files := map[string]struct {
+		content  string
+		language core.LanguageCode
+		imports  []importAt
+		calls    []callAt
+	}{
+		"App.jsx": {
+			content:  "import pad from 'left-pad'\n\nexport default function App() {\n  return <div>{pad('a', 2)}</div>;\n}\n",
+			language: core.LanguageCodeJavascript,
+			imports:  []importAt{{"left-pad", 1}},
+			calls:    []callAt{{"pad", 4, 16}},
+		},
+		"App.vue": {
+			content:  "<template>\n  <div>{{ msg }}</div>\n</template>\n\n<script setup>\nimport pad from 'left-pad'\nconst msg = pad('a', 2)\n</script>\n",
+			language: core.LanguageCodeJavascript,
+			imports:  []importAt{{"left-pad", 6}},
+			calls:    []callAt{{"pad", 7, 13}},
+		},
+		"Widget.vue": {
+			content:  "<script lang=\"ts\">\nimport { defineComponent } from 'vue'\nexport default defineComponent({})\n</script>\n<template><p/></template>\r\n<script setup lang=\"ts\">\r\nimport pad from 'left-pad'\r\nconst n: string = pad('a', 2)\r\n</script>\r\n",
+			language: core.LanguageCodeTypescript,
+			imports:  []importAt{{"vue", 2}, {"left-pad", 7}},
+			calls:    []callAt{{"defineComponent", 3, 16}, {"pad", 8, 19}},
+		},
+		"Page.astro": {
+			content:  "---\nimport pad from 'left-pad'\nconst title: string = pad('a', 2)\n---\n<h1>{title}</h1>\n<script>\nimport confetti from 'canvas-confetti'\n  confetti()\n</script>\n",
+			language: core.LanguageCodeTypescript,
+			imports:  []importAt{{"left-pad", 2}, {"canvas-confetti", 7}},
+			calls:    []callAt{{"pad", 3, 23}, {"confetti", 8, 3}},
+		},
+		"Card.svelte": {
+			content:  "<p>{label}</p>\n<script>\n  import pad from 'left-pad'\n  let label = pad('a', 2)\n</script>\n",
+			language: core.LanguageCodeJavascript,
+			imports:  []importAt{{"left-pad", 3}},
+			calls:    []callAt{{"pad", 4, 15}},
+		},
+	}
+	dir := t.TempDir()
+	contents := map[string]string{}
+	for name, f := range files {
+		contents[name] = f.content
+	}
+	writeFiles(t, dir, contents)
+	fsys := appFileSystem(t, dir)
+	opts := Options{Languages: projectLanguages(t), Store: memstore.New()}
+
+	cold, err := runIndexer(t, context.Background(), fsys, opts)
+	require.NoError(t, err)
+	assert.Empty(t, cold.Report.Failed)
+	require.Len(t, cold.Indexes, len(files))
+	for _, ix := range cold.Indexes {
+		want := files[ix.Path]
+		t.Run(ix.Path, func(t *testing.T) {
+			assert.Equal(t, want.language, ix.Language)
+			assert.Equal(t, want.language, cold.Languages[ix.Path])
+			assert.Equal(t, fileindex.FileIndexed, cold.Files[ix.Path])
+			var imports []importAt
+			for _, imp := range ix.Imports {
+				imports = append(imports, importAt{imp.Module, imp.Line})
+			}
+			assert.Equal(t, want.imports, imports)
+			var calls []callAt
+			for _, c := range ix.Calls {
+				calls = append(calls, callAt{c.Callee, c.Line, c.Column})
+			}
+			assert.Equal(t, want.calls, calls)
+		})
+	}
+
+	warm, err := runIndexer(t, context.Background(), fsys, opts)
+	require.NoError(t, err)
+	assert.Empty(t, warm.Report.Visited)
+	assert.Equal(t, cold.Indexes, warm.Indexes)
+}

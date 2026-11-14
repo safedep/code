@@ -295,6 +295,11 @@ func (r *run) index(ctx context.Context, files []core.File, byExtension map[stri
 			r.exclude(file)
 			continue
 		}
+		// The script blocks of a component file name their language, and
+		// the key and the index of the file hold it. The parse picks the
+		// same language again from the same bytes.
+		language, _ = parser.Source(language, file.Name(), data)
+		r.result.Languages[file.Name()] = language.Meta().Code
 
 		batch = append(batch, pending{
 			file:     file,

@@ -72,6 +72,16 @@ generated file, as a `.pb.go` file, stay in the graph. The index keeps the
 hash of the file. If the skeleton still hits a limit, the file stays
 truncated, and reach counts it as budget.
 
+The JavaScript language reads `.jsx` files with its grammar, which parses
+JSX. It also reads the component files of Vue, Svelte and Astro (`.vue`,
+`.svelte`, `.astro`). The parse reads only the `<script>` blocks of such a
+file, and the Astro code between the two `---` lines at the top. Each byte
+outside them becomes a space, so each import and call keeps its line and
+column in the file. A file whose blocks have `lang="ts"` or
+`lang="typescript"` is TypeScript, and so is every Astro file. A block
+with a `src` attribute holds no code. The index of the file holds the hash
+of the bytes of the file.
+
 The index leaves out a Go file of a unit only when no Go build reads it by
 default: a `_test.go` file, a file with `//go:build ignore`, and a file
 whose constraint needs a tag that the go command never sets, as `purego`.
