@@ -33,12 +33,17 @@ var goRules = languageRules{
 			"return_statement":      "",
 			"literal_value":         "",
 			"send_statement":        "value",
+			// A conversion, as (func())(f), or a call of a generic
+			// function with type arguments, as id[func()](f), which the
+			// grammar parses as a conversion.
+			"type_conversion_expression": "operand",
 		},
 		member:      "selector_expression",
 		object:      "operand",
 		property:    "field",
 		identifiers: map[string]bool{"identifier": true},
 		lists:       map[string]bool{"expression_list": true, "literal_element": true, "keyed_element": true},
+		value:       goReference,
 	},
 	arguments: &argumentSyntax{
 		calls:    map[string]string{"call_expression": "function"},
@@ -211,7 +216,7 @@ func (p *projection) goVariableValues(spec *sitter.Node) {
 func (p *projection) goDataType(t *sitter.Node) bool {
 	switch t.Type() {
 	case "type_identifier":
-		return langcode.IsBuiltin(langcode.Go, p.text(t)) && p.defs[p.local(p.text(t))] == nil
+		return p.goPredeclared(p.text(t))
 	case "parenthesized_type":
 		return t.NamedChildCount() == 1 && p.goDataType(t.NamedChild(0))
 	case "pointer_type", "slice_type", "array_type", "map_type", "channel_type", "struct_type", "interface_type":
@@ -247,7 +252,7 @@ func (p *projection) goDataValue(value *sitter.Node) bool {
 		}
 		switch function.Type() {
 		case "identifier":
-			return langcode.IsBuiltin(langcode.Go, p.text(function)) && p.defs[p.local(p.text(function))] == nil
+			return p.goPredeclared(p.text(function))
 		case "selector_expression":
 			operand, field := function.ChildByFieldName("operand"), function.ChildByFieldName("field")
 			return operand != nil && field != nil && goErrorConstructors[[2]string{p.importPath(p.text(operand)), p.text(field)}]
@@ -268,19 +273,10 @@ func (p *projection) importPath(alias string) string {
 }
 
 // goValueTarget returns the per-file target of a value that names a
-// function or another value: a definition of the file, a name of the
-// package that the link step resolves, or a member of an import.
+// function or another value, in each form that a reference reads.
 func (p *projection) goValueTarget(value *sitter.Node) (string, bool) {
-	switch value.Type() {
-	case "identifier":
-		if key := p.local(p.text(value)); p.defs[key] != nil {
-			return key, true
-		}
-		return p.text(value), true
-	case "selector_expression":
-		return p.reference(*p.rules().references, p.cg.FileName, value)
-	}
-	return "", false
+	target, _ := goReference(p, p.cg.FileName, value)
+	return target, target != ""
 }
 
 // goBases returns the types that a Go type embeds, and the type that an

@@ -51,6 +51,9 @@ type projection struct {
 	// exportStatements are the export statements and the CommonJS export
 	// assignments of the file.
 	exportStatements []*sitter.Node
+	// goScoped holds the scoped local names of each Go function that a
+	// value names, by the key of the function.
+	goScoped map[string][]goScopedName
 }
 
 // project builds the call graph of tree and projects it into an index. It
