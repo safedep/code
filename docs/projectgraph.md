@@ -201,7 +201,13 @@ follow what the candidates call. The site keeps its method name, because
 the call can run only a method of that name. A record with a method name
 concerns the targets with that last segment and the targets that a
 definition of the name reaches, so it concerns what each candidate
-reaches.
+reaches. A candidate can also run code that no edge leads to, through an
+unresolved site of its own. So the record also concerns what each
+uncertainty of the code that a candidate reaches concerns, as
+[The honesty rule](#the-honesty-rule) says. In the case
+`python/name-ambiguous-record`, `H0.handle` calls `load` on a field whose
+value the index does not know, and `yaml.load` is `uncertain` and not
+`no-such-target`.
 
 A call on the result of another call, as `html.NewTokenizer(r).Next()`,
 needs the type of that result. When the link step does not know it, the
@@ -627,6 +633,19 @@ reaches, as [Code outside the graph](#code-outside-the-graph) argues. A
 result caps the uncertainties that it lists at three per kind and keeps
 the full count in `Searched`.
 
+The code of such a scope can hold uncertainties of its own: an unresolved
+site, a dynamic flag, a truncation, or a file of a unit that the index
+step did not complete. That code can run code that no edge leads to. So
+the scope also concerns what each of them concerns, as the search of a
+query counts them, and the scope of a method name, a unit or a callback
+that one of them names goes on into that code too. Without that, a target
+that only such code reaches reads as `not-found`. The cases
+`python/name-ambiguous-record` for a method name,
+`python/dependency-dark-unit-record` for a unit and
+`go/stdlib-callback-record` for a callback show it. A summary keeps the
+same scope: `reach.Scoped` holds the method names and the import prefixes
+of those uncertainties, and `Every` marks one that concerns every target.
+
 A file of dependency code that the index step did not complete counts
 only for a search that enters its package. A file of the project counts
 for every search, because it can hold a root.
@@ -721,7 +740,7 @@ A failed or truncated file of a unit of dependency code counts for every
 target when the search enters the unit. An unresolved site in the code of a
 unit with no method name, as an import that no file of the unit gives,
 counts for every target too. The closure of the edges of the unit, which
-`unitReaches` reads, does not bound such code, for two reasons.
+the scope of a unit reads, does not bound such code, for two reasons.
 
 - The unknown code can call a package that no known code of the unit
   calls. A failed file has no index, so its imports are not known. The
@@ -768,7 +787,8 @@ depends on what the code can call.
   exported name. So the record of a key of the standard library is a
   callback, as `Callback` marks it. It concerns the targets that a Go
   method of an exported name reaches, in the project and in each unit, as
-  the closure of a method name does. Each key of the standard library gives
+  the scope of a method name does, and what the uncertainties of that code
+  concern. Each key of the standard library gives
   the same scope, so a result lists the callback once, with no key.
 - A package of another module can import the package of any target and
   call any function of it. So its record concerns every target. A summary

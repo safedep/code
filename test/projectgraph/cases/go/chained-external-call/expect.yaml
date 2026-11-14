@@ -80,3 +80,5 @@ results:
     uncertainties:
       - kind: unresolved-call
       - kind: unresolved-call
+      - kind: unresolved-call
+        site: tokens.go:10

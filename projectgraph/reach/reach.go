@@ -103,10 +103,12 @@ type CallSite struct {
 // definition to the targets that the code of the package, and of each
 // package that it calls, reaches. Callback scopes code outside the graph
 // that can call into the graph only through a method of a value that it
-// holds, as the Go standard library with no unit, to the targets that any
-// method of an exported name reaches. Such an uncertainty has no key and
-// counts once per search. With none of them, the uncertainty concerns
-// every target.
+// holds, as the Go standard library with no unit, to the targets that a
+// method that the graph names for it reaches. Such an uncertainty has no
+// key and counts once per search. The code of a Method, a Unit or a
+// Callback scope can hold uncertainties of its own, and the scope also
+// concerns what each of them concerns. With none of the fields, the
+// uncertainty concerns every target.
 type Uncertainty struct {
 	Kind         UncertaintyKind   `json:"kind"`
 	Key          string            `json:"key,omitempty"`
@@ -354,10 +356,10 @@ func (x *Explorer) Explore(ctx context.Context, from []string, maxDepth int) (*E
 
 // adjacency is the graph with integer node ids, in key order, and the edges out
 // of each node. unitNodes holds the nodes of each unit of dependency code,
-// and closures what the code of each unit reaches. byLast holds the nodes
-// by the last segment of their key, and methodClosures what the nodes of
-// each last segment reach. Each table fills on first use. includeTests
-// lets a node of a test file be a source of a method closure.
+// byLast the nodes by the last segment of their key, callbacks the methods
+// that code outside the graph can call, and spans what the code of each
+// scope can run. Each table fills on first use. includeTests lets a node
+// of a test file start the span of a method name or of the callback.
 type adjacency struct {
 	g         *projectgraph.Graph
 	keys      []string
@@ -372,12 +374,11 @@ type adjacency struct {
 
 	includeTests bool
 
-	src            *sources
-	unitNodes      map[string][]int
-	closures       map[string][]bool
-	byLast         map[string][]int
-	methodClosures map[string][]bool
-	exported       []bool
+	src       *sources
+	unitNodes map[string][]int
+	byLast    map[string][]int
+	callbacks []int
+	spans     map[scopeKey]*span
 }
 
 // sources returns the records, the flags and the budgets of the graph by
@@ -423,131 +424,6 @@ func newAdjacency(g *projectgraph.Graph) *adjacency {
 		a.in[to] = append(a.in[to], int32(i))
 	}
 	return a
-}
-
-// unitOf returns the unit of dependency code of a node, or "".
-func (a *adjacency) unitOf(id int) string {
-	if n := a.g.Nodes[a.keys[id]]; n != nil {
-		return fileindex.PackageOf(n.Path)
-	}
-	return ""
-}
-
-// closure returns the nodes that the code of a unit reaches, and the code
-// of each unit that a node of it reaches. A value of the project that the
-// code of a unit calls comes to it on an edge, as a reference, so the
-// search from the project reaches that value already.
-func (a *adjacency) closure(unit string) []bool {
-	if c, ok := a.closures[unit]; ok {
-		return c
-	}
-	if a.unitNodes == nil {
-		a.unitNodes, a.closures = map[string][]int{}, map[string][]bool{}
-		for id := range a.keys {
-			if u := a.unitOf(id); u != "" {
-				a.unitNodes[u] = append(a.unitNodes[u], id)
-			}
-		}
-	}
-	entered := map[string]bool{}
-	seen := a.reachable(a.unitNodes[unit], func(id int) []int {
-		u := a.unitOf(id)
-		if u == "" || entered[u] {
-			return nil
-		}
-		entered[u] = true
-		return a.unitNodes[u]
-	})
-	a.closures[unit] = seen
-	return seen
-}
-
-// reachable returns the nodes that a search from the sources reaches. The
-// search also takes the nodes that more gives for each node that it
-// reaches, as the other nodes of the unit of the node.
-func (a *adjacency) reachable(sources []int, more func(id int) []int) []bool {
-	seen := make([]bool, len(a.keys))
-	var queue []int
-	add := func(id int) {
-		if !seen[id] {
-			seen[id] = true
-			queue = append(queue, id)
-		}
-	}
-	for _, id := range sources {
-		add(id)
-	}
-	for len(queue) > 0 {
-		id := queue[0]
-		queue = queue[1:]
-		for _, v := range more(id) {
-			add(v)
-		}
-		for _, e := range a.out[id] {
-			add(a.id[a.g.Edges[e].To])
-		}
-	}
-	return seen
-}
-
-// unitReaches reports whether the code of a unit reaches a node of the
-// target.
-func (a *adjacency) unitReaches(unit string, target Target) bool {
-	c := a.closure(unit)
-	return slices.ContainsFunc(a.match(target), func(id int) bool { return c[id] })
-}
-
-// methodClosure returns the nodes that the nodes with the last segment
-// reach: the definitions of the name in the project and in each unit of
-// dependency code, and the external keys of the name, which can lead into
-// a unit. An unresolved call of the name can run any of them. A node of a
-// test file is a source only when the query includes the tests.
-func (a *adjacency) methodClosure(name string) []bool {
-	if c, ok := a.methodClosures[name]; ok {
-		return c
-	}
-	if a.byLast == nil {
-		a.byLast, a.methodClosures = map[string][]int{}, map[string][]bool{}
-		for id, key := range a.keys {
-			if n := a.g.Nodes[key]; n != nil && (a.includeTests || !n.Test) {
-				a.byLast[fileindex.Last(key)] = append(a.byLast[fileindex.Last(key)], id)
-			}
-		}
-	}
-	seen := a.reachable(a.byLast[name], func(int) []int { return nil })
-	a.methodClosures[name] = seen
-	return seen
-}
-
-// methodReaches reports whether a node with the last segment reaches a
-// node of the target.
-func (a *adjacency) methodReaches(name string, target Target) bool {
-	c := a.methodClosure(name)
-	return slices.ContainsFunc(a.match(target), func(id int) bool { return c[id] })
-}
-
-// exportedClosure returns the nodes that the methods that code outside the
-// graph can call back reach, as the graph names them, in the project and in
-// each unit of dependency code. A method of a test file is a source only
-// when the query includes the tests.
-func (a *adjacency) exportedClosure() []bool {
-	if a.exported == nil {
-		var methods []int
-		for id, key := range a.keys {
-			if n := a.g.Nodes[key]; n != nil && (a.includeTests || !n.Test) && a.g.CallbackMethod(key) {
-				methods = append(methods, id)
-			}
-		}
-		a.exported = a.reachable(methods, func(int) []int { return nil })
-	}
-	return a.exported
-}
-
-// exportedReaches reports whether a method that code outside the graph can
-// call back reaches a node of the target.
-func (a *adjacency) exportedReaches(target Target) bool {
-	c := a.exportedClosure()
-	return slices.ContainsFunc(a.match(target), func(id int) bool { return c[id] })
 }
 
 // match returns the nodes of a target, by id: the external node of its

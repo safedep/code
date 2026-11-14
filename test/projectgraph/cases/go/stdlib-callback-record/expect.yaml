@@ -1,0 +1,32 @@
+source: safedep:hand
+description: >-
+  main calls os.Getenv, and no unit gives the standard library, so the callback record of os//Getenv concerns
+  what a method of an exported name can run. store.Close is such a method. It calls Flush of
+  example.com/legacy, which no unit gives, and the code of legacy can call any function. The callback scope
+  counts the records of the code that it reaches, so os.RemoveAll, which only the uncalled purge calls, is
+  uncertain and not not-found.
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+unresolved:
+  - caller: example.com//legacy//Flush
+    reason: no-dependency-source
+  - caller: os//Getenv
+    reason: no-dependency-source
+    callback: true
+  - caller: os//RemoveAll
+    reason: no-dependency-source
+    callback: true
+results:
+  - target: os//RemoveAll
+    status: uncertain
+    call_sites:
+      - caller: main.go//purge
+        site: main.go:17
+        reached: false
+    uncertainties:
+      - kind: unresolved-call

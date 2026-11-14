@@ -12,27 +12,33 @@ import (
 // concerns. Targets is nil for an uncertainty that concerns every target.
 // A Method scope also concerns every target whose last segment is the
 // method, and an ImportPrefix scope every target under the prefix, whether
-// the graph holds the target or not.
+// the graph holds the target or not. The code of a Method, a Unit or a
+// Callback scope can hold unresolved calls of its own. Methods holds the
+// method names of those calls, ImportPrefixes their import prefixes, and
+// Every marks one that concerns every target.
 type Scoped struct {
 	Uncertainty
-	Targets []string `json:"targets,omitempty"`
+	Targets        []string `json:"targets,omitempty"`
+	Methods        []string `json:"methods,omitempty"`
+	ImportPrefixes []string `json:"import_prefixes,omitempty"`
+	Every          bool     `json:"every,omitempty"`
 }
 
 // Concerns reports whether the uncertainty concerns a target, as the
-// result of a reach query lists it: a Unit or a Callback scope concerns its
-// Targets, an ImportPrefix scope every target under the prefix, a Method
-// scope its Targets and every target whose last segment is the method, and
-// an uncertainty with no scope every target.
+// result of a reach query lists it: an ImportPrefix scope concerns every
+// target under the prefix, and an uncertainty with no scope every target.
+// A Method, a Unit or a Callback scope concerns its Targets, every target
+// whose last segment is its method or one of its Methods, every target
+// under one of its ImportPrefixes, and every target when Every is set.
 func (u Scoped) Concerns(t Target) bool {
-	switch {
-	case u.Unit != "", u.Callback:
-		return t.MatchesSorted(u.Targets)
-	case u.ImportPrefix != "":
-		return t.mayImport(u.ImportPrefix)
-	case u.Method != "":
-		return t.hasMethod(u.Method) || t.MatchesSorted(u.Targets)
+	if _, ok := scopeOf(u.Uncertainty); !ok {
+		return u.ImportPrefix == "" || t.mayImport(u.ImportPrefix)
 	}
-	return true
+	return u.Every ||
+		u.Method != "" && t.hasMethod(u.Method) ||
+		slices.ContainsFunc(u.Methods, t.hasMethod) ||
+		slices.ContainsFunc(u.ImportPrefixes, t.mayImport) ||
+		t.MatchesSorted(u.Targets)
 }
 
 // Reachable is what one source reaches: the external nodes, in key order,
@@ -166,25 +172,25 @@ func (a *adjacency) table() *table {
 	return t
 }
 
-// scoped adds the targets that the scope of an uncertainty concerns.
+// scoped adds what the span of the scope of an uncertainty concerns.
 func (a *adjacency) scoped(u Uncertainty) Scoped {
 	s := Scoped{Uncertainty: u}
-	var closure []bool
-	switch {
-	case u.Callback:
-		closure = a.exportedClosure()
-	case u.Unit != "":
-		closure = a.closure(u.Unit)
-	case u.Method != "":
-		closure = a.methodClosure(u.Method)
-	default:
+	k, ok := scopeOf(u)
+	if !ok {
+		return s
+	}
+	sp := a.span(k)
+	if sp.every {
+		s.Every = true
 		return s
 	}
 	for _, id := range a.externals {
-		if closure[id] {
+		if sp.nodes[id] {
 			s.Targets = append(s.Targets, a.keys[id])
 		}
 	}
+	s.Methods = slices.DeleteFunc(slices.Clone(sp.methods), func(m string) bool { return m == u.Method })
+	s.ImportPrefixes = sp.prefixes
 	return s
 }
 

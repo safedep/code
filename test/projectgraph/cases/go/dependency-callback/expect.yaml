@@ -8,7 +8,9 @@ description: >-
   target. The call h.Handle() in Serve has no implementation in the graph, so it is an interface-receiver
   record with the method Handle, and os/exec.LookPath, which mine.Handle calls, is uncertain. The link step
   cannot name the method of c.Close, so the reference is a record with the method Close, which gets a name
-  edge to conn.Close. So os.Chdir is found. No target that a callback reaches is not found.
+  edge to conn.Close. So os.Chdir is found. No target that a callback reaches is not found. conn.Close, a
+  candidate of c.Close, calls os.Chdir, whose callback reaches mine.Handle. So the record c.Close also
+  concerns os/exec.LookPath.
 units:
   gomod/github.com/acme/srv@v1.0.0: go:github.com/acme/srv@v1.0.0
 roots:
@@ -89,6 +91,8 @@ results:
         site: main.go:13
         reached: false
     uncertainties:
+      - kind: unresolved-call
+        site: main.go:33
       - kind: unresolved-call
         site: go:github.com/acme/srv@v1.0.0//srv.go:20
       - kind: unresolved-call

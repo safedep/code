@@ -11,6 +11,8 @@ description: >-
   Conn declares, and netctx.Context.Done is the method Done of the interface context.Context of the unit of
   the standard library. A call of such a method runs the code of the type that the interface value holds, so
   each keeps an interface-receiver record, and a target that only that code reaches is uncertain, not found.
+  The call of Handler in Render can run the key example.com//markup//Handler, whose record enters the code of
+  the unit, so it concerns each target of that code too.
 units:
   gomod/example.com/markup@v1.0.0: go:example.com/markup@v1.0.0
   goroot/src: go:std@go1.25.1
@@ -297,11 +299,11 @@ results:
         reached: false
     uncertainties:
       - kind: unresolved-call
-        site: go:example.com/markup@v1.0.0
+        site: go:example.com/markup@v1.0.0//node.go:39
       - kind: unresolved-call
         site: go:example.com/markup@v1.0.0
       - kind: unresolved-call
-        site: go:std@go1.25.1
+        site: go:example.com/markup@v1.0.0
   - target: os//Remove
     status: uncertain
     call_sites:
@@ -310,8 +312,8 @@ results:
         reached: false
     uncertainties:
       - kind: unresolved-call
-        site: go:example.com/markup@v1.0.0
+        site: go:example.com/markup@v1.0.0//node.go:39
       - kind: unresolved-call
         site: go:example.com/markup@v1.0.0
       - kind: unresolved-call
-        site: go:std@go1.25.1
+        site: go:example.com/markup@v1.0.0
