@@ -1,6 +1,7 @@
 package projectgraph
 
 import (
+	"cmp"
 	"slices"
 	"strings"
 
@@ -417,8 +418,12 @@ func (r rustResolver) Module(importer, spec string) (string, string, bool) {
 	if key, ok := r.b.resolveRust(importer, spec); ok {
 		return key, "path", true
 	}
+	// A use can bind an item of the crate, as fl of use crate::ffi::flush
+	// as fl after pub use dep as ffi. A call of fl links the key itself,
+	// so the key needs its node. Without it the edge reached no node, and
+	// the target read as not-found.
 	if path, file, ok := r.b.rustCratePath(importer, spec); ok {
-		return r.b.rustCrateKey(file, path), "crate", true
+		return r.b.external(r.b.rustCrateKey(file, path)), "crate", true
 	}
 	return "", "", false
 }
@@ -458,7 +463,9 @@ func rustTypePath(b *builder, sc *scope, written string) (string, bool) {
 // libsqlite3_sys as ffi binds ffi, so crate::ffi::ErrorCode is
 // libsqlite3_sys::ErrorCode. The deepest module of the path that the crate
 // has decides. A path through a use of another module of the crate, as
-// self::rand after use crate::secure::rand, follows that use.
+// self::rand after use crate::secure::rand, follows that use. So does a
+// path through a use of the module of the file, as sub::f after use
+// dep::sub.
 //
 // A walk asks for the route of each glob use of each module that it reads,
 // so the route of an outer call stays for the build. The route reads only
@@ -485,14 +492,17 @@ func (b *builder) rustCratePath(importer, written string) (string, string, bool)
 
 func (b *builder) routeCrate(importer, written string) (string, string, bool) {
 	parts := strings.Split(strings.TrimPrefix(written, "::"), "::")
-	for i := len(parts) - 1; i > 0; i-- {
-		u := b.rustModuleUnit(importer, strings.Join(parts[:i], "::"))
+	for i := len(parts) - 1; i >= 0; i-- {
+		u := b.rustModuleUnit(importer, cmp.Or(strings.Join(parts[:i], "::"), "self"))
 		if u == nil {
 			continue
 		}
 		for _, p := range u.files {
 			for _, imp := range rustBindings(b.scopes[p], parts[i]) {
 				module, _ := importedModule(langcode.Rust, imp)
+				if i == 0 && rustSelfBinding(module, parts) {
+					continue
+				}
 				if crate, file, ok := b.rustCrate(p, module); ok {
 					return joinPath(crate, parts[i+1:]), file, true
 				}
@@ -501,6 +511,15 @@ func (b *builder) routeCrate(importer, written string) (string, string, bool) {
 		return "", "", false
 	}
 	return "", "", false
+}
+
+// rustSelfBinding reports whether a use of the module of a path binds the
+// first name of the path to the path itself: use rand binds rand, and use
+// smallvec::smallvec binds smallvec. Rust never reads the binding of a use
+// in its own path, so such a binding routes nothing.
+func rustSelfBinding(module string, parts []string) bool {
+	module = strings.TrimPrefix(module, "::")
+	return module == parts[0] || module == strings.Join(parts, "::")
 }
 
 // rustModuleUnit returns the unit of the module that a path of a file

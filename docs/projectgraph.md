@@ -288,6 +288,11 @@ Rust follows the same rules, with these additions.
   first name that names no module that the file sees, as a child module or
   a module of the root, names a crate, also when a file of the project has
   that name, as `extern crate schannel;` in `src/imp/schannel.rs`.
+- A path can start with a name that another `use` of the module binds. So
+  `helpers::run` after `use crate::deep::helpers;` names the function of
+  the module `deep::helpers`, and `sub::f` after `use dep::sub;` names
+  `dep//sub//f`. A `use` never reads its own binding, so
+  `use smallvec::smallvec;` names the crate `smallvec`.
 - The index records a type alias, as `pub type Image<P> = ImageBuffer<P>;`,
   as a definition of the kind `alias`. The link step resolves the type
   that it names, as the file of the alias names it, when a walk first
