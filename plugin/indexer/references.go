@@ -39,6 +39,11 @@ type referenceSyntax struct {
 	// files of a unit with no import, as C#. A name that the file does not
 	// bind keeps its text, and the link step resolves it or drops it.
 	rawNames bool
+	// value replaces reference for a language whose function values take
+	// more forms than a name or a member chain, as Go. It gives the member
+	// node of a method value whose receiver the index cannot name, and the
+	// visitor records the method name of that member.
+	value func(p *projection, caller string, value *sitter.Node) (target string, member *sitter.Node)
 }
 
 // referenceVisitor adds each function, method, class or import that the
@@ -97,15 +102,20 @@ func referenceVisitor(p *projection) visitor {
 			}
 			// A read of a field, a constant or a variable of data runs
 			// no code and gives the reader no function.
-			target, ok := p.reference(*syntax, caller, value)
-			if def := p.defs[target]; !ok || def != nil && def.HoldsData() {
+			target, member := p.valueTarget(*syntax, caller, value)
+			if def := p.defs[target]; target == "" && member == nil || def != nil && def.HoldsData() {
 				continue
 			}
 			at := ast.GetNodePosition(value)
-			if k := (site{int(at.StartLine), int(at.StartColumn), caller, p.text(value)}); !seen[k] {
-				seen[k] = true
+			k := site{int(at.StartLine), int(at.StartColumn), caller, p.text(value)}
+			switch {
+			case seen[k]:
+			case target != "":
 				p.addReference(value, caller, p.targets([]string{target}))
+			default:
+				p.addValueRecord(member, caller)
 			}
+			seen[k] = true
 		}
 	}
 }
@@ -123,6 +133,36 @@ func (p *projection) addReference(node *sitter.Node, caller string, targets []st
 		Column:  int(site.StartColumn),
 		Text:    callgraph.ClipText(p.text(node)),
 		Targets: targets,
+	})
+}
+
+// valueTarget returns the per-file target of a value, or the member node
+// of a method value whose receiver the index cannot name.
+func (p *projection) valueTarget(syntax referenceSyntax, caller string, value *sitter.Node) (string, *sitter.Node) {
+	if syntax.value != nil {
+		return syntax.value(p, caller, value)
+	}
+	target, _ := p.reference(syntax, caller, value)
+	return target, nil
+}
+
+// addValueRecord records a method value whose receiver the index cannot
+// name, as ts[0].Close. The code that gets the value can call any method of
+// the name, so the record keeps the method name, as the record of a call
+// on such a receiver does. Its site is the method name, so it never shares
+// the site of a call that the receiver makes.
+func (p *projection) addValueRecord(member *sitter.Node, caller string) {
+	syntax := p.rules().references
+	name := member.ChildByFieldName(syntax.property)
+	site := ast.GetNodePosition(name)
+	p.ix.Unresolved = append(p.ix.Unresolved, fileindex.Unresolved{
+		Caller:   p.caller(caller, site),
+		Line:     int(site.StartLine),
+		Column:   int(site.StartColumn),
+		Text:     callgraph.ClipText(p.text(member)),
+		Receiver: callgraph.ClipText(p.text(member.ChildByFieldName(syntax.object))),
+		Method:   p.text(name),
+		Reason:   fileindex.UnresolvedUnknownReceiver,
 	})
 }
 

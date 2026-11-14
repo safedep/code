@@ -33,12 +33,17 @@ var goRules = languageRules{
 			"return_statement":      "",
 			"literal_value":         "",
 			"send_statement":        "value",
+			// A conversion, as (func())(f), or a call of a generic
+			// function with type arguments, as id[func()](f), which the
+			// grammar parses as a conversion.
+			"type_conversion_expression": "operand",
 		},
 		member:      "selector_expression",
 		object:      "operand",
 		property:    "field",
 		identifiers: map[string]bool{"identifier": true},
 		lists:       map[string]bool{"expression_list": true, "literal_element": true, "keyed_element": true},
+		value:       goReference,
 	},
 	arguments: &argumentSyntax{
 		calls:    map[string]string{"call_expression": "function"},
@@ -67,7 +72,7 @@ func goPackage(p *projection) string {
 // of each struct, the constants and the package variables. The call graph
 // has no node for them, so the tree gives them.
 func goDefinitions(p *projection) {
-	var vars []*sitter.Node
+	var specs []*sitter.Node
 	for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
 		switch statement.Type() {
 		case "type_declaration":
@@ -81,17 +86,18 @@ func goDefinitions(p *projection) {
 				}
 			}
 		case "var_declaration":
-			vars = append(vars, goVarSpecs(statement)...)
+			specs = append(specs, goVarSpecs(statement)...)
 		}
 	}
-	for _, spec := range vars {
+	vars := make([][]*fileindex.Definition, len(specs))
+	for i, spec := range specs {
 		for _, name := range goNames(spec) {
-			p.goValue(name, spec, fileindex.DefVariable)
+			vars[i] = append(vars[i], p.goValue(name, spec, fileindex.DefVariable))
 		}
 	}
 	// A value can name a variable that the file declares after it.
-	for _, spec := range vars {
-		p.goVariableValues(spec)
+	for i, spec := range specs {
+		p.goVariableValues(spec, vars[i])
 	}
 }
 
@@ -112,14 +118,14 @@ func (p *projection) goTypes(statement *sitter.Node) {
 		if t != nil && t.Type() == "interface_type" {
 			kind = fileindex.DefInterface
 		}
-		p.addGoDefinition(key, kind, spec)
+		p.addDefinition(key, kind, spec)
 		p.addSyntax(key, spec)
 		if t == nil || t.Type() != "struct_type" || spec.Type() != "type_spec" {
 			continue
 		}
 		for _, field := range p.goStructFields(t) {
 			for _, name := range childrenByField(field, "name") {
-				p.addGoDefinition(fileindex.Join(key, p.text(name)), fileindex.DefField, field)
+				p.addDefinition(fileindex.Join(key, p.text(name)), fileindex.DefField, field)
 			}
 		}
 	}
@@ -146,26 +152,15 @@ func goNames(spec *sitter.Node) []*sitter.Node {
 	return slices.DeleteFunc(childrenByField(spec, "name"), func(n *sitter.Node) bool { return n.Type() != "identifier" })
 }
 
-// goValue adds a constant or a package variable of a spec. The blank name
-// _ declares nothing.
-func (p *projection) goValue(name, spec *sitter.Node, kind fileindex.DefKind) {
-	if p.text(name) == "_" {
-		return
-	}
+// goValue adds a constant or a package variable of a spec, and returns it.
+// The blank name _ declares nothing, and a name that the file defines
+// already keeps its definition. Both give nil.
+func (p *projection) goValue(name, spec *sitter.Node, kind fileindex.DefKind) *fileindex.Definition {
 	key := p.local(p.text(name))
-	if _, defined := p.defs[key]; !defined {
-		p.addGoDefinition(key, kind, spec)
+	if _, defined := p.defs[key]; defined || p.text(name) == "_" {
+		return nil
 	}
-}
-
-func (p *projection) addGoDefinition(key string, kind fileindex.DefKind, node *sitter.Node) {
-	p.defs[key] = &fileindex.Definition{
-		Key:       key,
-		Kind:      kind,
-		Name:      fileindex.Last(key),
-		StartLine: lineOf(node),
-		EndLine:   int(node.EndPoint().Row) + 1,
-	}
+	return p.addDefinition(key, kind, spec)
 }
 
 // goVariableValues fills each package variable of a spec: the per-file
@@ -173,21 +168,20 @@ func (p *projection) addGoDefinition(key string, kind fileindex.DefKind, node *s
 // var Run = run, or the Data mark when the source shows that the value is
 // no function. A variable with neither can hold a function that the index
 // does not know, as the value of a function literal or of a call, so a
-// call of it keeps its record.
-func (p *projection) goVariableValues(spec *sitter.Node) {
-	names := goNames(spec)
+// call of it keeps its record. defs holds the definition that goValue
+// added for each name of the spec, or nil.
+func (p *projection) goVariableValues(spec *sitter.Node, defs []*fileindex.Definition) {
 	var values []*sitter.Node
 	if list := spec.ChildByFieldName("value"); list != nil {
 		values = ts.NamedChildren(list)
 	}
 	typed := spec.ChildByFieldName("type")
-	for i, name := range names {
-		def := p.defs[p.local(p.text(name))]
-		if def == nil || def.Kind != fileindex.DefVariable || def.StartLine != lineOf(spec) {
+	for i, def := range defs {
+		if def == nil {
 			continue
 		}
 		var value *sitter.Node
-		if len(values) == len(names) {
+		if len(values) == len(defs) {
 			value = values[i]
 		}
 		switch {
@@ -211,7 +205,7 @@ func (p *projection) goVariableValues(spec *sitter.Node) {
 func (p *projection) goDataType(t *sitter.Node) bool {
 	switch t.Type() {
 	case "type_identifier":
-		return langcode.IsBuiltin(langcode.Go, p.text(t)) && p.defs[p.local(p.text(t))] == nil
+		return p.goPredeclared(p.text(t))
 	case "parenthesized_type":
 		return t.NamedChildCount() == 1 && p.goDataType(t.NamedChild(0))
 	case "pointer_type", "slice_type", "array_type", "map_type", "channel_type", "struct_type", "interface_type":
@@ -247,18 +241,18 @@ func (p *projection) goDataValue(value *sitter.Node) bool {
 		}
 		switch function.Type() {
 		case "identifier":
-			return langcode.IsBuiltin(langcode.Go, p.text(function)) && p.defs[p.local(p.text(function))] == nil
+			return p.goPredeclared(p.text(function))
 		case "selector_expression":
 			operand, field := function.ChildByFieldName("operand"), function.ChildByFieldName("field")
-			return operand != nil && field != nil && goErrorConstructors[[2]string{p.importPath(p.text(operand)), p.text(field)}]
+			return operand != nil && field != nil && goErrorConstructors[[2]string{p.goImportPath(p.text(operand)), p.text(field)}]
 		}
 		return p.goDataType(function)
 	}
 	return false
 }
 
-// importPath returns the module of the import that binds the alias.
-func (p *projection) importPath(alias string) string {
+// goImportPath returns the import path of the import that binds the alias.
+func (p *projection) goImportPath(alias string) string {
 	for _, imp := range p.ix.Imports {
 		if imp.Alias == alias {
 			return imp.Module
@@ -268,19 +262,10 @@ func (p *projection) importPath(alias string) string {
 }
 
 // goValueTarget returns the per-file target of a value that names a
-// function or another value: a definition of the file, a name of the
-// package that the link step resolves, or a member of an import.
+// function or another value, in each form that a reference reads.
 func (p *projection) goValueTarget(value *sitter.Node) (string, bool) {
-	switch value.Type() {
-	case "identifier":
-		if key := p.local(p.text(value)); p.defs[key] != nil {
-			return key, true
-		}
-		return p.text(value), true
-	case "selector_expression":
-		return p.reference(*p.rules().references, p.cg.FileName, value)
-	}
-	return "", false
+	target, _ := goReference(p, p.cg.FileName, value)
+	return target, target != ""
 }
 
 // goBases returns the types that a Go type embeds, and the type that an

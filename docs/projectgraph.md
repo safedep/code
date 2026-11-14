@@ -68,7 +68,9 @@ line or a name that starts with `tables`, can hit a limit of the index,
 as a table of thousands of entries. Its index then comes from the file
 with each top-level var value that holds only data blanked. Function bodies
 and values with a call or a function literal stay, so the calls of a
-generated file, as a `.pb.go` file, stay in the graph. The index keeps the
+generated file, as a `.pb.go` file, stay in the graph. A var value that
+names a function stays too, as a map of handlers, because a call of a
+function value finds the function only through that reference. The index keeps the
 hash of the file. If the skeleton still hits a limit, the file stays
 truncated, and reach counts it as budget.
 
@@ -746,15 +748,21 @@ each function that such a call can run. A Go function value is one of
 these:
 
 - A function or a method that code uses as a value: an argument, the
-  right side of an assignment or a declaration, a return value, an element
-  of a composite literal, or the value of a send on a channel. The index
-  records a reference there, and the link step adds a `reference` edge from
-  the code that holds the value. The value exists only after that code
-  runs, so the search reaches that code and then the function.
-- A method value whose method the link step cannot name, as `h.Handle` on a
-  value of an interface. The link step records the reference with the
-  method name. That record concerns the targets that a method of the name
-  reaches, as a call `h.Handle()` does.
+  operand of a conversion, the right side of an assignment or a
+  declaration, a return value, an element of a composite literal, or the
+  value of a send on a channel. The index records a reference there, and
+  the link step adds a `reference` edge from the code that holds the value.
+  The value exists only after that code runs, so the search reaches that
+  code and then the function. The value is a name, as a function of
+  another file of the package, a member chain, a method expression, as
+  `(*T).M`, a method value on a call, a composite literal, a type assertion,
+  `new` or a dereference, as `f().M`, or a generic instantiation, as `F[int]`.
+  Each of them can be in parentheses or behind `&`.
+- A method value whose method the index or the link step cannot name, as
+  `ts[0].Close` or `h.Handle` on a value of an interface. The index or the
+  link step records the reference with the method name. That record
+  concerns the targets that a method of the name reaches, as a call
+  `h.Handle()` does.
 - A function literal. The index gives the calls of the literal to the
   definition or the module top level that holds it. So a function that
   returns a literal reaches the calls of the literal.

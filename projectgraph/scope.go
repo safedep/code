@@ -79,8 +79,8 @@ func newScope(ix *fileindex.Index) *scope {
 // or the module key.
 func (sc *scope) enclosing(line int) string {
 	key, span := sc.ix.Path, -1
-	for _, def := range sc.ix.Definitions {
-		if def.StartLine > line || def.EndLine < line || def.HoldsData() {
+	for def := range sc.ix.CodeDefinitions() {
+		if def.StartLine > line || def.EndLine < line {
 			continue
 		}
 		if s := def.EndLine - def.StartLine; span < 0 || s <= span {

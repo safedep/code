@@ -23,14 +23,12 @@ func (b *builder) addDefinitions(ix *fileindex.Index) {
 	}
 	b.addNode(module)
 
+	// No edge goes to a definition of data, so it has no node. A walk
+	// finds it by its definition.
 	for i := range ix.Definitions {
-		def := &ix.Definitions[i]
-		b.defs[def.Key] = def
-		// No edge goes to a definition of data, so it has no node. A walk
-		// finds it by its definition.
-		if def.HoldsData() {
-			continue
-		}
+		b.defs[ix.Definitions[i].Key] = &ix.Definitions[i]
+	}
+	for def := range ix.CodeDefinitions() {
 		if def.Key == ix.Path {
 			module.Line = cmp.Or(def.StartLine, 1)
 			module.Flags = append(module.Flags, def.Flags...)
@@ -46,16 +44,13 @@ func (b *builder) addDefinitions(ix *fileindex.Index) {
 			Flags:    slices.Clone(def.Flags),
 		})
 	}
-	for _, def := range ix.Definitions {
+	for def := range ix.CodeDefinitions() {
 		if r := b.runner(def.Key); r != def.Key {
 			n, runner := b.g.Nodes[def.Key], b.g.Nodes[r]
 			runner.Flags, n.Flags = append(runner.Flags, n.Flags...), nil
 		}
 	}
-	for _, def := range ix.Definitions {
-		if def.HoldsData() {
-			continue
-		}
+	for def := range ix.CodeDefinitions() {
 		n := b.g.Nodes[def.Key]
 		slices.SortFunc(n.Flags, fileindex.CompareFlags)
 		n.Flags = slices.Compact(n.Flags)

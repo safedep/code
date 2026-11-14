@@ -9,6 +9,7 @@ import (
 	"cmp"
 	"crypto/sha256"
 	"encoding/hex"
+	"iter"
 	"slices"
 	"strings"
 
@@ -233,8 +234,9 @@ type Export struct {
 
 // Definition is one module, function, method, class, constructor, module
 // variable, interface, field or constant. Key is its symbol key, as
-// src/a.py//Parser//parse. Parent is the class key of a method or a field. A JavaScript function that an object
-// property or a property assignment holds is a method with no parent.
+// src/a.py//Parser//parse. Parent is the class key of a method or a
+// field. A JavaScript function that an object property or a property
+// assignment holds is a method with no parent.
 // Decorators are as written, in source order, and hold the annotations of
 // a Java definition. Values are the per-file targets that a variable
 // holds, as the targets of a Call. Params are the parameters that declare
@@ -488,6 +490,19 @@ func (ix *Index) ExternalCalls() []Call {
 		}
 	}
 	return calls
+}
+
+// CodeDefinitions returns the definitions of the file that hold code, in
+// the order of Definitions. A definition of data runs no code, so the graph
+// has no node for it and no root or caller is one.
+func (ix *Index) CodeDefinitions() iter.Seq[*Definition] {
+	return func(yield func(*Definition) bool) {
+		for i := range ix.Definitions {
+			if !ix.Definitions[i].HoldsData() && !yield(&ix.Definitions[i]) {
+				return
+			}
+		}
+	}
 }
 
 // DynamicSites returns the flags of the file and of its definitions, by line.
