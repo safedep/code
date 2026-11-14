@@ -1,0 +1,220 @@
+source: safedep:hand
+description: >-
+  The crate kit is the unit cargo:kit@1.0.0, and no unit gives the crate aes. src/secure/mod.rs binds kit with extern
+  crate, so crate::secure::kit::flush() in src/secure/aes.rs calls kit//flush. src/main.rs binds kit as ffi with
+  pub use, and its test module binds ffi again with use crate::ffi. So ffi::reset() after use super::ffi and
+  crate::ffi::Store::open() in src/store.rs call kit//reset and kit//Store//open. src/defs.rs names kit::Store as the
+  type alias Handle, so Handle::open() calls kit//Store//open, and the declared type Handle of h gives
+  kit//Store//save. The alias binds the key kit//Store and makes no node of it, so no type target turns from
+  no-such-target into not-found. src/secure/aes.rs binds aes with extern crate, and make imports self::aes::Cipher.
+  The file has the name of the crate, and the crate still names no module of the project. No unit gives aes, so the
+  use is a no-dependency-source record with the import prefix aes, and the extern crate has no record. A target of
+  aes is uncertain, and kit//unused, which no code calls, stays not-found. Cipher::new() calls the external key
+  aes//Cipher//new, as a call of aes::Cipher::new() does.
+units:
+  vendor/kit: cargo:kit@1.0.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+exact_edges: true
+edges:
+  - from: cargo:kit@1.0.0//src/lib.rs//Store//open
+    to: cargo:kit@1.0.0//src/lib.rs//Store
+    kind: direct
+    confidence: high
+    site: cargo:kit@1.0.0//src/lib.rs:7
+  - from: cargo:kit@1.0.0//src/lib.rs//Store//save
+    to: cargo:kit@1.0.0//src/lib.rs//Store
+    kind: direct
+    confidence: high
+    site: cargo:kit@1.0.0//src/lib.rs:10
+  - from: cargo:kit@1.0.0//src/lib.rs//Store//save
+    to: std//fs//write
+    kind: direct
+    confidence: high
+    site: cargo:kit@1.0.0//src/lib.rs:11
+  - from: cargo:kit@1.0.0//src/lib.rs//Store//save
+    to: std//fs//write//unwrap
+    kind: direct
+    confidence: high
+    site: cargo:kit@1.0.0//src/lib.rs:11
+  - from: kit//Store//open
+    to: cargo:kit@1.0.0//src/lib.rs//Store//open
+    kind: package
+    confidence: high
+    site: cargo:kit@1.0.0//src/lib.rs:6
+  - from: kit//Store//save
+    to: cargo:kit@1.0.0//src/lib.rs//Store//save
+    kind: package
+    confidence: high
+    site: cargo:kit@1.0.0//src/lib.rs:10
+  - from: kit//flush
+    to: cargo:kit@1.0.0//src/lib.rs//flush
+    kind: package
+    confidence: high
+    site: cargo:kit@1.0.0//src/lib.rs:15
+  - from: kit//reset
+    to: cargo:kit@1.0.0//src/lib.rs//reset
+    kind: package
+    confidence: high
+    site: cargo:kit@1.0.0//src/lib.rs:17
+  - from: src/defs.rs//keep
+    to: kit//Store//save
+    kind: direct
+    confidence: high
+    site: src/defs.rs:8
+  - from: src/defs.rs//run
+    to: kit//Store//open
+    kind: direct
+    confidence: high
+    site: src/defs.rs:4
+  - from: src/defs.rs//run
+    to: src/defs.rs//keep
+    kind: direct
+    confidence: high
+    site: src/defs.rs:4
+  - from: src/main.rs//main
+    to: src/defs.rs//run
+    kind: direct
+    confidence: high
+    site: src/main.rs:10
+  - from: src/main.rs//main
+    to: src/secure/aes.rs//make
+    kind: direct
+    confidence: high
+    site: src/main.rs:8
+  - from: src/main.rs//main
+    to: src/store.rs//sync
+    kind: direct
+    confidence: high
+    site: src/main.rs:9
+  - from: src/secure/aes.rs//make
+    to: aes//Cipher//new
+    kind: direct
+    confidence: high
+    site: src/secure/aes.rs:7
+  - from: src/secure/aes.rs//make
+    to: kit//flush
+    kind: direct
+    confidence: high
+    site: src/secure/aes.rs:6
+  - from: src/store.rs//sync
+    to: kit//Store//open
+    kind: direct
+    confidence: high
+    site: src/store.rs:5
+  - from: src/store.rs//sync
+    to: kit//reset
+    kind: direct
+    confidence: high
+    site: src/store.rs:4
+unresolved:
+  - caller: cargo:kit@1.0.0//src/lib.rs//Store//save
+    site: cargo:kit@1.0.0//src/lib.rs:11
+    reason: unknown-receiver
+    method: unwrap
+  - caller: src/secure/aes.rs//make
+    site: src/secure/aes.rs:4
+    reason: no-dependency-source
+results:
+  - target: kit//flush
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/secure/aes.rs//make
+        site: src/main.rs:8
+        kind: direct
+        confidence: high
+      - key: kit//flush
+        site: src/secure/aes.rs:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/secure/aes.rs//make
+        site: src/secure/aes.rs:6
+        reached: true
+  - target: kit//reset
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/store.rs//sync
+        site: src/main.rs:9
+        kind: direct
+        confidence: high
+      - key: kit//reset
+        site: src/store.rs:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/store.rs//sync
+        site: src/store.rs:4
+        reached: true
+  - target: kit//Store//open
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/store.rs//sync
+        site: src/main.rs:9
+        kind: direct
+        confidence: high
+      - key: kit//Store//open
+        site: src/store.rs:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/defs.rs//run
+        site: src/defs.rs:4
+        reached: true
+      - caller: src/store.rs//sync
+        site: src/store.rs:5
+        reached: true
+  - target: kit//Store//save
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/defs.rs//run
+        site: src/main.rs:10
+        kind: direct
+        confidence: high
+      - key: src/defs.rs//keep
+        site: src/defs.rs:4
+        kind: direct
+        confidence: high
+      - key: kit//Store//save
+        site: src/defs.rs:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/defs.rs//keep
+        site: src/defs.rs:8
+        reached: true
+  - target: aes//Cipher//new
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/secure/aes.rs//make
+        site: src/main.rs:8
+        kind: direct
+        confidence: high
+      - key: aes//Cipher//new
+        site: src/secure/aes.rs:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/secure/aes.rs//make
+        site: src/secure/aes.rs:7
+        reached: true
+  - target: aes//Cipher//encrypt
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: src/secure/aes.rs:4
+  - target: kit//unused
+    status: not-found
+    set_aside:
+      - kind: unresolved-call
+        site: src/secure/aes.rs:4

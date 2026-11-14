@@ -30,6 +30,7 @@ const (
 	ruleReference        rule = "reference"
 	ruleReexport         rule = "reexport"
 	ruleReexportStar     rule = "reexport-star"
+	ruleAlias            rule = "alias"
 	ruleOverride         rule = "override"
 	ruleArgumentFunction rule = "argument-function"
 	ruleDecorator        rule = "decorator"

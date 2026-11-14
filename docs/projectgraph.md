@@ -206,7 +206,11 @@ reaches.
 A call on the result of another call, as `html.NewTokenizer(r).Next()`,
 needs the type of that result. When the link step does not know it, the
 site is a record with the method name, so a target of that method is
-`uncertain` and not `no-such-target`.
+`uncertain` and not `no-such-target`. A call on the result of a builtin of
+the language, as `Promise.resolve(x).then(f)`, makes no record. The code
+of the runtime calls the code of the project or of a dependency only
+through a value that the call passes, as `f`, and a `reference` edge holds
+that value.
 
 ### Result types
 
@@ -246,9 +250,14 @@ Rust follows the same rules, with these additions.
   `Self` as the type of its `impl`. A type drops `&`, `&mut`, `Box<..>`,
   `Rc<..>`, `Arc<..>` and its type arguments, so `&mut SmallVec<[u8; 4]>`
   is `SmallVec`. An `Option<T>` or a `Result<T, E>` result keeps `T` in
-  `Returns` and its wrapper in `Wraps`. `unwrap` and `expect` give `T`,
-  and so does a `?`, which the index does not record. A call of another
-  method of the wrapper, as `map`, has no type.
+  `Returns` and its wrapper in `Wraps`. A wrapper matches by the last name
+  of its path, so `std::io::Result<T>` and `anyhow::Result<T>` wrap `T`.
+  `unwrap` and `expect` give `T`, and so does a `?`. The index records each
+  `?` in the receiver of a method call as the name `?` in the target, as
+  `dep//load//?//run` for `dep::load()?.run()` and for `t.run()` after
+  `let t = dep::load()?`. A call of any other method of the wrapper, as
+  `map` or `inspect`, has no type, so the site is a record with the reason
+  `unknown-receiver`.
 - A declared type of a parameter, a field or a local that a unit gives
   binds the receiver. An associated function, as `Type::from_vec(v)`,
   binds the type that it returns, and `clone`, `to_owned`, `default` and
@@ -266,6 +275,28 @@ Rust follows the same rules, with these additions.
   a `match` arm, an `if let`, a `for` or a closure can bind the name again
   with another type. A call on such a name keeps its record, so a method of
   the real type does not read as `not-found`.
+- `extern crate x;`, `extern crate x as y;`, `use x;` and `pub use x as y;`
+  of a whole crate bind `x` or `y` in their module to the crate. A path
+  through the binding is a path of the crate, so
+  `crate::secure::rand::thread_rng()` after `extern crate rand;` in the
+  module `secure` calls `rand//thread_rng`, and `crate::ffi::ErrorCode`
+  after `pub use libsqlite3_sys as ffi;` names
+  `libsqlite3_sys//ErrorCode`. A `use` of such a path into a crate that no
+  unit gives is a record with the reason `no-dependency-source` and the
+  crate as its import prefix, so only a target of that crate sees it. A
+  first name that names no module that the file sees, as a child module or
+  a module of the root, names a crate, also when a file of the project has
+  that name, as `extern crate schannel;` in `src/imp/schannel.rs`.
+- The index records a type alias, as `pub type Image<P> = ImageBuffer<P>;`,
+  as a definition of the kind `alias`. The link step resolves the type
+  that it names, as the file of the alias names it, when a walk first
+  reads the alias. A type of the graph gets an `export` edge from the
+  alias. A type of another crate is its external key, with no node, so a
+  target of the type stays `no-such-target` and does not turn into
+  `not-found`. A path, a call or a declared type through the alias then
+  reads the type.
+  An alias of a type that the file does not resolve, as a primitive type,
+  gives the record `unknown-receiver` for a name after it.
 - A trait object or a generic bound `T: Trait` of a unit gets the `cha`
   edges to the implementations in the graph, through their external keys.
   With no implementation, the site is a record with the reason

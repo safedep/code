@@ -32,6 +32,10 @@ func (p *projection) retargetTyped(call *fileindex.Call, untyped bool) {
 
 func (p *projection) addCalls() {
 	untyped := p.untypedSites()
+	var retarget func(call *fileindex.Call, callee ast.NodePosition)
+	if r := p.rules().retarget; r != nil {
+		retarget = r(p)
+	}
 	for key, node := range p.cg.Nodes {
 		for _, ref := range node.CallsTo {
 			kind, ok := callKind(ref.Kind)
@@ -65,6 +69,9 @@ func (p *projection) addCalls() {
 				Args:     p.arguments(key, ref.Site),
 			}
 			p.retargetTyped(&call, untyped[[2]uint32{ref.Site.StartLine, ref.Site.StartColumn}])
+			if retarget != nil {
+				retarget(&call, ref.Site)
+			}
 			p.ix.Calls = append(p.ix.Calls, call)
 		}
 	}

@@ -35,8 +35,9 @@ const (
 	// through it goes on to the value that it holds.
 	NodeVariable NodeKind = "variable"
 	// NodeExport is a name that a file imports and gives on to its own
-	// importers, as a barrel file or an __init__.py does. The node keeps the
-	// barrel on a path.
+	// importers, as a barrel file or an __init__.py does, or a type alias,
+	// which gives on the type that it names. The node keeps the barrel on a
+	// path.
 	NodeExport   NodeKind = "export"
 	NodeExternal NodeKind = "external"
 )

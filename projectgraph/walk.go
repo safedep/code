@@ -2,6 +2,7 @@ package projectgraph
 
 import (
 	"cmp"
+	"slices"
 	"strings"
 
 	"github.com/safedep/code/fileindex"
@@ -59,7 +60,12 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 		case isNamespacePackage(r.key) || kind == NodeModule:
 			consumed, done = b.walkModule(&r, name)
 		case kind == NodeExport:
-			r.key = b.bindings[r.key]
+			target, ok := b.bound(r.key)
+			if !ok {
+				r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+				return r
+			}
+			r.key = target
 		case kind == NodeVariable:
 			consumed, done = b.walkVariable(&r, name)
 		case kind == NodeClass || kind == NodeInterface:
@@ -102,7 +108,9 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 			if r.virtual && i+1 == len(names) {
 				r.class = r.key
 			}
-			r.key = b.deriveExternal(r.key, names[i:])
+			// A ? names no member, so the key keeps the names that the
+			// code writes.
+			r.key = b.deriveExternal(r.key, slices.DeleteFunc(slices.Clone(names[i:]), func(n string) bool { return n == fileindex.TryName }))
 			r.rule = cmp.Or(r.rule, ruleExternal)
 			return r
 		case kind == NodeFunction || kind == NodeMethod || kind == NodeConstructor:

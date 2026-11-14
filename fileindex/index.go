@@ -62,7 +62,15 @@ const (
 	DefField DefKind = "field"
 	// DefConstant is a constant of a Go package. It holds data and no code.
 	DefConstant DefKind = "constant"
+	// DefAlias is a type alias, as type A = B of Rust. It has no code. A
+	// path through it goes on to the type that it names.
+	DefAlias DefKind = "alias"
 )
+
+// TryName is the name that a ? of Rust takes in a call target, as
+// dep//load//?//run for dep::load()?.run(). The ? gives the value inside
+// an Option or a Result, so the name after it is a name of that value.
+const TryName = "?"
 
 type CallKind string
 
@@ -255,6 +263,9 @@ type Definition struct {
 	Static     bool     `json:"static,omitempty"`
 	Data       bool     `json:"data,omitempty"`
 	Flags      []Flag   `json:"flags,omitempty"`
+	// Alias is the type that a DefAlias names, as written, with no type
+	// arguments, as B for type A = B<u8>.
+	Alias string `json:"alias,omitempty"`
 }
 
 // HoldsData reports whether the definition holds data and no code: a
@@ -643,6 +654,7 @@ func (ix *Index) EachString(fn func(string) string) {
 		kind(&def.Returns)
 		strs(def.Results)
 		kind(&def.Wraps)
+		kind(&def.Alias)
 		flags(def.Flags)
 	}
 	for i := range ix.Classes {

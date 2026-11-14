@@ -159,6 +159,12 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 // right: new Yaml().load() in Java, or Yaml().load() in Python or Kotlin,
 // whose classes start with an upper case letter. A Go name starts with an
 // upper case letter when the package exports it, so it tells nothing.
+//
+// A builtin of the language, as Promise in Promise.resolve().then() or std
+// in std::fs::read(p).map(f), is code of the runtime, which no unit gives.
+// That code calls the code of the project or of a dependency only through
+// a value that the call passes, and a reference edge holds each such
+// value. So a call on its result makes no record.
 func (b *builder) onCallResult(p *profile, call fileindex.Call, r resolution) (fileindex.UnresolvedReason, bool) {
 	called, ok := calledName(call.Receiver)
 	if !ok || r.fail != nil || call.Method == "" || b.kindOf(r.key) != NodeExternal {
@@ -171,6 +177,9 @@ func (b *builder) onCallResult(p *profile, call fileindex.Call, r resolution) (f
 		return "", false
 	}
 	if _, provided := b.unitDefinitions(b.origins[r.key]); !provided {
+		if langcode.IsBuiltin(p.code, fileindex.Unit(r.key)) {
+			return "", false
+		}
 		return fileindex.UnresolvedNoDependencySource, true
 	}
 	return fileindex.UnresolvedUnknownReceiver, true
