@@ -59,6 +59,11 @@ const (
 	DefInterface DefKind = "interface"
 )
 
+// TryName is the name that a ? of Rust takes in a call target, as
+// dep//load//?//run for dep::load()?.run(). The ? gives the value inside
+// an Option or a Result, so the name after it is a name of that value.
+const TryName = "?"
+
 type CallKind string
 
 const (

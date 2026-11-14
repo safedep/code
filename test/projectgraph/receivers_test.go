@@ -169,6 +169,30 @@ var rustReceiverRows = []receiverRow{
 		want:   "found",
 	},
 	{
+		name:   "anyhow result with ?",
+		source: "fn run() -> anyhow::Result<()> {\n    let mut t = dep::parse_thing()?;\n    t.insert(1);\n    Ok(())\n}",
+		target: "dep//Thing//insert",
+		want:   "found",
+	},
+	{
+		name:   "chained call after ? on a std::io::Result",
+		source: "fn run() -> std::io::Result<()> {\n    dep::read_thing()?.insert(1);\n    Ok(())\n}",
+		target: "dep//Thing//insert",
+		want:   "found",
+	},
+	{
+		name:   "chained call after ? with a name of an Option method",
+		source: "fn run() -> Option<()> {\n    dep::try_thing()?.insert(1);\n    Some(())\n}",
+		target: "dep//Thing//insert",
+		want:   "found",
+	},
+	{
+		name:   "option method with the name of a method of the value inside",
+		source: "fn run() {\n    dep::try_thing().inspect(|t| {});\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
 		name:   "chained call",
 		source: "fn run() {\n    dep::new_thing().insert(1);\n}",
 		target: "dep//Thing//insert",

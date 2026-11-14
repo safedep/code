@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"github.com/safedep/code/core"
+	"github.com/safedep/code/core/ast"
 	"github.com/safedep/code/fileindex"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -69,6 +70,11 @@ type languageRules struct {
 	afterWalk func(p *projection)
 	// prune drops the definitions that hold no record, after the records.
 	prune func(p *projection)
+
+	// retarget returns the function that rewrites the targets of a call
+	// from the syntax of its callee, as the ? of Rust in dep//load//?//run.
+	// The call graph keeps no such mark.
+	retarget func(p *projection) func(call *fileindex.Call, callee ast.NodePosition)
 
 	// visitors read the walk of the tree, as for the references and the
 	// flags of the language, in this order.

@@ -184,7 +184,11 @@ that a definition of the name reaches.
 A call on the result of another call, as `html.NewTokenizer(r).Next()`,
 needs the type of that result. When the link step does not know it, the
 site is a record with the method name, so a target of that method is
-`uncertain` and not `no-such-target`.
+`uncertain` and not `no-such-target`. A call on the result of a builtin of
+the language, as `Promise.resolve(x).then(f)`, makes no record. The code
+of the runtime calls the code of the project or of a dependency only
+through a value that the call passes, as `f`, and a `reference` edge holds
+that value.
 
 ### Result types
 
@@ -224,9 +228,14 @@ Rust follows the same rules, with these additions.
   `Self` as the type of its `impl`. A type drops `&`, `&mut`, `Box<..>`,
   `Rc<..>`, `Arc<..>` and its type arguments, so `&mut SmallVec<[u8; 4]>`
   is `SmallVec`. An `Option<T>` or a `Result<T, E>` result keeps `T` in
-  `Returns` and its wrapper in `Wraps`. `unwrap` and `expect` give `T`,
-  and so does a `?`, which the index does not record. A call of another
-  method of the wrapper, as `map`, has no type.
+  `Returns` and its wrapper in `Wraps`. A wrapper matches by the last name
+  of its path, so `std::io::Result<T>` and `anyhow::Result<T>` wrap `T`.
+  `unwrap` and `expect` give `T`, and so does a `?`. The index records each
+  `?` in the receiver of a method call as the name `?` in the target, as
+  `dep//load//?//run` for `dep::load()?.run()` and for `t.run()` after
+  `let t = dep::load()?`. A call of any other method of the wrapper, as
+  `map` or `inspect`, has no type, so the site is a record with the reason
+  `unknown-receiver`.
 - A declared type of a parameter, a field or a local that a unit gives
   binds the receiver. An associated function, as `Type::from_vec(v)`,
   binds the type that it returns, and `clone`, `to_owned`, `default` and

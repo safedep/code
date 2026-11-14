@@ -95,43 +95,11 @@ var rustImplicit = map[string]bool{
 	"call_once": true, "serialize": true, "deserialize": true,
 }
 
-// rustUnwraps are the methods of Option and Result that give the value
-// inside, and rustWrapperMethods the other methods of each one. A ?
-// gives the value inside too, and the index records no ?, so a name that
-// neither table holds takes the value inside.
-var (
-	rustUnwraps        = map[string]bool{"unwrap": true, "expect": true, "unwrap_unchecked": true}
-	rustWrapperMethods = map[string]map[string]bool{
-		"Option": setOf("and", "and_then", "as_deref", "as_deref_mut", "as_mut", "as_ref", "cloned", "copied", "filter",
-			"flatten", "get_or_insert", "get_or_insert_with", "insert", "is_none", "is_some", "is_some_and", "iter",
-			"iter_mut", "map", "map_or", "map_or_else", "ok_or", "ok_or_else", "or", "or_else", "replace", "take",
-			"unwrap_or", "unwrap_or_default", "unwrap_or_else", "xor", "zip"),
-		"Result": setOf("and", "and_then", "as_deref", "as_deref_mut", "as_mut", "as_ref", "cloned", "copied", "err",
-			"expect_err", "flatten", "is_err", "is_ok", "is_ok_and", "iter", "iter_mut", "map", "map_err", "map_or",
-			"map_or_else", "ok", "or", "or_else", "unwrap_err", "unwrap_or", "unwrap_or_default", "unwrap_or_else"),
-	}
-)
-
-func setOf(names ...string) map[string]bool {
-	out := make(map[string]bool, len(names))
-	for _, n := range names {
-		out[n] = true
-	}
-	return out
-}
-
-// rustUnwrap returns how many names a Rust result in the wrapper takes
-// before the next name: one for an unwrap, none for a name of the value
-// inside, and false for a method of the wrapper itself.
-func rustUnwrap(wraps, next string) (int, bool) {
-	switch {
-	case rustUnwraps[next]:
-		return 1, true
-	case rustWrapperMethods[wraps][next]:
-		return 0, false
-	}
-	return 0, true
-}
+// rustUnwraps are the names that give the value inside an Option or a
+// Result: unwrap, expect and the ? that the index records in a target. Any
+// other name on a wrapped result is a method of the wrapper itself, as map
+// or inspect of Option, and the link step does not know its result.
+var rustUnwraps = map[string]bool{"unwrap": true, "expect": true, "unwrap_unchecked": true, fileindex.TryName: true}
 
 // rustRoots are the first names of the paths of the crates of the
 // toolchain, which no crate of the project defines.

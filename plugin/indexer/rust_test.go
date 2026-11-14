@@ -61,3 +61,38 @@ func TestFileIndexRust(t *testing.T) {
 		assert.Equal(t, []string{"Error", "Note"}, targets)
 	})
 }
+
+func TestFileIndexRustTry(t *testing.T) {
+	source := strings.Join([]string{
+		"fn run() -> Result<(), Error> {",
+		"    let t = dep::load()?;",
+		"    t.save();",
+		"    dep::load()?.check()?.save();",
+		"    dep::find().inspect(|t| {});",
+		"    Ok(())",
+		"}",
+		"fn read() -> std::io::Result<Job> { open() }",
+	}, "\n") + "\n"
+	ix := indexSource(t, core.LanguageCodeRust, "main.rs", source)
+
+	targets := map[string][]string{}
+	for _, call := range ix.Calls {
+		targets[call.Callee] = call.Targets
+	}
+	tests := []struct {
+		callee string
+		want   []string
+	}{
+		{"t.save", []string{"dep//load//?//save"}},
+		{"dep::load()?.check", []string{"dep//load//?//check"}},
+		{"dep::load()?.check()?.save", []string{"dep//load//?//check//?//save"}},
+		{"dep::find().inspect", []string{"dep//find//inspect"}},
+	}
+	for _, tt := range tests {
+		assert.Equal(t, tt.want, targets[tt.callee], tt.callee)
+	}
+
+	read := definitionOf(t, ix, "main.rs//read")
+	assert.Equal(t, "Job", read.Returns)
+	assert.Equal(t, "Result", read.Wraps)
+}

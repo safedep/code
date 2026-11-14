@@ -68,16 +68,21 @@ func (b *builder) oneResult(unit string, defs []string, pos int) (result, bool) 
 }
 
 // unwrap returns how many of the names after a call a wrapped result
-// takes: one for unwrap or expect, which give the value inside, and none
-// for a name that the value inside takes after a ?, which the index does
-// not record. A method of the wrapper itself, as map of Option, gives no
-// type, so it reports false. A result with no wrapper takes no name. Only
-// a Rust result has a wrapper.
+// takes: one for unwrap, expect or a ?, which give the value inside. Any
+// other name is a method of the wrapper itself, as map of Option, and
+// gives no type, so it reports false. A result with no wrapper takes no
+// name, and a ? on it gives no type, because the index knows no wrapper
+// that holds the value. Only a Rust result has a wrapper.
 func unwrap(wraps string, next []string) (int, bool) {
-	if wraps == "" || len(next) == 0 {
+	switch {
+	case len(next) == 0:
 		return 0, true
+	case wraps == "":
+		return 0, next[0] != fileindex.TryName
+	case rustUnwraps[next[0]]:
+		return 1, true
 	}
-	return rustUnwrap(wraps, next[0])
+	return 0, false
 }
 
 // resultText returns the type name of the result at a position of a
