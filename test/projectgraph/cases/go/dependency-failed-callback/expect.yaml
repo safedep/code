@@ -5,7 +5,8 @@ description: >-
   mine.Handle calls os/exec.LookPath, which no code of srv reaches by an edge. A failed file of a unit can
   call a method of a value that the project gives to the unit, so its budget concerns every target where
   the search enters the unit, and os/exec.LookPath is uncertain. A scope by the code that the unit reaches
-  would make it not found.
+  would make it not found. The call of serve can also run a method of the standard library, which no unit
+  gives, so Serve has a callback record, which concerns os/exec.LookPath too.
 units:
   gomod/github.com/acme/srv@v1.0.0: go:github.com/acme/srv@v1.0.0
 max_file_bytes: 400
@@ -19,6 +20,9 @@ roots:
     kind: main
     rule: go.main
 unresolved:
+  - caller: go:github.com/acme/srv@v1.0.0//srv.go//Serve
+    reason: no-dependency-source
+    callback: true
   - caller: os//exec//LookPath
     reason: no-dependency-source
     callback: true
@@ -36,3 +40,4 @@ results:
     uncertainties:
       - kind: budget
         site: go:github.com/acme/srv@v1.0.0//big.go
+      - kind: unresolved-call

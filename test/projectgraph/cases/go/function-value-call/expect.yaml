@@ -21,6 +21,9 @@ no_edges:
   - from: main.go//main
     to: os//Remove
 unresolved:
+  - caller: main.go//main
+    reason: no-dependency-source
+    callback: true
   - caller: os//Getenv
     reason: no-dependency-source
     callback: true

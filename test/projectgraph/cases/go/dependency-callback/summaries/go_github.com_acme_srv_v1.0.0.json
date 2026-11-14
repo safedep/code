@@ -11,7 +11,8 @@
       ],
       "reaches": [],
       "uncertainties": [
-        0
+        0,
+        1
       ]
     },
     {
@@ -42,7 +43,8 @@
       ],
       "reaches": [],
       "uncertainties": [
-        1
+        0,
+        2
       ]
     },
     {
@@ -52,12 +54,21 @@
       ],
       "reaches": [],
       "uncertainties": [
-        2
+        0,
+        3
       ]
     }
   ],
   "targets": [],
   "uncertainties": [
+    {
+      "kind": "unresolved-call",
+      "site": {
+        "path": ""
+      },
+      "text": "the Go standard library, which no unit gives (no-dependency-source)",
+      "callback": true
+    },
     {
       "kind": "unresolved-call",
       "key": "go:github.com/acme/srv@v1.0.0//srv.go//Bind",

@@ -724,8 +724,18 @@ these:
   does not always know that the receiver is a `reflect.Value`, so the rule
   takes any receiver.
 
-A function value that code outside the graph makes runs code outside the
-graph, which the search does not see for any call.
+A function value that code outside the graph makes, as the result of
+`sync.OnceFunc(g)`, runs code outside the graph. A call of that code makes
+the value, and the call has the record that
+[Code outside the graph](#code-outside-the-graph) gives. The search
+reaches that record where it reaches the code that makes the value.
+
+The argument holds for a search from the roots, which reaches the module
+top level of each package that the program loads. A search from the
+sources alone, as `reach.SourcesOnly` asks, starts at the sources and not
+at the module top levels of their packages. So a call of a function value
+that only a package-level value holds can run a function that such a
+search does not reach, and the target can read as `not-found`.
 
 The rule does not apply to Rust. The Rust index records a function that an
 argument, a `let`, an assignment, a `return`, a field initializer or an
@@ -801,6 +811,27 @@ depends on what the code can call.
   the value of a panic that no `recover` stops with its method `Error` or
   `String`. So `panic` has a record for each of the two methods.
 
+A Go call of a method on a value whose type the link step does not know is
+a record with the method name, as `srv.ListenAndServe()` on a
+package-level variable, on an element of a slice, on a range variable, on a
+parameter of an interface type, or after a dot import of `net/http`. Such a
+call can run a method of a type of a package that no unit gives, and no
+edge leads to that code. So the link step gives the caller of each such
+record the record of that code too.
+
+- When no unit gives the standard library, the caller gets a callback
+  record. Code of the standard library can give a value of its type to any
+  code, as an `error`, so the rule does not ask for an import.
+- When a Go file imports a package of another module that no unit gives,
+  in a build with a project file, the caller gets a record that concerns
+  every target. Only code that imports the module, or code of the module,
+  makes a value of its type, so such an import names the module.
+- A record of the reason `no-dependency-source` names its package, and
+  that package has its own record. It gets no other record.
+
+The cases `go/stdlib-callback-method-record` and
+`go/dependency-no-unit-method` show it.
+
 A target that no Go method of an exported name reaches keeps its answer.
 In the case `go/stdlib-callback-scope`, only the function `Dial` calls
 `handshake`, so `handshake` stays `not-found`. A search that reaches no
@@ -817,4 +848,5 @@ Two gaps stay.
   `no-such-target`.
 - The rule applies to Go only. Code of another language that no unit gives,
   as the standard library of Python with no `python:std` unit, can call a
-  method of a value too, and no record shows it.
+  method of a value too, and a call of a method on a value of an unknown
+  type can run such code. No record shows it.

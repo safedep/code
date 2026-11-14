@@ -43,6 +43,9 @@ edges:
     confidence: high
     site: go:github.com/acme/dep@v1.0.0//dep.go:12
 unresolved:
+  - caller: main.go//main
+    reason: no-dependency-source
+    callback: true
   - caller: os//exec//Command
     reason: no-dependency-source
     callback: true

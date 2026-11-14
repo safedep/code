@@ -410,6 +410,7 @@ func (b *builder) recordGoOutsideCode() {
 			}
 		}
 	}
+	b.recordGoMethodsOutside()
 }
 
 // goOutsideRecords returns the records of an external key whose package no
@@ -440,4 +441,64 @@ func (b *builder) goOutsideRecords(key string) []UnresolvedSite {
 		return nil
 	}
 	return []UnresolvedSite{{Caller: key, Text: key, Reason: fileindex.UnresolvedNoDependencySource}}
+}
+
+// recordGoMethodsOutside adds the records of code outside the graph to each
+// Go call of a method on a value whose type the link step does not know.
+// Such a call can run a method of a type of a package that no unit gives,
+// and no edge leads to that code. A method of the standard library can
+// call back a method of an exported name, as ListenAndServe of
+// http.Server calls ServeHTTP of its handler. A method of another module
+// can call any function. A call that names its package already has its
+// record on the external key.
+func (b *builder) recordGoMethodsOutside() {
+	std, other := b.goOutsidePackages()
+	if !std && !other {
+		return
+	}
+	var add []UnresolvedSite
+	for u := range b.unresolved {
+		if u.Method == "" || ReachesAny(u.Reason) || u.Reason == fileindex.UnresolvedNoDependencySource || b.kindOf(u.Caller) == NodeExternal || b.languageOf(u.Caller) != langcode.Go {
+			continue
+		}
+		if std {
+			add = append(add, UnresolvedSite{Caller: u.Caller, Text: goStdText, Reason: fileindex.UnresolvedNoDependencySource, Callback: true})
+		}
+		if other {
+			add = append(add, UnresolvedSite{Caller: u.Caller, Site: u.Site, Text: u.Text, Reason: fileindex.UnresolvedNoDependencySource})
+		}
+	}
+	for _, r := range add {
+		b.addUnresolved(r)
+	}
+}
+
+// goOutsidePackages reports whether Go code of the build can hold a value
+// of a type of the standard library that no unit gives, and of a type of
+// another module that no unit gives. Code of the standard library can give
+// a value of its type to any code, as an error. Only code that imports a
+// package of another module, or code of the module, makes a value of its
+// type, and an import of the module names it. A summary does not count
+// another module, as goOutsideRecords does not.
+func (b *builder) goOutsidePackages() (std, other bool) {
+	std = !slices.ContainsFunc(b.ordered, func(sp *space) bool { return sp.pkg.Ecosystem == "go" && sp.pkg.Name == modules.StdModule })
+	if !b.hasProject {
+		return std, false
+	}
+	for _, p := range b.paths {
+		ix := b.byPath[p]
+		if ix == nil || ix.Language != langcode.Go {
+			continue
+		}
+		for _, imp := range ix.Imports {
+			if imp.Module == "C" || modules.IsStdPath(imp.Module) {
+				continue
+			}
+			if mods, missing := b.importedModules(ix, imp.Module, formOf(imp)); len(mods) > 0 || len(missing) > 0 {
+				continue
+			}
+			return std, true
+		}
+	}
+	return std, false
 }

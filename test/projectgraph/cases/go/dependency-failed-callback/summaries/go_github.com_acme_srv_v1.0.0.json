@@ -22,7 +22,8 @@
       "reaches": [],
       "uncertainties": [
         0,
-        1
+        1,
+        2
       ]
     }
   ],
@@ -35,6 +36,14 @@
         "path": "go:github.com/acme/srv@v1.0.0//big.go"
       },
       "text": "the file is failed"
+    },
+    {
+      "kind": "unresolved-call",
+      "site": {
+        "path": ""
+      },
+      "text": "the Go standard library, which no unit gives (no-dependency-source)",
+      "callback": true
     },
     {
       "kind": "unresolved-call",

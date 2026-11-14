@@ -17,6 +17,9 @@ no_edges:
   - from: cmd/app/main.go//start
     to: worker/script.go//Script//Run
 unresolved:
+  - caller: cmd/app/main.go//start
+    reason: no-dependency-source
+    callback: true
   - caller: net//http//Get
     reason: no-dependency-source
     callback: true

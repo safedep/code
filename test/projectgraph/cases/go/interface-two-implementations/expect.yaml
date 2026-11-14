@@ -22,6 +22,9 @@ no_edges:
   - from: cmd/app/main.go//run
     to: sink/db.go//Log//Write
 unresolved:
+  - caller: cmd/app/main.go//run
+    reason: no-dependency-source
+    callback: true
   - caller: database//sql//DB//Exec
     reason: no-dependency-source
     callback: true
