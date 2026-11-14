@@ -84,7 +84,7 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			continue
 		}
 		for _, r := range resolutions {
-			if r.unbound && sc.profile.literals[r.key] {
+			if r.unbound && sc.profile.literals[r.key] || r.fail == nil && b.holdsData(r.key) {
 				continue
 			}
 			if r.unbound && sc.profile.thisCalls {
@@ -339,8 +339,8 @@ func (b *builder) linkReferences(ix *fileindex.Index) {
 		site := Site{Path: ix.Path, Line: ref.Line, Column: ref.Column}
 		for _, r := range b.resolveTargets(sc, ref.Caller, ref.Targets) {
 			// A Go value of a named type is no function, so passing it
-			// on calls nothing.
-			if r.fail != nil || r.unbound || sc.profile.typeConversions && b.isType(r.key) {
+			// on calls nothing. Nor is a field or a constant.
+			if r.fail != nil || r.unbound || sc.profile.typeConversions && b.isType(r.key) || b.holdsData(r.key) {
 				continue
 			}
 			b.link(ix.Language, from, r.key, site, EdgeReference, ruleReference)
@@ -540,7 +540,7 @@ func (b *builder) enclosingClass(key string) (string, bool) {
 // caller is a parameter or a local variable of the function, and its
 // declared type gives its class.
 func (b *builder) resolveLocal(sc *scope, caller, target string) resolution {
-	if b.g.Nodes[target] != nil {
+	if b.g.Nodes[target] != nil || b.holdsData(target) {
 		return b.walkAs(target, nil, ruleLocal)
 	}
 	unit, segs := fileindex.Unit(target), fileindex.Segments(target)

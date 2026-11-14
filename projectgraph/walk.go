@@ -64,6 +64,11 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 			consumed, done = b.walkVariable(&r, name)
 		case kind == NodeClass || kind == NodeInterface:
 			consumed, done = b.walkClass(&r, name, i+1 == len(names), &instance)
+		case b.holdsData(r.key):
+			// The walk does not know the type of a field, a constant or
+			// a variable of data, so it does not know a name on it.
+			r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+			return r
 		case kind == NodeExternal || kind == "" && b.g.IsExternal(r.key):
 			// A name before the last one under an external key is a call
 			// of a function or a method whose result has the next name,
@@ -231,6 +236,22 @@ func (b *builder) walkClass(r *resolution, name string, last bool, instance *boo
 			r.key, r.class, r.virtual, r.declared = field, "", true, true
 			return true, false
 		}
+	}
+	// A read of a field runs no code. A name on a field whose type the
+	// walk does not know is unknown.
+	if field, ok := b.goField(r.key, name); ok {
+		if !last {
+			r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+			return false, true
+		}
+		r.key = field
+		return true, false
+	}
+	// A method that an embedded interface declares runs on the value that
+	// the field holds, as a call on a value of the interface does.
+	if iface, ok := b.declaringInterface(r.key, name); ok {
+		r.class, r.virtual, r.fail = iface, true, noDefinition(name)
+		return false, true
 	}
 	base, external := b.externalBase(r.key)
 	switch {

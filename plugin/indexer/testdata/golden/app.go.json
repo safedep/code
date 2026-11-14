@@ -54,12 +54,57 @@
       "exported": true
     },
     {
+      "key": "app.go//Server//addr",
+      "kind": "field",
+      "name": "addr",
+      "start_line": 21,
+      "end_line": 21,
+      "exported": false,
+      "parent": "app.go//Server"
+    },
+    {
+      "key": "app.go//Server//name",
+      "kind": "field",
+      "name": "name",
+      "start_line": 21,
+      "end_line": 21,
+      "exported": false,
+      "parent": "app.go//Server"
+    },
+    {
+      "key": "app.go//Server//db",
+      "kind": "field",
+      "name": "db",
+      "start_line": 22,
+      "end_line": 22,
+      "exported": false,
+      "parent": "app.go//Server"
+    },
+    {
+      "key": "app.go//Server//cache",
+      "kind": "field",
+      "name": "cache",
+      "start_line": 23,
+      "end_line": 23,
+      "exported": false,
+      "parent": "app.go//Server"
+    },
+    {
       "key": "app.go//Box",
       "kind": "class",
       "name": "Box",
       "start_line": 26,
       "end_line": 26,
       "exported": true
+    },
+    {
+      "key": "app.go//Box//v",
+      "kind": "field",
+      "name": "v",
+      "start_line": 26,
+      "end_line": 26,
+      "exported": false,
+      "parent": "app.go//Box"
     },
     {
       "key": "app.go//Box//Get",

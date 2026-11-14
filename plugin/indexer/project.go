@@ -344,7 +344,7 @@ func decorators(p *projection, node *sitter.Node) []string {
 func (p *projection) addClasses(_ context.Context) error {
 	methods := map[string][]string{}
 	for key, def := range p.defs {
-		if def.Parent != "" {
+		if def.Parent != "" && !def.HoldsData() {
 			methods[def.Parent] = append(methods[def.Parent], key)
 		}
 	}

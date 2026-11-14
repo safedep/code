@@ -80,7 +80,7 @@ func newScope(ix *fileindex.Index) *scope {
 func (sc *scope) enclosing(line int) string {
 	key, span := sc.ix.Path, -1
 	for _, def := range sc.ix.Definitions {
-		if def.StartLine > line || def.EndLine < line {
+		if def.StartLine > line || def.EndLine < line || def.HoldsData() {
 			continue
 		}
 		if s := def.EndLine - def.StartLine; span < 0 || s <= span {

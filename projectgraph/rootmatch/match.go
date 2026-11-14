@@ -204,7 +204,7 @@ func (f *finder) matchDefinition(r rules.Rule) {
 		}
 		for _, def := range ix.Definitions {
 			switch {
-			case def.Name != m.Name:
+			case def.Name != m.Name || def.HoldsData():
 			case m.Parent != "" && fileindex.Last(def.Parent) != m.Parent:
 			case m.InPackage != "" && (def.Kind != fileindex.DefFunction || len(fileindex.Segments(def.Key)) != 1):
 			case m.Static && !def.Static:
@@ -234,7 +234,7 @@ func (f *finder) matchTestFiles(r rules.Rule) {
 		}
 		f.add(r, ix.Path)
 		for _, def := range ix.Definitions {
-			if def.Kind != fileindex.DefClass {
+			if def.Kind != fileindex.DefClass && !def.HoldsData() {
 				f.add(r, def.Key)
 			}
 		}

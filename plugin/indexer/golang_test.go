@@ -95,3 +95,71 @@ func TestFileIndexGo(t *testing.T) {
 		}
 	})
 }
+
+func TestFileIndexGoValues(t *testing.T) {
+	source := strings.Join([]string{
+		"package shop",
+		"import (",
+		"  \"errors\"",
+		"  \"example.com/shop/store\"",
+		")",
+		"type Node struct { Data, kind string; *Base }",
+		"const ( Max, Min = 1, iota; Next )",
+		"var ErrNoRows = errors.New(\"no rows\")",
+		"var n, m int",
+		"var Default = &Node{}",
+		"var Handler = func() {}",
+		"var Hook = store.Hook()",
+		"var Run = run",
+		"var Open = store.Open",
+		"var Fn func()",
+		"var Conv = store.HandlerFunc(run)",
+		"var _ = run",
+		"func run() { use(ErrNoRows, Max, Run) }",
+	}, "\n") + "\n"
+	ix := indexSource(t, core.LanguageCodeGo, "shop.go", source)
+
+	tests := []struct {
+		key    string
+		kind   fileindex.DefKind
+		data   bool
+		values []string
+	}{
+		{key: "shop.go//Node//Data", kind: fileindex.DefField},
+		{key: "shop.go//Node//kind", kind: fileindex.DefField},
+		{key: "shop.go//Max", kind: fileindex.DefConstant},
+		{key: "shop.go//Min", kind: fileindex.DefConstant},
+		{key: "shop.go//Next", kind: fileindex.DefConstant},
+		{key: "shop.go//ErrNoRows", kind: fileindex.DefVariable, data: true},
+		{key: "shop.go//n", kind: fileindex.DefVariable, data: true},
+		{key: "shop.go//m", kind: fileindex.DefVariable, data: true},
+		{key: "shop.go//Default", kind: fileindex.DefVariable, data: true},
+		{key: "shop.go//Handler", kind: fileindex.DefVariable},
+		{key: "shop.go//Hook", kind: fileindex.DefVariable},
+		{key: "shop.go//Run", kind: fileindex.DefVariable, values: []string{"shop.go//run"}},
+		{key: "shop.go//Open", kind: fileindex.DefVariable, values: []string{"example.com//shop//store//Open"}},
+		{key: "shop.go//Fn", kind: fileindex.DefVariable},
+		{key: "shop.go//Conv", kind: fileindex.DefVariable},
+	}
+	for _, tt := range tests {
+		t.Run(tt.key, func(t *testing.T) {
+			def := definitionOf(t, ix, tt.key)
+			assert.Equal(t, tt.kind, def.Kind)
+			assert.Equal(t, tt.data, def.Data)
+			assert.Equal(t, tt.values, def.Values)
+		})
+	}
+	t.Run("a field is no method of its class and the embedded type is a base", func(t *testing.T) {
+		node := classOf(t, ix, "shop.go//Node")
+		assert.Empty(t, node.Methods)
+		assert.Equal(t, []string{"Base"}, node.Bases)
+		assert.Equal(t, "shop.go//Node", definitionOf(t, ix, "shop.go//Node//Data").Parent)
+	})
+	t.Run("a read of data is no reference and a read of a function value is one", func(t *testing.T) {
+		var texts []string
+		for _, ref := range ix.References {
+			texts = append(texts, ref.Text)
+		}
+		assert.Equal(t, []string{"run", "store.Open", "run", "run", "Run"}, texts)
+	})
+}

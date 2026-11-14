@@ -47,6 +47,9 @@ func (b *builder) lookupName(module, name string, hops int) (string, *failure) {
 	if n := b.g.Nodes[fileindex.Join(module, name)]; n != nil && n.Kind != NodeExport {
 		return n.Key, nil
 	}
+	if key := fileindex.Join(module, name); b.holdsData(key) {
+		return key, nil
+	}
 
 	miss := noDefinition(name)
 	try := func(fail *failure) bool {
