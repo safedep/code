@@ -272,6 +272,44 @@ The standard library is a unit too. Pass `GOROOT/src` as the unit
 each import path whose first element has no dot, as `net/http`. The index
 step leaves out the `cmd` module of it, which no program imports.
 
+### Go fields, constants and variables
+
+The Go index records each named field of a struct as a `field` under the
+key of its type, as `html.go//Node//Data`, each constant as a `constant`,
+and each package variable as a `variable`. A field and a constant hold no
+code. A variable holds no code when the source shows that its value is no
+function: its declared type is a predeclared type or a type literal that
+is no function type, as `int` or `*Client`, or its value is a literal, a
+composite literal, an arithmetic expression, a call of a builtin, or the
+error of `errors.New` or `fmt.Errorf`. The index marks such a variable
+with `data`. A variable whose value is a name, as `run` in
+`var Run = run`, holds that value.
+
+Such a definition of data has no node. A read of it, as `n.Data` or
+`pgx.ErrNoRows`, gives no edge and no record, in the project and in the
+walk of an external key into a unit. A name on it, as `bufPool.Get()`,
+is a record with the reason `unknown-receiver`, because the walk does not
+know its type.
+
+A call of any other variable keeps its edge or its record. A variable that
+holds a name gives the edge to that name, as a call of `Run` gives the
+edge to `run`. A variable whose value can be a function that the index does
+not know, as `var Handler = func() {...}` or `var h = makeHandler()`, gives
+a record with the reason `unknown-receiver`. So a target that only such a
+function reaches is `uncertain`, never `not-found`.
+
+A struct gets the methods of the types that it embeds. A method that an
+embedded interface declares, as `Close` of `ssh.Client` that embeds the
+interface `Conn`, runs on the value that the field holds, as a call on a
+value of the interface does. The walk of an external key into a unit that
+ends at such a method, or at a method of an interface of the unit, is a
+record with the reason `interface-receiver`. A type alias, as
+`type Context = context.Context`, names its target as a base, so a method
+of the alias is a method of the target type. An import of a package whose
+path has one element, as `context`, binds its name, so the base resolves
+to the external key `context//Context`, and a unit of the standard library
+gives it on.
+
 A `pypi:` unit is a distribution, as a site-packages directory or an
 unpacked wheel holds it. These rules apply to it.
 

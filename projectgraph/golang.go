@@ -29,6 +29,7 @@ var goProfile = profile{
 	typeConversions:    true,
 	scopeWildcards:     true,
 	mainLoadsPackage:   true,
+	importsBindAlias:   true,
 }
 
 // goProvide returns the package unit of a Go module that an import path
@@ -85,6 +86,7 @@ func goSurface(s *surfacer) {
 			for _, def := range b.byPath[p].Definitions {
 				segs := fileindex.Segments(def.Key)
 				switch {
+				case def.HoldsData():
 				case len(segs) == 1 && isGoExported(segs[0]):
 					s.add(langcode.Go, importPath, modules.FormImport, segs[0])
 				case len(segs) == 2 && def.Kind == fileindex.DefMethod && isGoExported(segs[0]) && isGoExported(segs[1]):
@@ -331,4 +333,28 @@ func (b *builder) abstract(iface string, depth int) []fileindex.Signature {
 		sigs = append(sigs, b.abstract(base, depth+1)...)
 	}
 	return sigs
+}
+
+// goField returns the field of the name that a struct of the MRO of the
+// class declares: the struct, or a struct that it embeds.
+func (b *builder) goField(class, name string) (string, bool) {
+	for _, c := range b.mro(class) {
+		if key := fileindex.Join(c, name); b.defs[key] != nil && b.defs[key].Kind == fileindex.DefField {
+			return key, true
+		}
+	}
+	return "", false
+}
+
+// declaringInterface returns the first-party interface of the MRO of the
+// class that declares the method: the class itself, or an interface that
+// it embeds, as Conn for Close of a struct that embeds Conn.
+func (b *builder) declaringInterface(class, name string) (string, bool) {
+	for _, c := range b.mro(class) {
+		rec, ok := b.classes[c]
+		if ok && b.kindOf(c) == NodeInterface && slices.ContainsFunc(rec.class.Abstract, func(s fileindex.Signature) bool { return s.Name == name }) {
+			return c, true
+		}
+	}
+	return "", false
 }

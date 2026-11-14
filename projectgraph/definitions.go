@@ -26,6 +26,11 @@ func (b *builder) addDefinitions(ix *fileindex.Index) {
 	for i := range ix.Definitions {
 		def := &ix.Definitions[i]
 		b.defs[def.Key] = def
+		// No edge goes to a definition of data, so it has no node. A walk
+		// finds it by its definition.
+		if def.HoldsData() {
+			continue
+		}
 		if def.Key == ix.Path {
 			module.Line = cmp.Or(def.StartLine, 1)
 			module.Flags = append(module.Flags, def.Flags...)
@@ -48,6 +53,9 @@ func (b *builder) addDefinitions(ix *fileindex.Index) {
 		}
 	}
 	for _, def := range ix.Definitions {
+		if def.HoldsData() {
+			continue
+		}
 		n := b.g.Nodes[def.Key]
 		slices.SortFunc(n.Flags, fileindex.CompareFlags)
 		n.Flags = slices.Compact(n.Flags)
@@ -89,6 +97,13 @@ func nodeKind(k fileindex.DefKind) NodeKind {
 	default:
 		return NodeModule
 	}
+}
+
+// holdsData reports whether the key names a definition that holds data and
+// no code, as a field or a constant of Go.
+func (b *builder) holdsData(key string) bool {
+	def := b.defs[key]
+	return def != nil && def.HoldsData()
 }
 
 func (b *builder) addNode(n *Node) {

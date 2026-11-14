@@ -89,8 +89,10 @@ func referenceVisitor(p *projection) visitor {
 		}
 		caller := stack[len(stack)-1].key
 		for _, value := range syntax.unlist(values) {
+			// A read of a field, a constant or a variable of data runs
+			// no code and gives the reader no function.
 			target, ok := p.reference(*syntax, caller, value)
-			if !ok {
+			if def := p.defs[target]; !ok || def != nil && def.HoldsData() {
 				continue
 			}
 			at := ast.GetNodePosition(value)

@@ -57,6 +57,11 @@ const (
 	// DefInterface is a TypeScript or Go interface. It has no code, but a
 	// declared type can name it and a class can implement it.
 	DefInterface DefKind = "interface"
+	// DefField is a named field of a Go struct, under the key of its type,
+	// as Node//Data. It holds data and no code.
+	DefField DefKind = "field"
+	// DefConstant is a constant of a Go package. It holds data and no code.
+	DefConstant DefKind = "constant"
 )
 
 type CallKind string
@@ -206,8 +211,8 @@ type Export struct {
 }
 
 // Definition is one module, function, method, class, constructor, module
-// variable or interface. Key is its symbol key, as src/a.py//Parser//parse.
-// Parent is the class key of a method. A JavaScript function that an object
+// variable, interface, field or constant. Key is its symbol key, as
+// src/a.py//Parser//parse. Parent is the class key of a method or a field. A JavaScript function that an object
 // property or a property assignment holds is a method with no parent.
 // Decorators are as written, in source order, and hold the annotations of
 // a Java definition. Values are the per-file targets that a variable
@@ -223,7 +228,8 @@ type Export struct {
 // "" for a result with no named type. Wraps names the Option or the Result
 // that holds the result of a Rust function, and Returns then names the
 // type inside, as Thing for -> Option<Thing>. Static marks a static method
-// of Java.
+// of Java. Data marks a Go variable whose value the source shows is no
+// function, as var n int or var ErrX = errors.New("x").
 type Definition struct {
 	Key        string   `json:"key"`
 	Kind       DefKind  `json:"kind"`
@@ -242,7 +248,15 @@ type Definition struct {
 	Results    []string `json:"results,omitempty"`
 	Wraps      string   `json:"wraps,omitempty"`
 	Static     bool     `json:"static,omitempty"`
+	Data       bool     `json:"data,omitempty"`
 	Flags      []Flag   `json:"flags,omitempty"`
+}
+
+// HoldsData reports whether the definition holds data and no code: a
+// field, a constant or a variable with Data. A read of it runs no code, and
+// a call of it does not compile.
+func (d Definition) HoldsData() bool {
+	return d.Kind == DefField || d.Kind == DefConstant || d.Data
 }
 
 // Class is one class or interface of the file. Bases are as written, in

@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"slices"
 	"unicode"
 	"unicode/utf8"
 
@@ -21,7 +22,7 @@ var goRules = languageRules{
 	abstract:    goMethodElems,
 	signature:   goSignature,
 	exported:    goExported,
-	definitions: goTypes,
+	definitions: goDefinitions,
 	visitors:    []func(p *projection) visitor{referenceVisitor},
 	references: &referenceSyntax{
 		holders: map[string]string{
@@ -61,36 +62,224 @@ func goPackage(p *projection) string {
 	return ""
 }
 
-// goTypes adds each top-level named type of a Go file. An interface is an
-// interface. Any other named type is a class, because it can have methods.
-// The call graph has no node for a type, so the tree gives the types.
-func goTypes(p *projection) {
+// goDefinitions adds the top-level named types of a Go file with the fields
+// of each struct, the constants and the package variables. The call graph
+// has no node for them, so the tree gives them.
+func goDefinitions(p *projection) {
+	var vars []*sitter.Node
 	for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
-		if statement.Type() != "type_declaration" {
-			continue
-		}
-		for _, spec := range ts.NamedChildren(statement) {
-			if spec.Type() != "type_spec" && spec.Type() != "type_alias" {
-				continue
+		switch statement.Type() {
+		case "type_declaration":
+			p.goTypes(statement)
+		case "const_declaration":
+			for _, spec := range ts.NamedChildren(statement) {
+				if spec.Type() == "const_spec" {
+					for _, name := range goNames(spec) {
+						p.goValue(name, spec, fileindex.DefConstant)
+					}
+				}
 			}
-			key := p.local(p.text(spec.ChildByFieldName("name")))
-			if _, defined := p.defs[key]; defined {
-				continue
-			}
-			kind := fileindex.DefClass
-			if t := spec.ChildByFieldName("type"); t != nil && t.Type() == "interface_type" {
-				kind = fileindex.DefInterface
-			}
-			p.defs[key] = &fileindex.Definition{
-				Key:       key,
-				Kind:      kind,
-				Name:      fileindex.Last(key),
-				StartLine: lineOf(spec),
-				EndLine:   int(spec.EndPoint().Row) + 1,
-			}
-			p.addSyntax(key, spec)
+		case "var_declaration":
+			vars = append(vars, goVarSpecs(statement)...)
 		}
 	}
+	for _, spec := range vars {
+		for _, name := range goNames(spec) {
+			p.goValue(name, spec, fileindex.DefVariable)
+		}
+	}
+	// A value can name a variable that the file declares after it.
+	for _, spec := range vars {
+		p.goVariableValues(spec)
+	}
+}
+
+// goTypes adds each named type of a type declaration. An interface is an
+// interface. Any other named type is a class, because it can have methods.
+// A named field of a struct is a field of its class.
+func (p *projection) goTypes(statement *sitter.Node) {
+	for _, spec := range ts.NamedChildren(statement) {
+		if spec.Type() != "type_spec" && spec.Type() != "type_alias" {
+			continue
+		}
+		key := p.local(p.text(spec.ChildByFieldName("name")))
+		if _, defined := p.defs[key]; defined {
+			continue
+		}
+		kind := fileindex.DefClass
+		t := spec.ChildByFieldName("type")
+		if t != nil && t.Type() == "interface_type" {
+			kind = fileindex.DefInterface
+		}
+		p.addGoDefinition(key, kind, spec)
+		p.addSyntax(key, spec)
+		if t == nil || t.Type() != "struct_type" || spec.Type() != "type_spec" {
+			continue
+		}
+		for _, field := range p.goStructFields(t) {
+			for _, name := range childrenByField(field, "name") {
+				p.addGoDefinition(fileindex.Join(key, p.text(name)), fileindex.DefField, field)
+			}
+		}
+	}
+}
+
+// goVarSpecs returns the specs of a var declaration. A declaration with
+// parentheses holds them in a list.
+func goVarSpecs(statement *sitter.Node) []*sitter.Node {
+	var specs []*sitter.Node
+	for _, child := range ts.NamedChildren(statement) {
+		switch child.Type() {
+		case "var_spec":
+			specs = append(specs, child)
+		case "var_spec_list":
+			specs = append(specs, goVarSpecs(child)...)
+		}
+	}
+	return specs
+}
+
+// goNames returns the names that a const or a var spec declares. The commas
+// between them have the name field too.
+func goNames(spec *sitter.Node) []*sitter.Node {
+	return slices.DeleteFunc(childrenByField(spec, "name"), func(n *sitter.Node) bool { return n.Type() != "identifier" })
+}
+
+// goValue adds a constant or a package variable of a spec. The blank name
+// _ declares nothing.
+func (p *projection) goValue(name, spec *sitter.Node, kind fileindex.DefKind) {
+	if p.text(name) == "_" {
+		return
+	}
+	key := p.local(p.text(name))
+	if _, defined := p.defs[key]; !defined {
+		p.addGoDefinition(key, kind, spec)
+	}
+}
+
+func (p *projection) addGoDefinition(key string, kind fileindex.DefKind, node *sitter.Node) {
+	p.defs[key] = &fileindex.Definition{
+		Key:       key,
+		Kind:      kind,
+		Name:      fileindex.Last(key),
+		StartLine: lineOf(node),
+		EndLine:   int(node.EndPoint().Row) + 1,
+	}
+}
+
+// goVariableValues fills each package variable of a spec: the per-file
+// target of a value that names a function or another value, as run for
+// var Run = run, or the Data mark when the source shows that the value is
+// no function. A variable with neither can hold a function that the index
+// does not know, as the value of a function literal or of a call, so a
+// call of it keeps its record.
+func (p *projection) goVariableValues(spec *sitter.Node) {
+	names := goNames(spec)
+	var values []*sitter.Node
+	if list := spec.ChildByFieldName("value"); list != nil {
+		values = ts.NamedChildren(list)
+	}
+	typed := spec.ChildByFieldName("type")
+	for i, name := range names {
+		def := p.defs[p.local(p.text(name))]
+		if def == nil || def.Kind != fileindex.DefVariable || def.StartLine != lineOf(spec) {
+			continue
+		}
+		var value *sitter.Node
+		if len(values) == len(names) {
+			value = values[i]
+		}
+		switch {
+		case typed != nil && p.goDataType(typed):
+			def.Data = true
+		case value == nil:
+		case p.goDataValue(value):
+			def.Data = true
+		default:
+			if target, ok := p.goValueTarget(value); ok {
+				def.Values = []string{target}
+			}
+		}
+	}
+}
+
+// goDataType reports whether a value of the type is no function: a
+// predeclared type, as int or error, or a type literal that is not a
+// function type, as *T or []T. A named type can be a function type, as
+// http.HandlerFunc.
+func (p *projection) goDataType(t *sitter.Node) bool {
+	switch t.Type() {
+	case "type_identifier":
+		return langcode.IsBuiltin(langcode.Go, p.text(t)) && p.defs[p.local(p.text(t))] == nil
+	case "parenthesized_type":
+		return t.NamedChildCount() == 1 && p.goDataType(t.NamedChild(0))
+	case "pointer_type", "slice_type", "array_type", "map_type", "channel_type", "struct_type", "interface_type":
+		return true
+	}
+	return false
+}
+
+// goErrorConstructors are the functions of the standard library that give
+// an error value, by import path and name.
+var goErrorConstructors = map[[2]string]bool{{"errors", "New"}: true, {"fmt", "Errorf"}: true}
+
+// goDataValue reports whether the source shows that a value is no
+// function: a literal, a composite literal, an arithmetic expression, a
+// conversion to a type of data, a call of a builtin, or an error that
+// errors.New or fmt.Errorf gives.
+func (p *projection) goDataValue(value *sitter.Node) bool {
+	switch value.Type() {
+	case "interpreted_string_literal", "raw_string_literal", "int_literal", "float_literal", "imaginary_literal", "rune_literal",
+		"true", "false", "iota", "composite_literal", "binary_expression":
+		return true
+	case "parenthesized_expression":
+		return value.NamedChildCount() == 1 && p.goDataValue(value.NamedChild(0))
+	case "unary_expression":
+		// A dereference of a pointer to a function or a receive from a
+		// channel of functions gives a function.
+		op := p.text(value.ChildByFieldName("operator"))
+		return op != "*" && op != "<-"
+	case "call_expression":
+		function := value.ChildByFieldName("function")
+		if function == nil {
+			return false
+		}
+		switch function.Type() {
+		case "identifier":
+			return langcode.IsBuiltin(langcode.Go, p.text(function)) && p.defs[p.local(p.text(function))] == nil
+		case "selector_expression":
+			operand, field := function.ChildByFieldName("operand"), function.ChildByFieldName("field")
+			return operand != nil && field != nil && goErrorConstructors[[2]string{p.importPath(p.text(operand)), p.text(field)}]
+		}
+		return p.goDataType(function)
+	}
+	return false
+}
+
+// importPath returns the module of the import that binds the alias.
+func (p *projection) importPath(alias string) string {
+	for _, imp := range p.ix.Imports {
+		if imp.Alias == alias {
+			return imp.Module
+		}
+	}
+	return ""
+}
+
+// goValueTarget returns the per-file target of a value that names a
+// function or another value: a definition of the file, a name of the
+// package that the link step resolves, or a member of an import.
+func (p *projection) goValueTarget(value *sitter.Node) (string, bool) {
+	switch value.Type() {
+	case "identifier":
+		if key := p.local(p.text(value)); p.defs[key] != nil {
+			return key, true
+		}
+		return p.text(value), true
+	case "selector_expression":
+		return p.reference(*p.rules().references, p.cg.FileName, value)
+	}
+	return "", false
 }
 
 // goBases returns the types that a Go type embeds, and the type that an

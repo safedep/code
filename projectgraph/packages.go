@@ -429,7 +429,11 @@ func (b *builder) linkProvision(key string, o origin, pv provision) {
 	}
 	res := b.walk(pv.module, names)
 	if res.fail != nil {
-		fail(res.fail.reason)
+		fail(b.provisionReason(o.lang, res))
+		return
+	}
+	// A field or a constant holds no code, so a read of it goes nowhere.
+	if b.holdsData(res.key) {
 		return
 	}
 	n := b.g.Nodes[res.key]
@@ -437,6 +441,23 @@ func (b *builder) linkProvision(key string, o origin, pv provision) {
 		return
 	}
 	b.link(o.lang, key, res.key, Site{Path: cmp.Or(n.Path, pv.sp.unit), Line: n.Line}, EdgePackage, r)
+}
+
+// provisionReason returns the reason of the record of a walk into a unit
+// that fails. A method that an interface of the unit declares, as Close of
+// a struct that embeds the interface Conn, has its code in the type that
+// the interface value holds. The external key gets no edge to such a type,
+// so its record is the one of a call on a value of an interface with no
+// implementation.
+func (b *builder) provisionReason(lang langcode.Code, res resolution) fileindex.UnresolvedReason {
+	reason, abstract := res.fail.reason, profileOf(lang).abstractReceiver
+	if reason != fileindex.UnresolvedNoDefinition || abstract == "" || res.class == "" {
+		return reason
+	}
+	if _, ok := b.declaringInterface(res.class, res.fail.name); ok {
+		return abstract
+	}
+	return reason
 }
 
 // addSurfaces links an external node to each exported symbol of each unit,

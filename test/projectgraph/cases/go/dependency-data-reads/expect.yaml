@@ -1,0 +1,287 @@
+source: safedep:hand
+description: >-
+  The unit markup has a struct Node with the field Data, a constant KindText, a variable ErrNoRows that
+  errors.New gives, a variable Handler that holds a function literal, a variable Run that holds the function
+  run, a struct Writer that embeds the struct Base, a struct Client that embeds the interface Conn, and in
+  netctx the alias Context of context.Context of the standard library. A read of n.Data, KindText or ErrNoRows
+  runs no code, so the walk into the unit gives no package edge and no record. The reference edges of main end
+  at the external keys. A call of Run gets a package edge to run. A call of Handler keeps an unknown-receiver
+  record, in main and in Render, because the index does not know the function that the variable holds.
+  Writer.Flush is the promoted method Base.Flush. Client.Close is the method Close that the embedded interface
+  Conn declares, and netctx.Context.Done is the method Done of the interface context.Context of the unit of
+  the standard library. A call of such a method runs the code of the type that the interface value holds, so
+  each keeps an interface-receiver record, and a target that only that code reaches is uncertain, not found.
+units:
+  gomod/example.com/markup@v1.0.0: go:example.com/markup@v1.0.0
+  goroot/src: go:std@go1.25.1
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+exact_edges: true
+edges:
+  - from: errors//New
+    to: go:std@go1.25.1//errors/errors.go//New
+    kind: package
+    confidence: high
+    site: go:std@go1.25.1//errors/errors.go:7
+  - from: example.com//markup//Dial
+    to: go:example.com/markup@v1.0.0//client.go//Dial
+    kind: package
+    confidence: high
+    site: go:example.com/markup@v1.0.0//client.go:24
+  - from: example.com//markup//NewWriter
+    to: go:example.com/markup@v1.0.0//client.go//NewWriter
+    kind: package
+    confidence: high
+    site: go:example.com/markup@v1.0.0//client.go:39
+  - from: example.com//markup//Print
+    to: go:example.com/markup@v1.0.0//node.go//Print
+    kind: package
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go:31
+  - from: example.com//markup//Render
+    to: go:example.com/markup@v1.0.0//node.go//Render
+    kind: package
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go:35
+  - from: example.com//markup//Run
+    to: go:example.com/markup@v1.0.0//node.go//run
+    kind: package
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go:27
+  - from: example.com//markup//Writer//Flush
+    to: go:example.com/markup@v1.0.0//client.go//Base//Flush
+    kind: package
+    confidence: high
+    site: go:example.com/markup@v1.0.0//client.go:30
+  - from: example.com//markup//netctx//Context//Done
+    to: context//Context//Done
+    kind: package
+    confidence: high
+    site: go:example.com/markup@v1.0.0
+  - from: go:example.com/markup@v1.0.0//client.go//Base//Flush
+    to: os//exec//Command
+    kind: direct
+    confidence: high
+    site: go:example.com/markup@v1.0.0//client.go:31
+  - from: go:example.com/markup@v1.0.0//client.go//conn//Close
+    to: os//Remove
+    kind: direct
+    confidence: high
+    site: go:example.com/markup@v1.0.0//client.go:15
+  - from: go:example.com/markup@v1.0.0//node.go
+    to: errors//New
+    kind: direct
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go:19
+  - from: go:example.com/markup@v1.0.0//node.go
+    to: go:example.com/markup@v1.0.0//node.go//run
+    kind: reference
+    confidence: low
+    site: go:example.com/markup@v1.0.0//node.go:25
+  - from: go:example.com/markup@v1.0.0//node.go
+    to: os//exec//Command
+    kind: direct
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go:22
+  - from: go:example.com/markup@v1.0.0//node.go//Print
+    to: os//exec//Command
+    kind: direct
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go:32
+  - from: go:example.com/markup@v1.0.0//node.go//Render
+    to: go:example.com/markup@v1.0.0//node.go//Print
+    kind: direct
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go:36
+  - from: go:example.com/markup@v1.0.0//node.go//Render
+    to: go:example.com/markup@v1.0.0//node.go//Print
+    kind: direct
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go:37
+  - from: go:example.com/markup@v1.0.0//node.go//Render
+    to: go:example.com/markup@v1.0.0//node.go//Print
+    kind: direct
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go:38
+  - from: go:example.com/markup@v1.0.0//node.go//Render
+    to: go:example.com/markup@v1.0.0//node.go//run
+    kind: direct
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go:40
+  - from: go:example.com/markup@v1.0.0//node.go//run
+    to: os//exec//Command
+    kind: direct
+    confidence: high
+    site: go:example.com/markup@v1.0.0//node.go:28
+  - from: go:std@go1.25.1//context/context.go//emptyCtx//Done
+    to: go:std@go1.25.1//os/exec/exec.go//LookPath
+    kind: direct
+    confidence: high
+    site: go:std@go1.25.1//context/context.go:12
+  - from: main.go
+    to: go:example.com/markup@v1.0.0//node.go
+    kind: import
+    confidence: high
+    site: main.go:4
+  - from: main.go//call
+    to: example.com//markup//Handler
+    kind: direct
+    confidence: high
+    site: main.go:23
+  - from: main.go//call
+    to: example.com//markup//Run
+    kind: direct
+    confidence: high
+    site: main.go:24
+  - from: main.go//main
+    to: main.go//call
+    kind: direct
+    confidence: high
+    site: main.go:10
+  - from: main.go//main
+    to: main.go//promoted
+    kind: direct
+    confidence: high
+    site: main.go:11
+  - from: main.go//main
+    to: main.go//read
+    kind: direct
+    confidence: high
+    site: main.go:9
+  - from: main.go//main
+    to: main.go//wait
+    kind: direct
+    confidence: high
+    site: main.go:12
+  - from: main.go//promoted
+    to: example.com//markup//Client//Close
+    kind: direct
+    confidence: high
+    site: main.go:31
+  - from: main.go//promoted
+    to: example.com//markup//Dial
+    kind: direct
+    confidence: high
+    site: main.go:30
+  - from: main.go//promoted
+    to: example.com//markup//NewWriter
+    kind: direct
+    confidence: high
+    site: main.go:28
+  - from: main.go//promoted
+    to: example.com//markup//Writer//Flush
+    kind: direct
+    confidence: high
+    site: main.go:29
+  - from: main.go//read
+    to: example.com//markup//ErrNoRows
+    kind: reference
+    confidence: low
+    site: main.go:17
+  - from: main.go//read
+    to: example.com//markup//KindText
+    kind: reference
+    confidence: low
+    site: main.go:18
+  - from: main.go//read
+    to: example.com//markup//Node//Data
+    kind: reference
+    confidence: low
+    site: main.go:16
+  - from: main.go//read
+    to: example.com//markup//Print
+    kind: direct
+    confidence: high
+    site: main.go:16
+  - from: main.go//read
+    to: example.com//markup//Print
+    kind: direct
+    confidence: high
+    site: main.go:17
+  - from: main.go//read
+    to: example.com//markup//Print
+    kind: direct
+    confidence: high
+    site: main.go:18
+  - from: main.go//read
+    to: example.com//markup//Render
+    kind: direct
+    confidence: high
+    site: main.go:19
+  - from: main.go//wait
+    to: example.com//markup//netctx//Context//Done
+    kind: direct
+    confidence: high
+    site: main.go:35
+  - from: os//Remove
+    to: go:std@go1.25.1//os/file.go//Remove
+    kind: package
+    confidence: high
+    site: go:std@go1.25.1//os/file.go:3
+  - from: os//exec//Command
+    to: go:std@go1.25.1//os/exec/exec.go//Command
+    kind: package
+    confidence: high
+    site: go:std@go1.25.1//os/exec/exec.go:5
+unresolved:
+  - caller: example.com//markup//Client//Close
+    site: go:example.com/markup@v1.0.0
+    reason: interface-receiver
+  - caller: example.com//markup//Handler
+    site: go:example.com/markup@v1.0.0
+    reason: unknown-receiver
+  - caller: go:example.com/markup@v1.0.0//node.go//Render
+    site: go:example.com/markup@v1.0.0//node.go:39
+    reason: unknown-receiver
+    method: Handler
+  - caller: context//Context//Done
+    site: go:std@go1.25.1
+    reason: interface-receiver
+results:
+  - target: example.com//markup//Writer//Flush
+    status: found
+    path:
+      - key: main.go//main
+      - key: main.go//promoted
+        site: main.go:11
+        kind: direct
+        confidence: high
+      - key: example.com//markup//Writer//Flush
+        site: main.go:29
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//promoted
+        site: main.go:29
+        reached: true
+  - target: os//exec//LookPath
+    status: uncertain
+    call_sites:
+      - caller: go:std@go1.25.1//context/context.go//emptyCtx//Done
+        site: go:std@go1.25.1//context/context.go:12
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: go:example.com/markup@v1.0.0
+      - kind: unresolved-call
+        site: go:example.com/markup@v1.0.0
+      - kind: unresolved-call
+        site: go:std@go1.25.1
+  - target: os//Remove
+    status: uncertain
+    call_sites:
+      - caller: go:example.com/markup@v1.0.0//client.go//conn//Close
+        site: go:example.com/markup@v1.0.0//client.go:15
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: go:example.com/markup@v1.0.0
+      - kind: unresolved-call
+        site: go:example.com/markup@v1.0.0
+      - kind: unresolved-call
+        site: go:std@go1.25.1

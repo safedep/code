@@ -72,7 +72,7 @@ func (b *builder) markRoots(ctx context.Context) error {
 		}
 		b.addRoot(ix.Path, RootLibrarySurface, string(RootLibrarySurface))
 		for _, def := range ix.Definitions {
-			if def.Exported && def.Key != ix.Path && def.Kind != fileindex.DefVariable && def.Kind != fileindex.DefInterface {
+			if def.Exported && def.Key != ix.Path && def.Kind != fileindex.DefVariable && def.Kind != fileindex.DefInterface && !def.HoldsData() {
 				b.addRoot(def.Key, RootLibrarySurface, string(RootLibrarySurface))
 			}
 		}
@@ -152,7 +152,7 @@ func (b *builder) exportKeys(p string, seen map[string]bool) []string {
 	var keys []string
 	if sc.profile.definitionExports {
 		for _, def := range sc.ix.Definitions {
-			if def.Exported && def.Key != p && def.Kind != fileindex.DefVariable && def.Kind != fileindex.DefInterface {
+			if def.Exported && def.Key != p && def.Kind != fileindex.DefVariable && def.Kind != fileindex.DefInterface && !def.HoldsData() {
 				keys = append(keys, def.Key)
 			}
 		}

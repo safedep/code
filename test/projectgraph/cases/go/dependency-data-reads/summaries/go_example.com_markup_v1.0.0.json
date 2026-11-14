@@ -1,0 +1,150 @@
+{
+  "version": "2",
+  "index_version": "15",
+  "link_version": "17",
+  "unit": "go:example.com/markup@v1.0.0",
+  "symbols": [
+    {
+      "key": "example.com//markup//Attribute",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//node.go//Attribute"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "example.com//markup//Base",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//client.go//Base"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "example.com//markup//Base//Flush",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//client.go//Base//Flush"
+      ],
+      "reaches": [
+        "os//exec//Command"
+      ]
+    },
+    {
+      "key": "example.com//markup//Client",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//client.go//Client"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "example.com//markup//Conn",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//client.go//Conn"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "example.com//markup//Dial",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//client.go//Dial"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "example.com//markup//Handler",
+      "definitions": [],
+      "reaches": [],
+      "uncertainties": [
+        0
+      ]
+    },
+    {
+      "key": "example.com//markup//NewWriter",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//client.go//NewWriter"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "example.com//markup//Node",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//node.go//Node"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "example.com//markup//Print",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//node.go//Print"
+      ],
+      "reaches": [
+        "os//exec//Command"
+      ]
+    },
+    {
+      "key": "example.com//markup//Render",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//node.go//Render"
+      ],
+      "reaches": [
+        "os//exec//Command"
+      ],
+      "uncertainties": [
+        1
+      ]
+    },
+    {
+      "key": "example.com//markup//Run",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//node.go//run"
+      ],
+      "reaches": [
+        "os//exec//Command"
+      ]
+    },
+    {
+      "key": "example.com//markup//Writer",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//client.go//Writer"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "example.com//markup//netctx//Context",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//netctx/ctx.go//Context"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": [
+    "errors//New",
+    "os//Remove",
+    "os//exec//Command"
+  ],
+  "uncertainties": [
+    {
+      "kind": "unresolved-call",
+      "key": "example.com//markup//Handler",
+      "site": {
+        "path": "go:example.com/markup@v1.0.0"
+      },
+      "text": "example.com//markup//Handler (unknown-receiver)",
+      "unit": "go:example.com/markup@v1.0.0",
+      "targets": [
+        "errors//New",
+        "os//Remove",
+        "os//exec//Command"
+      ]
+    },
+    {
+      "kind": "unresolved-call",
+      "key": "go:example.com/markup@v1.0.0//node.go//Render",
+      "site": {
+        "path": "go:example.com/markup@v1.0.0//node.go",
+        "line": 39,
+        "column": 2
+      },
+      "text": "Handler (unknown-receiver)",
+      "method": "Handler"
+    }
+  ]
+}
