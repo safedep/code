@@ -1,0 +1,62 @@
+{
+  "version": "3",
+  "index_version": "16",
+  "link_version": "18",
+  "unit": "npm:plug@1.0.0",
+  "symbols": [
+    {
+      "key": "plug//Plug",
+      "definitions": [
+        "npm:plug@1.0.0//index.js//Plug"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "plug//Plug//run",
+      "definitions": [
+        "npm:plug@1.0.0//index.js//Plug//run"
+      ],
+      "reaches": [
+        "fs//rmSync"
+      ]
+    },
+    {
+      "key": "plug//Plug//zap",
+      "definitions": [
+        "npm:plug@1.0.0//index.js//Plug//zap"
+      ],
+      "reaches": [
+        "fs//rmdirSync"
+      ]
+    },
+    {
+      "key": "plug//index//Plug",
+      "definitions": [
+        "npm:plug@1.0.0//index.js//Plug"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "plug//index//Plug//run",
+      "definitions": [
+        "npm:plug@1.0.0//index.js//Plug//run"
+      ],
+      "reaches": [
+        "fs//rmSync"
+      ]
+    },
+    {
+      "key": "plug//index//Plug//zap",
+      "definitions": [
+        "npm:plug@1.0.0//index.js//Plug//zap"
+      ],
+      "reaches": [
+        "fs//rmdirSync"
+      ]
+    }
+  ],
+  "targets": [
+    "fs//rmSync",
+    "fs//rmdirSync"
+  ]
+}

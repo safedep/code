@@ -117,6 +117,12 @@ var goReceiverRows = []receiverRow{
 		want:   "uncertain/no-dependency-source",
 		noDeps: true,
 	},
+	{
+		name:   "method of a first-party type on new",
+		source: "type thing struct{}\n\nfunc (t *thing) vuln() {\n\tdep.NewRunner()\n}\n\nfunc run() {\n\tnew(thing).vuln()\n}",
+		target: "example.com//dep//NewRunner",
+		want:   "found/low",
+	},
 }
 
 var rustReceiverRows = []receiverRow{
@@ -252,6 +258,12 @@ var rustReceiverRows = []receiverRow{
 		target: "dep//Job//start",
 		want:   "uncertain/trait-receiver",
 	},
+	{
+		name:   "std function that returns its argument",
+		source: "fn run(t: Thing<u8>) {\n    std::convert::identity(t).inspect();\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
 }
 
 // pythonReceiverRows are the forms of a Python receiver. A type hint is
@@ -365,6 +377,18 @@ var pythonReceiverRows = []receiverRow{
 		target: "dep//Thing//do",
 		want:   "uncertain/no-dependency-source",
 		noDeps: true,
+	},
+	{
+		name:   "builtin that returns an argument",
+		source: "def run(t):\n    max(t, t).do()",
+		target: "dep//Thing//do",
+		want:   "uncertain/no-dependency-source",
+	},
+	{
+		name:   "builtin that returns an element of an argument",
+		source: "def run(ts):\n    next(iter(ts)).do()",
+		target: "dep//Thing//do",
+		want:   "uncertain/no-dependency-source",
 	},
 }
 

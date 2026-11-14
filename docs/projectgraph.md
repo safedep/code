@@ -207,10 +207,11 @@ A call on the result of another call, as `html.NewTokenizer(r).Next()`,
 needs the type of that result. When the link step does not know it, the
 site is a record with the method name, so a target of that method is
 `uncertain` and not `no-such-target`. A call on the result of a builtin of
-the language, as `Promise.resolve(x).then(f)`, makes no record. The code
-of the runtime calls the code of the project or of a dependency only
-through a value that the call passes, as `f`, and a `reference` edge holds
-that value.
+the language, as `Promise.resolve(x).then(f)`, is a record too. Some
+builtins give back a value that the call passes, or an element of it, as
+`new(thing)` in Go, `max(t, t)` in Python or `Object.assign(p, o)` in
+JavaScript. The method then runs on a value of the project or of a
+dependency.
 
 ### Result types
 
