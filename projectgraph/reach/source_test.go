@@ -222,17 +222,20 @@ func TestReachFromASourceEntersItsLoadGroup(t *testing.T) {
 }
 
 // TestReachScopesAValueCallOnlyFromTheRoots checks that a call of a
-// function value concerns no target in a search from the roots that the
-// rules marked. A search with a source and the sets of ExploreAll may not
-// reach the code that stores the value, so there it concerns every target.
+// function value concerns no target, and an ambiguous call only what its
+// method name concerns, in a search from the roots that the rules marked.
+// A search with a source and the sets of ExploreAll may not reach the code
+// that stores the value, so there each record concerns every target.
 func TestReachScopesAValueCallOnlyFromTheRoots(t *testing.T) {
 	const spec = `
 root app/a.go//main
 edge app/a.go//main app/a.go//serve direct 3
+edge app/a.go//H//Handle os//Getwd direct 12
 edge app/a.go//dead os//Remove direct 16
 `
 	for _, tt := range []struct{ name, record string }{
 		{name: "a call of a function value", record: "unresolved app/a.go//serve 8 function-value"},
+		{name: "an ambiguous call of a method name", record: "unresolved app/a.go//serve 8 ambiguous Handle"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			g := graphOf(t, spec+tt.record)

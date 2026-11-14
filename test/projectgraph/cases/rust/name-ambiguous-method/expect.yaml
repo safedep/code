@@ -1,0 +1,47 @@
+source: safedep:hand
+description: >-
+  dispatch calls handle on an element of a vector of a generic type, which the link step does not know. 25
+  types define handle. That is over the cap of 20, so the site gets no name edge and is ambiguous. A Rust
+  call on a receiver runs only a method of the name, because a field that holds a function needs the form
+  (h.f)(). So the site keeps the method name handle. H0.handle calls std::env::var, so std::env::var is
+  uncertain. H1.handle calls decode on a trait object of Codec, which no type of the graph implements, so
+  that site is a record with the method decode. The ambiguous site concerns what the code of each candidate
+  can run, through its records too, so the Engine::decode of base64 is uncertain and not no-such-target.
+  std::fs::remove_file, which only the uncalled cleanup calls, is not found.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+unresolved:
+  - caller: src/handlers.rs//H1//handle
+    site: src/handlers.rs:19
+    reason: trait-receiver
+    method: decode
+  - caller: src/main.rs//dispatch
+    site: src/main.rs:9
+    reason: ambiguous
+    method: handle
+results:
+  - target: std//env//var
+    status: uncertain
+    call_sites:
+      - caller: src/handlers.rs//H0//handle
+        site: src/handlers.rs:5
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/main.rs:9
+  - target: base64//engine//Engine//decode
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: src/main.rs:9
+  - target: std//fs//remove_file
+    status: not-found
+    call_sites:
+      - caller: src/main.rs//cleanup
+        site: src/main.rs:4
+        reached: false

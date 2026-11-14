@@ -226,6 +226,10 @@ type profile struct {
 	// concerns no target in a search from the roots. A reference to a method that the link step cannot
 	// name, as h.Handle on an interface, gets a record with the method name.
 	functionValues bool
+	// receiverMethods marks a language where a call on a receiver, as
+	// x.m(), runs only a method of the name m, as Rust. A Rust field that
+	// holds a function needs another form, as (x.f)().
+	receiverMethods bool
 	// reflection names the package of the language that can run any
 	// function by a value or by a name, and its methods that do it, as
 	// Call of reflect.Value in Go.
@@ -259,6 +263,18 @@ func profileOf(lang langcode.Code) *profile {
 		return p
 	}
 	return noProfile
+}
+
+// keepsAmbiguousMethod reports whether an ambiguous site with the receiver
+// keeps its method name, so the reach query scopes it by the name. A call
+// on a receiver of a language with receiverMethods runs only a method of
+// the name. A call of a language with functionValues runs a method of the
+// name or a function value, and a reference edge leads to each function
+// value. In another language a call of a name can run code that no
+// definition of the name holds, as a Python class attribute that holds an
+// object with __call__, or a Rust parameter that holds a function.
+func (p *profile) keepsAmbiguousMethod(receiver string) bool {
+	return p.functionValues || p.receiverMethods && receiver != ""
 }
 
 func isInstanceKeyword(lang langcode.Code, name string) bool {

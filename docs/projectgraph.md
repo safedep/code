@@ -235,17 +235,41 @@ reason.
 
 A site with more than 20 candidates of its method name, as `render` in a
 Django project, is `ambiguous`. The site gets no edge, so the search cannot
-follow what the candidates call. The site keeps its method name, because
-the call can run only a method of that name. A record with a method name
-concerns the targets with that last segment and the targets that a
-definition of the name reaches, so it concerns what each candidate
-reaches. A candidate can also run code that no edge leads to, through an
-unresolved site of its own. So the record also concerns what each
-uncertainty of the code that a candidate reaches concerns, as
-[The honesty rule](#the-honesty-rule) says. In the case
-`python/name-ambiguous-record`, `H0.handle` calls `load` on a field whose
-value the index does not know, and `yaml.load` is `uncertain` and not
-`no-such-target`.
+follow what the candidates call. A record with a method name concerns the
+targets with that last segment and the targets that a definition of the
+name reaches, so it concerns what each candidate reaches. A candidate can
+also run code that no edge leads to, through an unresolved site of its
+own. So the record also concerns what each uncertainty of the code that a
+candidate reaches concerns, as [The honesty rule](#the-honesty-rule) says.
+
+An ambiguous site keeps its method name only where a call of the name can
+run nothing but a method of the name or a function value that a
+`reference` edge leads to. The profile of the language says where.
+
+- Go. A call runs a method of the name or a function value, as a field of
+  a function type. A function value has a `reference` edge from the code
+  that stores it, as [A call of a function value](#a-call-of-a-function-value)
+  argues. So the site keeps its name, and the search from the roots
+  reaches the stored function through that edge. A search with a source
+  and a summary may not reach the code that stores the value, so there the
+  site concerns every target. The case `go/name-ambiguous` shows each
+  answer.
+- Rust. A call on a receiver, as `h.handle(s)`, runs only a method of the
+  name, because a field that holds a function needs the form `(h.f)(s)`.
+  So the site keeps its name, as in the case `rust/name-ambiguous-method`.
+  A call with no receiver, as `handle(s)` of a parameter, can run any
+  function value, and the Rust index does not record each one. So that
+  site concerns every target, as in the case `rust/name-ambiguous-param`.
+  The reach query does not read the language of a site, so a search with a
+  source and a summary count a Rust site for every target too.
+- Python, JavaScript, TypeScript, Ruby and PHP. A call of a name can run
+  code that no definition of the name holds: an object with `__call__` in a
+  class attribute, a value that `__getattr__` gives, a function that a
+  module binds to the name by an import, or code of a module that no unit
+  gives. So an ambiguous site keeps no method name and concerns every
+  target. The cases `python/name-ambiguous-callable`,
+  `python/name-ambiguous-getattr`, `python/name-ambiguous-module` and
+  `python/name-ambiguous-nounit` show each form.
 
 A call on the result of another call, as `html.NewTokenizer(r).Next()`,
 needs the type of that result. When the link step does not know it, the
@@ -559,8 +583,8 @@ A search from a source also enters the load code of each package whose
 code it reaches, because the program runs that code before the source. The
 caller of a source can also run other code before it that no root
 reaches, and that code can store a function value. So in a search with a
-source, in either mode, a call of a function value concerns every
-target. See
+source, in either mode, a call of a function value and an ambiguous call
+concern every target. See
 [A call of a function value](#a-call-of-a-function-value).
 
 A source must name a first-party node of the graph. A key of no node, an
@@ -706,7 +730,7 @@ the scope also concerns what each of them concerns, as the search of a
 query counts them, and the scope of a method name, a unit or a callback
 that one of them names goes on into that code too. Without that, a target
 that only such code reaches reads as `not-found`. The cases
-`python/name-ambiguous-record` for a method name,
+`rust/name-ambiguous-method` for a method name,
 `python/dependency-dark-unit-record` for a unit and
 `go/stdlib-callback-record` for a callback show it. A summary keeps the
 same scope: `reach.Scoped` holds the method names and the import prefixes
@@ -818,16 +842,18 @@ that only `main` imports and that fills a registry, or a `setup` that
 `main` calls before `serve`. With `SourcesAndRoots` the source is an entry
 that the rules missed, so its caller can be code that the rules missed
 too. So in a search with a source, a `function-value` record concerns
-every target, as a `computed-name` record does. The case
-`go/source-function-value` holds both forms of the store.
+every target, as a `computed-name` record does. So does an ambiguous site,
+because a Go call of a name can run a function value in a field. The case
+`go/source-function-value` holds both forms of the store, and
+`go/name-ambiguous` holds a field.
 
 A summary does not have the argument either. A summary is a search from
 one symbol of a unit, and a search of any kind reads it: a search from the
 roots or from a source, of a project that the summary does not see. The
 value can come from that project, from another unit, or from a package of
 the unit that the symbol does not import, as a registry that the init of
-another package fills. So a summary counts a `function-value` record for
-every target. `summarytest` checks a summary against
+another package fills. So a summary counts a `function-value` record and
+an ambiguous site for every target. `summarytest` checks a summary against
 a reach query of the unit graph from the symbol as a root of kind `query`,
 which has the same rule.
 
@@ -868,7 +894,8 @@ name, as `f` or `hook`, which concerns what a definition of the name
 reaches. In a search from the roots of a Go program, the `reference` edge
 of the stored function covers the call. In a search with a source, and in
 Rust, a function of another name that no path reaches can run. So such a
-call can read as `not-found`.
+call can read as `not-found`. Only an ambiguous site of the form concerns
+every target.
 
 The rule does not apply to Rust. The Rust index records a function that an
 argument, a `let`, an assignment, a `return`, a field initializer or an

@@ -176,7 +176,10 @@ func (s *sources) at(key string, n *projectgraph.Node) []Uncertainty {
 			u.Unit = r.Unit
 		case r.ImportPrefix != "":
 			u.ImportPrefix = r.ImportPrefix
-		case r.Method != "" && !projectgraph.ReachesAny(r.Reason):
+		case r.Method != "" && !projectgraph.ReachesAny(r.Reason) && (s.valueEdges || r.Reason != fileindex.UnresolvedAmbiguous):
+			// An ambiguous site that keeps its method name can call a
+			// function value, as a Go field of a function type, so only
+			// a search with valueEdges scopes it by the name.
 			u.Method = r.Method
 		}
 		out = append(out, u)
