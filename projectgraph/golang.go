@@ -30,6 +30,21 @@ var goProfile = profile{
 	scopeWildcards:     true,
 	mainLoadsPackage:   true,
 	importsBindAlias:   true,
+	functionValues:     true,
+	reflective:         goReflective,
+}
+
+// goReflectMethods are the methods of package reflect that call a function
+// value or give a method by its name or its index. Each one can run any
+// function of the program.
+var goReflectMethods = map[string]bool{"Call": true, "CallSlice": true, "Method": true, "MethodByName": true}
+
+// goReflective reports whether a call or a reference of the method in a Go
+// file that imports reflect can run a function that reflect gives. The
+// link step does not always know that the receiver is a reflect.Value, as
+// when no unit gives the standard library. So any receiver counts.
+func goReflective(ix *fileindex.Index, method string) bool {
+	return goReflectMethods[method] && slices.ContainsFunc(ix.Imports, func(imp fileindex.Import) bool { return imp.Module == "reflect" })
 }
 
 // goProvide returns the package unit of a Go module that an import path

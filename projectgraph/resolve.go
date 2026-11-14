@@ -338,9 +338,13 @@ func (b *builder) linkReferences(ix *fileindex.Index) {
 		from := b.runner(ref.Caller)
 		site := Site{Path: ix.Path, Line: ref.Line, Column: ref.Column}
 		for _, r := range b.resolveTargets(sc, ref.Caller, ref.Targets) {
+			if r.fail != nil || r.unbound {
+				b.linkUnknownValue(sc, ref, from, site, r)
+				continue
+			}
 			// A Go value of a named type is no function, so passing it
 			// on calls nothing. Nor is a field or a constant.
-			if r.fail != nil || r.unbound || sc.profile.typeConversions && b.isType(r.key) || b.holdsData(r.key) {
+			if sc.profile.typeConversions && b.isType(r.key) || b.holdsData(r.key) {
 				continue
 			}
 			b.link(ix.Language, from, r.key, site, EdgeReference, ruleReference)

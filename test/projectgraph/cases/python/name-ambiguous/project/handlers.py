@@ -1,3 +1,4 @@
+import os
 import yaml
 
 
@@ -125,3 +126,7 @@ class H23:
 class H24:
     def handle(self, text):
         return text
+
+
+def cleanup(path):
+    os.remove(path)

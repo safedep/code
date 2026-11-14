@@ -1,0 +1,54 @@
+{
+  "version": "2",
+  "index_version": "15",
+  "link_version": "17",
+  "unit": "go:github.com/acme/srv@v1.0.0",
+  "symbols": [
+    {
+      "key": "github.com//acme//srv//Handler",
+      "definitions": [
+        "go:github.com/acme/srv@v1.0.0//srv.go//Handler"
+      ],
+      "reaches": [],
+      "uncertainties": [
+        0
+      ]
+    },
+    {
+      "key": "github.com//acme//srv//Serve",
+      "definitions": [
+        "go:github.com/acme/srv@v1.0.0//srv.go//Serve"
+      ],
+      "reaches": [],
+      "uncertainties": [
+        0,
+        1
+      ]
+    }
+  ],
+  "targets": [],
+  "uncertainties": [
+    {
+      "kind": "budget",
+      "key": "go:github.com/acme/srv@v1.0.0//big.go",
+      "site": {
+        "path": "go:github.com/acme/srv@v1.0.0//big.go"
+      },
+      "text": "the file is failed"
+    },
+    {
+      "kind": "unresolved-call",
+      "key": "go:github.com/acme/srv@v1.0.0//srv.go//Serve",
+      "site": {
+        "path": "go:github.com/acme/srv@v1.0.0//srv.go",
+        "line": 8,
+        "column": 2
+      },
+      "text": "serve (unknown-receiver)",
+      "method": "serve"
+    }
+  ],
+  "incomplete": [
+    "go:github.com/acme/srv@v1.0.0//big.go"
+  ]
+}

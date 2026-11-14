@@ -134,7 +134,11 @@ func (b *builder) moduleFiles(mod string) []string {
 
 // runsAtLoad reports whether the module top level of a file runs code: an
 // init function, a call, a reference, an unresolved site, a flag, or an
-// import of a package of the project that runs code at load.
+// import of a package that runs code at load. The package can be in the
+// project or in a unit of dependency code. A Go program loads each package
+// that it imports, also through a package that runs no code of its own, and
+// the reference edges of a package-level value start at the module top
+// level. A call of a function value finds its function only through them.
 func (b *builder) runsAtLoad(ix *fileindex.Index) bool {
 	if runs, ok := b.loads[ix.Path]; ok {
 		return runs
@@ -148,7 +152,8 @@ func (b *builder) runsAtLoad(ix *fileindex.Index) bool {
 		slices.ContainsFunc(ix.Unresolved, func(u fileindex.Unresolved) bool { return atTop(u.Caller) }) ||
 		len(b.g.Nodes[ix.Path].Flags) > 0 ||
 		slices.ContainsFunc(ix.Imports, func(imp fileindex.Import) bool {
-			return slices.ContainsFunc(b.resolveModules(ix, imp.Module, formOf(imp)), func(m moduleRef) bool { return len(b.moduleFiles(m.key)) > 0 })
+			mods, _ := b.importedModules(ix, imp.Module, formOf(imp))
+			return slices.ContainsFunc(mods, func(m moduleRef) bool { return len(b.moduleFiles(m.key)) > 0 })
 		})
 	b.loads[ix.Path] = runs
 	return runs

@@ -103,6 +103,11 @@ const (
 	// from a package with no code in the graph, as the result of a
 	// function of a module that no unit gives.
 	UnresolvedNoDependencySource UnresolvedReason = "no-dependency-source"
+	// UnresolvedFunctionValue is a call of a function value, as f(x)(y) or
+	// handlers[i](c), in a language whose function values the link step
+	// joins to the code that holds them. The link step gives the reason
+	// in place of computed-name, and the record names no target.
+	UnresolvedFunctionValue UnresolvedReason = "function-value"
 )
 
 type FlagKind string

@@ -1,5 +1,9 @@
 source: safedep:hand
-description: dispatch calls handle on the parameter handler, whose value the index does not know. 25 object properties hold a function named handle. That is over the cap of 20, so the site gets no field edge and is ambiguous. An ambiguous site can call any target, so the reach result for yaml.load is uncertain.
+description: >-
+  dispatch calls handle on the parameter handler, whose value the index does not know. 25 object properties
+  hold a function named handle. That is over the cap of 20, so the site gets no field edge and is ambiguous. The
+  site keeps the method name handle, and h0.handle calls yaml.load, so the reach result for yaml.load is
+  uncertain.
 roots:
   - key: src/main.js
     kind: manifest
@@ -17,6 +21,7 @@ unresolved:
   - caller: src/main.js//dispatch
     site: src/main.js:4
     reason: ambiguous
+    method: handle
 results:
   - target: js-yaml//load
     status: uncertain

@@ -1,0 +1,20 @@
+{
+  "version": "2",
+  "index_version": "15",
+  "link_version": "17",
+  "unit": "go:github.com/acme/a@v1.0.0",
+  "symbols": [
+    {
+      "key": "github.com//acme//a//F",
+      "definitions": [
+        "go:github.com/acme/a@v1.0.0//a.go//F"
+      ],
+      "reaches": [
+        "github.com//acme//b//Get"
+      ]
+    }
+  ],
+  "targets": [
+    "github.com//acme//b//Get"
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "version": "2",
+  "index_version": "15",
+  "link_version": "17",
+  "unit": "go:github.com/acme/b@v1.0.0",
+  "symbols": [
+    {
+      "key": "github.com//acme//b//Get",
+      "definitions": [
+        "go:github.com/acme/b@v1.0.0//b.go//Get"
+      ],
+      "reaches": [
+        "os//Remove",
+        "os//exec//Command"
+      ]
+    }
+  ],
+  "targets": [
+    "os//Getwd",
+    "os//Remove",
+    "os//exec//Command"
+  ]
+}

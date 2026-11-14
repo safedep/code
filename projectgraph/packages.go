@@ -441,6 +441,23 @@ func (b *builder) linkProvision(key string, o origin, pv provision) {
 		return
 	}
 	b.link(o.lang, key, res.key, Site{Path: cmp.Or(n.Path, pv.sp.unit), Line: n.Line}, EdgePackage, r)
+	b.linkPackageLoad(o.lang, key, pv.module)
+}
+
+// linkPackageLoad adds an import edge from an external key to each module
+// top level of its package that runs code at load, in a language whose
+// function values the link step joins to the code that holds them. The
+// program loads a package before a symbol of it runs. A search that enters
+// the package by the key, as the search of a summary does, then reaches the
+// init functions and the package-level values. A call of a function value
+// that a package-level value holds finds its function only through them.
+func (b *builder) linkPackageLoad(lang langcode.Code, key, module string) {
+	if !profileOf(lang).functionValues {
+		return
+	}
+	for _, p := range b.moduleFiles(module) {
+		b.link(lang, key, p, Site{Path: p}, EdgeImport, ruleImport.via("package"))
+	}
 }
 
 // provisionReason returns the reason of the record of a walk into a unit

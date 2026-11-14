@@ -370,6 +370,7 @@ func (b *builder) linkAll(ctx context.Context) error {
 		b.linkReferences(ix)
 		b.linkDecorators(ix)
 		b.copyUnresolved(ix)
+		b.linkReflection(ix)
 	}
 	if b.opts.Surface {
 		b.addSurfaces()
@@ -444,7 +445,7 @@ func (b *builder) copyUnresolved(ix *fileindex.Index) {
 			Text:     u.Text,
 			Receiver: u.Receiver,
 			Method:   u.Method,
-			Reason:   u.Reason,
+			Reason:   functionValue(profileOf(ix.Language), u.Reason),
 		}
 		if u.Reason == fileindex.UnresolvedDynamicImport {
 			site.ImportPrefix = b.importPrefix(ix, u.Line)

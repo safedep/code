@@ -32,6 +32,7 @@ var goRules = languageRules{
 			"var_spec":              "value",
 			"return_statement":      "",
 			"literal_value":         "",
+			"send_statement":        "value",
 		},
 		member:      "selector_expression",
 		object:      "operand",

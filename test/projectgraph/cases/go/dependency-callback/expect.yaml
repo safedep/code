@@ -1,0 +1,97 @@
+source: safedep:hand
+description: >-
+  main gives code of the project to the unit srv in four ways. Run calls the named function named, which
+  main passes as a value. Each calls a function literal that main passes in a slice. Serve calls Handle on
+  a value of the interface Handler, and Bind calls the method value c.Close on a value of the interface
+  Closer. A function that main passes is a reference of main, and the calls of a literal belong to main, so
+  os.Getwd and os.Getenv are found. The call fs[0]() in Each is a function-value record that concerns no
+  target. The call h.Handle() in Serve has no implementation in the graph, so it is an interface-receiver
+  record with the method Handle, and os/exec.LookPath, which mine.Handle calls, is uncertain. The link step
+  cannot name the method of c.Close, so the reference is a record with the method Close, which gets a name
+  edge to conn.Close. So os.Chdir is found. No target that a callback reaches is not found.
+units:
+  gomod/github.com/acme/srv@v1.0.0: go:github.com/acme/srv@v1.0.0
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+no_edges:
+  - from: main.go//main
+    to: main.go//mine//Handle
+unresolved:
+  - caller: go:github.com/acme/srv@v1.0.0//srv.go//Run
+    site: go:github.com/acme/srv@v1.0.0//srv.go:12
+    reason: unknown-receiver
+    method: f
+  - caller: go:github.com/acme/srv@v1.0.0//srv.go//Each
+    site: go:github.com/acme/srv@v1.0.0//srv.go:16
+    reason: function-value
+  - caller: go:github.com/acme/srv@v1.0.0//srv.go//Serve
+    site: go:github.com/acme/srv@v1.0.0//srv.go:20
+    reason: interface-receiver
+    method: Handle
+  - caller: go:github.com/acme/srv@v1.0.0//srv.go//Bind
+    site: go:github.com/acme/srv@v1.0.0//srv.go:24
+    reason: unknown-receiver
+    method: f
+  - caller: main.go//main
+    site: main.go:33
+    reason: no-definition
+    method: Close
+results:
+  - target: os//Getwd
+    status: found
+    path:
+      - key: main.go//main
+      - key: main.go//named
+        site: main.go:27
+        kind: reference
+        confidence: low
+      - key: os//Getwd
+        site: main.go:23
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//named
+        site: main.go:23
+        reached: true
+  - target: os//Getenv
+    status: found
+    path:
+      - key: main.go//main
+      - key: os//Getenv
+        site: main.go:29
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//main
+        site: main.go:29
+        reached: true
+  - target: os//exec//LookPath
+    status: uncertain
+    call_sites:
+      - caller: main.go//mine//Handle
+        site: main.go:13
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: go:github.com/acme/srv@v1.0.0//srv.go:20
+  - target: os//Chdir
+    status: found
+    path:
+      - key: main.go//main
+      - key: main.go//conn//Close
+        site: main.go:33
+        kind: name
+        confidence: low
+      - key: os//Chdir
+        site: main.go:19
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//conn//Close
+        site: main.go:19
+        reached: true

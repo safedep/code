@@ -190,14 +190,18 @@ of the highest confidence.
 A call that the link step cannot resolve is an unresolved site with a
 reason: `computed-name`, `dynamic-import`, `unknown-receiver`,
 `no-definition`, `ambiguous`, `limit`, `interface-receiver`,
-`trait-receiver` or `no-dependency-source`. The site keeps the method name of the call, so the
-reach query can tell which targets it concerns.
+`trait-receiver`, `no-dependency-source` or `function-value`. The site keeps the method name of the call, so the
+reach query can tell which targets it concerns. A `function-value`
+record concerns no target. [A call of a function value](#a-call-of-a-function-value)
+gives the reason.
 
 A site with more than 20 candidates of its method name, as `render` in a
-Django project, is `ambiguous` and keeps no method name. The site gets no
-edge, so the search cannot follow what the candidates call, and the record
-concerns every target. A record with a method name concerns the targets
-that a definition of the name reaches.
+Django project, is `ambiguous`. The site gets no edge, so the search cannot
+follow what the candidates call. The site keeps its method name, because
+the call can run only a method of that name. A record with a method name
+concerns the targets with that last segment and the targets that a
+definition of the name reaches, so it concerns what each candidate
+reaches.
 
 A call on the result of another call, as `html.NewTokenizer(r).Next()`,
 needs the type of that result. When the link step does not know it, the
@@ -624,3 +628,78 @@ record.
 
 A summary keeps every uncertainty of a symbol in a table, with the targets
 that its scope concerns, so `Status` applies the same rule with no graph.
+
+### A call of a function value
+
+A Go call of a function value, as `BackoffLinearWithJitter(d, j)(attempt)`
+or `route.Handlers[0](c)`, is a record with the reason `function-value`.
+The record concerns no target. This is sound because the search reaches
+each function that such a call can run. A Go function value is one of
+these:
+
+- A function or a method that code uses as a value: an argument, the
+  right side of an assignment or a declaration, a return value, an element
+  of a composite literal, or the value of a send on a channel. The index
+  records a reference there, and the link step adds a `reference` edge from
+  the code that holds the value. The value exists only after that code
+  runs, so the search reaches that code and then the function.
+- A method value whose method the link step cannot name, as `h.Handle` on a
+  value of an interface. The link step records the reference with the
+  method name. That record concerns the targets that a method of the name
+  reaches, as a call `h.Handle()` does.
+- A function literal. The index gives the calls of the literal to the
+  definition or the module top level that holds it. So a function that
+  returns a literal reaches the calls of the literal.
+- A package-level value, as a map of handlers. Its references start at the
+  module top level of its file. The program loads each package that it
+  imports before any code of the package runs. So a file that imports a
+  package that runs code at load runs code at load too, also when the
+  package is in a unit of dependency code. An import edge joins the
+  importer to the module top level, and a search from `main` reaches it.
+  An external key also has an import edge to each module top level of its
+  package that runs code at load, so the search of a summary reaches it.
+- A value that reflection gives, as `reflect.Value.Call`,
+  `reflect.Value.MethodByName` or `reflect.Value.Method`. No reference
+  leads to such a function. A call or a reference of the methods `Call`,
+  `CallSlice`, `Method` or `MethodByName` in a file that imports `reflect`
+  gets a `computed-name` record, which concerns every target. The link step
+  does not always know that the receiver is a `reflect.Value`, so the rule
+  takes any receiver.
+
+A function value that code outside the graph makes runs code outside the
+graph, which the search does not see for any call.
+
+The rule does not apply to Rust. The Rust index records a function that an
+argument, a `let`, an assignment, a `return`, a field initializer or an
+array names. It does not record a function that the tail expression of a
+block, a match arm, a shorthand field or a tuple holds, and a Rust function
+returns its tail expression. So a call of a Rust function value stays a
+`computed-name` record.
+
+### Unknown code of a unit of dependency code
+
+A failed or truncated file of a unit of dependency code counts for every
+target when the search enters the unit. An unresolved site in the code of a
+unit with no method name, as an import that no file of the unit gives,
+counts for every target too. The closure of the edges of the unit, which
+`unitReaches` reads, does not bound such code, for two reasons.
+
+- The unknown code can call a package that no known code of the unit
+  calls. A failed file has no index, so its imports are not known. The
+  imports of the other files of the unit do not bound them, and neither does
+  the closure of the imports of the packages of the unit, because the
+  import closure reads the same files. Only the manifest of the unit, as the
+  `require` list of a `go.mod`, bounds them. The link step does not record
+  it.
+- The project can give the unit a value of an interface, as a handler. The
+  unknown code can call a method of that value, and the method can call any
+  code of the program. A function value has a reference edge from the code
+  of the project that holds it, so the search reaches the function without
+  the unit. A value of an interface has no such edge. Known code of the unit
+  records such a call with its method name, and the record concerns every
+  target of the name. The unknown code can hold such a call for any name.
+
+So a scope narrower than every target can make a target `not-found` that
+the program reaches. The case `go/dependency-failed-callback` shows it:
+`os/exec.LookPath` stays uncertain only through the budget of the failed
+file.

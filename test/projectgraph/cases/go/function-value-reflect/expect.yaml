@@ -1,0 +1,52 @@
+source: safedep:hand
+description: >-
+  main looks up the method Hidden of T by its name with reflect and calls it. No edge and no reference
+  leads to Hidden, and a call through reflect can run any function. So the calls of MethodByName and of
+  Call are computed-name records, and os.Remove, which Hidden calls, and os/exec.Command, which the uncalled
+  other calls, are uncertain. The call r.Method() resolves to the method of R, which is not in reflect, so
+  it gets no record.
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+unresolved:
+  - caller: main.go//main
+    site: main.go:25
+    reason: computed-name
+  - caller: main.go//main
+    site: main.go:25
+    reason: unknown-receiver
+    method: MethodByName
+  - caller: main.go//main
+    site: main.go:25
+    reason: computed-name
+  - caller: main.go//main
+    site: main.go:25
+    reason: unknown-receiver
+    method: Call
+results:
+  - target: os//Remove
+    status: uncertain
+    call_sites:
+      - caller: main.go//T//Hidden
+        site: main.go:12
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:25
+      - kind: unresolved-call
+        site: main.go:25
+  - target: os//exec//Command
+    status: uncertain
+    call_sites:
+      - caller: main.go//other
+        site: main.go:20
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:25
+      - kind: unresolved-call
+        site: main.go:25

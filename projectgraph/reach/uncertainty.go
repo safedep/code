@@ -149,6 +149,11 @@ func (s *sources) at(key string, n *projectgraph.Node) []Uncertainty {
 		out = append(out, u)
 	}
 	for _, r := range s.unresolved[key] {
+		// A call of a function value runs a function that the search
+		// reaches through the code that holds the value.
+		if r.Reason == fileindex.UnresolvedFunctionValue {
+			continue
+		}
 		u := Uncertainty{Kind: UnresolvedCall, Key: key, Site: r.Site, Text: fmt.Sprintf("%s (%s)", r.Text, r.Reason)}
 		switch {
 		case r.Unit != "":
