@@ -452,7 +452,7 @@ func (x *Explorer) Path(ctx context.Context, from string, target Target, maxDept
 	if maxDepth == NoDepthCap {
 		depth = len(a.keys)
 	}
-	s := a.search(ctx, []int{id}, depth, targets)
+	s := a.search(ctx, []int{id}, depth, targets, false)
 	if err := ctx.Err(); err != nil {
 		return nil, false, err
 	}

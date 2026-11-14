@@ -1,0 +1,263 @@
+source: safedep:hand
+test_paths: ["*_test.go"]
+description: >-
+  The module top level of main.go holds os.Exit in the slice hooks and os.Getwd in the field Hook of
+  defaults. run calls hooks[0], and runHook calls the field Hook of its parameter. impl.go holds os.Remove in
+  the map table, and T.Handle calls table["rm"]. lib.Serve calls Handle on a value of an interface, and lib
+  does not import impl. extra.go holds os.Chdir, and Run calls steps[0]. The test file of extra holds
+  os.RemoveAll. A call of a function value concerns no target, because the search reaches the code that
+  holds the value. The program runs the module top level of each file of a package before any code of the
+  package. So a search from a source enters the module top levels of each package that it enters, and each
+  target is found from each source. idle calls nothing, and os.Exit is found from it too, because the
+  program loads main.go before idle runs. A test file loads only with the code of a test, so os.RemoveAll
+  is not found from Run, and is found from TestRun. The roots of kind main do not reach extra, so os.Chdir
+  is found only with the tests, through the test root of extra.
+roots:
+  - key: extra/extra_test.go
+    kind: test
+    rule: test.files
+  - key: extra/extra_test.go//TestRun
+    kind: test
+    rule: test.files
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+exact_edges: true
+edges:
+  - from: extra/extra.go
+    to: os//Chdir
+    kind: reference
+    confidence: low
+    site: extra/extra.go:5
+  - from: extra/extra_test.go
+    to: os//RemoveAll
+    kind: reference
+    confidence: low
+    site: extra/extra_test.go:8
+  - from: extra/extra_test.go//TestRun
+    to: extra/extra.go//Run
+    kind: direct
+    confidence: high
+    site: extra/extra_test.go:11
+  - from: impl/impl.go
+    to: os//Remove
+    kind: reference
+    confidence: low
+    site: impl/impl.go:5
+  - from: lib/lib.go//Serve
+    to: impl/impl.go//T//Handle
+    kind: cha
+    confidence: medium
+    site: lib/lib.go:8
+  - from: main.go
+    to: impl/impl.go
+    kind: import
+    confidence: high
+    site: main.go:6
+  - from: main.go
+    to: os//Exit
+    kind: reference
+    confidence: low
+    site: main.go:10
+  - from: main.go
+    to: os//Getwd
+    kind: reference
+    confidence: low
+    site: main.go:16
+  - from: main.go//main
+    to: main.go//run
+    kind: direct
+    confidence: high
+    site: main.go:29
+  - from: main.go//main
+    to: main.go//runHook
+    kind: direct
+    confidence: high
+    site: main.go:30
+  - from: main.go//main
+    to: lib/lib.go//Serve
+    kind: direct
+    confidence: high
+    site: main.go:31
+unresolved:
+  - caller: lib/lib.go//Serve
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//runHook
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Chdir
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Exit
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Getwd
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Remove
+    reason: no-dependency-source
+    callback: true
+  - caller: os//RemoveAll
+    reason: no-dependency-source
+    callback: true
+  - caller: extra/extra.go//Run
+    site: extra/extra.go:8
+    reason: function-value
+  - caller: extra/extra_test.go//TestRun
+    site: extra/extra_test.go:12
+    reason: function-value
+  - caller: impl/impl.go//T//Handle
+    site: impl/impl.go:10
+    reason: function-value
+  - caller: lib/lib.go//Serve
+    site: lib/lib.go:8
+    reason: no-definition
+    method: Handle
+  - caller: main.go//run
+    site: main.go:19
+    reason: function-value
+  - caller: main.go//runHook
+    site: main.go:23
+    reason: unknown-receiver
+    method: Hook
+results:
+  - target: os//Exit
+    sources: [main.go//run]
+    sources_only: true
+    status: found
+    path:
+      - key: main.go//run
+        root: query
+      - key: main.go
+        site: main.go
+        kind: import
+        confidence: high
+      - key: os//Exit
+        site: main.go:10
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: main.go
+        site: main.go:10
+        reached: true
+  - target: os//Getwd
+    sources: [main.go//runHook]
+    sources_only: true
+    status: found
+    path:
+      - key: main.go//runHook
+      - key: main.go
+        site: main.go
+        kind: import
+        confidence: high
+      - key: os//Getwd
+        site: main.go:16
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: main.go
+        site: main.go:16
+        reached: true
+  - target: os//Remove
+    sources: [lib/lib.go//Serve]
+    sources_only: true
+    status: found
+    path:
+      - key: lib/lib.go//Serve
+      - key: impl/impl.go//T//Handle
+        site: lib/lib.go:8
+        kind: cha
+        confidence: medium
+      - key: impl/impl.go
+        site: impl/impl.go
+        kind: import
+        confidence: high
+      - key: os//Remove
+        site: impl/impl.go:5
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: impl/impl.go
+        site: impl/impl.go:5
+        reached: true
+  - target: os//Exit
+    sources: [main.go//idle]
+    sources_only: true
+    status: found
+    path:
+      - key: main.go//idle
+      - key: main.go
+        site: main.go
+        kind: import
+        confidence: high
+      - key: os//Exit
+        site: main.go:10
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: main.go
+        site: main.go:10
+        reached: true
+  - target: os//RemoveAll
+    sources: [extra/extra.go//Run]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: extra/extra_test.go
+        site: extra/extra_test.go:8
+        reached: false
+  - target: os//RemoveAll
+    sources: [extra/extra_test.go//TestRun]
+    sources_only: true
+    status: found
+    path:
+      - key: extra/extra_test.go//TestRun
+      - key: extra/extra_test.go
+        site: extra/extra_test.go
+        kind: import
+        confidence: high
+      - key: os//RemoveAll
+        site: extra/extra_test.go:8
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: extra/extra_test.go
+        site: extra/extra_test.go:8
+        reached: true
+  - target: os//Chdir
+    include_tests: true
+    status: found
+    path:
+      - key: extra/extra_test.go
+      - key: extra/extra.go
+        site: extra/extra.go
+        kind: import
+        confidence: high
+      - key: os//Chdir
+        site: extra/extra.go:5
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: extra/extra.go
+        site: extra/extra.go:5
+        reached: true
+  - target: os//Chdir
+    status: not-found
+    test_path:
+      - key: extra/extra_test.go
+      - key: extra/extra.go
+        site: extra/extra.go
+        kind: import
+        confidence: high
+      - key: os//Chdir
+        site: extra/extra.go:5
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: extra/extra.go
+        site: extra/extra.go:5
+        reached: false

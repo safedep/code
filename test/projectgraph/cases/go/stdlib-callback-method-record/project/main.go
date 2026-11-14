@@ -52,6 +52,4 @@ func viaMethodValue() {
 	serve()
 }
 
-func idle() {}
-
 func main() {}

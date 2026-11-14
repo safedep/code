@@ -188,7 +188,9 @@ func (r Result) String() string {
 // A hop with low confidence names its edge kind, as main.py:3 (name), so
 // a reader sees the weak hop. An llm hop also names its model and its
 // prompt. A package hop names its kind at the definition in the package,
-// so a reader sees where the path enters dependency code.
+// so a reader sees where the path enters dependency code. A load hop, as
+// main.go (load), enters a module top level that the program runs before
+// the code of the hop before it.
 func PathString(hops []Hop) string {
 	parts := make([]string, 0, len(hops)+1)
 	if hops[0].Root == RootQuery {
@@ -199,6 +201,8 @@ func PathString(hops []Hop) string {
 		switch {
 		case h.EdgeKind == projectgraph.EdgeLLM:
 			part += " (" + string(h.EdgeKind) + ", " + h.Resolver + ")"
+		case h.Resolver == LoadResolver:
+			part += " (" + LoadResolver + ")"
 		case h.Confidence == projectgraph.ConfidenceLow || h.EdgeKind == projectgraph.EdgePackage:
 			part += " (" + string(h.EdgeKind) + ")"
 		}
@@ -223,6 +227,10 @@ func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error
 	}
 	a := newAdjacency(g)
 	a.includeTests = q.IncludeTests
+	// A search from the roots of kind main enters the load code through
+	// the module top levels that the root rules add and through the
+	// import edges. A search from a source or a test root does not.
+	a.loads = len(q.Sources) > 0 || q.IncludeTests
 	depth := cmp.Or(q.MaxDepth, defaultMaxDepth)
 
 	targets := make([][]int, len(q.Targets))
@@ -245,7 +253,7 @@ func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error
 		}
 	}
 	kinds := a.rootKinds(roots)
-	s := a.search(ctx, a.ids(roots), depth, targets)
+	s := a.search(ctx, a.ids(roots), depth, targets, a.loads)
 	unc := a.uncertainties(s, depth)
 	// The fallback roots are in the search only with the roots of the
 	// graph, so a search from the sources alone has no fallback to report.
@@ -275,7 +283,7 @@ func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error
 				if tests == nil {
 					all := slices.Concat(roots, testRoots)
 					testKinds = a.rootKinds(all)
-					tests = a.search(ctx, a.ids(all), depth, targets)
+					tests = a.search(ctx, a.ids(all), depth, targets, true)
 				}
 				if node, ok := tests.nearest(targets[i]); ok {
 					r.TestPath = a.path(tests, node, testKinds)
@@ -342,7 +350,7 @@ func (x *Explorer) Explore(ctx context.Context, from []string, maxDepth int) (*E
 	}
 	slices.Sort(sources)
 	depth := cmp.Or(maxDepth, defaultMaxDepth)
-	s := a.search(ctx, slices.Compact(sources), depth, nil)
+	s := a.search(ctx, slices.Compact(sources), depth, nil, false)
 
 	e := &Exploration{Reached: []Reached{}}
 	for _, id := range a.externals {
@@ -359,7 +367,10 @@ func (x *Explorer) Explore(ctx context.Context, from []string, maxDepth int) (*E
 // byLast the nodes by the last segment of their key, callbacks the methods
 // that code outside the graph can call, and spans what the code of each
 // scope can run. Each table fills on first use. includeTests lets a node
-// of a test file start the span of a method name or of the callback.
+// of a test file start the span of a method name or of the callback. loads
+// makes the search of a query and each span enter the load group of each
+// node that they reach, and loadGroups holds the module top levels of each
+// group.
 type adjacency struct {
 	g         *projectgraph.Graph
 	keys      []string
@@ -373,12 +384,14 @@ type adjacency struct {
 	byExternal map[string][]int
 
 	includeTests bool
+	loads        bool
 
-	src       *sources
-	unitNodes map[string][]int
-	byLast    map[string][]int
-	callbacks []int
-	spans     map[scopeKey]*span
+	src        *sources
+	loadGroups map[string]*loadGroup
+	unitNodes  map[string][]int
+	byLast     map[string][]int
+	callbacks  []int
+	spans      map[scopeKey]*span
 }
 
 // sources returns the records, the flags and the budgets of the graph by
@@ -466,7 +479,7 @@ func (a *adjacency) ids(roots []projectgraph.Root) []int {
 
 // search is the state of one breadth-first search. best is the highest
 // lowest confidence rank of a shortest path to each node, and parent is the
-// edge into the node on that path, or -1 at a root.
+// edge into the node on that path, -1 at a root, or a load parent.
 type search struct {
 	dist     []int32
 	best     []int8
@@ -477,7 +490,9 @@ type search struct {
 	stopped  bool
 }
 
-func (a *adjacency) search(ctx context.Context, sources []int, maxDepth int, targets [][]int) *search {
+// search runs one breadth-first search. With loads, it enters the load
+// group of each node that it reaches.
+func (a *adjacency) search(ctx context.Context, sources []int, maxDepth int, targets [][]int, loads bool) *search {
 	n := len(a.keys)
 	s := &search{dist: make([]int32, n), best: make([]int8, n), parent: make([]int32, n)}
 	for i := range s.dist {
@@ -498,26 +513,36 @@ func (a *adjacency) search(ctx context.Context, sources []int, maxDepth int, tar
 		if len(targets) > 0 && s.allFound(targets) {
 			return s
 		}
+		unseen := func(v int) bool { return s.dist[v] < 0 }
 		if depth == maxDepth {
 			s.depthCut = slices.ContainsFunc(frontier, func(u int) bool {
-				return slices.ContainsFunc(a.out[u], func(e int32) bool { return s.dist[a.id[a.g.Edges[e].To]] < 0 })
+				return slices.ContainsFunc(a.out[u], func(e int32) bool { return unseen(a.id[a.g.Edges[e].To]) }) ||
+					loads && slices.ContainsFunc(a.loadsOf(u), unseen)
 			})
 			return s
 		}
 		var next []int
+		visit := func(v int, rank int8, parent int32) {
+			switch {
+			case s.dist[v] < 0:
+				s.dist[v], s.best[v], s.parent[v] = int32(depth+1), rank, parent
+				next = append(next, v)
+			case s.dist[v] == int32(depth+1) && rank > s.best[v]:
+				s.best[v], s.parent[v] = rank, parent
+			}
+		}
 		for _, u := range frontier {
 			for _, e := range a.out[u] {
 				s.edges++
 				edge := &a.g.Edges[e]
-				v := a.id[edge.To]
-				rank := min(s.best[u], int8(edge.Confidence.Rank()))
-				switch {
-				case s.dist[v] < 0:
-					s.dist[v], s.best[v], s.parent[v] = int32(depth+1), rank, e
-					next = append(next, v)
-				case s.dist[v] == int32(depth+1) && rank > s.best[v]:
-					s.best[v], s.parent[v] = rank, e
-				}
+				visit(a.id[edge.To], min(s.best[u], int8(edge.Confidence.Rank())), e)
+			}
+			if !loads {
+				continue
+			}
+			for _, v := range a.loadsOf(u) {
+				s.edges++
+				visit(v, s.best[u], loadParent(u))
 			}
 		}
 		s.order = append(s.order, next...)
@@ -555,8 +580,8 @@ func (s *search) nearest(ids []int) (int, bool) {
 // exploration, passes nil.
 func (a *adjacency) path(s *search, node int, kinds rootKinds) []Hop {
 	var hops []Hop
-	for s.parent[node] >= 0 {
-		e := a.g.Edges[s.parent[node]]
+	for s.parent[node] != -1 {
+		e := a.edgeInto(s, node)
 		hops = append(hops, Hop{Key: e.To, Site: e.Site, EdgeKind: e.Kind, Confidence: e.Confidence, Resolver: e.Resolver})
 		node = a.id[e.From]
 	}

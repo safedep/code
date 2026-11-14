@@ -292,6 +292,17 @@ func (g *Graph) Runs(path string) bool {
 	return len(g.Stats.Languages) == 0 || slices.Contains(g.Stats.Languages, n.Language)
 }
 
+// LoadGroup returns the key of the files whose module top levels the
+// program runs before the code of a file runs: the directory of the file,
+// in a language whose program loads a whole package, as Go, and else the
+// file alone.
+func (g *Graph) LoadGroup(path string) string {
+	if n := g.Nodes[path]; n != nil && profileOf(n.Language).loadsPackages {
+		return modules.Dir(path)
+	}
+	return path
+}
+
 // unitLanguages returns the languages of the code that the ecosystem of a
 // unit installs, or nil for an ecosystem that the link step does not know.
 func unitLanguages(unit string) []langcode.Code {

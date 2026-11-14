@@ -160,6 +160,11 @@ func (w *spanWalk) run() {
 		for _, e := range a.out[n.id] {
 			w.add(a.id[a.g.Edges[e].To], n.unit)
 		}
+		if a.loads {
+			for _, id := range a.loadsOf(n.id) {
+				w.add(id, n.unit)
+			}
+		}
 		w.meet(n.id)
 	}
 }

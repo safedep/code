@@ -176,3 +176,47 @@ func TestReachRejectsSourcesOnlyWithNoSource(t *testing.T) {
 	_, err := Reach(context.Background(), g, Query{Targets: targetsOf(t, "yaml//load"), SourceMode: SourcesOnly})
 	assert.ErrorContains(t, err, "source mode SourcesOnly needs at least one source")
 }
+
+// loaded has the Go package app of two files, whose b.go holds os.Remove
+// as a value, and the package lib, whose c.go holds os.Chdir. run calls a
+// function value, and dispatch calls Handle on a value whose type the
+// link step does not know. T.Handle of lib calls a function value. The
+// Python module other.py holds os.system as a value.
+const loaded = `
+file app/a.go indexed go
+file app/b.go indexed go
+file lib/c.go indexed go
+file other.py indexed python
+root app/a.go//main
+edge app/a.go//main app/a.go//run direct 3
+edge app/b.go os//Remove reference 3
+edge lib/c.go os//Chdir reference 2
+edge other.py os//system reference 1
+unresolved app/a.go//run 5 function-value
+unresolved app/a.go//dispatch 7 unknown-receiver Handle
+unresolved lib/c.go//T//Handle 4 function-value
+edge other.py//f os//getcwd direct 2
+`
+
+func TestReachFromASourceEntersItsLoadGroup(t *testing.T) {
+	g := graphOf(t, loaded)
+	for _, tt := range []struct {
+		name, source, target string
+		want                 Status
+		path                 []string
+	}{
+		{name: "a file of the package of the source", source: "app/a.go//run", target: "os//Remove", want: Found, path: []string{"app/a.go//run", "app/b.go", "os//Remove"}},
+		{name: "a package that the span of a method enters", source: "app/a.go//dispatch", target: "os//Chdir", want: Uncertain, path: []string{}},
+		{name: "a file of no package of the search", source: "app/a.go//run", target: "os//system", want: NotFound, path: []string{}},
+		{name: "the file of the source", source: "other.py//f", target: "os//system", want: Found, path: []string{"other.py//f", "other.py", "os//system"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			r := reachOne(t, g, Query{Targets: targetsOf(t, tt.target), Sources: sourcesOf(t, tt.source), SourceMode: SourcesOnly})
+			assert.Equal(t, tt.want, r.Status)
+			assert.Equal(t, tt.path, pathKeys(r.Path))
+		})
+	}
+
+	r := reachOne(t, g, Query{Targets: targetsOf(t, "os//Remove")})
+	assert.Equal(t, NotFound, r.Status, "a search from the roots of kind main enters the load code through the roots and the import edges")
+}

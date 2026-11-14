@@ -148,7 +148,7 @@ func TestExampleSearchesFromASource(t *testing.T) {
 
 	out, err = exec.Command(bin, "-dir", deadCallCase, "-source", "handlers.py:load_old", "-sources-only", "-target", "json//load").CombinedOutput()
 	require.NoError(t, err, string(out))
-	assert.Equal(t, "json//load: not-found\n  call at handlers.py:8 in handlers.py//parse, which no root reaches\n  searched 1 roots, 3 nodes, 2 edges\n", string(out))
+	assert.Equal(t, "json//load: not-found\n  call at handlers.py:8 in handlers.py//parse, which no root reaches\n  searched 1 roots, 4 nodes, 4 edges\n", string(out))
 
 	cmd := exec.Command(bin, "-dir", deadCallCase, "-source", "handlers.py:load_odl", "-target", "yaml//load")
 	var stderr strings.Builder
