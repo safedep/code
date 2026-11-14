@@ -61,7 +61,6 @@ var rustProfile = shapedProfile(languageProfile{
 	skipped:            []string{"use_declaration", "extern_crate_declaration", "attribute_item", "inner_attribute_item"},
 	values:             map[string]childRef{"generic_function": named("function"), "type_cast_expression": named("value")},
 	constructorMethods: []string{"new", "default"},
-	pointer:            langcode.IsRustPointer,
 	classKeywords:      []string{"Self"},
 	computedCallees:    map[string]bool{"index_expression": true},
 })

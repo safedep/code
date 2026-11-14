@@ -189,7 +189,7 @@ func (p *projection) rustTypeName(node *sitter.Node, bounds map[string]string) s
 		return p.text(node)
 	case "generic_type":
 		name := p.rustTypeName(node.ChildByFieldName("type"), bounds)
-		if args := ts.NamedChildren(node.ChildByFieldName("type_arguments")); langcode.IsRustPointer(name) && len(args) > 0 {
+		if args := ts.NamedChildren(node.ChildByFieldName("type_arguments")); langcode.IsPointer(langcode.Rust, name) && len(args) > 0 {
 			return p.rustTypeName(args[0], bounds)
 		}
 		return name
