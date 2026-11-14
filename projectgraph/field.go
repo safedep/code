@@ -51,9 +51,11 @@ func (b *builder) linkFields() {
 				}
 			}
 		}
+		// An ambiguous site keeps its method name. It can run only a
+		// method of that name, so the reach query scopes it by the name.
 		if len(candidates) > maxNameCandidates {
 			delete(b.unresolved, u)
-			u.Reason, u.Method = fileindex.UnresolvedAmbiguous, ""
+			u.Reason = fileindex.UnresolvedAmbiguous
 			b.addUnresolved(u)
 			continue
 		}

@@ -210,7 +210,7 @@ func TestBuildFieldEdges(t *testing.T) {
 	assert.Equal(t, []string{
 		"main.js:1 main.js unknown-receiver parse",
 		"main.js:2 main.js unknown-receiver parse",
-		"main.js:3 main.js ambiguous ",
+		"main.js:3 main.js ambiguous get",
 	}, unresolvedStrings(g), "25 candidates make the site ambiguous")
 }
 

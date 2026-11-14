@@ -1,5 +1,10 @@
 source: safedep:hand
-description: dispatch calls handle on the parameter handler, whose value the index does not know. 25 classes define handle. That is over the cap of 20, so the site gets no name edge and is ambiguous. An ambiguous site can call any target, so the reach result for yaml.load is uncertain.
+description: >-
+  dispatch calls handle on the parameter handler, whose value the index does not know. 25 classes define
+  handle. That is over the cap of 20, so the site gets no name edge and is ambiguous. The site keeps the
+  method name handle. H0.handle calls yaml.load, so the reach result for yaml.load is uncertain. An ambiguous
+  call of handle runs no function of another name, so os.remove, which only the uncalled cleanup calls, is
+  not found.
 roots:
   - key: main.py
     kind: manifest
@@ -17,13 +22,20 @@ unresolved:
   - caller: main.py//dispatch
     site: main.py:5
     reason: ambiguous
+    method: handle
 results:
   - target: yaml//load
     status: uncertain
     call_sites:
       - caller: handlers.py//H0//handle
-        site: handlers.py:7
+        site: handlers.py:8
         reached: false
     uncertainties:
       - kind: unresolved-call
         site: main.py:5
+  - target: os//remove
+    status: not-found
+    call_sites:
+      - caller: handlers.py//cleanup
+        site: handlers.py:132
+        reached: false
