@@ -361,3 +361,35 @@ func TestParseAfterADeadlineParsesTheNextFile(t *testing.T) {
 	root := tree.Tree().RootNode()
 	assert.Equal(t, "(module (expression_statement (call function: (identifier) arguments: (argument_list))))", root.String())
 }
+
+func TestParseReadsJSXAndTheScriptsOfComponentFiles(t *testing.T) {
+	const vue = "<template><p/></template>\n<script setup lang=\"ts\">\nconst n = <number>m;\n</script>\n"
+	cases := []struct {
+		file    string
+		content string
+		code    core.LanguageCode
+	}{
+		{file: "App.jsx", content: "const e = <div>{x}</div>;\n", code: core.LanguageCodeJavascript},
+		{file: "App.vue", content: vue, code: core.LanguageCodeTypescript},
+	}
+	for _, tc := range cases {
+		t.Run(tc.file, func(t *testing.T) {
+			p, err := NewParser([]core.Language{javascript(t)})
+			require.NoError(t, err)
+			t.Cleanup(p.Close)
+
+			tree, err := p.Parse(t.Context(), &trackedFile{name: tc.file, content: tc.content})
+			require.NoError(t, err)
+			defer tree.Close()
+			assert.False(t, tree.Tree().RootNode().HasError())
+
+			treeLanguage, err := tree.Language()
+			require.NoError(t, err)
+			assert.Equal(t, tc.code, treeLanguage.Meta().Code)
+
+			data, err := tree.Data()
+			require.NoError(t, err)
+			assert.Equal(t, tc.content, string(*data), "the tree keeps the bytes of the file")
+		})
+	}
+}
