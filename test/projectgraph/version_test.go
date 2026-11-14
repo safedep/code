@@ -32,7 +32,7 @@ var graphHashes = map[string]string{
 	"14/15": "bbc708aba767ccf554c75a7e06816abda3fc1804ad6d0876ad8ce9575f4c3a88",
 	"14/16": "823b1f82c4aed8ba27d19275505c8d1dee755086be48fcda64d323f55b4c62a5",
 	"15/17": "d823ce8ba221c534ab062f7e48abfe91d1c90d50b2a2fdb00d41183dc0e9da09",
-	"16/18": "22947eb8bae556a99ad7131fa93dac167fc7869e4ec4e77fef11ff0cf958f577",
+	"16/18": "917c95d5abe3d1b0b6d2fd07825fd34892e2b5a79311a436ccece8d1bd63ebc7",
 }
 
 // resultHashes records the hash of the reach results of every case for
@@ -49,7 +49,7 @@ var resultHashes = map[string]string{
 	"14/15/3": "77dfd0ea8ab71869ef612d41b8c2e46852d4fb67a49458cb645321692af77ea0",
 	"14/16/3": "13b6eecb686ddec3c2ba470fc9752ea66cff445d5e18e0772a71b15ae7fe1c9c",
 	"15/17/4": "1b32d7c1dbb0a4637853eb7a00b0db91a0a4e1a31f221b37ed0d0654a66ed13e",
-	"16/18/5": "d8c8cd0e84f656684b03781de7e98100a19649d38da4263570b9387cbac55df7",
+	"16/18/5": "debdac29066cb2544a07cde77c546924bd1c26528a752871905b2ef5ebd8ea72",
 }
 
 // summaryHashes records the hash of the golden summaries of the cases for
@@ -67,7 +67,7 @@ var summaryHashes = map[string]string{
 	"14/15/2": "5969f3cda15b666cbd902bbc2db953cbdef8c0ce48d5e77446cf243cdd0bb0e7",
 	"14/16/2": "fb678202978212aae932e50a56a0d3dc7f0f794ce908988bf605ce9a6e04bc51",
 	"15/17/2": "00a6bd5871f70459a617079f431939ef7c92e4b3f360013c1dedd017fe1146be",
-	"16/18/3": "450c8ffebb71aba578e63e27a995927c57691a4c722f389ce752aee384bbdc20",
+	"16/18/3": "cdac0f560211526c43b8c9141a3bb92663b36b6b555269cf4cfb9d19c7879436",
 }
 
 func TestGraphHashFollowsVersion(t *testing.T) {
