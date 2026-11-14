@@ -56,13 +56,14 @@ func (l *javascriptLanguage) Resolvers() core.LanguageResolvers {
 }
 
 // Source gives the script blocks of a component file to the language of
-// their dialect. It gives every other file to JavaScript.
+// their dialect, with the markup of the file. It gives every other file to
+// JavaScript.
 func (l *javascriptLanguage) Source(ext string, data []byte) core.Source {
 	if !slices.Contains(componentExtensions, ext) {
 		return core.Source{Language: l, Code: data}
 	}
-	code, dialect := componentSource(ext, data)
-	source := core.Source{Language: l, Code: code}
+	code, dialect, markup := componentSource(ext, data)
+	source := core.Source{Language: l, Code: code, Markup: markup}
 	switch dialect {
 	case dialectTSX:
 		source.Language = l.tsx

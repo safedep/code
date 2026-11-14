@@ -95,6 +95,7 @@ func project(ctx context.Context, tree core.ParseTree) (*fileindex.Index, *callg
 		p.ix.Package = rules.packageOf(p)
 	}
 	p.addImports()
+	p.addMarkup()
 	p.addDefinitions()
 	p.flagModuleGetattr()
 	p.run(rules.exports)

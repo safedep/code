@@ -20,14 +20,16 @@ type parserWrapper struct {
 }
 
 type parseTree struct {
-	tree *sitter.Tree
-	data *[]byte
-	file core.File
-	lang core.Language
+	tree   *sitter.Tree
+	data   *[]byte
+	file   core.File
+	lang   core.Language
+	markup *core.Markup
 }
 
 var _ core.Parser = (*parserWrapper)(nil)
 var _ core.ParseTree = (*parseTree)(nil)
+var _ core.MarkupTree = (*parseTree)(nil)
 
 // NewParser creates a parser for the given languages. It picks the language
 // of a file by the file extension. A language that implements
@@ -170,10 +172,11 @@ func (p *parserWrapper) ParseSource(ctx context.Context, file core.File, data []
 	}
 
 	return &parseTree{
-		tree: tree,
-		data: &data,
-		file: file,
-		lang: source.Language,
+		tree:   tree,
+		data:   &data,
+		file:   file,
+		lang:   source.Language,
+		markup: source.Markup,
 	}, nil
 }
 
@@ -191,6 +194,10 @@ func (t *parseTree) File() (core.File, error) {
 
 func (t *parseTree) Language() (core.Language, error) {
 	return t.lang, nil
+}
+
+func (t *parseTree) Markup() *core.Markup {
+	return t.markup
 }
 
 func (t *parseTree) Close() {

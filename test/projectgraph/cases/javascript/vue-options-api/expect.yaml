@@ -1,0 +1,68 @@
+source: safedep:hand
+description: Vue calls the methods and the hooks of the options object of a component. No code of the project calls go of Opt.vue or mounted of Hooks.vue. Hooks.vue has no template, and it still has a markup record, so hdanger reads uncertain and not not-found.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+exact_edges: true
+edges:
+  - from: src/main.js
+    to: src/Opt.vue
+    kind: import
+    confidence: high
+    site: src/main.js:2
+  - from: src/main.js
+    to: src/Hooks.vue
+    kind: import
+    confidence: high
+    site: src/main.js:3
+  - from: src/main.js
+    to: vue//createApp
+    kind: direct
+    confidence: high
+    site: src/main.js:5
+  - from: src/main.js
+    to: vue//createApp
+    kind: direct
+    confidence: high
+    site: src/main.js:6
+  - from: src/Opt.vue//methods//go
+    to: plug//odanger
+    kind: direct
+    confidence: high
+    site: src/Opt.vue:11
+  - from: src/Hooks.vue//mounted
+    to: plug//hdanger
+    kind: direct
+    confidence: high
+    site: src/Hooks.vue:6
+unresolved:
+  - caller: src/Hooks.vue
+    site: src/Hooks.vue:1
+    reason: markup
+  - caller: src/Opt.vue
+    site: src/Opt.vue:1
+    reason: markup
+results:
+  - target: plug//odanger
+    status: uncertain
+    call_sites:
+      - caller: src/Opt.vue//methods//go
+        site: src/Opt.vue:11
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/Opt.vue:1
+      - kind: unresolved-call
+        site: src/Hooks.vue:1
+  - target: plug//hdanger
+    status: uncertain
+    call_sites:
+      - caller: src/Hooks.vue//mounted
+        site: src/Hooks.vue:6
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/Opt.vue:1
+      - kind: unresolved-call
+        site: src/Hooks.vue:1

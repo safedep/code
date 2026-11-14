@@ -111,4 +111,30 @@ type Source struct {
 	// keeps the offsets and the line ends of data, so a node reports its
 	// line and column in the file, and its content in data.
 	Code []byte
+	// Markup is what the file holds outside the code, or nil.
+	Markup *Markup
+}
+
+// Markup is the part of a file that the grammar does not parse, as the
+// template of a Vue component. The framework of the file runs it.
+type Markup struct {
+	// Offset is the offset of the first byte of the markup that is no
+	// space.
+	Offset int
+	// Scripts are the script elements that load a file, in file order.
+	Scripts []Script
+}
+
+// Script is a script element that loads a file, as <script src="./a.js">.
+type Script struct {
+	// Src is the src attribute as written, as ./a.js.
+	Src string
+	// Offset is the offset of the element.
+	Offset int
+}
+
+// MarkupTree is an optional interface of a ParseTree. Markup returns the
+// markup of the file of the tree, or nil.
+type MarkupTree interface {
+	Markup() *Markup
 }

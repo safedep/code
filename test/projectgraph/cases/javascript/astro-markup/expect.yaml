@@ -1,0 +1,44 @@
+source: safedep:hand
+description: An expression in the body of Page.astro calls adanger, which its fence imports. The index does not parse the body, so the file has a markup record, and adanger reads uncertain, not no-such-target.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+exact_edges: true
+edges:
+  - from: src/main.js
+    to: src/Page.astro
+    kind: import
+    confidence: high
+    site: src/main.js:1
+  - from: src/Page.astro
+    to: plug//asetup
+    kind: direct
+    confidence: high
+    site: src/Page.astro:3
+unresolved:
+  - caller: src/Page.astro
+    site: src/Page.astro:1
+    reason: markup
+results:
+  - target: plug//asetup
+    status: found
+    path:
+      - key: src/main.js
+      - key: src/Page.astro
+        site: src/main.js:1
+        kind: import
+        confidence: high
+      - key: plug//asetup
+        site: src/Page.astro:3
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Page.astro
+        site: src/Page.astro:3
+        reached: true
+  - target: plug//adanger
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: src/Page.astro:1

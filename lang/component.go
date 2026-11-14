@@ -3,6 +3,8 @@ package lang
 import (
 	"bytes"
 	"strings"
+
+	"github.com/safedep/code/core"
 )
 
 // componentExtensions are the extensions of the component files of Vue,
@@ -21,14 +23,15 @@ const (
 )
 
 // componentSource returns data with each byte outside the script blocks
-// replaced by a space, and the dialect of the blocks. The line ends stay, so
-// a node of the code reports its line and column in the file. One parse
-// reads every block, as a Vue <script> and <script setup>, and the greatest
-// dialect of a block parses all of them. Astro reads the code between the
-// two --- lines at the top of the file, and every script, as TypeScript.
-// A block that does not close runs to the end of the file, as an HTML
-// parser reads it.
-func componentSource(ext string, data []byte) ([]byte, scriptDialect) {
+// replaced by a space, the dialect of the blocks and the markup of the file.
+// The line ends stay, so a node of the code reports its line and column in
+// the file. One parse reads every block, as a Vue <script> and <script
+// setup>, and the greatest dialect of a block parses all of them. Astro
+// reads the code between the two --- lines at the top of the file, and
+// every script, as TypeScript. A block that does not close runs to the end
+// of the file, as an HTML parser reads it. A block with a src attribute
+// holds no code, and the markup lists it.
+func componentSource(ext string, data []byte) ([]byte, scriptDialect, *core.Markup) {
 	source := make([]byte, len(data))
 	for i, b := range data {
 		if b == '\n' || b == '\r' {
@@ -38,6 +41,7 @@ func componentSource(ext string, data []byte) ([]byte, scriptDialect) {
 		}
 	}
 
+	var scripts []core.Script
 	dialect, from := dialectJavascript, 0
 	if ext == ".astro" {
 		dialect = dialectTypescript
@@ -52,13 +56,26 @@ func componentSource(ext string, data []byte) ([]byte, scriptDialect) {
 		if !ok {
 			break
 		}
-		if _, external := block.attrs["src"]; !external {
+		if src, external := block.attrs["src"]; external {
+			scripts = append(scripts, core.Script{Src: src, Offset: block.open})
+		} else {
 			copy(source[block.start:block.end], data[block.start:block.end])
 			dialect = max(dialect, dialectOf(block.attrs["lang"]))
 		}
 		from = block.next
 	}
-	return source, dialect
+	return source, dialect, markupOf(data, source, scripts)
+}
+
+// markupOf returns the markup of data, or nil when each byte outside the
+// code is a space.
+func markupOf(data, source []byte, scripts []core.Script) *core.Markup {
+	for i, b := range data {
+		if b != source[i] && !isSpace(b) {
+			return &core.Markup{Offset: i, Scripts: scripts}
+		}
+	}
+	return nil
 }
 
 func dialectOf(lang string) scriptDialect {
@@ -101,12 +118,12 @@ func lineAt(data []byte, i int) ([]byte, int) {
 	return bytes.TrimRight(data[i:i+end], " \t\r"), i + end + 1
 }
 
-// scriptElement is a script element of a file: the bounds of its code, the
-// offset after its end tag, and the attributes of its start tag by lower
-// case name.
+// scriptElement is a script element of a file: the offset of its start
+// tag, the bounds of its code, the offset after its end tag, and the
+// attributes of its start tag by lower case name.
 type scriptElement struct {
-	start, end, next int
-	attrs            map[string]string
+	open, start, end, next int
+	attrs                  map[string]string
 }
 
 // scriptBlock finds the first script element at or after from. lower is
@@ -120,7 +137,7 @@ func scriptBlock(data, lower []byte, from int) (scriptElement, bool) {
 	if start < 0 {
 		return scriptElement{}, false
 	}
-	block := scriptElement{start: start, end: len(data), next: len(data), attrs: attrs}
+	block := scriptElement{open: open, start: start, end: len(data), next: len(data), attrs: attrs}
 	if selfClosing {
 		block.end, block.next = start, start
 		return block, true

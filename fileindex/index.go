@@ -117,6 +117,11 @@ const (
 	// joins to the code that holds them. The link step gives the reason
 	// in place of computed-name, and the record names no target.
 	UnresolvedFunctionValue UnresolvedReason = "function-value"
+	// UnresolvedMarkup is the markup of a component file, as the template
+	// of a Vue component, which the index does not parse. The framework
+	// runs the markup and calls the functions of the component, so the
+	// record can name any target.
+	UnresolvedMarkup UnresolvedReason = "markup"
 )
 
 type FlagKind string
