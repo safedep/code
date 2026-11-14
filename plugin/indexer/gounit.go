@@ -114,7 +114,10 @@ func isGeneratedTable(name string, data []byte) bool {
 // data values of a generated table file are what hit the limits of the
 // index, as a string of thousands of concatenated parts. Function bodies and
 // any value with a call or a function literal stay, because a generated
-// file can hold code that a program runs, as a .pb.go file.
+// file can hold code that a program runs, as a .pb.go file. A var value
+// that names a function stays too, as a map of handlers. A call of an
+// element of the map is a call of a function value, and the search finds
+// the function only through the reference that the value records.
 func goSkeleton(tree *sitter.Tree, data []byte) []byte {
 	out := bytes.Clone(data)
 	clear := func(from, to uint32) {
@@ -132,7 +135,7 @@ func goSkeleton(tree *sitter.Tree, data []byte) []byte {
 		case "var_spec", "const_spec":
 			if values := node.ChildByFieldName("value"); values != nil {
 				for _, v := range ts.NamedChildren(values) {
-					if !holdsCode(v) {
+					if !holdsCode(v) && (node.Type() == "const_spec" || !namesValue(v)) {
 						clear(v.StartByte(), v.EndByte())
 						out[v.StartByte()] = '0'
 					}
@@ -155,6 +158,25 @@ func holdsCode(node *sitter.Node) bool {
 		return true
 	}
 	return slices.ContainsFunc(ts.NamedChildren(node), holdsCode)
+}
+
+// namesValue reports whether an expression holds a name that can give a
+// function, as remove in map[string]func(){"rm": remove}. The key of a
+// keyed element and an operand of arithmetic give no function.
+func namesValue(node *sitter.Node) bool {
+	switch node.Type() {
+	case "identifier", "selector_expression":
+		return true
+	case "binary_expression":
+		return false
+	case "unary_expression":
+		if op := goOperator(node); op != "&" && op != "*" && op != "<-" {
+			return false
+		}
+	case "keyed_element":
+		return node.NamedChildCount() > 0 && namesValue(node.NamedChild(int(node.NamedChildCount())-1))
+	}
+	return slices.ContainsFunc(ts.NamedChildren(node), namesValue)
 }
 
 // skeletonIndex indexes the skeleton of a generated table file of a

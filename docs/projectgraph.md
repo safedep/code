@@ -68,7 +68,9 @@ line or a name that starts with `tables`, can hit a limit of the index,
 as a table of thousands of entries. Its index then comes from the file
 with each top-level var value that holds only data blanked. Function bodies
 and values with a call or a function literal stay, so the calls of a
-generated file, as a `.pb.go` file, stay in the graph. The index keeps the
+generated file, as a `.pb.go` file, stay in the graph. A var value that
+names a function stays too, as a map of handlers, because a call of a
+function value finds the function only through that reference. The index keeps the
 hash of the file. If the skeleton still hits a limit, the file stays
 truncated, and reach counts it as budget.
 
