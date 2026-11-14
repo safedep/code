@@ -269,7 +269,7 @@ func rustSignature(p *projection, def *fileindex.Definition, node *sitter.Node) 
 			continue
 		}
 		name := rustBoundName(param.ChildByFieldName("pattern"))
-		if typ := p.rustTypeName(param.ChildByFieldName("type"), bounds); typ != "" && name != nil {
+		if typ := p.rustDeclaredType(param, bounds); typ != "" && name != nil {
 			def.Params = append(def.Params, fileindex.Typed{Name: p.text(name), Type: typ})
 		}
 	}
@@ -309,11 +309,139 @@ func (p *projection) rustLocals(body *sitter.Node, bounds map[string]string) []f
 			return
 		}
 		name := rustBoundName(node.ChildByFieldName("pattern"))
-		if typ := p.rustTypeName(node.ChildByFieldName("type"), bounds); typ != "" && name != nil {
+		if typ := p.rustDeclaredType(node, bounds); typ != "" && name != nil {
 			locals = append(locals, fileindex.Typed{Name: p.text(name), Type: typ})
 		}
 	})
 	return locals
+}
+
+// rustDeclaredType returns the type that a let or a parameter declares, or
+// "" when a scope that holds the binder declares the first name of the
+// type. The link step resolves a declared type at the root of the file. So
+// Local in fn run() { type Local = dep::Thing<u8>; let t: Local = ... }
+// resolved to a struct Local of the root. A call on t then took the method
+// of that struct with no record, and a method of dep::Thing read as
+// not-found. Without the type, the call keeps the target of the call graph
+// or its record.
+func (p *projection) rustDeclaredType(binder *sitter.Node, bounds map[string]string) string {
+	typ := p.rustTypeName(binder.ChildByFieldName("type"), bounds)
+	first, _, _ := strings.Cut(typ, "::")
+	if typ == "" || p.rustScopeDeclares(binder, first) {
+		return ""
+	}
+	return typ
+}
+
+// rustScopeDeclares reports whether a scope between a node and the root of
+// the file can give a name another meaning than the root gives it: an item
+// or a use of a block or of an inline module, or a type parameter of a
+// function, an impl or a trait. A glob use can declare any name, except
+// use super::* in a module of the root, which reads the names of the root.
+// In an inline module, self and super name other modules than the root.
+func (p *projection) rustScopeDeclares(node *sitter.Node, name string) bool {
+	for scope := node.Parent(); scope != nil; scope = scope.Parent() {
+		switch scope.Type() {
+		case "block":
+			if p.rustItemsDeclare(scope, name, false) {
+				return true
+			}
+		case "declaration_list":
+			mod := scope.Parent()
+			if mod == nil || mod.Type() != "mod_item" {
+				continue
+			}
+			ofRoot := mod.Parent() != nil && mod.Parent().Type() == "source_file"
+			if name == "self" || name == "super" || p.rustItemsDeclare(scope, name, ofRoot) {
+				return true
+			}
+		case "function_item", "impl_item", "trait_item":
+			if slices.ContainsFunc(ts.NamedChildren(scope.ChildByFieldName("type_parameters")), func(param *sitter.Node) bool {
+				return p.rustTypeParameter(param) == name
+			}) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// rustItemsDeclare reports whether the items of a block or of a module
+// declare a type, a trait, a module or a use of the name. ofRoot tells
+// that the module is a module of the root, whose use super::* reads the
+// names of the root.
+func (p *projection) rustItemsDeclare(list *sitter.Node, name string, ofRoot bool) bool {
+	for _, item := range ts.NamedChildren(list) {
+		switch item.Type() {
+		case "struct_item", "enum_item", "union_item", "type_item", "trait_item", "mod_item":
+			if p.text(item.ChildByFieldName("name")) == name {
+				return true
+			}
+		case "extern_crate_declaration":
+			bound := item.ChildByFieldName("alias")
+			if bound == nil {
+				bound = item.ChildByFieldName("name")
+			}
+			if p.text(bound) == name {
+				return true
+			}
+		case "use_declaration":
+			tree := item.ChildByFieldName("argument")
+			names, glob := p.rustUseNames(tree, nil)
+			readsRoot := ofRoot && p.text(tree) == "super::*"
+			if slices.Contains(names, name) || glob && !readsRoot {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// rustUseNames returns the names that a use tree binds, and whether it
+// holds a glob. The prefix is the path of the use list that holds the
+// tree, whose last name self binds, as io for std::io::{self}.
+func (p *projection) rustUseNames(tree, prefix *sitter.Node) ([]string, bool) {
+	if tree == nil {
+		return nil, false
+	}
+	switch tree.Type() {
+	case "use_as_clause":
+		return []string{p.text(tree.ChildByFieldName("alias"))}, false
+	case "use_wildcard":
+		return nil, true
+	case "scoped_use_list":
+		return p.rustUseNames(tree.ChildByFieldName("list"), tree.ChildByFieldName("path"))
+	case "use_list":
+		var names []string
+		glob := false
+		for _, child := range ts.NamedChildren(tree) {
+			n, g := p.rustUseNames(child, prefix)
+			names, glob = append(names, n...), glob || g
+		}
+		return names, glob
+	case "self":
+		if prefix == nil {
+			return nil, false
+		}
+		return []string{rustLastName(p.text(prefix))}, false
+	case "identifier", "scoped_identifier":
+		return []string{rustLastName(p.text(tree))}, false
+	}
+	return nil, false
+}
+
+// rustTypeParameter returns the name of a type parameter, as T for T,
+// T: Store or T = u8, and "" for a lifetime or a const parameter.
+func (p *projection) rustTypeParameter(param *sitter.Node) string {
+	switch param.Type() {
+	case "optional_type_parameter":
+		return p.rustTypeParameter(param.ChildByFieldName("name"))
+	case "constrained_type_parameter":
+		return p.text(param.ChildByFieldName("left"))
+	case "type_identifier":
+		return p.text(param)
+	}
+	return ""
 }
 
 // rustLastName returns the last name of a path, as Result for

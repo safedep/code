@@ -114,3 +114,51 @@ func TestFileIndexRustTypeAlias(t *testing.T) {
 	assert.Equal(t, "crate::store::Store", store.Alias)
 	assert.False(t, store.Exported)
 }
+
+func TestFileIndexRustDeclaredTypes(t *testing.T) {
+	source := strings.Join([]string{
+		"fn plain() { let t: Store = make(); }",
+		"fn sibling() { { use dep::Thing as Store; } let t: Store = make(); }",
+		"fn alias() { type Store = u8; let t: Store = make(); }",
+		"fn after() { let t: Store = make(); use dep::Thing as Store; }",
+		"fn outer() { struct Store; { let t: Store = make(); } }",
+		"fn listed() { use dep::{store::{self}, Other}; let t: store::Store = make(); }",
+		"fn globbed() { use dep::*; let t: Store = make(); }",
+		"fn crated() { extern crate other as dep; let t: dep::Store = make(); }",
+		"fn generic<S>(s: S) { let t: S = s; }",
+		"fn bounded<S: Store>(s: S) {}",
+		"struct Holder<S>(S);",
+		"impl<S> Holder<S> { fn go(&self, s: S) { let t: Self = make(); } }",
+		"mod up { use super::*; fn run() { let t: Store = make(); } }",
+		"mod outer { mod down { use super::*; fn run() { let t: Store = make(); } } }",
+		"mod own { fn run() { let t: self::Store = make(); } }",
+	}, "\n") + "\n"
+	ix := indexSource(t, core.LanguageCodeRust, "main.rs", source)
+
+	store := []fileindex.Typed{{Name: "t", Type: "Store"}}
+	tests := []struct {
+		key    string
+		locals []fileindex.Typed
+		params []fileindex.Typed
+	}{
+		{key: "main.rs//plain", locals: store},
+		{key: "main.rs//sibling", locals: store},
+		{key: "main.rs//alias"},
+		{key: "main.rs//after"},
+		{key: "main.rs//outer"},
+		{key: "main.rs//listed"},
+		{key: "main.rs//globbed"},
+		{key: "main.rs//crated"},
+		{key: "main.rs//generic"},
+		{key: "main.rs//bounded", params: []fileindex.Typed{{Name: "s", Type: "Store"}}},
+		{key: "main.rs//Holder//go", locals: []fileindex.Typed{{Name: "t", Type: "Holder"}}},
+		{key: "main.rs//up//run", locals: store},
+		{key: "main.rs//outer//down//run"},
+		{key: "main.rs//own//run"},
+	}
+	for _, tt := range tests {
+		def := definitionOf(t, ix, tt.key)
+		assert.Equal(t, tt.locals, def.Locals, tt.key)
+		assert.Equal(t, tt.params, def.Params, tt.key)
+	}
+}
