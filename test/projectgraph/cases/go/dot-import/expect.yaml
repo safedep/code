@@ -13,7 +13,10 @@ edges:
     kind: wildcard
     confidence: low
     site: cmd/app/main.go:6
-unresolved: []
+unresolved:
+  - caller: html//template//New
+    reason: no-dependency-source
+    callback: true
 results:
   - target: html//template//New
     status: found

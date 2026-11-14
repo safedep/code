@@ -19,6 +19,9 @@ roots:
     kind: main
     rule: go.main
 unresolved:
+  - caller: os//exec//LookPath
+    reason: no-dependency-source
+    callback: true
   - caller: go:github.com/acme/srv@v1.0.0//srv.go//Serve
     site: go:github.com/acme/srv@v1.0.0//srv.go:8
     reason: unknown-receiver

@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/projectgraph"
 )
 
@@ -101,8 +102,12 @@ type CallSite struct {
 // dependency code. ImportPrefix scopes a computed import to the targets
 // under the prefix, and Unit scopes a call into a package at no known
 // definition to the targets that the code of the package, and of each
-// package that it calls, reaches. With none of them, the uncertainty
-// concerns every target.
+// package that it calls, reaches. Callback scopes code outside the graph
+// that can call into the graph only through a method of a value that it
+// holds, as the Go standard library with no unit, to the targets that any
+// method of an exported name reaches. Such an uncertainty has no key and
+// counts once per search. With none of them, the uncertainty concerns
+// every target.
 type Uncertainty struct {
 	Kind         UncertaintyKind   `json:"kind"`
 	Key          string            `json:"key,omitempty"`
@@ -111,6 +116,7 @@ type Uncertainty struct {
 	Method       string            `json:"method,omitempty"`
 	ImportPrefix string            `json:"import_prefix,omitempty"`
 	Unit         string            `json:"unit,omitempty"`
+	Callback     bool              `json:"callback,omitempty"`
 }
 
 // Searched is what the search did. Version is the Version of the search
@@ -372,6 +378,7 @@ type adjacency struct {
 	closures       map[string][]bool
 	byLast         map[string][]int
 	methodClosures map[string][]bool
+	exported       []bool
 }
 
 // sources returns the records, the flags and the budgets of the graph by
@@ -517,6 +524,35 @@ func (a *adjacency) methodClosure(name string) []bool {
 // node of the target.
 func (a *adjacency) methodReaches(name string, target Target) bool {
 	c := a.methodClosure(name)
+	return slices.ContainsFunc(a.match(target), func(id int) bool { return c[id] })
+}
+
+// exportedClosure returns the nodes that the Go methods of an exported
+// name reach, in the project and in each unit of dependency code. Code
+// outside the graph can call such a method on a value that it holds. A
+// method of a test file is a source only when the query includes the
+// tests.
+func (a *adjacency) exportedClosure() []bool {
+	if a.exported == nil {
+		var methods []int
+		for id, key := range a.keys {
+			n := a.g.Nodes[key]
+			if n == nil || n.Kind != projectgraph.NodeMethod || !n.Exported || n.Test && !a.includeTests {
+				continue
+			}
+			if file := a.g.Nodes[n.Path]; file != nil && file.Language == langcode.Go {
+				methods = append(methods, id)
+			}
+		}
+		a.exported = a.reachable(methods, func(int) []int { return nil })
+	}
+	return a.exported
+}
+
+// exportedReaches reports whether a Go method of an exported name reaches
+// a node of the target.
+func (a *adjacency) exportedReaches(target Target) bool {
+	c := a.exportedClosure()
 	return slices.ContainsFunc(a.match(target), func(id int) bool { return c[id] })
 }
 

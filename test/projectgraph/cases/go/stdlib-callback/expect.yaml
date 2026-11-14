@@ -1,0 +1,53 @@
+source: safedep:hand
+description: >-
+  The shape of melody and gorilla/websocket. main calls ReadMessage of Conn of the unit github.com/acme/ws.
+  ReadMessage passes the reader that NextReader gives, a messageReader, to io.ReadAll. No unit gives the
+  standard library, so the graph holds no code of io.ReadAll. That code calls Read of the value, and Read calls
+  advance. The standard library can call a method of an exported name on a value that it holds, so the key
+  io//ReadAll has a callback record. Read and advance are uncertain, not not-found. NextReader has a path.
+units:
+  gomod/github.com/acme/ws@v1.0.0: go:github.com/acme/ws@v1.0.0
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+unresolved:
+  - caller: io//ReadAll
+    reason: no-dependency-source
+    callback: true
+results:
+  - target: github.com//acme//ws//messageReader//Read
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+  - target: github.com//acme//ws//Conn//advance
+    status: uncertain
+    call_sites:
+      - caller: go:github.com/acme/ws@v1.0.0//conn.go//messageReader//Read
+        site: go:github.com/acme/ws@v1.0.0//conn.go:18
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+  - target: github.com//acme//ws//Conn//NextReader
+    status: found
+    path:
+      - key: main.go//main
+      - key: github.com//acme//ws//Conn//ReadMessage
+        site: main.go:7
+        kind: direct
+        confidence: high
+      - key: go:github.com/acme/ws@v1.0.0//conn.go//Conn//ReadMessage
+        site: go:github.com/acme/ws@v1.0.0//conn.go:7
+        kind: package
+        confidence: high
+      - key: go:github.com/acme/ws@v1.0.0//conn.go//Conn//NextReader
+        site: go:github.com/acme/ws@v1.0.0//conn.go:8
+        kind: member
+        confidence: high
+    call_sites:
+      - caller: go:github.com/acme/ws@v1.0.0//conn.go//Conn//ReadMessage
+        site: go:github.com/acme/ws@v1.0.0//conn.go:8
+        reached: true

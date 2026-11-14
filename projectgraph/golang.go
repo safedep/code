@@ -86,12 +86,13 @@ func goNarrowProviders(out []provision) []provision {
 }
 
 // goSurface adds the exported names and methods of each Go package of a
-// unit that is not internal.
+// unit that is not internal. Only the module can import an internal
+// package.
 func goSurface(s *surfacer) {
 	b, sp := s.b, s.sp
 	for _, dir := range slices.Sorted(maps.Keys(sp.goPackages)) {
 		importPath, ok := b.goImportPath(sp, dir)
-		if !ok {
+		if !ok || slices.Contains(strings.Split(dir, "/"), "internal") {
 			continue
 		}
 		for _, p := range sp.goPackages[dir].files {
@@ -124,12 +125,15 @@ func goSymbol(b *builder, sp *space, def string) (string, []string, bool) {
 	return importPath, fileindex.Segments(def), ok
 }
 
-// goImportPath returns the import path of a Go package of a unit. A package
-// under an internal directory and a main package have no importer outside
-// the module.
+// goImportPath returns the import path of a Go package of a unit. A main
+// package has none, because no program imports it. A package under an
+// internal directory keeps its path. The code of its module calls it, and
+// an advisory names a symbol of it by that path, as
+// google.golang.org/grpc/internal/transport.NewServerTransport. Without the
+// path, such a target matches no definition and reads as no-such-target.
 func (b *builder) goImportPath(sp *space, dir string) (string, bool) {
 	u := sp.goPackages[dir]
-	if slices.Contains(strings.Split(dir, "/"), "internal") || slices.ContainsFunc(u.files, func(p string) bool {
+	if slices.ContainsFunc(u.files, func(p string) bool {
 		ix := b.byPath[p]
 		return ix != nil && ix.Package == "main"
 	}) {
@@ -372,4 +376,60 @@ func (b *builder) declaringInterface(class, name string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// goPanicMethods are the methods that the runtime calls on the value of a
+// panic that no recover stops, to print it.
+var goPanicMethods = []string{"Error", "String"}
+
+// recordOutsideCode adds a record on each external key that Go code calls
+// or uses as a value and whose package no unit gives. The graph holds no
+// code of such a key, and that code can call back into code that the
+// graph holds. docs/projectgraph.md gives the argument for the scope of
+// each record:
+//
+//   - The standard library can call back only a method of an exported name
+//     of a value that it holds, so its record is a Callback.
+//   - C code that cgo calls can call any function that an export comment
+//     names, and another module can call any function of a package that it
+//     imports. Their records concern every target. A build with no project
+//     file, as a summary, gives no record for another module, because the
+//     reader of a summary joins the summary of each module that it calls.
+//   - A builtin runs no code of the program, except panic.
+func (b *builder) recordOutsideCode() {
+	for from, to := range b.edges.pairs {
+		if b.kindOf(to) == NodeExternal && b.languageOf(from) == langcode.Go && !b.provided(to) {
+			for _, r := range b.outsideRecords(to) {
+				b.addUnresolved(r)
+			}
+		}
+	}
+}
+
+func (b *builder) outsideRecords(key string) []UnresolvedSite {
+	r := UnresolvedSite{Caller: key, Text: key, Reason: fileindex.UnresolvedNoDependencySource}
+	first := fileindex.Unit(key)
+	switch {
+	case key == "panic":
+		var out []UnresolvedSite
+		for _, m := range goPanicMethods {
+			r.Method = m
+			out = append(out, r)
+		}
+		return out
+	case langcode.IsBuiltin(langcode.Go, key):
+		return nil
+	case first == "C":
+	case modules.IsStdPath(first):
+		r.Text, r.Callback = "the Go standard library, which no unit gives", true
+	case !b.hasProject:
+		return nil
+	}
+	return []UnresolvedSite{r}
+}
+
+// provided reports whether a unit of dependency code gives the package of
+// an external key.
+func (b *builder) provided(key string) bool {
+	return slices.ContainsFunc(b.origins[key], func(o origin) bool { return len(b.providers(o)) > 0 })
 }

@@ -542,6 +542,11 @@ dependency code whose `Node.External` is the key, as the unexported
 definition and not to the external key, so a target that only the code of
 its unit calls is found through the definition. The call sites of a
 target leave out the package edges, which join a key to its definition.
+A definition of an internal package of a Go unit has an external key too,
+as `google.golang.org//grpc//internal//transport//NewServerTransport`. Only
+the module can import such a package, so no importer writes the key, but
+an advisory names the symbol by it. An internal package gives no symbol
+to a summary.
 
 `reach.TargetsByKey` reads a list of keys. `Target.Key` returns the key,
 and the JSON form of a target is its key. One breadth-first search from
@@ -616,8 +621,11 @@ with an unknown receiver and a method name concerns the targets with that
 last segment, and the targets that any definition of that name reaches. A
 computed import with a static prefix concerns the targets under the
 prefix. A call into a package at no known definition concerns the targets
-that the code of the package reaches. A result caps the uncertainties that
-it lists at three per kind and keeps the full count in `Searched`.
+that the code of the package reaches. Code of the Go standard library that
+no unit gives concerns the targets that a Go method of an exported name
+reaches, as [Code outside the graph](#code-outside-the-graph) argues. A
+result caps the uncertainties that it lists at three per kind and keeps
+the full count in `Searched`.
 
 A file of dependency code that the index step did not complete counts
 only for a search that enters its package. A file of the project counts
@@ -734,3 +742,59 @@ So a scope narrower than every target can make a target `not-found` that
 the program reaches. The case `go/dependency-failed-callback` shows it:
 `os/exec.LookPath` stays uncertain only through the budget of the failed
 file.
+
+### Code outside the graph
+
+A Go call or reference of an external key whose package no unit gives
+runs code that the graph does not hold. That code can call back into code
+that the graph holds, and no edge shows it. As an example, `ReadMessage` of
+`gorilla/websocket` passes its reader to `io.ReadAll`, and `io.ReadAll`
+calls `Read` of the reader. With no unit of the standard library, the
+search stops at the key `io//ReadAll`, and `messageReader.Read` reads as
+`not-found`. So the link step gives each such key a record with the reason
+`no-dependency-source`, and its caller is the key. The scope of the record
+depends on what the code can call.
+
+- The Go standard library imports no package outside it. So its code can
+  run code of another module only through a value that it holds: a function
+  value, or a method of a value. A function value has a reference edge from
+  the code that makes it, so the search reaches the function without the
+  standard library. See [A call of a function value](#a-call-of-a-function-value).
+  A method of a value runs through an interface or through reflection. A
+  type outside the standard library cannot declare a method of an
+  unexported name of an interface of the standard library. It can only
+  embed a type of the standard library that has the method, and that method
+  is code of the standard library. Reflection gives only the methods of an
+  exported name. So the record of a key of the standard library is a
+  callback, as `Callback` marks it. It concerns the targets that a Go
+  method of an exported name reaches, in the project and in each unit, as
+  the closure of a method name does. Each key of the standard library gives
+  the same scope, so a result lists the callback once, with no key.
+- A package of another module can import the package of any target and
+  call any function of it. So its record concerns every target. A summary
+  links one unit alone, and the reader of a summary joins the summary of
+  each module that the unit calls. So the link step gives this record only
+  in a build with a project file.
+- C code that cgo calls, as `C//f`, can call each Go function that an
+  `//export` comment names. So its record concerns every target.
+- A builtin runs no code of the program, except `panic`. The runtime prints
+  the value of a panic that no `recover` stops with its method `Error` or
+  `String`. So `panic` has a record for each of the two methods.
+
+A target that no Go method of an exported name reaches keeps its answer.
+In the case `go/stdlib-callback-scope`, only the function `Dial` calls
+`handshake`, so `handshake` stays `not-found`. A search that reaches no
+such key keeps every answer. With the unit `go:std@<version>`, the standard
+library is code of the graph and gives no callback. A unit of each module
+removes the records of the other modules.
+
+Two gaps stay.
+
+- A target of a package that no unit gives, which the project names only
+  in a value, as the composite literal `legacy.Config{}`, has no node. The
+  standard library can call a method of that value, and the method can call
+  the target. The graph holds none of that code, so the target reads as
+  `no-such-target`.
+- The rule applies to Go only. Code of another language that no unit gives,
+  as the standard library of Python with no `python:std` unit, can call a
+  method of a value too, and no record shows it.

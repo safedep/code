@@ -19,13 +19,13 @@ type Scoped struct {
 }
 
 // Concerns reports whether the uncertainty concerns a target, as the
-// result of a reach query lists it: a Unit scope concerns its Targets, an
-// ImportPrefix scope every target under the prefix, a Method scope its
-// Targets and every target whose last segment is the method, and an
-// uncertainty with no scope every target.
+// result of a reach query lists it: a Unit or a Callback scope concerns its
+// Targets, an ImportPrefix scope every target under the prefix, a Method
+// scope its Targets and every target whose last segment is the method, and
+// an uncertainty with no scope every target.
 func (u Scoped) Concerns(t Target) bool {
 	switch {
-	case u.Unit != "":
+	case u.Unit != "", u.Callback:
 		return t.MatchesSorted(u.Targets)
 	case u.ImportPrefix != "":
 		return t.mayImport(u.ImportPrefix)
@@ -100,18 +100,20 @@ func (x *Explorer) ExploreAll(ctx context.Context, from []string) (*Sets, error)
 }
 
 // table is the item space of the sets: the external nodes first, then the
-// units a search can enter, then the nodes with an uncertainty. target
-// holds the item of each external node, and unc the item of each node
-// with an uncertainty. entries is the table of uncertainties, and at holds
-// the index range of each item of a unit or a node in it.
+// units a search can enter, then the code outside the graph that can call
+// a method, then the nodes with an uncertainty. target holds the item of
+// each external node, and unc the item of each node with an uncertainty.
+// entries is the table of uncertainties, and at holds the index range of
+// each item of a unit, of the callback or of a node in it.
 type table struct {
-	items   int
-	targets []int
-	target  map[int]int
-	unc     map[int]int
-	units   map[string]int
-	entries []Scoped
-	at      map[int][2]int
+	items    int
+	targets  []int
+	target   map[int]int
+	unc      map[int]int
+	units    map[string]int
+	callback int
+	entries  []Scoped
+	at       map[int][2]int
 	// global holds the indexes of the entries that count for every
 	// search.
 	global []int
@@ -136,6 +138,12 @@ func (a *adjacency) table() *table {
 			t.entries = append(t.entries, a.scoped(u))
 		}
 		t.at[t.items] = [2]int{start, len(t.entries)}
+		t.items++
+	}
+	if src.callback != nil {
+		t.callback = t.items
+		t.at[t.items] = [2]int{len(t.entries), len(t.entries) + 1}
+		t.entries = append(t.entries, a.scoped(*src.callback))
 		t.items++
 	}
 	for id, key := range a.keys {
@@ -163,6 +171,8 @@ func (a *adjacency) scoped(u Uncertainty) Scoped {
 	s := Scoped{Uncertainty: u}
 	var closure []bool
 	switch {
+	case u.Callback:
+		closure = a.exportedClosure()
 	case u.Unit != "":
 		closure = a.closure(u.Unit)
 	case u.Method != "":
@@ -179,7 +189,7 @@ func (a *adjacency) scoped(u Uncertainty) Scoped {
 }
 
 // own returns the items of one node: its external node, the units it
-// enters and its uncertainties.
+// enters, the callback of code outside the graph and its uncertainties.
 func (t *table) own(a *adjacency, id int) []int {
 	var items []int
 	if item, ok := t.target[id]; ok {
@@ -187,6 +197,9 @@ func (t *table) own(a *adjacency, id int) []int {
 	}
 	if item, ok := t.unc[id]; ok {
 		items = append(items, item)
+	}
+	if a.sources().callbacks[a.keys[id]] {
+		items = append(items, t.callback)
 	}
 	n := a.g.Nodes[a.keys[id]]
 	if n == nil {

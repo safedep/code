@@ -45,7 +45,7 @@ it at 0.80.
    | `edges` | A subset of the edges, with `from`, `to`, `kind`, `confidence` and `site` |
    | `exact_edges` | `true` makes `edges` the whole set, so a spurious edge fails the case. Use it for a small case |
    | `no_edges` | Pairs of `from` and `to` that no edge of the graph may join. A case that is not exact needs one for each result that is found, so a spurious edge on its path fails the case |
-   | `unresolved` | The whole set of unresolved sites, with `caller`, `site`, `reason` and `method` |
+   | `unresolved` | The whole set of unresolved sites, with `caller`, `site`, `reason`, `method` and `callback`. A site of an external key has no `site` |
    | `truncated` | The whole set of truncation records of the link step, with `kind`, `key` and `site` |
    | `dropped` | The whole set of `overlay.json` edges that the merge drops, with `site`, `callee` and `reason` |
    | `results` | The reach result of each `target`, with `status`, `path`, `call_sites` and the uncertainties. An `llm` hop of a path has its `resolver`, as `model m1, prompt v2`. The first hop has its `root` kind, as `query`, when the case checks who chose the start of the path. `sources` names the sources of the query, as keys, and `sources_only` searches from them alone. `error` is the text of the error that the query must give, as for an unknown source, in place of a result |

@@ -12,6 +12,9 @@
       "reaches": [
         "errors//New",
         "os//exec//Command"
+      ],
+      "uncertainties": [
+        0
       ]
     },
     {
@@ -22,6 +25,9 @@
       "reaches": [
         "errors//New",
         "os//exec//Command"
+      ],
+      "uncertainties": [
+        0
       ]
     },
     {
@@ -32,6 +38,9 @@
       "reaches": [
         "errors//New",
         "os//exec//Command"
+      ],
+      "uncertainties": [
+        0
       ]
     },
     {
@@ -42,6 +51,9 @@
       "reaches": [
         "errors//New",
         "os//exec//Command"
+      ],
+      "uncertainties": [
+        0
       ]
     },
     {
@@ -52,6 +64,9 @@
       "reaches": [
         "errors//New",
         "os//exec//Command"
+      ],
+      "uncertainties": [
+        0
       ]
     },
     {
@@ -62,6 +77,9 @@
       "reaches": [
         "errors//New",
         "os//exec//Command"
+      ],
+      "uncertainties": [
+        0
       ]
     },
     {
@@ -69,7 +87,7 @@
       "definitions": [],
       "reaches": [],
       "uncertainties": [
-        0
+        1
       ]
     },
     {
@@ -80,6 +98,9 @@
       "reaches": [
         "errors//New",
         "os//exec//Command"
+      ],
+      "uncertainties": [
+        0
       ]
     },
     {
@@ -90,6 +111,9 @@
       "reaches": [
         "errors//New",
         "os//exec//Command"
+      ],
+      "uncertainties": [
+        0
       ]
     },
     {
@@ -100,6 +124,9 @@
       "reaches": [
         "errors//New",
         "os//exec//Command"
+      ],
+      "uncertainties": [
+        0
       ]
     },
     {
@@ -112,7 +139,8 @@
         "os//exec//Command"
       ],
       "uncertainties": [
-        1
+        0,
+        2
       ]
     },
     {
@@ -123,6 +151,9 @@
       "reaches": [
         "errors//New",
         "os//exec//Command"
+      ],
+      "uncertainties": [
+        0
       ]
     },
     {
@@ -133,6 +164,9 @@
       "reaches": [
         "errors//New",
         "os//exec//Command"
+      ],
+      "uncertainties": [
+        0
       ]
     },
     {
@@ -149,6 +183,18 @@
     "os//exec//Command"
   ],
   "uncertainties": [
+    {
+      "kind": "unresolved-call",
+      "site": {
+        "path": ""
+      },
+      "text": "the Go standard library, which no unit gives (no-dependency-source)",
+      "callback": true,
+      "targets": [
+        "os//Remove",
+        "os//exec//Command"
+      ]
+    },
     {
       "kind": "unresolved-call",
       "key": "example.com//markup//Handler",

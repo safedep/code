@@ -378,6 +378,7 @@ func (b *builder) linkAll(ctx context.Context) error {
 	if err := b.linkPackages(ctx); err != nil {
 		return err
 	}
+	b.recordOutsideCode()
 	b.checkUnits()
 	b.linkFields()
 	return nil

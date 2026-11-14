@@ -37,7 +37,7 @@ func graphOf(t *testing.T, spec string) *projectgraph.Graph {
 			return n
 		}
 		n := &projectgraph.Node{Key: key, Kind: projectgraph.NodeExternal}
-		if unit := fileindex.Unit(key); strings.HasSuffix(unit, ".py") || strings.HasSuffix(unit, ".js") {
+		if unit := fileindex.Unit(key); strings.HasSuffix(unit, ".py") || strings.HasSuffix(unit, ".js") || strings.HasSuffix(unit, ".go") {
 			n.Kind, n.Path, n.Line, n.Test = projectgraph.NodeFunction, unit, 1, strings.HasPrefix(unit, "tests/")
 			if _, ok := g.Files[unit]; !ok {
 				g.Files[unit] = fileindex.FileIndexed
@@ -86,6 +86,17 @@ func graphOf(t *testing.T, spec string) *projectgraph.Graph {
 			g.Unresolved = append(g.Unresolved, projectgraph.UnresolvedSite{
 				Caller: caller, Site: projectgraph.Site{Path: f[2]}, Text: f[1], Reason: fileindex.UnresolvedNoDefinition, Unit: f[2],
 			})
+		case "callback":
+			node(f[1])
+			g.Unresolved = append(g.Unresolved, projectgraph.UnresolvedSite{
+				Caller: f[1], Text: "the Go standard library, which no unit gives", Reason: fileindex.UnresolvedNoDependencySource, Callback: true,
+			})
+		case "method":
+			n := node(f[1])
+			n.Kind, n.Exported = projectgraph.NodeMethod, arg(f, 2, "") != "unexported"
+			if _, ok := g.Nodes[n.Path]; !ok {
+				g.Nodes[n.Path] = &projectgraph.Node{Key: n.Path, Kind: projectgraph.NodeModule, Path: n.Path, Language: langcode.Go}
+			}
 		case "flag":
 			n := node(f[1])
 			l, err := strconv.Atoi(f[3])
@@ -244,6 +255,51 @@ func TestReachUncertainties(t *testing.T) {
 			for _, u := range r.Uncertainties {
 				if u.Kind != RootFallback && u.Key != "" {
 					assert.NotEmpty(t, u.Site.Path, "an uncertainty names its site")
+				}
+			}
+		})
+	}
+}
+
+// TestReachCallback checks the scope of code outside the graph that can
+// call a method of a value that it holds. A target that a Go method of an
+// exported name reaches is uncertain. A target that only a function or a
+// method of an unexported name reaches stays not-found, and so does each
+// target of a search that reaches no such code.
+func TestReachCallback(t *testing.T) {
+	const units = `
+method go:kit@1.0.0//k.go//conn//Read
+edge go:kit@1.0.0//k.go//conn//Read os//remove direct 5
+method go:kit@1.0.0//k.go//conn//reset unexported
+edge go:kit@1.0.0//k.go//conn//reset os//chmod direct 6
+edge go:kit@1.0.0//k.go//dial os//exit direct 7
+callback io//ReadAll
+`
+	tests := []struct {
+		name string
+		spec string
+		want map[string]Status
+	}{
+		{
+			name: "a search that reaches the code",
+			spec: "root main.go//main\nedge main.go//main io//ReadAll direct 3" + units,
+			want: map[string]Status{"os//remove": Uncertain, "os//chmod": NotFound, "os//exit": NotFound},
+		},
+		{
+			name: "a search that does not reach the code",
+			spec: "root main.go//main\nedge main.go//main os//getpid direct 3" + units,
+			want: map[string]Status{"os//remove": NotFound, "os//chmod": NotFound, "os//exit": NotFound},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := graphOf(t, tt.spec)
+			for target, status := range tt.want {
+				r := reachOne(t, g, Query{Targets: targetsOf(t, target)})
+				assert.Equal(t, status, r.Status, target)
+				if status == Uncertain {
+					require.Len(t, r.Uncertainties, 1)
+					assert.True(t, r.Uncertainties[0].Callback)
 				}
 			}
 		})
@@ -661,6 +717,17 @@ entry - npm:other@1.0.0
 edge npm:other@1.0.0//o.js//f fs//unlink direct 2
 `,
 	"project with units": dependencies + "edge main.py//run kit//load//close direct 4\nentry kit//load//close npm:kit@1.0.0\nedge npm:kit@1.0.0//k.js//close fs//unlink\n",
+	"code outside the graph that calls a method": `
+edge kit//run go:kit@1.0.0//k.go//run package
+edge go:kit@1.0.0//k.go//run io//ReadAll direct 2
+edge go:kit@1.0.0//k.go//run os//exit direct 3
+callback io//ReadAll
+edge kit//conn//Read go:kit@1.0.0//k.go//conn//Read package
+method go:kit@1.0.0//k.go//conn//Read
+edge go:kit@1.0.0//k.go//conn//Read os//remove direct 5
+edge go:kit@1.0.0//k.go//conn//Read io//Copy direct 6
+callback io//Copy
+`,
 	"two symbols in one cycle": `
 edge a//x npm:a@1.0.0//a.js//x package
 edge npm:a@1.0.0//a.js//x a//y direct 2
@@ -739,6 +806,24 @@ func TestExploreAllScopesTheTargets(t *testing.T) {
 
 	_, err = NewExplorer(g).ExploreAll(context.Background(), []string{"kit//nope"})
 	assert.ErrorContains(t, err, "no node kit//nope")
+}
+
+// TestExploreAllScopesACallback checks that the code outside the graph that
+// can call a method is one entry of the table, whose targets are what the
+// Go methods of an exported name reach.
+func TestExploreAllScopesACallback(t *testing.T) {
+	g := graphOf(t, exploreAllGraphs["code outside the graph that calls a method"])
+	sets, err := NewExplorer(g).ExploreAll(context.Background(), []string{"kit//run", "kit//conn//Read"})
+	require.NoError(t, err)
+	require.Len(t, sets.Uncertainties, 1)
+	callback := sets.Uncertainties[0]
+	assert.True(t, callback.Callback)
+	assert.Equal(t, []string{"io//Copy", "os//remove"}, callback.Targets)
+	assert.True(t, callback.Concerns(targetOf(t, "os//remove")))
+	assert.False(t, callback.Concerns(targetOf(t, "os//exit")))
+	for _, src := range sets.Sources {
+		assert.Equal(t, []int{0}, src.Uncertainties)
+	}
 }
 
 func TestExploreAllSharesTheSetOfAChain(t *testing.T) {

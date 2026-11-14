@@ -109,7 +109,8 @@ const (
 	UnresolvedTraitReceiver UnresolvedReason = "trait-receiver"
 	// UnresolvedNoDependencySource is a call on a value whose type comes
 	// from a package with no code in the graph, as the result of a
-	// function of a module that no unit gives.
+	// function of a module that no unit gives, or an external key of such a
+	// package, whose code can call back into the graph.
 	UnresolvedNoDependencySource UnresolvedReason = "no-dependency-source"
 	// UnresolvedFunctionValue is a call of a function value, as f(x)(y) or
 	// handlers[i](c), in a language whose function values the link step
