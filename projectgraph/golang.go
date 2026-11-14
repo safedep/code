@@ -29,6 +29,7 @@ var goProfile = profile{
 	typeConversions:    true,
 	scopeWildcards:     true,
 	mainLoadsPackage:   true,
+	importsBindAlias:   true,
 }
 
 // goProvide returns the package unit of a Go module that an import path

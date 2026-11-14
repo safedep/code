@@ -1,11 +1,15 @@
 package main
 
-import "example.com/markup"
+import (
+	"example.com/markup"
+	"example.com/markup/netctx"
+)
 
 func main() {
 	read(&markup.Node{})
 	call()
 	promoted()
+	wait(nil)
 }
 
 func read(n *markup.Node) {
@@ -25,4 +29,8 @@ func promoted() {
 	w.Flush()
 	c := markup.Dial()
 	c.Close()
+}
+
+func wait(ctx netctx.Context) {
+	ctx.Done()
 }

@@ -273,7 +273,12 @@ embedded interface declares, as `Close` of `ssh.Client` that embeds the
 interface `Conn`, runs on the value that the field holds, as a call on a
 value of the interface does. The walk of an external key into a unit that
 ends at such a method, or at a method of an interface of the unit, is a
-record with the reason `interface-receiver`.
+record with the reason `interface-receiver`. A type alias, as
+`type Context = context.Context`, names its target as a base, so a method
+of the alias is a method of the target type. An import of a package whose
+path has one element, as `context`, binds its name, so the base resolves
+to the external key `context//Context`, and a unit of the standard library
+gives it on.
 
 A `pypi:` unit is a distribution, as a site-packages directory or an
 unpacked wheel holds it. These rules apply to it.

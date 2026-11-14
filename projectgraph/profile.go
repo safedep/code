@@ -180,6 +180,10 @@ type profile struct {
 	// with no item and no alias binds the first segment, as os for import
 	// os.path in Python.
 	importBindsRoot bool
+	// importsBindAlias marks a language where each import binds its alias,
+	// also an alias that is the whole module, as context for import
+	// "context" in Go.
+	importsBindAlias bool
 	// moduleNames marks a language where a module gives on each name that
 	// it binds, imports too, unless it lists its exports, and where a
 	// package gives on its submodules, as Python.

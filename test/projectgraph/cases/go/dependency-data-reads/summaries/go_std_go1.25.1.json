@@ -5,6 +5,20 @@
   "unit": "go:std@go1.25.1",
   "symbols": [
     {
+      "key": "context//Background",
+      "definitions": [
+        "go:std@go1.25.1//context/context.go//Background"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "context//Context",
+      "definitions": [
+        "go:std@go1.25.1//context/context.go//Context"
+      ],
+      "reaches": []
+    },
+    {
       "key": "errors//New",
       "definitions": [
         "go:std@go1.25.1//errors/errors.go//New"
@@ -29,6 +43,13 @@
       "key": "os//exec//Command",
       "definitions": [
         "go:std@go1.25.1//os/exec/exec.go//Command"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "os//exec//LookPath",
+      "definitions": [
+        "go:std@go1.25.1//os/exec/exec.go//LookPath"
       ],
       "reaches": []
     }

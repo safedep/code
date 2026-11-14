@@ -122,7 +122,7 @@ func bindingName(lang langcode.Code, imp fileindex.Import) string {
 	switch {
 	case imp.Item != "":
 		return lastDotted(cmp.Or(imp.Alias, imp.Item))
-	case imp.Alias != "" && imp.Alias != imp.Module:
+	case imp.Alias != "" && (imp.Alias != imp.Module || profileOf(lang).importsBindAlias):
 		return imp.Alias
 	case profileOf(lang).importBindsRoot:
 		return firstDotted(imp.Module)

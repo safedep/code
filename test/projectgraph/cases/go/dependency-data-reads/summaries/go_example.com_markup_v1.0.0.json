@@ -106,6 +106,13 @@
         "go:example.com/markup@v1.0.0//client.go//Writer"
       ],
       "reaches": []
+    },
+    {
+      "key": "example.com//markup//netctx//Context",
+      "definitions": [
+        "go:example.com/markup@v1.0.0//netctx/ctx.go//Context"
+      ],
+      "reaches": []
     }
   ],
   "targets": [
