@@ -332,6 +332,21 @@ Rust follows the same rules, with these additions.
   before the call is a record with the reason `unknown-receiver`, and so is
   a call whose declared type does not hold. A method of the real type then
   reads as `uncertain` and not as `not-found`.
+- The link step resolves the declared type of a parameter or a `let` at
+  the root of the file. So the index keeps a declared type only when no
+  scope that holds the binder declares the first name of the type. Such a
+  scope is a block or an inline module with an item, a `use` or an
+  `extern crate` of the name, or a function, an `impl` or a trait with a
+  type parameter of the name. A glob `use` can declare any name, except
+  `use super::*` in a module of the root, which reads the names of the
+  root. `self` and `super` in an inline module name other modules. So in
+  `fn run() { type Local = dep::Thing<u8>; let t: Local = dep::new_thing(); t.inspect(); }`
+  with a `struct Local` at the root, `t.inspect()` takes no method of the
+  root `Local`. The call keeps the target that the call graph gives, or a
+  record with the reason `unknown-receiver`. A type parameter with a bound,
+  as `S` in `fn run<S: Store>(s: S)`, names its bound. The type of a field
+  and the result type of a function do not get this check, so a type that
+  an inline module declares for them still resolves at the root.
 - `extern crate x;`, `extern crate x as y;`, `use x;` and `pub use x as y;`
   of a whole crate bind `x` or `y` in their module to the crate. A path
   through the binding is a path of the crate, so

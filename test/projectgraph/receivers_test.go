@@ -318,6 +318,60 @@ var rustReceiverRows = []receiverRow{
 		target: "dep//Thing//inspect",
 		want:   "uncertain/unknown-receiver",
 	},
+	{
+		name:   "typed let of a type alias of the function",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn run() {\n    type Local = dep::Thing<u8>;\n    let t: Local = dep::new_thing();\n    t.inspect();\n}",
+		target: "dep//Thing//inspect",
+		want:   "found",
+	},
+	{
+		name:   "typed let of a use of the function",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn run() {\n    use dep::Thing as Local;\n    let t: Local<u8> = dep::new_thing();\n    t.inspect();\n}",
+		target: "dep//Thing//inspect",
+		want:   "found",
+	},
+	{
+		name:   "typed let of a type alias of an inline module",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nmod inner {\n    pub type Local = dep::Thing<u8>;\n    pub fn go() {\n        let t: Local = dep::new_thing();\n        t.inspect();\n    }\n}\n\nfn run() {\n    inner::go();\n}",
+		target: "dep//Thing//inspect",
+		want:   "found",
+	},
+	{
+		name:   "typed let of a glob use of a block",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn run() {\n    mod m {\n        pub use dep::Thing as Local;\n    }\n    use m::*;\n    let t: Local<u8> = dep::new_thing();\n    t.inspect();\n}",
+		target: "dep//Thing//inspect",
+		want:   "found",
+	},
+	{
+		name:   "parameter of a use of an inline module",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nmod inner {\n    use dep::Thing as Local;\n    pub fn go(t: Local<u8>) {\n        t.inspect();\n    }\n}\n\nfn run() {\n    inner::go(dep::new_thing());\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "parameter of a type alias of the outer function",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn run() {\n    type Local = dep::Thing<u8>;\n    fn inner(t: Local) {\n        t.inspect();\n    }\n    inner(dep::new_thing());\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "parameter of a type parameter of the impl",
+		source: "struct Local;\nimpl Local {\n    fn run(&self) {}\n}\n\nstruct Holder<T>(T);\nimpl<Local: Doer> Holder<Local> {\n    fn go(t: Local) {\n        t.run();\n    }\n}\n\nfn run() {\n    Holder::<Thing<u8>>::go(dep::new_thing());\n}",
+		target: "dep//Thing//run",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "typed let of a type parameter of the impl",
+		source: "struct Local;\nimpl Local {\n    fn run(&self) {}\n}\n\nstruct Holder<T>(T);\nimpl<Local: Doer> Holder<Local> {\n    fn go(t: Local) {\n        let u: Local = t;\n        u.run();\n    }\n}\n\nfn run() {\n    Holder::<Thing<u8>>::go(dep::new_thing());\n}",
+		target: "dep//Thing//run",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "boxed trait object in a module that reads the root",
+		source: "mod inner {\n    use super::*;\n    pub fn go() {\n        let d: Box<dyn Doer> = Box::new(Thing::<u8>::new());\n        d.run();\n    }\n}\n\nfn run() {\n    inner::go();\n}",
+		target: "dep//Thing//run",
+		want:   "found",
+	},
 }
 
 // pythonReceiverRows are the forms of a Python receiver. A type hint is
