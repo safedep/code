@@ -1,0 +1,53 @@
+source: safedep:hand
+description: The script element of Ext.vue loads logic.js by its src attribute. The element is an import of logic.js, so the search reaches edanger through it.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+exact_edges: true
+edges:
+  - from: src/main.js
+    to: src/Ext.vue
+    kind: import
+    confidence: high
+    site: src/main.js:2
+  - from: src/main.js
+    to: vue//createApp
+    kind: direct
+    confidence: high
+    site: src/main.js:4
+  - from: src/Ext.vue
+    to: src/logic.js
+    kind: import
+    confidence: high
+    site: src/Ext.vue:2
+  - from: src/logic.js
+    to: plug//edanger
+    kind: direct
+    confidence: high
+    site: src/logic.js:3
+unresolved:
+  - caller: src/Ext.vue
+    site: src/Ext.vue:1
+    reason: markup
+results:
+  - target: plug//edanger
+    status: found
+    path:
+      - key: src/main.js
+      - key: src/Ext.vue
+        site: src/main.js:2
+        kind: import
+        confidence: high
+      - key: src/logic.js
+        site: src/Ext.vue:2
+        kind: import
+        confidence: high
+      - key: plug//edanger
+        site: src/logic.js:3
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/logic.js
+        site: src/logic.js:3
+        reached: true

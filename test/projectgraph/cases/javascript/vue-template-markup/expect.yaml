@@ -1,0 +1,54 @@
+source: safedep:hand
+description: The template of App.vue calls danger and render, which its script imports. The index does not parse the template, so the file has a markup record, and each target reads uncertain, not no-such-target. setup runs in the script and is found.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+exact_edges: true
+edges:
+  - from: src/main.js
+    to: src/App.vue
+    kind: import
+    confidence: high
+    site: src/main.js:2
+  - from: src/main.js
+    to: vue//createApp
+    kind: direct
+    confidence: high
+    site: src/main.js:4
+  - from: src/App.vue
+    to: plug//setup
+    kind: direct
+    confidence: high
+    site: src/App.vue:8
+unresolved:
+  - caller: src/App.vue
+    site: src/App.vue:1
+    reason: markup
+results:
+  - target: plug//setup
+    status: found
+    path:
+      - key: src/main.js
+      - key: src/App.vue
+        site: src/main.js:2
+        kind: import
+        confidence: high
+      - key: plug//setup
+        site: src/App.vue:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/App.vue
+        site: src/App.vue:8
+        reached: true
+  - target: plug//danger
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: src/App.vue:1
+  - target: plug//render
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: src/App.vue:1

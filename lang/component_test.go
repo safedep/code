@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/safedep/code/core"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -149,9 +150,57 @@ func TestComponentSource(t *testing.T) {
 				}
 			}
 
-			source, dialect := componentSource(tc.ext, []byte(data.String()))
+			source, dialect, _ := componentSource(tc.ext, []byte(data.String()))
 			assert.Equal(t, want.String(), string(source))
 			assert.Equal(t, tc.dialect, dialect)
+		})
+	}
+}
+
+func TestComponentMarkup(t *testing.T) {
+	cases := []struct {
+		name   string
+		ext    string
+		data   string
+		markup *core.Markup
+	}{
+		{
+			name:   "a template is markup",
+			ext:    ".vue",
+			data:   "\n  <template><p/></template>\n<script>x()</script>\n",
+			markup: &core.Markup{Offset: 3},
+		},
+		{
+			name:   "the tags of a script block are markup",
+			ext:    ".vue",
+			data:   "<script>export default { mounted() {} }</script>\n",
+			markup: &core.Markup{Offset: 0},
+		},
+		{
+			name: "a script with a src attribute loads its file",
+			ext:  ".vue",
+			data: "<template><p/></template>\n<script src=\"./logic.js\"></script>\n<SCRIPT setup SRC='./setup.ts'/>",
+			markup: &core.Markup{Offset: 0, Scripts: []core.Script{
+				{Src: "./logic.js", Offset: 26},
+				{Src: "./setup.ts", Offset: 61},
+			}},
+		},
+		{
+			name:   "an Astro fence is markup",
+			ext:    ".astro",
+			data:   "---\nconst a = 1\n---\n",
+			markup: &core.Markup{Offset: 0},
+		},
+		{
+			name: "a file of spaces has no markup",
+			ext:  ".svelte",
+			data: " \t\r\n",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, _, markup := componentSource(tc.ext, []byte(tc.data))
+			assert.Equal(t, tc.markup, markup)
 		})
 	}
 }

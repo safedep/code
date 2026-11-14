@@ -1,0 +1,4 @@
+{
+  "name": "tsx-elements",
+  "bin": { "app": "src/main.ts" }
+}

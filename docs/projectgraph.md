@@ -78,9 +78,43 @@ JSX. It also reads the component files of Vue, Svelte and Astro (`.vue`,
 file, and the Astro code between the two `---` lines at the top. Each byte
 outside them becomes a space, so each import and call keeps its line and
 column in the file. A file whose blocks have `lang="ts"` or
-`lang="typescript"` is TypeScript, and so is every Astro file. A block
-with a `src` attribute holds no code. The index of the file holds the hash
-of the bytes of the file.
+`lang="typescript"` is TypeScript, and so is every Astro file. The index
+of the file holds the hash of the bytes of the file. The indexer picks the
+language and the code of a file once, and the parse reads them.
+
+A `<script>` element with a `src` attribute holds no code. The index
+records it as an import of the file that it loads, as
+`import './logic.js'` for `<script src="./logic.js">`, so the search
+reaches the code of that file.
+
+The parse does not read the rest of a component file, the markup: the
+template of a Vue file, the markup of a Svelte file and the body of an
+Astro file. The markup can call each name that the script of the file
+imports or defines, as `danger` in `@click="danger(item)"`, and a function
+that only the markup names, as `onClick` in `@click="onClick"`, has no
+caller in the graph. The markup can also call a name that the script does
+not bind: a component or a property that the app registers for all
+components, and a name that the framework imports with no import
+statement, as Nuxt does. Vue calls the functions of the options object of
+a component, as `mounted` and the functions of `methods`, and no code of
+the project calls them, also in a file with no template.
+
+So the index gives each component file one record with the reason
+`markup`, at the first byte outside the code that is no space. The record
+has no method name, so it concerns every target of a search that reaches
+the file. A narrower scope, as the targets that the names of the script
+reach, would miss a name that the app registers elsewhere, and a target
+that only such a name reaches would read `not-found`. A project of
+component files thus reads `uncertain` for each target that it does not
+find, as it did when the index did not read component files.
+
+A JSX element renders the component that its name holds, so the name is a
+reference, as a function value is. `<Child />` gives a `reference` edge
+to `Child`, and `<table.Row />` to `table.Row`. A lower case name, as
+`div`, is a tag of the host, which JSX gives as a string, so it gives no
+edge. A function in a JSX expression, as `handle` in
+`<button onClick={handle}>`, is a reference too. This holds in `.jsx`,
+`.tsx` and `.js` files.
 
 The index leaves out a Go file of a unit only when no Go build reads it by
 default: a `_test.go` file, a file with `//go:build ignore`, and a file
@@ -190,7 +224,7 @@ of the highest confidence.
 A call that the link step cannot resolve is an unresolved site with a
 reason: `computed-name`, `dynamic-import`, `unknown-receiver`,
 `no-definition`, `ambiguous`, `limit`, `interface-receiver`,
-`trait-receiver`, `no-dependency-source` or `function-value`. The site keeps the method name of the call, so the
+`trait-receiver`, `no-dependency-source`, `function-value` or `markup`. The site keeps the method name of the call, so the
 reach query can tell which targets it concerns. A `function-value`
 record concerns no target. [A call of a function value](#a-call-of-a-function-value)
 gives the reason.

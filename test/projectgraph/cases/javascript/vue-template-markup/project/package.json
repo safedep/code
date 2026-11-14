@@ -1,0 +1,4 @@
+{
+  "name": "vue-template-markup",
+  "bin": { "app": "src/main.js" }
+}

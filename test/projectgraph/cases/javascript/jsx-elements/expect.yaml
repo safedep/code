@@ -1,0 +1,119 @@
+source: safedep:hand
+description: App renders Child, the imported Other and the member table.Row as JSX elements, and passes press to a button. Each element name and the prop give a reference, so the search reaches what each component calls. The lower case element b is a tag of the host, a string, so it gives no reference to the imported b.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.js
+    to: src/App.jsx//App
+    kind: reference
+    confidence: low
+    site: src/main.js:4
+  - from: src/App.jsx//App
+    to: src/App.jsx//Child
+    kind: reference
+    confidence: low
+    site: src/App.jsx:18
+  - from: src/App.jsx//App
+    to: src/Other.jsx//Other
+    kind: reference
+    confidence: low
+    site: src/App.jsx:19
+  - from: src/App.jsx//App
+    to: src/App.jsx//table//Row
+    kind: reference
+    confidence: low
+    site: src/App.jsx:20
+  - from: src/App.jsx//App
+    to: src/App.jsx//press
+    kind: reference
+    confidence: low
+    site: src/App.jsx:21
+no_edges:
+  - from: src/App.jsx//App
+    to: plug//b
+unresolved: []
+results:
+  - target: plug//danger
+    status: found
+    path:
+      - key: src/main.js
+      - key: src/App.jsx//App
+        site: src/main.js:4
+        kind: reference
+        confidence: low
+      - key: src/App.jsx//Child
+        site: src/App.jsx:18
+        kind: reference
+        confidence: low
+      - key: plug//danger
+        site: src/App.jsx:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/App.jsx//Child
+        site: src/App.jsx:5
+        reached: true
+  - target: plug//odanger
+    status: found
+    path:
+      - key: src/main.js
+      - key: src/App.jsx//App
+        site: src/main.js:4
+        kind: reference
+        confidence: low
+      - key: src/Other.jsx//Other
+        site: src/App.jsx:19
+        kind: reference
+        confidence: low
+      - key: plug//odanger
+        site: src/Other.jsx:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Other.jsx//Other
+        site: src/Other.jsx:4
+        reached: true
+  - target: plug//viaprop
+    status: found
+    path:
+      - key: src/main.js
+      - key: src/App.jsx//App
+        site: src/main.js:4
+        kind: reference
+        confidence: low
+      - key: src/App.jsx//table//Row
+        site: src/App.jsx:20
+        kind: reference
+        confidence: low
+      - key: plug//viaprop
+        site: src/App.jsx:9
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/App.jsx//table//Row
+        site: src/App.jsx:9
+        reached: true
+  - target: plug//onpress
+    status: found
+    path:
+      - key: src/main.js
+      - key: src/App.jsx//App
+        site: src/main.js:4
+        kind: reference
+        confidence: low
+      - key: src/App.jsx//press
+        site: src/App.jsx:21
+        kind: reference
+        confidence: low
+      - key: plug//onpress
+        site: src/App.jsx:12
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/App.jsx//press
+        site: src/App.jsx:12
+        reached: true
+  - target: plug//b
+    status: no-such-target

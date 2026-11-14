@@ -20,14 +20,16 @@ type parserWrapper struct {
 }
 
 type parseTree struct {
-	tree *sitter.Tree
-	data *[]byte
-	file core.File
-	lang core.Language
+	tree   *sitter.Tree
+	data   *[]byte
+	file   core.File
+	lang   core.Language
+	markup *core.Markup
 }
 
 var _ core.Parser = (*parserWrapper)(nil)
 var _ core.ParseTree = (*parseTree)(nil)
+var _ core.MarkupTree = (*parseTree)(nil)
 
 // NewParser creates a parser for the given languages. It picks the language
 // of a file by the file extension. A language that implements
@@ -76,14 +78,14 @@ func (p *parserWrapper) Close() {
 	}
 }
 
-// Source returns the language that parses data as the content of the file
-// of the name, and the bytes that its grammar parses. language is the
-// language of the extension of the name. A core.SourceSelector picks both.
-func Source(language core.Language, name string, data []byte) (core.Language, []byte) {
+// Source returns the source of data as the content of the file of the
+// name. language is the language of the extension of the name. A
+// core.SourceSelector picks the source.
+func Source(language core.Language, name string, data []byte) core.Source {
 	if selector, ok := language.(core.SourceSelector); ok {
 		return selector.Source(filepath.Ext(name), data)
 	}
-	return language, data
+	return core.Source{Language: language, Code: data}
 }
 
 // Parse parses the file with the language of its extension. It returns an
@@ -110,7 +112,7 @@ func (p *parserWrapper) parse(ctx context.Context, file core.File) (core.ParseTr
 		return nil, core.StageRead, err
 	}
 
-	tree, err := p.parseContent(ctx, language, file, data)
+	tree, err := p.ParseSource(ctx, file, data, Source(language, file.Name(), data))
 	return tree, core.StageParse, err
 }
 
@@ -119,14 +121,11 @@ func (p *parserWrapper) parse(ctx context.Context, file core.File) (core.ParseTr
 // file is not read again. The tree keeps data, so the caller must not
 // change data after the call.
 func (p *parserWrapper) ParseContent(ctx context.Context, file core.File, data []byte) (core.ParseTree, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
 	language, err := p.languageOf(file)
 	if err != nil {
 		return nil, err
 	}
-	return p.parseContent(ctx, language, file, data)
+	return p.ParseSource(ctx, file, data, Source(language, file.Name(), data))
 }
 
 func (p *parserWrapper) languageOf(file core.File) (core.Language, error) {
@@ -149,17 +148,22 @@ func (p *parserWrapper) sitterParser(language core.Language) *sitter.Parser {
 	return sp
 }
 
-// parseContent parses the source of data. The tree keeps data, not the
-// source, so the tree data is the bytes of the file. The source keeps the
-// offsets of data, so a node has the same content in both.
-func (p *parserWrapper) parseContent(ctx context.Context, language core.Language, file core.File, data []byte) (core.ParseTree, error) {
+// ParseSource parses the source of data that Source gave for file. A
+// caller that already picked the source uses it, so the parse does not pick
+// it again. The tree keeps data, not the code of the source, so the tree
+// data is the bytes of the file. The code keeps the offsets of data, so a
+// node has the same content in both. The caller must not change data after
+// the call.
+func (p *parserWrapper) ParseSource(ctx context.Context, file core.File, data []byte, source core.Source) (core.ParseTree, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if p.maxBytes > 0 && len(data) > p.maxBytes {
 		return nil, fmt.Errorf("%w: %s is over %d bytes", ErrInputTooLarge, file.Name(), p.maxBytes)
 	}
 
-	language, source := Source(language, file.Name(), data)
-	sp := p.sitterParser(language)
-	tree, err := sp.ParseCtx(ctx, nil, source)
+	sp := p.sitterParser(source.Language)
+	tree, err := sp.ParseCtx(ctx, nil, source.Code)
 	if err != nil {
 		// A sitter parser resumes a cancelled parse on its next call.
 		// The reset makes the next file parse from its start.
@@ -168,10 +172,11 @@ func (p *parserWrapper) parseContent(ctx context.Context, language core.Language
 	}
 
 	return &parseTree{
-		tree: tree,
-		data: &data,
-		file: file,
-		lang: language,
+		tree:   tree,
+		data:   &data,
+		file:   file,
+		lang:   source.Language,
+		markup: source.Markup,
 	}, nil
 }
 
@@ -189,6 +194,10 @@ func (t *parseTree) File() (core.File, error) {
 
 func (t *parseTree) Language() (core.Language, error) {
 	return t.lang, nil
+}
+
+func (t *parseTree) Markup() *core.Markup {
+	return t.markup
 }
 
 func (t *parseTree) Close() {

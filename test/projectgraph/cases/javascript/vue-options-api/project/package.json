@@ -1,0 +1,4 @@
+{
+  "name": "vue-options-api",
+  "bin": { "app": "src/main.js" }
+}

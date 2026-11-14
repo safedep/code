@@ -368,9 +368,10 @@ func TestParseReadsJSXAndTheScriptsOfComponentFiles(t *testing.T) {
 		file    string
 		content string
 		code    core.LanguageCode
+		markup  *core.Markup
 	}{
 		{file: "App.jsx", content: "const e = <div>{x}</div>;\n", code: core.LanguageCodeJavascript},
-		{file: "App.vue", content: vue, code: core.LanguageCodeTypescript},
+		{file: "App.vue", content: vue, code: core.LanguageCodeTypescript, markup: &core.Markup{Offset: 0}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.file, func(t *testing.T) {
@@ -390,6 +391,7 @@ func TestParseReadsJSXAndTheScriptsOfComponentFiles(t *testing.T) {
 			data, err := tree.Data()
 			require.NoError(t, err)
 			assert.Equal(t, tc.content, string(*data), "the tree keeps the bytes of the file")
+			assert.Equal(t, tc.markup, tree.(core.MarkupTree).Markup(), "the tree keeps the markup of the file")
 		})
 	}
 }

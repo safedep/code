@@ -1,0 +1,4 @@
+{
+  "name": "astro-markup",
+  "bin": { "app": "src/main.js" }
+}

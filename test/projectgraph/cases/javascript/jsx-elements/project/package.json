@@ -1,0 +1,4 @@
+{
+  "name": "jsx-elements",
+  "bin": { "app": "src/main.js" }
+}

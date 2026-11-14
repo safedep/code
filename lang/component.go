@@ -2,6 +2,9 @@ package lang
 
 import (
 	"bytes"
+	"strings"
+
+	"github.com/safedep/code/core"
 )
 
 // componentExtensions are the extensions of the component files of Vue,
@@ -20,14 +23,15 @@ const (
 )
 
 // componentSource returns data with each byte outside the script blocks
-// replaced by a space, and the dialect of the blocks. The line ends stay, so
-// a node of the code reports its line and column in the file. One parse
-// reads every block, as a Vue <script> and <script setup>, and the greatest
-// dialect of a block parses all of them. Astro reads the code between the
-// two --- lines at the top of the file, and every script, as TypeScript.
-// A block that does not close runs to the end of the file, as an HTML
-// parser reads it.
-func componentSource(ext string, data []byte) ([]byte, scriptDialect) {
+// replaced by a space, the dialect of the blocks and the markup of the file.
+// The line ends stay, so a node of the code reports its line and column in
+// the file. One parse reads every block, as a Vue <script> and <script
+// setup>, and the greatest dialect of a block parses all of them. Astro
+// reads the code between the two --- lines at the top of the file, and
+// every script, as TypeScript. A block that does not close runs to the end
+// of the file, as an HTML parser reads it. A block with a src attribute
+// holds no code, and the markup lists it.
+func componentSource(ext string, data []byte) ([]byte, scriptDialect, *core.Markup) {
 	source := make([]byte, len(data))
 	for i, b := range data {
 		if b == '\n' || b == '\r' {
@@ -37,6 +41,7 @@ func componentSource(ext string, data []byte) ([]byte, scriptDialect) {
 		}
 	}
 
+	var scripts []core.Script
 	dialect, from := dialectJavascript, 0
 	if ext == ".astro" {
 		dialect = dialectTypescript
@@ -47,21 +52,34 @@ func componentSource(ext string, data []byte) ([]byte, scriptDialect) {
 
 	lower := asciiLower(data)
 	for from < len(data) {
-		start, end, next, attrs, ok := scriptBlock(data, lower, from)
+		block, ok := scriptBlock(data, lower, from)
 		if !ok {
 			break
 		}
-		if _, external := attrs["src"]; !external {
-			copy(source[start:end], data[start:end])
-			dialect = max(dialect, dialectOf(attrs["lang"]))
+		if src, external := block.attrs["src"]; external {
+			scripts = append(scripts, core.Script{Src: src, Offset: block.open})
+		} else {
+			copy(source[block.start:block.end], data[block.start:block.end])
+			dialect = max(dialect, dialectOf(block.attrs["lang"]))
 		}
-		from = next
+		from = block.next
 	}
-	return source, dialect
+	return source, dialect, markupOf(data, source, scripts)
+}
+
+// markupOf returns the markup of data, or nil when each byte outside the
+// code is a space.
+func markupOf(data, source []byte, scripts []core.Script) *core.Markup {
+	for i, b := range data {
+		if b != source[i] && !isSpace(b) {
+			return &core.Markup{Offset: i, Scripts: scripts}
+		}
+	}
+	return nil
 }
 
 func dialectOf(lang string) scriptDialect {
-	switch string(asciiLower([]byte(lang))) {
+	switch strings.ToLower(lang) {
 	case "ts", "typescript":
 		return dialectTypescript
 	case "tsx":
@@ -100,30 +118,39 @@ func lineAt(data []byte, i int) ([]byte, int) {
 	return bytes.TrimRight(data[i:i+end], " \t\r"), i + end + 1
 }
 
-// scriptBlock finds the first script element at or after from. It returns
-// the bounds of its code, the offset after its end tag, and the attributes
-// of its start tag by lower case name. lower is data in ASCII lower case.
-func scriptBlock(data, lower []byte, from int) (start, end, next int, attrs map[string]string, ok bool) {
+// scriptElement is a script element of a file: the offset of its start
+// tag, the bounds of its code, the offset after its end tag, and the
+// attributes of its start tag by lower case name.
+type scriptElement struct {
+	open, start, end, next int
+	attrs                  map[string]string
+}
+
+// scriptBlock finds the first script element at or after from. lower is
+// data in ASCII lower case.
+func scriptBlock(data, lower []byte, from int) (scriptElement, bool) {
 	open := tagAt(lower, "<script", from)
 	if open < 0 {
-		return 0, 0, 0, nil, false
+		return scriptElement{}, false
 	}
 	attrs, start, selfClosing := startTag(data, open+len("<script"))
 	if start < 0 {
-		return 0, 0, 0, nil, false
+		return scriptElement{}, false
 	}
+	block := scriptElement{open: open, start: start, end: len(data), next: len(data), attrs: attrs}
 	if selfClosing {
-		return start, start, start, attrs, true
+		block.end, block.next = start, start
+		return block, true
 	}
-	end = tagAt(lower, "</script", start)
+	end := tagAt(lower, "</script", start)
 	if end < 0 {
-		return start, len(data), len(data), attrs, true
+		return block, true
 	}
-	next = bytes.IndexByte(data[end:], '>')
-	if next < 0 {
-		return start, end, len(data), attrs, true
+	block.end = end
+	if next := bytes.IndexByte(data[end:], '>'); next >= 0 {
+		block.next = end + next + 1
 	}
-	return start, end, end + next + 1, attrs, true
+	return block, true
 }
 
 // tagAt returns the offset of the first tag name at or after from, or -1.
@@ -136,7 +163,7 @@ func tagAt(lower []byte, name string, from int) int {
 		}
 		i += from
 		after := i + len(name)
-		if after == len(lower) || bytes.IndexByte([]byte(" \t\r\n\f/>"), lower[after]) >= 0 {
+		if after == len(lower) || isSpace(lower[after]) || lower[after] == '/' || lower[after] == '>' {
 			return i
 		}
 		from = after
@@ -160,7 +187,7 @@ func startTag(data []byte, i int) (map[string]string, int, bool) {
 		default:
 			var name, value string
 			name, value, i = attribute(data, i)
-			attrs[string(asciiLower([]byte(name)))] = value
+			attrs[strings.ToLower(name)] = value
 		}
 	}
 	return attrs, -1, false

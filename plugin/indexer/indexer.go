@@ -161,10 +161,10 @@ func New(opts Options) (*Indexer, error) {
 
 // pending is a file that a run read and has not indexed yet.
 type pending struct {
-	file     core.File
-	language core.Language
-	data     []byte
-	key      fileindex.Key
+	file   core.File
+	source core.Source
+	data   []byte
+	key    fileindex.Key
 
 	// restored names the cached plugins that took their stored artifact
 	// before another plugin rejected its own. They skip the tree.
@@ -287,9 +287,9 @@ func (r *run) index(ctx context.Context, files []core.File, byExtension map[stri
 			r.exclude(file)
 			continue
 		}
-		r.result.Languages[file.Name()] = language.Meta().Code
 		data, err := read(file, r.opts.MaxFileBytes)
 		if err != nil {
+			r.result.Languages[file.Name()] = language.Meta().Code
 			r.fail(ctx, file, core.StageRead, err)
 			continue
 		}
@@ -298,16 +298,15 @@ func (r *run) index(ctx context.Context, files []core.File, byExtension map[stri
 			continue
 		}
 		// The script blocks of a component file name their language, and
-		// the key and the index of the file hold it. The parse picks the
-		// same language again from the same bytes.
-		language, _ = parser.Source(language, file.Name(), data)
-		r.result.Languages[file.Name()] = language.Meta().Code
+		// the key and the index of the file hold it.
+		source := parser.Source(language, file.Name(), data)
+		r.result.Languages[file.Name()] = source.Language.Meta().Code
 
 		batch = append(batch, pending{
-			file:     file,
-			language: language,
-			data:     data,
-			key:      fileindex.NewKey(file.Name(), fileindex.HashContent(data), language.Meta().Code),
+			file:   file,
+			source: source,
+			data:   data,
+			key:    fileindex.NewKey(file.Name(), fileindex.HashContent(data), source.Language.Meta().Code),
 		})
 		bytes += len(data)
 		if len(batch) == batchSize || bytes >= maxBatchBytes {
