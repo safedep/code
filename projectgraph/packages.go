@@ -435,7 +435,11 @@ func (b *builder) linkProvision(key string, o origin, pv provision) {
 	}
 	b.named[pv.sp.unit] = true
 	names := o.names
-	if len(names) == 0 {
+	// A Rust use path names a module or an item, so the provision of use
+	// dep::top is the function top itself. Without this check, the key of
+	// the bound name read as a whole module, and got no package edge.
+	item := b.defs[pv.module] != nil && !b.isModule(pv.module)
+	if len(names) == 0 && !item {
 		// The key of a whole module is the value of the module. Only the
 		// default export of JavaScript gives that value code, and an
 		// import edge runs the module top level.

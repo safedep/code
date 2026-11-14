@@ -20,6 +20,16 @@ edges:
     kind: direct
     confidence: high
     site: cargo:dep@1.2.0//src/lib.rs:8
+  - from: dep//Html
+    to: cargo:dep@1.2.0//src/lib.rs//Html
+    kind: package
+    confidence: high
+    site: cargo:dep@1.2.0//src/lib.rs:7
+  - from: dep//Write
+    to: cargo:dep@1.2.0//src/lib.rs//Write
+    kind: package
+    confidence: high
+    site: cargo:dep@1.2.0//src/lib.rs:1
   - from: dep//Html//write
     to: cargo:dep@1.2.0//src/lib.rs//Html//write
     kind: package

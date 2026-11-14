@@ -1,0 +1,302 @@
+source: safedep:hand
+description: >-
+  main.rs binds items of the crate dep with use and calls each one by its bound name: a function (top), a renamed
+  function (renamed as r), two names of one use list (other, Type), a function of a nested module (sub::nested), a
+  function that lib.rs gives on with pub use (reexported), and a use in a function body (inner). The code of the
+  crate is the unit cargo:dep@1.0.0. A use path names a module or an item, so the link step reads dep::top as the
+  module of the origin, and the unit gives the function top itself. Before the link step linked an item that way,
+  the external key had no package edge, and each target but run_sink was not-found. main does not call unused, so
+  unused_sink stays not-found.
+units:
+  vendor/dep: cargo:dep@1.0.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+exact_edges: true
+edges:
+  - from: cargo:dep@1.0.0//src/hidden.rs//reexported
+    to: cargo:dep@1.0.0//src/hidden.rs//hidden_sink
+    kind: direct
+    confidence: high
+    site: cargo:dep@1.0.0//src/hidden.rs:2
+  - from: cargo:dep@1.0.0//src/lib.rs//Type//run
+    to: cargo:dep@1.0.0//src/lib.rs//Type
+    kind: direct
+    confidence: high
+    site: cargo:dep@1.0.0//src/lib.rs:43
+  - from: cargo:dep@1.0.0//src/lib.rs//Type//run
+    to: cargo:dep@1.0.0//src/lib.rs//run_sink
+    kind: direct
+    confidence: high
+    site: cargo:dep@1.0.0//src/lib.rs:44
+  - from: cargo:dep@1.0.0//src/lib.rs//inner
+    to: cargo:dep@1.0.0//src/lib.rs//inner_sink
+    kind: direct
+    confidence: high
+    site: cargo:dep@1.0.0//src/lib.rs:25
+  - from: cargo:dep@1.0.0//src/lib.rs//other
+    to: cargo:dep@1.0.0//src/lib.rs//other_sink
+    kind: direct
+    confidence: high
+    site: cargo:dep@1.0.0//src/lib.rs:19
+  - from: cargo:dep@1.0.0//src/lib.rs//renamed
+    to: cargo:dep@1.0.0//src/lib.rs//renamed_sink
+    kind: direct
+    confidence: high
+    site: cargo:dep@1.0.0//src/lib.rs:13
+  - from: cargo:dep@1.0.0//src/lib.rs//top
+    to: cargo:dep@1.0.0//src/lib.rs//sink
+    kind: direct
+    confidence: high
+    site: cargo:dep@1.0.0//src/lib.rs:7
+  - from: cargo:dep@1.0.0//src/lib.rs//unused
+    to: cargo:dep@1.0.0//src/lib.rs//unused_sink
+    kind: direct
+    confidence: high
+    site: cargo:dep@1.0.0//src/lib.rs:31
+  - from: cargo:dep@1.0.0//src/sub.rs//nested
+    to: cargo:dep@1.0.0//src/sub.rs//nested_sink
+    kind: direct
+    confidence: high
+    site: cargo:dep@1.0.0//src/sub.rs:2
+  - from: dep//Type//new
+    to: cargo:dep@1.0.0//src/lib.rs//Type//new
+    kind: package
+    confidence: high
+    site: cargo:dep@1.0.0//src/lib.rs:39
+  - from: dep//Type//run
+    to: cargo:dep@1.0.0//src/lib.rs//Type//run
+    kind: package
+    confidence: high
+    site: cargo:dep@1.0.0//src/lib.rs:43
+  - from: dep//inner
+    to: cargo:dep@1.0.0//src/lib.rs//inner
+    kind: package
+    confidence: high
+    site: cargo:dep@1.0.0//src/lib.rs:24
+  - from: dep//other
+    to: cargo:dep@1.0.0//src/lib.rs//other
+    kind: package
+    confidence: high
+    site: cargo:dep@1.0.0//src/lib.rs:18
+  - from: dep//reexported
+    to: cargo:dep@1.0.0//src/hidden.rs//reexported
+    kind: package
+    confidence: high
+    site: cargo:dep@1.0.0//src/hidden.rs:1
+  - from: dep//renamed
+    to: cargo:dep@1.0.0//src/lib.rs//renamed
+    kind: package
+    confidence: high
+    site: cargo:dep@1.0.0//src/lib.rs:12
+  - from: dep//sub//nested
+    to: cargo:dep@1.0.0//src/sub.rs//nested
+    kind: package
+    confidence: high
+    site: cargo:dep@1.0.0//src/sub.rs:1
+  - from: dep//top
+    to: cargo:dep@1.0.0//src/lib.rs//top
+    kind: package
+    confidence: high
+    site: cargo:dep@1.0.0//src/lib.rs:6
+  - from: src/main.rs//local
+    to: dep//inner
+    kind: direct
+    confidence: high
+    site: src/main.rs:21
+  - from: src/main.rs//main
+    to: dep//Type//new
+    kind: direct
+    confidence: high
+    site: src/main.rs:14
+  - from: src/main.rs//main
+    to: dep//Type//run
+    kind: direct
+    confidence: high
+    site: src/main.rs:14
+  - from: src/main.rs//main
+    to: dep//other
+    kind: direct
+    confidence: high
+    site: src/main.rs:12
+  - from: src/main.rs//main
+    to: dep//reexported
+    kind: direct
+    confidence: high
+    site: src/main.rs:15
+  - from: src/main.rs//main
+    to: dep//renamed
+    kind: direct
+    confidence: high
+    site: src/main.rs:11
+  - from: src/main.rs//main
+    to: dep//sub//nested
+    kind: direct
+    confidence: high
+    site: src/main.rs:13
+  - from: src/main.rs//main
+    to: dep//top
+    kind: direct
+    confidence: high
+    site: src/main.rs:10
+  - from: src/main.rs//main
+    to: src/main.rs//local
+    kind: direct
+    confidence: high
+    site: src/main.rs:16
+unresolved: []
+results:
+  - target: dep//sink
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: dep//top
+        site: src/main.rs:10
+        kind: direct
+        confidence: high
+      - key: cargo:dep@1.0.0//src/lib.rs//top
+        site: cargo:dep@1.0.0//src/lib.rs:6
+        kind: package
+        confidence: high
+      - key: cargo:dep@1.0.0//src/lib.rs//sink
+        site: cargo:dep@1.0.0//src/lib.rs:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: cargo:dep@1.0.0//src/lib.rs//top
+        site: cargo:dep@1.0.0//src/lib.rs:7
+        reached: true
+  - target: dep//renamed_sink
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: dep//renamed
+        site: src/main.rs:11
+        kind: direct
+        confidence: high
+      - key: cargo:dep@1.0.0//src/lib.rs//renamed
+        site: cargo:dep@1.0.0//src/lib.rs:12
+        kind: package
+        confidence: high
+      - key: cargo:dep@1.0.0//src/lib.rs//renamed_sink
+        site: cargo:dep@1.0.0//src/lib.rs:13
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: cargo:dep@1.0.0//src/lib.rs//renamed
+        site: cargo:dep@1.0.0//src/lib.rs:13
+        reached: true
+  - target: dep//other_sink
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: dep//other
+        site: src/main.rs:12
+        kind: direct
+        confidence: high
+      - key: cargo:dep@1.0.0//src/lib.rs//other
+        site: cargo:dep@1.0.0//src/lib.rs:18
+        kind: package
+        confidence: high
+      - key: cargo:dep@1.0.0//src/lib.rs//other_sink
+        site: cargo:dep@1.0.0//src/lib.rs:19
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: cargo:dep@1.0.0//src/lib.rs//other
+        site: cargo:dep@1.0.0//src/lib.rs:19
+        reached: true
+  - target: dep//sub//nested_sink
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: dep//sub//nested
+        site: src/main.rs:13
+        kind: direct
+        confidence: high
+      - key: cargo:dep@1.0.0//src/sub.rs//nested
+        site: cargo:dep@1.0.0//src/sub.rs:1
+        kind: package
+        confidence: high
+      - key: cargo:dep@1.0.0//src/sub.rs//nested_sink
+        site: cargo:dep@1.0.0//src/sub.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: cargo:dep@1.0.0//src/sub.rs//nested
+        site: cargo:dep@1.0.0//src/sub.rs:2
+        reached: true
+  - target: dep//run_sink
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: dep//Type//run
+        site: src/main.rs:14
+        kind: direct
+        confidence: high
+      - key: cargo:dep@1.0.0//src/lib.rs//Type//run
+        site: cargo:dep@1.0.0//src/lib.rs:43
+        kind: package
+        confidence: high
+      - key: cargo:dep@1.0.0//src/lib.rs//run_sink
+        site: cargo:dep@1.0.0//src/lib.rs:44
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: cargo:dep@1.0.0//src/lib.rs//Type//run
+        site: cargo:dep@1.0.0//src/lib.rs:44
+        reached: true
+  - target: dep//hidden//hidden_sink
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: dep//reexported
+        site: src/main.rs:15
+        kind: direct
+        confidence: high
+      - key: cargo:dep@1.0.0//src/hidden.rs//reexported
+        site: cargo:dep@1.0.0//src/hidden.rs:1
+        kind: package
+        confidence: high
+      - key: cargo:dep@1.0.0//src/hidden.rs//hidden_sink
+        site: cargo:dep@1.0.0//src/hidden.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: cargo:dep@1.0.0//src/hidden.rs//reexported
+        site: cargo:dep@1.0.0//src/hidden.rs:2
+        reached: true
+  - target: dep//inner_sink
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//local
+        site: src/main.rs:16
+        kind: direct
+        confidence: high
+      - key: dep//inner
+        site: src/main.rs:21
+        kind: direct
+        confidence: high
+      - key: cargo:dep@1.0.0//src/lib.rs//inner
+        site: cargo:dep@1.0.0//src/lib.rs:24
+        kind: package
+        confidence: high
+      - key: cargo:dep@1.0.0//src/lib.rs//inner_sink
+        site: cargo:dep@1.0.0//src/lib.rs:25
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: cargo:dep@1.0.0//src/lib.rs//inner
+        site: cargo:dep@1.0.0//src/lib.rs:25
+        reached: true
+  - target: dep//unused_sink
+    status: not-found
+    call_sites:
+      - caller: cargo:dep@1.0.0//src/lib.rs//unused
+        site: cargo:dep@1.0.0//src/lib.rs:31
+        reached: false
