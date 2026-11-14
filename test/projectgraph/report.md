@@ -1470,3 +1470,44 @@ as the table above.
   amqp091-go in go-rabbitmq, as `Channel.NotifyClose`. The advisory has
   no symbol list and gives no target, so the comparison leaves out its
   findings.
+
+### The reach MVP branch
+
+The rows come from two runs of the branch of the reach MVP (FOU-556,
+FOU-557, FOU-558, FOU-560, FOU-561, FOU-562, FOU-563, FOU-575, FOU-576 and
+FOU-578, with the fixes of two reviews), on 2026-11-14, on the machine
+above. The run "without" sets `PROJECTGRAPH_METHOD_NO_STD=1`, as vet runs
+today. `found` counts `found` and `found/low`. The main rows come from the
+same corpus on origin/main at 39cf1e2, without the unit.
+
+| Language | Kind | Run | Targets | found | not-found | no-such-target | no-dependency-source | unknown-receiver | no-definition | interface-receiver | ambiguous | budget | computed-name |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Go | function | main | 256 | 51 | 0 | 0 | 2 | 3 | 5 | 0 | 106 | 39 | 50 |
+| Go | function | without | 256 | 58 | 0 | 0 | 193 | 5 | 0 | 0 | 0 | 0 | 0 |
+| Go | function | with | 256 | 59 | 0 | 0 | 187 | 8 | 1 | 0 | 1 | 0 | 0 |
+| Go | method | main | 1298 | 331 | 0 | 0 | 2 | 154 | 71 | 2 | 416 | 109 | 213 |
+| Go | method | without | 1298 | 343 | 0 | 7 | 776 | 156 | 15 | 1 | 0 | 0 | 0 |
+| Go | method | with | 1298 | 384 | 0 | 0 | 432 | 253 | 184 | 14 | 31 | 0 | 0 |
+| Rust | function | main | 13 | 4 | 0 | 0 | 0 | 0 | 9 | 0 | 0 | 0 | 0 |
+| Rust | function | branch | 13 | 5 | 0 | 0 | 0 | 7 | 1 | 0 | 0 | 0 | 0 |
+| Rust | method | main | 38 | 16 | 0 | 0 | 0 | 0 | 13 | 0 | 0 | 9 | 0 |
+| Rust | method | branch | 38 | 16 | 0 | 0 | 0 | 12 | 1 | 0 | 0 | 9 | 0 |
+
+| Run | govulncheck reaches | reach found | reach uncertain | false negative | govulncheck does not reach | reach not-found or no-such-target | reach found (review) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| without | 115 | 71 | 44 | 0 | 1439 | 7 | 330 |
+| with | 115 | 71 | 44 | 0 | 1439 | 0 | 372 |
+
+- No target is a false negative in either run. A measure run fails on one.
+- Reach finds 71 of the 115 targets that govulncheck reaches. Main found 60.
+- The global causes of main are gone: `ambiguous`, `budget` and
+  `computed-name`. Most of their targets now read `no-dependency-source`.
+  That record marks code outside the graph that can call back into it: a
+  module with no unit, or the standard library with no unit. The corpus
+  gives a unit only to the modules that an advisory names, so most
+  modules of a build have no unit. A consumer that gives a unit to each
+  module with source on the disk, and to GOROOT, removes most of these
+  records.
+- Python does not change. The Rust `no-definition` records of main fall
+  from 22 to 2. The rest are `unknown-receiver` records of calls that the
+  link step does not type yet, as a turbofish or a `<T as Trait>::m` call.
