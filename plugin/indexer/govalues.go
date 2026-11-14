@@ -1,6 +1,8 @@
 package indexer
 
 import (
+	"slices"
+
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/pkg/ts"
@@ -168,10 +170,9 @@ func (p *projection) goPredeclared(name string) bool {
 	return langcode.IsBuiltin(langcode.Go, name) && p.defs[p.local(name)] == nil
 }
 
-// goScopedName is a name that a Go function declares, with the bytes of
-// the source where the name is in scope.
-type goScopedName struct {
-	name     string
+// goScope holds the bytes of the source where a local name of a Go
+// function is in scope.
+type goScope struct {
 	from, to uint32
 }
 
@@ -192,33 +193,28 @@ var goTypeLiterals = map[string]bool{"function_type": true, "interface_type": tr
 // function or a function literal in it declares.
 func (p *projection) goLocal(caller, name string, at uint32) bool {
 	if p.goScoped == nil {
-		p.goScoped = map[string][]goScopedName{}
+		p.goScoped = map[string]map[string][]goScope{}
 	}
-	names, ok := p.goScoped[caller]
+	locals, ok := p.goScoped[caller]
 	if !ok {
-		names = p.goScopedNames(p.syntax[caller])
-		p.goScoped[caller] = names
+		locals = p.goScopes(p.syntax[caller])
+		p.goScoped[caller] = locals
 	}
-	for _, n := range names {
-		if n.name == name && n.from <= at && at < n.to {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(locals[name], func(s goScope) bool { return s.from <= at && at < s.to })
 }
 
-// goScopedNames returns the names that a function declares, each with its
-// scope. The scope of a variable starts after its declaration, so x in
-// x := x names the outer x.
-func (p *projection) goScopedNames(function *sitter.Node) []goScopedName {
+// goScopes returns the scopes of each name that a function declares. The
+// scope of a variable starts after its declaration, so x in x := x names
+// the outer x.
+func (p *projection) goScopes(function *sitter.Node) map[string][]goScope {
+	locals := map[string][]goScope{}
 	if function == nil || function.Type() != "function_declaration" && function.Type() != "method_declaration" {
-		return nil
+		return locals
 	}
-	var names []goScopedName
 	add := func(nodes []*sitter.Node, from uint32, block *sitter.Node) {
 		for _, n := range nodes {
 			if n.Type() == "identifier" {
-				names = append(names, goScopedName{name: p.text(n), from: from, to: block.EndByte()})
+				locals[p.text(n)] = append(locals[p.text(n)], goScope{from: from, to: block.EndByte()})
 			}
 		}
 	}
@@ -258,7 +254,7 @@ func (p *projection) goScopedNames(function *sitter.Node) []goScopedName {
 		}
 	}
 	walk(function, function, 0)
-	return names
+	return locals
 }
 
 // goOperator returns the operator of a unary expression, as & or <-.
