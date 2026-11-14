@@ -721,6 +721,9 @@ func TestPathStringNamesAWeakHop(t *testing.T) {
 
 	hops[1].EdgeKind, hops[1].Resolver = projectgraph.EdgeLLM, "model m1, prompt v2"
 	assert.Equal(t, "main.py:3 (llm, model m1, prompt v2) -> app.py:6 -> yaml//load", PathString(hops))
+
+	hops[1] = Hop{Key: "app.py", Site: projectgraph.Site{Path: "app.py"}, EdgeKind: projectgraph.EdgeImport, Confidence: projectgraph.ConfidenceHigh, Resolver: LoadResolver}
+	assert.Equal(t, "app.py (load) -> app.py:6 -> yaml//load", PathString(hops))
 }
 
 func TestResultString(t *testing.T) {

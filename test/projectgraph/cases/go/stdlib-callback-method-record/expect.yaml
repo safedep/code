@@ -6,7 +6,9 @@ description: >-
   method value, and a dot import. viaField calls a function value that a field holds. Each call is a record
   with a method name, and such a call can run a method of the standard library, which calls back ServeHTTP.
   So the caller of each record also has a callback record, and os.Remove is uncertain from each via
-  function. idle calls nothing, so os.Remove is not found from it.
+  function. quiet.Idle calls nothing, and its package holds no load code, so os.Remove is not found from it.
+  A source in package main would enter the module top level of main.go, which holds http.ListenAndServe as a
+  value.
 roots:
   - key: dot.go
     kind: main
@@ -161,7 +163,7 @@ results:
         site: dot.go:6
       - kind: unresolved-call
   - target: os//Remove
-    sources: [main.go//idle]
+    sources: [quiet/quiet.go//Idle]
     sources_only: true
     status: not-found
     call_sites:

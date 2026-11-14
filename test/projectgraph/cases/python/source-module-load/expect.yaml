@@ -1,0 +1,100 @@
+source: safedep:hand
+description: >-
+  The module top level of handlers.py holds os.system in the list HOOKS, and os.getcwd in the attribute hook
+  of DEFAULTS. run calls HOOKS[0], and run_hook calls the attribute hook of its parameter. The program runs
+  the module top level of handlers.py before run or run_hook can run. So a search from run or run_hook
+  alone enters it, and each target is found through the reference there. Without that step, the call of
+  o.hook concerns only the targets of the method name hook, and os.getcwd reads as not-found.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+exact_edges: true
+edges:
+  - from: handlers.py
+    to: os//system
+    kind: reference
+    confidence: low
+    site: handlers.py:9
+  - from: handlers.py
+    to: handlers.py//Options
+    kind: direct
+    confidence: high
+    site: handlers.py:10
+  - from: handlers.py
+    to: os//getcwd
+    kind: reference
+    confidence: low
+    site: handlers.py:10
+  - from: handlers.py//Options
+    to: handlers.py//Options//__init__
+    kind: direct
+    confidence: high
+    site: handlers.py:5
+  - from: handlers.py//run_hook
+    to: handlers.py//Options
+    kind: reference
+    confidence: low
+    site: handlers.py:17
+  - from: main.py
+    to: handlers.py
+    kind: import
+    confidence: high
+    site: main.py:1
+  - from: main.py
+    to: handlers.py//run
+    kind: direct
+    confidence: high
+    site: main.py:3
+  - from: main.py
+    to: handlers.py//run_hook
+    kind: direct
+    confidence: high
+    site: main.py:4
+unresolved:
+  - caller: handlers.py//run
+    site: handlers.py:14
+    reason: computed-name
+  - caller: handlers.py//run_hook
+    site: handlers.py:18
+    reason: unknown-receiver
+    method: hook
+results:
+  - target: os//system
+    sources: [handlers.py//run]
+    sources_only: true
+    status: found
+    path:
+      - key: handlers.py//run
+        root: query
+      - key: handlers.py
+        site: handlers.py
+        kind: import
+        confidence: high
+      - key: os//system
+        site: handlers.py:9
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: handlers.py
+        site: handlers.py:9
+        reached: true
+  - target: os//getcwd
+    sources: [handlers.py//run_hook]
+    sources_only: true
+    status: found
+    path:
+      - key: handlers.py//run_hook
+        root: query
+      - key: handlers.py
+        site: handlers.py
+        kind: import
+        confidence: high
+      - key: os//getcwd
+        site: handlers.py:10
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: handlers.py
+        site: handlers.py:10
+        reached: true

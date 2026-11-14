@@ -553,6 +553,10 @@ the sources do.
 | `reach.SourcesAndRoots` | The sources and the roots that the rules marked. It is the default |
 | `reach.SourcesOnly` | The sources alone. The root fallback does not apply, so no result carries a `root-fallback` uncertainty. It needs at least one source |
 
+A search from a source also enters the load code of each package whose
+code it reaches, because the program runs that code before the source. See
+[A call of a function value](#a-call-of-a-function-value).
+
 A source must name a first-party node of the graph. A key of no node, an
 external symbol or a definition of dependency code is an error of `Reach`
 that wraps `reach.ErrUnknownSource`, one per bad source, so a typo never
@@ -792,12 +796,37 @@ the value, and the call has the record that
 [Code outside the graph](#code-outside-the-graph) gives. The search
 reaches that record where it reaches the code that makes the value.
 
-The argument holds for a search from the roots, which reaches the module
-top level of each package that the program loads. A search from the
-sources alone, as `reach.SourcesOnly` asks, starts at the sources and not
-at the module top levels of their packages. So a call of a function value
-that only a package-level value holds can run a function that such a
-search does not reach, and the target can read as `not-found`.
+The argument needs a search that reaches the module top level of each
+package whose code it reaches. A search from the roots of kind `main`
+does. The module top level of each file of the package of `main` is a
+root, and an import edge joins a module top level to each module top level
+of a package that it imports and that runs code at load. A search from a
+source, or from a test root, does not. The program runs the load code of
+a package before the source, so no path from the source leads to it.
+
+So a query with a source, or with `IncludeTests`, adds a load step, and
+the search of a test path adds it too. Each node that the search reaches
+enters the module top level of each file of its load group, as
+`Graph.LoadGroup` gives it. The load group is the
+package of the file in a language whose program loads a whole package
+before any code of the package runs, as Go. In another language it is the
+file alone, as a Python or a JavaScript module, which runs its top level
+before any of its functions can run. A test file is in the load group only
+of the code of a test. The span of a method name, a unit or a callback
+takes the same step, so the code that a candidate of a method name holds
+in its package counts too. A hop of the step has the resolver `load`, and
+`reach.PathString` writes it as `main.go (load)`.
+
+The step only adds nodes to a search, so it turns no answer into
+`not-found`. It costs precision. A source that calls nothing still reaches
+each function value of the load code of its package, as `idle` does in the
+case `go/source-package-load`. A search from the roots alone does not take
+the step, so its results do not change. The summary of a unit does not
+take it either. A summary answers for a search from one symbol of a unit,
+and the import edges of an external key give that search the load code of
+its Go package. The cases `go/source-package-load`,
+`python/source-module-load` and `javascript/source-module-load` hold a
+function value in the load code and call it from a source.
 
 The rule does not apply to Rust. The Rust index records a function that an
 argument, a `let`, an assignment, a `return`, a field initializer or an
