@@ -31,7 +31,9 @@ type profile struct {
 	// qualified resolves a qualified name, as com.x.Service in Java.
 	qualified func(b *builder, name string) (string, bool)
 	// typePath resolves a type path that a file writes and that its scope
-	// does not bind, as kit::Store in type Handle = kit::Store of Rust.
+	// does not bind, as kit::Store in type Handle = kit::Store of Rust. It
+	// gives a key and makes no node, where scopeFallback walks the names of
+	// a call and makes the node of the key that the call reaches.
 	typePath func(b *builder, sc *scope, written string) (string, bool)
 	// scopeFallback resolves a name that no scope of the file binds, as a
 	// Java class of a wildcard import of a dependency.

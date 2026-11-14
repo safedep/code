@@ -415,17 +415,37 @@ type rustResolver struct {
 }
 
 func (r rustResolver) Module(importer, spec string) (string, string, bool) {
-	if key, ok := r.b.resolveRust(importer, spec); ok {
-		return key, "path", true
+	t, ok := r.b.rustPath(importer, spec)
+	switch {
+	case !ok:
+		return "", "", false
+	case t.key != "":
+		return t.key, "path", true
 	}
 	// A use can bind an item of the crate, as fl of use crate::ffi::flush
 	// as fl after pub use dep as ffi. A call of fl links the key itself,
 	// so the key needs its node. Without it the edge reached no node, and
 	// the target read as not-found.
-	if path, file, ok := r.b.rustCratePath(importer, spec); ok {
-		return r.b.external(r.b.rustCrateKey(file, path)), "crate", true
+	return r.b.external(r.b.rustCrateKey(t.file, t.path)), "crate", true
+}
+
+// rustTarget is what a path of a file names: a definition or a module of
+// the project, or a path in another crate and the file of the binding
+// that names the crate.
+type rustTarget struct {
+	key, path, file string
+}
+
+// rustPath resolves a path that a file writes: in the project, or else
+// through a name that a module binds to another crate.
+func (b *builder) rustPath(importer, written string) (rustTarget, bool) {
+	if key, ok := b.resolveRust(importer, written); ok {
+		return rustTarget{key: key}, true
 	}
-	return "", "", false
+	if path, file, ok := b.rustCratePath(importer, written); ok {
+		return rustTarget{path: path, file: file}, true
+	}
+	return rustTarget{}, false
 }
 
 // rustCrateKey returns the external key of a path of another crate that a
@@ -444,11 +464,11 @@ func (b *builder) rustCrateKey(file, path string) string {
 // alias of the file writes it: a type of the crate, or the key of a type of
 // another crate, also through a binding of a module.
 func rustTypePath(b *builder, sc *scope, written string) (string, bool) {
-	if key, ok := b.resolveRust(sc.ix.Path, written); ok {
-		return b.deref(key), true
-	}
-	if path, file, ok := b.rustCratePath(sc.ix.Path, written); ok {
-		return b.rustCrateKey(file, path), true
+	if t, ok := b.rustPath(sc.ix.Path, written); ok {
+		if t.key != "" {
+			return b.deref(t.key), true
+		}
+		return b.rustCrateKey(t.file, t.path), true
 	}
 	if !strings.Contains(written, "::") || b.rustLocalRoot(sc.ix.Path, written) {
 		return "", false
@@ -573,12 +593,18 @@ func (b *builder) rustCrate(file, module string) (string, string, bool) {
 // as schannel of extern crate schannel in src/imp/schannel.rs. A file of
 // the name does not tell it, because the module of that file is no child.
 func (b *builder) rustLocalRoot(file, path string) bool {
-	first, _, _ := strings.Cut(strings.TrimPrefix(path, "::"), "::")
+	first := rustFirstName(path)
 	switch first {
 	case "crate", "self", "super":
 		return true
 	}
 	return b.cargoOf(b.spaceOf(file)).Has(first) || b.rustModuleUnit(file, first) != nil || b.rustModuleUnit(file, "crate::"+first) != nil
+}
+
+// rustFirstName returns the first name of a path, as std for ::std::io.
+func rustFirstName(path string) string {
+	first, _, _ := strings.Cut(strings.TrimPrefix(path, "::"), "::")
+	return first
 }
 
 // rustCrateNames splits a path of a crate into the crate and the names
@@ -595,7 +621,7 @@ func rustCrateNames(path string) (string, []string) {
 // the name of a crate of the project or with the name of a file or a
 // directory of the project, as a child module.
 func (r rustResolver) FirstParty(spec string) bool {
-	first, _, _ := strings.Cut(strings.TrimPrefix(spec, "::"), "::")
+	first := rustFirstName(spec)
 	switch {
 	case first == "crate" || first == "self" || first == "super":
 		return true
@@ -609,8 +635,7 @@ func (r rustResolver) FirstParty(spec string) bool {
 // crate, by the modules that the file sees, and not by the names of all
 // the files of the project.
 func (r rustResolver) FirstPartyFrom(importer, spec string) bool {
-	first, _, _ := strings.Cut(strings.TrimPrefix(spec, "::"), "::")
-	return !rustRoots[first] && r.b.rustLocalRoot(importer, spec)
+	return !rustRoots[rustFirstName(spec)] && r.b.rustLocalRoot(importer, spec)
 }
 
 // rustScopeFallback resolves a path that no use and no item of the module
@@ -621,12 +646,12 @@ func (r rustResolver) FirstPartyFrom(importer, spec string) bool {
 // a local closure can bind it.
 func (b *builder) rustScopeFallback(sc *scope, _, first string, rest []string, target string) []resolution {
 	written := strings.Join(append([]string{first}, rest...), "::")
-	if key, ok := b.resolveRust(sc.ix.Path, written); ok {
-		return []resolution{b.walkNamespace(key)}
-	}
-	if path, file, ok := b.rustCratePath(sc.ix.Path, written); ok {
-		crate, names := rustCrateNames(path)
-		return []resolution{b.importedWalk(b.byPath[file], fileindex.Namespace(langcode.Rust, path), crate, modules.FormImport, names)}
+	if t, ok := b.rustPath(sc.ix.Path, written); ok {
+		if t.key != "" {
+			return []resolution{b.walkNamespace(t.key)}
+		}
+		crate, names := rustCrateNames(t.path)
+		return []resolution{b.importedWalk(b.byPath[t.file], fileindex.Namespace(langcode.Rust, t.path), crate, modules.FormImport, names)}
 	}
 	if len(rest) > 0 {
 		return []resolution{b.importedWalk(sc.ix, target, first, modules.FormImport, rest)}
