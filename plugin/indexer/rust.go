@@ -72,24 +72,11 @@ func rustTypes(p *projection) {
 				if _, ok := p.defs[key]; ok {
 					continue
 				}
-				p.defs[key] = &fileindex.Definition{
-					Key:       key,
-					Kind:      fileindex.DefClass,
-					Name:      fileindex.Last(key),
-					StartLine: lineOf(item),
-					EndLine:   int(item.EndPoint().Row) + 1,
-				}
+				p.addDefinition(key, fileindex.DefClass, item)
 				p.addSyntax(key, item)
 			case item.Type() == "type_item":
 				key := fileindex.Join(scope, p.text(item.ChildByFieldName("name")))
-				p.defs[key] = &fileindex.Definition{
-					Key:       key,
-					Kind:      fileindex.DefAlias,
-					Name:      fileindex.Last(key),
-					StartLine: lineOf(item),
-					EndLine:   int(item.EndPoint().Row) + 1,
-					Alias:     p.rustTypeName(item.ChildByFieldName("type"), nil),
-				}
+				p.addDefinition(key, fileindex.DefAlias, item).Alias = p.rustTypeName(item.ChildByFieldName("type"), nil)
 				p.addSyntax(key, item)
 			}
 		}
