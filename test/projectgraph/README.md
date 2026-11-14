@@ -148,6 +148,42 @@ crates.io, and a PyPI package from pypi.org: a dependency as its wheel,
 unpacked, so its directory has the layout of site-packages, and a project
 as its sdist, so its directory has the manifests.
 
+The script also fetches the `src` tree of the Go release of each Go
+project from go.dev into `gostd/<release>/src`, and writes the release of
+each project to `gostd/releases.txt`. The release comes from the `go` line
+of the go.mod of the project, as `go1.16` for `go 1.16`. The measure links
+the tree as the unit `go:std@<release>`, as vet links GOROOT. Set
+`PROJECTGRAPH_METHOD_NO_STD=1` to leave the unit out and see what it
+changes.
+
+With govulncheck on the `PATH`, the measure also compares each answer of a
+Go target with govulncheck. The script fetches the modules of the build
+list of each Go project into the module cache of the corpus. The measure
+writes the Go advisories of `advisories.json` as a vulnerability database
+in the layout of `vuln.go.dev`, and runs
+`govulncheck -mode source -json -db file://<db> ./...` on a copy of each
+project, with `GOPROXY=off`. So the run needs no network, and govulncheck
+checks exactly the advisories of the measure. Install the version that
+`methods_govulncheck_test.go` pins:
+
+```bash
+go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+export PATH="$PATH:$(go env GOPATH)/bin"
+```
+
+The block `set=govulncheck-agreement` counts the targets that govulncheck
+reaches by the answer of reach (`found`, `uncertain`, or `false-negative`
+for `not-found` and `no-such-target`), and the same for the targets that
+govulncheck does not reach. A false negative fails the test. A `review`
+row is a target that reach finds and govulncheck does not. It is not a
+failure, because reach also starts from the library surface of the
+project. An `unmatched` row is a symbol of an advisory with a symbol list
+that govulncheck reaches and that is no target of the project: the corpus
+does not list the module of the symbol, or the two tools write its key in
+two ways. An advisory with no symbol list gives no target, so the
+comparison leaves out its findings. `TestVulnAgreement` checks the
+comparison on fixed answers and runs with the tag and no corpus.
+
 `receivers_test.go` holds one row per form of the receiver of a method
 call, for Go, for Rust and for Python, against the small dependency units under
 `testdata/receivers`. It runs in `go test ./...`. A row that the link step
