@@ -1,0 +1,215 @@
+source: safedep:hand
+description: >-
+  The init of plugins stores os.Remove in the map and in the slice of registry, and only main imports
+  plugins. ByName calls handlers["rm"], and First calls list[0]. setup stores os.Chdir in fs[0], and main
+  calls setup and then serve, which calls fs[0]. A search from the roots reaches each code that stores a
+  function value, so os.Remove and os.Chdir are found through the references, and a call of a value
+  concerns no target. No code uses os.Exit as a value, so os.Exit is not found. The program runs code
+  before a source that a search from the source does not reach, as the init of plugins before ByName or
+  setup before serve. So in a search with a source, each call of a value concerns every target. os.Remove is
+  uncertain from ByName and from First, os.Chdir from serve, and os.Exit from serve also with the roots.
+  serve finds os.Remove, because the program loads main.go, and with it plugins, before serve runs.
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+exact_edges: true
+edges:
+  - from: main.go
+    to: plugins/plugins.go
+    kind: import
+    confidence: high
+    site: main.go:6
+  - from: main.go
+    to: make
+    kind: direct
+    confidence: high
+    site: main.go:10
+  - from: main.go//main
+    to: main.go//setup
+    kind: direct
+    confidence: high
+    site: main.go:21
+  - from: main.go//main
+    to: main.go//serve
+    kind: direct
+    confidence: high
+    site: main.go:22
+  - from: main.go//main
+    to: registry/registry.go//ByName
+    kind: direct
+    confidence: high
+    site: main.go:23
+  - from: main.go//main
+    to: registry/registry.go//First
+    kind: direct
+    confidence: high
+    site: main.go:24
+  - from: main.go//setup
+    to: os//Chdir
+    kind: reference
+    confidence: low
+    site: main.go:13
+  - from: plugins/plugins.go
+    to: plugins/plugins.go//init
+    kind: direct
+    confidence: high
+    site: plugins/plugins.go:9
+  - from: plugins/plugins.go//init
+    to: registry/registry.go//Register
+    kind: direct
+    confidence: high
+    site: plugins/plugins.go:10
+  - from: plugins/plugins.go//init
+    to: os//Remove
+    kind: reference
+    confidence: low
+    site: plugins/plugins.go:10
+  - from: plugins/plugins.go//unused
+    to: os//Exit
+    kind: direct
+    confidence: high
+    site: plugins/plugins.go:14
+  - from: registry/registry.go//Register
+    to: append
+    kind: direct
+    confidence: high
+    site: registry/registry.go:10
+unresolved:
+  - caller: os//Chdir
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Exit
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Remove
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//serve
+    site: main.go:17
+    reason: function-value
+  - caller: registry/registry.go//ByName
+    site: registry/registry.go:13
+    reason: function-value
+  - caller: registry/registry.go//First
+    site: registry/registry.go:15
+    reason: function-value
+results:
+  - target: os//Remove
+    status: found
+    path:
+      - key: main.go
+      - key: plugins/plugins.go
+        site: main.go:6
+        kind: import
+        confidence: high
+      - key: plugins/plugins.go//init
+        site: plugins/plugins.go:9
+        kind: direct
+        confidence: high
+      - key: os//Remove
+        site: plugins/plugins.go:10
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: plugins/plugins.go//init
+        site: plugins/plugins.go:10
+        reached: true
+  - target: os//Chdir
+    status: found
+    path:
+      - key: main.go//main
+      - key: main.go//setup
+        site: main.go:21
+        kind: direct
+        confidence: high
+      - key: os//Chdir
+        site: main.go:13
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: main.go//setup
+        site: main.go:13
+        reached: true
+  - target: os//Exit
+    status: not-found
+    call_sites:
+      - caller: plugins/plugins.go//unused
+        site: plugins/plugins.go:14
+        reached: false
+  - target: os//Remove
+    sources: [registry/registry.go//ByName]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: plugins/plugins.go//init
+        site: plugins/plugins.go:10
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: registry/registry.go:13
+  - target: os//Remove
+    sources: [registry/registry.go//First]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: plugins/plugins.go//init
+        site: plugins/plugins.go:10
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: registry/registry.go:15
+  - target: os//Chdir
+    sources: [main.go//serve]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//setup
+        site: main.go:13
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:17
+  - target: os//Exit
+    sources: [main.go//serve]
+    status: uncertain
+    call_sites:
+      - caller: plugins/plugins.go//unused
+        site: plugins/plugins.go:14
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:17
+      - kind: unresolved-call
+        site: registry/registry.go:13
+      - kind: unresolved-call
+        site: registry/registry.go:15
+  - target: os//Remove
+    sources: [main.go//serve]
+    sources_only: true
+    status: found
+    path:
+      - key: main.go//serve
+      - key: main.go
+        site: main.go
+        kind: import
+        confidence: high
+      - key: plugins/plugins.go
+        site: main.go:6
+        kind: import
+        confidence: high
+      - key: plugins/plugins.go//init
+        site: plugins/plugins.go:9
+        kind: direct
+        confidence: high
+      - key: os//Remove
+        site: plugins/plugins.go:10
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: plugins/plugins.go//init
+        site: plugins/plugins.go:10
+        reached: true

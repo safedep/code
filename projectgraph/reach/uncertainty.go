@@ -60,10 +60,14 @@ type sources struct {
 	// so the search counts it once.
 	callbacks map[string]bool
 	callback  *Uncertainty
+	// valueEdges marks a search that reaches each code that can store a
+	// function value, so a reference edge leads it to each function that
+	// a call of a value can run.
+	valueEdges bool
 }
 
-func newSources(g *projectgraph.Graph) *sources {
-	s := &sources{unresolved: map[string][]projectgraph.UnresolvedSite{}, prefixes: map[projectgraph.Site]string{}, truncated: map[string][]projectgraph.Truncation{}, budgets: map[string][]Uncertainty{}, testBudgets: map[string][]Uncertainty{}, callbacks: map[string]bool{}}
+func newSources(g *projectgraph.Graph, valueEdges bool) *sources {
+	s := &sources{valueEdges: valueEdges, unresolved: map[string][]projectgraph.UnresolvedSite{}, prefixes: map[projectgraph.Site]string{}, truncated: map[string][]projectgraph.Truncation{}, budgets: map[string][]Uncertainty{}, testBudgets: map[string][]Uncertainty{}, callbacks: map[string]bool{}}
 	for _, u := range g.Unresolved {
 		if u.Callback {
 			s.callbacks[u.Caller] = true
@@ -163,7 +167,7 @@ func (s *sources) at(key string, n *projectgraph.Node) []Uncertainty {
 	for _, r := range s.unresolved[key] {
 		// A call of a function value runs a function that the search
 		// reaches through the code that holds the value.
-		if r.Reason == fileindex.UnresolvedFunctionValue {
+		if r.Reason == fileindex.UnresolvedFunctionValue && s.valueEdges {
 			continue
 		}
 		u := Uncertainty{Kind: UnresolvedCall, Key: key, Site: r.Site, Text: fmt.Sprintf("%s (%s)", r.Text, r.Reason)}

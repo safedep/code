@@ -5,13 +5,14 @@ description: >-
   defaults. run calls hooks[0], and runHook calls the field Hook of its parameter. impl.go holds os.Remove in
   the map table, and T.Handle calls table["rm"]. lib.Serve calls Handle on a value of an interface, and lib
   does not import impl. extra.go holds os.Chdir, and Run calls steps[0]. The test file of extra holds
-  os.RemoveAll. A call of a function value concerns no target, because the search reaches the code that
-  holds the value. The program runs the module top level of each file of a package before any code of the
+  os.RemoveAll. The program runs the module top level of each file of a package before any code of the
   package. So a search from a source enters the module top levels of each package that it enters, and each
   target is found from each source. idle calls nothing, and os.Exit is found from it too, because the
-  program loads main.go before idle runs. A test file loads only with the code of a test, so os.RemoveAll
-  is not found from Run, and is found from TestRun. The roots of kind main do not reach extra, so os.Chdir
-  is found only with the tests, through the test root of extra.
+  program loads main.go before idle runs. A test file loads only with the code of a test, so the search
+  from Run does not enter it, and os.RemoveAll is found only from TestRun. From Run, os.RemoveAll is
+  uncertain. Code that a search from a source does not reach can store a function value, so there the call
+  steps[0] concerns every target. The roots of kind main do not reach extra, so os.Chdir is found only with
+  the tests, through the test root of extra.
 roots:
   - key: extra/extra_test.go
     kind: test
@@ -205,11 +206,15 @@ results:
   - target: os//RemoveAll
     sources: [extra/extra.go//Run]
     sources_only: true
-    status: not-found
+    status: uncertain
     call_sites:
       - caller: extra/extra_test.go
         site: extra/extra_test.go:8
         reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: extra/extra.go:8
+      - kind: unresolved-call
   - target: os//RemoveAll
     sources: [extra/extra_test.go//TestRun]
     sources_only: true

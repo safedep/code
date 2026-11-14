@@ -228,8 +228,10 @@ reason: `computed-name`, `dynamic-import`, `unknown-receiver`,
 `no-definition`, `ambiguous`, `limit`, `interface-receiver`,
 `trait-receiver`, `no-dependency-source`, `function-value` or `markup`. The site keeps the method name of the call, so the
 reach query can tell which targets it concerns. A `function-value`
-record concerns no target. [A call of a function value](#a-call-of-a-function-value)
-gives the reason.
+record concerns no target in a search from the roots that the rules
+mark, and every target in a search with a source and in a summary.
+[A call of a function value](#a-call-of-a-function-value) gives the
+reason.
 
 A site with more than 20 candidates of its method name, as `render` in a
 Django project, is `ambiguous`. The site gets no edge, so the search cannot
@@ -554,7 +556,11 @@ the sources do.
 | `reach.SourcesOnly` | The sources alone. The root fallback does not apply, so no result carries a `root-fallback` uncertainty. It needs at least one source |
 
 A search from a source also enters the load code of each package whose
-code it reaches, because the program runs that code before the source. See
+code it reaches, because the program runs that code before the source. The
+caller of a source can also run other code before it that no root
+reaches, and that code can store a function value. So in a search with a
+source, in either mode, a call of a function value concerns every
+target. See
 [A call of a function value](#a-call-of-a-function-value).
 
 A source must name a first-party node of the graph. A key of no node, an
@@ -751,9 +757,9 @@ that its scope concerns, so `Status` applies the same rule with no graph.
 
 A Go call of a function value, as `BackoffLinearWithJitter(d, j)(attempt)`
 or `route.Handlers[0](c)`, is a record with the reason `function-value`.
-The record concerns no target. This is sound because the search reaches
-each function that such a call can run. A Go function value is one of
-these:
+In a search from the roots that the rules mark, the record concerns no
+target. This is sound because that search reaches each function that such
+a call can run. A Go function value is one of these:
 
 - A function or a method that code uses as a value: an argument, the
   operand of a conversion, the right side of an assignment or a
@@ -781,7 +787,7 @@ these:
   package is in a unit of dependency code. An import edge joins the
   importer to the module top level, and a search from `main` reaches it.
   An external key also has an import edge to each module top level of its
-  package that runs code at load, so the search of a summary reaches it.
+  package that runs code at load.
 - A value that reflection gives, as `reflect.Value.Call`,
   `reflect.Value.MethodByName` or `reflect.Value.Method`. No reference
   leads to such a function. A call or a reference of the methods `Call`,
@@ -796,44 +802,80 @@ the value, and the call has the record that
 [Code outside the graph](#code-outside-the-graph) gives. The search
 reaches that record where it reaches the code that makes the value.
 
-The argument needs a search that reaches the module top level of each
-package whose code it reaches. A search from the roots of kind `main`
-does. The module top level of each file of the package of `main` is a
-root, and an import edge joins a module top level to each module top level
-of a package that it imports and that runs code at load. A search from a
-source, or from a test root, does not. The program runs the load code of
-a package before the source, so no path from the source leads to it.
+The argument holds only for a search that starts from the roots that the
+rules mark. Those roots are the entries of the program: `main` with the
+module top level of each file of its package, a test root, or, with the
+root fallback, each module top level and each exported symbol. Code that
+stores a function value runs only after an entry, so the search reaches
+it. An import edge joins a module top level to each module top level of a
+package that it imports and that runs code at load, so the search also
+reaches the load code of each package that the program loads.
 
-So a query with a source, or with `IncludeTests`, adds a load step, and
-the search of a test path adds it too. Each node that the search reaches
-enters the module top level of each file of its load group, as
-`Graph.LoadGroup` gives it. The load group is the
-package of the file in a language whose program loads a whole package
-before any code of the package runs, as Go. In another language it is the
-file alone, as a Python or a JavaScript module, which runs its top level
-before any of its functions can run. A test file is in the load group only
-of the code of a test. The span of a method name, a unit or a callback
-takes the same step, so the code that a candidate of a method name holds
-in its package counts too. A hop of the step has the resolver `load`, and
-`reach.PathString` writes it as `main.go (load)`.
+A search with a source does not have the argument, in either source mode.
+The caller of a source can run code before the source that no root
+reaches, and that code can store a function value: the init of a package
+that only `main` imports and that fills a registry, or a `setup` that
+`main` calls before `serve`. With `SourcesAndRoots` the source is an entry
+that the rules missed, so its caller can be code that the rules missed
+too. So in a search with a source, a `function-value` record concerns
+every target, as a `computed-name` record does. The case
+`go/source-function-value` holds both forms of the store.
 
-The step only adds nodes to a search, so it turns no answer into
-`not-found`. It costs precision. A source that calls nothing still reaches
-each function value of the load code of its package, as `idle` does in the
-case `go/source-package-load`. A search from the roots alone does not take
-the step, so its results do not change. The summary of a unit does not
-take it either. A summary answers for a search from one symbol of a unit,
-and the import edges of an external key give that search the load code of
-its Go package. The cases `go/source-package-load`,
-`python/source-module-load` and `javascript/source-module-load` hold a
-function value in the load code and call it from a source.
+A summary does not have the argument either. A summary is a search from
+one symbol of a unit, and a search of any kind reads it: a search from the
+roots or from a source, of a project that the summary does not see. The
+value can come from that project, from another unit, or from a package of
+the unit that the symbol does not import, as a registry that the init of
+another package fills. So a summary counts a `function-value` record for
+every target. `summarytest` checks a summary against
+a reach query of the unit graph from the symbol as a root of kind `query`,
+which has the same rule.
+
+A query with a source, or with `IncludeTests`, adds a load step, and the
+search of a test path adds it too. The program runs the load code of a
+package before the source or the test, and no path from the source or the
+test root leads to it. Each node that the search reaches enters the module
+top level of each file of its load group, as `Graph.LoadGroup` gives it.
+The load group is the package of the file in a language whose program
+loads a whole package before any code of the package runs, as Go. In
+another language it is the file alone, as a Python or a JavaScript module,
+which runs its top level before any of its functions can run. A test file
+is in the load group only of the code of a test. The span of a method
+name, a unit or a callback takes the same step, so the code that a
+candidate of a method name holds in its package counts too. A hop of the
+step has the resolver `load`, and `reach.PathString` writes it as
+`main.go (load)`.
+
+The step keeps two answers sound. A call in the load code, as `var x =
+dep.Init()`, runs before the source, so the search finds its target. A
+value that the load code stores in a variable or an attribute is reached
+through its reference, also where the call of the value is a record with a
+name, as `o.hook()` in the case `python/source-module-load`. The step only
+adds nodes to a search, so it turns no answer into `not-found`. It costs
+precision. A source that calls nothing still reaches the load code of its
+package, as `idle` does in the case `go/source-package-load`. A search from
+the roots alone does not take the step, so its results do not change. The
+summary of a unit does not take it either. A summary answers for a search
+from one symbol of a unit, and the import edges of an external key give
+that search the load code of its Go package. The cases
+`go/source-package-load`, `python/source-module-load` and
+`javascript/source-module-load` hold a value in the load code and call it
+from a source.
+
+A call of a parameter, a local or a field that holds a function, as `f(x)`
+or `t.hook(x)`, is no `function-value` record. It is a record with the
+name, as `f` or `hook`, which concerns what a definition of the name
+reaches. In a search from the roots of a Go program, the `reference` edge
+of the stored function covers the call. In a search with a source, and in
+Rust, a function of another name that no path reaches can run. So such a
+call can read as `not-found`.
 
 The rule does not apply to Rust. The Rust index records a function that an
 argument, a `let`, an assignment, a `return`, a field initializer or an
 array names. It does not record a function that the tail expression of a
 block, a match arm, a shorthand field or a tuple holds, and a Rust function
-returns its tail expression. So a call of a Rust function value stays a
-`computed-name` record.
+returns its tail expression. So a call of a Rust function value in an
+expression, as `v[0](x)`, stays a `computed-name` record.
 
 ### Unknown code of a unit of dependency code
 

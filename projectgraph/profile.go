@@ -223,7 +223,7 @@ type profile struct {
 	// functionValues marks a language whose function values the link step
 	// joins to the code that holds them, as Go. A call of a function value
 	// gets the reason function-value in place of computed-name, and it
-	// concerns no target. A reference to a method that the link step cannot
+	// concerns no target in a search from the roots. A reference to a method that the link step cannot
 	// name, as h.Handle on an interface, gets a record with the method name.
 	functionValues bool
 	// reflection names the package of the language that can run any

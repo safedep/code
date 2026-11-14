@@ -4,8 +4,9 @@ description: >-
   it from the package-level map table, which holds doA. The program loads b, because a imports it, so it
   runs the module top level of b.go, with the init of b and the reference to doA. The import of b makes a.go
   run code at load, so main.go reaches a.go and b.go through import edges. So the search finds os.Remove
-  through the reference to doA, and os/exec.Command through init. The call of the value concerns no
-  target, and no code uses doB as a value, so os.Getwd is not found.
+  through the reference to doA, and os/exec.Command through init. In a search from the roots, the call of
+  the value concerns no target, and no code uses doB as a value, so os.Getwd is not found. The summary of a
+  counts the call for every target, because the summary does not see the load code of b.
 units:
   gomod/github.com/acme/a@v1.0.0: go:github.com/acme/a@v1.0.0
   gomod/github.com/acme/b@v1.0.0: go:github.com/acme/b@v1.0.0
