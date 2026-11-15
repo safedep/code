@@ -179,6 +179,7 @@ func (p *projection) functionsOf(key string) []string {
 			functions = append(functions, k)
 		}
 	}
+	slices.Sort(functions)
 	return functions
 }
 
