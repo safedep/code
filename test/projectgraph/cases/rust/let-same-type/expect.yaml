@@ -1,0 +1,44 @@
+source: safedep:hand
+description: >-
+  builder binds c to Client::new(), then binds c again to c.with_retry(), which returns a Client, and calls
+  c.send(). branch binds c to a Client and again to a Client in a block. Each let of c holds a Client, so each
+  call runs a method of Client. The call c.with_retry() sits in the value of the second let, where the first
+  let still binds c. An index that counts a let before its statement ends, or that makes each call after a
+  second let a record, gives the calls the low name edges of send, and std::fs::create_dir of Other::send reads
+  found. The calls keep their targets, so std::fs::create_dir is not-found.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//builder
+    to: src/main.rs//Client//with_retry
+    kind: member
+    confidence: high
+    site: src/main.rs:27
+  - from: src/main.rs//builder
+    to: src/main.rs//Client//send
+    kind: member
+    confidence: high
+    site: src/main.rs:28
+  - from: src/main.rs//branch
+    to: src/main.rs//Client//send
+    kind: member
+    confidence: high
+    site: src/main.rs:35
+no_edges:
+  - from: src/main.rs//builder
+    to: src/main.rs//Other//send
+  - from: src/main.rs//branch
+    to: src/main.rs//Other//send
+unresolved: []
+results:
+  - target: std//fs//create_dir
+    status: not-found
+    call_sites:
+      - caller: src/main.rs//Other//send
+        site: src/main.rs:21
+        reached: false

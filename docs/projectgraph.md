@@ -408,7 +408,10 @@ Rust follows the same rules, with these additions.
   before the call is a record with the reason `unknown-receiver`, and so is
   a call whose declared type does not hold. The call graph binds a name to
   the value of its first `let`, so a call after a second `let` of the name
-  is a record too, as in the case `rust/shadowed-let-type`. A method of the
+  with another type is a record too, as in the case
+  `rust/shadowed-let-type`. A `let` counts once its statement ends, and
+  `let`s of one type keep the target, as `c.send()` after
+  `let c = c.with_retry();` in the case `rust/let-same-type`. A method of the
   real type then reads as `uncertain` and not as `not-found`.
 - The link step resolves a type that a parameter, a `let`, a field or the
   result of a function declares at the root of the file, or as a struct,

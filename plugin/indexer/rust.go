@@ -5,6 +5,7 @@ import (
 	"maps"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/safedep/code/core/ast"
 	"github.com/safedep/code/fileindex"
@@ -535,30 +536,102 @@ func rustDeclaredAt(ctx context.Context, p *projection, call fileindex.Call, nam
 }
 
 // rustRebound reports whether the function binds a name before a call by a
-// binder that the call graph does not read, or by a second let. A static or
-// a const binds its name in the whole block, also before it. The call graph
-// binds a name to the value of its first let, so it sends t.run() after
-// let t = B to A::run when let t = A comes first. A function whose walk
-// stopped early can bind any name.
+// binder that the call graph does not read, or by a second let of another
+// type. A static or a const binds its name in the whole block, also before
+// it. The call graph binds a name to the value of its first let, so it sends
+// t.run() after let t = B to A::run when let t = A comes first. A let counts
+// once its statement ends, because the call in its value, as c.with_retry()
+// in let c = c.with_retry(), still sees the binding before it. Lets of one
+// type, as let c = c.with_retry() after let c = Client::new(), keep the
+// target. A function whose walk stopped early can bind any name.
 func rustRebound(ctx context.Context, p *projection, call fileindex.Call, name string) bool {
 	binders, ok := p.rustBinders(ctx, call.Caller)
 	if !ok {
 		return true
 	}
-	lets := 0
-	return slices.ContainsFunc(binders[name], func(binder *sitter.Node) bool {
+	var lets []*sitter.Node
+	if slices.ContainsFunc(binders[name], func(binder *sitter.Node) bool {
 		item := binder.Type() == "static_item" || binder.Type() == "const_item"
-		if !item && !startsBefore(binder, call) {
+		switch {
+		case !item && !startsBefore(binder, call):
 			return false
-		}
-		if !rustPlainBinder(binder) {
+		case !rustPlainBinder(binder):
 			return true
+		case binder.Type() == "let_declaration" && endsBefore(binder, call):
+			lets = append(lets, binder)
 		}
-		if binder.Type() == "let_declaration" {
-			lets++
-		}
-		return lets > 1
+		return false
+	}) {
+		return true
+	}
+	if len(lets) < 2 {
+		return false
+	}
+	first := p.rustLetType(binders, lets[0], 0)
+	return first == "" || slices.ContainsFunc(lets[1:], func(let *sitter.Node) bool {
+		return p.rustLetType(binders, let, 0) != first
 	})
+}
+
+// endsBefore reports whether a node ends before the site of a call.
+func endsBefore(node *sitter.Node, call fileindex.Call) bool {
+	at := node.EndPoint()
+	line, column := int(at.Row)+1, int(at.Column)+1
+	return line < call.Line || line == call.Line && column <= call.Column
+}
+
+// rustMaxLetDepth bounds the lets that the type of one let reads, as c of
+// let c = c.with_retry().
+const rustMaxLetDepth = 4
+
+// rustLetType returns the name of the type of the value of a let, as the
+// file writes it, or "" when the index does not know it: the declared type,
+// a struct, a function or a method of the file with a result, or the let of
+// a name that the value reads.
+func (p *projection) rustLetType(binders map[string][]*sitter.Node, let *sitter.Node, depth int) string {
+	if typ := p.rustTypeName(let.ChildByFieldName("type"), nil); typ != "" {
+		return typ
+	}
+	return p.rustValueType(binders, let.ChildByFieldName("value"), depth)
+}
+
+func (p *projection) rustValueType(binders map[string][]*sitter.Node, value *sitter.Node, depth int) string {
+	if value == nil || depth > rustMaxLetDepth {
+		return ""
+	}
+	switch value.Type() {
+	case "struct_expression":
+		return p.rustTypeName(value.ChildByFieldName("name"), nil)
+	case "identifier":
+		if name := p.text(value); name != "" && unicode.IsUpper(rune(name[0])) {
+			return name
+		}
+		if let := rustLetOf(binders[p.text(value)], value); let != nil {
+			return p.rustLetType(binders, let, depth+1)
+		}
+	case "call_expression":
+		fn := value.ChildByFieldName("function")
+		if method := rustMethod(fn); method != nil {
+			if typ := p.rustValueType(binders, method.ChildByFieldName("value"), depth+1); typ != "" {
+				return p.rustResultOf(typ, p.text(method.ChildByFieldName("field")))
+			}
+			return ""
+		}
+		if fn != nil && fn.Type() == "scoped_identifier" {
+			return p.rustResultOf(p.text(fn.ChildByFieldName("path")), p.text(fn.ChildByFieldName("name")))
+		}
+	}
+	return ""
+}
+
+// rustResultOf returns the result type of a function of a type of the
+// file, with no Option or Result around it.
+func (p *projection) rustResultOf(typ, name string) string {
+	def := p.defs[fileindex.Join(p.cg.FileName, append(strings.Split(typ, "::"), name)...)]
+	if def == nil || def.Wraps != "" {
+		return ""
+	}
+	return def.Returns
 }
 
 // startsBefore reports whether a node starts before the site of a call.
