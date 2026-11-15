@@ -45,4 +45,11 @@ func main() {
 	each([]func(){lookup})
 	fire([]hook{{fn: getwd}})
 	call(getenv)
+	pick(map[string]func(){"cd": chdir}, os.Args[1])
+}
+
+func chdir() { os.Chdir("/") }
+
+func pick(m map[string]func(), name string) {
+	m[name]()
 }

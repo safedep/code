@@ -1,10 +1,11 @@
 source: safedep:hand
 description: >-
-  main passes remove to run, lookup to each in a slice, getwd to fire in the field fn of a hook, and getenv
-  to call, which stores it in the typed local g. run calls its parameter f, each its range variable g, fire
-  the field fn of its range variable h, and call its local g. A search from the roots reaches main, which
-  holds each function as a value, so os.Remove is found through the reference. A search from run, each,
-  fire or call alone does not reach main. Each call there runs a function value that the search does not
+  main passes remove to run, lookup to each in a slice, getwd to fire in the field fn of a hook, and
+  getenv to call, which stores it in the typed local g, and chdir to pick in a map. run calls its
+  parameter f, each its range variable g, fire the field fn of its range variable h, call its local g, and
+  pick the element of its parameter m at a variable key. A search from the roots reaches main, which holds
+  each function as a value, so os.Remove is found through the reference. A search from run, each, fire,
+  call or pick alone does not reach main. Each call there runs a function value that the search does not
   reach, so the call is a function-value record, which concerns every target in a search with a source.
   Each target is then uncertain. A record with the name alone, as f or fn, gave not-found there.
 roots:
@@ -26,7 +27,16 @@ unresolved:
   - caller: main.go//fire
     reason: no-dependency-source
     callback: true
+  - caller: main.go//pick
+    reason: no-dependency-source
+    callback: true
   - caller: main.go//run
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Args
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Chdir
     reason: no-dependency-source
     callback: true
   - caller: os//Getenv
@@ -65,6 +75,13 @@ unresolved:
   - caller: main.go//call
     site: main.go:40
     reason: function-value
+  - caller: main.go//pick
+    site: main.go:54
+    reason: function-value
+  - caller: main.go//pick
+    site: main.go:54
+    reason: unknown-receiver
+    method: m
 results:
   - target: os//Remove
     status: found
@@ -126,3 +143,14 @@ results:
     uncertainties:
       - kind: unresolved-call
         site: main.go:40
+  - target: os//Chdir
+    sources: [main.go//pick]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//chdir
+        site: main.go:51
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:54
