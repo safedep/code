@@ -238,28 +238,41 @@ type classCall struct {
 	site        Site
 }
 
-// classCalls returns each call of the first parameter of a classmethod,
-// which holds the class of the method or a subclass of it.
+// classCalls returns each call that makes an instance of the class of the
+// method that holds it, or of a subclass: a call of the first parameter of
+// a classmethod, also from a function that the method defines, and a call
+// of the class of the instance, as self.__class__() or type(self)().
 func (b *builder) classCalls() []classCall {
 	var out []classCall
 	for _, p := range b.paths {
 		ix := b.byPath[p]
-		if ix == nil {
-			continue
-		}
-		param := profileOf(ix.Language).classParam
-		if param == "" {
+		if ix == nil || len(profileOf(ix.Language).instanceClass) == 0 {
 			continue
 		}
 		for _, call := range ix.Calls {
-			def := b.defs[call.Caller]
-			if call.Callee != param || def == nil || def.Parent == "" || !slices.Contains(def.Decorators, "@classmethod") {
-				continue
+			if class, ok := b.callsClass(ix, call); ok {
+				out = append(out, classCall{from: b.runner(call.Caller), class: class, site: Site{Path: ix.Path, Line: call.Line, Column: call.Column}})
 			}
-			out = append(out, classCall{from: b.runner(call.Caller), class: def.Parent, site: Site{Path: ix.Path, Line: call.Line, Column: call.Column}})
 		}
 	}
 	return out
+}
+
+// callsClass returns the class that a call makes an instance of, by the
+// method that holds the call.
+func (b *builder) callsClass(ix *fileindex.Index, call fileindex.Call) (string, bool) {
+	instance := slices.Contains(profileOf(ix.Language).instanceClass, call.Callee)
+	for key := call.Caller; key != "" && key != ix.Path; key = fileindex.Parent(key) {
+		def := b.defs[key]
+		if def == nil || def.Parent == "" || b.kindOf(def.Parent) != NodeClass {
+			continue
+		}
+		if instance || def.ClassParam != "" && call.Callee == def.ClassParam {
+			return def.Parent, true
+		}
+		return "", false
+	}
+	return "", false
 }
 
 // linkOverrides adds a reference edge from each class with a base of a

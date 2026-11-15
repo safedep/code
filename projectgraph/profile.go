@@ -186,9 +186,11 @@ type profile struct {
 	// metaclassCall names the method of a metaclass that a call of a class
 	// runs, as __call__ of Python.
 	metaclassCall string
-	// classParam names the first parameter of a class method, which holds
-	// the class, as cls of Python. A call of it makes an instance.
-	classParam string
+	// instanceClass names the callees that give the class of the instance
+	// of a method, as self.__class__ of Python. A call of one makes an
+	// instance, and so does a call of the class parameter of a class
+	// method, which the index records.
+	instanceClass []string
 	// forwardMethod names the method of a class that forwards a call that
 	// the class has no method for to another type, as deref of Rust. A
 	// declared type with it does not narrow the receiver.

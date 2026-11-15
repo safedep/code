@@ -300,12 +300,18 @@ each edge that can make an instance of a Python class to the method of
 each of these names that the instance runs, from the class or from a base
 in its MRO. A call of the class makes an instance. So does code that gets
 the class as a value, as `functools.partial(C)`, `map(C, xs)` or
-`field(default_factory=C)`, and a call of `cls` in a classmethod, which
-holds the class of the method or a subclass. The edge can reach the class
+`field(default_factory=C)`, and `raise C`. So does a call of the first
+parameter of a classmethod, as `cls()` or `klass()`, also from a function
+that the method defines, which holds the class of the method or a
+subclass. The index records that parameter as `Definition.ClassParam`. A
+call of `self.__class__` or `type(self)` makes an instance of the class of
+the method or of a subclass too. The edge can reach the class
 through an export hop or the `package` edge of a unit. The code that
 makes the instance holds it, so a search from the roots reaches the
 method, as it reaches a stored function value. A class that code only
-tests a value against, as in `isinstance(x, Proxy)`, makes no instance.
+tests a value against or reads, as in `isinstance(x, Proxy)`,
+`issubclass`, `typing.cast(Proxy, x)`, `hasattr(Proxy, "x")` or
+`getattr`, also through a conditional, makes no instance.
 The index marks such a reference with `Check`, and it gets no edge. A
 call of a class also runs `__call__` of its metaclass, as `Meta` in
 `class Made(metaclass=Meta)`, which `Class.Metaclass` records. A call with

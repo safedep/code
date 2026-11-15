@@ -283,13 +283,16 @@ type Definition struct {
 	Returns    string   `json:"returns,omitempty"`
 	Results    []string `json:"results,omitempty"`
 	Wraps      string   `json:"wraps,omitempty"`
-	Static     bool     `json:"static,omitempty"`
-	Data       bool     `json:"data,omitempty"`
+	// ClassParam is the first parameter of a Python classmethod, which
+	// holds the class of the method or a subclass, as cls or klass.
+	ClassParam string `json:"class_param,omitempty"`
+	Static     bool   `json:"static,omitempty"`
+	Data       bool   `json:"data,omitempty"`
 	// ValueData marks a Go function whose first result holds no function,
 	// and a Go named type whose values hold no function, as []string or a
 	// struct. A range over such a value reads data.
-	ValueData bool `json:"value_data,omitempty"`
-	Flags      []Flag   `json:"flags,omitempty"`
+	ValueData bool   `json:"value_data,omitempty"`
+	Flags     []Flag `json:"flags,omitempty"`
 	// Alias is the type that a DefAlias names, as written, with no type
 	// arguments, as B for type A = B<u8>.
 	Alias string `json:"alias,omitempty"`
@@ -696,6 +699,7 @@ func (ix *Index) EachString(fn func(string) string) {
 		strs(def.Decorators)
 		strs(def.Values)
 		typed(def.Params)
+		kind(&def.ClassParam)
 		typed(def.Locals)
 		kind(&def.Returns)
 		strs(def.Results)

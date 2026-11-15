@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import typing
 from dataclasses import dataclass, field
 
 
@@ -35,8 +36,61 @@ class Meta(type):
         tempfile.mkdtemp()
 
 
+class ByKlass:
+    def __call__(self):
+        os.chmod("e", 0)
+
+    @classmethod
+    def build(klass):
+        def inner():
+            return klass()
+
+        return inner()
+
+
+class ByInstanceClass:
+    def __getattr__(self, name):
+        os.rename("f", "g")
+
+    def clone(self):
+        return self.__class__()
+
+
+class ByType:
+    def __call__(self):
+        os.rmdir("h")
+
+    def dup(self):
+        return type(self)()
+
+
+class Raised(Exception):
+    def __getattr__(self, name):
+        os.unlink("i")
+
+
+class Checked:
+    def __call__(self):
+        os.mkdir("j")
+
+
 def run(f):
     f()
+
+
+def fail():
+    raise Raised
+
+
+def copies(seed):
+    seed.clone()
+    seed.dup()
+
+
+def check_more(x, c):
+    typing.cast(Checked, x)
+    hasattr(Checked, "x")
+    return isinstance(x, Checked if c else Meta)
 
 
 def check(x):
@@ -48,3 +102,7 @@ if __name__ == "__main__":
     run(functools.partial(ByPartial)())
     print(Holder().d.anything)
     check(1)
+    run(ByKlass.build())
+    copies(None)
+    fail()
+    check_more(1, True)

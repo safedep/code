@@ -59,6 +59,8 @@ var pythonRules = languageRules{
 			"conditional_expression":   "",
 			"boolean_operator":         "",
 			"parenthesized_expression": "",
+			// raise K makes an instance of K, as raise K() does.
+			"raise_statement": "",
 		},
 		member:      "attribute",
 		object:      "object",
@@ -97,15 +99,29 @@ func pythonBases(p *projection, class *sitter.Node) []string {
 	return bases
 }
 
-// pythonChecks name the builtins that test a value against a class.
-var pythonChecks = map[string]bool{"isinstance": true, "issubclass": true}
+// pythonChecks name the functions that test a value against a class or
+// read a class and make no instance of it: isinstance, issubclass,
+// typing.cast, hasattr and getattr.
+var pythonChecks = map[string]bool{
+	"isinstance": true, "issubclass": true, "cast": true, "typing.cast": true, "hasattr": true, "getattr": true,
+}
+
+// pythonCheckWrappers hold a value of an argument and give it on, as
+// K if c else J or (K).
+var pythonCheckWrappers = map[string]bool{"conditional_expression": true, "parenthesized_expression": true, "boolean_operator": true}
 
 // pythonCheck reports whether a holder holds classes that the code only
-// tests a value against or names as a metaclass: the arguments of
-// isinstance or issubclass, a tuple among them, or metaclass=M in a class
-// statement. The class statement makes an instance of M, and a call of the
-// class that it makes runs M.__call__, so the call of that class owns it.
+// tests a value against or reads. Such a holder is the argument list of a
+// function of pythonChecks, a tuple or a conditional in it, or
+// metaclass=M in a class statement. A class statement makes an instance of
+// M, and a call of the class that it makes runs M.__call__. So the call of
+// that class owns the edge.
 func pythonCheck(p *projection, holder *sitter.Node) bool {
+	for pythonCheckWrappers[holder.Type()] {
+		if holder = holder.Parent(); holder == nil {
+			return false
+		}
+	}
 	switch holder.Type() {
 	case "keyword_argument":
 		list := holder.Parent()
@@ -205,6 +221,7 @@ func pythonSignature(p *projection, def *fileindex.Definition, node *sitter.Node
 		return
 	}
 	def.Params = p.pythonParams(node.ChildByFieldName("parameters"))
+	def.ClassParam = p.pythonClassParam(node)
 	if ret := node.ChildByFieldName("return_type"); ret != nil {
 		def.Returns = p.pythonTypeName(ret)
 		if results := p.pythonTupleTypes(ret); len(results) > 1 {
@@ -212,6 +229,33 @@ func pythonSignature(p *projection, def *fileindex.Definition, node *sitter.Node
 		}
 	}
 	def.Locals = p.pythonLocals(node.ChildByFieldName("body"), "")
+}
+
+// pythonClassParam returns the name of the first parameter of a method
+// that the decorator @classmethod marks, or "".
+func (p *projection) pythonClassParam(node *sitter.Node) string {
+	decorated := node.Parent()
+	if decorated == nil || decorated.Type() != "decorated_definition" || !slices.ContainsFunc(ts.NamedChildren(decorated), func(d *sitter.Node) bool {
+		return d.Type() == "decorator" && p.text(d) == "@classmethod"
+	}) {
+		return ""
+	}
+	params := node.ChildByFieldName("parameters")
+	if params == nil || params.NamedChildCount() == 0 {
+		return ""
+	}
+	first := params.NamedChild(0)
+	switch first.Type() {
+	case "identifier":
+		return p.text(first)
+	case "typed_parameter":
+		if first.NamedChildCount() > 0 && first.NamedChild(0).Type() == "identifier" {
+			return p.text(first.NamedChild(0))
+		}
+	case "default_parameter", "typed_default_parameter":
+		return p.text(first.ChildByFieldName("name"))
+	}
+	return ""
 }
 
 // pythonParams returns the parameters of a function that declare a type

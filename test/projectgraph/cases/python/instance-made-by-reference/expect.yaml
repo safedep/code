@@ -2,9 +2,13 @@ source: safedep:hand
 description: >-
   Each class makes an instance in a way other than a call of its name. cls() in the classmethod create
   calls the class of the method. functools.partial and field(default_factory=...) get the class as a
-  value and call it. So each of these sites links the __call__ or __getattr__ of the class, and os.remove,
-  shutil.rmtree and subprocess.run are found. check names Meta only in isinstance, which makes no
-  instance, and no class names Meta as its metaclass, so tempfile.mkdtemp in Meta.__call__ is not-found.
+  value and call it. klass() in a function that the classmethod build defines calls its first parameter.
+  self.__class__() in clone and type(self)() in dup call the class of the instance, and copies calls
+  clone and dup on a parameter, and raise Raised makes an instance of
+  Raised. So each of these sites links the __call__ or __getattr__ of the class, and the os targets of
+  those classes are found. check names Meta only in isinstance, and check_more names Checked only in
+  typing.cast, hasattr and a conditional in isinstance, which make no instance. So tempfile.mkdtemp and
+  os.mkdir are not-found.
 roots:
   - key: main.py
     kind: main
@@ -15,167 +19,416 @@ edges:
     to: dataclasses//dataclass
     kind: direct
     confidence: high
-    site: main.py:29
+    site: main.py:30
   - from: main.py
     to: dataclasses//field
     kind: direct
     confidence: high
-    site: main.py:30
+    site: main.py:31
   - from: main.py
     to: main.py//ByDefault
     kind: reference
     confidence: low
-    site: main.py:30
+    site: main.py:31
   - from: main.py
     to: main.py//ByDefault//__getattr__
     kind: reference
     confidence: low
-    site: main.py:30
+    site: main.py:31
   - from: main.py
     to: main.py//run
     kind: direct
     confidence: high
-    site: main.py:47
+    site: main.py:101
   - from: main.py
     to: main.py//ByClassmethod//create
     kind: member
     confidence: high
-    site: main.py:47
+    site: main.py:101
   - from: main.py
     to: main.py//run
     kind: direct
     confidence: high
-    site: main.py:48
+    site: main.py:102
   - from: main.py
     to: functools//partial
     kind: direct
     confidence: high
-    site: main.py:48
+    site: main.py:102
   - from: main.py
     to: main.py//ByPartial
     kind: reference
     confidence: low
-    site: main.py:48
+    site: main.py:102
   - from: main.py
     to: main.py//ByPartial//__call__
     kind: reference
     confidence: low
-    site: main.py:48
+    site: main.py:102
   - from: main.py
     to: print
     kind: direct
     confidence: high
-    site: main.py:49
+    site: main.py:103
   - from: main.py
     to: main.py//Holder
     kind: direct
     confidence: high
-    site: main.py:49
+    site: main.py:103
   - from: main.py
     to: main.py//check
     kind: direct
     confidence: high
-    site: main.py:50
+    site: main.py:104
+  - from: main.py
+    to: main.py//run
+    kind: direct
+    confidence: high
+    site: main.py:105
+  - from: main.py
+    to: main.py//ByKlass//build
+    kind: member
+    confidence: high
+    site: main.py:105
+  - from: main.py
+    to: main.py//copies
+    kind: direct
+    confidence: high
+    site: main.py:106
+  - from: main.py
+    to: main.py//fail
+    kind: direct
+    confidence: high
+    site: main.py:107
+  - from: main.py
+    to: main.py//check_more
+    kind: direct
+    confidence: high
+    site: main.py:108
   - from: main.py//ByClassmethod//__call__
     to: os//remove
     kind: direct
     confidence: high
-    site: main.py:11
+    site: main.py:12
   - from: main.py//ByClassmethod//create
     to: main.py//ByClassmethod//__call__
     kind: reference
     confidence: low
-    site: main.py:15
+    site: main.py:16
   - from: main.py//ByDefault//__getattr__
     to: subprocess//run
     kind: direct
     confidence: high
-    site: main.py:25
+    site: main.py:26
+  - from: main.py//ByInstanceClass//__getattr__
+    to: os//rename
+    kind: direct
+    confidence: high
+    site: main.py:53
+  - from: main.py//ByInstanceClass//clone
+    to: main.py//ByInstanceClass//__getattr__
+    kind: reference
+    confidence: low
+    site: main.py:56
+  - from: main.py//ByKlass//__call__
+    to: os//chmod
+    kind: direct
+    confidence: high
+    site: main.py:41
+  - from: main.py//ByKlass//build
+    to: main.py//ByKlass//build//inner
+    kind: direct
+    confidence: high
+    site: main.py:48
+  - from: main.py//ByKlass//build//inner
+    to: main.py//ByKlass//__call__
+    kind: reference
+    confidence: low
+    site: main.py:46
   - from: main.py//ByPartial//__call__
     to: shutil//rmtree
     kind: direct
     confidence: high
-    site: main.py:20
+    site: main.py:21
+  - from: main.py//ByType//__call__
+    to: os//rmdir
+    kind: direct
+    confidence: high
+    site: main.py:61
+  - from: main.py//ByType//dup
+    to: type
+    kind: direct
+    confidence: high
+    site: main.py:64
+  - from: main.py//ByType//dup
+    to: main.py//ByType
+    kind: reference
+    confidence: low
+    site: main.py:64
+  - from: main.py//ByType//dup
+    to: main.py//ByType//__call__
+    kind: reference
+    confidence: low
+    site: main.py:64
+  - from: main.py//Checked//__call__
+    to: os//mkdir
+    kind: direct
+    confidence: high
+    site: main.py:74
   - from: main.py//Meta//__call__
     to: tempfile//mkdtemp
     kind: direct
     confidence: high
-    site: main.py:35
+    site: main.py:36
+  - from: main.py//Raised//__getattr__
+    to: os//unlink
+    kind: direct
+    confidence: high
+    site: main.py:69
   - from: main.py//check
     to: isinstance
     kind: direct
     confidence: high
-    site: main.py:43
+    site: main.py:97
   - from: main.py//check
     to: main.py//Meta
     kind: reference
     confidence: low
-    site: main.py:43
+    site: main.py:97
+  - from: main.py//check_more
+    to: typing//cast
+    kind: direct
+    confidence: high
+    site: main.py:91
+  - from: main.py//check_more
+    to: main.py//Checked
+    kind: reference
+    confidence: low
+    site: main.py:91
+  - from: main.py//check_more
+    to: hasattr
+    kind: direct
+    confidence: high
+    site: main.py:92
+  - from: main.py//check_more
+    to: main.py//Checked
+    kind: reference
+    confidence: low
+    site: main.py:92
+  - from: main.py//check_more
+    to: isinstance
+    kind: direct
+    confidence: high
+    site: main.py:93
+  - from: main.py//check_more
+    to: main.py//Checked
+    kind: reference
+    confidence: low
+    site: main.py:93
+  - from: main.py//check_more
+    to: main.py//Meta
+    kind: reference
+    confidence: low
+    site: main.py:93
+  - from: main.py//copies
+    to: main.py//ByInstanceClass//clone
+    kind: name
+    confidence: low
+    site: main.py:86
+  - from: main.py//copies
+    to: main.py//ByType//dup
+    kind: name
+    confidence: low
+    site: main.py:87
+  - from: main.py//fail
+    to: main.py//Raised
+    kind: reference
+    confidence: low
+    site: main.py:82
+  - from: main.py//fail
+    to: main.py//Raised//__getattr__
+    kind: reference
+    confidence: low
+    site: main.py:82
 unresolved:
   - caller: main.py//ByClassmethod//create
-    site: main.py:15
+    site: main.py:16
     reason: unknown-receiver
     method: cls
+  - caller: main.py//ByKlass//build//inner
+    site: main.py:46
+    reason: unknown-receiver
+    method: klass
+  - caller: main.py//ByInstanceClass//clone
+    site: main.py:56
+    reason: no-definition
+    method: __class__
   - caller: main.py//run
-    site: main.py:39
+    site: main.py:78
     reason: unknown-receiver
     method: f
+  - caller: main.py//copies
+    site: main.py:86
+    reason: unknown-receiver
+    method: clone
+  - caller: main.py//copies
+    site: main.py:87
+    reason: unknown-receiver
+    method: dup
 results:
   - target: os//remove
     status: found
     path:
       - key: main.py
       - key: main.py//ByClassmethod//create
-        site: main.py:47
+        site: main.py:101
         kind: member
         confidence: high
       - key: main.py//ByClassmethod//__call__
-        site: main.py:15
+        site: main.py:16
         kind: reference
         confidence: low
       - key: os//remove
-        site: main.py:11
+        site: main.py:12
         kind: direct
         confidence: high
     call_sites:
       - caller: main.py//ByClassmethod//__call__
-        site: main.py:11
+        site: main.py:12
         reached: true
   - target: shutil//rmtree
     status: found
     path:
       - key: main.py
       - key: main.py//ByPartial//__call__
-        site: main.py:48
+        site: main.py:102
         kind: reference
         confidence: low
       - key: shutil//rmtree
-        site: main.py:20
+        site: main.py:21
         kind: direct
         confidence: high
     call_sites:
       - caller: main.py//ByPartial//__call__
-        site: main.py:20
+        site: main.py:21
         reached: true
   - target: subprocess//run
     status: found
     path:
       - key: main.py
       - key: main.py//ByDefault//__getattr__
-        site: main.py:30
+        site: main.py:31
         kind: reference
         confidence: low
       - key: subprocess//run
-        site: main.py:25
+        site: main.py:26
         kind: direct
         confidence: high
     call_sites:
       - caller: main.py//ByDefault//__getattr__
-        site: main.py:25
+        site: main.py:26
         reached: true
   - target: tempfile//mkdtemp
     status: not-found
     call_sites:
       - caller: main.py//Meta//__call__
-        site: main.py:35
+        site: main.py:36
+        reached: false
+  - target: os//chmod
+    status: found
+    path:
+      - key: main.py
+      - key: main.py//ByKlass//build
+        site: main.py:105
+        kind: member
+        confidence: high
+      - key: main.py//ByKlass//build//inner
+        site: main.py:48
+        kind: direct
+        confidence: high
+      - key: main.py//ByKlass//__call__
+        site: main.py:46
+        kind: reference
+        confidence: low
+      - key: os//chmod
+        site: main.py:41
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.py//ByKlass//__call__
+        site: main.py:41
+        reached: true
+  - target: os//rename
+    status: found
+    path:
+      - key: main.py
+      - key: main.py//copies
+        site: main.py:106
+        kind: direct
+        confidence: high
+      - key: main.py//ByInstanceClass//clone
+        site: main.py:86
+        kind: name
+        confidence: low
+      - key: main.py//ByInstanceClass//__getattr__
+        site: main.py:56
+        kind: reference
+        confidence: low
+      - key: os//rename
+        site: main.py:53
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.py//ByInstanceClass//__getattr__
+        site: main.py:53
+        reached: true
+  - target: os//rmdir
+    status: found
+    path:
+      - key: main.py
+      - key: main.py//copies
+        site: main.py:106
+        kind: direct
+        confidence: high
+      - key: main.py//ByType//dup
+        site: main.py:87
+        kind: name
+        confidence: low
+      - key: main.py//ByType//__call__
+        site: main.py:64
+        kind: reference
+        confidence: low
+      - key: os//rmdir
+        site: main.py:61
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.py//ByType//__call__
+        site: main.py:61
+        reached: true
+  - target: os//unlink
+    status: found
+    path:
+      - key: main.py
+      - key: main.py//fail
+        site: main.py:107
+        kind: direct
+        confidence: high
+      - key: main.py//Raised//__getattr__
+        site: main.py:82
+        kind: reference
+        confidence: low
+      - key: os//unlink
+        site: main.py:69
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.py//Raised//__getattr__
+        site: main.py:69
+        reached: true
+  - target: os//mkdir
+    status: not-found
+    call_sites:
+      - caller: main.py//Checked//__call__
+        site: main.py:74
         reached: false
