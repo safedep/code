@@ -331,6 +331,19 @@ edge joins the key to the definition in the unit. A chained call, as
 | A result with no named type, or a function that the unit does not define | A record with the reason `unknown-receiver` |
 | Two definitions of the function, as in two platform files of a Go package, with two result types | A record with the reason `unknown-receiver`. The walk follows one type, and a method of the other type would be `not-found` |
 
+The index records the typed parameters and locals of a Go function with no
+extent, and the link step reads the type of the first one of a name. An
+inner block can bind the name again, as `x` in
+`x := local{}; { x := remote{}; x.run() }`, and a function literal can
+take a parameter of the name. So the index checks each call and each
+method value on a typed name. The binding of the name in scope there must
+be the binding whose type the link step reads, or a binding of the same
+type. Otherwise the site is a record with the reason `unknown-receiver`
+and the method name, and the method of the real type gets a `name` edge. A
+short variable declaration that assigns a name of its own block, as `err`
+in `n, err := f()` after `m, err := g()`, binds no new name. The case
+`go/typed-local-shadow` shows it.
+
 Rust follows the same rules, with these additions.
 
 - The link step links the code of a `cargo:` unit, as the crate directory

@@ -1,0 +1,112 @@
+source: safedep:hand
+description: >-
+  main declares x as a local, and an inner block declares x again as a remote. The call x.run() in the
+  block runs remote.run, which calls os/exec.LookPath. The index records the typed locals of a function
+  with no extent, and the link step reads the type of the first one. So the index checks that the binding
+  of x in scope at the call is the binding whose type the link step reads. Here it is not, so the call is
+  an unknown-receiver record with the method name run, which gets a name edge to remote.run. The method
+  value x.stop is a record of the same kind, with the name stop. A type of the first x gave not-found for
+  os/exec.LookPath. The call x.run() before the block keeps its member edge to local.run.
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+edges:
+  - from: main.go//main
+    to: main.go//local//run
+    kind: member
+    confidence: high
+    site: main.go:20
+  - from: main.go//main
+    to: main.go//remote//run
+    kind: name
+    confidence: low
+    site: main.go:23
+  - from: main.go//main
+    to: main.go//remote//stop
+    kind: name
+    confidence: low
+    site: main.go:24
+no_edges:
+  - from: main.go//local//run
+    to: os//exec//LookPath
+unresolved:
+  - caller: main.go//main
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Getwd
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Remove
+    reason: no-dependency-source
+    callback: true
+  - caller: os//exec//LookPath
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//main
+    site: main.go:23
+    reason: unknown-receiver
+    method: run
+  - caller: main.go//main
+    site: main.go:24
+    reason: unknown-receiver
+    method: stop
+  - caller: main.go//main
+    site: main.go:25
+    reason: function-value
+  - caller: main.go//main
+    site: main.go:25
+    reason: unknown-receiver
+    method: f
+results:
+  - target: os//Getwd
+    status: found
+    path:
+      - key: main.go//main
+      - key: main.go//local//run
+        site: main.go:20
+        kind: member
+        confidence: high
+      - key: os//Getwd
+        site: main.go:10
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//local//run
+        site: main.go:10
+        reached: true
+  - target: os//exec//LookPath
+    status: found
+    path:
+      - key: main.go//main
+      - key: main.go//remote//run
+        site: main.go:23
+        kind: name
+        confidence: low
+      - key: os//exec//LookPath
+        site: main.go:14
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//remote//run
+        site: main.go:14
+        reached: true
+  - target: os//Remove
+    status: found
+    path:
+      - key: main.go//main
+      - key: main.go//remote//stop
+        site: main.go:24
+        kind: name
+        confidence: low
+      - key: os//Remove
+        site: main.go:16
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//remote//stop
+        site: main.go:16
+        reached: true

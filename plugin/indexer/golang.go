@@ -23,6 +23,7 @@ var goRules = languageRules{
 	signature:   goSignature,
 	exported:    goExported,
 	definitions: goDefinitions,
+	typedAt:     goTypedCall,
 	visitors:    []func(p *projection) visitor{referenceVisitor},
 	references: &referenceSyntax{
 		holders: map[string]string{
@@ -366,7 +367,7 @@ func goSignature(p *projection, def *fileindex.Definition, node *sitter.Node) {
 	if len(results) > 1 {
 		def.Results = results
 	}
-	def.Locals = p.goLocals(node.ChildByFieldName("body"))
+	def.Locals, p.goOrigins[def.Key] = p.goLocals(node.ChildByFieldName("body"))
 }
 
 // goExported reports that a name starts with an upper case letter, a
@@ -460,27 +461,40 @@ func (p *projection) goResults(result *sitter.Node) []string {
 // source declares, as var p Parser, or constructs, as p := &Parser{},
 // p := new(Parser) or p := v.(*Parser). A name that holds the first result
 // of a call, as p := NewParser(), names the function. A function literal in
-// the body shares the scope of the body, so its names count too.
-func (p *projection) goLocals(body *sitter.Node) []fileindex.Typed {
+// the body shares the scope of the body, so its names count too. It also
+// returns the origin of each local: the start of its scope as goScopes
+// records it, or goAssignedOrigin for an assignment.
+func (p *projection) goLocals(body *sitter.Node) ([]fileindex.Typed, []uint32) {
 	var locals []fileindex.Typed
+	var origins []uint32
+	add := func(typed []fileindex.Typed, origin uint32) {
+		locals = append(locals, typed...)
+		for range typed {
+			origins = append(origins, origin)
+		}
+	}
 	walkBody(body, nil, func(node *sitter.Node) {
 		switch node.Type() {
 		case "var_spec":
 			names := childrenByField(node, "name")
 			if typ := p.goTypeName(node.ChildByFieldName("type")); typ != "" {
 				for _, name := range names {
-					locals = append(locals, fileindex.Typed{Name: p.text(name), Type: typ})
+					add([]fileindex.Typed{{Name: p.text(name), Type: typ}}, node.EndByte())
 				}
 			} else {
-				locals = append(locals, p.goAssigned(names, node.ChildByFieldName("value"))...)
+				add(p.goAssigned(names, node.ChildByFieldName("value")), node.EndByte())
 			}
 		case "short_var_declaration", "assignment_statement":
+			origin := node.EndByte()
+			if node.Type() == "assignment_statement" {
+				origin = goAssignedOrigin
+			}
 			if left := node.ChildByFieldName("left"); left != nil {
-				locals = append(locals, p.goAssigned(ts.NamedChildren(left), node.ChildByFieldName("right"))...)
+				add(p.goAssigned(ts.NamedChildren(left), node.ChildByFieldName("right")), origin)
 			}
 		}
 	})
-	return locals
+	return locals, origins
 }
 
 // goAssigned returns the typed names of an assignment. One call on the

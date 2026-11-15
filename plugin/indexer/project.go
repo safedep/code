@@ -59,6 +59,9 @@ type projection struct {
 	// whose values the index reads, by the key of the function and the
 	// name.
 	goScoped map[string]map[string][]goScope
+	// goOrigins holds the origin of each typed local of each Go function,
+	// by the key of the function, as goLocals gives it.
+	goOrigins map[string][]uint32
 }
 
 // project builds the call graph of tree and projects it into an index. It
@@ -89,13 +92,14 @@ func project(ctx context.Context, tree core.ParseTree) (*fileindex.Index, *callg
 			ContentHash: fileindex.HashContent(*data),
 			Unit:        unitOf(cg.FileName),
 		},
-		defs:     map[string]*fileindex.Definition{},
-		syntax:   map[string]*sitter.Node{},
-		spans:    map[span]string{},
-		bodies:   map[span]string{},
-		exports:  map[string]bool{},
-		bindings: map[string]bool{},
-		members:  map[[2]uint32]bool{},
+		defs:      map[string]*fileindex.Definition{},
+		syntax:    map[string]*sitter.Node{},
+		spans:     map[span]string{},
+		bodies:    map[span]string{},
+		exports:   map[string]bool{},
+		bindings:  map[string]bool{},
+		members:   map[[2]uint32]bool{},
+		goOrigins: map[string][]uint32{},
 	}
 
 	rules := p.rules()

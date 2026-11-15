@@ -45,6 +45,11 @@ type languageRules struct {
 	// if let Some(t) = x. The call graph then binds a call on the name to
 	// the value of another binding.
 	rebound func(ctx context.Context, p *projection, call fileindex.Call, name string) bool
+	// typedAt reports whether the declared type that the link step reads
+	// for the receiver of a call holds at the call. The Go index records
+	// the typed locals of a function with no extent, so an inner block can
+	// bind the name of the receiver again.
+	typedAt func(p *projection, call fileindex.Call) bool
 
 	// packageOf returns the package or the namespace of the file, which the
 	// files of one unit share.

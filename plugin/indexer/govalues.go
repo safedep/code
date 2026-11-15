@@ -27,6 +27,12 @@ func goReference(p *projection, caller string, value *sitter.Node) (string, *sit
 		target, _ := p.goName(caller, value)
 		return target, nil
 	case "selector_expression":
+		// The link step reads the type of the first binding of a typed
+		// name, so a method value on another binding of the name keeps
+		// only its method name.
+		if root := goSelectorRoot(value); root != nil && !p.goTypedAt(caller, p.text(root), root.StartByte()) {
+			return "", value
+		}
 		if target, ok := p.reference(*p.rules().references, caller, value); ok {
 			return target, nil
 		}
@@ -41,6 +47,18 @@ func goReference(p *projection, caller string, value *sitter.Node) (string, *sit
 		return target, nil
 	}
 	return "", nil
+}
+
+// goSelectorRoot returns the name that starts a member chain, as x for
+// x.cfg.Run, or nil for a chain that starts with no name.
+func goSelectorRoot(node *sitter.Node) *sitter.Node {
+	for depth := 0; node != nil && node.Type() == "selector_expression" && depth < maxReferenceSegments; depth++ {
+		node = node.ChildByFieldName("operand")
+	}
+	if node == nil || node.Type() != "identifier" {
+		return nil
+	}
+	return node
 }
 
 // goValueName returns the expression that names the function of a value:
@@ -194,9 +212,9 @@ func (p *projection) goPredeclared(name string) bool {
 }
 
 // goScope holds the bytes of the source where a local name of a Go
-// function is in scope.
+// function is in scope, and the start of the block that declares it.
 type goScope struct {
-	from, to uint32
+	from, to, block uint32
 }
 
 // goBlocks are the nodes whose extent is the scope of a name that a
@@ -215,6 +233,14 @@ var goTypeLiterals = map[string]bool{"function_type": true, "interface_type": tr
 // byte: a parameter, a result, a variable, a constant or a type that the
 // function or a function literal in it declares.
 func (p *projection) goLocal(caller, name string, at uint32) bool {
+	_, ok := p.goBinding(caller, name, at)
+	return ok
+}
+
+// goBinding returns the scope of the local name of the caller that is in
+// scope at the byte. An inner scope starts after an outer one that holds
+// it, so the scope with the last start is the binding.
+func (p *projection) goBinding(caller, name string, at uint32) (goScope, bool) {
 	if p.goScoped == nil {
 		p.goScoped = map[string]map[string][]goScope{}
 	}
@@ -223,7 +249,99 @@ func (p *projection) goLocal(caller, name string, at uint32) bool {
 		locals = p.goScopes(p.syntax[caller])
 		p.goScoped[caller] = locals
 	}
-	return slices.ContainsFunc(locals[name], func(s goScope) bool { return s.from <= at && at < s.to })
+	var binding goScope
+	found := false
+	for _, s := range locals[name] {
+		if s.from <= at && at < s.to && (!found || s.from > binding.from) {
+			binding, found = s, true
+		}
+	}
+	return binding, found
+}
+
+// goTypedAt reports whether the binding of a typed name in scope at the
+// byte has the type that the link step reads. The index records the typed
+// locals of a function with no extent, and the link step reads the first
+// parameter or local of the name. An inner block can bind the name again,
+// as x in x := local{}; { x := remote{}; x.run() }. A call on the name
+// there runs a method of the inner type, and the type of the first binding
+// loses it.
+func (p *projection) goTypedAt(caller, name string, at uint32) bool {
+	def, fn := p.defs[caller], p.syntax[caller]
+	if def == nil || fn == nil {
+		return true
+	}
+	origins := p.goOrigins[caller]
+	read, origin, ok := fileindex.Typed{}, goParamOrigin(fn), false
+	for _, t := range def.Params {
+		if t.Name == name {
+			read, ok = t, true
+			break
+		}
+	}
+	if !ok {
+		i := slices.IndexFunc(def.Locals, func(t fileindex.Typed) bool { return t.Name == name })
+		if i < 0 || i >= len(origins) {
+			return true
+		}
+		read, origin = def.Locals[i], origins[i]
+	}
+	binding, bound := p.goBinding(caller, name, at)
+	switch {
+	case !bound:
+		// An assignment types a variable of the package, which no local
+		// binds.
+		return origin == goAssignedOrigin
+	case binding.from == origin:
+		return true
+	}
+	for i, t := range def.Locals {
+		if t.Name == name && i < len(origins) && origins[i] == binding.from {
+			return t.Type == read.Type && t.Result == read.Result && t.Index == read.Index
+		}
+	}
+	return false
+}
+
+// goTypedCall reports whether the type that the link step reads for each
+// typed name that starts a target of a call holds at the call.
+func goTypedCall(p *projection, call fileindex.Call) bool {
+	for _, target := range call.Targets {
+		if name, ok := p.typedName(call.Caller, target); ok && !p.goTypedAt(call.Caller, name, p.byteAt(call.Line, call.Column)) {
+			return false
+		}
+	}
+	return true
+}
+
+// byteAt returns the start of the innermost named node at a line and a
+// column of a site, as a call or a record holds them.
+func (p *projection) byteAt(line, column int) uint32 {
+	at := sitter.Point{Row: uint32(max(line-1, 0)), Column: uint32(max(column-1, 0))}
+	return p.tree.Tree().RootNode().NamedDescendantForPointRange(at, at).StartByte()
+}
+
+// goAssignedOrigin is the origin of a typed local that an assignment types and
+// that no declaration binds, as client in client = &http.Client{}.
+const goAssignedOrigin = ^uint32(0)
+
+// goParamOrigin returns the start of the scope of the parameters of a
+// function, as goScopes records it.
+func goParamOrigin(fn *sitter.Node) uint32 {
+	return fn.StartByte()
+}
+
+// goBlockStart returns the start of the block that a name of the block
+// belongs to. The parameters of a function share the block of its body,
+// so x, err := f() in the body binds no new x for a parameter x.
+func goBlockStart(block *sitter.Node) uint32 {
+	switch block.Type() {
+	case "function_declaration", "method_declaration", "func_literal":
+		if body := block.ChildByFieldName("body"); body != nil {
+			return body.StartByte()
+		}
+	}
+	return block.StartByte()
 }
 
 // goScopes returns the scopes of each name that a function declares. The
@@ -234,11 +352,19 @@ func (p *projection) goScopes(function *sitter.Node) map[string][]goScope {
 	if function == nil || function.Type() != "function_declaration" && function.Type() != "method_declaration" {
 		return locals
 	}
-	add := func(nodes []*sitter.Node, from uint32, block *sitter.Node) {
+	add := func(nodes []*sitter.Node, from uint32, block *sitter.Node, redeclares bool) {
+		start := goBlockStart(block)
 		for _, n := range nodes {
-			if n.Type() == "identifier" {
-				locals[p.text(n)] = append(locals[p.text(n)], goScope{from: from, to: block.EndByte()})
+			if n.Type() != "identifier" {
+				continue
 			}
+			name := p.text(n)
+			// A short variable declaration assigns a name that its block
+			// declares already, and binds no new variable.
+			if redeclares && slices.ContainsFunc(locals[name], func(s goScope) bool { return s.block == start && s.to == block.EndByte() }) {
+				continue
+			}
+			locals[name] = append(locals[name], goScope{from: from, to: block.EndByte(), block: start})
 		}
 	}
 	var walk func(node, block *sitter.Node, depth int)
@@ -256,20 +382,20 @@ func (p *projection) goScopes(function *sitter.Node) map[string][]goScope {
 		}
 		switch node.Type() {
 		case "parameter_declaration", "variadic_parameter_declaration":
-			add(childrenByField(node, "name"), block.StartByte(), block)
+			add(childrenByField(node, "name"), goParamOrigin(block), block, false)
 		case "short_var_declaration":
-			add(ts.NamedChildren(node.ChildByFieldName("left")), node.EndByte(), block)
+			add(ts.NamedChildren(node.ChildByFieldName("left")), node.EndByte(), block, true)
 		case "var_spec", "const_spec":
-			add(childrenByField(node, "name"), node.EndByte(), block)
+			add(childrenByField(node, "name"), node.EndByte(), block, false)
 		case "type_spec", "type_alias":
-			add(childrenByField(node, "name"), node.StartByte(), block)
+			add(childrenByField(node, "name"), node.StartByte(), block, false)
 		case "range_clause", "receive_statement":
 			if goDeclares(node) {
-				add(ts.NamedChildren(node.ChildByFieldName("left")), node.EndByte(), block)
+				add(ts.NamedChildren(node.ChildByFieldName("left")), node.EndByte(), block, false)
 			}
 		case "type_switch_statement":
 			if alias := node.ChildByFieldName("alias"); alias != nil {
-				add(ts.NamedChildren(alias), alias.EndByte(), block)
+				add(ts.NamedChildren(alias), alias.EndByte(), block, false)
 			}
 		}
 		for _, child := range ts.NamedChildren(node) {
