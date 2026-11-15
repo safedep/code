@@ -478,10 +478,8 @@ func (b *builder) resolveScope(sc *scope, caller, target string) []resolution {
 // exactly, so its edge is direct.
 func (b *builder) wildcardImported(sc *scope, name string) []string {
 	var keys []string
-	for _, imp := range sc.wildcards {
-		mod, _, ok := b.resolveModule(sc.ix, imp.Module)
+	for _, mod := range b.wildcardModules(sc) {
 		switch {
-		case !ok:
 		case b.units[mod] != nil:
 			keys = append(keys, b.units[mod].names[name]...)
 		case b.isType(mod):
@@ -491,6 +489,64 @@ func (b *builder) wildcardImported(sc *scope, name string) []string {
 		}
 	}
 	return keys
+}
+
+// wildcardModules holds the modules of the wildcard imports of a scope.
+// depth is the depth of the scope among the scopes that a resolution reads
+// now, or 0 when the modules are whole. read marks a pass whose
+// resolutions read the modules of the scope itself.
+type wildcardModules struct {
+	mods  []string
+	depth int
+	read  bool
+}
+
+// wildcardModules returns the modules of the wildcard imports of a scope,
+// in the order of the imports. The resolution of a module can walk a unit
+// whose name lookup reads the wildcard imports of the same scope, as the
+// eight glob uses of src/sys.rs of time 0.1.45 do. Without the table each
+// such lookup resolves every import again, and the work grows with the
+// orders of the imports.
+//
+// A read of a scope that a resolution reads now gets the modules of the
+// last whole pass. So the passes repeat until the modules stay the same,
+// and a module that only an import after it brings into scope resolves.
+// The table keeps no modules that read a scope further up the chain. Such
+// a chain of scopes across files resolves again on each read.
+func (b *builder) wildcardModules(sc *scope) []string {
+	if w := b.wildcardMods[sc]; w != nil {
+		if w.depth > 0 {
+			w.read = true
+			b.wildcardLow = min(b.wildcardLow, w.depth)
+		}
+		return w.mods
+	}
+	b.wildcardDepth++
+	w := &wildcardModules{depth: b.wildcardDepth}
+	b.wildcardMods[sc] = w
+	outer := b.wildcardLow
+	b.wildcardLow = w.depth
+	for range len(sc.wildcards) + 1 {
+		w.read = false
+		var mods []string
+		for _, imp := range sc.wildcards {
+			if mod, _, ok := b.resolveModule(sc.ix, imp.Module); ok {
+				mods = append(mods, mod)
+			}
+		}
+		same := slices.Equal(mods, w.mods)
+		w.mods = mods
+		if !w.read || same {
+			break
+		}
+	}
+	b.wildcardDepth--
+	if b.wildcardLow < w.depth {
+		delete(b.wildcardMods, sc)
+	}
+	w.depth = 0
+	b.wildcardLow = min(outer, b.wildcardLow)
+	return w.mods
 }
 
 // superKeyword is the receiver of a call of a method of the base class, as

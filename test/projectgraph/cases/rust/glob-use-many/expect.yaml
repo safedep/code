@@ -1,0 +1,55 @@
+source: safedep:hand
+description: >-
+  src/sys.rs has eight glob uses, as src/sys.rs of time 0.1.45 has. The glob use of the module inner
+  brings now of the inline module unix into scope through a second glob use, so main calls
+  sys::now, and std::fs::remove_file is found. The six glob uses of crates in unix and the two in mac
+  name no crate that the project gives. The lookup of each name that the file does not define reads
+  the glob uses of the file, and the resolution of each glob use walks the file again. A link step
+  that resolves the glob uses again on each such read does work that grows with the orders of the
+  eight glob uses, and the case does not end. The calls of names that only a glob use of a crate can
+  bring stay records.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+exact_edges: true
+edges:
+  - from: src/main.rs//main
+    to: src/sys.rs//inner//unix//now
+    kind: direct
+    confidence: high
+    site: src/main.rs:4
+  - from: src/sys.rs//inner//unix//now
+    to: std//fs//remove_file
+    kind: direct
+    confidence: high
+    site: src/sys.rs:26
+unresolved:
+  - caller: src/sys.rs//inner//mac//ticks
+    site: src/sys.rs:12
+    reason: unknown-receiver
+    method: mach_absolute_time
+  - caller: src/sys.rs//inner//unix//now
+    site: src/sys.rs:25
+    reason: unknown-receiver
+    method: clock_gettime
+results:
+  - target: std//fs//remove_file
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/sys.rs//inner//unix//now
+        site: src/main.rs:4
+        kind: direct
+        confidence: high
+      - key: std//fs//remove_file
+        site: src/sys.rs:26
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/sys.rs//inner//unix//now
+        site: src/sys.rs:26
+        reached: true
