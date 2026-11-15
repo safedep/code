@@ -901,8 +901,10 @@ a call can run. A Go function value is one of these:
 
 - A function or a method that code uses as a value: an argument, the
   operand of a conversion, the right side of an assignment or a
-  declaration, a return value, an element of a composite literal, or the
-  value of a send on a channel. The index records a reference there, and
+  declaration, a return value, an element of a composite literal, the
+  value of a send on a channel, or the expression of a range clause, as
+  `walk` in `for x := range walk`. A range over a function calls it, and the
+  function calls the body of the loop. The index records a reference there, and
   the link step adds a `reference` edge from the code that holds the value.
   The value exists only after that code runs, so the search reaches that
   code and then the function. The value is a name, as a function of
@@ -1041,11 +1043,17 @@ function covers the call, and the `function-value` record concerns no
 target. In a search with a source and in a summary, it concerns every
 target. The case `go/source-local-func` shows each form.
 
-Two gaps stay. A field of a type of a package that no unit gives can hold a
-function, and no definition names that field. So a call of it keeps only
-the record with the name. In Rust, a call of a parameter or a local keeps
-only the record with the name, and in a search with a source it can read as
+Three gaps stay. In each of them, a search with a source can read
 `not-found`.
+
+- A field of a type of a package that no unit gives can hold a function,
+  and no definition names that field. So a call of it keeps only the
+  record with the name.
+- A range over a parameter or a local that holds a function, as
+  `for x := range seq`, has no record. The index does not know whether
+  `seq` holds a function or data.
+- In Rust, a call of a parameter or a local keeps only the record with the
+  name.
 
 The rule does not apply to Rust. The Rust index records a function that an
 argument, a `let`, an assignment, a `return`, a field initializer or an

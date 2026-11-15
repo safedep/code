@@ -1,0 +1,101 @@
+source: safedep:hand
+description: >-
+  main ranges over the function walk and over the method value t.All, as Go 1.23 allows. The range
+  calls the function, and the function calls the body of the loop through yield. So the range
+  expression is a reference, as an argument is, and os.Remove and os/exec.LookPath are found through it. A
+  range clause with no reference lost both. The range over a slice names no function. No code uses unused,
+  so os.Getwd is not found.
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+edges:
+  - from: main.go//main
+    to: main.go//walk
+    kind: reference
+    confidence: low
+    site: main.go:25
+  - from: main.go//main
+    to: main.go//tree//All
+    kind: reference
+    confidence: low
+    site: main.go:28
+no_edges:
+  - from: main.go//main
+    to: main.go//unused
+  - from: main.go//main
+    to: os//Remove
+  - from: main.go//main
+    to: os//exec//LookPath
+unresolved:
+  - caller: main.go//tree//All
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//walk
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Getwd
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Remove
+    reason: no-dependency-source
+    callback: true
+  - caller: os//exec//LookPath
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//walk
+    site: main.go:10
+    reason: function-value
+  - caller: main.go//walk
+    site: main.go:10
+    reason: unknown-receiver
+    method: yield
+  - caller: main.go//tree//All
+    site: main.go:17
+    reason: function-value
+  - caller: main.go//tree//All
+    site: main.go:17
+    reason: unknown-receiver
+    method: yield
+results:
+  - target: os//Remove
+    status: found
+    path:
+      - key: main.go//main
+      - key: main.go//walk
+        site: main.go:25
+        kind: reference
+        confidence: low
+      - key: os//Remove
+        site: main.go:9
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//walk
+        site: main.go:9
+        reached: true
+  - target: os//exec//LookPath
+    status: found
+    path:
+      - key: main.go//main
+      - key: main.go//tree//All
+        site: main.go:28
+        kind: reference
+        confidence: low
+      - key: os//exec//LookPath
+        site: main.go:16
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//tree//All
+        site: main.go:16
+        reached: true
+  - target: os//Getwd
+    status: not-found
+    call_sites:
+      - caller: main.go//unused
+        site: main.go:21
+        reached: false

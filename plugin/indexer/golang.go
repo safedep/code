@@ -34,6 +34,9 @@ var goRules = languageRules{
 			"return_statement":      "",
 			"literal_value":         "",
 			"send_statement":        "value",
+			// A range over a function calls it, as walk in
+			// for x := range walk.
+			"range_clause": "right",
 			// A conversion, as (func())(f), or a call of a generic
 			// function with type arguments, as id[func()](f), which the
 			// grammar parses as a conversion.
