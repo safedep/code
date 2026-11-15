@@ -22,8 +22,25 @@ func (f *finder) matchPath(r rules.Rule) {
 		if r.Kind == rules.Main {
 			continue
 		}
-		for _, key := range f.Exports(ix.Path) {
+		exports := f.Exports(ix.Path)
+		for _, key := range exports {
 			f.add(r, key)
+		}
+		f.addMembers(r, ix, exports)
+	}
+}
+
+// addMembers marks each function under an exported object of the file. The
+// framework calls a function of the object by its name, as the actions of
+// a SvelteKit page, and no edge of the graph leads from the object to it.
+func (f *finder) addMembers(r rules.Rule, ix *fileindex.Index, exports []string) {
+	objects := slices.DeleteFunc(slices.Clone(exports), func(key string) bool {
+		def, ok := f.defs[key]
+		return !ok || def.Kind != fileindex.DefVariable
+	})
+	for def := range ix.CodeDefinitions() {
+		if slices.ContainsFunc(objects, func(key string) bool { return def.Key != key && fileindex.HasKeyPrefix(def.Key, key) }) {
+			f.add(r, def.Key)
 		}
 	}
 }

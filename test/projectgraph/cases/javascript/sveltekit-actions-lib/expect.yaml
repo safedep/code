@@ -1,0 +1,105 @@
+source: safedep:hand
+description: >-
+  SvelteKit calls each function of the exported object actions of a +page.server.ts by its name, and no
+  call of the graph names them. The rule node.sveltekit.route marks each function under an exported object
+  of a route file, so a1 and a2 are found. The API route imports helper by the alias $lib, which SvelteKit
+  maps to src/lib of the package that depends on @sveltejs/kit, so the call of helper reaches c1.
+roots:
+  - key: server.js
+    kind: manifest
+    rule: node.package-json
+  - key: src/routes/api/+server.js
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/api/+server.js//POST
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/form/+page.server.ts
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/form/+page.server.ts//actions
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/form/+page.server.ts//actions//default
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/form/+page.server.ts//actions//save
+    kind: framework
+    rule: node.sveltekit.route
+exact_edges: true
+edges:
+  - from: server.js
+    to: plug//listen
+    kind: direct
+    confidence: high
+    site: server.js:3
+  - from: src/lib/helper.js//helper
+    to: plug//c1
+    kind: direct
+    confidence: high
+    site: src/lib/helper.js:4
+  - from: src/routes/api/+server.js
+    to: src/lib/helper.js
+    kind: import
+    confidence: high
+    site: src/routes/api/+server.js:1
+  - from: src/routes/api/+server.js//POST
+    to: src/lib/helper.js//helper
+    kind: direct
+    confidence: high
+    site: src/routes/api/+server.js:4
+  - from: src/routes/form/+page.server.ts//actions//default
+    to: plug//a1
+    kind: direct
+    confidence: high
+    site: src/routes/form/+page.server.ts:5
+  - from: src/routes/form/+page.server.ts//actions//save
+    to: plug//a2
+    kind: direct
+    confidence: high
+    site: src/routes/form/+page.server.ts:8
+unresolved: []
+results:
+  - target: plug//a1
+    status: found
+    path:
+      - key: src/routes/form/+page.server.ts//actions//default
+        root: framework
+      - key: plug//a1
+        site: src/routes/form/+page.server.ts:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/routes/form/+page.server.ts//actions//default
+        site: src/routes/form/+page.server.ts:5
+        reached: true
+  - target: plug//a2
+    status: found
+    path:
+      - key: src/routes/form/+page.server.ts//actions//save
+        root: framework
+      - key: plug//a2
+        site: src/routes/form/+page.server.ts:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/routes/form/+page.server.ts//actions//save
+        site: src/routes/form/+page.server.ts:8
+        reached: true
+  - target: plug//c1
+    status: found
+    path:
+      - key: src/routes/api/+server.js//POST
+        root: framework
+      - key: src/lib/helper.js//helper
+        site: src/routes/api/+server.js:4
+        kind: direct
+        confidence: high
+      - key: plug//c1
+        site: src/lib/helper.js:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/lib/helper.js//helper
+        site: src/lib/helper.js:4
+        reached: true

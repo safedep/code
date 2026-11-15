@@ -94,9 +94,10 @@ func (r jsResolver) Modules(importer, spec string, form Form) ([]string, string,
 	return r.j.Resolve(importer, spec, r.typescript, form)
 }
 
-// FirstParty reports whether a module is relative or starts with the name
-// of a file or a directory of the project.
+// FirstParty reports whether a module is relative, starts with the name of
+// a file or a directory of the project, or starts with the alias $lib of
+// SvelteKit, which names the library directory of the project.
 func (r jsResolver) FirstParty(spec string) bool {
 	first, _, _ := strings.Cut(spec, "/")
-	return strings.HasPrefix(spec, ".") || r.j.files.HasName(first)
+	return strings.HasPrefix(spec, ".") || first == svelteKitLib || r.j.files.HasName(first)
 }

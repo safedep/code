@@ -13,6 +13,10 @@ import (
 var (
 	jsExtensions = []string{".js", ".mjs", ".cjs", ".jsx", ".json"}
 	tsExtensions = []string{".ts", ".tsx", ".mts", ".cts", ".d.ts", ".js", ".mjs", ".cjs", ".jsx", ".json"}
+	// svelteKit is the package of SvelteKit, and svelteKitLib its alias of
+	// the library directory of a project.
+	svelteKit    = "@sveltejs/kit"
+	svelteKitLib = "$lib"
 	tsRewrites   = map[string][]string{".js": {".ts", ".tsx"}, ".jsx": {".tsx"}, ".mjs": {".mts"}, ".cjs": {".cts"}}
 )
 
@@ -91,11 +95,33 @@ func (j *JavaScript) Resolve(importer, spec string, typescript bool, form Form) 
 			}
 		}
 	}
+	if file, ok := j.svelteKitLib(importer, spec, typescript); ok {
+		return []string{file}, "sveltekit-lib", true
+	}
 	name, sub := SplitPackage(spec)
 	if pj := j.packages[name]; pj != nil {
 		return j.Entries(pj, sub, typescript, form)
 	}
 	return nil, "", false
+}
+
+// svelteKitLib resolves the alias $lib of SvelteKit to src/lib of the
+// nearest package that depends on @sveltejs/kit. A svelte.config file can
+// move the directory, and the resolver does not read it. FirstParty then
+// keeps the import first party, so its calls get a record.
+func (j *JavaScript) svelteKitLib(importer, spec string, typescript bool) (string, bool) {
+	rest, ok := strings.CutPrefix(spec, svelteKitLib)
+	if !ok || rest != "" && !strings.HasPrefix(rest, "/") {
+		return "", false
+	}
+	for d := Dir(importer); ; d = Dir(d) {
+		if pj := j.manifests[d]; pj != nil && slices.Contains(pj.DependencyNames(), svelteKit) {
+			return j.relativeFile(path.Join(d, "src", "lib"), "."+rest, typescript)
+		}
+		if d == "" {
+			return "", false
+		}
+	}
 }
 
 // Package returns the files of a subpath of the package at the root of

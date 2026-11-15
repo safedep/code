@@ -707,12 +707,24 @@ reads. The rules `node.sveltekit.route` and `node.astro.page` mark the
 route files of SvelteKit and the pages of Astro, as `+page.ts`,
 `+server.ts` and `src/pages/api/data.ts`, with their exports. They keep
 the fallback on too, because a framework can load a file by a convention
-that a rule does not list. Nuxt gets no rule of its own: it imports the
+that a rule does not list. Nuxt gets no rule of its own. It imports the
 code of `composables` and `utils` with no import statement, so no list of
 paths is complete. The cases `javascript/vue-route-dynamic-import`,
 `javascript/vue-alias-import`, `javascript/vue-import-meta-glob`,
 `javascript/nuxt-pages`, `javascript/sveltekit-routes`,
 `javascript/astro-pages` and `javascript/vue-vite-fallback` show each form.
+
+A path rule also marks each function under an exported object of its
+files, as `default` and `save` of `export const actions = {...}` in a
+`+page.server.ts`. The framework calls such a function by its name, and no
+edge leads from the object to it. A destructured export, as
+`export const { GET } = handlers`, gives no export record in the index, so
+its function is no root. The resolver maps the alias `$lib` of SvelteKit
+to `src/lib` of the nearest package that depends on `@sveltejs/kit`. It
+does not read `svelte.config.js`, which can move the directory. So an
+import of `$lib` that names no file is first party, and it is a record
+with the reason `no-definition`. The cases `javascript/sveltekit-actions-lib`
+and `javascript/sveltekit-lib-moved` show both.
 
 ## Sources
 
