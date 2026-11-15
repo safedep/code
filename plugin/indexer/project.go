@@ -68,6 +68,14 @@ type projection struct {
 	// anonFields holds the names of the fields of the anonymous structs of
 	// a Go file that can hold a function.
 	anonFields map[string]bool
+	// fileTypes and fileVars hold the declared type of each type and each
+	// variable at the top level of a Go file, read once.
+	fileTypes, fileVars map[string]*sitter.Node
+	// extents holds the bytes of each definition node in start order, for
+	// innermost. A new definition node clears it.
+	extents []extent
+	// lineStarts holds the byte where each line of the source starts.
+	lineStarts []uint32
 	// rustMacros holds the names that a macro_rules! or a use of a Rust
 	// file binds, once a call of a macro reads them.
 	rustMacros map[string]bool

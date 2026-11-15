@@ -164,13 +164,24 @@ func (p *projection) goFileType(t *sitter.Node) *sitter.Node {
 	if t.Type() != "type_identifier" {
 		return nil
 	}
-	name := p.text(t)
-	for spec := range p.goTypeSpecs() {
-		if p.text(spec.ChildByFieldName("name")) == name {
-			return spec.ChildByFieldName("type")
+	return p.goFileTypes()[p.text(t)]
+}
+
+// goFileTypes returns the type that the first type spec of each name at
+// the top level of the file gives the name, read once per file. A type
+// check of a value asks for it often, and each walk of the top level
+// costs a call of the tree per statement.
+func (p *projection) goFileTypes() map[string]*sitter.Node {
+	if p.fileTypes == nil {
+		p.fileTypes = map[string]*sitter.Node{}
+		for spec := range p.goTypeSpecs() {
+			name := p.text(spec.ChildByFieldName("name"))
+			if _, ok := p.fileTypes[name]; !ok {
+				p.fileTypes[name] = spec.ChildByFieldName("type")
+			}
 		}
 	}
-	return nil
+	return p.fileTypes
 }
 
 // goTypeSpecs returns the type specs of the type declarations at the top

@@ -1,6 +1,9 @@
 package indexer
 
 import (
+	"cmp"
+	"slices"
+
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/pkg/ts"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -29,6 +32,7 @@ var functionValues = map[string]bool{
 // addSyntax records the tree node of a definition.
 func (p *projection) addSyntax(key string, node *sitter.Node) {
 	p.syntax[key] = node
+	p.extents = nil
 	if node != nil {
 		p.spans[spanOf(node)] = key
 	}
@@ -90,17 +94,33 @@ func walkBody(body *sitter.Node, stop map[string]bool, visit func(node *sitter.N
 // innermost returns the key of the innermost definition that holds the
 // byte, or the module key.
 func (p *projection) innermost(at uint32) string {
-	var inner *sitter.Node
-	key := p.cg.FileName
-	for k, node := range p.syntax {
-		if node == nil || at < node.StartByte() || at >= node.EndByte() {
-			continue
+	if p.extents == nil {
+		p.extents = make([]extent, 0, len(p.syntax))
+		for k, node := range p.syntax {
+			if node != nil {
+				p.extents = append(p.extents, extent{start: node.StartByte(), end: node.EndByte(), key: k})
+			}
 		}
-		if inner == nil || node.EndByte()-node.StartByte() < inner.EndByte()-inner.StartByte() {
-			inner, key = node, k
+		slices.SortFunc(p.extents, func(a, b extent) int {
+			return cmp.Or(cmp.Compare(a.start, b.start), cmp.Compare(b.end, a.end), cmp.Compare(a.key, b.key))
+		})
+	}
+	// The nodes of a tree nest or do not meet, so of the nodes that hold
+	// the byte the one that starts last is the innermost. The scan back
+	// from the last start before the byte passes only nodes inside it.
+	i, _ := slices.BinarySearchFunc(p.extents, at+1, func(e extent, t uint32) int { return cmp.Compare(e.start, t) })
+	for i--; i >= 0; i-- {
+		if e := p.extents[i]; at < e.end {
+			return e.key
 		}
 	}
-	return key
+	return p.cg.FileName
+}
+
+// extent is the bytes of the node of a definition, for innermost.
+type extent struct {
+	start, end uint32
+	key        string
 }
 
 // fields returns the fields of a class that declare a type name, by the

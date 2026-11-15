@@ -1,7 +1,9 @@
 package indexer
 
 import (
+	"bytes"
 	"fmt"
+	"iter"
 	"slices"
 	"strings"
 
@@ -377,17 +379,22 @@ func (p *projection) goDeclaredType(caller string, value *sitter.Node) *sitter.N
 // goFileVarType returns the declared type of a variable at the top level
 // of the file, or nil.
 func (p *projection) goFileVarType(name string) *sitter.Node {
-	for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
-		if statement.Type() != "var_declaration" {
-			continue
-		}
-		for _, spec := range goVarSpecs(statement) {
-			if slices.ContainsFunc(goNames(spec), func(n *sitter.Node) bool { return p.text(n) == name }) {
-				return spec.ChildByFieldName("type")
+	if p.fileVars == nil {
+		p.fileVars = map[string]*sitter.Node{}
+		for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
+			if statement.Type() != "var_declaration" {
+				continue
+			}
+			for _, spec := range goVarSpecs(statement) {
+				for _, n := range goNames(spec) {
+					if _, ok := p.fileVars[p.text(n)]; !ok {
+						p.fileVars[p.text(n)] = spec.ChildByFieldName("type")
+					}
+				}
 			}
 		}
 	}
-	return nil
+	return p.fileVars[name]
 }
 
 // goFieldValueType returns the declared type of a field that a value
@@ -426,16 +433,14 @@ func (p *projection) goParamField(caller string, value *sitter.Node) *sitter.Nod
 // goFileField returns the type of a field of a struct that the file
 // declares, or nil.
 func (p *projection) goFileField(structName, field string) *sitter.Node {
-	for spec := range p.goTypeSpecs() {
-		t := spec.ChildByFieldName("type")
-		if t == nil || t.Type() != "struct_type" || p.text(spec.ChildByFieldName("name")) != structName {
-			continue
-		}
-		for _, f := range p.goStructFields(t) {
-			for _, n := range childrenByField(f, "name") {
-				if p.text(n) == field {
-					return f.ChildByFieldName("type")
-				}
+	t := p.goFileTypes()[structName]
+	if t == nil || t.Type() != "struct_type" {
+		return nil
+	}
+	for _, f := range p.goStructFields(t) {
+		for _, n := range childrenByField(f, "name") {
+			if p.text(n) == field {
+				return f.ChildByFieldName("type")
 			}
 		}
 	}
@@ -758,31 +763,87 @@ func goUnparen(node *sitter.Node) *sitter.Node {
 
 // goAnonFields returns the names of the fields of each anonymous struct of
 // the file and of each struct type that a function declares, true for a
-// name that a field which can hold a function has.
+// name that a field which can hold a function has. Each struct type starts
+// with the keyword struct, so the index finds the struct types at the words
+// struct of the source, and a walk of the whole tree is not needed. A word
+// in a comment or a string finds no struct type there.
 func (p *projection) goAnonFields() map[string]bool {
 	if p.anonFields != nil {
 		return p.anonFields
 	}
 	p.anonFields = map[string]bool{}
-	var walk func(node *sitter.Node, depth int)
-	walk = func(node *sitter.Node, depth int) {
-		if depth > maxLocalDepth {
-			return
+	root := p.tree.Tree().RootNode()
+	for at := range p.goStructWords() {
+		node := root.NamedDescendantForPointRange(p.pointAt(at), p.pointAt(at+uint32(len("struct"))))
+		if node == nil || node.Type() != "struct_type" || node.StartByte() != at || goTopLevelType(node) {
+			continue
 		}
-		if node.Type() == "struct_type" && !goTopLevelType(node) {
-			for _, field := range p.goStructFields(node) {
-				holds := !p.goDataField(field.ChildByFieldName("type"))
-				for _, name := range childrenByField(field, "name") {
-					p.anonFields[p.text(name)] = p.anonFields[p.text(name)] || holds
-				}
+		for _, field := range p.goStructFields(node) {
+			holds := !p.goDataField(field.ChildByFieldName("type"))
+			for _, name := range childrenByField(field, "name") {
+				p.anonFields[p.text(name)] = p.anonFields[p.text(name)] || holds
 			}
 		}
-		for _, child := range ts.NamedChildren(node) {
-			walk(child, depth+1)
+	}
+	return p.anonFields
+}
+
+// goStructWords returns the byte of each word struct of the source that a
+// brace with a field can follow, as struct{ run func() }. struct{} holds no
+// field, so it is left out.
+func (p *projection) goStructWords() iter.Seq[uint32] {
+	return func(yield func(uint32) bool) {
+		src := p.source
+		for i := 0; ; {
+			j := bytes.Index(src[i:], []byte("struct"))
+			if j < 0 {
+				return
+			}
+			at, end := i+j, i+j+len("struct")
+			i = end
+			if at > 0 && goWordByte(src[at-1]) || end < len(src) && goWordByte(src[end]) {
+				continue
+			}
+			k := end
+			for k < len(src) && (src[k] == ' ' || src[k] == '\t' || src[k] == '\n' || src[k] == '\r') {
+				k++
+			}
+			if k < len(src) && src[k] == '{' {
+				k++
+				for k < len(src) && (src[k] == ' ' || src[k] == '\t' || src[k] == '\n' || src[k] == '\r') {
+					k++
+				}
+				if k < len(src) && src[k] == '}' {
+					continue
+				}
+			}
+			if !yield(uint32(at)) {
+				return
+			}
 		}
 	}
-	walk(p.tree.Tree().RootNode(), 0)
-	return p.anonFields
+}
+
+// pointAt returns the row and the byte column of a byte of the source.
+func (p *projection) pointAt(at uint32) sitter.Point {
+	if p.lineStarts == nil {
+		p.lineStarts = []uint32{0}
+		for i, b := range p.source {
+			if b == '\n' {
+				p.lineStarts = append(p.lineStarts, uint32(i+1))
+			}
+		}
+	}
+	row, found := slices.BinarySearch(p.lineStarts, at)
+	if !found {
+		row--
+	}
+	return sitter.Point{Row: uint32(row), Column: at - p.lineStarts[row]}
+}
+
+// goWordByte reports whether a byte can be part of a Go identifier.
+func goWordByte(b byte) bool {
+	return b == '_' || b >= '0' && b <= '9' || b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z' || b >= 0x80
 }
 
 // goTopLevelType reports whether a type is the type of a type declaration
