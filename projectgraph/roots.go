@@ -59,7 +59,9 @@ func (b *builder) markRoots(ctx context.Context) error {
 		// export, and no edge names them. The record keeps a target that
 		// only they call uncertain and not not-found.
 		if r.Opaque != "" {
-			b.addUnresolved(UnresolvedSite{Caller: r.Key, Site: Site(r.Site), Text: "export " + r.Opaque, Reason: fileindex.UnresolvedComputedName})
+			site := UnresolvedSite{Caller: r.Key, Site: Site(r.Site), Text: "export " + r.Opaque, Reason: fileindex.UnresolvedComputedName}
+			b.scopeToLanguage(b.byPath[r.Key], &site)
+			b.addUnresolved(site)
 			continue
 		}
 		b.addRootAt(r.Key, r.Kind, r.Rule, Site(r.Site))

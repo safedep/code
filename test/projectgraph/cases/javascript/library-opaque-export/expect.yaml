@@ -1,0 +1,38 @@
+source: safedep:hand
+description: >-
+  The entry of the library exports api, which holds the result of the call makeApi. A user of the library
+  calls the functions of api, and no edge names them. So the manifest rule gives the export a
+  computed-name record of the JavaScript family, and a5 reads uncertain and not not-found.
+roots:
+  - key: src/index.js
+    kind: manifest
+    rule: node.package-json
+  - key: src/index.js//api
+    kind: manifest
+    rule: node.package-json
+exact_edges: true
+edges:
+  - from: src/index.js
+    to: src/index.js//makeApi
+    kind: direct
+    confidence: high
+    site: src/index.js:7
+  - from: src/index.js//makeApi//get
+    to: plug//a5
+    kind: direct
+    confidence: high
+    site: src/index.js:4
+unresolved:
+  - caller: src/index.js
+    site: src/index.js:9
+    reason: computed-name
+results:
+  - target: plug//a5
+    status: uncertain
+    call_sites:
+      - caller: src/index.js//makeApi//get
+        site: src/index.js:4
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/index.js:9

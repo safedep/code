@@ -444,6 +444,31 @@ func (b *builder) linkAll(ctx context.Context) error {
 	return nil
 }
 
+// scopeToLanguage scopes a site to the targets that code of the language
+// family of its file calls, and keeps the modules that the file imports
+// from outside the project, as the markup of a component runs only code
+// of its script and of what the script imports.
+func (b *builder) scopeToLanguage(ix *fileindex.Index, site *UnresolvedSite) {
+	site.Language = ix.Language.Family()
+	if _, done := b.g.Imports[ix.Path]; done {
+		return
+	}
+	var keys []string
+	for _, imp := range ix.Imports {
+		if imp.Kind == fileindex.ImportTypeOnly || imp.Namespace == "" || strings.HasPrefix(imp.Module, ".") {
+			continue
+		}
+		if _, _, ok := b.resolveModule(ix, imp.Module); !ok {
+			keys = append(keys, imp.Namespace)
+		}
+	}
+	slices.Sort(keys)
+	if b.g.Imports == nil {
+		b.g.Imports = map[string][]string{}
+	}
+	b.g.Imports[ix.Path] = slices.Compact(keys)
+}
+
 // CallbackMethod reports whether code outside the graph that a Callback
 // record stands for can call the definition of the key back, on a value
 // that it holds, as a Go method of an exported name.
@@ -540,6 +565,9 @@ func (b *builder) copyUnresolved(ix *fileindex.Index) {
 		}
 		if u.Reason == fileindex.UnresolvedDynamicImport {
 			site.ImportPrefix = b.importPrefix(ix, u.Line)
+		}
+		if u.Reason == fileindex.UnresolvedMarkup {
+			b.scopeToLanguage(ix, &site)
 		}
 		if u.Reason == fileindex.UnresolvedNoDependencySource && ix.Language == langcode.Go {
 			if b.linkGoStub(ix, site) {

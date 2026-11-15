@@ -108,8 +108,11 @@ script reach, would miss a name that the app registers elsewhere, and a
 target that only such a name reaches would read `not-found`. The markup
 runs only code of the JavaScript family, so the reach query scopes the
 record by its language with `Uncertainty.Language`. It concerns a target
-that a definition of the family is, or that an edge from a file of the
-family leads to, and a target with no node. A JavaScript project of
+under a module that the file imports from outside the project, as
+`jsonschema` for `import { validate } from 'jsonschema'`, which
+`Graph.Imports` holds. It also concerns a target that a definition of the
+family is, or that an edge from a file of the family leads to, and a
+target with no node. A JavaScript project of
 component files thus reads `uncertain` for each JavaScript target that it
 does not find. A target that only the Python code of a project calls does
 not, as in the case `python/component-in-frontend`. A span and a summary
@@ -790,14 +793,24 @@ A default of a pattern, as `fb` in `{ PUT = fb } = h`, is a second export
 record of the name, and a path rule marks each record that resolves. An
 export of a name that holds another name, as `export const GET = handler`,
 gives that name first. An exported name whose value is no literal, as the
-result of a call in `export const actions = makeActions()`, is `Opaque` in
-the index. The framework calls the functions of such a value, and no edge
-names them, so a path rule gives the export a `computed-name` record in
-place of a root. The index records a function that an argument of a call
+result of a call in `export const actions = makeActions()` or of
+`export default NextAuth({...})`, is `Opaque` in the index. A value with no
+call, `new`, `await` or read of a member, as `60 * 60` or
+`'x' as const`, is a literal, and the index looks through `satisfies`,
+`as`, `!` and parentheses. The framework calls the functions of an opaque
+value, and no edge names them. So a path rule and the manifest rule give
+the export a `computed-name` record in place of a root, and so does an
+export whose name no record resolves, as GET of
+`export const { GET } = handlers` for an imported `handlers`. The record
+has the scope of the markup record. It concerns the targets of the
+JavaScript family and of the modules that the file imports. The cases `typescript/next-route-literals`,
+`typescript/next-route-opaque` and `javascript/library-opaque-export`
+show it. The index records a function that an argument of a call
 in an export statement names, as `first` in
 `export const handle = sequence(first)`, as a reference. The case
-`javascript/sveltekit-opaque-exports` shows each form. The resolver maps the alias `$lib` of SvelteKit
-to `src/lib` of the nearest package that depends on `@sveltejs/kit`. It
+`javascript/sveltekit-opaque-exports` shows each form.
+
+The resolver maps the alias `$lib` of SvelteKit to `src/lib` of the nearest package that depends on `@sveltejs/kit`. It
 does not read `svelte.config.js`, which can move the directory. So an
 import of `$lib` that names no file is first party, and it is a record
 with the reason `no-definition`. The cases `javascript/sveltekit-actions-lib`

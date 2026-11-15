@@ -91,6 +91,11 @@ func (p *projection) addExportStatement(statement *sitter.Node) {
 			p.export(defaultExport, p.text(value), line)
 		case functionValues[value.Type()] || value.Type() == "class":
 			p.export(defaultExport, defaultExport, line)
+		case opaque(value):
+			// A default of a call, as export default NextAuth({...}), has
+			// no definition. The record keeps it for a rule that roots it.
+			p.export(defaultExport, defaultExport, line)
+			p.ix.Exports[len(p.ix.Exports)-1].Opaque = true
 		}
 		return
 	}
@@ -156,7 +161,7 @@ func (p *projection) declaredNames(declaration *sitter.Node) []string {
 // its target is the object that holds it.
 func (p *projection) exportDeclarators(declaration *sitter.Node, line int) {
 	for _, declarator := range ts.NamedChildren(declaration) {
-		pattern, value := declarator.ChildByFieldName("name"), declarator.ChildByFieldName("value")
+		pattern, value := declarator.ChildByFieldName("name"), unwrap(declarator.ChildByFieldName("value"))
 		switch {
 		case pattern == nil:
 		case pattern.Type() == "identifier":
@@ -178,6 +183,7 @@ func (p *projection) exportDeclarators(declaration *sitter.Node, line int) {
 // export const GET = handler, so the export reaches its function. A value
 // that is no literal, as the result of a call, is opaque.
 func (p *projection) exportValue(name, local string, value *sitter.Node, line int) {
+	value = unwrap(value)
 	if value != nil && value.Type() == "identifier" && p.text(value) != local {
 		p.export(name, p.text(value), line)
 	}
@@ -187,11 +193,45 @@ func (p *projection) exportValue(name, local string, value *sitter.Node, line in
 	}
 }
 
+// typeWrappers hold a value with a type or a check of TypeScript, as
+// x satisfies T, x as T and x!, or in parentheses. The value is the value
+// of the wrapper.
+var typeWrappers = map[string]bool{
+	"satisfies_expression": true, "as_expression": true, "non_null_expression": true,
+	"parenthesized_expression": true, "type_assertion": true,
+}
+
+// unwrap returns the value that type wrappers hold.
+func unwrap(value *sitter.Node) *sitter.Node {
+	for value != nil && typeWrappers[value.Type()] {
+		value = value.NamedChild(0)
+	}
+	return value
+}
+
+// opaqueParts are the expressions that can give a function that no
+// definition of the file names: a call, a new, an await, and a read of a
+// member, which can hold a function of another object.
+var opaqueParts = map[string]bool{
+	"call_expression": true, "new_expression": true, "await_expression": true,
+	"member_expression": true, "subscript_expression": true,
+}
+
 // opaque reports whether a value runs code that the index does not follow
-// to a definition, as a call. A nil value is a name that no top-level
-// declaration of the file binds, as an import.
+// to a definition, as a call. A value with no call, new, await or read of
+// a member, as 60 * 60 or 'x' as const, is a literal. A nil value is a
+// name that no top-level declaration of the file binds, as an import.
 func opaque(value *sitter.Node) bool {
-	return value != nil && value.Type() != "identifier" && !functionValues[value.Type()] && !literalValues[value.Type()]
+	value = unwrap(value)
+	if value == nil || value.Type() == "identifier" || functionValues[value.Type()] || literalValues[value.Type()] {
+		return false
+	}
+	if opaqueParts[value.Type()] {
+		return true
+	}
+	return slices.ContainsFunc(ts.NamedChildren(value), func(child *sitter.Node) bool {
+		return opaqueParts[child.Type()] || opaque(child)
+	})
 }
 
 // literalValues are the JavaScript values that run no code of their own

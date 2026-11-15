@@ -83,6 +83,7 @@ func Find(ctx context.Context, p Project, rs []rules.Rule) ([]Root, []modules.Pr
 	f := &finder{
 		Project:   p,
 		languages: map[string]langcode.Code{},
+		indexes:   map[string]*fileindex.Index{},
 		seen:      map[Root]bool{},
 		defs:      map[string]*fileindex.Definition{},
 		calls:     map[*fileindex.Call][]string{},
@@ -91,6 +92,7 @@ func Find(ctx context.Context, p Project, rs []rules.Rule) ([]Root, []modules.Pr
 	}
 	for _, ix := range p.Indexes {
 		f.languages[ix.Path] = ix.Language
+		f.indexes[ix.Path] = ix
 		for i := range ix.Definitions {
 			f.defs[ix.Definitions[i].Key] = &ix.Definitions[i]
 		}
@@ -116,6 +118,7 @@ func state[T any](p Project, code langcode.Code) *T {
 type finder struct {
 	Project
 	languages map[string]langcode.Code
+	indexes   map[string]*fileindex.Index
 	defs      map[string]*fileindex.Definition
 	// calls holds the keys that each call resolves to.
 	calls map[*fileindex.Call][]string
@@ -314,10 +317,8 @@ func (f *finder) matchPackageJSON(r rules.Rule) {
 		}
 		for _, file := range f.entryFiles(js, pj.Dir, libraries) {
 			f.addFile(r, file)
-			if lang, ok := f.languages[file]; ok && r.Applies(lang) {
-				for _, key := range f.Exports(file) {
-					f.add(r, key)
-				}
+			if ix := f.indexes[file]; ix != nil && r.Applies(ix.Language) {
+				f.addExports(r, ix)
 			}
 		}
 	}

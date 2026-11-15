@@ -1,0 +1,60 @@
+source: safedep:hand
+description: >-
+  route.ts exports constants whose values run no call, as 60 * 60, 'force-dynamic' as const, -1, an
+  object with satisfies and an object that reads process.env inside a literal. They are no opaque exports
+  and get no record, so dead, which only the unused function of lib/db.ts calls, stays not-found.
+roots:
+  - key: app/api/x/route.ts
+    kind: framework
+    rule: node.next.route
+  - key: app/api/x/route.ts//GET
+    kind: framework
+    rule: node.next.route
+  - key: app/api/x/route.ts//config
+    kind: framework
+    rule: node.next.route
+  - key: app/api/x/route.ts//dynamic
+    kind: framework
+    rule: node.next.route
+  - key: app/api/x/route.ts//maxDuration
+    kind: framework
+    rule: node.next.route
+  - key: app/api/x/route.ts//metadata
+    kind: framework
+    rule: node.next.route
+  - key: app/api/x/route.ts//revalidate
+    kind: framework
+    rule: node.next.route
+exact_edges: true
+edges:
+  - from: app/api/x/route.ts//GET
+    to: plug//a1
+    kind: direct
+    confidence: high
+    site: app/api/x/route.ts:11
+  - from: lib/db.ts//unused
+    to: plug//dead
+    kind: direct
+    confidence: high
+    site: lib/db.ts:4
+unresolved: []
+results:
+  - target: plug//a1
+    status: found
+    path:
+      - key: app/api/x/route.ts//GET
+        root: framework
+      - key: plug//a1
+        site: app/api/x/route.ts:11
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: app/api/x/route.ts//GET
+        site: app/api/x/route.ts:11
+        reached: true
+  - target: plug//dead
+    status: not-found
+    call_sites:
+      - caller: lib/db.ts//unused
+        site: lib/db.ts:4
+        reached: false

@@ -206,7 +206,9 @@ type Edge struct {
 // search. Callback marks the site of an external key whose code can call
 // into the graph only through a method of a value that it holds, as the
 // Go standard library with no unit. The reach query applies it to the
-// targets that a method of an exported name reaches.
+// targets that a method of an exported name reaches. Language scopes a
+// site to the targets that code of the language family calls, as a value
+// of JavaScript that a framework calls, which runs only JavaScript code.
 type UnresolvedSite struct {
 	Caller       string                     `json:"caller"`
 	Site         Site                       `json:"site"`
@@ -217,6 +219,7 @@ type UnresolvedSite struct {
 	ImportPrefix string                     `json:"import_prefix,omitempty"`
 	Unit         string                     `json:"unit,omitempty"`
 	Callback     bool                       `json:"callback,omitempty"`
+	Language     langcode.Code              `json:"language,omitempty"`
 }
 
 // Root is a node that runs with no caller in the graph. Rule is the id of the
@@ -264,7 +267,12 @@ type Graph struct {
 	Files      map[string]fileindex.FileStatus `json:"files"`
 	Truncated  []Truncation                    `json:"truncated,omitempty"`
 	Problems   []modules.Problem               `json:"problems,omitempty"`
-	Stats      Stats                           `json:"stats"`
+	// Imports holds the module keys that each file with a site of a
+	// Language scope imports from outside the project, as jsonschema. Such
+	// a site can run a name of the module that the file imports and no
+	// edge names, as a function that only the markup of the file calls.
+	Imports map[string][]string `json:"imports,omitempty"`
+	Stats   Stats               `json:"stats"`
 
 	// edges is the set of Edges, which AddEdge makes on its first call and
 	// keeps for the next ones.

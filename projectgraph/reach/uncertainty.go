@@ -31,8 +31,9 @@ type found struct {
 	// byLanguage holds the markup records, which concern the targets that
 	// code of their language family calls.
 	byLanguage []Uncertainty
-	// speaks reports whether code of a language family calls a target.
-	speaks   func(lang langcode.Code, target Target) bool
+	// speaks reports whether the code of a site of a language scope can
+	// call a target.
+	speaks   func(u Uncertainty, target Target) bool
 	callback *Uncertainty
 	// concerns reports whether the span of a scope concerns a target.
 	concerns func(k scopeKey, target Target) bool
@@ -179,6 +180,8 @@ func (s *sources) at(key string, n *projectgraph.Node) []Uncertainty {
 		}
 		u := Uncertainty{Kind: UnresolvedCall, Key: key, Site: r.Site, Text: fmt.Sprintf("%s (%s)", r.Text, r.Reason)}
 		switch {
+		case r.Language != "":
+			u.Language = r.Language
 		case r.Reason == fileindex.UnresolvedMarkup:
 			u.Language = s.language(r.Site.Path)
 		case r.Unit != "":
@@ -323,7 +326,7 @@ func (f *found) forTarget(target Target) ([]Uncertainty, []Uncertainty, int) {
 		}
 	}
 	for _, u := range f.byLanguage {
-		if f.speaks(u.Language, target) {
+		if f.speaks(u, target) {
 			all = append(all, u)
 		}
 	}
@@ -362,11 +365,16 @@ func (s *sources) language(path string) langcode.Code {
 	return ""
 }
 
-// speaks reports whether code of a language family calls a target: a node
+// speaks reports whether the code of a site of a language scope can call
+// a target: the file of the site imports the module of the target, a node
 // of the target is a definition in a file of the family, or an edge from
 // such a file leads to it. A target with no node keeps every uncertainty,
 // because no edge tells who calls it.
-func (a *adjacency) speaks(lang langcode.Code, target Target) bool {
+func (a *adjacency) speaks(u Uncertainty, target Target) bool {
+	lang := u.Language
+	if slices.ContainsFunc(a.g.Imports[u.Site.Path], func(module string) bool { return target.under(module) }) {
+		return true
+	}
 	ids := a.match(target)
 	if len(ids) == 0 {
 		return true

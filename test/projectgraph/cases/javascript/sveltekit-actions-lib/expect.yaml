@@ -3,7 +3,9 @@ description: >-
   SvelteKit calls each function of the exported object actions of a +page.server.ts by its name, and no
   call of the graph names them. The rule node.sveltekit.route marks each function under an exported object
   of a route file, so a1 and a2 are found. The API route imports helper by the alias $lib, which SvelteKit
-  maps to src/lib of the package that depends on @sveltejs/kit, so the call of helper reaches c1.
+  maps to src/lib of the package that depends on @sveltejs/kit, so the call of helper reaches c1. The
+  object actions of items/+page.server.ts has a satisfies type, and its functions keep their names under
+  actions, so a6 is found.
 roots:
   - key: server.js
     kind: manifest
@@ -24,6 +26,15 @@ roots:
     kind: framework
     rule: node.sveltekit.route
   - key: src/routes/form/+page.server.ts//actions//save
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/items/+page.server.ts
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/items/+page.server.ts//actions
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/items/+page.server.ts//actions//default
     kind: framework
     rule: node.sveltekit.route
 exact_edges: true
@@ -58,6 +69,11 @@ edges:
     kind: direct
     confidence: high
     site: src/routes/form/+page.server.ts:8
+  - from: src/routes/items/+page.server.ts//actions//default
+    to: plug//a6
+    kind: direct
+    confidence: high
+    site: src/routes/items/+page.server.ts:6
 unresolved: []
 results:
   - target: plug//a1
@@ -102,4 +118,17 @@ results:
     call_sites:
       - caller: src/lib/helper.js//helper
         site: src/lib/helper.js:4
+        reached: true
+  - target: plug//a6
+    status: found
+    path:
+      - key: src/routes/items/+page.server.ts//actions//default
+        root: framework
+      - key: plug//a6
+        site: src/routes/items/+page.server.ts:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/routes/items/+page.server.ts//actions//default
+        site: src/routes/items/+page.server.ts:6
         reached: true

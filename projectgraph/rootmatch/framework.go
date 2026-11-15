@@ -22,15 +22,27 @@ func (f *finder) matchPath(r rules.Rule) {
 		if r.Kind == rules.Main {
 			continue
 		}
-		exports := f.Exports(ix.Path)
-		for _, key := range exports {
-			f.add(r, key)
+		f.addExports(r, ix)
+	}
+}
+
+// addExports marks the exports of a file that a framework or a user of a
+// library loads, the functions under an exported object, and each export
+// whose value the index does not follow: an opaque value, as the result of
+// a call, or a name that no record resolves, as GET of
+// export const { GET } = handlers for an imported handlers.
+func (f *finder) addExports(r rules.Rule, ix *fileindex.Index) {
+	exports := f.Exports(ix.Path)
+	for _, key := range exports {
+		f.add(r, key)
+	}
+	f.addMembers(r, ix, exports)
+	for _, ex := range ix.Exports {
+		if ex.From != "" {
+			continue
 		}
-		f.addMembers(r, ix, exports)
-		for _, ex := range ix.Exports {
-			if ex.Opaque {
-				f.addOpaque(r, ix.Path, ex)
-			}
+		if _, ok := f.Export(ix.Path, ex.Name); ex.Opaque || !ok {
+			f.addOpaque(r, ix.Path, ex)
 		}
 	}
 }
