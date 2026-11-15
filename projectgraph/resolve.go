@@ -472,8 +472,9 @@ func (b *builder) resolveScope(sc *scope, caller, target string) []resolution {
 }
 
 // wildcardImported returns the definitions of the name in the packages
-// that the file imports with a Go dot import or a Java wildcard import, and
-// the members of the name in the classes of a Java static wildcard import.
+// that the file imports with a Go dot import, a Java wildcard import or a
+// Rust glob use, and the members of the name in the classes of a Java
+// static wildcard import.
 // A Java wildcard import of a package of the project names its class
 // exactly, so its edge is direct.
 func (b *builder) wildcardImported(sc *scope, name string) []string {
@@ -491,62 +492,54 @@ func (b *builder) wildcardImported(sc *scope, name string) []string {
 	return keys
 }
 
-// wildcardModules holds the modules of the wildcard imports of a scope.
-// depth is the depth of the scope among the scopes that a resolution reads
-// now, or 0 when the modules are whole. read marks a pass whose
-// resolutions read the modules of the scope itself.
-type wildcardModules struct {
-	mods  []string
-	depth int
-	read  bool
+// wildcardRead is a read of the wildcard imports of a scope that a
+// resolution makes now. mods holds the modules of the last whole pass, and
+// read marks a pass whose resolutions read the same scope again.
+type wildcardRead struct {
+	mods []string
+	read bool
 }
 
 // wildcardModules returns the modules of the wildcard imports of a scope,
 // in the order of the imports. The resolution of a module can walk a unit
 // whose name lookup reads the wildcard imports of the same scope, as the
-// eight glob uses of src/sys.rs of time 0.1.45 do. Without the table each
-// such lookup resolves every import again, and the work grows with the
-// orders of the imports.
+// eight glob uses of src/sys.rs of time 0.1.45 do. If each such read
+// resolved every import again, the work would grow with the orders of the
+// imports, and the link step of a project with that file would not end.
 //
-// A read of a scope that a resolution reads now gets the modules of the
-// last whole pass. So the passes repeat until the modules stay the same,
-// and a module that only an import after it brings into scope resolves.
-// The table keeps no modules that read a scope further up the chain. Such
-// a chain of scopes across files resolves again on each read.
+// So a read of a scope that a resolution reads now gets the modules of the
+// last whole pass, and the passes repeat until the modules stay the same.
+// A module that only an import after it brings into scope thus resolves.
+// No table keeps the modules after the read. A resolution under the
+// resolving guard of a Rust path gives a part of the modules, and a table
+// would keep that part for the whole build.
+//
+// A cycle of wildcard imports across files still costs time that grows
+// with the number of files. A file that each other file of the cycle reads
+// with a glob use of a name that no file defines is such a cycle.
 func (b *builder) wildcardModules(sc *scope) []string {
-	if w := b.wildcardMods[sc]; w != nil {
-		if w.depth > 0 {
-			w.read = true
-			b.wildcardLow = min(b.wildcardLow, w.depth)
-		}
-		return w.mods
+	if r := b.expanding[sc]; r != nil {
+		r.read = true
+		return r.mods
 	}
-	b.wildcardDepth++
-	w := &wildcardModules{depth: b.wildcardDepth}
-	b.wildcardMods[sc] = w
-	outer := b.wildcardLow
-	b.wildcardLow = w.depth
+	r := &wildcardRead{}
+	b.expanding[sc] = r
+	defer delete(b.expanding, sc)
 	for range len(sc.wildcards) + 1 {
-		w.read = false
+		r.read = false
 		var mods []string
 		for _, imp := range sc.wildcards {
 			if mod, _, ok := b.resolveModule(sc.ix, imp.Module); ok {
 				mods = append(mods, mod)
 			}
 		}
-		same := slices.Equal(mods, w.mods)
-		w.mods = mods
-		if !w.read || same {
+		same := slices.Equal(mods, r.mods)
+		r.mods = mods
+		if !r.read || same {
 			break
 		}
 	}
-	b.wildcardDepth--
-	if b.wildcardLow < w.depth {
-		delete(b.wildcardMods, sc)
-	}
-	w.depth = 0
-	b.wildcardLow = min(outer, b.wildcardLow)
-	return w.mods
+	return r.mods
 }
 
 // superKeyword is the receiver of a call of a method of the base class, as

@@ -1,0 +1,54 @@
+source: safedep:hand
+description: >-
+  The workspace has the crates app and core_lib. app/src/prelude.rs has pub use core_lib::*, and
+  run in app/src/work.rs calls crate::prelude::helper. helper of core_lib calls dep::danger, so
+  dep::danger is found. The link step reads the glob use of prelude.rs while it resolves the path
+  core_lib of that same glob use. The guard of that resolution gives no module for the glob use at
+  that point. A link step that keeps such a list of modules for the whole build sends the call to
+  the external key crate//prelude//helper with no record, and dep::danger reads not-found.
+roots:
+  - key: app/src/main.rs
+    kind: main
+    rule: rust.main
+  - key: app/src/main.rs//main
+    kind: main
+    rule: rust.main
+exact_edges: true
+edges:
+  - from: app/src/main.rs//main
+    to: app/src/work.rs//run
+    kind: direct
+    confidence: high
+    site: app/src/main.rs:5
+  - from: app/src/work.rs//run
+    to: core_lib/src/lib.rs//helper
+    kind: direct
+    confidence: high
+    site: app/src/work.rs:2
+  - from: core_lib/src/lib.rs//helper
+    to: dep//danger
+    kind: direct
+    confidence: high
+    site: core_lib/src/lib.rs:2
+unresolved: []
+results:
+  - target: dep//danger
+    status: found
+    path:
+      - key: app/src/main.rs//main
+      - key: app/src/work.rs//run
+        site: app/src/main.rs:5
+        kind: direct
+        confidence: high
+      - key: core_lib/src/lib.rs//helper
+        site: app/src/work.rs:2
+        kind: direct
+        confidence: high
+      - key: dep//danger
+        site: core_lib/src/lib.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: core_lib/src/lib.rs//helper
+        site: core_lib/src/lib.rs:2
+        reached: true
