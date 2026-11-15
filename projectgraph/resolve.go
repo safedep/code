@@ -623,6 +623,16 @@ func (b *builder) undo(mark int) {
 	b.tentative = b.tentative[:mark]
 }
 
+// idle reports whether no cycle guard is in progress. A search that starts
+// idle meets only the guards that it sets itself. A cut under it ends a
+// cycle back through the search, and the answer of the search loses
+// nothing by it.
+func (b *builder) idle() bool {
+	s := b.rustState()
+	return len(b.expanding)+len(b.visiting)+len(b.reading)+len(b.stepping)+len(b.findingBases)+
+		len(s.routing)+b.ordering+len(s.resolving)+len(s.members)+len(s.globbing) == 0
+}
+
 // uncut reports whether a read of the wildcard imports of a scope that
 // asks the resolving guard for the paths gets no answer from a resolution
 // in progress. Such a read gives the same modules each time. The guards
