@@ -1,0 +1,54 @@
+source: safedep:hand
+description: >-
+  main.rs has use dep::html::* at its root, and the inline module inner has use other::*. A glob use of the root
+  brings no name into inner, so render() in inner::go runs render of other, which calls std::fs::remove_file.
+  A link step that reads the glob use of the root for inner gives the call the edge to dep//html//render, so
+  dep//html//render reads found from inner::go. The call keeps its record of render, so both targets read
+  uncertain from inner::go.
+units:
+  vendor/dep: cargo:dep@1.0.0
+  vendor/other: cargo:other@1.0.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//main
+    to: dep//html//page
+    kind: direct
+    confidence: high
+    site: src/main.rs:13
+no_edges:
+  - from: src/main.rs//inner//go
+    to: dep//html//render
+unresolved:
+  - caller: src/main.rs//inner//go
+    site: src/main.rs:7
+    reason: unknown-receiver
+    method: render
+  - caller: src/main.rs//main
+    site: src/main.rs:13
+    reason: unknown-receiver
+    method: page
+results:
+  - target: dep//html//render
+    status: uncertain
+    sources: [src/main.rs//inner//go]
+    sources_only: true
+    call_sites:
+      - caller: cargo:dep@1.0.0//src/html.rs//page
+        site: cargo:dep@1.0.0//src/html.rs:4
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/main.rs:7
+  - target: other//render
+    status: uncertain
+    sources: [src/main.rs//inner//go]
+    sources_only: true
+    uncertainties:
+      - kind: unresolved-call
+        site: src/main.rs:7

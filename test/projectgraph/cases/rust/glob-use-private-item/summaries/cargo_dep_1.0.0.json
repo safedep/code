@@ -1,0 +1,23 @@
+{
+  "version": "3",
+  "index_version": "17",
+  "link_version": "20",
+  "unit": "cargo:dep@1.0.0",
+  "symbols": [
+    {
+      "key": "dep//html//page",
+      "definitions": [
+        "cargo:dep@1.0.0//src/html.rs//page"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "dep//html//util//run",
+      "definitions": [
+        "cargo:dep@1.0.0//src/html.rs//util//run"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": []
+}

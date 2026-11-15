@@ -1,0 +1,60 @@
+source: safedep:hand
+description: >-
+  main.rs has use dep::html::* and use other::*, and calls render() and util::run(). dep::html defines render
+  and the module util, both private, so the glob use of dep::html brings neither. other gives the pub function
+  render and the pub module util. So both calls run code of other: render calls std::fs::remove_file and
+  util::run calls std::fs::remove_dir. A link step that takes a private item of a unit for a name of a glob use
+  sends render() to dep//html//render and util::run() to dep//html//util//run, so std::fs::remove_dir reads
+  not-found. render() keeps its record, because a closure or a parameter can bind a single name.
+units:
+  vendor/dep: cargo:dep@1.0.0
+  vendor/other: cargo:other@1.0.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//main
+    to: other//render
+    kind: direct
+    confidence: high
+    site: src/main.rs:5
+  - from: src/main.rs//main
+    to: other//util//run
+    kind: direct
+    confidence: high
+    site: src/main.rs:6
+no_edges:
+  - from: src/main.rs//main
+    to: dep//html//render
+  - from: src/main.rs//main
+    to: dep//html//util//run
+unresolved:
+  - caller: src/main.rs//main
+    site: src/main.rs:5
+    reason: unknown-receiver
+    method: render
+results:
+  - target: std//fs//remove_dir
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: other//util//run
+        site: src/main.rs:6
+        kind: direct
+        confidence: high
+      - key: cargo:other@1.0.0//src/util.rs//run
+        site: cargo:other@1.0.0//src/util.rs:1
+        kind: package
+        confidence: high
+      - key: std//fs//remove_dir
+        site: cargo:other@1.0.0//src/util.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: cargo:other@1.0.0//src/util.rs//run
+        site: cargo:other@1.0.0//src/util.rs:2
+        reached: true

@@ -163,6 +163,9 @@ type rustState struct {
 	// memberAnswers holds the answers of rustGlobUnitMember that no cut
 	// gave.
 	memberAnswers map[[2]string]memberAnswer
+	// useScopes holds the classes of each file that hold a use, which are
+	// inline modules.
+	useScopes map[string]map[string]bool
 }
 
 // crateRoute is the path in another crate that a path of a file names, and
@@ -204,6 +207,7 @@ func (b *builder) addRustUnits() {
 	s.globPaths = map[[2]string]globPath{}
 	s.members = map[[2]string]bool{}
 	s.memberAnswers = map[[2]string]memberAnswer{}
+	s.useScopes = map[string]map[string]bool{}
 	files := map[string][]string{}
 	for _, p := range b.paths {
 		if ix := b.byPath[p]; ix != nil && ix.Language == langcode.Rust {
@@ -572,13 +576,22 @@ type rustTarget struct {
 // rustPath resolves a path that a file writes: in the project, or else
 // through a name that a module binds to another crate.
 func (b *builder) rustPath(importer, written string) (rustTarget, bool) {
+	if t, ok := b.rustLocalPath(importer, written); ok {
+		return t, true
+	}
+	if path, file, ok := b.rustGlobPath(importer, written); ok {
+		return rustTarget{path: path, file: file}, true
+	}
+	return rustTarget{}, false
+}
+
+// rustLocalPath resolves a path that a file writes as rustPath does, with
+// no glob use of another crate.
+func (b *builder) rustLocalPath(importer, written string) (rustTarget, bool) {
 	if key, ok := b.resolveRust(importer, written); ok {
 		return rustTarget{key: key}, true
 	}
 	if path, file, ok := b.rustCratePath(importer, written); ok {
-		return rustTarget{path: path, file: file}, true
-	}
-	if path, file, ok := b.rustGlobPath(importer, written); ok {
 		return rustTarget{path: path, file: file}, true
 	}
 	return rustTarget{}, false
@@ -783,10 +796,15 @@ func (r rustResolver) FirstPartyFrom(importer, spec string) bool {
 // a local closure or a parameter can bind it. A single name that a glob use
 // of another crate or an exported macro of a dependency gives also gets the
 // edge to that item.
-func (b *builder) rustScopeFallback(sc *scope, _, first string, rest []string, target string) []resolution {
+func (b *builder) rustScopeFallback(sc *scope, caller, first string, rest []string, target string) []resolution {
 	written := strings.Join(append([]string{first}, rest...), "::")
 	record := resolution{fail: unknownReceiver(first)}
-	t, ok := b.rustPath(sc.ix.Path, written)
+	// A glob use of the file brings no name into an inline module, which
+	// reads its own uses.
+	t, ok := b.rustLocalPath(sc.ix.Path, written)
+	if !ok && !b.rustInUseScope(sc, caller) {
+		t, ok = b.rustPath(sc.ix.Path, written)
+	}
 	switch {
 	case ok && t.key != "":
 		return []resolution{b.walkNamespace(t.key)}
@@ -804,6 +822,30 @@ func (b *builder) rustScopeFallback(sc *scope, _, first string, rest []string, t
 		return []resolution{b.importedWalk(sc.ix, fileindex.Join(crate, first), crate, modules.FormImport, []string{first}), record}
 	}
 	return nil
+}
+
+// rustInUseScope reports whether a key of a file sits in an inline module
+// with a use of its own. The index keeps the uses of a file in one scope,
+// and an impl block holds no use, so a class of the file that holds a use
+// is an inline module.
+func (b *builder) rustInUseScope(sc *scope, key string) bool {
+	s := b.rustState()
+	scopes, ok := s.useScopes[sc.ix.Path]
+	if !ok {
+		scopes = map[string]bool{}
+		for _, imp := range sc.imports {
+			if k := sc.enclosing(imp.Line); k != sc.ix.Path && b.kindOf(k) == NodeClass {
+				scopes[k] = true
+			}
+		}
+		s.useScopes[sc.ix.Path] = scopes
+	}
+	for k := fileindex.Parent(key); k != sc.ix.Path && fileindex.HasKeyPrefix(k, sc.ix.Path); k = fileindex.Parent(k) {
+		if scopes[k] {
+			return true
+		}
+	}
+	return false
 }
 
 // rustMacroCrate returns a dependency of the crate of a file whose unit
@@ -876,6 +918,17 @@ func (b *builder) rustGlobPath(importer, written string) (string, string, bool) 
 	return g.join(written)
 }
 
+// rustPublic reports whether a provision gives an item that a glob use of
+// another crate brings: a module, a key of a third crate, or a pub item. A
+// private item stays out, as fn render of dep::html for use dep::html::*.
+func (b *builder) rustPublic(pv provision) bool {
+	if pv.module == "" {
+		return false
+	}
+	def := b.defs[pv.module]
+	return def == nil || def.Exported
+}
+
 // globPath is the path of the module of another crate that a glob use of
 // a file brings a name from, and the file that names the crate.
 type globPath struct {
@@ -907,7 +960,7 @@ func (b *builder) findGlobPath(sc *scope, first string) globPath {
 		}
 		ix := b.byPath[file]
 		o := origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, joinPath(path, []string{first})), form: modules.FormImport}
-		if slices.ContainsFunc(b.providers(o), func(pv provision) bool { return pv.module != "" }) {
+		if slices.ContainsFunc(b.providers(o), b.rustPublic) {
 			return globPath{path: path, file: file, ok: true}
 		}
 	}

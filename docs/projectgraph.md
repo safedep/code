@@ -526,7 +526,10 @@ Rust follows the same rules, with these additions.
   crates can bring each other's names, so a cycle guard cuts the read, and
   the link step keeps no provision of a unit that a cut read gives, as the
   case `rust/glob-use-crate-cycle` shows. A local closure or a parameter can
-  bind a single name, so such a call keeps its record too.
+  bind a single name, so such a call keeps its record too. A glob `use`
+  brings only a `pub` item, as in the case `rust/glob-use-private-item`.
+  A glob `use` of the root of the file brings no name into an inline module
+  with uses of its own, as in the case `rust/glob-use-inline-scope`.
 - `#[macro_export]` puts a macro at the root of its crate, from any module
   of the crate. So `dep::wipe` names the macro `wipe` of a private module
   of the unit, as in the case `rust/macro-export-module`. A call of a
