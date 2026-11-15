@@ -1,0 +1,71 @@
+source: safedep:hand
+description: >-
+  A route of the app has a path under a test path, as app/api/test or src/routes/tests. The route rule
+  names its files by their path in the app, so it marks them although they are test files, and probe
+  and render are found. Only the rule node.component skips a file of a test path.
+test_paths: [test, tests, spec]
+roots:
+  - key: app/api/test/route.ts
+    kind: framework
+    rule: node.next.route
+  - key: app/api/test/route.ts
+    kind: test
+    rule: test.files
+  - key: app/api/test/route.ts//GET
+    kind: framework
+    rule: node.next.route
+  - key: app/api/test/route.ts//GET
+    kind: test
+    rule: test.files
+  - key: app/spec/page.tsx
+    kind: framework
+    rule: node.next.route
+  - key: app/spec/page.tsx
+    kind: test
+    rule: test.files
+  - key: app/spec/page.tsx//Page
+    kind: framework
+    rule: node.next.route
+  - key: app/spec/page.tsx//Page
+    kind: test
+    rule: test.files
+exact_edges: true
+edges:
+  - from: app/api/test/route.ts//GET
+    to: plug//probe
+    kind: direct
+    confidence: high
+    site: app/api/test/route.ts:4
+  - from: app/spec/page.tsx//Page
+    to: plug//render
+    kind: direct
+    confidence: high
+    site: app/spec/page.tsx:4
+unresolved: []
+results:
+  - target: plug//probe
+    status: found
+    path:
+      - key: app/api/test/route.ts//GET
+        root: framework
+      - key: plug//probe
+        site: app/api/test/route.ts:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: app/api/test/route.ts//GET
+        site: app/api/test/route.ts:4
+        reached: true
+  - target: plug//render
+    status: found
+    path:
+      - key: app/spec/page.tsx//Page
+        root: framework
+      - key: plug//render
+        site: app/spec/page.tsx:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: app/spec/page.tsx//Page
+        site: app/spec/page.tsx:4
+        reached: true

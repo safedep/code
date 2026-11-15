@@ -1,0 +1,76 @@
+source: safedep:hand
+description: >-
+  A route of the app has a path under a test path, as app/api/test or src/routes/tests. The route rule
+  names its files by their path in the app, so it marks them although they are test files, and probe
+  and render are found. Only the rule node.component skips a file of a test path.
+test_paths: [test, tests, spec]
+roots:
+  - key: server.js
+    kind: manifest
+    rule: node.package-json
+  - key: src/routes/api/test/+server.ts
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/api/test/+server.ts
+    kind: test
+    rule: test.files
+  - key: src/routes/api/test/+server.ts//GET
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/api/test/+server.ts//GET
+    kind: test
+    rule: test.files
+  - key: src/routes/tests/+page.svelte
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/tests/+page.svelte
+    kind: test
+    rule: test.files
+exact_edges: true
+edges:
+  - from: server.js
+    to: plug//listen
+    kind: direct
+    confidence: high
+    site: server.js:3
+  - from: src/routes/api/test/+server.ts//GET
+    to: plug//probe
+    kind: direct
+    confidence: high
+    site: src/routes/api/test/+server.ts:4
+  - from: src/routes/tests/+page.svelte
+    to: plug//render
+    kind: direct
+    confidence: high
+    site: src/routes/tests/+page.svelte:3
+unresolved:
+  - caller: src/routes/tests/+page.svelte
+    site: src/routes/tests/+page.svelte:1
+    reason: markup
+results:
+  - target: plug//probe
+    status: found
+    path:
+      - key: src/routes/api/test/+server.ts//GET
+        root: framework
+      - key: plug//probe
+        site: src/routes/api/test/+server.ts:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/routes/api/test/+server.ts//GET
+        site: src/routes/api/test/+server.ts:4
+        reached: true
+  - target: plug//render
+    status: found
+    path:
+      - key: src/routes/tests/+page.svelte
+        root: framework
+      - key: plug//render
+        site: src/routes/tests/+page.svelte:3
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/routes/tests/+page.svelte
+        site: src/routes/tests/+page.svelte:3
+        reached: true

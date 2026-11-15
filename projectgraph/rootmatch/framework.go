@@ -15,9 +15,7 @@ import (
 // script, and only its top level runs.
 func (f *finder) matchPath(r rules.Rule) {
 	for _, ix := range f.applying(r) {
-		// A test file runs only under a test, so a path convention of the
-		// program does not make it a root of the program.
-		if !pathglob.MatchAny(r.Match.Path, ix.Path) || f.IsTest(ix.Path) {
+		if !pathglob.MatchAny(r.Match.Path, ix.Path) || r.SkipsTests && f.IsTest(ix.Path) {
 			continue
 		}
 		f.add(r, ix.Path)

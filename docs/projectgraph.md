@@ -754,10 +754,13 @@ A framework loads a component file of Vue, Svelte or Astro in ways that no
 static import shows: a route table with `() => import('./views/X.vue')`,
 an alias of the bundler as `@/`, `import.meta.glob`, or a file-based
 router, as the `pages` of Nuxt. So the rule `node.component` marks each
-component file as a root, with no `requires`. A path rule skips a test
-file, which runs only under a test, and the rule matches the name of a
-file, not of a directory, as the case `javascript/component-test-path`
-shows. A component file holds a `markup` record, so this root makes each
+component file as a root, with no `requires`. The rule has
+`skips_tests`, so it skips a component under a test path, which runs only
+under a test, and it matches the name of a file, not of a directory, as
+the case `javascript/component-test-path` shows. A route rule does not
+skip a test path, because a route can have one, as `app/api/test`. The
+cases `typescript/next-route-test-dir` and `javascript/sveltekit-test-dir`
+show it. A component file holds a `markup` record, so this root makes each
 JavaScript target that the search does not find read `uncertain`. A static import
 of a component file already did that in most such projects. The rule keeps
 the fallback on, because a Vite app starts at `index.html`, which no rule
