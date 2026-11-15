@@ -24,7 +24,7 @@ import (
 // change. Version 2 added the root kind to the first hop of a path.
 // Version 3 matches a target against the external key of a definition of a
 // unit of dependency code.
-const Version = "5"
+const Version = "6"
 
 const (
 	defaultMaxDepth = 64
