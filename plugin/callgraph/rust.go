@@ -59,6 +59,7 @@ var rustProfile = shapedProfile(languageProfile{
 		"macro_definition": {name: named("name"), header: true, reachable: true},
 	},
 	skipped:            []string{"use_declaration", "extern_crate_declaration", "attribute_item", "inner_attribute_item"},
+	paths:              []string{"scoped_identifier"},
 	values:             map[string]childRef{"generic_function": named("function"), "type_cast_expression": named("value")},
 	constructorMethods: []string{"new", "default"},
 	classKeywords:      []string{"Self"},

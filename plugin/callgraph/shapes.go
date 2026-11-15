@@ -29,6 +29,10 @@ type syntaxShapes struct {
 	// skipped are node types with no calls below them, such as imports.
 	skipped []string
 
+	// paths are the node types that name a value by a path, as config::LIMIT
+	// in Rust. The value is the namespace of the path.
+	paths []string
+
 	// values are the node types whose value is the expression in one child:
 	// the Rust turbofish, as in iter.collect::<Vec<_>>(), and a cast.
 	values map[string]childRef
@@ -228,6 +232,9 @@ func shapedProfile(profile languageProfile, shapes syntaxShapes) languageProfile
 	}
 	for _, nodeType := range shapes.skipped {
 		processors[nodeType] = skippedProcessor
+	}
+	for _, nodeType := range shapes.paths {
+		processors[nodeType] = p.path
 	}
 
 	members := maps.Clone(profile.members)
@@ -443,6 +450,19 @@ func (p *shapedProcessors) assignment(node *sitter.Node, treeData []byte, curren
 	}
 
 	return newProcessorResult()
+}
+
+// path gives the namespace of a path as its value. The first segment of a
+// path names a module, a type or a crate, not a variable. A walk of the
+// segments as names bound config of config::LIMIT as a variable of the
+// function, and a later call config::load(t) then read config as a receiver
+// and got no edge.
+func (p *shapedProcessors) path(node *sitter.Node, treeData []byte, currentNamespace string, callGraph *CallGraph, metadata processorMetadata) processorResult {
+	namespace := p.resolve(node, treeData, currentNamespace, callGraph, metadata)
+	if namespace == "" {
+		return newProcessorResult()
+	}
+	return p.valueResult(namespace, callGraph)
 }
 
 // scope processes the body of a declaration in the namespace of its name.
