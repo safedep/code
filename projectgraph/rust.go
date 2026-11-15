@@ -158,6 +158,7 @@ type rustState struct {
 	macros    map[*space]map[string]string
 	nested    map[string]bool
 	globbing  map[[2]string]bool
+	globPaths map[[2]string]globPath
 	members   map[[2]string]bool
 }
 
@@ -197,6 +198,7 @@ func (b *builder) addRustUnits() {
 	s.routes = map[[2]string]crateRoute{}
 	s.globs = map[string][]string{}
 	s.globbing = map[[2]string]bool{}
+	s.globPaths = map[[2]string]globPath{}
 	s.members = map[[2]string]bool{}
 	files := map[string][]string{}
 	for _, p := range b.paths {
@@ -851,12 +853,42 @@ func (b *builder) rustGlobPath(importer, written string) (string, string, bool) 
 	}
 	s := b.rustState()
 	k := [2]string{importer, first}
+	if g, ok := s.globPaths[k]; ok {
+		return g.join(written)
+	}
 	if s.globbing[k] {
 		b.cuts++
 		return "", "", false
 	}
 	s.globbing[k] = true
-	defer delete(s.globbing, k)
+	cuts := b.cuts
+	g := b.findGlobPath(sc, first)
+	delete(s.globbing, k)
+	// The answer reads providers, so it follows the rule of that memo.
+	if b.cuts == cuts {
+		s.globPaths[k] = g
+		b.memo(func() { delete(s.globPaths, k) })
+	}
+	return g.join(written)
+}
+
+// globPath is the path of the module of another crate that a glob use of
+// a file brings a name from, and the file that names the crate.
+type globPath struct {
+	path, file string
+	ok         bool
+}
+
+// join returns the path of a written path under the module.
+func (g globPath) join(written string) (string, string, bool) {
+	if !g.ok {
+		return "", "", false
+	}
+	return joinPath(g.path, strings.Split(written, "::")), g.file, true
+}
+
+func (b *builder) findGlobPath(sc *scope, first string) globPath {
+	importer := sc.ix.Path
 	for _, imp := range sc.wildcards {
 		if def := b.defs[sc.enclosing(imp.Line)]; def != nil && def.Kind == fileindex.DefClass {
 			continue
@@ -872,10 +904,10 @@ func (b *builder) rustGlobPath(importer, written string) (string, string, bool) 
 		ix := b.byPath[file]
 		o := origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, joinPath(path, []string{first})), form: modules.FormImport}
 		if slices.ContainsFunc(b.providers(o), func(pv provision) bool { return pv.module != "" }) {
-			return joinPath(path, strings.Split(written, "::")), file, true
+			return globPath{path: path, file: file, ok: true}
 		}
 	}
-	return "", "", false
+	return globPath{}
 }
 
 // rustNestedName reports whether an inline module of the graph defines a
