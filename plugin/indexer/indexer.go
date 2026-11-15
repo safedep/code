@@ -368,7 +368,10 @@ func (r *run) flush(ctx context.Context, batch []pending) error {
 	saveCtx, cancel := graceContext(ctx, saveGrace)
 	defer cancel()
 	if err := r.save(saveCtx, put, made); err != nil {
-		return errors.Join(err, ctx.Err())
+		if ctx.Err() != nil {
+			return errors.Join(err, ctx.Err())
+		}
+		return err
 	}
 	return parseErr
 }
@@ -377,10 +380,20 @@ func (r *run) flush(ctx context.Context, batch []pending) error {
 // run ends.
 var saveGrace = 10 * time.Second
 
-// graceContext returns a context that ends grace after ctx ends.
+// graceContext returns a context that ends grace after ctx ends, or grace
+// after the call if ctx has ended before it. The timer stops when the
+// returned context ends, so a write that returns early holds nothing.
 func graceContext(ctx context.Context, grace time.Duration) (context.Context, context.CancelFunc) {
 	out, cancel := context.WithCancel(context.WithoutCancel(ctx))
-	stop := context.AfterFunc(ctx, func() { time.AfterFunc(grace, cancel) })
+	stop := context.AfterFunc(ctx, func() {
+		t := time.NewTimer(grace)
+		defer t.Stop()
+		select {
+		case <-t.C:
+			cancel()
+		case <-out.Done():
+		}
+	})
 	return out, func() {
 		stop()
 		cancel()
