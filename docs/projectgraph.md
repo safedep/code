@@ -1078,11 +1078,21 @@ definition of the name reaches. A local of a declared function type, as
 `g` in `var g F = h`, has no record of its own. The function value has
 another name, so in Go the link step also gives each such site a
 `function-value` record. It does the same for a call of a member whose
-receiver it does not know, as `h.fn()`, when a field of a type of the graph
-has the name. In a search from the roots, the `reference` edge of the stored
-function covers the call, and the `function-value` record concerns no
-target. In a search with a source and in a summary, it concerns every
-target. The case `go/source-local-func` shows each form.
+receiver it does not know, as `h.fn()`, when a Go field of the graph has the
+name and can hold a function. The index marks a field of a type of data, as
+`Name string`, with `Data`, and such a field does not count. In a search
+from the roots, the `reference` edge of the stored function covers the
+call, and the `function-value` record concerns no target. In a search with
+a source and in a summary, it concerns every target.
+
+A local that the function binds once, to a function literal, and never
+assigns again, as `f` in `f := func() {...}; f()`, runs only the literal.
+The index gives the calls of the literal to the function, so the call of
+`f` is no call of the index and has no record. A range over a parameter, a
+local or a field of a declared function type, as `seq` in
+`func consume(seq func(func(int) bool)) { for range seq {} }`, calls the
+function value, so it gets a `function-value` record too. The case
+`go/source-local-func` shows each form.
 
 Three gaps stay. In each of them, a search with a source can read
 `not-found`.
@@ -1090,9 +1100,10 @@ Three gaps stay. In each of them, a search with a source can read
 - A field of a type of a package that no unit gives can hold a function,
   and no definition names that field. So a call of it keeps only the
   record with the name.
-- A range over a parameter or a local that holds a function, as
-  `for x := range seq`, has no record. The index does not know whether
-  `seq` holds a function or data.
+- A range over a value whose type the index does not see as a function
+  type has no record: a local that a call gives, as `seq := all()`, or a
+  field that no struct of the file declares. The index does not know
+  whether the value is a function or data.
 - In Rust, a call of a parameter or a local keeps only the record with the
   name.
 

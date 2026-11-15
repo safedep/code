@@ -27,7 +27,7 @@ var goRules = languageRules{
 	definitions: goDefinitions,
 	typedAt:     goTypedCall,
 	literalCall: goLiteralCall,
-	visitors:    []func(p *projection) visitor{referenceVisitor},
+	visitors:    []func(p *projection) visitor{referenceVisitor, goRangeVisitor},
 	references: &referenceSyntax{
 		holders: map[string]string{
 			"argument_list":         "",

@@ -32,3 +32,18 @@ func main() {
 		_ = s
 	}
 }
+
+type source struct {
+	each func(func(string) bool)
+}
+
+func consume(seq func(func(string) bool)) {
+	for range seq {
+	}
+}
+
+func drain(s source) {
+	for x := range s.each {
+		_ = x
+	}
+}

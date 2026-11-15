@@ -1,10 +1,13 @@
 source: safedep:hand
 description: >-
-  main ranges over the function walk and over the method value t.All, as Go 1.23 allows. The range
-  calls the function, and the function calls the body of the loop through yield. So the range
-  expression is a reference, as an argument is, and os.Remove and os/exec.LookPath are found through it. A
-  range clause with no reference lost both. The range over a slice names no function. No code uses unused,
-  so os.Getwd is not found.
+  main ranges over the function walk and over the method value t.All, as Go 1.23 allows. The range calls
+  the function, and the function calls the body of the loop through yield. So the range expression is a
+  reference, as an argument is, and os.Remove and os/exec.LookPath are found through it. A range clause
+  with no reference lost both. The range over a slice names no function. No code uses unused, so os.Getwd
+  is not found. consume ranges over its parameter seq of a function type, and drain over the field each of
+  a function type. Each range calls a function value that a search from a source does not reach, so it is
+  a function-value record, and each target is uncertain from consume and from drain. A range with no
+  record read not-found there.
 roots:
   - key: main.go
     kind: main
@@ -60,6 +63,12 @@ unresolved:
     site: main.go:17
     reason: unknown-receiver
     method: yield
+  - caller: main.go//consume
+    site: main.go:41
+    reason: function-value
+  - caller: main.go//drain
+    site: main.go:46
+    reason: function-value
 results:
   - target: os//Remove
     status: found
@@ -99,3 +108,25 @@ results:
       - caller: main.go//unused
         site: main.go:21
         reached: false
+  - target: os//Remove
+    sources: [main.go//consume]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//walk
+        site: main.go:9
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:41
+  - target: os//Getwd
+    sources: [main.go//drain]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//unused
+        site: main.go:21
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:46
