@@ -554,11 +554,7 @@ func pythonReceiverProject(source string) map[string]string {
 // receiverAnswer links a project of the files with the dependency code of
 // the language and answers the target of the row.
 func receiverAnswer(t *testing.T, languages []core.Language, language core.LanguageCode, files map[string]string, row receiverRow) string {
-	dir := t.TempDir()
-	for p, text := range files {
-		require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(dir, p)), 0o755))
-		require.NoError(t, os.WriteFile(filepath.Join(dir, p), []byte(text), 0o644))
-	}
+	dir := writeFiles(t, files)
 	cfg := codefs.LocalFileSystemConfig{AppDirectories: []string{dir}, ImportUnits: map[string]string{}}
 	units := map[string]iofs.FS{}
 	if !row.noDeps {

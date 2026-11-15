@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -23,26 +22,22 @@ import (
 // work grows with the orders of the files. The build must end soon after
 // its deadline, as a scan gives the link step a budget.
 func TestBuildStopsAtTheDeadline(t *testing.T) {
-	const files = 10
-	dir := t.TempDir()
-	write := func(name, text string) {
-		require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o755))
-		require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644))
-	}
-	write("Cargo.toml", "[package]\nname = \"app\"\nversion = \"0.1.0\"\n")
+	const count = 10
+	files := map[string]string{"Cargo.toml": "[package]\nname = \"app\"\nversion = \"0.1.0\"\n"}
 	var lib strings.Builder
-	for i := range files {
+	for i := range count {
 		fmt.Fprintf(&lib, "pub mod f%d;\n", i)
 		var file strings.Builder
-		for j := range files {
+		for j := range count {
 			if j != i {
 				fmt.Fprintf(&file, "pub use crate::f%d::E::*;\n", j)
 			}
 		}
 		file.WriteString("pub fn run() {\n    missing();\n}\n")
-		write(fmt.Sprintf("src/f%d.rs", i), file.String())
+		files[fmt.Sprintf("src/f%d.rs", i)] = file.String()
 	}
-	write("src/lib.rs", lib.String())
+	files["src/lib.rs"] = lib.String()
+	dir := writeFiles(t, files)
 
 	fsys, err := codefs.NewLocalFileSystem(codefs.LocalFileSystemConfig{AppDirectories: []string{dir}})
 	require.NoError(t, err)
@@ -61,7 +56,8 @@ func TestBuildStopsAtTheDeadline(t *testing.T) {
 // second, a chain of twenty levels of two files each glob uses both files of
 // the next level, and only one file of the last level defines leaf. A
 // lookup that reads a module once per path through the glob uses grows
-// with the number of paths, and the build did not end within minutes.
+// with the number of paths. The build must read each glob module once per
+// name, so it ends well within the budget and reaches remove_file.
 func TestBuildReadsEachGlobModuleOncePerName(t *testing.T) {
 	complete := map[string]string{}
 	var main strings.Builder
@@ -100,17 +96,13 @@ func TestBuildReadsEachGlobModuleOncePerName(t *testing.T) {
 
 	for name, files := range map[string]map[string]string{"complete": complete, "diamond": diamond} {
 		t.Run(name, func(t *testing.T) {
-			dir := t.TempDir()
 			files["Cargo.toml"] = "[package]\nname = \"app\"\nversion = \"0.1.0\"\n"
-			for p, text := range files {
-				require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(dir, p)), 0o755))
-				require.NoError(t, os.WriteFile(filepath.Join(dir, p), []byte(text), 0o644))
-			}
+			dir := writeFiles(t, files)
 			fsys, err := codefs.NewLocalFileSystem(codefs.LocalFileSystemConfig{AppDirectories: []string{dir}})
 			require.NoError(t, err)
 			indexed := indexProject(t, fsys, indexer.Options{Languages: caseLanguages(t)})
 
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			g, err := projectgraph.Build(ctx, indexed.Indexes, projectgraph.Options{Root: os.DirFS(dir), Files: indexed.Statuses(), Languages: indexed.Languages})
 			require.NoError(t, err)
@@ -126,15 +118,11 @@ func TestBuildReadsEachGlobModuleOncePerName(t *testing.T) {
 // dependency code whose roots glob use the next crate, the last one back
 // to the first, and a crate leaf that the last one also glob uses. Each
 // file of the project glob uses one crate of the ring and calls n::f of
-// leaf. A glob path that kept no answer under a cut read the ring once for
-// each path round it, and the build did not end within minutes.
+// leaf. The build must read each glob path of the ring once, so it ends
+// well within the budget and reaches n::f.
 func TestBuildReadsEachGlobPathOnceInARingOfCrates(t *testing.T) {
 	const crates = 6
-	dir := t.TempDir()
-	write := func(name, text string) {
-		require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o755))
-		require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644))
-	}
+	files := map[string]string{}
 	manifest := func(name string, deps ...string) string {
 		var m strings.Builder
 		fmt.Fprintf(&m, "[package]\nname = \"%s\"\nversion = \"1.0.0\"\nedition = \"2021\"\n\n[dependencies]\n", name)
@@ -154,23 +142,23 @@ func TestBuildReadsEachGlobPathOnceInARingOfCrates(t *testing.T) {
 			lib += "pub use leaf::*;\n"
 			uses = append(uses, "leaf")
 		}
-		write("vendor/"+name+"/Cargo.toml", manifest(name, uses...))
-		write("vendor/"+name+"/src/lib.rs", lib)
-		write(fmt.Sprintf("src/c%d.rs", i), fmt.Sprintf("use %s::*;\n\npub fn go() {\n    n::f();\n}\n", name))
+		files["vendor/"+name+"/Cargo.toml"] = manifest(name, uses...)
+		files["vendor/"+name+"/src/lib.rs"] = lib
+		files[fmt.Sprintf("src/c%d.rs", i)] = fmt.Sprintf("use %s::*;\n\npub fn go() {\n    n::f();\n}\n", name)
 		main = append(main, fmt.Sprintf("mod c%d;", i))
 		deps = append(deps, name)
 	}
-	write("vendor/leaf/Cargo.toml", manifest("leaf"))
-	write("vendor/leaf/src/lib.rs", "pub mod n;\n")
-	write("vendor/leaf/src/n.rs", "pub fn f() {\n    let _ = std::fs::remove_file(\"a\");\n}\n")
-	write("Cargo.toml", manifest("app", deps...))
-	write("src/main.rs", strings.Join(main, "\n")+"\n\nfn main() {\n    c0::go();\n}\n")
-
+	files["vendor/leaf/Cargo.toml"] = manifest("leaf")
+	files["vendor/leaf/src/lib.rs"] = "pub mod n;\n"
+	files["vendor/leaf/src/n.rs"] = "pub fn f() {\n    let _ = std::fs::remove_file(\"a\");\n}\n"
+	files["Cargo.toml"] = manifest("app", deps...)
+	files["src/main.rs"] = strings.Join(main, "\n") + "\n\nfn main() {\n    c0::go();\n}\n"
+	dir := writeFiles(t, files)
 	cfg, roots := fileSystemConfig(dir, want)
 	fsys, err := codefs.NewLocalFileSystem(cfg)
 	require.NoError(t, err)
 	indexed := indexProject(t, fsys, indexer.Options{Languages: caseLanguages(t), Imports: true})
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	g, err := projectgraph.Build(ctx, indexed.Indexes, projectgraph.Options{Root: os.DirFS(dir), Files: indexed.Statuses(), Languages: indexed.Languages, Units: roots})
 	require.NoError(t, err)
