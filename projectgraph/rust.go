@@ -159,6 +159,8 @@ type rustState struct {
 	macros    map[*space]map[string]string
 	nested    map[string]bool
 	glob      globMemo
+	// asker is the file of the innermost resolveRust in progress.
+	asker string
 	// useScopes holds the classes of each file that hold a use, which are
 	// inline modules.
 	useScopes map[string]map[string]bool
@@ -303,7 +305,7 @@ func (b *builder) rustPaths(module, written string) []string {
 // not-found.
 func (b *builder) rustScopePaths(importer, written string) []string {
 	out := b.rustPaths(b.rustState().modules[importer], written)
-	if first := rustFirstName(written); first == "crate" || first == "self" || first == "super" || strings.HasPrefix(written, "::") {
+	if rustCrateRoot(rustFirstName(written)) || strings.HasPrefix(written, "::") {
 		return out
 	}
 	parts := strings.Split(written, "::")
@@ -520,6 +522,8 @@ func (b *builder) resolveRust(importer, written string) (string, bool) {
 	}
 	s.resolving[k] = true
 	defer delete(s.resolving, k)
+	defer func(asker string) { s.asker = asker }(s.asker)
+	s.asker = importer
 	for _, p := range b.rustScopePaths(importer, written) {
 		if key, ok := b.resolveQualified(langcode.Rust, p); ok {
 			return key, true
@@ -544,16 +548,22 @@ func (r rustResolver) Module(importer, spec string) (string, string, bool) {
 		return t.key, "path", true
 	}
 	// A use can bind an item of the crate, as fl of use crate::ffi::flush
-	// as fl after pub use dep as ffi. A call of fl links the key itself,
-	// so the key needs its node. An edge to a key with no node leaves the
-	// target not-found. A module of a unit, as html of dep::html, runs no
-	// code, and its node would get a record of the unit for a walk that ends
-	// on a module.
-	key := r.b.rustCrateKey(t.file, t.path)
-	if r.b.rustUnitModule(t.file, t.path) {
-		return key, "crate", true
+	// as fl after pub use dep as ffi.
+	return r.b.rustCrateTarget(t.file, t.path), "crate", true
+}
+
+// rustCrateTarget returns the key of a path of another crate that a use or
+// a glob use of a file of the project binds. A call of the name links the
+// key itself, so the key needs its node. An edge to a key with no node
+// leaves the target not-found. A module of a unit, as html of dep::html,
+// runs no code, and its node would get a record of the unit for a walk that
+// ends on a module.
+func (b *builder) rustCrateTarget(file, path string) string {
+	key := b.rustCrateKey(file, path)
+	if b.rustUnitModule(file, path) {
+		return key
 	}
-	return r.b.external(key), "crate", true
+	return b.external(key)
 }
 
 // rustUnitModule reports whether a path of another crate that a file names
@@ -739,11 +749,16 @@ func (b *builder) rustCrate(file, module string) (string, string, bool) {
 // the name does not tell it, because the module of that file is no child.
 func (b *builder) rustLocalRoot(file, path string) bool {
 	first := rustFirstName(path)
-	switch first {
-	case "crate", "self", "super":
+	if rustCrateRoot(first) {
 		return true
 	}
 	return b.cargoOf(b.spaceOf(file)).Has(first) || b.rustModuleUnit(file, first) != nil || b.rustModuleUnit(file, "crate::"+first) != nil
+}
+
+// rustCrateRoot reports whether the first name of a path names the crate
+// of the file or a module of it by a keyword: crate, self or super.
+func rustCrateRoot(first string) bool {
+	return first == "crate" || first == "self" || first == "super"
 }
 
 // rustFirstName returns the first name of a path, as std for ::std::io.
@@ -768,7 +783,7 @@ func rustCrateNames(path string) (string, []string) {
 func (r rustResolver) FirstParty(spec string) bool {
 	first := rustFirstName(spec)
 	switch {
-	case first == "crate" || first == "self" || first == "super":
+	case rustCrateRoot(first):
 		return true
 	case rustRoots[first]:
 		return false
@@ -810,6 +825,12 @@ func (b *builder) rustScopeFallback(sc *scope, caller, first string, rest []stri
 			return []resolution{r}
 		}
 		return []resolution{r, record}
+	case len(rest) > 0 && rustCrateRoot(first):
+		// crate, self or super names no other crate. A path of the crate
+		// that does not resolve, as crate::m0::f0 for a name of a glob use
+		// of a crate with no source, is a record and no edge to the
+		// external key crate//m0//f0.
+		return []resolution{record}
 	case len(rest) > 0:
 		return []resolution{b.importedWalk(sc.ix, target, first, modules.FormImport, rest)}
 	}
@@ -888,11 +909,7 @@ func (b *builder) rustMacroCrate(ix *fileindex.Index, name string) (string, bool
 func (b *builder) rustGlobPath(importer, written string) (rustTarget, bool) {
 	sc := b.scopes[importer]
 	first := rustFirstName(written)
-	if sc == nil || len(sc.wildcards) == 0 || !b.hasUnits() || strings.HasPrefix(written, "::") {
-		return rustTarget{}, false
-	}
-	switch first {
-	case "crate", "self", "super":
+	if sc == nil || len(sc.wildcards) == 0 || !b.hasUnits() || strings.HasPrefix(written, "::") || rustCrateRoot(first) {
 		return rustTarget{}, false
 	}
 	a := b.rustState().glob.lookup(b, globKey{path: true, scope: importer, name: first}, func() globAnswer {
@@ -1045,18 +1062,34 @@ func (b *builder) rustCrateMember(sc *scope, path string) (string, bool) {
 }
 
 // rustGlobMember returns the external key of a name that a glob use of a
-// file of a unit brings from another crate, as inner::ifn for ifn after
-// pub use inner::*. A file of the project reads such a name in rustPath,
-// which keeps the record of a single name.
+// file brings from another crate, as inner::ifn for ifn after pub use
+// inner::*. A path through a module of the project reads it, as
+// crate::m0::f0 after pub use dep::m::* in m0. Without it the path read as
+// a crate of its own, crate//m0//f0. A file of the project reads a name of
+// its own glob uses in rustScopeFallback, which keeps the record of a
+// single name and knows the inline modules.
 func (b *builder) rustGlobMember(sc *scope, name string) (string, bool) {
-	if !b.rustUnitFile(sc.ix) {
+	unit := b.rustUnitFile(sc.ix)
+	if s := b.rustState(); !unit && sc.ix.Path == s.asker {
+		// A glob lookup keys its answer by the module, not by the asker,
+		// so it keeps no answer that this skip gave.
+		if len(s.glob.active) > 0 {
+			b.cut()
+		}
 		return "", false
 	}
 	t, ok := b.rustGlobPath(sc.ix.Path, name)
-	if !ok {
+	switch {
+	case !ok:
+		return "", false
+	case unit:
+		return b.rustCrateKey(t.file, t.path), true
+	case !b.rustUnitModule(t.file, strings.TrimSuffix(t.path, "::"+name)):
+		// A glob use of a crate with no source can give any name, so a
+		// later glob use can give the item. The path stays a record.
 		return "", false
 	}
-	return b.rustCrateKey(t.file, t.path), true
+	return b.rustCrateTarget(t.file, t.path), true
 }
 
 // rustGlobUnitMember returns what a glob use of a module brings for a name
