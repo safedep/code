@@ -1,12 +1,31 @@
 source: safedep:hand
 description: >-
   Astro loads each file of src/pages by its path, and no file imports it. Each component file is a root
-  of the rule node.component, and the rule node.astro.page marks each file of src/pages and its exports.
-  So danger of index.astro and store of the endpoint GET of api/data.ts are found.
+  of the rule node.component. The rule node.astro.page marks each file of src/pages with its exports, the
+  actions, the content config and astro.config.mjs. So danger of index.astro, store of the endpoint GET of
+  api/data.ts, act of an action, collect of the content config and integrate of the config are found.
 roots:
+  - key: astro.config.mjs
+    kind: framework
+    rule: node.astro.page
   - key: server.js
     kind: manifest
     rule: node.package-json
+  - key: src/actions/index.ts
+    kind: framework
+    rule: node.astro.page
+  - key: src/actions/index.ts//server
+    kind: framework
+    rule: node.astro.page
+  - key: src/actions/index.ts//server//go//handler
+    kind: framework
+    rule: node.astro.page
+  - key: src/content/config.ts
+    kind: framework
+    rule: node.astro.page
+  - key: src/content/config.ts//collections
+    kind: framework
+    rule: node.astro.page
   - key: src/pages/api/data.ts
     kind: framework
     rule: node.astro.page
@@ -21,11 +40,26 @@ roots:
     rule: node.component
 exact_edges: true
 edges:
+  - from: astro.config.mjs
+    to: plug//integrate
+    kind: direct
+    confidence: high
+    site: astro.config.mjs:3
   - from: server.js
     to: plug//listen
     kind: direct
     confidence: high
     site: server.js:3
+  - from: src/actions/index.ts//server//go//handler
+    to: plug//act
+    kind: direct
+    confidence: high
+    site: src/actions/index.ts:3
+  - from: src/content/config.ts
+    to: plug//collect
+    kind: direct
+    confidence: high
+    site: src/content/config.ts:3
   - from: src/pages/api/data.ts//GET
     to: plug//store
     kind: direct
@@ -66,4 +100,43 @@ results:
     call_sites:
       - caller: src/pages/api/data.ts//GET
         site: src/pages/api/data.ts:4
+        reached: true
+  - target: plug//integrate
+    status: found
+    path:
+      - key: astro.config.mjs
+        root: framework
+      - key: plug//integrate
+        site: astro.config.mjs:3
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: astro.config.mjs
+        site: astro.config.mjs:3
+        reached: true
+  - target: plug//collect
+    status: found
+    path:
+      - key: src/content/config.ts
+        root: framework
+      - key: plug//collect
+        site: src/content/config.ts:3
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/content/config.ts
+        site: src/content/config.ts:3
+        reached: true
+  - target: plug//act
+    status: found
+    path:
+      - key: src/actions/index.ts//server//go//handler
+        root: framework
+      - key: plug//act
+        site: src/actions/index.ts:3
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/actions/index.ts//server//go//handler
+        site: src/actions/index.ts:3
         reached: true

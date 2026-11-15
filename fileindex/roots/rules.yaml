@@ -98,7 +98,7 @@ rules:
     language: javascript
     kind: framework
     keeps_fallback: true
-    match: { path: ["*.vue", "*.svelte", "*.astro"] }
+    match: { path: ["**/*.vue", "**/*.svelte", "**/*.astro"] }
   - id: node.sveltekit.route
     language: javascript
     kind: framework
@@ -110,7 +110,7 @@ rules:
     kind: framework
     requires: [astro]
     keeps_fallback: true
-    match: { path: ["**/src/pages/**", "**/src/middleware.*", "**/src/middleware/index.*"] }
+    match: { path: ["**/src/pages/**", "**/src/middleware.*", "**/src/middleware/index.*", "**/src/actions/index.*", "**/src/content/config.*", "**/src/content.config.*", "**/astro.config.*"] }
   - id: node.serverless.handler
     language: javascript
     kind: framework

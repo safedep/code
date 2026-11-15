@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/projectgraph"
 )
 
@@ -107,8 +108,10 @@ type CallSite struct {
 // method that the graph names for it reaches. Such an uncertainty has no
 // key and counts once per search. The code of a Method, a Unit or a
 // Callback scope can hold uncertainties of its own, and the scope also
-// concerns what each of them concerns. With none of the fields, the
-// uncertainty concerns every target.
+// concerns what each of them concerns. Language scopes the markup of a
+// component file to the targets that code of the language family calls,
+// because the markup runs only code of that family. With none of the
+// fields, the uncertainty concerns every target.
 type Uncertainty struct {
 	Kind         UncertaintyKind   `json:"kind"`
 	Key          string            `json:"key,omitempty"`
@@ -118,6 +121,7 @@ type Uncertainty struct {
 	ImportPrefix string            `json:"import_prefix,omitempty"`
 	Unit         string            `json:"unit,omitempty"`
 	Callback     bool              `json:"callback,omitempty"`
+	Language     langcode.Code     `json:"language,omitempty"`
 }
 
 // Searched is what the search did. Version is the Version of the search

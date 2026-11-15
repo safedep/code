@@ -1,0 +1,46 @@
+source: safedep:hand
+description: >-
+  A Python service ships a Vue frontend. App.vue is a root of the rule node.component, and its markup
+  record runs only JavaScript code. So the record concerns the targets that code of the JavaScript family
+  calls, and os.remove, which only dead Python code calls, stays not-found. plug.other has no node, so no
+  edge tells who calls it, and the record keeps it uncertain.
+roots:
+  - key: frontend/src/App.vue
+    kind: framework
+    rule: node.component
+  - key: main.py
+    kind: manifest
+    rule: procfile
+exact_edges: true
+edges:
+  - from: frontend/src/App.vue
+    to: plug//render
+    kind: direct
+    confidence: high
+    site: frontend/src/App.vue:4
+  - from: main.py
+    to: shutil//rmtree
+    kind: direct
+    confidence: high
+    site: main.py:9
+  - from: main.py//unused
+    to: os//remove
+    kind: direct
+    confidence: high
+    site: main.py:6
+unresolved:
+  - caller: frontend/src/App.vue
+    site: frontend/src/App.vue:1
+    reason: markup
+results:
+  - target: os//remove
+    status: not-found
+    call_sites:
+      - caller: main.py//unused
+        site: main.py:6
+        reached: false
+  - target: plug//other
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: frontend/src/App.vue:1

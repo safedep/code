@@ -103,12 +103,17 @@ the project calls them, also in a file with no template.
 
 So the index gives each component file one record with the reason
 `markup`, at the first byte outside the code that is no space. The record
-has no method name, so it concerns every target of a search that reaches
-the file. A narrower scope, as the targets that the names of the script
-reach, would miss a name that the app registers elsewhere, and a target
-that only such a name reaches would read `not-found`. A project of
-component files thus reads `uncertain` for each target that it does not
-find, as it did when the index did not read component files.
+has no method name. A narrower scope, as the targets that the names of the
+script reach, would miss a name that the app registers elsewhere, and a
+target that only such a name reaches would read `not-found`. The markup
+runs only code of the JavaScript family, so the reach query scopes the
+record by its language with `Uncertainty.Language`. It concerns a target
+that a definition of the family is, or that an edge from a file of the
+family leads to, and a target with no node. A JavaScript project of
+component files thus reads `uncertain` for each JavaScript target that it
+does not find. A target that only the Python code of a project calls does
+not, as in the case `python/component-in-frontend`. A span and a summary
+still count the record for every target.
 
 A JSX element renders the component that its name holds, so the name is a
 reference, as a function value is. `<Child />` gives a `reference` edge
@@ -727,14 +732,18 @@ A framework loads a component file of Vue, Svelte or Astro in ways that no
 static import shows: a route table with `() => import('./views/X.vue')`,
 an alias of the bundler as `@/`, `import.meta.glob`, or a file-based
 router, as the `pages` of Nuxt. So the rule `node.component` marks each
-component file as a root, with no `requires`. A component file holds a
-`markup` record, so this root makes each target that the search does not
-find read `uncertain` in a project with a component file. A static import
+component file as a root, with no `requires`. A path rule skips a test
+file, which runs only under a test, and the rule matches the name of a
+file, not of a directory, as the case `javascript/component-test-path`
+shows. A component file holds a `markup` record, so this root makes each
+JavaScript target that the search does not find read `uncertain`. A static import
 of a component file already did that in most such projects. The rule keeps
 the fallback on, because a Vite app starts at `index.html`, which no rule
 reads. The rules `node.sveltekit.route` and `node.astro.page` mark the
 route files of SvelteKit and the pages of Astro, as `+page.ts`,
-`+server.ts` and `src/pages/api/data.ts`, with their exports. They keep
+`+server.ts` and `src/pages/api/data.ts`, with their exports. The Astro
+rule also marks the middleware, the actions, the content config and
+`astro.config.*`. They keep
 the fallback on too, because a framework can load a file by a convention
 that a rule does not list. Nuxt gets no rule of its own. It imports the
 code of `composables` and `utils` with no import statement, so no list of
