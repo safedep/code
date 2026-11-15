@@ -630,7 +630,7 @@ func (b *builder) undo(mark int) {
 func (b *builder) idle() bool {
 	s := b.rustState()
 	return len(b.expanding)+len(b.visiting)+len(b.reading)+len(b.stepping)+len(b.findingBases)+
-		len(s.routing)+b.ordering+len(s.resolving)+len(s.members)+len(s.globbing) == 0
+		len(s.routing)+b.ordering+len(s.resolving)+len(s.active) == 0
 }
 
 // uncut reports whether a read of the wildcard imports of a scope that

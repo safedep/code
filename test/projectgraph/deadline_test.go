@@ -121,3 +121,61 @@ func TestBuildReadsEachGlobModuleOncePerName(t *testing.T) {
 		})
 	}
 }
+
+// TestBuildReadsEachGlobPathOnceInARingOfCrates links six crates of
+// dependency code whose roots glob use the next crate, the last one back
+// to the first, and a crate leaf that the last one also glob uses. Each
+// file of the project glob uses one crate of the ring and calls n::f of
+// leaf. A glob path that kept no answer under a cut read the ring once for
+// each path round it, and the build did not end within minutes.
+func TestBuildReadsEachGlobPathOnceInARingOfCrates(t *testing.T) {
+	const crates = 6
+	dir := t.TempDir()
+	write := func(name, text string) {
+		require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644))
+	}
+	manifest := func(name string, deps ...string) string {
+		var m strings.Builder
+		fmt.Fprintf(&m, "[package]\nname = \"%s\"\nversion = \"1.0.0\"\nedition = \"2021\"\n\n[dependencies]\n", name)
+		for _, d := range deps {
+			fmt.Fprintf(&m, "%s = \"1.0.0\"\n", d)
+		}
+		return m.String()
+	}
+	want := expectation{Units: map[string]string{"vendor/leaf": "cargo:leaf@1.0.0"}}
+	var main, deps []string
+	for i := range crates {
+		name, next := fmt.Sprintf("ring_%d", i), fmt.Sprintf("ring_%d", (i+1)%crates)
+		want.Units["vendor/"+name] = fmt.Sprintf("cargo:%s@1.0.0", name)
+		lib := "pub use " + next + "::*;\n"
+		uses := []string{next}
+		if i == crates-1 {
+			lib += "pub use leaf::*;\n"
+			uses = append(uses, "leaf")
+		}
+		write("vendor/"+name+"/Cargo.toml", manifest(name, uses...))
+		write("vendor/"+name+"/src/lib.rs", lib)
+		write(fmt.Sprintf("src/c%d.rs", i), fmt.Sprintf("use %s::*;\n\npub fn go() {\n    n::f();\n}\n", name))
+		main = append(main, fmt.Sprintf("mod c%d;", i))
+		deps = append(deps, name)
+	}
+	write("vendor/leaf/Cargo.toml", manifest("leaf"))
+	write("vendor/leaf/src/lib.rs", "pub mod n;\n")
+	write("vendor/leaf/src/n.rs", "pub fn f() {\n    let _ = std::fs::remove_file(\"a\");\n}\n")
+	write("Cargo.toml", manifest("app", deps...))
+	write("src/main.rs", strings.Join(main, "\n")+"\n\nfn main() {\n    c0::go();\n}\n")
+
+	cfg, roots := fileSystemConfig(dir, want)
+	fsys, err := codefs.NewLocalFileSystem(cfg)
+	require.NoError(t, err)
+	indexed := indexProject(t, fsys, indexer.Options{Languages: caseLanguages(t), Imports: true})
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	g, err := projectgraph.Build(ctx, indexed.Indexes, projectgraph.Options{Root: os.DirFS(dir), Files: indexed.Statuses(), Languages: indexed.Languages, Units: roots})
+	require.NoError(t, err)
+	results, err := reach.Reach(ctx, g, reach.Query{Targets: targetsOf(t, "leaf//n//f")})
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, reach.Found, results[0].Status)
+}

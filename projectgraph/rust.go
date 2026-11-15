@@ -158,19 +158,18 @@ type rustState struct {
 	globs     map[string][]string
 	macros    map[*space]map[string]string
 	nested    map[string]bool
-	globPaths map[[2]string]globPath
-	// globbing and members hold the depth of each glob path and glob
-	// member that a lookup reads now. depth is the depth of the last one,
-	// and low the least depth that a cut of the read in progress hit.
-	globbing map[[2]string]int
-	members  map[[2]string]int
-	depth    int
-	low      int
-	// memberAnswers holds the answers of rustGlobUnitMember that no cut of
-	// an outer read gave, and visited the other answers of the lookup in
-	// progress.
-	memberAnswers map[[2]string]memberAnswer
-	visited       map[[2]string]memberAnswer
+	// active holds the depth of each glob path and glob member that a
+	// lookup reads now. depth is the depth of the last one, and low the
+	// least depth that a cut of the read in progress hit.
+	active map[globKey]int
+	depth  int
+	low    int
+	// kept holds the answers of the glob lookups that no cut of an outer
+	// read gave, for the build. visited holds the other answers of the
+	// outermost lookup in progress, and visits the order of their reads.
+	kept    map[globKey]globAnswer
+	visited map[globKey]globAnswer
+	visits  []globKey
 	// useScopes holds the classes of each file that hold a use, which are
 	// inline modules.
 	useScopes map[string]map[string]bool
@@ -215,12 +214,10 @@ func (b *builder) addRustUnits() {
 	s.routing = map[[2]string]bool{}
 	s.routes = map[[2]string]crateRoute{}
 	s.globs = map[string][]string{}
-	s.globbing = map[[2]string]int{}
+	s.active = map[globKey]int{}
 	s.low = math.MaxInt
-	s.visited = map[[2]string]memberAnswer{}
-	s.globPaths = map[[2]string]globPath{}
-	s.members = map[[2]string]int{}
-	s.memberAnswers = map[[2]string]memberAnswer{}
+	s.kept = map[globKey]globAnswer{}
+	s.visited = map[globKey]globAnswer{}
 	s.useScopes = map[string]map[string]bool{}
 	s.spaceNames = map[*space]map[string]bool{}
 	files := map[string][]string{}
@@ -936,27 +933,10 @@ func (b *builder) rustGlobPath(importer, written string) (string, string, bool) 
 	case "crate", "self", "super":
 		return "", "", false
 	}
-	s := b.rustState()
-	k := [2]string{importer, first}
-	if g, ok := s.globPaths[k]; ok {
-		return g.join(written)
-	}
-	if d, ok := s.globbing[k]; ok {
-		b.globCut(d)
-		return "", "", false
-	}
-	s.depth++
-	s.globbing[k] = s.depth
-	cuts := b.cuts
-	g := b.findGlobPath(sc, first)
-	delete(s.globbing, k)
-	s.depth--
-	// The answer reads providers, so it follows the rule of that memo.
-	if b.cuts == cuts {
-		s.globPaths[k] = g
-		b.memo(func() { delete(s.globPaths, k) })
-	}
-	return g.join(written)
+	a := b.globLookup(globKey{path: true, a: importer, b: first}, func() globAnswer {
+		return globAnswer{path: b.findGlobPath(sc, first)}
+	})
+	return a.path.join(written)
 }
 
 // rustPublic reports whether a provision gives an item that a glob use of
@@ -1055,48 +1035,112 @@ func (b *builder) rustGlobMember(sc *scope, name string) (string, bool) {
 // that no definition of the module has: a child module, or the target of a
 // use or of a glob use of the module, as leaf for use crate::sub::* with
 // pub mod leaf in sub.
-//
-// Modules can bring each other with glob uses, in a diamond or in a cycle.
-// A walk of each path through them grows with the number of paths. So one
-// lookup reads each module once, and a module that it reads again gives
-// its first answer. A read of a module that the lookup reads now is a cut.
-// An answer stays for the build when each cut under it hit the module or a
-// module under it, as the low link of Tarjan tells. Such a cut leaves out
-// no path, because the module in progress reads that path itself.
 func (b *builder) rustGlobUnitMember(mod, name string) (string, bool) {
+	a := b.globLookup(globKey{a: mod, b: name}, func() globAnswer {
+		key, ok := b.unitMember(mod, name)
+		return globAnswer{key: key, ok: ok}
+	})
+	return a.key, a.ok
+}
+
+// globKey names a glob lookup: the glob path of a file and a first name, or
+// the glob member of a module and a name.
+type globKey struct {
+	path bool
+	a, b string
+}
+
+// globAnswer is the answer of a glob lookup, with the least depth that a cut
+// under it hit.
+type globAnswer struct {
+	key  string
+	ok   bool
+	path globPath
+	low  int
+}
+
+// found reports whether a glob lookup found its item.
+func (a globAnswer) found() bool {
+	return a.ok || a.path.ok
+}
+
+// keep keeps the answer of a glob lookup for the build.
+func (b *builder) keep(k globKey, a globAnswer) {
 	s := b.rustState()
-	k := [2]string{mod, name}
-	if m, ok := s.memberAnswers[k]; ok {
-		return m.key, m.ok
+	s.kept[k] = a
+	b.memo(func() { delete(s.kept, k) })
+}
+
+// globLookup reads a glob lookup once. Modules and crates can bring each
+// other with glob uses, in a diamond or in a cycle, and a walk of each path
+// through them grows with the number of paths. So the outermost lookup
+// reads each lookup once, and a lookup that it reads again gives its first
+// answer. A read of a lookup in progress is a cut. An answer stays for the
+// build when each cut under it hit the lookup or a lookup under it, as the
+// low link of Tarjan tells, and when no other guard cut it. Such a cut
+// leaves out no path, because the lookup in progress reads that path
+// itself.
+//
+// A visited answer is part of the lookup that read it. When that lookup
+// stays for the build, a visited answer under it that found its item stays
+// too, so a later read takes the same way through a cycle of crates. A
+// later read of dep_3 of a cycle dep_0 to dep_3 with pub use dep_d::* in
+// dep_3 took dep_0 first and sent the cycle round with no end. Any other
+// visited answer under it goes, because a later read with another depth
+// would take its low for its own, and it can lack an item that the lookup
+// found after it. When the lookup does not stay, their low falls to its
+// low, because they lack what it lacks.
+func (b *builder) globLookup(k globKey, read func() globAnswer) globAnswer {
+	s := b.rustState()
+	if a, ok := s.kept[k]; ok {
+		return a
 	}
-	if d, ok := s.members[k]; ok {
+	if d, ok := s.active[k]; ok {
 		b.globCut(d)
-		return "", false
+		return globAnswer{}
 	}
-	if m, ok := s.visited[k]; ok {
-		b.globCut(m.low)
-		return m.key, m.ok
+	if a, ok := s.visited[k]; ok {
+		b.globCut(a.low)
+		return a
 	}
-	if len(s.members) == 0 {
-		defer clear(s.visited)
+	if len(s.active) == 0 {
+		defer func() {
+			clear(s.visited)
+			s.visits = s.visits[:0]
+		}()
 	}
 	s.depth++
 	d := s.depth
-	s.members[k] = d
-	low, cuts := s.low, b.cuts-s.cuts
+	s.active[k] = d
+	low, cuts, mark := s.low, b.cuts-s.cuts, len(s.visits)
 	s.low = math.MaxInt
-	key, ok := b.unitMember(mod, name)
-	m := memberAnswer{key: key, ok: ok, low: s.low}
+	a := read()
+	a.low = s.low
 	s.low = min(low, s.low)
-	delete(s.members, k)
+	delete(s.active, k)
 	s.depth--
-	if m.low >= d && b.cuts-s.cuts == cuts {
-		s.memberAnswers[k] = m
-		b.memo(func() { delete(s.memberAnswers, k) })
-	} else {
-		s.visited[k] = m
+	under := s.visits[mark:]
+	if a.low >= d && b.cuts-s.cuts == cuts {
+		b.keep(k, a)
+		for _, v := range under {
+			if e, ok := s.visited[v]; ok && e.found() && e.low >= d {
+				b.keep(v, e)
+			}
+			delete(s.visited, v)
+		}
+		s.visits = s.visits[:mark]
+		return a
 	}
-	return key, ok
+	for _, v := range under {
+		if e, ok := s.visited[v]; ok && e.low > a.low {
+			e.low = a.low
+			s.visited[v] = e
+		}
+	}
+	s.visited[k] = a
+	s.visits = append(s.visits, k)
+	b.memo(func() { delete(s.visited, k) })
+	return a
 }
 
 // globCut counts a read that the guard of a glob path or of a glob member
@@ -1121,14 +1165,6 @@ func (b *builder) globRead() func() bool {
 		s.low = min(low, s.low)
 		return whole
 	}
-}
-
-// memberAnswer is the answer of rustGlobUnitMember for a module and a name,
-// with the least depth that a cut under it hit.
-type memberAnswer struct {
-	key string
-	ok  bool
-	low int
 }
 
 // rustUnitFile reports whether a file is Rust code of a unit of dependency
