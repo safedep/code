@@ -448,6 +448,9 @@ func joinPath(module string, parts []string) string {
 func (b *builder) resolveRust(importer, written string) (string, bool) {
 	s := b.rustState()
 	k := [2]string{importer, written}
+	if b.asked != nil {
+		b.asked[k] = true
+	}
 	if s.resolving[k] {
 		return "", false
 	}

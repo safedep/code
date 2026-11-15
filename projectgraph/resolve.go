@@ -500,6 +500,13 @@ type wildcardRead struct {
 	read bool
 }
 
+// wildcardMods holds the modules of the wildcard imports of a scope, and
+// the Rust paths that the read of them asked the resolving guard for.
+type wildcardMods struct {
+	mods  []string
+	asked map[[2]string]bool
+}
+
 // wildcardModules returns the modules of the wildcard imports of a scope,
 // in the order of the imports. The resolution of a module can walk a unit
 // whose name lookup reads the wildcard imports of the same scope, as the
@@ -510,9 +517,13 @@ type wildcardRead struct {
 // So a read of a scope that a resolution reads now gets the modules of the
 // last whole pass, and the passes repeat until the modules stay the same.
 // A module that only an import after it brings into scope thus resolves.
-// No table keeps the modules after the read. A resolution under the
-// resolving guard of a Rust path gives a part of the modules, and a table
-// would keep that part for the whole build.
+//
+// A cycle guard that an outer resolution holds can cut a read short.
+// app/src/prelude.rs has pub use core_lib::*, and the resolution of that
+// path reads the glob use again under its own resolving guard. A table
+// that kept that list gave no module for the whole build, and a target
+// under the crate read not-found. So the table keeps and gives a list only
+// where uncut holds, and any other read resolves the imports again.
 //
 // A cycle of wildcard imports across files still costs time that grows
 // with the number of files. A file that each other file of the cycle reads
@@ -525,9 +536,17 @@ func (b *builder) wildcardModules(sc *scope) []string {
 		r.read = true
 		return r.mods
 	}
+	if w := b.wildcardMods[sc]; w != nil && b.uncut(w.asked) {
+		return w.mods
+	}
+	// A read inside another read adds the paths that it asks for to the
+	// record of the outer one.
+	outer := b.wildcardMods != nil && b.asked == nil
+	if outer {
+		b.asked = map[[2]string]bool{}
+	}
 	r := &wildcardRead{}
 	b.expanding[sc] = r
-	defer delete(b.expanding, sc)
 	for range len(sc.wildcards) + 1 {
 		r.read = false
 		var mods []string
@@ -542,7 +561,37 @@ func (b *builder) wildcardModules(sc *scope) []string {
 			break
 		}
 	}
+	delete(b.expanding, sc)
+	if outer {
+		if b.uncut(b.asked) {
+			b.wildcardMods[sc] = &wildcardMods{mods: r.mods, asked: b.asked}
+		}
+		b.asked = nil
+	}
 	return r.mods
+}
+
+// uncut reports whether a read of the wildcard imports of a scope that
+// asks the resolving guard for the paths gets no answer from a resolution
+// in progress. Such a read gives the same modules each time. The guards
+// are set and cleared in the order of a stack. So at the end of a read, a
+// path in progress was set before the read, and the guard cut the read if
+// the read asked for it.
+//
+// uncut compares the paths of the resolving guard only. On the Rust
+// corpus, the reads under any other guard cost less than 3% of the read
+// time. So any other state in progress fails the check.
+func (b *builder) uncut(asked map[[2]string]bool) bool {
+	s := b.rustState()
+	if len(b.expanding)+len(b.visiting)+len(b.reading)+len(b.stepping)+len(b.findingBases)+len(s.routing)+b.ordering > 0 {
+		return false
+	}
+	for k := range s.resolving {
+		if asked[k] {
+			return false
+		}
+	}
+	return true
 }
 
 // superKeyword is the receiver of a call of a method of the base class, as

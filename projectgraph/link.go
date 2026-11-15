@@ -149,6 +149,12 @@ type builder struct {
 	// lets the resolutions of one file run on past the budget of the caller,
 	// and a cycle of glob uses can keep them running for hours.
 	stopped atomic.Bool
+	// wildcardMods holds the modules of the wildcard imports of each scope
+	// whose read no cycle guard cut, as wildcardModules describes. asked
+	// holds the Rust paths that the read whose modules can go to the table
+	// asks the resolving guard for, and is nil with no such read.
+	wildcardMods map[*scope]*wildcardMods
+	asked        map[[2]string]bool
 	// unitTypes holds the type that a unit of dependency code gives for
 	// each external key, or "".
 	unitTypes map[string]string
@@ -172,7 +178,10 @@ type builder struct {
 	// files declare a package or a namespace.
 	namespaces map[langcode.Code]*namespaces
 
-	mros     map[string][]string
+	mros map[string][]string
+	// ordering counts the classes whose MRO a lookup reads now. A read of
+	// such a class gets the class alone.
+	ordering int
 	children map[string][]string
 	// aliases holds the definitions of each class that the language joins
 	// to one class, the class too.
@@ -362,10 +371,12 @@ func (b *builder) linkAll(ctx context.Context) error {
 		}
 	}
 	// The classes are whole from here, so the members of a group of
-	// aliases can be one table.
+	// aliases can be one table. A read of the wildcard imports of a scope
+	// before this point can miss a class, so wildcardMods starts here.
 	b.groupMembers = map[string]map[string]string{}
 	b.groupRecords = map[string][]classRecord{}
 	b.externalBases = map[string]string{}
+	b.wildcardMods = map[*scope]*wildcardMods{}
 
 	for _, p := range b.paths {
 		if err := ctx.Err(); err != nil {

@@ -66,6 +66,7 @@ func (b *builder) mro(class string) []string {
 		return order
 	}
 	b.mros[class] = []string{class}
+	b.ordering++
 	var order []string
 	if rec, ok := b.classes[class]; ok && profileOf(rec.ix.Language).c3 {
 		order = b.c3(class)
@@ -73,6 +74,7 @@ func (b *builder) mro(class string) []string {
 	if order == nil {
 		order = b.depthFirst(class, 0, map[string]bool{})
 	}
+	b.ordering--
 	b.mros[class] = order
 	return order
 }
