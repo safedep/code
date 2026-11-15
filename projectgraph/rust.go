@@ -146,7 +146,8 @@ var rustRoots = map[string]bool{"std": true, "core": true, "alloc": true}
 // rustState is the state of Rust in a build: the crates of each space, the
 // module path of each Rust file, the paths that a resolution or a crate
 // route reads now, by the file that writes them, the module paths of the
-// glob uses of each file, and the exported macros of each unit by name.
+// glob uses of each file, the exported macros of each unit by name, and
+// the names of the types of the inline modules.
 type rustState struct {
 	cargo     map[*space]*modules.Cargo
 	modules   map[string]string
@@ -155,6 +156,7 @@ type rustState struct {
 	routes    map[[2]string]crateRoute
 	globs     map[string][]string
 	macros    map[*space]map[string]string
+	nested    map[string]bool
 }
 
 // crateRoute is the path in another crate that a path of a file names, and
@@ -376,28 +378,37 @@ func (b *builder) rustExportedMacro(sp *space, names []string) (string, bool) {
 	if len(names) != 1 {
 		return "", false
 	}
+	key, ok := b.rustMacros()[sp][names[0]]
+	return key, ok
+}
+
+// rustMacros returns the macros that #[macro_export] puts at the root of
+// the crate of each unit, by name.
+func (b *builder) rustMacros() map[*space]map[string]string {
 	s := b.rustState()
-	if s.macros == nil {
-		s.macros = map[*space]map[string]string{}
+	if s.macros != nil {
+		return s.macros
 	}
-	macros, ok := s.macros[sp]
-	if !ok {
-		macros = map[string]string{}
-		for _, p := range b.paths {
-			ix := b.byPath[p]
-			if ix == nil || ix.Language != langcode.Rust || fileindex.PackageOf(p) != sp.unit {
+	s.macros = map[*space]map[string]string{}
+	for _, p := range b.paths {
+		ix := b.byPath[p]
+		sp := b.spaces[fileindex.PackageOf(p)]
+		if ix == nil || ix.Language != langcode.Rust || sp == nil || sp.unit == "" {
+			continue
+		}
+		for _, def := range ix.Definitions {
+			if !slices.Contains(def.Decorators, rustMacroExport) {
 				continue
 			}
-			for _, def := range ix.Definitions {
-				if _, taken := macros[def.Name]; !taken && slices.Contains(def.Decorators, rustMacroExport) {
-					macros[def.Name] = def.Key
-				}
+			if s.macros[sp] == nil {
+				s.macros[sp] = map[string]string{}
+			}
+			if _, taken := s.macros[sp][def.Name]; !taken {
+				s.macros[sp][def.Name] = def.Key
 			}
 		}
-		s.macros[sp] = macros
 	}
-	key, ok := macros[names[0]]
-	return key, ok
+	return s.macros
 }
 
 // rustMacroExport is the attribute that puts a macro at the root of its
@@ -789,7 +800,12 @@ func (b *builder) rustScopeFallback(sc *scope, _, first string, rest []string, t
 // tell a call of a macro from a call of a function, so the caller keeps
 // the record of the name too.
 func (b *builder) rustMacroCrate(ix *fileindex.Index, name string) (string, bool) {
-	if !b.hasUnits() {
+	exported := false
+	for _, macros := range b.rustMacros() {
+		_, ok := macros[name]
+		exported = exported || ok
+	}
+	if !exported {
 		return "", false
 	}
 	for _, dep := range b.cargoOf(b.spaceOf(ix.Path)).Dependencies() {
@@ -842,6 +858,22 @@ func (b *builder) rustGlobPath(importer, written string) (string, string, bool) 
 		}
 	}
 	return "", "", false
+}
+
+// rustNestedName reports whether an inline module of the graph defines a
+// type of the name. Most names in a Rust file name no such type, and a walk
+// up the classes that hold each name cost a fifth of the link step.
+func (b *builder) rustNestedName(name string) bool {
+	s := b.rustState()
+	if s.nested == nil {
+		s.nested = map[string]bool{}
+		for key := range b.g.Nodes {
+			if b.isType(key) && b.isType(fileindex.Parent(key)) {
+				s.nested[fileindex.Last(key)] = true
+			}
+		}
+	}
+	return s.nested[name]
 }
 
 // joinImplBlocks makes an impl block of a type of another module one class

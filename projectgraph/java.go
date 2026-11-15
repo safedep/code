@@ -196,7 +196,7 @@ func (b *builder) selfName(class, caller, name string) string {
 // module of another file can hold it too, as Loader in module Shop for
 // Shop::Loader.
 func (b *builder) nestedType(sc *scope, from, name string) (string, bool) {
-	if !sc.profile.nestedTypes {
+	if !sc.profile.nestedTypes || sc.profile.code == langcode.Rust && !b.rustNestedName(name) {
 		return "", false
 	}
 	for class, ok := b.enclosingClass(from); ok; class, ok = b.enclosingClass(fileindex.Parent(class)) {
