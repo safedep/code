@@ -57,13 +57,16 @@ var manifestFields = map[string][]string{
 // on one of them: a package.json, a pyproject.toml, a setup.py, a Pipfile,
 // a requirements file, a go.mod, a composer.json or a Cargo.toml. A project
 // whose manifests declare no dependency gives no evidence, so the rule
-// applies.
+// applies. KeepsFallback marks a rule whose roots do not turn off the
+// library-surface roots. Such a rule names files that a framework loads,
+// but not the entry that loads them, as the index.html of a Vite app.
 type Rule struct {
-	ID       string   `yaml:"id"`
-	Language string   `yaml:"language"`
-	Kind     Kind     `yaml:"kind"`
-	Requires []string `yaml:"requires,omitempty"`
-	Match    Match    `yaml:"match"`
+	ID            string   `yaml:"id"`
+	Language      string   `yaml:"language"`
+	Kind          Kind     `yaml:"kind"`
+	Requires      []string `yaml:"requires,omitempty"`
+	KeepsFallback bool     `yaml:"keeps_fallback,omitempty"`
+	Match         Match    `yaml:"match"`
 }
 
 // MatchKey names one key of a Match.

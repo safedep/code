@@ -1,0 +1,69 @@
+source: safedep:hand
+description: >-
+  Astro loads each file of src/pages by its path, and no file imports it. Each component file is a root
+  of the rule node.component, and the rule node.astro.page marks each file of src/pages and its exports.
+  So danger of index.astro and store of the endpoint GET of api/data.ts are found.
+roots:
+  - key: server.js
+    kind: manifest
+    rule: node.package-json
+  - key: src/pages/api/data.ts
+    kind: framework
+    rule: node.astro.page
+  - key: src/pages/api/data.ts//GET
+    kind: framework
+    rule: node.astro.page
+  - key: src/pages/index.astro
+    kind: framework
+    rule: node.astro.page
+  - key: src/pages/index.astro
+    kind: framework
+    rule: node.component
+exact_edges: true
+edges:
+  - from: server.js
+    to: plug//listen
+    kind: direct
+    confidence: high
+    site: server.js:3
+  - from: src/pages/api/data.ts//GET
+    to: plug//store
+    kind: direct
+    confidence: high
+    site: src/pages/api/data.ts:4
+  - from: src/pages/index.astro
+    to: plug//danger
+    kind: direct
+    confidence: high
+    site: src/pages/index.astro:3
+unresolved:
+  - caller: src/pages/index.astro
+    site: src/pages/index.astro:1
+    reason: markup
+results:
+  - target: plug//danger
+    status: found
+    path:
+      - key: src/pages/index.astro
+        root: framework
+      - key: plug//danger
+        site: src/pages/index.astro:3
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/pages/index.astro
+        site: src/pages/index.astro:3
+        reached: true
+  - target: plug//store
+    status: found
+    path:
+      - key: src/pages/api/data.ts//GET
+        root: framework
+      - key: plug//store
+        site: src/pages/api/data.ts:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/pages/api/data.ts//GET
+        site: src/pages/api/data.ts:4
+        reached: true

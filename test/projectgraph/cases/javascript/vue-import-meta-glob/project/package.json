@@ -1,0 +1,5 @@
+{
+  "name": "vue-import-meta-glob",
+  "main": "src/main.js",
+  "dependencies": { "vue": "^3.4.0" }
+}

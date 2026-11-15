@@ -1,0 +1,5 @@
+{
+  "name": "vue-route-dynamic-import",
+  "main": "src/main.js",
+  "dependencies": { "vue": "^3.4.0", "vue-router": "^4.3.0" }
+}

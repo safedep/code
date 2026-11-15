@@ -16,8 +16,9 @@ import (
 // markRoots adds the roots that the rules mark. With no root of kind main,
 // manifest or framework, every exported definition and every module top
 // level of a file that is not a test becomes a root of kind
-// library-surface. Dependency code runs only when the project calls it, so
-// it holds no root.
+// library-surface. A root of a rule that keeps the fallback does not count
+// here. Dependency code runs only when the project calls it, so it holds no
+// root.
 func (b *builder) markRoots(ctx context.Context) error {
 	indexes := make([]*fileindex.Index, 0, len(b.byPath))
 	for _, p := range b.paths {
@@ -48,11 +49,15 @@ func (b *builder) markRoots(ctx context.Context) error {
 	}
 	b.problems = append(b.problems, problems...)
 
+	keeps := map[string]bool{}
+	for _, r := range b.rules {
+		keeps[r.ID] = r.KeepsFallback
+	}
 	entry := false
 	for _, r := range found {
 		b.addRootAt(r.Key, r.Kind, r.Rule, Site(r.Site))
 		helper := b.profileAt(r.Key).helperProgram
-		entry = entry || r.Kind != RootTest && (helper == nil || !helper(fileindex.Unit(r.Key)))
+		entry = entry || r.Kind != RootTest && !keeps[r.Rule] && (helper == nil || !helper(fileindex.Unit(r.Key)))
 		// A Go program initializes its package before main runs, so the
 		// module top level of each file of the package is a root too.
 		if u := b.unitOf[fileindex.Unit(r.Key)]; r.Kind == RootMain && u != nil && b.profileAt(r.Key).loadsPackages {

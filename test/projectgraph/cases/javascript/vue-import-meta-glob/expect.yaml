@@ -1,0 +1,66 @@
+source: safedep:hand
+description: >-
+  main.js loads each page of src/pages by import.meta.glob, which the index does not read, so no path
+  leads to About.vue. Each component file is a root of the rule node.component, so the call of danger in
+  the script of About.vue is found.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+  - key: src/pages/About.vue
+    kind: framework
+    rule: node.component
+exact_edges: true
+edges:
+  - from: src/main.js
+    to: vue//createApp
+    kind: direct
+    confidence: high
+    site: src/main.js:4
+  - from: src/main.js
+    to: Object//entries
+    kind: direct
+    confidence: high
+    site: src/main.js:5
+  - from: src/main.js
+    to: vue//createApp//component
+    kind: direct
+    confidence: high
+    site: src/main.js:6
+  - from: src/main.js
+    to: vue//defineAsyncComponent
+    kind: direct
+    confidence: high
+    site: src/main.js:6
+  - from: src/main.js
+    to: vue//createApp//mount
+    kind: direct
+    confidence: high
+    site: src/main.js:8
+  - from: src/pages/About.vue
+    to: plug//danger
+    kind: direct
+    confidence: high
+    site: src/pages/About.vue:4
+unresolved:
+  - caller: src/main.js
+    site: src/main.js:3
+    reason: unknown-receiver
+    method: glob
+  - caller: src/pages/About.vue
+    site: src/pages/About.vue:1
+    reason: markup
+results:
+  - target: plug//danger
+    status: found
+    path:
+      - key: src/pages/About.vue
+        root: framework
+      - key: plug//danger
+        site: src/pages/About.vue:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/pages/About.vue
+        site: src/pages/About.vue:4
+        reached: true

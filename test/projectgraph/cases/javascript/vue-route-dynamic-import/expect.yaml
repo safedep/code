@@ -1,0 +1,90 @@
+source: safedep:hand
+description: >-
+  The route table of router.js loads Home.vue by a dynamic import in an arrow function that vue-router
+  calls. No code of the graph calls the arrow function, so no path leads to Home.vue. Each component file
+  is a root of the rule node.component, so the call of danger in the script of Home.vue is found.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+  - key: src/views/Home.vue
+    kind: framework
+    rule: node.component
+exact_edges: true
+edges:
+  - from: src/main.js
+    to: src/router.js
+    kind: import
+    confidence: high
+    site: src/main.js:3
+  - from: src/main.js
+    to: vue//createApp
+    kind: direct
+    confidence: high
+    site: src/main.js:5
+  - from: src/main.js
+    to: vue//createApp//use
+    kind: direct
+    confidence: high
+    site: src/main.js:5
+  - from: src/main.js
+    to: vue//createApp//use//mount
+    kind: direct
+    confidence: high
+    site: src/main.js:5
+  - from: src/main.js//render
+    to: vue//h
+    kind: direct
+    confidence: high
+    site: src/main.js:5
+  - from: src/main.js//render
+    to: vue-router//RouterView
+    kind: reference
+    confidence: low
+    site: src/main.js:5
+  - from: src/router.js
+    to: vue-router//createRouter
+    kind: direct
+    confidence: high
+    site: src/router.js:7
+  - from: src/router.js
+    to: vue-router//createWebHistory
+    kind: direct
+    confidence: high
+    site: src/router.js:7
+  - from: src/router.js//component
+    to: src/views/Home.vue
+    kind: import
+    confidence: high
+    site: src/router.js:4
+  - from: src/views/Home.vue
+    to: plug//danger
+    kind: direct
+    confidence: high
+    site: src/views/Home.vue:4
+unresolved:
+  - caller: src/main.js
+    site: src/main.js:5
+    reason: no-dependency-source
+    method: use
+  - caller: src/main.js
+    site: src/main.js:5
+    reason: no-dependency-source
+    method: mount
+  - caller: src/views/Home.vue
+    site: src/views/Home.vue:1
+    reason: markup
+results:
+  - target: plug//danger
+    status: found
+    path:
+      - key: src/views/Home.vue
+        root: framework
+      - key: plug//danger
+        site: src/views/Home.vue:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/views/Home.vue
+        site: src/views/Home.vue:4
+        reached: true

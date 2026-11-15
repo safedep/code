@@ -3,6 +3,8 @@
 # A callee is a symbol key as the graph writes it, as django//urls//path for
 # path of django.urls. requires names the packages of the framework of a
 # rule, and the rule applies only to a project that depends on one of them.
+# keeps_fallback marks a rule whose roots do not turn off the library-surface
+# roots, because it names the files that a framework loads and not the entry.
 version: 1
 rules:
   - id: go.main
@@ -92,6 +94,23 @@ rules:
     kind: framework
     requires: [next]
     match: { path: ["app/**/route.*", "app/**/page.*", "app/**/layout.*", "src/app/**/route.*", "src/app/**/page.*", "src/app/**/layout.*", "pages/**", "src/pages/**"] }
+  - id: node.component
+    language: javascript
+    kind: framework
+    keeps_fallback: true
+    match: { path: ["*.vue", "*.svelte", "*.astro"] }
+  - id: node.sveltekit.route
+    language: javascript
+    kind: framework
+    requires: ["@sveltejs/kit"]
+    keeps_fallback: true
+    match: { path: ["**/src/routes/**/+*", "**/src/hooks.*", "**/src/params/*", "**/src/service-worker.*", "**/src/service-worker/index.*"] }
+  - id: node.astro.page
+    language: javascript
+    kind: framework
+    requires: [astro]
+    keeps_fallback: true
+    match: { path: ["**/src/pages/**", "**/src/middleware.*", "**/src/middleware/index.*"] }
   - id: node.serverless.handler
     language: javascript
     kind: framework

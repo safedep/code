@@ -630,7 +630,29 @@ file imports it.
 
 With no root of kind `main`, `manifest` or `framework`, every exported
 definition is a root, and `Graph.Stats.RootFallback` says so. Each result
-of a reach query then carries a `root-fallback` uncertainty.
+of a reach query then carries a `root-fallback` uncertainty. A root of a
+rule with `keeps_fallback` does not count here. Such a rule names files
+that a framework loads, but not the entry that loads them.
+
+A framework loads a component file of Vue, Svelte or Astro in ways that no
+static import shows: a route table with `() => import('./views/X.vue')`,
+an alias of the bundler as `@/`, `import.meta.glob`, or a file-based
+router, as the `pages` of Nuxt. So the rule `node.component` marks each
+component file as a root, with no `requires`. A component file holds a
+`markup` record, so this root makes each target that the search does not
+find read `uncertain` in a project with a component file. A static import
+of a component file already did that in most such projects. The rule keeps
+the fallback on, because a Vite app starts at `index.html`, which no rule
+reads. The rules `node.sveltekit.route` and `node.astro.page` mark the
+route files of SvelteKit and the pages of Astro, as `+page.ts`,
+`+server.ts` and `src/pages/api/data.ts`, with their exports. They keep
+the fallback on too, because a framework can load a file by a convention
+that a rule does not list. Nuxt gets no rule of its own: it imports the
+code of `composables` and `utils` with no import statement, so no list of
+paths is complete. The cases `javascript/vue-route-dynamic-import`,
+`javascript/vue-alias-import`, `javascript/vue-import-meta-glob`,
+`javascript/nuxt-pages`, `javascript/sveltekit-routes`,
+`javascript/astro-pages` and `javascript/vue-vite-fallback` show each form.
 
 ## Sources
 
