@@ -1,0 +1,79 @@
+source: safedep:hand
+description: >-
+  The file declares the struct T, and the type parameter T of Holder<T> and of impl<T: Save> Wrap<T> shadows
+  it. So the field item: T of Holder and the result &T of Wrap::get hold the type that the caller gives: Disk
+  in by_field and Cloud in by_result. Disk::save calls std::fs::remove_file and Cloud::save calls
+  std::fs::create_dir. An index that keeps T as the type of the field and of the result makes the link step
+  read the struct T, so both calls go to T::save with no record, and both targets read not-found. The index
+  keeps no such type, so each call is a record. The record of h.item.save() gets the low name edges of save.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//by_field
+    to: src/main.rs//Disk//save
+    kind: name
+    confidence: low
+    site: src/main.rs:41
+  - from: src/main.rs//by_result
+    to: src/main.rs//Wrap//get
+    kind: member
+    confidence: high
+    site: src/main.rs:45
+no_edges:
+  - from: src/main.rs//by_result
+    to: src/main.rs//T//save
+unresolved:
+  - caller: src/main.rs//by_field
+    site: src/main.rs:41
+    reason: no-definition
+    method: save
+  - caller: src/main.rs//by_result
+    site: src/main.rs:45
+    reason: unknown-receiver
+    method: save
+results:
+  - target: std//fs//remove_file
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//by_field
+        site: src/main.rs:49
+        kind: direct
+        confidence: high
+      - key: src/main.rs//Disk//save
+        site: src/main.rs:41
+        kind: name
+        confidence: low
+      - key: std//fs//remove_file
+        site: src/main.rs:18
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.rs//Disk//save
+        site: src/main.rs:18
+        reached: true
+  - target: std//fs//create_dir
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//by_field
+        site: src/main.rs:49
+        kind: direct
+        confidence: high
+      - key: src/main.rs//Cloud//save
+        site: src/main.rs:41
+        kind: name
+        confidence: low
+      - key: std//fs//create_dir
+        site: src/main.rs:24
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.rs//Cloud//save
+        site: src/main.rs:24
+        reached: true

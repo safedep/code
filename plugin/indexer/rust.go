@@ -182,7 +182,7 @@ func rustFields(p *projection, item *sitter.Node) []fileindex.Typed {
 			if field.Type() != "field_declaration" {
 				continue
 			}
-			if typ := p.rustTypeName(field.ChildByFieldName("type"), nil); typ != "" {
+			if typ := p.rustScopedType(field, p.rustTypeName(field.ChildByFieldName("type"), nil)); typ != "" {
 				fields = append(fields, fileindex.Typed{Name: p.text(field.ChildByFieldName("name")), Type: typ})
 			}
 		}
@@ -307,7 +307,10 @@ func rustSignature(p *projection, def *fileindex.Definition, node *sitter.Node) 
 			def.Params = append(def.Params, fileindex.Typed{Name: p.text(name), Type: typ})
 		}
 	}
-	def.Returns, def.Wraps = p.rustResult(node.ChildByFieldName("return_type"), bounds)
+	result := node.ChildByFieldName("return_type")
+	if def.Returns, def.Wraps = p.rustResult(result, bounds); def.Returns != "" && p.rustScopedType(result, def.Returns) == "" {
+		def.Returns, def.Wraps = "", ""
+	}
 	def.Locals = p.rustLocals(node.ChildByFieldName("body"), bounds)
 	if impl := rustImpl(node); impl != nil && !def.Static && !p.rustDefinesType(impl) {
 		def.Params = append([]fileindex.Typed{{Name: extensionParam, Type: p.rustItemName(impl)}}, def.Params...)
@@ -352,16 +355,22 @@ func (p *projection) rustLocals(body *sitter.Node, bounds map[string]string) []f
 
 // rustDeclaredType returns the type that a let or a parameter declares, or
 // "" when a scope that holds the binder declares the first name of the
-// type. The link step resolves a declared type at the root of the file. So
-// Local in fn run() { type Local = dep::Thing<u8>; let t: Local = ... }
-// resolved to a struct Local of the root. A call on t then took the method
-// of that struct with no record, and a method of dep::Thing read as
-// not-found. Without the type, the call keeps the target of the call graph
-// or its record.
+// type.
 func (p *projection) rustDeclaredType(binder *sitter.Node, bounds map[string]string) string {
-	typ := p.rustTypeName(binder.ChildByFieldName("type"), bounds)
+	return p.rustScopedType(binder, p.rustTypeName(binder.ChildByFieldName("type"), bounds))
+}
+
+// rustScopedType returns a type that a node names, or "" when a scope that
+// holds the node declares the first name of the type. The link step
+// resolves a type at the root of the file, or as a type of an inline module
+// that holds the node. So Local in fn run() { type Local = dep::Thing<u8>;
+// let t: Local = ... } resolved to a struct Local of the root. A call on t
+// then took the method of that struct with no record, and a method of
+// dep::Thing read as not-found. Without the type, the call keeps the target
+// of the call graph or its record.
+func (p *projection) rustScopedType(node *sitter.Node, typ string) string {
 	first, _, _ := strings.Cut(typ, "::")
-	if typ == "" || p.rustScopeDeclares(binder, first) {
+	if typ == "" || p.rustScopeDeclares(node, first) {
 		return ""
 	}
 	return typ
@@ -370,9 +379,12 @@ func (p *projection) rustDeclaredType(binder *sitter.Node, bounds map[string]str
 // rustScopeDeclares reports whether a scope between a node and the root of
 // the file can give a name another meaning than the root gives it: an item
 // or a use of a block or of an inline module, or a type parameter of a
-// function, an impl or a trait. A glob use can declare any name, except
-// use super::* in a module of the root, which reads the names of the root.
-// In an inline module, self and super name other modules than the root.
+// function, an impl, a trait or a type. A glob use can declare any name,
+// except use super::* in a module of the root, which reads the names of the
+// root. In an inline module, self and super name other modules than the
+// root. A struct, an enum, a union or a trait of the inline module that
+// declares the name first does not count, because the link step looks for
+// a type of the name in the inline modules that hold the node.
 func (p *projection) rustScopeDeclares(node *sitter.Node, name string) bool {
 	for scope := node.Parent(); scope != nil; scope = scope.Parent() {
 		switch scope.Type() {
@@ -386,10 +398,16 @@ func (p *projection) rustScopeDeclares(node *sitter.Node, name string) bool {
 				continue
 			}
 			ofRoot := mod.Parent() != nil && mod.Parent().Type() == "source_file"
-			if name == "self" || name == "super" || p.rustItemsDeclare(scope, name, ofRoot) {
+			if name == "self" || name == "super" {
 				return true
 			}
-		case "function_item", "impl_item", "trait_item":
+			if p.rustItemsDefineType(scope, name) {
+				return false
+			}
+			if p.rustItemsDeclare(scope, name, ofRoot) {
+				return true
+			}
+		case "function_item", "impl_item", "trait_item", "struct_item", "enum_item", "union_item":
 			if slices.ContainsFunc(ts.NamedChildren(scope.ChildByFieldName("type_parameters")), func(param *sitter.Node) bool {
 				return p.rustTypeParameter(param) == name
 			}) {
@@ -398,6 +416,19 @@ func (p *projection) rustScopeDeclares(node *sitter.Node, name string) bool {
 		}
 	}
 	return false
+}
+
+// rustItemsDefineType reports whether the items of a module define a
+// struct, an enum, a union or a trait of the name. The index gives each one
+// a key under the module.
+func (p *projection) rustItemsDefineType(list *sitter.Node, name string) bool {
+	return slices.ContainsFunc(ts.NamedChildren(list), func(item *sitter.Node) bool {
+		switch item.Type() {
+		case "struct_item", "enum_item", "union_item", "trait_item":
+			return p.text(item.ChildByFieldName("name")) == name
+		}
+		return false
+	})
 }
 
 // rustItemsDeclare reports whether the items of a block or of a module

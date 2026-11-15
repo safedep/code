@@ -29,6 +29,7 @@ var rustProfile = profile{
 	symbol:            rustSymbol,
 	surface:           rustSurface,
 	unitTypes:         true,
+	nestedTypes:       true,
 	receiverMethods:   true,
 	sameTypeMethods:   map[string]bool{"clone": true, "to_owned": true, "default": true, "from": true},
 	abstractReceiver:  fileindex.UnresolvedTraitReceiver,

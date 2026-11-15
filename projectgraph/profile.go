@@ -144,7 +144,9 @@ type profile struct {
 	// class with no instance keyword, as Java.
 	implicitFields bool
 	// nestedTypes marks a language where a class names the classes nested
-	// in the classes that hold it with no qualifier, as Java.
+	// in the classes that hold it with no qualifier, as Java. The index of
+	// Rust gives an inline module the kind class, and a name in the module
+	// names a type of the module before a type of the file.
 	nestedTypes bool
 	// implicitInterfaces marks a language where a type implements an
 	// interface with no declaration, as Go. Only an interface type can

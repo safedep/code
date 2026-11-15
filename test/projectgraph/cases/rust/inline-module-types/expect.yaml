@@ -1,0 +1,69 @@
+source: safedep:hand
+description: >-
+  src/store.rs declares the structs Holder and Item at its top level, and the inline module cache declares its
+  own Holder and Item. In cache, the field item of Holder, the result of make and the struct expression
+  Holder { .. } name the types of cache. So h.item.save() and make().save() run cache::Item::save, which calls
+  std::fs::create_dir. The save of the top level calls std::fs::write and nothing calls it. A link step that
+  resolves these names at the root of the file sends both calls to the save of the top level, so
+  std::fs::create_dir reads not-found and std::fs::write reads found.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/store.rs//cache//go
+    to: src/store.rs//cache//Holder
+    kind: direct
+    confidence: high
+    site: src/store.rs:31
+  - from: src/store.rs//cache//go
+    to: src/store.rs//cache//Item//save
+    kind: member
+    confidence: high
+    site: src/store.rs:32
+  - from: src/store.rs//cache//go
+    to: src/store.rs//cache//make
+    kind: direct
+    confidence: high
+    site: src/store.rs:33
+  - from: src/store.rs//cache//go
+    to: src/store.rs//cache//Item//save
+    kind: member
+    confidence: high
+    site: src/store.rs:33
+no_edges:
+  - from: src/store.rs//cache//go
+    to: src/store.rs//Item//save
+  - from: src/store.rs//cache//go
+    to: src/store.rs//Holder
+unresolved: []
+results:
+  - target: std//fs//create_dir
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/store.rs//cache//go
+        site: src/main.rs:4
+        kind: direct
+        confidence: high
+      - key: src/store.rs//cache//Item//save
+        site: src/store.rs:32
+        kind: member
+        confidence: high
+      - key: std//fs//create_dir
+        site: src/store.rs:18
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/store.rs//cache//Item//save
+        site: src/store.rs:18
+        reached: true
+  - target: std//fs//write
+    status: not-found
+    call_sites:
+      - caller: src/store.rs//Item//save
+        site: src/store.rs:5
+        reached: false

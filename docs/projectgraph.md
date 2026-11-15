@@ -404,21 +404,25 @@ Rust follows the same rules, with these additions.
   the value of its first `let`, so a call after a second `let` of the name
   is a record too, as in the case `rust/shadowed-let-type`. A method of the
   real type then reads as `uncertain` and not as `not-found`.
-- The link step resolves the declared type of a parameter or a `let` at
-  the root of the file. So the index keeps a declared type only when no
-  scope that holds the binder declares the first name of the type. Such a
-  scope is a block or an inline module with an item, a `use` or an
-  `extern crate` of the name, or a function, an `impl` or a trait with a
-  type parameter of the name. A glob `use` can declare any name, except
+- The link step resolves a type that a parameter, a `let`, a field or the
+  result of a function declares at the root of the file, or as a struct,
+  an enum, a union or a trait of an inline module that holds it. A name of
+  a call path in an inline module also names such a type of the module
+  first. So the index keeps a declared type only when no scope that holds
+  it declares the first name of the type in another way. Such a scope is a
+  block or an inline module with an item, a `use` or an `extern crate` of
+  the name, or a function, an `impl`, a trait or a type with a type
+  parameter of the name. A glob `use` can declare any name, except
   `use super::*` in a module of the root, which reads the names of the
   root. `self` and `super` in an inline module name other modules. So in
   `fn run() { type Local = dep::Thing<u8>; let t: Local = dep::new_thing(); t.inspect(); }`
   with a `struct Local` at the root, `t.inspect()` takes no method of the
   root `Local`. The call keeps the target that the call graph gives, or a
   record with the reason `unknown-receiver`. A type parameter with a bound,
-  as `S` in `fn run<S: Store>(s: S)`, names its bound. The type of a field
-  and the result type of a function do not get this check, so a type that
-  an inline module declares for them still resolves at the root.
+  as `S` in `fn run<S: Store>(s: S)`, names its bound. The case
+  `rust/inline-module-types` shows the types of an inline module, and the
+  case `rust/generic-field-type` a type parameter of a struct and of an
+  `impl`.
 - `extern crate x;`, `extern crate x as y;`, `use x;` and `pub use x as y;`
   of a whole crate bind `x` or `y` in their module to the crate. A path
   through the binding is a path of the crate, so
