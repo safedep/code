@@ -121,6 +121,15 @@ func (p *projection) bases(node *sitter.Node) []string {
 	return nil
 }
 
+// metaclass returns the metaclass of a class as written, by the rules of
+// the language.
+func (p *projection) metaclass(node *sitter.Node) string {
+	if rule := p.rules().metaclass; rule != nil {
+		return rule(p, node)
+	}
+	return ""
+}
+
 // abstract returns the methods that an interface declares, by the rules of
 // the language.
 func (p *projection) abstract(node *sitter.Node) []fileindex.Signature {

@@ -20,6 +20,7 @@ var pythonRules = languageRules{
 	constructor:    "__init__",
 	typedReceivers: true,
 	bases:          pythonBases,
+	metaclass:      pythonMetaclass,
 	fields:         pythonFields,
 	decorators:     decorators,
 	signature:      pythonSignature,
@@ -65,6 +66,7 @@ var pythonRules = languageRules{
 		identifiers: map[string]bool{"identifier": true},
 		instances:   map[string]bool{"self": true, "cls": true},
 		bases:       map[string]string{"class_definition": "superclasses"},
+		check:       pythonCheck,
 	},
 	arguments: &argumentSyntax{
 		calls: map[string]string{"call": "function"},
@@ -93,6 +95,51 @@ func pythonBases(p *projection, class *sitter.Node) []string {
 		}
 	}
 	return bases
+}
+
+// pythonChecks name the builtins that test a value against a class.
+var pythonChecks = map[string]bool{"isinstance": true, "issubclass": true}
+
+// pythonCheck reports whether a holder holds classes that the code only
+// tests a value against or names as a metaclass: the arguments of
+// isinstance or issubclass, a tuple among them, or metaclass=M in a class
+// statement. The class statement makes an instance of M, and a call of the
+// class that it makes runs M.__call__, so the call of that class owns it.
+func pythonCheck(p *projection, holder *sitter.Node) bool {
+	switch holder.Type() {
+	case "keyword_argument":
+		list := holder.Parent()
+		name := holder.ChildByFieldName("name")
+		return name != nil && p.text(name) == "metaclass" && list != nil && list.Parent() != nil && list.Parent().Type() == "class_definition"
+	case "tuple":
+		if holder = holder.Parent(); holder == nil || holder.Type() != "argument_list" {
+			return false
+		}
+	case "argument_list":
+	default:
+		return false
+	}
+	call := holder.Parent()
+	if call == nil || call.Type() != "call" {
+		return false
+	}
+	function := call.ChildByFieldName("function")
+	return function != nil && pythonChecks[p.text(function)]
+}
+
+// pythonMetaclass returns the metaclass of a Python class as written, as M
+// in class A(Base, metaclass=M), or "".
+func pythonMetaclass(p *projection, class *sitter.Node) string {
+	list := class.ChildByFieldName("superclasses")
+	if class.Type() != "class_definition" || list == nil {
+		return ""
+	}
+	for _, arg := range ts.NamedChildren(list) {
+		if name := arg.ChildByFieldName("name"); arg.Type() == "keyword_argument" && name != nil && p.text(name) == "metaclass" {
+			return p.text(arg.ChildByFieldName("value"))
+		}
+	}
+	return ""
 }
 
 // pythonAssigned returns the name of a top-level assignment, as x in x = f().

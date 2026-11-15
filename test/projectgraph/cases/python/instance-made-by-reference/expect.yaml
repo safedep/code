@@ -1,0 +1,181 @@
+source: safedep:hand
+description: >-
+  Each class makes an instance in a way other than a call of its name. cls() in the classmethod create
+  calls the class of the method. functools.partial and field(default_factory=...) get the class as a
+  value and call it. So each of these sites links the __call__ or __getattr__ of the class, and os.remove,
+  shutil.rmtree and subprocess.run are found. check names Meta only in isinstance, which makes no
+  instance, and no class names Meta as its metaclass, so tempfile.mkdtemp in Meta.__call__ is not-found.
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+exact_edges: true
+edges:
+  - from: main.py
+    to: dataclasses//dataclass
+    kind: direct
+    confidence: high
+    site: main.py:29
+  - from: main.py
+    to: dataclasses//field
+    kind: direct
+    confidence: high
+    site: main.py:30
+  - from: main.py
+    to: main.py//ByDefault
+    kind: reference
+    confidence: low
+    site: main.py:30
+  - from: main.py
+    to: main.py//ByDefault//__getattr__
+    kind: reference
+    confidence: low
+    site: main.py:30
+  - from: main.py
+    to: main.py//run
+    kind: direct
+    confidence: high
+    site: main.py:47
+  - from: main.py
+    to: main.py//ByClassmethod//create
+    kind: member
+    confidence: high
+    site: main.py:47
+  - from: main.py
+    to: main.py//run
+    kind: direct
+    confidence: high
+    site: main.py:48
+  - from: main.py
+    to: functools//partial
+    kind: direct
+    confidence: high
+    site: main.py:48
+  - from: main.py
+    to: main.py//ByPartial
+    kind: reference
+    confidence: low
+    site: main.py:48
+  - from: main.py
+    to: main.py//ByPartial//__call__
+    kind: reference
+    confidence: low
+    site: main.py:48
+  - from: main.py
+    to: print
+    kind: direct
+    confidence: high
+    site: main.py:49
+  - from: main.py
+    to: main.py//Holder
+    kind: direct
+    confidence: high
+    site: main.py:49
+  - from: main.py
+    to: main.py//check
+    kind: direct
+    confidence: high
+    site: main.py:50
+  - from: main.py//ByClassmethod//__call__
+    to: os//remove
+    kind: direct
+    confidence: high
+    site: main.py:11
+  - from: main.py//ByClassmethod//create
+    to: main.py//ByClassmethod//__call__
+    kind: reference
+    confidence: low
+    site: main.py:15
+  - from: main.py//ByDefault//__getattr__
+    to: subprocess//run
+    kind: direct
+    confidence: high
+    site: main.py:25
+  - from: main.py//ByPartial//__call__
+    to: shutil//rmtree
+    kind: direct
+    confidence: high
+    site: main.py:20
+  - from: main.py//Meta//__call__
+    to: tempfile//mkdtemp
+    kind: direct
+    confidence: high
+    site: main.py:35
+  - from: main.py//check
+    to: isinstance
+    kind: direct
+    confidence: high
+    site: main.py:43
+  - from: main.py//check
+    to: main.py//Meta
+    kind: reference
+    confidence: low
+    site: main.py:43
+unresolved:
+  - caller: main.py//ByClassmethod//create
+    site: main.py:15
+    reason: unknown-receiver
+    method: cls
+  - caller: main.py//run
+    site: main.py:39
+    reason: unknown-receiver
+    method: f
+results:
+  - target: os//remove
+    status: found
+    path:
+      - key: main.py
+      - key: main.py//ByClassmethod//create
+        site: main.py:47
+        kind: member
+        confidence: high
+      - key: main.py//ByClassmethod//__call__
+        site: main.py:15
+        kind: reference
+        confidence: low
+      - key: os//remove
+        site: main.py:11
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.py//ByClassmethod//__call__
+        site: main.py:11
+        reached: true
+  - target: shutil//rmtree
+    status: found
+    path:
+      - key: main.py
+      - key: main.py//ByPartial//__call__
+        site: main.py:48
+        kind: reference
+        confidence: low
+      - key: shutil//rmtree
+        site: main.py:20
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.py//ByPartial//__call__
+        site: main.py:20
+        reached: true
+  - target: subprocess//run
+    status: found
+    path:
+      - key: main.py
+      - key: main.py//ByDefault//__getattr__
+        site: main.py:30
+        kind: reference
+        confidence: low
+      - key: subprocess//run
+        site: main.py:25
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.py//ByDefault//__getattr__
+        site: main.py:25
+        reached: true
+  - target: tempfile//mkdtemp
+    status: not-found
+    call_sites:
+      - caller: main.py//Meta//__call__
+        site: main.py:35
+        reached: false

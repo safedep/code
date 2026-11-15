@@ -128,11 +128,13 @@ func (b *builder) linkConstructors(ix *fileindex.Index) {
 	}
 }
 
-// linkInstances adds a reference edge from each edge that makes an
+// linkInstances adds a reference edge from each edge that can make an
 // instance of a class to the method of each instance method name that the
-// instance runs, from the class or from a base in its MRO. The code that
-// makes the instance holds it, so a search reaches the method as it
-// reaches a stored function value. A reference to the class alone, as in
+// instance runs, from the class or from a base in its MRO. A call makes an
+// instance, and so can the code that gets a reference to the class, as
+// functools.partial(C) or map(C, xs). The code that makes the instance
+// holds it, so a search reaches the method as it reaches a stored function
+// value. A reference that only tests a value against the class, as in
 // isinstance(x, C), makes no instance and gets no edge. An edge reaches the
 // class through export hops and the package edge of a unit.
 func (b *builder) linkInstances() {
@@ -143,25 +145,31 @@ func (b *builder) linkInstances() {
 			hops[str[slot.from]] = append(hops[str[slot.from]], str[slot.to])
 		}
 	}
-	memo := map[symbol]instanceCalls{}
+	memo := map[string][]string{}
+	methodsOf := func(key string) []string {
+		m, ok := memo[key]
+		if !ok {
+			m = b.instanceMethods(key, hops)
+			memo[key] = m
+		}
+		return m
+	}
 	var out []Edge
+	add := func(from string, site Site, methods []string) {
+		for _, key := range methods {
+			out = append(out, newEdge(from, key, site, EdgeReference, resolverName(b.profileAt(key).code, ruleImplicit)))
+		}
+	}
 	for slot, v := range b.edges.slots {
 		kind := EdgeKind(str[v.kind])
-		if kind == EdgeImport || kind == EdgeExport || kind == EdgePackage {
+		if kind == EdgeImport || kind == EdgeExport || kind == EdgePackage || b.checks[slot] {
 			continue
 		}
-		m, ok := memo[slot.to]
-		if !ok {
-			m = b.instanceMethods(str[slot.to], hops)
-			memo[slot.to] = m
-		}
-		methods := m.call
-		if kind == EdgeReference {
-			methods = m.ref
-		}
-		site := Site{Path: str[slot.path], Line: int(slot.line), Column: int(slot.column)}
-		for _, key := range methods {
-			out = append(out, newEdge(str[slot.from], key, site, EdgeReference, resolverName(b.profileAt(key).code, ruleImplicit)))
+		add(str[slot.from], Site{Path: str[slot.path], Line: int(slot.line), Column: int(slot.column)}, methodsOf(str[slot.to]))
+	}
+	for _, c := range b.classCalls() {
+		for _, class := range append([]string{c.class}, b.subclasses(c.class)...) {
+			add(c.from, c.site, methodsOf(class))
 		}
 	}
 	slices.SortFunc(out, func(x, y Edge) int {
@@ -173,14 +181,11 @@ func (b *builder) linkInstances() {
 	}
 }
 
-// instanceCalls holds the instance methods that a call of a key runs, and
-// the ones that a reference to the key runs. Only a metaclass gives the
-// second kind, because a class statement that names it makes an instance.
-type instanceCalls struct{ call, ref []string }
-
 // instanceMethods returns the instance methods of each class that a key
-// names through its hops.
-func (b *builder) instanceMethods(key string, hops map[string][]string) (m instanceCalls) {
+// names through its hops. A call of a class also runs __call__ of its
+// metaclass, as M in class A(metaclass=M).
+func (b *builder) instanceMethods(key string, hops map[string][]string) []string {
+	var out []string
 	seen := map[string]bool{}
 	next := []string{key}
 	for depth := 0; len(next) > 0 && depth <= b.opts.MaxExportHops; depth++ {
@@ -195,36 +200,66 @@ func (b *builder) instanceMethods(key string, hops map[string][]string) (m insta
 			if b.kindOf(k) != NodeClass || len(p.instanceMethods) == 0 {
 				continue
 			}
-			meta := b.isMetaclass(k, p.metaclass)
 			for _, name := range slices.Sorted(maps.Keys(p.instanceMethods)) {
 				if method, ok := b.ownMethod(k, name); ok && b.isMethod(method) {
-					m.call = append(m.call, method)
-					if meta {
-						m.ref = append(m.ref, method)
-					}
+					out = append(out, method)
+				}
+			}
+			if meta, ok := b.metaclass(k); ok {
+				if method, ok := b.ownMethod(meta, p.metaclassCall); ok && b.isMethod(method) {
+					out = append(out, method)
 				}
 			}
 		}
 		next = later
 	}
-	return m
+	return out
 }
 
-// isMetaclass reports whether a class of its MRO names the metaclass base
-// as written, as class Meta(type). The builtin base binds no name, so the
-// written name tells it.
-func (b *builder) isMetaclass(class, metaclass string) bool {
-	if metaclass == "" {
-		return false
-	}
+// metaclass returns the class that a class of the MRO of a class names as
+// its metaclass.
+func (b *builder) metaclass(class string) (string, bool) {
 	for _, c := range b.mro(class) {
 		for _, rec := range b.records(c) {
-			if slices.Contains(rec.class.Bases, metaclass) {
-				return true
+			if rec.class.Metaclass == "" {
+				continue
 			}
+			key, ok := b.resolveNameIn(b.scopes[rec.ix.Path], fileindex.Parent(rec.class.Key), rec.class.Metaclass)
+			return key, ok && b.kindOf(key) == NodeClass
 		}
 	}
-	return false
+	return "", false
+}
+
+// classCall is a call of the class of a method from the method itself, as
+// cls() in a classmethod of Python.
+type classCall struct {
+	from, class string
+	site        Site
+}
+
+// classCalls returns each call of the first parameter of a classmethod,
+// which holds the class of the method or a subclass of it.
+func (b *builder) classCalls() []classCall {
+	var out []classCall
+	for _, p := range b.paths {
+		ix := b.byPath[p]
+		if ix == nil {
+			continue
+		}
+		param := profileOf(ix.Language).classParam
+		if param == "" {
+			continue
+		}
+		for _, call := range ix.Calls {
+			def := b.defs[call.Caller]
+			if call.Callee != param || def == nil || def.Parent == "" || !slices.Contains(def.Decorators, "@classmethod") {
+				continue
+			}
+			out = append(out, classCall{from: b.runner(call.Caller), class: def.Parent, site: Site{Path: ix.Path, Line: call.Line, Column: call.Column}})
+		}
+	}
+	return out
 }
 
 // linkOverrides adds a reference edge from each class with a base of a

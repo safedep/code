@@ -64,7 +64,10 @@ type languageRules struct {
 	kindOf func(p *projection, node *sitter.Node, kind fileindex.DefKind) fileindex.DefKind
 	// bases returns the classes and the interfaces that a class or an
 	// interface names as its bases, as written.
-	bases func(p *projection, class *sitter.Node) []string
+	// metaclass returns the metaclass of a class as written, as M in
+	// class A(metaclass=M).
+	metaclass func(p *projection, class *sitter.Node) string
+	bases     func(p *projection, class *sitter.Node) []string
 	// fields returns the fields of a class that declare a type.
 	fields func(p *projection, class *sitter.Node) []fileindex.Typed
 	// abstract returns the methods that an interface declares.

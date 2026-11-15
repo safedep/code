@@ -2,9 +2,9 @@ source: safedep:hand
 description: >-
   Proxy defines __call__ and __getattr__, and Desc defines __get__. No code makes an instance of them:
   check names them only in isinstance, and main calls a static method and reads a class attribute. So no
-  edge leads to these methods, and their targets are not-found. Made names the metaclass Meta, so its
-  class statement makes an instance of Meta. A call of Made runs Meta.__call__, so the reference to Meta
-  at the class statement leads to it and tempfile.mkdtemp is found.
+  edge leads to these methods, and their targets are not-found. Made names the metaclass Meta, and main
+  calls Made, which runs Meta.__call__. So the call of Made leads to Meta.__call__, and tempfile.mkdtemp
+  is found.
 roots:
   - key: main.py
     kind: main
@@ -13,11 +13,6 @@ exact_edges: true
 edges:
   - from: main.py
     to: main.py//Meta
-    kind: reference
-    confidence: low
-    site: main.py:31
-  - from: main.py
-    to: main.py//Meta//__call__
     kind: reference
     confidence: low
     site: main.py:31
@@ -86,6 +81,11 @@ edges:
     kind: direct
     confidence: high
     site: main.py:43
+  - from: main.py//main
+    to: main.py//Meta//__call__
+    kind: reference
+    confidence: low
+    site: main.py:43
 unresolved: []
 results:
   - target: os//remove
@@ -110,9 +110,12 @@ results:
     status: found
     path:
       - key: main.py
-        root: main
+      - key: main.py//main
+        site: main.py:47
+        kind: direct
+        confidence: high
       - key: main.py//Meta//__call__
-        site: main.py:31
+        site: main.py:43
         kind: reference
         confidence: low
       - key: tempfile//mkdtemp

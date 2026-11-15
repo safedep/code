@@ -53,6 +53,9 @@ type referenceSyntax struct {
 	// receiver, as Go. The link step then tells it from a call, which can
 	// run a function value of a field.
 	bareValues bool
+	// check reports whether the values of a holder are classes that the
+	// code only tests a value against, as the arguments of isinstance.
+	check func(p *projection, holder *sitter.Node) bool
 	// value replaces reference for a language whose function values take
 	// more forms than a name or a member chain, as Go. It gives the member
 	// node of a method value whose receiver the index cannot name, and the
@@ -110,6 +113,7 @@ func referenceVisitor(p *projection) visitor {
 			values = []*sitter.Node{node.ChildByFieldName(field)}
 		}
 		caller := stack[len(stack)-1].key
+		check := syntax.check != nil && syntax.check(p, node)
 		for _, value := range syntax.unlist(values) {
 			if spread, ok := syntax.spreads[kind]; ok && value.Type() == spread {
 				p.addSpread(*syntax, caller, value)
@@ -129,7 +133,7 @@ func referenceVisitor(p *projection) visitor {
 			switch {
 			case seen[k]:
 			case target != "":
-				p.addReference(value, caller, p.targets([]string{target}))
+				p.addReference(value, caller, p.targets([]string{target})).Check = check
 			case !syntax.namedOnly[kind]:
 				p.addValueRecord(member, caller)
 			}
@@ -143,7 +147,7 @@ func referenceVisitor(p *projection) visitor {
 // node, and a static initializer or a property function that the call
 // graph does not know takes it from there, as a call does. The text is
 // bounded as the text of a record is.
-func (p *projection) addReference(node *sitter.Node, caller string, targets []string) {
+func (p *projection) addReference(node *sitter.Node, caller string, targets []string) *fileindex.Reference {
 	site := ast.GetNodePosition(node)
 	p.ix.References = append(p.ix.References, fileindex.Reference{
 		Caller:  p.caller(caller, site),
@@ -152,6 +156,7 @@ func (p *projection) addReference(node *sitter.Node, caller string, targets []st
 		Text:    callgraph.ClipText(p.text(node)),
 		Targets: targets,
 	})
+	return &p.ix.References[len(p.ix.References)-1]
 }
 
 // addSpread adds the functions of the object that a spread passes, as

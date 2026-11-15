@@ -33,7 +33,8 @@ var pythonProfile = profile{
 	moduleNames:        true,
 	starImports:        true,
 	instanceMethods:    pythonInstanceMethods,
-	metaclass:          "type",
+	metaclassCall:      "__call__",
+	classParam:         "cls",
 }
 
 // pythonInstanceMethods names the methods that Python runs on an instance

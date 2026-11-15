@@ -294,13 +294,15 @@ func (d Definition) HoldsData() bool {
 // keys. Fields are the fields that declare the type of a class, in source
 // order. Abstract are the methods that a Go interface declares, in source
 // order. They have no definition, and a type implements the interface when
-// its methods hold them.
+// its methods hold them. Metaclass is the metaclass of a Python class as
+// written, as M in class A(metaclass=M).
 type Class struct {
-	Key      string      `json:"key"`
-	Bases    []string    `json:"bases,omitempty"`
-	Methods  []string    `json:"methods,omitempty"`
-	Fields   []Typed     `json:"fields,omitempty"`
-	Abstract []Signature `json:"abstract,omitempty"`
+	Key       string      `json:"key"`
+	Bases     []string    `json:"bases,omitempty"`
+	Metaclass string      `json:"metaclass,omitempty"`
+	Methods   []string    `json:"methods,omitempty"`
+	Fields    []Typed     `json:"fields,omitempty"`
+	Abstract  []Signature `json:"abstract,omitempty"`
 }
 
 // Signature is a method that an interface declares: its name, the count of
@@ -357,12 +359,16 @@ type Arg struct {
 // uses as a value and does not call, as yaml.load in run(yaml.load). The
 // code that gets the value can call it, so the link step counts the target
 // as possibly called. Targets are per-file resolutions, as in a Call.
+// Check marks a class that the code only tests a value against, as the
+// second argument of isinstance in Python, or names as the metaclass of a
+// class statement. Such a use makes no instance that code can call.
 type Reference struct {
 	Caller  string   `json:"caller"`
 	Line    int      `json:"line"`
 	Column  int      `json:"column"`
 	Text    string   `json:"text"`
 	Targets []string `json:"targets"`
+	Check   bool     `json:"check,omitempty"`
 }
 
 // Unresolved is a call site whose callee the index does not know in full.
@@ -688,6 +694,7 @@ func (ix *Index) EachString(fn func(string) string) {
 		c := &ix.Classes[i]
 		kind(&c.Key)
 		strs(c.Bases)
+		kind(&c.Metaclass)
 		strs(c.Methods)
 		typed(c.Fields)
 		for j := range c.Abstract {

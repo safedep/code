@@ -126,7 +126,10 @@ type builder struct {
 	// form.
 	provisions map[provisionKey][]provision
 
-	edges       *edgeSet
+	edges *edgeSet
+	// checks holds the reference edges that only test a value against a
+	// class, as isinstance(x, C). They make no instance.
+	checks      map[edgeSlot]bool
 	unresolved  map[UnresolvedSite]bool
 	truncations map[Truncation]bool
 	problems    []modules.Problem
@@ -303,6 +306,7 @@ func newTables(indexes []*fileindex.Index, opts Options) *builder {
 		byPath:       make(map[string]*fileindex.Index, len(indexes)),
 		scopes:       make(map[string]*scope, len(indexes)),
 		edges:        newEdgeSet(sites),
+		checks:       map[edgeSlot]bool{},
 		unresolved:   map[UnresolvedSite]bool{},
 		valueSites:   map[Site]bool{},
 		truncations:  map[Truncation]bool{},

@@ -379,7 +379,7 @@ func (p *projection) addClasses(_ context.Context) error {
 		case node == nil:
 			p.ix.Classes = append(p.ix.Classes, fileindex.Class{Key: key, Methods: methods[key]})
 		default:
-			p.ix.Classes = append(p.ix.Classes, fileindex.Class{Key: key, Bases: p.bases(node), Methods: methods[key], Fields: p.fields(node)})
+			p.ix.Classes = append(p.ix.Classes, fileindex.Class{Key: key, Bases: p.bases(node), Metaclass: p.metaclass(node), Methods: methods[key], Fields: p.fields(node)})
 		}
 	}
 	return nil

@@ -32,7 +32,7 @@ type found struct {
 	// code of their language family calls.
 	byLanguage []Uncertainty
 	// speaks reports whether code of a language family calls a target.
-	speaks func(lang langcode.Code, target Target) bool
+	speaks   func(lang langcode.Code, target Target) bool
 	callback *Uncertainty
 	// concerns reports whether the span of a scope concerns a target.
 	concerns func(k scopeKey, target Target) bool

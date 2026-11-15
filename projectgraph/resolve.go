@@ -372,6 +372,9 @@ func (b *builder) linkReferences(ix *fileindex.Index) {
 				b.valueSites[site] = true
 			}
 			b.link(ix.Language, from, r.key, site, EdgeReference, ruleReference)
+			if ref.Check {
+				b.checks[b.edges.slot(Edge{From: from, To: r.key, Site: site})] = true
+			}
 		}
 	}
 }

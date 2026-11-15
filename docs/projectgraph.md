@@ -293,20 +293,24 @@ call of the instance runs `__call__`. A read of an attribute runs
 define, and `__get__` of a descriptor in a class attribute. The code that
 calls or reads the instance often has an unknown receiver, or is code
 outside the graph. So a `reference` edge with the rule `implicit` joins
-each call that makes an instance of a Python class to the method of each
-of these names that the instance runs, from the class or from a base in
-its MRO. The call can reach the class through an export hop or the
-`package` edge of a unit. The code that makes the instance holds it, so a
-search from the roots reaches the method, as it reaches a stored function
-value. A reference to the class alone, as in `isinstance(x, Proxy)`, or a
-call of a static method, makes no instance and gets no edge. A class
-statement with `metaclass=Meta` makes an instance of `Meta`, so a
-reference to a class with the written base `type` gets the edges too. A
-call with an unknown receiver keeps its record with the method name. The
-target is then found. The edge proves only that an instance exists, and
-not that code calls it. The cases `python/unknown-receiver-callable`,
-`python/unknown-receiver-getattr` and
-`python/instance-methods-no-instance`
+each edge that can make an instance of a Python class to the method of
+each of these names that the instance runs, from the class or from a base
+in its MRO. A call of the class makes an instance. So does code that gets
+the class as a value, as `functools.partial(C)`, `map(C, xs)` or
+`field(default_factory=C)`, and a call of `cls` in a classmethod, which
+holds the class of the method or a subclass. The edge can reach the class
+through an export hop or the `package` edge of a unit. The code that
+makes the instance holds it, so a search from the roots reaches the
+method, as it reaches a stored function value. A class that code only
+tests a value against, as in `isinstance(x, Proxy)`, makes no instance.
+The index marks such a reference with `Check`, and it gets no edge. A
+call of a class also runs `__call__` of its metaclass, as `Meta` in
+`class Made(metaclass=Meta)`, which `Class.Metaclass` records. A call with
+an unknown receiver keeps its record with the method name. The target is
+then found. The edge proves only that an instance can exist, and not that
+code calls it. The cases `python/unknown-receiver-callable`,
+`python/unknown-receiver-getattr`, `python/instance-methods-no-instance`
+and `python/instance-made-by-reference`
 show it. A function that code binds to a module attribute, as
 `hooks.handler = wipe`, has a `reference` edge from that code, and the
 assignment has the flag `monkey-patch`, so it needs no rule of its own.
