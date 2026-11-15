@@ -1005,6 +1005,12 @@ func (b *builder) rustUnitFile(ix *fileindex.Index) bool {
 
 // joinImplBlocks makes an impl block of a type of another module one class
 // with the type, as impl Store for FileStore after use crate::FileStore.
+// Only a use at the root of the file counts. The root cannot define a type
+// of a name that such a use binds, so the class is an impl block. A use of
+// an inline module, as use crate::other::A in mod deep, binds A in deep
+// only. Read for the root, it joined a struct A of the root with the A of
+// the other module, and a call of a method of the root A went to the other
+// A with no record.
 func (b *builder) joinImplBlocks() {
 	var groups [][]string
 	for _, p := range b.paths {
@@ -1014,13 +1020,17 @@ func (b *builder) joinImplBlocks() {
 		}
 		sc := b.scopes[p]
 		for _, c := range ix.Classes {
-			imp, ok := sc.bindings[fileindex.Last(c.Key)]
-			if !ok || len(fileindex.Segments(c.Key)) != 1 {
+			if len(fileindex.Segments(c.Key)) != 1 {
 				continue
 			}
-			module, _ := importedModule(ix.Language, imp)
-			if key, _, found := b.resolveModule(ix, module); found && key != c.Key && b.isType(key) {
-				groups = append(groups, []string{key, c.Key})
+			for _, imp := range rustBindings(sc, fileindex.Last(c.Key)) {
+				if imp.Item == "" && imp.Alias == "" || sc.enclosing(imp.Line) != p {
+					continue
+				}
+				module, _ := importedModule(ix.Language, imp)
+				if key, _, found := b.resolveModule(ix, module); found && key != c.Key && b.isType(key) {
+					groups = append(groups, []string{key, c.Key})
+				}
 			}
 		}
 	}
