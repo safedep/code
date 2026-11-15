@@ -1131,6 +1131,24 @@ depends on what the code can call.
   the value of a panic that no `recover` stops with its method `Error` or
   `String`. So `panic` has a record for each of the two methods.
 
+A Go function with no body runs code that the graph does not hold too: a
+stub of assembly, as `func Sum(xs []int) int` with a `sum_amd64.s` file,
+or a function that `//go:linkname` binds to a function of another package.
+The index gives such a function a record with the reason
+`no-dependency-source`, and the link step gives it a scope.
+
+- A linkname into the standard library, or a stub of assembly in a unit of
+  the standard library, runs code of the standard library. So its record is
+  a callback, as above.
+- The assembly of a package of a unit calls code of its package and of the
+  runtime. So its record concerns what the code of its unit reaches.
+- A linkname into another package and the assembly of the project can call
+  any function. So their records concern every target.
+
+The case `go/function-no-body` shows each form. A function of the standard
+library that only its assembly calls, as a function of the runtime, can
+call a target, and the callback does not concern that target.
+
 A Go call of a method on a value whose type the link step does not know is
 a record with the method name, as `srv.ListenAndServe()` on a
 package-level variable, on an element of a slice, on a range variable, on a

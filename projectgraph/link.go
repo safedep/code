@@ -511,6 +511,9 @@ func (b *builder) copyUnresolved(ix *fileindex.Index) {
 		if u.Reason == fileindex.UnresolvedDynamicImport {
 			site.ImportPrefix = b.importPrefix(ix, u.Line)
 		}
+		if u.Reason == fileindex.UnresolvedNoDependencySource && ix.Language == langcode.Go {
+			b.scopeGoStub(ix, &site)
+		}
 		b.addUnresolved(site)
 	}
 }

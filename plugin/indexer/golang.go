@@ -2,9 +2,11 @@ package indexer
 
 import (
 	"slices"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/safedep/code/core/ast"
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/pkg/ts"
@@ -371,6 +373,63 @@ func goSignature(p *projection, def *fileindex.Definition, node *sitter.Node) {
 		def.Results = results
 	}
 	def.Locals, p.goOrigins[def.Key] = p.goLocals(node.ChildByFieldName("body"))
+	if node.ChildByFieldName("body") == nil {
+		p.goStub(def, node)
+	}
+}
+
+// goStub records a function with no body, as a stub of assembly or a
+// function that //go:linkname binds to a function of another package. Its
+// code is not Go source of the file, and that code can call code of the
+// graph. With no record, a path ends at the stub, and what the code calls
+// reads not-found. The receiver of the record is the import path of a
+// linkname, so the link step can give the record the scope of that
+// package.
+func (p *projection) goStub(def *fileindex.Definition, node *sitter.Node) {
+	site := ast.GetNodePosition(node)
+	text, pkg := def.Name, ""
+	if remote, ok := p.goLinknames()[def.Name]; ok && def.Kind == fileindex.DefFunction {
+		text, pkg = remote, goLinknamePackage(remote)
+	}
+	p.ix.Unresolved = append(p.ix.Unresolved, fileindex.Unresolved{
+		Caller:   def.Key,
+		Line:     int(site.StartLine),
+		Column:   int(site.StartColumn),
+		Text:     text,
+		Receiver: pkg,
+		Reason:   fileindex.UnresolvedNoDependencySource,
+	})
+}
+
+// goLinknames returns the remote name of each local name that a
+// //go:linkname directive of the file binds, as runtime.nanotime for
+// nanotime.
+func (p *projection) goLinknames() map[string]string {
+	if p.linknames != nil {
+		return p.linknames
+	}
+	p.linknames = map[string]string{}
+	for _, node := range ts.NamedChildren(p.tree.Tree().RootNode()) {
+		if node.Type() != "comment" {
+			continue
+		}
+		fields := strings.Fields(p.text(node))
+		if len(fields) == 3 && fields[0] == "//go:linkname" {
+			p.linknames[fields[1]] = fields[2]
+		}
+	}
+	return p.linknames
+}
+
+// goLinknamePackage returns the import path of a linkname target, as
+// crypto/internal/boring for crypto/internal/boring.Encrypt or
+// example.com/x for example.com/x.(*T).m.
+func goLinknamePackage(remote string) string {
+	slash := strings.LastIndex(remote, "/") + 1
+	if dot := strings.Index(remote[slash:], "."); dot >= 0 {
+		return remote[:slash+dot]
+	}
+	return remote
 }
 
 // goExported reports that a name starts with an upper case letter, a

@@ -113,7 +113,8 @@ const (
 	// UnresolvedNoDependencySource is a call on a value whose type comes
 	// from a package with no code in the graph, as the result of a
 	// function of a module that no unit gives, or an external key of such a
-	// package, whose code can call back into the graph.
+	// package, whose code can call back into the graph. A Go function with
+	// no body, as a stub of assembly, has the reason too.
 	UnresolvedNoDependencySource UnresolvedReason = "no-dependency-source"
 	// UnresolvedFunctionValue is a call of a function value, as f(x)(y) or
 	// handlers[i](c), in a language whose function values the link step

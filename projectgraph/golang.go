@@ -447,6 +447,27 @@ func (b *builder) goOutsideRecords(key string) []UnresolvedSite {
 	return []UnresolvedSite{{Caller: key, Text: key, Reason: fileindex.UnresolvedNoDependencySource}}
 }
 
+// scopeGoStub gives the record of a Go function with no body the scope of
+// the code that runs in its place. The receiver of the record names the
+// package of a //go:linkname target.
+//
+//   - Code of the standard library calls back only a method of an exported
+//     name, as goOutsideRecords argues. So a linkname into the standard
+//     library, or a stub of assembly in it, gets the callback.
+//   - The assembly of a package of a unit calls code of its package and of
+//     the runtime. So its record concerns what the code of its unit reaches.
+//   - A linkname into another package and the assembly of the project can
+//     call any function, so their records concern every target.
+func (b *builder) scopeGoStub(ix *fileindex.Index, site *UnresolvedSite) {
+	unit, _ := fileindex.ParseUnit(ix.Unit)
+	switch {
+	case site.Receiver != "" && modules.IsStdPath(site.Receiver), site.Receiver == "" && unit.Ecosystem == "go" && unit.Name == modules.StdModule:
+		site.Callback = true
+	case site.Receiver == "" && ix.Unit != "":
+		site.Unit = ix.Unit
+	}
+}
+
 // recordGoMethodsOutside adds the records of code outside the graph to each
 // Go call of a method on a value whose type the link step does not know.
 // Such a call can run a method of a type of a package that no unit gives,
