@@ -269,6 +269,9 @@ unresolved:
     reason: unknown-receiver
   - caller: go:example.com/markup@v1.0.0//node.go//Render
     site: go:example.com/markup@v1.0.0//node.go:39
+    reason: function-value
+  - caller: go:example.com/markup@v1.0.0//node.go//Render
+    site: go:example.com/markup@v1.0.0//node.go:39
     reason: unknown-receiver
     method: Handler
   - caller: context//Context//Done

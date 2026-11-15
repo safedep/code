@@ -6,7 +6,8 @@ description: >-
   method value, and a dot import. viaField calls a function value that a field holds. Each call is a record
   with a method name, and such a call can run a method of the standard library, which calls back ServeHTTP.
   So the caller of each record also has a callback record, and os.Remove is uncertain from each via
-  function. quiet.Idle calls nothing, and its package holds no load code, so os.Remove is not found from it.
+  function. A call of a function value, as the field of viaField or a name that no definition of the file
+  binds, as ListenAndServe after the dot import, also concerns every target from a source. quiet.Idle calls nothing, and its package holds no load code, so os.Remove is not found from it.
   A source in package main would enter the module top level of main.go, which holds http.ListenAndServe as a
   value.
 roots:
@@ -49,6 +50,9 @@ unresolved:
     callback: true
   - caller: dot.go//viaDotImport
     site: dot.go:6
+    reason: function-value
+  - caller: dot.go//viaDotImport
+    site: dot.go:6
     reason: unknown-receiver
     method: ListenAndServe
   - caller: main.go//viaVariable
@@ -67,6 +71,9 @@ unresolved:
     site: main.go:43
     reason: interface-receiver
     method: ListenAndServe
+  - caller: main.go//viaField
+    site: main.go:47
+    reason: function-value
   - caller: main.go//viaField
     site: main.go:47
     reason: unknown-receiver
@@ -138,6 +145,8 @@ results:
         reached: false
     uncertainties:
       - kind: unresolved-call
+        site: main.go:47
+      - kind: unresolved-call
   - target: os//Remove
     sources: [main.go//viaMethodValue]
     sources_only: true
@@ -159,6 +168,8 @@ results:
         site: main.go:11
         reached: false
     uncertainties:
+      - kind: unresolved-call
+        site: dot.go:6
       - kind: unresolved-call
         site: dot.go:6
       - kind: unresolved-call

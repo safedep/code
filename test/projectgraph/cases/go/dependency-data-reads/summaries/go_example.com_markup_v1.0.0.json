@@ -140,7 +140,8 @@
       ],
       "uncertainties": [
         0,
-        2
+        2,
+        3
       ]
     },
     {
@@ -203,14 +204,17 @@
       },
       "text": "example.com//markup//Handler (unknown-receiver)",
       "unit": "go:example.com/markup@v1.0.0",
-      "targets": [
-        "errors//New",
-        "os//Remove",
-        "os//exec//Command"
-      ],
-      "methods": [
-        "Handler"
-      ]
+      "every": true
+    },
+    {
+      "kind": "unresolved-call",
+      "key": "go:example.com/markup@v1.0.0//node.go//Render",
+      "site": {
+        "path": "go:example.com/markup@v1.0.0//node.go",
+        "line": 39,
+        "column": 2
+      },
+      "text": "Handler (function-value)"
     },
     {
       "kind": "unresolved-call",
@@ -222,11 +226,7 @@
       },
       "text": "Handler (unknown-receiver)",
       "method": "Handler",
-      "targets": [
-        "errors//New",
-        "os//Remove",
-        "os//exec//Command"
-      ]
+      "every": true
     }
   ]
 }

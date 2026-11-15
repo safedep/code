@@ -1016,14 +1016,23 @@ that search the load code of its Go package. The cases
 `javascript/source-module-load` hold a value in the load code and call it
 from a source.
 
-A call of a parameter, a local or a field that holds a function, as `f(x)`
-or `t.hook(x)`, is no `function-value` record. It is a record with the
-name, as `f` or `hook`, which concerns what a definition of the name
-reaches. In a search from the roots of a Go program, the `reference` edge
-of the stored function covers the call. In a search with a source, and in
-Rust, a function of another name that no path reaches can run. So such a
-call can read as `not-found`. Only an ambiguous site of the form concerns
-every target.
+A call of a parameter, a local or a range variable that holds a function,
+as `f(x)`, has a record with the name `f`, which concerns what a
+definition of the name reaches. A local of a declared function type, as
+`g` in `var g F = h`, has no record of its own. The function value has
+another name, so in Go the link step also gives each such site a
+`function-value` record. It does the same for a call of a member whose
+receiver it does not know, as `h.fn()`, when a field of a type of the graph
+has the name. In a search from the roots, the `reference` edge of the stored
+function covers the call, and the `function-value` record concerns no
+target. In a search with a source and in a summary, it concerns every
+target. The case `go/source-local-func` shows each form.
+
+Two gaps stay. A field of a type of a package that no unit gives can hold a
+function, and no definition names that field. So a call of it keeps only
+the record with the name. In Rust, a call of a parameter or a local keeps
+only the record with the name, and in a search with a source it can read as
+`not-found`.
 
 The rule does not apply to Rust. The Rust index records a function that an
 argument, a `let`, an assignment, a `return`, a field initializer or an

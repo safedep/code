@@ -135,8 +135,10 @@ type builder struct {
 	visiting map[nameKey]bool
 	bindings map[string]string
 	classes  map[string]classRecord
-	// defs holds the definition records by key.
-	defs map[string]*fileindex.Definition
+	// defs holds the definition records by key, and fieldNames the names
+	// of the fields among them.
+	defs       map[string]*fileindex.Definition
+	fieldNames map[string]bool
 	// reading holds the variables whose value a walk reads now, so a cycle
 	// of variables across files stops. stepping holds the names that a
 	// walk of a unit reads now for the result type of an external key.
@@ -403,6 +405,7 @@ func (b *builder) linkAll(ctx context.Context) error {
 		b.copyUnresolved(ix)
 		b.linkReflection(ix)
 	}
+	b.recordValueCalls()
 	if b.opts.Surface {
 		b.addSurfaces()
 	}

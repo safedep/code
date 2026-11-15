@@ -24,6 +24,56 @@ func (b *builder) linkUnknownValue(sc *scope, ref fileindex.Reference, from stri
 	b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: ref.Text, Method: lastWritten(ref.Text), Reason: reason})
 }
 
+// recordValueCalls adds a function-value record at each call that can run
+// a function value and that has only a record with its name: a call of a
+// parameter or a local, as f(x), or a call of a member whose name a field
+// of the graph has, as h.fn(). The name scopes the record to the
+// definitions of the name, and a function value has another name. A search
+// from the roots reaches the reference to the function, but a search from a
+// source can miss the code that stores the value. A field of a type that
+// no unit gives can also hold a function, and no definition shows it.
+func (b *builder) recordValueCalls() {
+	recorded := map[Site]bool{}
+	for u := range b.unresolved {
+		if u.Reason == fileindex.UnresolvedFunctionValue {
+			recorded[u.Site] = true
+		}
+	}
+	var add []UnresolvedSite
+	for u := range b.unresolved {
+		if u.Reason != fileindex.UnresolvedUnknownReceiver || u.Site.Path == "" || recorded[u.Site] || !b.callsValue(u) {
+			continue
+		}
+		ix := b.byPath[u.Site.Path]
+		if ix == nil || !profileOf(ix.Language).functionValues {
+			continue
+		}
+		recorded[u.Site] = true
+		add = append(add, UnresolvedSite{Caller: u.Caller, Site: u.Site, Text: u.Text, Receiver: u.Receiver, Reason: fileindex.UnresolvedFunctionValue})
+	}
+	for _, u := range add {
+		b.addUnresolved(u)
+	}
+}
+
+// callsValue reports whether a call with an unknown receiver can call a
+// function value: a name with no receiver, or a member that a field of the
+// graph names.
+func (b *builder) callsValue(u UnresolvedSite) bool {
+	if u.Receiver == "" {
+		return isIdentifier(u.Text)
+	}
+	if b.fieldNames == nil {
+		b.fieldNames = map[string]bool{}
+		for _, def := range b.defs {
+			if def.Kind == fileindex.DefField {
+				b.fieldNames[def.Name] = true
+			}
+		}
+	}
+	return b.fieldNames[u.Method]
+}
+
 // reflection is a package of a language that gives or runs a function
 // that no reference names, and the methods of it that do it.
 type reflection struct {

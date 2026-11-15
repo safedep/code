@@ -96,6 +96,12 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 				}
 				continue
 			}
+			// A local of a declared function type, as g in var g F = h,
+			// holds a function value. The walk ends at the type F, and no
+			// edge names the function.
+			if r.fail == nil && r.declared && call.Receiver == "" && sc.profile.functionValues && b.isType(r.key) {
+				b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: call.Callee, Reason: fileindex.UnresolvedFunctionValue})
+			}
 			if r.unbound && sc.profile.thisCalls {
 				r = b.thisCall(ix, caller, call, r)
 			}
