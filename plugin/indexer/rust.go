@@ -502,17 +502,29 @@ func rustDeclaredAt(ctx context.Context, p *projection, call fileindex.Call, nam
 }
 
 // rustRebound reports whether the function binds a name before a call by a
-// binder that the call graph does not read. A static or a const binds its
-// name in the whole block, also before it. A function whose walk stopped
-// early can bind any name.
+// binder that the call graph does not read, or by a second let. A static or
+// a const binds its name in the whole block, also before it. The call graph
+// binds a name to the value of its first let, so it sends t.run() after
+// let t = B to A::run when let t = A comes first. A function whose walk
+// stopped early can bind any name.
 func rustRebound(ctx context.Context, p *projection, call fileindex.Call, name string) bool {
 	binders, ok := p.rustBinders(ctx, call.Caller)
 	if !ok {
 		return true
 	}
+	lets := 0
 	return slices.ContainsFunc(binders[name], func(binder *sitter.Node) bool {
 		item := binder.Type() == "static_item" || binder.Type() == "const_item"
-		return (item || startsBefore(binder, call)) && !rustPlainBinder(binder)
+		if !item && !startsBefore(binder, call) {
+			return false
+		}
+		if !rustPlainBinder(binder) {
+			return true
+		}
+		if binder.Type() == "let_declaration" {
+			lets++
+		}
+		return lets > 1
 	})
 }
 

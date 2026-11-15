@@ -398,8 +398,10 @@ Rust follows the same rules, with these additions.
   name that its call passes as a token. A macro of std binds no such name,
   except `thread_local!`, which makes a `static`. So a call on a name that such a binder binds
   before the call is a record with the reason `unknown-receiver`, and so is
-  a call whose declared type does not hold. A method of the real type then
-  reads as `uncertain` and not as `not-found`.
+  a call whose declared type does not hold. The call graph binds a name to
+  the value of its first `let`, so a call after a second `let` of the name
+  is a record too, as in the case `rust/shadowed-let-type`. A method of the
+  real type then reads as `uncertain` and not as `not-found`.
 - The link step resolves the declared type of a parameter or a `let` at
   the root of the file. So the index keeps a declared type only when no
   scope that holds the binder declares the first name of the type. Such a
