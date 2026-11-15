@@ -309,8 +309,10 @@ func rustSignature(p *projection, def *fileindex.Definition, node *sitter.Node) 
 		}
 	}
 	result := node.ChildByFieldName("return_type")
-	if def.Returns, def.Wraps = p.rustResult(result, bounds); def.Returns != "" && p.rustScopedType(result, def.Returns) == "" {
-		def.Returns, def.Wraps = "", ""
+	if def.Returns, def.Wraps = p.rustResult(result, bounds); def.Returns != "" {
+		if def.Returns = p.rustScopedType(result, def.Returns); def.Returns == "" {
+			def.Wraps = ""
+		}
 	}
 	def.Locals = p.rustLocals(node.ChildByFieldName("body"), bounds)
 	if impl := rustImpl(node); impl != nil && !def.Static && !p.rustDefinesType(impl) {
@@ -361,24 +363,38 @@ func (p *projection) rustDeclaredType(binder *sitter.Node, bounds map[string]str
 	return p.rustScopedType(binder, p.rustTypeName(binder.ChildByFieldName("type"), bounds))
 }
 
-// rustScopedType returns a type that a node names, or "" when a scope that
-// holds the node declares the first name of the type. The link step
-// resolves a type at the root of the file, or as a type of an inline module
-// that holds the node. So Local in fn run() { type Local = dep::Thing<u8>;
-// let t: Local = ... } resolved to a struct Local of the root. A call on t
-// then took the method of that struct with no record, and a method of
-// dep::Thing read as not-found. Without the type, the call keeps the target
-// of the call graph or its record.
+// rustScopedType returns a type that a node names, as the link step reads
+// it. The link step resolves a type at the root of the file, or as a type of
+// an inline module that holds the node. So Local in fn run() { type Local =
+// dep::Thing<u8>; let t: Local = ... } resolved to a struct Local of the
+// root. A call on t then took the method of that struct with no record, and
+// a method of dep::Thing read as not-found. So when a scope that holds the
+// node declares the first name of the type, the type is "", and the call
+// keeps the target of the call graph or its record. A use that declares the
+// name gives its path instead, as crate::store::Item for Item after use
+// crate::store::Item in an inline module.
 func (p *projection) rustScopedType(node *sitter.Node, typ string) string {
-	first, _, _ := strings.Cut(typ, "::")
-	if typ == "" || p.rustScopeDeclares(node, first) {
+	first, rest, nested := strings.Cut(typ, "::")
+	if typ == "" || !p.rustScopeDeclares(node, nil, first) {
+		return typ
+	}
+	use, isUse := p.rustRebinder(node, nil, first)
+	if !isUse || p.rustScopeDeclares(node, use.Parent(), first) {
 		return ""
 	}
-	return typ
+	namespace, ok := p.rustUseNamespace(use, first)
+	if !ok {
+		return ""
+	}
+	path := strings.ReplaceAll(namespace, fileindex.Separator, "::")
+	if nested {
+		path += "::" + rest
+	}
+	return path
 }
 
 // rustScopeDeclares reports whether a scope between a node and the root of
-// the file can give a name another meaning than the root gives it: an item
+// the file, or a stop node, can give a name another meaning than the root gives it: an item
 // or a use of a block or of an inline module, or a type parameter of a
 // function, an impl, a trait or a type. A glob use can declare any name,
 // except use super::* in a module of the root, which reads the names of the
@@ -386,8 +402,8 @@ func (p *projection) rustScopedType(node *sitter.Node, typ string) string {
 // root. A struct, an enum, a union or a trait of the inline module that
 // declares the name first does not count, because the link step looks for
 // a type of the name in the inline modules that hold the node.
-func (p *projection) rustScopeDeclares(node *sitter.Node, name string) bool {
-	for scope := node.Parent(); scope != nil; scope = scope.Parent() {
+func (p *projection) rustScopeDeclares(node, stop *sitter.Node, name string) bool {
+	for scope := node.Parent(); scope != nil && (stop == nil || !ts.SameNode(scope, stop)); scope = scope.Parent() {
 		switch scope.Type() {
 		case "block":
 			if p.rustItemsDeclare(scope, name, false) {
@@ -780,6 +796,9 @@ func rustBoundName(pattern *sitter.Node) *sitter.Node {
 // record.
 func rustShadowed(p *projection, call *fileindex.Call, callee ast.NodePosition) bool {
 	node := p.descendant(callee)
+	if node != nil && rustMethod(node) != nil {
+		return p.rustShadowedMethod(call, node)
+	}
 	if node == nil || node.Type() != "identifier" && node.Type() != "scoped_identifier" {
 		return true
 	}
@@ -805,6 +824,34 @@ func rustShadowed(p *projection, call *fileindex.Call, callee ast.NodePosition) 
 				return false
 			}
 			call.Targets[i] = fileindex.Join(namespace, names[1:]...)
+		}
+	}
+	return true
+}
+
+// rustShadowedMethod fixes a target of a method call that the call graph
+// finds as a method of a type of an outer scope, when a scope between the
+// call and that scope binds the name of the type again. So x.save() after
+// let x = Item::new() and use crate::store::Item in mod deep went to the
+// Item of the parent of deep, and the real save read as not-found.
+func (p *projection) rustShadowedMethod(call *fileindex.Call, node *sitter.Node) bool {
+	for i, target := range call.Targets {
+		class := fileindex.Parent(target)
+		if def := p.defs[class]; def == nil || def.Kind != fileindex.DefClass || !fileindex.HasKeyPrefix(class, p.cg.FileName) {
+			continue
+		}
+		name := fileindex.Last(class)
+		binder, use := p.rustRebinder(node, p.syntax[fileindex.Parent(class)], name)
+		switch {
+		case binder == nil:
+		case !use:
+			return false
+		default:
+			namespace, ok := p.rustUseNamespace(binder, name)
+			if !ok {
+				return false
+			}
+			call.Targets[i] = fileindex.Join(namespace, fileindex.Last(target))
 		}
 	}
 	return true

@@ -127,6 +127,9 @@ func (b *builder) resolveType(sc *scope, from, text string) (string, bool) {
 		return "", false
 	}
 	key, ok := b.resolveNameIn(sc, from, text)
+	if !ok && sc.profile.typePath != nil && strings.Contains(text, "::") {
+		key, ok = sc.profile.typePath(b, sc, text)
+	}
 	trusted := sc.profile.implicitInterfaces || sc.profile.unitTypes || sc.profile.declaredTypes
 	switch {
 	case !ok:

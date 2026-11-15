@@ -1,0 +1,58 @@
+source: safedep:hand
+description: >-
+  src/store.rs declares the struct Item, and its inline module cache declares another Item. The inline module
+  cache::deep has use crate::store::Item, so x in by_new and in by_value holds the Item of the root, and x.save()
+  runs Item::save of the root, which calls std::fs::write. The call graph reads no use, so it finds the Item of
+  cache for Item::new() and for Item, and sends x.save() to cache::Item::save, which calls std::fs::create_dir.
+  std::fs::write then reads not-found. The index gives the call the path of the use.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/store.rs//cache//deep//by_new
+    to: src/store.rs//Item//save
+    kind: member
+    confidence: high
+    site: src/store.rs:31
+  - from: src/store.rs//cache//deep//by_value
+    to: src/store.rs//Item//save
+    kind: member
+    confidence: high
+    site: src/store.rs:36
+no_edges:
+  - from: src/store.rs//cache//deep//by_new
+    to: src/store.rs//cache//Item//save
+  - from: src/store.rs//cache//deep//by_value
+    to: src/store.rs//cache//Item//save
+unresolved: []
+results:
+  - target: std//fs//write
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/store.rs//cache//deep//by_new
+        site: src/main.rs:4
+        kind: direct
+        confidence: high
+      - key: src/store.rs//Item//save
+        site: src/store.rs:31
+        kind: member
+        confidence: high
+      - key: std//fs//write
+        site: src/store.rs:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/store.rs//Item//save
+        site: src/store.rs:5
+        reached: true
+  - target: std//fs//create_dir
+    status: not-found
+    call_sites:
+      - caller: src/store.rs//cache//Item//save
+        site: src/store.rs:18
+        reached: false

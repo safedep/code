@@ -346,7 +346,7 @@ var rustReceiverRows = []receiverRow{
 		name:   "parameter of a use of an inline module",
 		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nmod inner {\n    use dep::Thing as Local;\n    pub fn go(t: Local<u8>) {\n        t.inspect();\n    }\n}\n\nfn run() {\n    inner::go(dep::new_thing());\n}",
 		target: "dep//Thing//inspect",
-		want:   "uncertain/unknown-receiver",
+		want:   "found",
 	},
 	{
 		name:   "parameter of a type alias of the outer function",

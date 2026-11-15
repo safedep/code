@@ -428,7 +428,10 @@ Rust follows the same rules, with these additions.
   with a `struct Local` at the root, `t.inspect()` takes no method of the
   root `Local`. The call keeps the target that the call graph gives, or a
   record with the reason `unknown-receiver`. A type parameter with a bound,
-  as `S` in `fn run<S: Store>(s: S)`, names its bound. The case
+  as `S` in `fn run<S: Store>(s: S)`, names its bound. A `use` that
+  declares the name gives the path of the `use` in place of the type, as
+  `crate::store::Item` for `Item` after `use crate::store::Item;` in an
+  inline module, as in the case `rust/use-type-result`. The case
   `rust/inline-module-types` shows the types of an inline module, and the
   case `rust/generic-field-type` a type parameter of a struct and of an
   `impl`.
@@ -462,6 +465,10 @@ Rust follows the same rules, with these additions.
   the call, and reads no `use` and no type parameter. A `use` in a block
   or in an inline module can bind the name again, and the index then gives
   the call the path of that `use`, as in the case `rust/use-shadows-module`.
+  A method call whose target the call graph finds as a method of a type of
+  an outer scope gets the path of a `use` of the type name the same way,
+  as `x.save()` after `let x = Item::new();` in the case
+  `rust/use-type-receiver`.
   A type parameter of the name names a type that the caller gives, so the
   call is a record with the reason `unknown-receiver`, as in the case
   `rust/generic-shadows-type`.
