@@ -241,6 +241,19 @@ func (p *projection) goLocal(caller, name string, at uint32) bool {
 // scope at the byte. An inner scope starts after an outer one that holds
 // it, so the scope with the last start is the binding.
 func (p *projection) goBinding(caller, name string, at uint32) (goScope, bool) {
+	var binding goScope
+	found := false
+	for _, s := range p.goScopesOf(caller)[name] {
+		if s.from <= at && at < s.to && (!found || s.from > binding.from) {
+			binding, found = s, true
+		}
+	}
+	return binding, found
+}
+
+// goScopesOf returns the scopes of each local name of the caller, as
+// goScopes gives them, once per caller.
+func (p *projection) goScopesOf(caller string) map[string][]goScope {
 	if p.goScoped == nil {
 		p.goScoped = map[string]map[string][]goScope{}
 	}
@@ -249,14 +262,7 @@ func (p *projection) goBinding(caller, name string, at uint32) (goScope, bool) {
 		locals = p.goScopes(p.syntax[caller])
 		p.goScoped[caller] = locals
 	}
-	var binding goScope
-	found := false
-	for _, s := range locals[name] {
-		if s.from <= at && at < s.to && (!found || s.from > binding.from) {
-			binding, found = s, true
-		}
-	}
-	return binding, found
+	return locals
 }
 
 // goTypedAt reports whether the binding of a typed name in scope at the
@@ -293,6 +299,11 @@ func (p *projection) goTypedAt(caller, name string, at uint32) bool {
 		// binds.
 		return origin == goAssignedOrigin
 	case binding.from == origin:
+		return true
+	case origin == goAssignedOrigin && len(p.goScopesOf(caller)[name]) == 1:
+		// The function binds the name once, so the assignment types that
+		// one variable, as cl in cl := o.c; cl = &client{} or a named
+		// result c in c = &client{}.
 		return true
 	}
 	for i, t := range def.Locals {

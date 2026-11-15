@@ -6,7 +6,10 @@ description: >-
   of x in scope at the call is the binding whose type the link step reads. Here it is not, so the call is
   an unknown-receiver record with the method name run, which gets a name edge to remote.run. The method
   value x.stop is a record of the same kind, with the name stop. A type of the first x gave not-found for
-  os/exec.LookPath. The call x.run() before the block keeps its member edge to local.run.
+  os/exec.LookPath. The call x.run() before the block keeps its member edge to local.run. pick binds r
+  once and types it by the assignment r = &remote{}, and named types its named result l by an assignment.
+  Each function binds the name once, so the assignment types that variable, and the call keeps its member
+  edge. A record there gave a name edge to the run of the other type, and a target behind it read found.
 roots:
   - key: main.go
     kind: main
@@ -30,9 +33,23 @@ edges:
     kind: name
     confidence: low
     site: main.go:24
+  - from: main.go//pick
+    to: main.go//remote//run
+    kind: member
+    confidence: high
+    site: main.go:38
+  - from: main.go//named
+    to: main.go//local//run
+    kind: member
+    confidence: high
+    site: main.go:43
 no_edges:
   - from: main.go//local//run
     to: os//exec//LookPath
+  - from: main.go//pick
+    to: main.go//local//run
+  - from: main.go//named
+    to: main.go//remote//run
 unresolved:
   - caller: main.go//main
     reason: no-dependency-source
@@ -110,3 +127,19 @@ results:
       - caller: main.go//remote//stop
         site: main.go:16
         reached: true
+  - target: os//Getwd
+    sources: [main.go//pick]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: main.go//local//run
+        site: main.go:10
+        reached: false
+  - target: os//exec//LookPath
+    sources: [main.go//named]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: main.go//remote//run
+        site: main.go:14
+        reached: false

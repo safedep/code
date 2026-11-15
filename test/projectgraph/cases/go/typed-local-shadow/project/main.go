@@ -24,4 +24,22 @@ func main() {
 		f := x.stop
 		f()
 	}
+	pick(opts{})
+	named()
+}
+
+type opts struct{ r *remote }
+
+func pick(o opts) {
+	r := o.r
+	if r == nil {
+		r = &remote{}
+	}
+	r.run()
+}
+
+func named() (l *local) {
+	l = &local{}
+	l.run()
+	return
 }
