@@ -325,6 +325,57 @@ func goTypedCall(p *projection, call fileindex.Call) bool {
 	return true
 }
 
+// goLiteralCall reports whether a call names a local that the caller
+// binds once, to a function literal, and never assigns again, as f in
+// f := func() {...}; f(). The index gives the calls of the literal to the
+// caller, so the call runs no code that the caller does not hold. An
+// assignment or an address of the name can give it another function.
+func goLiteralCall(p *projection, call fileindex.Call) bool {
+	name := call.Callee
+	if call.Receiver != "" || !isIdentifier(name) || len(p.goScopesOf(call.Caller)[name]) != 1 {
+		return false
+	}
+	if _, bound := p.goBinding(call.Caller, name, p.byteAt(call.Line, call.Column)); !bound {
+		return false
+	}
+	fn := p.syntax[call.Caller]
+	if fn == nil {
+		return false
+	}
+	literal, other, declared := false, false, 0
+	walkBody(fn.ChildByFieldName("body"), nil, func(node *sitter.Node) {
+		switch node.Type() {
+		case "short_var_declaration", "var_spec":
+			left, right := node.ChildByFieldName("left"), node.ChildByFieldName("right")
+			var names []*sitter.Node
+			if node.Type() == "var_spec" {
+				names, right = childrenByField(node, "name"), node.ChildByFieldName("value")
+			} else if left != nil {
+				names = ts.NamedChildren(left)
+			}
+			var values []*sitter.Node
+			if right != nil {
+				values = ts.NamedChildren(right)
+			}
+			for i, n := range names {
+				if p.text(n) == name {
+					declared++
+					literal = len(values) == len(names) && values[i].Type() == "func_literal"
+				}
+			}
+		case "assignment_statement", "inc_statement", "dec_statement":
+			if left := node.ChildByFieldName("left"); left != nil && slices.ContainsFunc(ts.NamedChildren(left), func(n *sitter.Node) bool { return p.text(n) == name }) {
+				other = true
+			}
+		case "unary_expression":
+			if operand := node.ChildByFieldName("operand"); goOperator(node) == "&" && operand != nil && p.text(operand) == name {
+				other = true
+			}
+		}
+	})
+	return literal && !other && declared == 1
+}
+
 // byteAt returns the start of the innermost named node at a line and a
 // column of a site, as a call or a record holds them.
 func (p *projection) byteAt(line, column int) uint32 {

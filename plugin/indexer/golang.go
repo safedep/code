@@ -26,6 +26,7 @@ var goRules = languageRules{
 	exported:    goExported,
 	definitions: goDefinitions,
 	typedAt:     goTypedCall,
+	literalCall: goLiteralCall,
 	visitors:    []func(p *projection) visitor{referenceVisitor},
 	references: &referenceSyntax{
 		holders: map[string]string{
@@ -130,11 +131,47 @@ func (p *projection) goTypes(statement *sitter.Node) {
 			continue
 		}
 		for _, field := range p.goStructFields(t) {
+			data := p.goDataField(field.ChildByFieldName("type"))
 			for _, name := range childrenByField(field, "name") {
-				p.addDefinition(fileindex.Join(key, p.text(name)), fileindex.DefField, field)
+				p.addDefinition(fileindex.Join(key, p.text(name)), fileindex.DefField, field).Data = data
 			}
 		}
 	}
+}
+
+// goDataField reports whether a field of the type holds no function: a
+// type that goDataType reads as data, or a type of the file whose
+// declaration is such a type. A call x.f() can run the function value of a
+// field f, so the link step reads the fields that can hold one.
+func (p *projection) goDataField(t *sitter.Node) bool {
+	if t == nil {
+		return false
+	}
+	if p.goDataType(t) {
+		return true
+	}
+	declared := p.goFileType(t)
+	return declared != nil && p.goDataType(declared)
+}
+
+// goFileType returns the type that a type declaration of the file gives a
+// type name, as struct{...} for Config in type Config struct{...}.
+func (p *projection) goFileType(t *sitter.Node) *sitter.Node {
+	if t.Type() != "type_identifier" {
+		return nil
+	}
+	name := p.text(t)
+	for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
+		if statement.Type() != "type_declaration" {
+			continue
+		}
+		for _, spec := range ts.NamedChildren(statement) {
+			if spec.Type() == "type_spec" && p.text(spec.ChildByFieldName("name")) == name {
+				return spec.ChildByFieldName("type")
+			}
+		}
+	}
+	return nil
 }
 
 // goVarSpecs returns the specs of a var declaration. A declaration with

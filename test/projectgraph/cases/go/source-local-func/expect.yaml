@@ -7,7 +7,11 @@ description: >-
   each function as a value, so os.Remove is found through the reference. A search from run, each, fire,
   call or pick alone does not reach main. Each call there runs a function value that the search does not
   reach, so the call is a function-value record, which concerns every target in a search with a source.
-  Each target is then uncertain. A record with the name alone, as f or fn, gave not-found there.
+  Each target is then uncertain. A record with the name alone, as f or fn, gave not-found there. show
+  calls Name on a range variable of an interface. The field Name of user holds a string, so the call runs
+  no function value, and os.Getwd is not found from show. closure calls its local f, which holds a
+  function literal and nothing else. The index gives the calls of the literal to closure, so the call of f
+  is no record, and os.Getwd is not found from closure.
 roots:
   - key: main.go
     kind: main
@@ -33,6 +37,9 @@ unresolved:
   - caller: main.go//run
     reason: no-dependency-source
     callback: true
+  - caller: main.go//show
+    reason: no-dependency-source
+    callback: true
   - caller: os//Args
     reason: no-dependency-source
     callback: true
@@ -43,6 +50,9 @@ unresolved:
     reason: no-dependency-source
     callback: true
   - caller: os//Getwd
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Hostname
     reason: no-dependency-source
     callback: true
   - caller: os//Remove
@@ -82,6 +92,10 @@ unresolved:
     site: main.go:54
     reason: unknown-receiver
     method: m
+  - caller: main.go//show
+    site: main.go:65
+    reason: unknown-receiver
+    method: Name
 results:
   - target: os//Remove
     status: found
@@ -154,3 +168,33 @@ results:
     uncertainties:
       - kind: unresolved-call
         site: main.go:54
+  - target: os//Getwd
+    sources: [main.go//show]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+  - target: os//Hostname
+    sources: [main.go//closure]
+    sources_only: true
+    status: found
+    path:
+      - key: main.go//closure
+      - key: os//Hostname
+        site: main.go:70
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//closure
+        site: main.go:70
+        reached: true
+  - target: os//Getwd
+    sources: [main.go//closure]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false

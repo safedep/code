@@ -125,8 +125,8 @@ func TestFileIndexGoValues(t *testing.T) {
 		data   bool
 		values []string
 	}{
-		{key: "shop.go//Node//Data", kind: fileindex.DefField},
-		{key: "shop.go//Node//kind", kind: fileindex.DefField},
+		{key: "shop.go//Node//Data", kind: fileindex.DefField, data: true},
+		{key: "shop.go//Node//kind", kind: fileindex.DefField, data: true},
 		{key: "shop.go//Max", kind: fileindex.DefConstant},
 		{key: "shop.go//Min", kind: fileindex.DefConstant},
 		{key: "shop.go//Next", kind: fileindex.DefConstant},

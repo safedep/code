@@ -58,15 +58,16 @@ func (b *builder) recordValueCalls() {
 
 // callsValue reports whether a call with an unknown receiver can call a
 // function value: a name with no receiver, or a member that a field of the
-// graph names.
+// graph names. Only a field of a language with functionValues counts, and
+// not one whose type the index shows to hold data, as Name string.
 func (b *builder) callsValue(u UnresolvedSite) bool {
 	if u.Receiver == "" {
 		return isIdentifier(u.Text)
 	}
 	if b.fieldNames == nil {
 		b.fieldNames = map[string]bool{}
-		for _, def := range b.defs {
-			if def.Kind == fileindex.DefField {
+		for key, def := range b.defs {
+			if def.Kind == fileindex.DefField && !def.Data && profileOf(b.languageOf(key)).functionValues {
 				b.fieldNames[def.Name] = true
 			}
 		}

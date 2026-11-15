@@ -53,3 +53,21 @@ func chdir() { os.Chdir("/") }
 func pick(m map[string]func(), name string) {
 	m[name]()
 }
+
+type user struct {
+	Name string
+}
+
+type namer interface{ Name() string }
+
+func show(ns []namer) {
+	for _, n := range ns {
+		_ = n.Name()
+	}
+}
+
+func closure() {
+	f := func() { os.Hostname() }
+	f()
+	defer f()
+}

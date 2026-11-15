@@ -50,6 +50,10 @@ type languageRules struct {
 	// the typed locals of a function with no extent, so an inner block can
 	// bind the name of the receiver again.
 	typedAt func(p *projection, call fileindex.Call) bool
+	// literalCall reports whether a call runs a function literal whose
+	// calls the index gives to the caller already, as f() after
+	// f := func() {...} in Go. Such a call needs no edge and no record.
+	literalCall func(p *projection, call fileindex.Call) bool
 
 	// packageOf returns the package or the namespace of the file, which the
 	// files of one unit share.

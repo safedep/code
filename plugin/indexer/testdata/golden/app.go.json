@@ -60,7 +60,8 @@
       "start_line": 21,
       "end_line": 21,
       "exported": false,
-      "parent": "app.go//Server"
+      "parent": "app.go//Server",
+      "data": true
     },
     {
       "key": "app.go//Server//name",
@@ -69,7 +70,8 @@
       "start_line": 21,
       "end_line": 21,
       "exported": false,
-      "parent": "app.go//Server"
+      "parent": "app.go//Server",
+      "data": true
     },
     {
       "key": "app.go//Server//db",
@@ -78,7 +80,8 @@
       "start_line": 22,
       "end_line": 22,
       "exported": false,
-      "parent": "app.go//Server"
+      "parent": "app.go//Server",
+      "data": true
     },
     {
       "key": "app.go//Server//cache",
@@ -87,7 +90,8 @@
       "start_line": 23,
       "end_line": 23,
       "exported": false,
-      "parent": "app.go//Server"
+      "parent": "app.go//Server",
+      "data": true
     },
     {
       "key": "app.go//Box",
