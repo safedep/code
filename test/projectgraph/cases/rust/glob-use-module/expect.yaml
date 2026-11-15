@@ -1,0 +1,47 @@
+source: safedep:hand
+description: >-
+  The module deep declares the modules helpers and worker. worker.rs has use super::*, which brings the
+  module helpers into scope, and go calls helpers::cleanup. cleanup calls std::fs::remove_file, so
+  std::fs::remove_file is found. The name helpers is no child module of worker and no module of the root.
+  A link step that reads such a name as another crate gives the edge to the key helpers//cleanup with no
+  record, and std::fs::remove_file reads not-found.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//main
+    to: src/deep/worker.rs//go
+    kind: direct
+    confidence: high
+    site: src/main.rs:4
+  - from: src/deep/worker.rs//go
+    to: src/deep/helpers.rs//cleanup
+    kind: wildcard
+    confidence: low
+    site: src/deep/worker.rs:4
+unresolved: []
+results:
+  - target: std//fs//remove_file
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/deep/worker.rs//go
+        site: src/main.rs:4
+        kind: direct
+        confidence: high
+      - key: src/deep/helpers.rs//cleanup
+        site: src/deep/worker.rs:4
+        kind: wildcard
+        confidence: low
+      - key: std//fs//remove_file
+        site: src/deep/helpers.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/deep/helpers.rs//cleanup
+        site: src/deep/helpers.rs:2
+        reached: true
