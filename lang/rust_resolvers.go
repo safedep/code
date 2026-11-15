@@ -118,26 +118,18 @@ func rustInlineModules(data *[]byte, node *sitter.Node) []string {
 func rustFromFile(path string, mods []string) string {
 	parts := strings.Split(path, "::")
 	ups := 0
+	for ups < len(parts) && parts[ups] == "super" {
+		ups++
+	}
 	switch {
 	case parts[0] == "self":
-		parts = parts[1:]
-	case parts[0] == "super":
-		for ups < len(parts) && parts[ups] == "super" {
-			ups++
-		}
-		parts = parts[ups:]
-	default:
+		return strings.Join(slices.Concat([]string{"self"}, mods, parts[1:]), "::")
+	case ups == 0:
 		return path
+	case ups > len(mods):
+		return strings.Join(slices.Concat(slices.Repeat([]string{"super"}, ups-len(mods)), parts[ups:]), "::")
 	}
-	var out []string
-	if ups > len(mods) {
-		for range ups - len(mods) {
-			out = append(out, "super")
-		}
-	} else {
-		out = append(append(out, "self"), mods[:len(mods)-ups]...)
-	}
-	return strings.Join(append(out, parts...), "::")
+	return strings.Join(slices.Concat([]string{"self"}, mods[:len(mods)-ups], parts[ups:]), "::")
 }
 
 // rustUseImports returns the imports of a use tree. The prefix is the path of
