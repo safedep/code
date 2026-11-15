@@ -1,9 +1,13 @@
 source: safedep:hand
 description: >-
   The inline module other of src/store.rs calls super::Item::new and self::inner::run. super of other is the
-  module store, and self is other. The call graph reads no inline module, and the link step reads such a path
+  module store, and self is other. other also makes values of super::Item with super::Item::new,
+  super::Item {} and crate::store::Item::new, and calls save on each. other defines an Item of its own, whose
+  save calls std::fs::remove_dir. The call graph reads no inline module, and the link step reads such a path
   from the module of the file. So super::Item::new goes to the external key super//Item//new, and
   std::fs::write reads not-found. self::inner::run names an inner of the module store, which does not exist.
+  i.save() and j.save() go to super//Item//save, which gets low name edges to the save of each Item, so
+  std::fs::remove_dir reads found.
 roots:
   - key: src/main.rs
     kind: main
@@ -11,20 +15,88 @@ roots:
   - key: src/main.rs//main
     kind: main
     rule: rust.main
+exact_edges: true
 edges:
+  - from: src/main.rs//main
+    to: src/store.rs//other//sib
+    kind: direct
+    confidence: high
+    site: src/main.rs:4
+  - from: src/main.rs//main
+    to: src/store.rs//other//made
+    kind: direct
+    confidence: high
+    site: src/main.rs:5
+  - from: src/main.rs//main
+    to: src/store.rs//other//rooted
+    kind: direct
+    confidence: high
+    site: src/main.rs:6
+  - from: src/store.rs//Item//new
+    to: std//fs//write
+    kind: direct
+    confidence: high
+    site: src/store.rs:5
+  - from: src/store.rs//Item//save
+    to: src/store.rs//Item
+    kind: direct
+    confidence: high
+    site: src/store.rs:9
+  - from: src/store.rs//Item//save
+    to: std//fs//remove_file
+    kind: direct
+    confidence: high
+    site: src/store.rs:10
+  - from: src/store.rs//other//Item//save
+    to: src/store.rs//other//Item
+    kind: direct
+    confidence: high
+    site: src/store.rs:18
+  - from: src/store.rs//other//Item//save
+    to: std//fs//remove_dir
+    kind: direct
+    confidence: high
+    site: src/store.rs:19
+  - from: src/store.rs//other//inner//run
+    to: std//fs//create_dir
+    kind: direct
+    confidence: high
+    site: src/store.rs:41
   - from: src/store.rs//other//sib
     to: src/store.rs//Item//new
     kind: direct
     confidence: high
-    site: src/store.rs:12
+    site: src/store.rs:24
+  - from: src/store.rs//other//sib
+    to: src/store.rs//Item//save
+    kind: member
+    confidence: high
+    site: src/store.rs:25
   - from: src/store.rs//other//sib
     to: src/store.rs//other//inner//run
     kind: direct
     confidence: high
-    site: src/store.rs:13
-no_edges:
-  - from: src/store.rs//other//sib
-    to: super//Item//new
+    site: src/store.rs:26
+  - from: src/store.rs//other//made
+    to: src/store.rs//Item
+    kind: direct
+    confidence: high
+    site: src/store.rs:30
+  - from: src/store.rs//other//made
+    to: src/store.rs//Item//save
+    kind: member
+    confidence: high
+    site: src/store.rs:31
+  - from: src/store.rs//other//rooted
+    to: src/store.rs//Item//new
+    kind: direct
+    confidence: high
+    site: src/store.rs:35
+  - from: src/store.rs//other//rooted
+    to: src/store.rs//Item//save
+    kind: member
+    confidence: high
+    site: src/store.rs:36
 unresolved: []
 results:
   - target: std//fs//write
@@ -36,7 +108,7 @@ results:
         kind: direct
         confidence: high
       - key: src/store.rs//Item//new
-        site: src/store.rs:12
+        site: src/store.rs:24
         kind: direct
         confidence: high
       - key: std//fs//write
@@ -47,6 +119,30 @@ results:
       - caller: src/store.rs//Item//new
         site: src/store.rs:5
         reached: true
+  - target: std//fs//remove_file
+    status: found
+    sources: [src/store.rs//other//made]
+    sources_only: true
+    path:
+      - key: src/store.rs//other//made
+      - key: src/store.rs//Item//save
+        site: src/store.rs:31
+        kind: member
+        confidence: high
+      - key: std//fs//remove_file
+        site: src/store.rs:10
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/store.rs//Item//save
+        site: src/store.rs:10
+        reached: true
+  - target: std//fs//remove_dir
+    status: not-found
+    call_sites:
+      - caller: src/store.rs//other//Item//save
+        site: src/store.rs:19
+        reached: false
   - target: std//fs//create_dir
     status: found
     path:
@@ -56,14 +152,14 @@ results:
         kind: direct
         confidence: high
       - key: src/store.rs//other//inner//run
-        site: src/store.rs:13
+        site: src/store.rs:26
         kind: direct
         confidence: high
       - key: std//fs//create_dir
-        site: src/store.rs:18
+        site: src/store.rs:41
         kind: direct
         confidence: high
     call_sites:
       - caller: src/store.rs//other//inner//run
-        site: src/store.rs:18
+        site: src/store.rs:41
         reached: true

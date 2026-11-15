@@ -812,10 +812,17 @@ func rustBoundName(pattern *sitter.Node) *sitter.Node {
 // util::g() the module util of the file. A use gives the target through
 // the path of the use. A type parameter names a type that the call does not
 // know, so the call is a record.
-func rustShadowed(p *projection, call *fileindex.Call, callee ast.NodePosition) bool {
+func rustShadowed(ctx context.Context, p *projection, call *fileindex.Call, callee ast.NodePosition) bool {
 	node := p.descendant(callee)
-	if node != nil && rustMethod(node) != nil {
+	if method := rustMethod(node); node != nil && method != nil {
+		if binders, ok := p.rustBinders(ctx, call.Caller); ok {
+			p.rustFromFile(call, node, p.rustReceiverPath(binders, method))
+		}
 		return p.rustShadowedMethod(call, node)
+	}
+	if node != nil && node.Type() == "scoped_type_identifier" {
+		p.rustFromFile(call, node, p.text(node))
+		return true
 	}
 	if node == nil || node.Type() != "identifier" && node.Type() != "scoped_identifier" {
 		return true
@@ -823,7 +830,7 @@ func rustShadowed(p *projection, call *fileindex.Call, callee ast.NodePosition) 
 	names := strings.Split(p.text(node), "::")
 	switch names[0] {
 	case "self", "super":
-		p.rustFromFile(call, node, names)
+		p.rustFromFile(call, node, p.text(node))
 		return true
 	case "crate", "Self", "":
 		return true
@@ -845,14 +852,18 @@ func rustShadowed(p *projection, call *fileindex.Call, callee ast.NodePosition) 
 	return true
 }
 
-// rustFromFile writes the target of a call whose path starts with self or
-// super in an inline module as a path from the module of the file. The call
-// graph reads no inline module, and the link step reads such a path from the
-// module of the file. So super::Item::new() in mod other went to an external
-// super//Item//new, and the real Item::new of the file read as not-found.
-// Only the target that the call writes changes. A use already gives its
-// target from the module of the file.
-func (p *projection) rustFromFile(call *fileindex.Call, node *sitter.Node, names []string) {
+// rustFromFile writes the targets of a call under a path that the call
+// writes, when the path starts with self or super in an inline module, as a
+// path from the module of the file. The call graph reads no inline module,
+// and the link step reads such a path from the module of the file. So
+// super::Item::new() in mod other went to an external super//Item//new, and
+// the real Item::new of the file read as not-found. A method of a value of
+// such a path, as i.save() after let i = super::Item::new(), gets the same
+// fix. A use already gives its target from the module of the file.
+func (p *projection) rustFromFile(call *fileindex.Call, node *sitter.Node, written string) {
+	if first, _, _ := strings.Cut(written, "::"); first != "self" && first != "super" {
+		return
+	}
 	var mods []string
 	for n := node.Parent(); n != nil; n = n.Parent() {
 		if n.Type() == "mod_item" {
@@ -863,13 +874,39 @@ func (p *projection) rustFromFile(call *fileindex.Call, node *sitter.Node, names
 		return
 	}
 	slices.Reverse(mods)
-	written := strings.Join(names, fileindex.Separator)
-	path := langcode.RustFromFile(strings.Join(names, "::"), mods)
+	from := strings.ReplaceAll(written, "::", fileindex.Separator)
+	to := strings.ReplaceAll(langcode.RustFromFile(written, mods), "::", fileindex.Separator)
 	for i, target := range call.Targets {
-		if target == written {
-			call.Targets[i] = strings.ReplaceAll(path, "::", fileindex.Separator)
+		if rest, ok := strings.CutPrefix(target, from); ok && (rest == "" || strings.HasPrefix(rest, fileindex.Separator)) {
+			call.Targets[i] = to + rest
 		}
 	}
+}
+
+// rustReceiverPath returns the path of the type that the let of the
+// receiver of a method call writes, as super::Item of let i =
+// super::Item::new() or of let i = super::Item {}. The call graph types the
+// receiver by that path.
+func (p *projection) rustReceiverPath(binders map[string][]*sitter.Node, method *sitter.Node) string {
+	receiver := method.ChildByFieldName("value")
+	if receiver.Type() != "identifier" {
+		return ""
+	}
+	let := rustLetOf(binders[p.text(receiver)], receiver)
+	if let == nil {
+		return ""
+	}
+	value := let.ChildByFieldName("value")
+	switch {
+	case value == nil:
+	case value.Type() == "struct_expression":
+		return p.text(value.ChildByFieldName("name"))
+	case value.Type() == "call_expression":
+		if fn := value.ChildByFieldName("function"); fn != nil && fn.Type() == "scoped_identifier" {
+			return p.text(fn.ChildByFieldName("path"))
+		}
+	}
+	return ""
 }
 
 // rustShadowedMethod fixes a target of a method call that the call graph
