@@ -83,7 +83,17 @@ func rustTokenTreeProcessor(node *sitter.Node, treeData []byte, currentNamespace
 			continue
 		}
 		rustTokenTreeProcessor(token, treeData, currentNamespace, callGraph, metadata)
-		if i == 0 || tokens[i-1].Type() != "identifier" {
+		if i == 0 {
+			continue
+		}
+		// A metavariable before a group in parentheses, as $f() in a rule
+		// of a macro, calls whatever function the call of the macro
+		// passes. The tokens do not name it, so the call is a record.
+		if prev := tokens[i-1]; prev.Type() == "metavariable" && !rustPathToken(prev, treeData) && strings.HasPrefix(token.Content(treeData), "(") {
+			callGraph.addRecord(currentNamespace, prev, "", "", treeData, UnresolvedComputedName)
+			continue
+		}
+		if tokens[i-1].Type() != "identifier" {
 			continue
 		}
 		creation := strings.HasPrefix(token.Content(treeData), "{")

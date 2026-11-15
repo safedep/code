@@ -1,0 +1,33 @@
+source: safedep:hand
+description: >-
+  The rule of the macro call has $f(), which calls the function that a call of the macro passes. main calls
+  call!(target), so target runs and calls std::fs::remove_dir. The tokens of the rule do not name the function,
+  and a macro that reads $f() as no call gives no edge and no record, so std::fs::remove_dir reads not-found.
+  The call is a record with the reason computed-name, so the target reads uncertain.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//main
+    to: src/main.rs//call
+    kind: direct
+    confidence: high
+    site: src/main.rs:12
+unresolved:
+  - caller: src/main.rs//call
+    site: src/main.rs:3
+    reason: computed-name
+results:
+  - target: std//fs//remove_dir
+    status: uncertain
+    call_sites:
+      - caller: src/main.rs//target
+        site: src/main.rs:8
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/main.rs:3
