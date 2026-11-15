@@ -1,0 +1,48 @@
+source: safedep:hand
+description: >-
+  The file declares Client two times. With the feature native, Client is a struct, and its method send calls
+  std::fs::remove_file. Without the feature, Client is an alias of fallback::Client, whose send calls
+  nothing. work calls send on a parameter of the type Client. The call can run the send of each
+  declaration, so std::fs::remove_file is found through the send of the struct. An index that lets the alias
+  replace the struct gives only the edge to fallback::Client.send, and std::fs::remove_file reads
+  not-found.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//main
+    to: src/main.rs//work
+    kind: direct
+    confidence: high
+    site: src/main.rs:35
+  - from: src/main.rs//work
+    to: src/main.rs//Client//send
+    kind: member
+    confidence: high
+    site: src/main.rs:31
+unresolved: []
+results:
+  - target: std//fs//remove_file
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//work
+        site: src/main.rs:35
+        kind: direct
+        confidence: high
+      - key: src/main.rs//Client//send
+        site: src/main.rs:31
+        kind: member
+        confidence: high
+      - key: std//fs//remove_file
+        site: src/main.rs:23
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.rs//Client//send
+        site: src/main.rs:23
+        reached: true
