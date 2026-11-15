@@ -3,8 +3,8 @@ description: >-
   dispatch calls handle on the parameter handler. 24 classes define a method handle, so the site is over
   the cap of 20 and is ambiguous. main passes an H0, which defines no handle. Its __getattr__ gives cleanup,
   which calls os.remove. That code is no definition of the name handle, so the site keeps no method name and
-  concerns every target. A read of an attribute of an H0 can run H0.__getattr__, so a reference edge joins H0
-  to H0.__getattr__ and os.remove is found. No code calls shutil.rmtree, and the ambiguous site makes it
+  concerns every target. A read of an attribute of an H0 can run H0.__getattr__, so a reference edge joins the
+  call that makes the H0 to H0.__getattr__ and os.remove is found. No code calls shutil.rmtree, and the ambiguous site makes it
   uncertain and not not-found.
 roots:
   - key: main.py
@@ -22,12 +22,8 @@ results:
     status: found
     path:
       - key: main.py
-      - key: handlers.py//H0
-        site: main.py:6
-        kind: direct
-        confidence: high
       - key: handlers.py//H0//__getattr__
-        site: handlers.py:7
+        site: main.py:6
         kind: reference
         confidence: low
       - key: handlers.py//cleanup

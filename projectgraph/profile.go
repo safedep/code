@@ -179,6 +179,14 @@ type profile struct {
 	// implicitMethods name the methods that the language calls with no
 	// call of the name, as an operator of Kotlin.
 	implicitMethods map[string]bool
+	// instanceMethods name the methods that an instance runs with no call
+	// of the name, as __call__ of Python. A call that makes an instance
+	// links them, and a reference to the class alone does not.
+	instanceMethods map[string]bool
+	// metaclass is the base of a class whose instances are classes, as
+	// type of Python. A class statement makes an instance of such a class,
+	// so each edge to it makes an instance.
+	metaclass string
 	// forwardMethod names the method of a class that forwards a call that
 	// the class has no method for to another type, as deref of Rust. A
 	// declared type with it does not narrow the receiver.

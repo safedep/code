@@ -1,0 +1,125 @@
+source: safedep:hand
+description: >-
+  Proxy defines __call__ and __getattr__, and Desc defines __get__. No code makes an instance of them:
+  check names them only in isinstance, and main calls a static method and reads a class attribute. So no
+  edge leads to these methods, and their targets are not-found. Made names the metaclass Meta, so its
+  class statement makes an instance of Meta. A call of Made runs Meta.__call__, so the reference to Meta
+  at the class statement leads to it and tempfile.mkdtemp is found.
+roots:
+  - key: main.py
+    kind: main
+    rule: python.main-guard
+exact_edges: true
+edges:
+  - from: main.py
+    to: main.py//Meta
+    kind: reference
+    confidence: low
+    site: main.py:31
+  - from: main.py
+    to: main.py//Meta//__call__
+    kind: reference
+    confidence: low
+    site: main.py:31
+  - from: main.py
+    to: main.py//main
+    kind: direct
+    confidence: high
+    site: main.py:47
+  - from: main.py//Desc//__get__
+    to: subprocess//run
+    kind: direct
+    confidence: high
+    site: main.py:23
+  - from: main.py//Meta//__call__
+    to: tempfile//mkdtemp
+    kind: direct
+    confidence: high
+    site: main.py:28
+  - from: main.py//Proxy//__call__
+    to: os//remove
+    kind: direct
+    confidence: high
+    site: main.py:11
+  - from: main.py//Proxy//__getattr__
+    to: shutil//rmtree
+    kind: direct
+    confidence: high
+    site: main.py:14
+  - from: main.py//check
+    to: isinstance
+    kind: direct
+    confidence: high
+    site: main.py:36
+  - from: main.py//check
+    to: main.py//Proxy
+    kind: reference
+    confidence: low
+    site: main.py:36
+  - from: main.py//check
+    to: isinstance
+    kind: direct
+    confidence: high
+    site: main.py:36
+  - from: main.py//check
+    to: main.py//Desc
+    kind: reference
+    confidence: low
+    site: main.py:36
+  - from: main.py//main
+    to: main.py//check
+    kind: direct
+    confidence: high
+    site: main.py:40
+  - from: main.py//main
+    to: main.py//Proxy//helper
+    kind: member
+    confidence: high
+    site: main.py:41
+  - from: main.py//main
+    to: print
+    kind: direct
+    confidence: high
+    site: main.py:42
+  - from: main.py//main
+    to: main.py//Made
+    kind: direct
+    confidence: high
+    site: main.py:43
+unresolved: []
+results:
+  - target: os//remove
+    status: not-found
+    call_sites:
+      - caller: main.py//Proxy//__call__
+        site: main.py:11
+        reached: false
+  - target: shutil//rmtree
+    status: not-found
+    call_sites:
+      - caller: main.py//Proxy//__getattr__
+        site: main.py:14
+        reached: false
+  - target: subprocess//run
+    status: not-found
+    call_sites:
+      - caller: main.py//Desc//__get__
+        site: main.py:23
+        reached: false
+  - target: tempfile//mkdtemp
+    status: found
+    path:
+      - key: main.py
+        root: main
+      - key: main.py//Meta//__call__
+        site: main.py:31
+        kind: reference
+        confidence: low
+      - key: tempfile//mkdtemp
+        site: main.py:28
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.py//Meta//__call__
+        site: main.py:28
+        reached: true

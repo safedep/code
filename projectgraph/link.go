@@ -419,6 +419,7 @@ func (b *builder) linkAll(ctx context.Context) error {
 	}
 	b.checkUnits()
 	b.linkFields()
+	b.linkInstances()
 	return nil
 }
 

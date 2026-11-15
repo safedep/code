@@ -2,6 +2,7 @@ package projectgraph
 
 import (
 	"cmp"
+	"maps"
 	"slices"
 	"strings"
 
@@ -125,6 +126,105 @@ func (b *builder) linkConstructors(ix *fileindex.Index) {
 		}
 		b.link(ix.Language, c.Key, ctor, b.siteOf(ctor), EdgeDirect, ruleConstructor)
 	}
+}
+
+// linkInstances adds a reference edge from each edge that makes an
+// instance of a class to the method of each instance method name that the
+// instance runs, from the class or from a base in its MRO. The code that
+// makes the instance holds it, so a search reaches the method as it
+// reaches a stored function value. A reference to the class alone, as in
+// isinstance(x, C), makes no instance and gets no edge. An edge reaches the
+// class through export hops and the package edge of a unit.
+func (b *builder) linkInstances() {
+	str := b.edges.symbols.strings
+	hops := map[string][]string{}
+	for slot, v := range b.edges.slots {
+		if k := EdgeKind(str[v.kind]); k == EdgeExport || k == EdgePackage {
+			hops[str[slot.from]] = append(hops[str[slot.from]], str[slot.to])
+		}
+	}
+	memo := map[symbol]instanceCalls{}
+	var out []Edge
+	for slot, v := range b.edges.slots {
+		kind := EdgeKind(str[v.kind])
+		if kind == EdgeImport || kind == EdgeExport || kind == EdgePackage {
+			continue
+		}
+		m, ok := memo[slot.to]
+		if !ok {
+			m = b.instanceMethods(str[slot.to], hops)
+			memo[slot.to] = m
+		}
+		methods := m.call
+		if kind == EdgeReference {
+			methods = m.ref
+		}
+		site := Site{Path: str[slot.path], Line: int(slot.line), Column: int(slot.column)}
+		for _, key := range methods {
+			out = append(out, newEdge(str[slot.from], key, site, EdgeReference, resolverName(b.profileAt(key).code, ruleImplicit)))
+		}
+	}
+	slices.SortFunc(out, func(x, y Edge) int {
+		return cmp.Or(cmp.Compare(x.From, y.From), cmp.Compare(x.Site.Path, y.Site.Path), cmp.Compare(x.Site.Line, y.Site.Line),
+			cmp.Compare(x.Site.Column, y.Site.Column), cmp.Compare(x.To, y.To))
+	})
+	for _, e := range out {
+		b.addEdge(e)
+	}
+}
+
+// instanceCalls holds the instance methods that a call of a key runs, and
+// the ones that a reference to the key runs. Only a metaclass gives the
+// second kind, because a class statement that names it makes an instance.
+type instanceCalls struct{ call, ref []string }
+
+// instanceMethods returns the instance methods of each class that a key
+// names through its hops.
+func (b *builder) instanceMethods(key string, hops map[string][]string) (m instanceCalls) {
+	seen := map[string]bool{}
+	next := []string{key}
+	for depth := 0; len(next) > 0 && depth <= b.opts.MaxExportHops; depth++ {
+		var later []string
+		for _, k := range next {
+			if seen[k] {
+				continue
+			}
+			seen[k] = true
+			later = append(later, hops[k]...)
+			p := b.profileAt(k)
+			if b.kindOf(k) != NodeClass || len(p.instanceMethods) == 0 {
+				continue
+			}
+			meta := b.isMetaclass(k, p.metaclass)
+			for _, name := range slices.Sorted(maps.Keys(p.instanceMethods)) {
+				if method, ok := b.ownMethod(k, name); ok && b.isMethod(method) {
+					m.call = append(m.call, method)
+					if meta {
+						m.ref = append(m.ref, method)
+					}
+				}
+			}
+		}
+		next = later
+	}
+	return m
+}
+
+// isMetaclass reports whether a class of its MRO names the metaclass base
+// as written, as class Meta(type). The builtin base binds no name, so the
+// written name tells it.
+func (b *builder) isMetaclass(class, metaclass string) bool {
+	if metaclass == "" {
+		return false
+	}
+	for _, c := range b.mro(class) {
+		for _, rec := range b.records(c) {
+			if slices.Contains(rec.class.Bases, metaclass) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // linkOverrides adds a reference edge from each class with a base of a
