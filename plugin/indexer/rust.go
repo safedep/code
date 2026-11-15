@@ -864,13 +864,21 @@ func (p *projection) rustRebinder(node, scope *sitter.Node, name string) (*sitte
 	for n := node.Parent(); n != nil && (scope == nil || !ts.SameNode(n, scope)); n = n.Parent() {
 		switch n.Type() {
 		case "block", "declaration_list":
+			var globbed *sitter.Node
 			for _, item := range ts.NamedChildren(n) {
 				if item.Type() != "use_declaration" {
 					continue
 				}
-				if names, _ := p.rustUseNames(item.ChildByFieldName("argument"), nil); slices.Contains(names, name) {
+				names, glob := p.rustUseNames(item.ChildByFieldName("argument"), nil)
+				if slices.Contains(names, name) {
 					return item, true
 				}
+				if glob && !p.rustOuterGlob(item) {
+					globbed = item
+				}
+			}
+			if globbed != nil {
+				return globbed, false
 			}
 		case "function_item", "impl_item", "trait_item":
 			if slices.ContainsFunc(ts.NamedChildren(n.ChildByFieldName("type_parameters")), func(param *sitter.Node) bool {
@@ -881,6 +889,22 @@ func (p *projection) rustRebinder(node, scope *sitter.Node, name string) (*sitte
 		}
 	}
 	return nil, false
+}
+
+// rustOuterGlob reports whether a glob use brings no name that the call
+// graph would find in an outer scope instead: a glob of super or self, which
+// brings the names of the scopes that hold it, or of std, core or alloc,
+// which define no item of the crate. Any other glob use can bring the name,
+// as A of use crate::other::* in mod n inside mod m with a struct A.
+func (p *projection) rustOuterGlob(use *sitter.Node) bool {
+	first := rustFirstName(p.text(use.ChildByFieldName("argument")))
+	return first == "super" || first == "self" || first == "std" || first == "core" || first == "alloc"
+}
+
+// rustFirstName returns the first name of a path, as std for ::std::io.
+func rustFirstName(path string) string {
+	first, _, _ := strings.Cut(strings.TrimPrefix(path, "::"), "::")
+	return first
 }
 
 // rustUseNamespace returns the namespace of the import of a use that binds

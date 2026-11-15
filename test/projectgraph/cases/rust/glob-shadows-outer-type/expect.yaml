@@ -1,0 +1,49 @@
+source: safedep:hand
+description: >-
+  The inline module m declares a struct A, and its inline module n has use crate::other::*. n sees no item of m
+  with no use, so A in f names the A of src/other.rs, whose run calls std::fs::remove_file. The call graph
+  reads no use and finds the A of m, whose run calls std::fs::remove_dir. A call of A::new() and of run in f
+  then goes to m::A with no record, and std::fs::remove_file reads not-found. The index makes each such call a
+  record, so the target reads found through the low name edges of run.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//m//n//f
+    to: src/other.rs//A//run
+    kind: name
+    confidence: low
+    site: src/main.rs:21
+unresolved:
+  - caller: src/main.rs//m//n//f
+    site: src/main.rs:20
+    reason: unknown-receiver
+  - caller: src/main.rs//m//n//f
+    site: src/main.rs:21
+    reason: unknown-receiver
+    method: run
+results:
+  - target: std//fs//remove_file
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//m//n//f
+        site: src/main.rs:27
+        kind: direct
+        confidence: high
+      - key: src/other.rs//A//run
+        site: src/main.rs:21
+        kind: name
+        confidence: low
+      - key: std//fs//remove_file
+        site: src/other.rs:9
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/other.rs//A//run
+        site: src/other.rs:9
+        reached: true

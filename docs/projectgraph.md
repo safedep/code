@@ -490,7 +490,10 @@ Rust follows the same rules, with these additions.
   A method call whose target the call graph finds as a method of a type of
   an outer scope gets the path of a `use` of the type name the same way,
   as `x.save()` after `let x = Item::new();` in the case
-  `rust/use-type-receiver`.
+  `rust/use-type-receiver`. A glob `use` between the call and that scope
+  can bring the name too, unless it reads `super`, `self` or a crate of
+  the toolchain, so the call is a record, as in the case
+  `rust/glob-shadows-outer-type`.
   A type parameter of the name names a type that the caller gives, so the
   call is a record with the reason `unknown-receiver`, as in the case
   `rust/generic-shadows-type`.
