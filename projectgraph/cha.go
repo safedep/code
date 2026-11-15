@@ -66,6 +66,7 @@ func (b *builder) mro(class string) []string {
 		return order
 	}
 	b.mros[class] = []string{class}
+	b.ordering++
 	var order []string
 	if rec, ok := b.classes[class]; ok && profileOf(rec.ix.Language).c3 {
 		order = b.c3(class)
@@ -73,7 +74,9 @@ func (b *builder) mro(class string) []string {
 	if order == nil {
 		order = b.depthFirst(class, 0, map[string]bool{})
 	}
+	b.ordering--
 	b.mros[class] = order
+	b.memo(func() { delete(b.mros, class) })
 	return order
 }
 
@@ -181,6 +184,7 @@ func (b *builder) externalBase(class string) (string, bool) {
 	if !ok {
 		base, _ = b.findExternalBase(class)
 		b.externalBases[class] = base
+		b.memo(func() { delete(b.externalBases, class) })
 	}
 	return base, base != ""
 }

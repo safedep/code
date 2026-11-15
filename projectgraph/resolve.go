@@ -472,16 +472,15 @@ func (b *builder) resolveScope(sc *scope, caller, target string) []resolution {
 }
 
 // wildcardImported returns the definitions of the name in the packages
-// that the file imports with a Go dot import or a Java wildcard import, and
-// the members of the name in the classes of a Java static wildcard import.
+// that the file imports with a Go dot import, a Java wildcard import or a
+// Rust glob use, and the members of the name in the classes of a Java
+// static wildcard import.
 // A Java wildcard import of a package of the project names its class
 // exactly, so its edge is direct.
 func (b *builder) wildcardImported(sc *scope, name string) []string {
 	var keys []string
-	for _, imp := range sc.wildcards {
-		mod, _, ok := b.resolveModule(sc.ix, imp.Module)
+	for _, mod := range b.wildcardModules(sc) {
 		switch {
-		case !ok:
 		case b.units[mod] != nil:
 			keys = append(keys, b.units[mod].names[name]...)
 		case b.isType(mod):
@@ -491,6 +490,135 @@ func (b *builder) wildcardImported(sc *scope, name string) []string {
 		}
 	}
 	return keys
+}
+
+// wildcardRead is a read of the wildcard imports of a scope that a
+// resolution makes now. mods holds the modules of the last whole pass, and
+// read marks a pass whose resolutions read the same scope again.
+type wildcardRead struct {
+	mods []string
+	read bool
+}
+
+// wildcardMods holds the modules of the wildcard imports of a scope, and
+// the Rust paths that the read of them asked the resolving guard for.
+type wildcardMods struct {
+	mods  []string
+	asked map[[2]string]bool
+}
+
+// wildcardModules returns the modules of the wildcard imports of a scope,
+// in the order of the imports. The resolution of a module can walk a unit
+// whose name lookup reads the wildcard imports of the same scope, as the
+// eight glob uses of src/sys.rs of time 0.1.45 do. If each such read
+// resolved every import again, the work would grow with the orders of the
+// imports, and the link step of a project with that file would not end.
+//
+// So a read of a scope that a resolution reads now gets the modules of the
+// last whole pass, and the passes repeat until the modules stay the same.
+// A module that only an import after it brings into scope thus resolves.
+// A memo that a pass writes from the modules of the last pass can lack a
+// module for the whole build. The MRO of a class whose base only the next
+// pass brings into scope is such a memo, and a call of a method of the base
+// then gets no edge. So a pass whose modules change undoes its memo writes.
+//
+// A cycle guard that an outer resolution holds can cut a read short.
+// app/src/prelude.rs has pub use core_lib::*, and the resolution of that
+// path reads the glob use again under its own resolving guard. A table
+// that kept that list gave no module for the whole build, and a target
+// under the crate read not-found. So the table keeps and gives a list only
+// where uncut holds, and any other read resolves the imports again.
+//
+// A cycle of wildcard imports across files still costs time that grows
+// with the number of files. A file that each other file of the cycle reads
+// with a glob use of a name that no file defines is such a cycle.
+func (b *builder) wildcardModules(sc *scope) []string {
+	if b.stopped.Load() {
+		return nil
+	}
+	if r := b.expanding[sc]; r != nil {
+		r.read = true
+		return r.mods
+	}
+	if w := b.wildcardMods[sc]; w != nil && b.uncut(w.asked) {
+		return w.mods
+	}
+	// A read inside another read adds the paths that it asks for to the
+	// record of the outer one.
+	outer := b.wildcardMods != nil && b.asked == nil
+	if outer {
+		b.asked = map[[2]string]bool{}
+	}
+	r := &wildcardRead{}
+	b.expanding[sc] = r
+	for range len(sc.wildcards) + 1 {
+		r.read = false
+		mark := len(b.tentative)
+		var mods []string
+		for _, imp := range sc.wildcards {
+			if mod, _, ok := b.resolveModule(sc.ix, imp.Module); ok {
+				mods = append(mods, mod)
+			}
+		}
+		same := slices.Equal(mods, r.mods)
+		r.mods = mods
+		if !r.read || same {
+			break
+		}
+		b.undo(mark)
+	}
+	delete(b.expanding, sc)
+	if len(b.expanding) == 0 {
+		clear(b.tentative)
+		b.tentative = b.tentative[:0]
+	}
+	if outer {
+		if b.uncut(b.asked) {
+			b.wildcardMods[sc] = &wildcardMods{mods: r.mods, asked: b.asked}
+		}
+		b.asked = nil
+	}
+	return r.mods
+}
+
+// memo logs the undo step of a memo write while a read of wildcard imports
+// is in progress.
+func (b *builder) memo(undo func()) {
+	if len(b.expanding) > 0 {
+		b.tentative = append(b.tentative, undo)
+	}
+}
+
+// undo reverts the memo writes after the mark, newest first.
+func (b *builder) undo(mark int) {
+	for i := len(b.tentative) - 1; i >= mark; i-- {
+		b.tentative[i]()
+	}
+	clear(b.tentative[mark:])
+	b.tentative = b.tentative[:mark]
+}
+
+// uncut reports whether a read of the wildcard imports of a scope that
+// asks the resolving guard for the paths gets no answer from a resolution
+// in progress. Such a read gives the same modules each time. The guards
+// are set and cleared in the order of a stack. So at the end of a read, a
+// path in progress was set before the read, and the guard cut the read if
+// the read asked for it.
+//
+// uncut compares the paths of the resolving guard only. On the Rust
+// corpus, the reads under any other guard cost less than 3% of the read
+// time. So any other state in progress fails the check.
+func (b *builder) uncut(asked map[[2]string]bool) bool {
+	s := b.rustState()
+	if len(b.expanding)+len(b.visiting)+len(b.reading)+len(b.stepping)+len(b.findingBases)+len(s.routing)+b.ordering > 0 {
+		return false
+	}
+	for k := range s.resolving {
+		if asked[k] {
+			return false
+		}
+	}
+	return true
 }
 
 // superKeyword is the receiver of a call of a method of the base class, as

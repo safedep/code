@@ -57,6 +57,9 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 	instance := r.virtual
 	for i := 0; i < len(names); {
 		name := names[i]
+		if b.stopped.Load() {
+			return resolution{fail: &failure{reason: fileindex.UnresolvedLimit, name: name, cut: true}}
+		}
 		var consumed, done bool
 		switch kind := b.kindOf(r.key); {
 		case b.units[r.key] != nil:

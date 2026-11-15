@@ -1,7 +1,7 @@
 {
   "version": "3",
   "index_version": "16",
-  "link_version": "18",
+  "link_version": "19",
   "unit": "pypi:google-cloud-storage@2.1.0",
   "symbols": [
     {

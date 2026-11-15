@@ -29,6 +29,7 @@ func (b *builder) resolveName(module, name string, hops int) (string, *failure) 
 	delete(b.visiting, k)
 	if fail == nil || !fail.cut {
 		b.names[k] = resolution{key: key, fail: fail}
+		b.memo(func() { delete(b.names, k) })
 	}
 	return key, fail
 }
@@ -223,6 +224,7 @@ func (b *builder) bound(key string) (string, bool) {
 		return "", false
 	}
 	b.bindings[key] = target
+	b.memo(func() { delete(b.bindings, key) })
 	if b.g.Nodes[target] != nil {
 		b.link(sc.ix.Language, key, target, b.siteOf(key), EdgeExport, ruleAlias)
 	}
