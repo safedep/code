@@ -182,9 +182,14 @@ func (b *builder) externalBase(class string) (string, bool) {
 	}
 	base, ok := b.externalBases[class]
 	if !ok {
+		// A search that the guard of an outer search cut can miss a base,
+		// so only an uncut answer stays for the build.
+		cuts := b.cuts
 		base, _ = b.findExternalBase(class)
-		b.externalBases[class] = base
-		b.memo(func() { delete(b.externalBases, class) })
+		if b.cuts == cuts {
+			b.externalBases[class] = base
+			b.memo(func() { delete(b.externalBases, class) })
+		}
 	}
 	return base, base != ""
 }
@@ -196,6 +201,7 @@ func (b *builder) externalBase(class string) (string, bool) {
 // that the search reads now has no external base, so the search ends.
 func (b *builder) findExternalBase(class string) (string, bool) {
 	if b.findingBases[class] {
+		b.cuts++
 		return "", false
 	}
 	b.findingBases[class] = true
