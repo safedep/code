@@ -634,10 +634,30 @@ func (p *projection) rustValueType(binders map[string][]*sitter.Node, value *sit
 			return ""
 		}
 		if fn != nil && fn.Type() == "scoped_identifier" {
-			return p.rustResultOf(p.text(fn.ChildByFieldName("path")), p.text(fn.ChildByFieldName("name")))
+			path := p.text(fn.ChildByFieldName("path"))
+			if typ := p.rustResultOf(path, p.text(fn.ChildByFieldName("name"))); typ != "" {
+				return typ
+			}
+			return rustConstructorPath(path, p.text(fn))
 		}
 	}
 	return ""
+}
+
+// rustGenericTraits are the traits of std whose associated function gives
+// whatever type the caller infers, as Default::default().
+var rustGenericTraits = map[string]bool{"Default": true, "From": true, "Into": true, "FromStr": true, "TryFrom": true, "FromIterator": true}
+
+// rustConstructorPath returns a function of a type as a type of its own,
+// as A::new for let t = A::new() when A is a type of another file. Two lets
+// whose values call the same function of the same type hold one type. A
+// trait of std that gives an inferred type names no type.
+func rustConstructorPath(typ, fn string) string {
+	last := rustLastName(typ)
+	if last == "" || !unicode.IsUpper(rune(last[0])) || rustGenericTraits[last] {
+		return ""
+	}
+	return fn + "()"
 }
 
 // rustResultOf returns the result type of a function of a type of the
