@@ -58,21 +58,43 @@ func (b *builder) recordValueCalls() {
 
 // callsValue reports whether a call with an unknown receiver can call a
 // function value: a name with no receiver, or a member that a field of the
-// graph names. Only a field of a language with functionValues counts, and
-// not one whose type the index shows to hold data, as Name string.
+// graph names and that can hold a function. A record of a method value, as
+// the index gives it for x.f in g(x.f), has no receiver, so only a call
+// counts.
 func (b *builder) callsValue(u UnresolvedSite) bool {
 	if u.Receiver == "" {
 		return isIdentifier(u.Text)
 	}
+	holds, _ := b.valueField(u.Method)
+	return holds
+}
+
+// valueField reports whether a field of the name in a language with
+// functionValues can hold a function, and whether the graph has a field
+// of the name at all. The index marks a field of a type of data, as
+// Name string, with Data.
+func (b *builder) valueField(name string) (holds, known bool) {
 	if b.fieldNames == nil {
 		b.fieldNames = map[string]bool{}
 		for key, def := range b.defs {
-			if def.Kind == fileindex.DefField && !def.Data && profileOf(b.languageOf(key)).functionValues {
-				b.fieldNames[def.Name] = true
+			if def.Kind == fileindex.DefField && profileOf(b.languageOf(key)).functionValues {
+				b.fieldNames[def.Name] = b.fieldNames[def.Name] || !def.Data
 			}
 		}
 	}
-	return b.fieldNames[u.Method]
+	holds, known = b.fieldNames[name]
+	return holds, known
+}
+
+// rangesNoValue reports whether the index record of a range over a member
+// needs no record: each field of the member name in the graph holds data,
+// or the member is a function or a method with a reference edge at the
+// site, as t.All in for x := range t.All. A member that no field of the
+// graph names, as a field of a type of a package that no unit gives, can
+// hold a function.
+func (b *builder) rangesNoValue(u fileindex.Unresolved, at Site) bool {
+	holds, known := b.valueField(u.Method)
+	return known && !holds || b.valueSites[at]
 }
 
 // reflection is a package of a language that gives or runs a function

@@ -96,10 +96,11 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 				}
 				continue
 			}
-			// A local of a declared function type, as g in var g F = h,
-			// holds a function value. The walk ends at the type F, and no
-			// edge names the function.
-			if r.fail == nil && r.declared && call.Receiver == "" && sc.profile.functionValues && b.isType(r.key) {
+			// A local of a declared function type, as g in var g F = h or
+			// h in var h http.HandlerFunc = m["a"], holds a function value.
+			// The walk ends at the type, a node of the graph or an external
+			// key, and no edge names the function.
+			if r.fail == nil && r.declared && call.Receiver == "" && sc.profile.functionValues && !b.isFunction(r.key) {
 				b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: call.Callee, Reason: fileindex.UnresolvedFunctionValue})
 			}
 			if r.unbound && sc.profile.thisCalls {
@@ -366,6 +367,9 @@ func (b *builder) linkReferences(ix *fileindex.Index) {
 			// on calls nothing. Nor is a field or a constant.
 			if sc.profile.typeConversions && b.isType(r.key) || b.holdsData(r.key) {
 				continue
+			}
+			if b.isFunction(r.key) {
+				b.valueSites[site] = true
 			}
 			b.link(ix.Language, from, r.key, site, EdgeReference, ruleReference)
 		}

@@ -65,6 +65,9 @@ type projection struct {
 	// linknames holds the remote name of each local name that a
 	// //go:linkname directive of a Go file binds.
 	linknames map[string]string
+	// anonFields holds the names of the fields of the anonymous structs of
+	// a Go file that can hold a function.
+	anonFields map[string]bool
 	// rustMacros holds the names that a macro_rules! or a use of a Rust
 	// file binds, once a call of a macro reads them.
 	rustMacros map[string]bool

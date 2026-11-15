@@ -119,7 +119,10 @@ const (
 	// UnresolvedFunctionValue is a call of a function value, as f(x)(y) or
 	// handlers[i](c), in a language whose function values the link step
 	// joins to the code that holds them. The link step gives the reason
-	// in place of computed-name, and the record names no target.
+	// in place of computed-name, and the record names no target. The Go
+	// index gives it to a range over a member, with the member name in
+	// Method. The link step drops that record when each field of the name
+	// holds data, and clears the name otherwise.
 	UnresolvedFunctionValue UnresolvedReason = "function-value"
 	// UnresolvedMarkup is the markup of a component file, as the template
 	// of a Vue component, which the index does not parse. The framework

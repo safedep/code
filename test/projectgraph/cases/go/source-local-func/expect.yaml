@@ -11,12 +11,20 @@ description: >-
   calls Name on a range variable of an interface. The field Name of user holds a string, so the call runs
   no function value, and os.Getwd is not found from show. closure calls its local f, which holds a
   function literal and nothing else. The index gives the calls of the literal to closure, so the call of f
-  is no record, and os.Getwd is not found from closure.
+  is no record, and os.Getwd is not found from closure. In other.go, serveLocal calls a local of the type
+  http.HandlerFunc, rangeAssign calls a local that a range assigns after the literal, anonSteps calls the
+  field act of an anonymous struct, and deref calls (*p). Each call runs a function value, so each is a
+  function-value record, and os.Getwd is uncertain from each. keepRead reads the field fn of a hook and
+  calls nothing. The read is a record with no receiver, so the link step does not take it for a call of a
+  field, and os.Getwd is not found from keepRead.
 roots:
   - key: main.go
     kind: main
     rule: go.main
   - key: main.go//main
+    kind: main
+    rule: go.main
+  - key: other.go
     kind: main
     rule: go.main
 no_edges:
@@ -61,6 +69,15 @@ unresolved:
   - caller: os//exec//LookPath
     reason: no-dependency-source
     callback: true
+  - caller: other.go//anonSteps
+    reason: no-dependency-source
+    callback: true
+  - caller: other.go//keepRead
+    reason: no-dependency-source
+    callback: true
+  - caller: other.go//rangeAssign
+    reason: no-dependency-source
+    callback: true
   - caller: main.go//run
     site: main.go:23
     reason: function-value
@@ -96,6 +113,30 @@ unresolved:
     site: main.go:65
     reason: unknown-receiver
     method: Name
+  - caller: other.go//serveLocal
+    site: other.go:7
+    reason: function-value
+  - caller: other.go//rangeAssign
+    site: other.go:14
+    reason: function-value
+  - caller: other.go//rangeAssign
+    site: other.go:14
+    reason: unknown-receiver
+    method: f
+  - caller: other.go//anonSteps
+    site: other.go:19
+    reason: unknown-receiver
+    method: act
+  - caller: other.go//anonSteps
+    site: other.go:19
+    reason: function-value
+  - caller: other.go//deref
+    site: other.go:24
+    reason: function-value
+  - caller: other.go//keepRead
+    site: other.go:29
+    reason: unknown-receiver
+    method: fn
 results:
   - target: os//Remove
     status: found
@@ -192,6 +233,58 @@ results:
         reached: true
   - target: os//Getwd
     sources: [main.go//closure]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+  - target: os//Getwd
+    sources: [other.go//serveLocal]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: other.go:7
+  - target: os//Getwd
+    sources: [other.go//rangeAssign]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: other.go:14
+  - target: os//Getwd
+    sources: [other.go//anonSteps]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: other.go:19
+  - target: os//Getwd
+    sources: [other.go//deref]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: other.go:24
+  - target: os//Getwd
+    sources: [other.go//keepRead]
     sources_only: true
     status: not-found
     call_sites:

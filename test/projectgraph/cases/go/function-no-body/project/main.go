@@ -27,3 +27,10 @@ func main() {
 	viaUnit()
 	viaLinkname()
 }
+
+//go:linkname alias main.aliased
+func alias()
+
+func aliased() { os.Mkdir("d", 0o755) }
+
+func viaAlias() { alias() }

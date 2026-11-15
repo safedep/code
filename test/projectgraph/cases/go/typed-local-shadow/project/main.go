@@ -43,3 +43,32 @@ func named() (l *local) {
 	l.run()
 	return
 }
+
+func (x local) viaLit(r remote) {
+	go func(x remote) {
+		x.run()
+	}(r)
+}
+
+type runner interface{ run() }
+
+type optsIface struct{ r runner }
+
+func pickIface(o optsIface) {
+	r := o.r
+	if r == nil {
+		r = &local{}
+	}
+	r.run()
+}
+
+func siblings() {
+	{
+		x := local{}
+		x.run()
+	}
+	{
+		x := remote{}
+		x.run()
+	}
+}

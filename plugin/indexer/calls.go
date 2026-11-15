@@ -32,7 +32,7 @@ func (p *projection) retargetTyped(ctx context.Context, call *fileindex.Call, un
 }
 
 // bindsAsWritten reports whether the call graph binds the names of a call
-// as the code does, in a language with typedAt or declaredAt. The call
+// as the code does, in a language with declaredAt. The call
 // graph reads
 // only some binders of a name, so it can bind a receiver to a parameter or
 // to the value of a let while a pattern binds the name again, as t in
@@ -43,9 +43,6 @@ func (p *projection) retargetTyped(ctx context.Context, call *fileindex.Call, un
 // name must have its declared type at the call.
 func (p *projection) bindsAsWritten(ctx context.Context, call fileindex.Call) bool {
 	rules := p.rules()
-	if rules.typedAt != nil && !rules.typedAt(p, call) {
-		return false
-	}
 	if rules.declaredAt == nil {
 		return true
 	}
@@ -117,6 +114,10 @@ func (p *projection) addCalls(ctx context.Context) {
 			}
 			p.retargetTyped(ctx, &call, untyped[[2]uint32{ref.Site.StartLine, ref.Site.StartColumn}])
 			if shadowed := p.rules().shadowed; shadowed != nil && !shadowed(p, &call, ref.Site) {
+				p.addRecord(call, fileindex.UnresolvedUnknownReceiver)
+				continue
+			}
+			if typed := p.rules().typedAt; typed != nil && !typed(p, &call) {
 				p.addRecord(call, fileindex.UnresolvedUnknownReceiver)
 				continue
 			}

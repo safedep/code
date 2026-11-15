@@ -1,7 +1,9 @@
 package indexer
 
 import (
+	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/safedep/code/core/ast"
 	"github.com/safedep/code/fileindex"
@@ -217,8 +219,9 @@ func (p *projection) goPredeclared(name string) bool {
 // function is in scope, and the start of the block that declares it.
 type goScope struct {
 	from, to, block uint32
-	// typ is the declared type of a parameter or a var, or nil.
-	typ *sitter.Node
+	// typ is the declared type of a parameter or a var, or nil. value is
+	// the value that a declaration gives the name, or nil.
+	typ, value *sitter.Node
 }
 
 // goBlocks are the nodes whose extent is the scope of a name that a
@@ -253,6 +256,109 @@ func (p *projection) goBinding(caller, name string, at uint32) (goScope, bool) {
 		}
 	}
 	return binding, found
+}
+
+// goAssignedType reports whether the one variable of a name has the type
+// that an assignment gives it, as the link step reads it. A declared type
+// is the type of the variable, so it must be that type: a declared
+// interface holds any type that implements it. With no declared type,
+// each write of the variable must give that type, as the declaration
+// cl := o.c with a field c *client and cl = &client{}. A write whose type
+// the index does not know, as a range or l := ls[0], can give another type.
+func (p *projection) goAssignedType(caller, name string, binding goScope, read fileindex.Typed) bool {
+	if read.Result {
+		return false
+	}
+	if binding.typ != nil {
+		return p.goTypeName(binding.typ) == read.Type
+	}
+	fn := p.syntax[caller]
+	if fn == nil {
+		return false
+	}
+	agree := true
+	walkBody(fn.ChildByFieldName("body"), nil, func(node *sitter.Node) {
+		var names []*sitter.Node
+		var right *sitter.Node
+		switch node.Type() {
+		case "short_var_declaration", "assignment_statement":
+			if left := node.ChildByFieldName("left"); left != nil {
+				names = ts.NamedChildren(left)
+			}
+			right = node.ChildByFieldName("right")
+		case "var_spec":
+			names, right = childrenByField(node, "name"), node.ChildByFieldName("value")
+		case "range_clause", "receive_statement":
+			if left := node.ChildByFieldName("left"); left != nil {
+				names = ts.NamedChildren(left)
+			}
+		}
+		i := slices.IndexFunc(names, func(n *sitter.Node) bool { return p.text(n) == name })
+		if i < 0 {
+			return
+		}
+		var values []*sitter.Node
+		if right != nil && node.Type() != "range_clause" && node.Type() != "receive_statement" {
+			values = ts.NamedChildren(right)
+		}
+		if len(values) != len(names) {
+			agree = false
+			return
+		}
+		t, ok := p.goValueType(values[i])
+		if !ok {
+			t, ok = p.goFieldValueType(caller, values[i])
+		}
+		agree = agree && ok && !t.Result && t.Type == read.Type
+	})
+	return agree
+}
+
+// goFieldValueType returns the declared type of a field that a value
+// reads, as client for o.c with a parameter o opts and a field c *client
+// of the struct opts of the file.
+func (p *projection) goFieldValueType(caller string, value *sitter.Node) (fileindex.Typed, bool) {
+	def := p.defs[caller]
+	if def == nil || value.Type() != "selector_expression" {
+		return fileindex.Typed{}, false
+	}
+	operand, field := value.ChildByFieldName("operand"), value.ChildByFieldName("field")
+	if operand == nil || field == nil || operand.Type() != "identifier" {
+		return fileindex.Typed{}, false
+	}
+	i := slices.IndexFunc(def.Params, func(t fileindex.Typed) bool { return t.Name == p.text(operand) })
+	if i < 0 {
+		return fileindex.Typed{}, false
+	}
+	t := p.goFileField(def.Params[i].Type, p.text(field))
+	if typ := p.goTypeName(t); typ != "" {
+		return fileindex.Typed{Type: typ}, true
+	}
+	return fileindex.Typed{}, false
+}
+
+// goFileField returns the type of a field of a struct that the file
+// declares, or nil.
+func (p *projection) goFileField(structName, field string) *sitter.Node {
+	for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
+		if statement.Type() != "type_declaration" {
+			continue
+		}
+		for _, spec := range ts.NamedChildren(statement) {
+			t := spec.ChildByFieldName("type")
+			if spec.Type() != "type_spec" || t == nil || t.Type() != "struct_type" || p.text(spec.ChildByFieldName("name")) != structName {
+				continue
+			}
+			for _, f := range p.goStructFields(t) {
+				for _, n := range childrenByField(f, "name") {
+					if p.text(n) == field {
+						return f.ChildByFieldName("type")
+					}
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // goScopesOf returns the scopes of each local name of the caller, as
@@ -307,8 +413,9 @@ func (p *projection) goTypedAt(caller, name string, at uint32) bool {
 	case origin == goAssignedOrigin && len(p.goScopesOf(caller)[name]) == 1:
 		// The function binds the name once, so the assignment types that
 		// one variable, as cl in cl := o.c; cl = &client{} or a named
-		// result c in c = &client{}.
-		return true
+		// result c in c = &client{}, if the type of the variable is that
+		// type.
+		return p.goAssignedType(caller, name, binding, read)
 	}
 	for i, t := range def.Locals {
 		if t.Name == name && i < len(origins) && origins[i] == binding.from {
@@ -319,111 +426,193 @@ func (p *projection) goTypedAt(caller, name string, at uint32) bool {
 }
 
 // goTypedCall reports whether the type that the link step reads for each
-// typed name that starts a target of a call holds at the call.
-func goTypedCall(p *projection, call fileindex.Call) bool {
-	for _, target := range call.Targets {
-		if name, ok := p.typedName(call.Caller, target); ok && !p.goTypedAt(call.Caller, name, p.byteAt(call.Line, call.Column)) {
-			return false
+// typed name that starts a target or the receiver of a call holds at the
+// call. The call graph can keep a raw target for a name that a function
+// literal binds, as x//run for x.run() in go func(x B) { x.run() }(b),
+// and the link step then reads the type of the parameter x of the caller.
+// When the binding in scope has a type of its own, as file in a second
+// file, err := os.Create(p) of a sibling block, the call gets the target
+// of that binding under its alias.
+func goTypedCall(p *projection, call *fileindex.Call) bool {
+	at := p.byteAt(call.Line, call.Column)
+	names := strings.Split(call.Receiver, ".")
+	name := names[0]
+	if !isIdentifier(name) || p.goTypedAt(call.Caller, name, at) {
+		for _, target := range call.Targets {
+			if n, ok := p.typedName(call.Caller, target); ok && n != name && !p.goTypedAt(call.Caller, n, at) {
+				return false
+			}
 		}
+		return true
 	}
+	alias, ok := p.goAlias(call.Caller, name, at)
+	if !ok {
+		return false
+	}
+	call.Targets = []string{fileindex.Join(call.Caller, append(append([]string{alias}, names[1:]...), call.Method)...)}
 	return true
 }
 
-// goRangeVisitor records each range over a function value whose code
-// the index cannot name, as seq in func consume(seq func(func(int) bool))
-// { for range seq {} }. The range calls the value, as seq(yield) does. A
-// search from the roots reaches the reference to the function that the
-// value holds. A search from a source can miss it, so the range gets a
-// record, which the link step makes a function-value record. The index
-// reads a parameter or a var of a declared function type, and a field
-// that a struct of the file declares with a function type.
-func goRangeVisitor(p *projection) visitor {
-	return func(node *sitter.Node, kind string) {
-		if kind != "range_clause" {
-			return
-		}
-		value := node.ChildByFieldName("right")
-		for value != nil && value.Type() == "parenthesized_expression" {
-			value = value.NamedChild(0)
-		}
-		if value == nil || !p.goRangesValue(value) {
-			return
-		}
-		site := ast.GetNodePosition(value)
-		p.ix.Unresolved = append(p.ix.Unresolved, fileindex.Unresolved{
-			Caller: p.caller(p.innermost(value.StartByte()), site),
-			Line:   int(site.StartLine),
-			Column: int(site.StartColumn),
-			Text:   callgraph.ClipText(p.text(value)),
-			Reason: fileindex.UnresolvedComputedName,
-		})
+// goAlias returns a name under which the link step reads the type of the
+// binding of a name in scope at the byte, when that binding has a type of
+// its own. The index adds a typed local of the alias to the caller once.
+func (p *projection) goAlias(caller, name string, at uint32) (string, bool) {
+	def := p.defs[caller]
+	binding, bound := p.goBinding(caller, name, at)
+	if def == nil || !bound {
+		return "", false
 	}
-}
-
-// goRangesValue reports whether a range expression holds a function value
-// of a declared function type: a local of the caller, or a field.
-func (p *projection) goRangesValue(value *sitter.Node) bool {
-	switch value.Type() {
-	case "identifier":
-		binding, ok := p.goBinding(p.innermost(value.StartByte()), p.text(value), value.StartByte())
-		return ok && binding.typ != nil && p.goFuncType(binding.typ, 0)
-	case "selector_expression":
-		return p.goFuncField(p.text(value.ChildByFieldName("field")))
-	}
-	return false
-}
-
-// goFuncType reports whether a type is a function type: a literal
-// function type, a type of the package iter, as iter.Seq[int], or a type
-// of the file whose declaration is a function type.
-func (p *projection) goFuncType(t *sitter.Node, depth int) bool {
-	if t == nil || depth > maxReferenceSegments {
-		return false
-	}
-	switch t.Type() {
-	case "function_type":
-		return true
-	case "parenthesized_type":
-		return p.goFuncType(t.NamedChild(0), depth+1)
-	case "generic_type":
-		return p.goFuncType(t.ChildByFieldName("type"), depth+1)
-	case "qualified_type":
-		return p.goImportPath(p.text(t.ChildByFieldName("package"))) == "iter"
-	case "type_identifier":
-		return p.goFuncType(p.goFileType(t), depth+1)
-	}
-	return false
-}
-
-// goFuncField reports whether a struct of the file declares a field of the
-// name with a function type.
-func (p *projection) goFuncField(name string) bool {
-	for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
-		if statement.Type() != "type_declaration" {
+	origins := p.goOrigins[caller]
+	i := slices.IndexFunc(def.Locals, func(t fileindex.Typed) bool { return t.Name == name })
+	for j := i; i >= 0 && j < len(def.Locals) && j < len(origins); j++ {
+		t := def.Locals[j]
+		if t.Name != name || origins[j] != binding.from {
 			continue
 		}
-		for _, spec := range ts.NamedChildren(statement) {
-			t := spec.ChildByFieldName("type")
-			if spec.Type() != "type_spec" || t == nil || t.Type() != "struct_type" {
-				continue
+		alias := fmt.Sprintf("%s#%d", name, binding.from)
+		if !slices.ContainsFunc(def.Locals, func(l fileindex.Typed) bool { return l.Name == alias }) {
+			t.Name = alias
+			def.Locals = append(def.Locals, t)
+			p.goOrigins[caller] = append(origins, binding.from)
+		}
+		return alias, true
+	}
+	return "", false
+}
+
+// goValueVisitor records the Go code that calls a function value with no
+// call record of its own. The link step makes each record a function-value
+// record, which concerns every target in a search with a source.
+//
+//   - A range over a value that the source does not show to be data, as
+//     seq in func consume(seq func(func(int) bool)) { for range seq {} }.
+//     The range calls the value, as seq(yield) does. A range over a member
+//     keeps the member name in Method, and the link step drops the record
+//     when each field of the name holds data.
+//   - A call of a field of an anonymous struct of the file, as s.run() in
+//     for _, s := range []struct{ run func() }{...}. No definition names
+//     such a field, so the link step cannot see it.
+//   - A call of a dereference or a receive, as (*p)() or (<-ch)(), which
+//     the call graph does not record.
+func goValueVisitor(p *projection) visitor {
+	return func(node *sitter.Node, kind string) {
+		switch kind {
+		case "range_clause":
+			value := goUnparen(node.ChildByFieldName("right"))
+			if value == nil {
+				return
 			}
-			for _, field := range p.goStructFields(t) {
-				for _, n := range childrenByField(field, "name") {
-					if p.text(n) == name && p.goFuncType(field.ChildByFieldName("type"), 0) {
-						return true
+			if method, ok := p.goRangeRecord(value); ok {
+				p.goValueRecord(value, method)
+			}
+		case "call_expression":
+			function := goUnparen(node.ChildByFieldName("function"))
+			switch {
+			case function == nil:
+			case function.Type() == "unary_expression" && (goOperator(function) == "*" || goOperator(function) == "<-"):
+				p.goValueRecord(node, "")
+			case function.Type() == "selector_expression" && p.goAnonFields()[p.text(function.ChildByFieldName("field"))]:
+				p.goValueRecord(node, "")
+			}
+		}
+	}
+}
+
+// goValueRecord adds the record of a call of a function value at the node.
+// A record with a member name is a candidate that the link step checks.
+func (p *projection) goValueRecord(node *sitter.Node, member string) {
+	site := ast.GetNodePosition(node)
+	u := fileindex.Unresolved{
+		Caller: p.caller(p.innermost(node.StartByte()), site),
+		Line:   int(site.StartLine),
+		Column: int(site.StartColumn),
+		Text:   callgraph.ClipText(p.text(node)),
+		Reason: fileindex.UnresolvedComputedName,
+	}
+	if member != "" {
+		u.Receiver = callgraph.ClipText(p.text(node.ChildByFieldName("operand")))
+		u.Method, u.Reason = member, fileindex.UnresolvedFunctionValue
+	}
+	p.ix.Unresolved = append(p.ix.Unresolved, u)
+}
+
+// goRangeRecord reports whether a range over a value needs a record, and
+// the member name that the link step checks. A value that the source
+// shows to be data needs none: a literal, a value of a type of data, or a
+// local whose declaration gives it such a value. A name of the package
+// reaches its value through the load code of the package. A member is a
+// candidate that the link step checks against the fields and the
+// references of the graph.
+func (p *projection) goRangeRecord(value *sitter.Node) (string, bool) {
+	caller := p.innermost(value.StartByte())
+	if p.goDataValue(value) {
+		return "", false
+	}
+	switch value.Type() {
+	case "identifier":
+		binding, ok := p.goBinding(caller, p.text(value), value.StartByte())
+		switch {
+		case !ok:
+			return "", false
+		case binding.typ != nil:
+			return "", !p.goDataField(binding.typ)
+		case binding.value != nil:
+			return "", !p.goDataValue(goUnparen(binding.value))
+		}
+		return "", true
+	case "selector_expression":
+		return p.text(value.ChildByFieldName("field")), true
+	case "type_assertion_expression":
+		return "", !p.goDataField(value.ChildByFieldName("type"))
+	}
+	return "", true
+}
+
+// goUnparen returns the expression in parentheses.
+func goUnparen(node *sitter.Node) *sitter.Node {
+	for depth := 0; node != nil && node.Type() == "parenthesized_expression" && depth < maxReferenceSegments; depth++ {
+		node = node.NamedChild(0)
+	}
+	return node
+}
+
+// goAnonFields returns the names of the fields of each anonymous struct of
+// the file that can hold a function.
+func (p *projection) goAnonFields() map[string]bool {
+	if p.anonFields != nil {
+		return p.anonFields
+	}
+	p.anonFields = map[string]bool{}
+	var walk func(node *sitter.Node, depth int)
+	walk = func(node *sitter.Node, depth int) {
+		if depth > maxLocalDepth {
+			return
+		}
+		if node.Type() == "struct_type" {
+			if parent := node.Parent(); parent == nil || parent.Type() != "type_spec" {
+				for _, field := range p.goStructFields(node) {
+					if !p.goDataField(field.ChildByFieldName("type")) {
+						for _, name := range childrenByField(field, "name") {
+							p.anonFields[p.text(name)] = true
+						}
 					}
 				}
 			}
 		}
+		for _, child := range ts.NamedChildren(node) {
+			walk(child, depth+1)
+		}
 	}
-	return false
+	walk(p.tree.Tree().RootNode(), 0)
+	return p.anonFields
 }
 
 // goLiteralCall reports whether a call names a local that the caller
 // binds once, to a function literal, and never assigns again, as f in
 // f := func() {...}; f(). The index gives the calls of the literal to the
 // caller, so the call runs no code that the caller does not hold. An
-// assignment or an address of the name can give it another function.
+// assignment, a range or a receive into the name, or an address of it, can
+// give it another function.
 func goLiteralCall(p *projection, call fileindex.Call) bool {
 	name := call.Callee
 	if call.Receiver != "" || !isIdentifier(name) || len(p.goScopesOf(call.Caller)[name]) != 1 {
@@ -457,7 +646,7 @@ func goLiteralCall(p *projection, call fileindex.Call) bool {
 					literal = len(values) == len(names) && values[i].Type() == "func_literal"
 				}
 			}
-		case "assignment_statement", "inc_statement", "dec_statement":
+		case "assignment_statement", "inc_statement", "dec_statement", "range_clause", "receive_statement":
 			if left := node.ChildByFieldName("left"); left != nil && slices.ContainsFunc(ts.NamedChildren(left), func(n *sitter.Node) bool { return p.text(n) == name }) {
 				other = true
 			}
@@ -508,9 +697,13 @@ func (p *projection) goScopes(function *sitter.Node) map[string][]goScope {
 	if function == nil || function.Type() != "function_declaration" && function.Type() != "method_declaration" {
 		return locals
 	}
-	add := func(nodes []*sitter.Node, from uint32, block, typ *sitter.Node, redeclares bool) {
+	add := func(nodes []*sitter.Node, from uint32, block, typ *sitter.Node, redeclares bool, list *sitter.Node) {
 		start := goBlockStart(block)
-		for _, n := range nodes {
+		var values []*sitter.Node
+		if list != nil {
+			values = ts.NamedChildren(list)
+		}
+		for i, n := range nodes {
 			if n.Type() != "identifier" {
 				continue
 			}
@@ -520,7 +713,11 @@ func (p *projection) goScopes(function *sitter.Node) map[string][]goScope {
 			if redeclares && slices.ContainsFunc(locals[name], func(s goScope) bool { return s.block == start && s.to == block.EndByte() }) {
 				continue
 			}
-			locals[name] = append(locals[name], goScope{from: from, to: block.EndByte(), block: start, typ: typ})
+			scope := goScope{from: from, to: block.EndByte(), block: start, typ: typ}
+			if len(values) == len(nodes) {
+				scope.value = values[i]
+			}
+			locals[name] = append(locals[name], scope)
 		}
 	}
 	var walk func(node, block *sitter.Node, depth int)
@@ -538,20 +735,20 @@ func (p *projection) goScopes(function *sitter.Node) map[string][]goScope {
 		}
 		switch node.Type() {
 		case "parameter_declaration", "variadic_parameter_declaration":
-			add(childrenByField(node, "name"), goParamOrigin(block), block, node.ChildByFieldName("type"), false)
+			add(childrenByField(node, "name"), goParamOrigin(block), block, node.ChildByFieldName("type"), false, nil)
 		case "short_var_declaration":
-			add(ts.NamedChildren(node.ChildByFieldName("left")), node.EndByte(), block, nil, true)
+			add(ts.NamedChildren(node.ChildByFieldName("left")), node.EndByte(), block, nil, true, node.ChildByFieldName("right"))
 		case "var_spec", "const_spec":
-			add(childrenByField(node, "name"), node.EndByte(), block, node.ChildByFieldName("type"), false)
+			add(childrenByField(node, "name"), node.EndByte(), block, node.ChildByFieldName("type"), false, node.ChildByFieldName("value"))
 		case "type_spec", "type_alias":
-			add(childrenByField(node, "name"), node.StartByte(), block, nil, false)
+			add(childrenByField(node, "name"), node.StartByte(), block, nil, false, nil)
 		case "range_clause", "receive_statement":
 			if goDeclares(node) {
-				add(ts.NamedChildren(node.ChildByFieldName("left")), node.EndByte(), block, nil, false)
+				add(ts.NamedChildren(node.ChildByFieldName("left")), node.EndByte(), block, nil, false, nil)
 			}
 		case "type_switch_statement":
 			if alias := node.ChildByFieldName("alias"); alias != nil {
-				add(ts.NamedChildren(alias), alias.EndByte(), block, nil, false)
+				add(ts.NamedChildren(alias), alias.EndByte(), block, nil, false, nil)
 			}
 		}
 		for _, child := range ts.NamedChildren(node) {

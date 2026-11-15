@@ -43,6 +43,16 @@ type referenceSyntax struct {
 	// files of a unit with no import, as C#. A name that the file does not
 	// bind keeps its text, and the link step resolves it or drops it.
 	rawNames bool
+	// namedOnly holds the holders whose value counts only when the index
+	// names its function, as the expression of a Go range. A range over a
+	// member that the index cannot name, as n.Attr, mostly reads a slice or
+	// a map, and a record with the method name would give it a name edge
+	// to each method of the name.
+	namedOnly map[string]bool
+	// bareValues marks a language whose record of a method value keeps no
+	// receiver, as Go. The link step then tells it from a call, which can
+	// run a function value of a field.
+	bareValues bool
 	// value replaces reference for a language whose function values take
 	// more forms than a name or a member chain, as Go. It gives the member
 	// node of a method value whose receiver the index cannot name, and the
@@ -120,7 +130,7 @@ func referenceVisitor(p *projection) visitor {
 			case seen[k]:
 			case target != "":
 				p.addReference(value, caller, p.targets([]string{target}))
-			default:
+			case !syntax.namedOnly[kind]:
 				p.addValueRecord(member, caller)
 			}
 			seen[k] = true
@@ -202,12 +212,16 @@ func (p *projection) addValueRecord(member *sitter.Node, caller string) {
 	syntax := p.rules().references
 	name := member.ChildByFieldName(syntax.property)
 	site := ast.GetNodePosition(name)
+	receiver := callgraph.ClipText(p.text(member.ChildByFieldName(syntax.object)))
+	if syntax.bareValues {
+		receiver = ""
+	}
 	p.ix.Unresolved = append(p.ix.Unresolved, fileindex.Unresolved{
 		Caller:   p.caller(caller, site),
 		Line:     int(site.StartLine),
 		Column:   int(site.StartColumn),
 		Text:     callgraph.ClipText(p.text(member)),
-		Receiver: callgraph.ClipText(p.text(member.ChildByFieldName(syntax.object))),
+		Receiver: receiver,
 		Method:   p.text(name),
 		Reason:   fileindex.UnresolvedUnknownReceiver,
 	})

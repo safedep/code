@@ -447,21 +447,53 @@ func (b *builder) goOutsideRecords(key string) []UnresolvedSite {
 	return []UnresolvedSite{{Caller: key, Text: key, Reason: fileindex.UnresolvedNoDependencySource}}
 }
 
+// linkGoStub joins a Go function with no body to the function that a
+// //go:linkname binds it to, when a package of the graph holds that
+// function, and reports whether it did. The receiver of the record names
+// the package of the linkname and the text its full name, as
+// app/internal/impl.secret, or main.target for the package of the file.
+func (b *builder) linkGoStub(ix *fileindex.Index, site UnresolvedSite) bool {
+	pkg := site.Receiver
+	name, ok := strings.CutPrefix(site.Text, pkg+".")
+	if pkg == "" || !ok || !isIdentifier(name) {
+		return false
+	}
+	var keys []string
+	if pkg == ix.Package {
+		if key, ok := b.resolveScopeName(b.scopes[ix.Path], name); ok && !b.g.IsExternal(key) {
+			keys = append(keys, key)
+		}
+	}
+	for _, m := range b.resolveModules(ix, pkg, modules.FormImport) {
+		if r := b.walk(m.key, []string{name}); r.fail == nil && !b.g.IsExternal(r.key) {
+			keys = append(keys, r.key)
+		}
+	}
+	for _, key := range keys {
+		b.link(ix.Language, site.Caller, key, site.Site, EdgeDirect, ruleLocal)
+	}
+	return len(keys) > 0
+}
+
 // scopeGoStub gives the record of a Go function with no body the scope of
-// the code that runs in its place. The receiver of the record names the
-// package of a //go:linkname target.
+// the code that runs in its place, when no package of the graph holds
+// that code. The receiver of the record names the package of a
+// //go:linkname target.
 //
 //   - Code of the standard library calls back only a method of an exported
 //     name, as goOutsideRecords argues. So a linkname into the standard
-//     library, or a stub of assembly in it, gets the callback.
+//     library, or a stub of assembly in it, gets the callback. A path with
+//     no dot can also name a package of a module, as app/internal/impl in
+//     the module app, so the path must name no package of the graph.
 //   - The assembly of a package of a unit calls code of its package and of
 //     the runtime. So its record concerns what the code of its unit reaches.
 //   - A linkname into another package and the assembly of the project can
 //     call any function, so their records concern every target.
 func (b *builder) scopeGoStub(ix *fileindex.Index, site *UnresolvedSite) {
 	unit, _ := fileindex.ParseUnit(ix.Unit)
+	std := site.Receiver != "" && site.Receiver != ix.Package && modules.IsStdPath(site.Receiver) && len(b.resolveModules(ix, site.Receiver, modules.FormImport)) == 0
 	switch {
-	case site.Receiver != "" && modules.IsStdPath(site.Receiver), site.Receiver == "" && unit.Ecosystem == "go" && unit.Name == modules.StdModule:
+	case std, site.Receiver == "" && unit.Ecosystem == "go" && unit.Name == modules.StdModule:
 		site.Callback = true
 	case site.Receiver == "" && ix.Unit != "":
 		site.Unit = ix.Unit

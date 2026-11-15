@@ -27,7 +27,7 @@ var goRules = languageRules{
 	definitions: goDefinitions,
 	typedAt:     goTypedCall,
 	literalCall: goLiteralCall,
-	visitors:    []func(p *projection) visitor{referenceVisitor, goRangeVisitor},
+	visitors:    []func(p *projection) visitor{referenceVisitor, goValueVisitor},
 	references: &referenceSyntax{
 		holders: map[string]string{
 			"argument_list":         "",
@@ -45,6 +45,8 @@ var goRules = languageRules{
 			// grammar parses as a conversion.
 			"type_conversion_expression": "operand",
 		},
+		namedOnly:   map[string]bool{"range_clause": true},
+		bareValues:  true,
 		member:      "selector_expression",
 		object:      "operand",
 		property:    "field",

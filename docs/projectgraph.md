@@ -344,11 +344,24 @@ inner block can bind the name again, as `x` in
 take a parameter of the name. So the index checks each call and each
 method value on a typed name. The binding of the name in scope there must
 be the binding whose type the link step reads, or a binding of the same
-type. Otherwise the site is a record with the reason `unknown-receiver`
-and the method name, and the method of the real type gets a `name` edge. A
-short variable declaration that assigns a name of its own block, as `err`
-in `n, err := f()` after `m, err := g()`, binds no new name. The case
-`go/typed-local-shadow` shows it.
+type. A binding in scope with a type of its own, as `x := remote{}` in the
+block, gives the call the target of a typed local under an alias, as
+`x#120`, so the link step reads that type. Otherwise the site is a record
+with the reason `unknown-receiver` and the method name, and the method of
+the real type gets a `name` edge. The index checks the first name of the
+receiver too, because the call graph can keep a raw target, as `x//run` for
+a parameter `x` of a function literal. A short variable declaration that
+assigns a name of its own block, as `err` in `n, err := f()` after
+`m, err := g()`, binds no new name.
+
+An assignment can type a variable that the function binds once, as `r` in
+`r := o.r; if r == nil { r = &remote{} }`. The link step reads that type
+only when it is the type of the variable. A declared type must be that
+type, and with no declared type each write must give it, as the field `r`
+of the struct `opts` of the file does. A variable that can hold an
+interface, as `r` of a field `r runner`, a range variable or `l := ls[0]`,
+can hold another type, so its call is a record. The case
+`go/typed-local-shadow` shows each form.
 
 Rust follows the same rules, with these additions.
 
@@ -1125,11 +1138,32 @@ a source and in a summary, it concerns every target.
 A local that the function binds once, to a function literal, and never
 assigns again, as `f` in `f := func() {...}; f()`, runs only the literal.
 The index gives the calls of the literal to the function, so the call of
-`f` is no call of the index and has no record. A range over a parameter, a
-local or a field of a declared function type, as `seq` in
-`func consume(seq func(func(int) bool)) { for range seq {} }`, calls the
-function value, so it gets a `function-value` record too. The case
-`go/source-local-func` shows each form.
+`f` is no call of the index and has no record. A range, an assignment in a
+range or a receive, or an address of `f` can give it another function, so
+its call keeps its records.
+
+The index also gives a `function-value` record to code that calls a
+function value with no call record of its own: a call of a field of an
+anonymous struct, as `s.act()`, a call of a dereference or a receive, as
+`(*p)()` or `(<-ch)()`, and a call of a local whose declared type is a
+function type of another package, as `h` in `var h http.HandlerFunc`. A
+record of a method value that a reference reads, as `g := h.fn`, has no
+receiver, so the link step does not take it for a call of a field. The
+case `go/source-local-func` shows each form.
+
+A range over a function calls it, as `seq(yield)` does. So a range over a
+value that the source does not show to be data gets a `function-value`
+record: a parameter of a function type of another file, as `seq` in
+`func consume(seq Seq) { for range seq {} }`, a local that a field gives,
+an element of a slice, or the result of a call. A literal, a value of a
+type of data and a local whose declaration gives such a value need no
+record. A range over a member keeps the member name for the link step. The
+link step drops the record when each field of the name in the graph holds
+data, as `Attr []string`, or when a reference at the site names a function
+or a method, as `t.All`. The index gives a range over a member no record
+with the method name, because such a range mostly reads a slice or a map,
+and a `name` edge to a method of the name would make a target behind it
+`found`. The case `go/range-over-func` shows each form.
 
 Three gaps stay. In each of them, a search with a source can read
 `not-found`.
@@ -1137,10 +1171,8 @@ Three gaps stay. In each of them, a search with a source can read
 - A field of a type of a package that no unit gives can hold a function,
   and no definition names that field. So a call of it keeps only the
   record with the name.
-- A range over a value whose type the index does not see as a function
-  type has no record: a local that a call gives, as `seq := all()`, or a
-  field that no struct of the file declares. The index does not know
-  whether the value is a function or data.
+- A field of an anonymous struct of another file can hold a function, and
+  no definition names it.
 - In Rust, a call of a parameter or a local keeps only the record with the
   name.
 
@@ -1224,11 +1256,15 @@ A Go function with no body runs code that the graph does not hold too: a
 stub of assembly, as `func Sum(xs []int) int` with a `sum_amd64.s` file,
 or a function that `//go:linkname` binds to a function of another package.
 The index gives such a function a record with the reason
-`no-dependency-source`, and the link step gives it a scope.
+`no-dependency-source`. When a package of the graph holds the function of
+a linkname, as `main.aliased` or `app/internal/impl.secret`, the link step
+joins the stub to it with an edge in place of the record. Otherwise it
+gives the record a scope.
 
 - A linkname into the standard library, or a stub of assembly in a unit of
   the standard library, runs code of the standard library. So its record is
-  a callback, as above.
+  a callback, as above. A path with no dot names the standard library only
+  when no package of the graph gives it.
 - The assembly of a package of a unit calls code of its package and of the
   runtime. So its record concerns what the code of its unit reaches.
 - A linkname into another package and the assembly of the project can call

@@ -136,9 +136,13 @@ type builder struct {
 	bindings map[string]string
 	classes  map[string]classRecord
 	// defs holds the definition records by key, and fieldNames the names
-	// of the fields among them.
+	// of the Go fields among them, true for a name that a field which can
+	// hold a function has.
 	defs       map[string]*fileindex.Definition
 	fieldNames map[string]bool
+	// valueSites holds the sites of the references to a function or a
+	// method.
+	valueSites map[Site]bool
 	// reading holds the variables whose value a walk reads now, so a cycle
 	// of variables across files stops. stepping holds the names that a
 	// walk of a unit reads now for the result type of an external key.
@@ -191,8 +195,8 @@ type builder struct {
 	// cuts counts the answers that a cycle guard or the hop limit cut
 	// short. A memo that a read with a cut gives can lack an answer that
 	// another way in finds.
-	cuts int
-	children  map[string][]string
+	cuts     int
+	children map[string][]string
 	// aliases holds the definitions of each class that the language joins
 	// to one class, the class too.
 	aliases map[string][]string
@@ -300,6 +304,7 @@ func newTables(indexes []*fileindex.Index, opts Options) *builder {
 		scopes:       make(map[string]*scope, len(indexes)),
 		edges:        newEdgeSet(sites),
 		unresolved:   map[UnresolvedSite]bool{},
+		valueSites:   map[Site]bool{},
 		truncations:  map[Truncation]bool{},
 		names:        map[nameKey]resolution{},
 		visiting:     map[nameKey]bool{},
@@ -513,10 +518,21 @@ func (b *builder) copyUnresolved(ix *fileindex.Index) {
 		if u.Reason == fileindex.UnresolvedComputedName && profileOf(ix.Language).functionValues {
 			site.Reason = fileindex.UnresolvedFunctionValue
 		}
+		// The Go index gives a range over a member the member name, and
+		// the fields of the graph decide whether the range reads data.
+		if u.Reason == fileindex.UnresolvedFunctionValue && u.Method != "" {
+			if b.rangesNoValue(u, at) {
+				continue
+			}
+			site.Method = ""
+		}
 		if u.Reason == fileindex.UnresolvedDynamicImport {
 			site.ImportPrefix = b.importPrefix(ix, u.Line)
 		}
 		if u.Reason == fileindex.UnresolvedNoDependencySource && ix.Language == langcode.Go {
+			if b.linkGoStub(ix, site) {
+				continue
+			}
 			b.scopeGoStub(ix, &site)
 		}
 		b.addUnresolved(site)

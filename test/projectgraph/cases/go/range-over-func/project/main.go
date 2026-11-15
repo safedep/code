@@ -47,3 +47,29 @@ func drain(s source) {
 		_ = x
 	}
 }
+
+type element struct{}
+
+func (element) Attr() string {
+	os.Chdir("/")
+	return ""
+}
+
+func attrs(ns []*node) {
+	for _, n := range ns {
+		for _, a := range n.Attr {
+			_ = a
+		}
+	}
+}
+
+func typed(seq Seq) {
+	for range seq {
+	}
+}
+
+func viaLocal(h holder) {
+	seq := h.Each
+	for range seq {
+	}
+}

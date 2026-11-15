@@ -7,12 +7,21 @@ description: >-
   is not found. consume ranges over its parameter seq of a function type, and drain over the field each of
   a function type. Each range calls a function value that a search from a source does not reach, so it is
   a function-value record, and each target is uncertain from consume and from drain. A range with no
-  record read not-found there.
+  record read not-found there. attrs ranges over the field Attr of a node, which holds a slice. A range
+  over a member that the index cannot name keeps no record with the method name, so it gets no name edge
+  to element.Attr, and os.Chdir is not found from attrs. The link step drops the record of the range,
+  because each field Attr of the graph holds data. typed ranges over a parameter of the type Seq of
+  another file, and viaLocal over a local that holds the field Each of a holder. The index cannot show
+  that either value is data, so each range is a function-value record, and os.Remove is uncertain from
+  each.
 roots:
   - key: main.go
     kind: main
     rule: go.main
   - key: main.go//main
+    kind: main
+    rule: go.main
+  - key: types.go
     kind: main
     rule: go.main
 edges:
@@ -38,6 +47,9 @@ unresolved:
     reason: no-dependency-source
     callback: true
   - caller: main.go//walk
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Chdir
     reason: no-dependency-source
     callback: true
   - caller: os//Getwd
@@ -68,6 +80,12 @@ unresolved:
     reason: function-value
   - caller: main.go//drain
     site: main.go:46
+    reason: function-value
+  - caller: main.go//typed
+    site: main.go:67
+    reason: function-value
+  - caller: main.go//viaLocal
+    site: main.go:73
     reason: function-value
 results:
   - target: os//Remove
@@ -130,3 +148,33 @@ results:
     uncertainties:
       - kind: unresolved-call
         site: main.go:46
+  - target: os//Chdir
+    sources: [main.go//attrs]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: main.go//element//Attr
+        site: main.go:54
+        reached: false
+  - target: os//Remove
+    sources: [main.go//typed]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//walk
+        site: main.go:9
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:67
+  - target: os//Remove
+    sources: [main.go//viaLocal]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//walk
+        site: main.go:9
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:73

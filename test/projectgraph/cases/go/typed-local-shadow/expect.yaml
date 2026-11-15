@@ -3,13 +3,19 @@ description: >-
   main declares x as a local, and an inner block declares x again as a remote. The call x.run() in the
   block runs remote.run, which calls os/exec.LookPath. The index records the typed locals of a function
   with no extent, and the link step reads the type of the first one. So the index checks that the binding
-  of x in scope at the call is the binding whose type the link step reads. Here it is not, so the call is
-  an unknown-receiver record with the method name run, which gets a name edge to remote.run. The method
-  value x.stop is a record of the same kind, with the name stop. A type of the first x gave not-found for
-  os/exec.LookPath. The call x.run() before the block keeps its member edge to local.run. pick binds r
-  once and types it by the assignment r = &remote{}, and named types its named result l by an assignment.
-  Each function binds the name once, so the assignment types that variable, and the call keeps its member
-  edge. A record there gave a name edge to the run of the other type, and a target behind it read found.
+  of x in scope at the call is the binding whose type the link step reads. Here it is not. The method
+  value x.stop is an unknown-receiver record with the method name stop, which gets a name edge to
+  remote.stop. A type of the first x gave not-found for os/exec.LookPath. The call x.run() before the
+  block keeps its member edge to local.run. pick binds r once and types it by the assignment r =
+  &remote{}, and named types its named result l by an assignment. Each function binds the name once, so
+  the assignment types that variable, and the call keeps its member edge. A record there gave a name edge
+  to the run of the other type, and a target behind it read found. The binding of x in the block of main
+  has a type of its own, so the index gives the call the target of that binding under an alias, and the
+  call gets a member edge to remote.run. siblings does the same in each of two blocks. viaLit calls run on
+  the parameter x of a function literal, which no type of the index names, so the call is a record.
+  pickIface types r by an assignment, but r holds the interface runner from the field r, so the writes do
+  not agree and the call is a record too. A type of local for each of the two gave not-found for
+  os/exec.LookPath.
 roots:
   - key: main.go
     kind: main
@@ -25,9 +31,24 @@ edges:
     site: main.go:20
   - from: main.go//main
     to: main.go//remote//run
+    kind: member
+    confidence: high
+    site: main.go:23
+  - from: main.go//siblings
+    to: main.go//remote//run
+    kind: member
+    confidence: high
+    site: main.go:72
+  - from: main.go//local//viaLit
+    to: main.go//remote//run
     kind: name
     confidence: low
-    site: main.go:23
+    site: main.go:49
+  - from: main.go//pickIface
+    to: main.go//remote//run
+    kind: name
+    confidence: low
+    site: main.go:62
   - from: main.go//main
     to: main.go//remote//stop
     kind: name
@@ -51,7 +72,13 @@ no_edges:
   - from: main.go//named
     to: main.go//remote//run
 unresolved:
+  - caller: main.go//local//viaLit
+    reason: no-dependency-source
+    callback: true
   - caller: main.go//main
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//pickIface
     reason: no-dependency-source
     callback: true
   - caller: os//Getwd
@@ -64,10 +91,6 @@ unresolved:
     reason: no-dependency-source
     callback: true
   - caller: main.go//main
-    site: main.go:23
-    reason: unknown-receiver
-    method: run
-  - caller: main.go//main
     site: main.go:24
     reason: unknown-receiver
     method: stop
@@ -78,6 +101,14 @@ unresolved:
     site: main.go:25
     reason: unknown-receiver
     method: f
+  - caller: main.go//local//viaLit
+    site: main.go:49
+    reason: unknown-receiver
+    method: run
+  - caller: main.go//pickIface
+    site: main.go:62
+    reason: unknown-receiver
+    method: run
 results:
   - target: os//Getwd
     status: found
@@ -101,8 +132,8 @@ results:
       - key: main.go//main
       - key: main.go//remote//run
         site: main.go:23
-        kind: name
-        confidence: low
+        kind: member
+        confidence: high
       - key: os//exec//LookPath
         site: main.go:14
         kind: direct
@@ -143,3 +174,39 @@ results:
       - caller: main.go//remote//run
         site: main.go:14
         reached: false
+  - target: os//exec//LookPath
+    sources: [main.go//local//viaLit]
+    sources_only: true
+    status: found
+    path:
+      - key: main.go//local//viaLit
+      - key: main.go//remote//run
+        site: main.go:49
+        kind: name
+        confidence: low
+      - key: os//exec//LookPath
+        site: main.go:14
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//remote//run
+        site: main.go:14
+        reached: true
+  - target: os//exec//LookPath
+    sources: [main.go//pickIface]
+    sources_only: true
+    status: found
+    path:
+      - key: main.go//pickIface
+      - key: main.go//remote//run
+        site: main.go:62
+        kind: name
+        confidence: low
+      - key: os//exec//LookPath
+        site: main.go:14
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//remote//run
+        site: main.go:14
+        reached: true
