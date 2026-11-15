@@ -718,8 +718,11 @@ A path rule also marks each function under an exported object of its
 files, as `default` and `save` of `export const actions = {...}` in a
 `+page.server.ts`. The framework calls such a function by its name, and no
 edge leads from the object to it. A destructured export, as
-`export const { GET } = handlers`, gives no export record in the index, so
-its function is no root. The resolver maps the alias `$lib` of SvelteKit
+`export const { GET } = handlers`, gives an export record whose target is
+the member that the name takes, as `handlers//GET`, also through a nested
+pattern and a rename. A name of an array pattern or a rest element takes
+the object that holds it. The case `javascript/sveltekit-destructured-export`
+shows each form. The resolver maps the alias `$lib` of SvelteKit
 to `src/lib` of the nearest package that depends on `@sveltejs/kit`. It
 does not read `svelte.config.js`, which can move the directory. So an
 import of `$lib` that names no file is first party, and it is a record

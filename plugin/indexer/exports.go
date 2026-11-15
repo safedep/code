@@ -1,6 +1,8 @@
 package indexer
 
 import (
+	"slices"
+
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/pkg/ts"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -77,6 +79,7 @@ func (p *projection) addExportStatement(statement *sitter.Node) {
 		for _, name := range p.declaredNames(declaration) {
 			p.export(named(name), name, line)
 		}
+		p.exportPatterns(declaration, line)
 		return
 	}
 	if value := statement.ChildByFieldName("value"); value != nil {
@@ -139,6 +142,57 @@ func (p *projection) declaredNames(declaration *sitter.Node) []string {
 		return []string{p.text(name)}
 	}
 	return nil
+}
+
+// exportPatterns adds the exports of the names that a destructuring
+// declaration binds, as GET in export const { GET } = handlers. The
+// target of a name is the member of the object that it takes, as
+// handlers//GET. A framework calls the function of an exported name, and
+// without the record no root names the function. A name of an array
+// pattern or a rest element takes no member that a key names, so its
+// target is the object that holds it. A value that is no name of the file
+// gives no target, and the call of the value holds its code.
+func (p *projection) exportPatterns(declaration *sitter.Node, line int) {
+	if t := declaration.Type(); t != "lexical_declaration" && t != "variable_declaration" {
+		return
+	}
+	for _, declarator := range ts.NamedChildren(declaration) {
+		pattern, value := declarator.ChildByFieldName("name"), declarator.ChildByFieldName("value")
+		if pattern == nil || pattern.Type() == "identifier" || value == nil || value.Type() != "identifier" {
+			continue
+		}
+		p.exportPattern(pattern, []string{p.text(value)}, line)
+	}
+}
+
+// exportPattern adds the exports of the names of a pattern whose value is
+// the member at the path. A name of an object pattern takes the member of
+// its own name, as GET in { GET }.
+func (p *projection) exportPattern(pattern *sitter.Node, path []string, line int) {
+	switch pattern.Type() {
+	case "identifier":
+		p.export(p.text(pattern), fileindex.Join(path[0], path[1:]...), line)
+	case "shorthand_property_identifier_pattern":
+		name := p.text(pattern)
+		p.export(name, fileindex.Join(path[0], append(slices.Clip(path[1:]), name)...), line)
+	case "assignment_pattern", "object_assignment_pattern":
+		if left := pattern.ChildByFieldName("left"); left != nil {
+			p.exportPattern(left, path, line)
+		}
+	case "pair_pattern":
+		key, value := pattern.ChildByFieldName("key"), pattern.ChildByFieldName("value")
+		if key == nil || value == nil {
+			return
+		}
+		if key.Type() == "property_identifier" {
+			path = append(slices.Clip(path), p.text(key))
+		}
+		p.exportPattern(value, path, line)
+	case "object_pattern", "array_pattern", "rest_pattern":
+		for _, child := range ts.NamedChildren(pattern) {
+			p.exportPattern(child, path, line)
+		}
+	}
 }
 
 // addExportAssignment adds the exports of a CommonJS assignment, as

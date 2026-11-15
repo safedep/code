@@ -1,0 +1,5 @@
+{
+  "name": "sveltekit-destructured-export",
+  "main": "server.js",
+  "devDependencies": { "@sveltejs/kit": "^2.5.0" }
+}
