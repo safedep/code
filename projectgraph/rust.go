@@ -815,7 +815,7 @@ func (b *builder) rustScopeFallback(sc *scope, caller, first string, rest []stri
 	// reads its own uses.
 	t, ok := b.rustLocalPath(sc.ix.Path, written)
 	if !ok && !b.rustInUseScope(sc, caller) {
-		t, ok = b.rustPath(sc.ix.Path, written)
+		t.path, t.file, ok = b.rustGlobPath(sc.ix.Path, written)
 	}
 	switch {
 	case ok && t.key != "":
