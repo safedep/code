@@ -356,7 +356,8 @@ type provisionKey struct {
 // package has the name of the import: the npm name for JavaScript, the
 // module path for Go, and the top-level package for Python. The answer
 // depends only on the family, the module and the form, so the builder
-// keeps it.
+// keeps it. The Rust profile resolves a path of the unit, which can read
+// glob uses, so a pass of a glob read that does not settle undoes it.
 func (b *builder) providers(o origin) []provision {
 	family := o.lang.Family()
 	k := provisionKey{family: family, module: o.module, form: o.form}
@@ -373,6 +374,7 @@ func (b *builder) providers(o origin) []provision {
 		out = narrow(out)
 	}
 	b.provisions[k] = out
+	b.memo(func() { delete(b.provisions, k) })
 	return out
 }
 
