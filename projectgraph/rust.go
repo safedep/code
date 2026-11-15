@@ -981,11 +981,78 @@ func (b *builder) findGlobPath(sc *scope, first string) globPath {
 		}
 		ix := b.byPath[file]
 		o := origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, joinPath(path, []string{first})), form: modules.FormImport}
-		if slices.ContainsFunc(b.providers(o), b.rustPublic) {
+		if slices.ContainsFunc(b.providers(o), b.rustPublic) && b.rustGlobGives(ix, path, first) {
 			return globPath{path: path, file: file, ok: true}
 		}
 	}
 	return globPath{}
+}
+
+// rustGlobGives reports whether a glob use of the module of another crate
+// at a path brings a name. Another crate sees only what is pub for every
+// crate: a pub item of the module, a child module, or the binding of a pub
+// use or of a pub glob use. A private use or a pub(crate) item of the module
+// stays out, as render of use crate::inner::render in dep::html. A glob of
+// what is no module, as an enum, brings the item that the provision gives.
+func (b *builder) rustGlobGives(ix *fileindex.Index, path, name string) bool {
+	o := origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, path), form: modules.FormImport}
+	read := false
+	for _, pv := range b.providers(o) {
+		if b.units[pv.module] == nil {
+			continue
+		}
+		read = true
+		if b.rustExports(pv.module, name, map[string]bool{}) {
+			return true
+		}
+	}
+	return !read
+}
+
+// rustExports reports whether a module of the project or of a unit gives a
+// name to another crate, as rustGlobGives says.
+func (b *builder) rustExports(mod, name string, seen map[string]bool) bool {
+	if seen[mod] {
+		return false
+	}
+	seen[mod] = true
+	u := b.units[mod]
+	if slices.ContainsFunc(u.names[name], func(k string) bool { return b.defs[k] != nil && b.defs[k].Exported }) {
+		return true
+	}
+	if _, pkg, ok := strings.Cut(mod, ":"); ok && b.namespaces[langcode.Rust].units[pkg+"::"+name] != nil {
+		return true
+	}
+	for _, p := range u.files {
+		sc := b.scopes[p]
+		if sc == nil {
+			continue
+		}
+		for _, imp := range sc.imports {
+			if !imp.Exported || sc.enclosing(imp.Line) != p {
+				continue
+			}
+			if !imp.Wildcard {
+				if bindingName(langcode.Rust, imp) == name {
+					return true
+				}
+				continue
+			}
+			if b.rustLocalRoot(p, imp.Module) {
+				if m, _, ok := b.resolveModule(sc.ix, imp.Module); ok && b.units[m] != nil && b.rustExports(m, name, seen) {
+					return true
+				}
+				continue
+			}
+			o := origin{lang: sc.ix.Language, unit: sc.ix.Unit, module: b.packageModule(sc.ix, imp.Module), form: modules.FormImport}
+			if slices.ContainsFunc(b.providers(o), func(pv provision) bool {
+				return b.units[pv.module] != nil && b.rustExports(pv.module, name, seen)
+			}) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // rustNestedName reports whether an inline module of the graph defines a

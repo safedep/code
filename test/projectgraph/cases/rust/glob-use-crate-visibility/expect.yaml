@@ -1,0 +1,74 @@
+source: safedep:hand
+description: >-
+  main.rs has use dep::html::* and use other::*, and calls render(), save() and load(). In dep::html, render is
+  pub(crate), save comes from a private use and load from a pub(crate) use, so another crate sees none of them,
+  and the glob use of dep::html brings none. other gives the pub functions render, save and load, so each call
+  runs code of other. A link step that takes pub(crate) for pub, or a use for a pub use, gives the calls the edges
+  to dep, and the code of dep reads found. Each call keeps its record of the single name, so the code of dep
+  reads uncertain.
+units:
+  vendor/dep: cargo:dep@1.0.0
+  vendor/other: cargo:other@1.0.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//main
+    to: other//render
+    kind: direct
+    confidence: high
+    site: src/main.rs:5
+  - from: src/main.rs//main
+    to: other//save
+    kind: direct
+    confidence: high
+    site: src/main.rs:6
+  - from: src/main.rs//main
+    to: other//load
+    kind: direct
+    confidence: high
+    site: src/main.rs:7
+no_edges:
+  - from: src/main.rs//main
+    to: dep//html//render
+  - from: src/main.rs//main
+    to: dep//html//save
+  - from: src/main.rs//main
+    to: dep//html//load
+unresolved:
+  - caller: src/main.rs//main
+    site: src/main.rs:5
+    reason: unknown-receiver
+    method: render
+  - caller: src/main.rs//main
+    site: src/main.rs:6
+    reason: unknown-receiver
+    method: save
+  - caller: src/main.rs//main
+    site: src/main.rs:7
+    reason: unknown-receiver
+    method: load
+results:
+  - target: std//fs//remove_dir
+    status: uncertain
+    call_sites:
+      - caller: cargo:dep@1.0.0//src/html.rs//render
+        site: cargo:dep@1.0.0//src/html.rs:5
+        reached: false
+      - caller: cargo:dep@1.0.0//src/inner.rs//save
+        site: cargo:dep@1.0.0//src/inner.rs:2
+        reached: false
+      - caller: cargo:dep@1.0.0//src/inner.rs//load
+        site: cargo:dep@1.0.0//src/inner.rs:6
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/main.rs:5
+      - kind: unresolved-call
+        site: src/main.rs:6
+      - kind: unresolved-call
+        site: src/main.rs:7

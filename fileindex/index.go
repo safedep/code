@@ -225,6 +225,8 @@ type Import struct {
 	Kind      ImportKind `json:"kind"`
 	Namespace string     `json:"namespace"`
 	Require   bool       `json:"require,omitempty"`
+	// Exported marks a Rust pub use, whose binding another crate can name.
+	Exported bool `json:"exported,omitempty"`
 }
 
 // Export is one export of the file. Name is "default" for a default export.

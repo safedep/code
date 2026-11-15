@@ -6,6 +6,7 @@ import (
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
 	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/plugin/callgraph"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -99,6 +100,9 @@ type languageRules struct {
 	// prune drops the definitions that hold no record, after the records.
 	prune func(p *projection)
 
+	// importExported reports whether an import gives its binding on to
+	// other crates or modules, as pub use of Rust.
+	importExported func(p *projection, imp callgraph.Import) bool
 	// shadowed fixes the targets of a call whose first name a scope between
 	// the call and the definition of the target binds again, as a use in a
 	// block of Rust. It reports false when the call is a record.

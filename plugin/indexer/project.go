@@ -154,9 +154,11 @@ func unitOf(name string) string {
 }
 
 func (p *projection) addImports() {
+	exported := p.rules().importExported
 	for _, imp := range p.cg.Imports {
 		kind, require := p.importForm(imp)
 		p.ix.Imports = append(p.ix.Imports, fileindex.Import{
+			Exported:  exported != nil && exported(p, imp),
 			Line:      int(imp.Position.StartLine),
 			Module:    imp.Module,
 			Item:      imp.Item,

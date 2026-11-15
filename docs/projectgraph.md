@@ -543,7 +543,12 @@ Rust follows the same rules, with these additions.
   the link step keeps no provision of a unit that a cut read gives, as the
   case `rust/glob-use-crate-cycle` shows. A local closure or a parameter can
   bind a single name, so such a call keeps its record too. A glob `use`
-  brings only a `pub` item, as in the case `rust/glob-use-private-item`.
+  brings only what another crate sees: a `pub` item, a child module, or the
+  binding of a `pub use`, as in the case `rust/glob-use-private-item`. An
+  item that is `pub(crate)`, `pub(super)` or `pub(in ..)`, and a `use` that
+  is not `pub`, stay out, as in the case `rust/glob-use-crate-visibility`.
+  The index marks an item as exported only when it is `pub`, and marks each
+  `pub use`.
   A glob `use` of the root of the file brings no name into an inline module
   with uses of its own, as in the case `rust/glob-use-inline-scope`.
 - `#[macro_export]` puts a macro at the root of its crate, from any module

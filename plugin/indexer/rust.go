@@ -11,6 +11,7 @@ import (
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/pkg/ts"
+	"github.com/safedep/code/plugin/callgraph"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -22,17 +23,18 @@ var rustRules = languageRules{
 		"mod_item":         fileindex.DefClass,
 		"trait_item":       fileindex.DefInterface,
 	},
-	bases:       rustBases,
-	fields:      rustFields,
-	decorators:  rustAttributes,
-	signature:   rustSignature,
-	exported:    rustPublic,
-	definitions: rustTypes,
-	markTries:   rustMarkTries,
-	shadowed:    rustShadowed,
-	visitors:    []func(p *projection) visitor{referenceVisitor, rustVisitor},
-	declaredAt:  rustDeclaredAt,
-	rebound:     rustRebound,
+	bases:          rustBases,
+	fields:         rustFields,
+	decorators:     rustAttributes,
+	signature:      rustSignature,
+	exported:       rustPublic,
+	definitions:    rustTypes,
+	markTries:      rustMarkTries,
+	importExported: rustImportExported,
+	shadowed:       rustShadowed,
+	visitors:       []func(p *projection) visitor{referenceVisitor, rustVisitor},
+	declaredAt:     rustDeclaredAt,
+	rebound:        rustRebound,
 	// A Rust path to a function, as handler in get(handler) or
 	// Self::visit in items.iter().for_each(Self::visit), is a value that
 	// the code that gets it calls.
@@ -1050,10 +1052,10 @@ func rustPublic(p *projection, def *fileindex.Definition) bool {
 	}
 	if node.Type() == "impl_item" {
 		return slices.ContainsFunc(p.rustSiblings(node, p.rustItemName(node)), func(item *sitter.Node) bool {
-			return item.Type() != "impl_item" && ts.ChildOfType(item, "visibility_modifier") != nil
+			return item.Type() != "impl_item" && p.rustPub(item)
 		})
 	}
-	if ts.ChildOfType(node, "visibility_modifier") != nil {
+	if p.rustPub(node) {
 		return true
 	}
 	if impl := rustImpl(node); impl != nil {
@@ -1061,6 +1063,24 @@ func rustPublic(p *projection, def *fileindex.Definition) bool {
 	}
 	parent := p.syntax[fileindex.Parent(def.Key)]
 	return parent != nil && parent.Type() == "trait_item"
+}
+
+// rustPub reports whether an item is pub for every crate. pub(crate),
+// pub(super) and pub(in path) keep the item in its crate, so another crate
+// cannot name it, and a glob use of another crate does not bring it.
+func (p *projection) rustPub(item *sitter.Node) bool {
+	return p.text(ts.ChildOfType(item, "visibility_modifier")) == "pub"
+}
+
+// rustImportExported reports whether a use is pub, as pub use
+// inner::render, so another crate can name what it binds.
+func rustImportExported(p *projection, imp callgraph.Import) bool {
+	for node := p.descendant(imp.Position); node != nil; node = node.Parent() {
+		if node.Type() == "use_declaration" {
+			return p.rustPub(node)
+		}
+	}
+	return false
 }
 
 // rustVisitor marks an include! of a source file, whose code the index
