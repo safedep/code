@@ -431,7 +431,11 @@ Rust follows the same rules, with these additions.
   `helpers::run` after `use crate::deep::helpers;` names the function of
   the module `deep::helpers`, and `sub::f` after `use dep::sub;` names
   `dep//sub//f`. A `use` never reads its own binding, so
-  `use smallvec::smallvec;` names the crate `smallvec`.
+  `use smallvec::smallvec;` names the crate `smallvec`. A binding can
+  name a module, so `use util::helpers;` after `use crate::deep;` and
+  `use deep::util;` names the module `deep::util::helpers`, as in the case
+  `rust/use-chain-module`. A glob `use` brings such a binding of its
+  module too, as in the case `rust/glob-use-binding`.
 - A glob `use` brings each name of its module into the module of the
   file. So `helpers::cleanup` after `use super::*;` in
   `src/deep/worker.rs` names the function of the module `deep::helpers`,
