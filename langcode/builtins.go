@@ -1,5 +1,7 @@
 package langcode
 
+import "slices"
+
 // builtins are the names that a file of the language uses with no import or
 // definition: functions, types and runtime globals. Each language holds its
 // list in its own file.
@@ -46,6 +48,18 @@ var javaLangSet = func() map[string]bool {
 	}
 	return set
 }()
+
+// pointers are the smart pointers of each language with them. A method
+// call on a pointer runs a method of the value that it holds, as s.save()
+// on a Box<dyn Store> of Rust.
+var pointers = map[Code][]string{
+	Rust: rustPointers,
+}
+
+// IsPointer reports whether the name is a smart pointer of the language.
+func IsPointer(c Code, name string) bool {
+	return slices.Contains(pointers[c], name)
+}
 
 // IsJavaLang reports whether the name is a class of java.lang, which a
 // Java or a Kotlin file names with no import.

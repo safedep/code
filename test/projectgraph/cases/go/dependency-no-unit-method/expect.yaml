@@ -1,0 +1,46 @@
+source: safedep:hand
+description: >-
+  No unit gives example.com/legacy, and main makes a value of its type Conn only in a composite literal, so no
+  edge leads to legacy. run calls Close on an element of a slice of a first-party interface, whose value the
+  link step does not know. That call can run Close of legacy.Conn, and the code of legacy can call any
+  function. So the call has a record of code outside the graph that concerns every target, and os.RemoveAll,
+  which only the uncalled purge calls, is uncertain. idle calls nothing, so os.RemoveAll is not found from it.
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+unresolved:
+  - caller: main.go//run
+    reason: no-dependency-source
+    callback: true
+  - caller: os//RemoveAll
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//run
+    site: main.go:16
+    reason: no-dependency-source
+  - caller: main.go//run
+    site: main.go:16
+    reason: unknown-receiver
+    method: Close
+results:
+  - target: os//RemoveAll
+    status: uncertain
+    call_sites:
+      - caller: main.go//purge
+        site: main.go:22
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:16
+  - target: os//RemoveAll
+    sources: [main.go//idle]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: main.go//purge
+        site: main.go:22
+        reached: false

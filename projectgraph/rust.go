@@ -1,6 +1,7 @@
 package projectgraph
 
 import (
+	"cmp"
 	"slices"
 	"strings"
 
@@ -28,9 +29,11 @@ var rustProfile = profile{
 	symbol:            rustSymbol,
 	surface:           rustSurface,
 	unitTypes:         true,
+	receiverMethods:   true,
 	sameTypeMethods:   map[string]bool{"clone": true, "to_owned": true, "default": true, "from": true},
 	abstractReceiver:  fileindex.UnresolvedTraitReceiver,
 	dependencies:      func(b *builder) ([]string, []modules.Problem) { return b.cargoOf(b.project).Dependencies(), nil },
+	typePath:          rustTypePath,
 	instance:          []string{"self"},
 	superModule:       true,
 	unitImports:       true,
@@ -78,6 +81,40 @@ var rustConversions = map[string][]string{
 func (b *builder) linkRust(ix *fileindex.Index) {
 	b.linkClassBodies(ix)
 	b.linkExtensions(ix, b.extensionsNamed)
+	b.linkCrateRoutes(ix)
+}
+
+// linkCrateRoutes records each use of a path through a module into a
+// crate that no unit gives, as use self::aes_gcm::Aes256Gcm after extern
+// crate aes_gcm. The code of the crate is not in the graph, so the record
+// has the crate as its import prefix, and only a target of the crate sees
+// it. A graph with no unit links no crate, so it records nothing.
+func (b *builder) linkCrateRoutes(ix *fileindex.Index) {
+	if !b.hasUnits() {
+		return
+	}
+	sc := b.scopes[ix.Path]
+	for _, imp := range ix.Imports {
+		if imp.Kind != fileindex.ImportStatic {
+			continue
+		}
+		module, _ := importedModule(ix.Language, imp)
+		path, file, ok := b.rustCratePath(ix.Path, module)
+		if !ok {
+			continue
+		}
+		crate, _ := rustCrateNames(path)
+		if b.provides(origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(b.byPath[file], crate), form: modules.FormImport}) {
+			continue
+		}
+		b.addUnresolved(UnresolvedSite{
+			Caller:       b.runner(sc.enclosing(imp.Line)),
+			Site:         Site{Path: ix.Path, Line: imp.Line},
+			Text:         module,
+			Reason:       fileindex.UnresolvedNoDependencySource,
+			ImportPrefix: fileindex.Namespace(ix.Language, crate),
+		})
+	}
 }
 
 // rustImplicit name the methods of the traits of std that Rust code calls
@@ -95,55 +132,34 @@ var rustImplicit = map[string]bool{
 	"call_once": true, "serialize": true, "deserialize": true,
 }
 
-// rustUnwraps are the methods of Option and Result that give the value
-// inside, and rustWrapperMethods the other methods of each one. A ?
-// gives the value inside too, and the index records no ?, so a name that
-// neither table holds takes the value inside.
-var (
-	rustUnwraps        = map[string]bool{"unwrap": true, "expect": true, "unwrap_unchecked": true}
-	rustWrapperMethods = map[string]map[string]bool{
-		"Option": setOf("and", "and_then", "as_deref", "as_deref_mut", "as_mut", "as_ref", "cloned", "copied", "filter",
-			"flatten", "get_or_insert", "get_or_insert_with", "insert", "is_none", "is_some", "is_some_and", "iter",
-			"iter_mut", "map", "map_or", "map_or_else", "ok_or", "ok_or_else", "or", "or_else", "replace", "take",
-			"unwrap_or", "unwrap_or_default", "unwrap_or_else", "xor", "zip"),
-		"Result": setOf("and", "and_then", "as_deref", "as_deref_mut", "as_mut", "as_ref", "cloned", "copied", "err",
-			"expect_err", "flatten", "is_err", "is_ok", "is_ok_and", "iter", "iter_mut", "map", "map_err", "map_or",
-			"map_or_else", "ok", "or", "or_else", "unwrap_err", "unwrap_or", "unwrap_or_default", "unwrap_or_else"),
-	}
-)
-
-func setOf(names ...string) map[string]bool {
-	out := make(map[string]bool, len(names))
-	for _, n := range names {
-		out[n] = true
-	}
-	return out
-}
-
-// rustUnwrap returns how many names a Rust result in the wrapper takes
-// before the next name: one for an unwrap, none for a name of the value
-// inside, and false for a method of the wrapper itself.
-func rustUnwrap(wraps, next string) (int, bool) {
-	switch {
-	case rustUnwraps[next]:
-		return 1, true
-	case rustWrapperMethods[wraps][next]:
-		return 0, false
-	}
-	return 0, true
-}
+// rustUnwraps are the names that give the value inside an Option or a
+// Result: unwrap, expect and the ? that the index records in a target. Any
+// other name on a wrapped result is a method of the wrapper itself, as map
+// or inspect of Option, and the link step does not know its result.
+var rustUnwraps = map[string]bool{"unwrap": true, "expect": true, "unwrap_unchecked": true, fileindex.TryName: true}
 
 // rustRoots are the first names of the paths of the crates of the
 // toolchain, which no crate of the project defines.
 var rustRoots = map[string]bool{"std": true, "core": true, "alloc": true}
 
 // rustState is the state of Rust in a build: the crates of each space, the
-// module path of each Rust file, and the paths that a resolution reads now,
-// by the file that writes them.
+// module path of each Rust file, the paths that a resolution or a crate
+// route reads now, by the file that writes them, and the module paths of
+// the glob uses of each file.
 type rustState struct {
 	cargo     map[*space]*modules.Cargo
 	modules   map[string]string
 	resolving map[[2]string]bool
+	routing   map[[2]string]bool
+	routes    map[[2]string]crateRoute
+	globs     map[string][]string
+}
+
+// crateRoute is the path in another crate that a path of a file names, and
+// the file of the binding.
+type crateRoute struct {
+	path, file string
+	ok         bool
 }
 
 func (b *builder) rustState() *rustState {
@@ -171,6 +187,9 @@ func (b *builder) addRustUnits() {
 	s := b.rustState()
 	s.modules = map[string]string{}
 	s.resolving = map[[2]string]bool{}
+	s.routing = map[[2]string]bool{}
+	s.routes = map[[2]string]crateRoute{}
+	s.globs = map[string][]string{}
 	files := map[string][]string{}
 	for _, p := range b.paths {
 		if ix := b.byPath[p]; ix != nil && ix.Language == langcode.Rust {
@@ -258,6 +277,56 @@ func (b *builder) rustPaths(module, written string) []string {
 		out = append(out, written)
 	}
 	return out
+}
+
+// rustScopePaths returns the module paths that a path of a file can name:
+// the paths of rustPaths, with the path under the module of each glob use
+// of the file after the path of a child item. use super::* in
+// src/deep/worker.rs brings the module helpers of src/deep/mod.rs into
+// scope, so helpers::cleanup names crate::deep::helpers::cleanup. Rust
+// reads a name of a glob use after an item of the module and before a
+// crate. Without the glob paths the first name reads as another crate, the
+// edge goes to an external key with no record, and a target under it reads
+// not-found.
+func (b *builder) rustScopePaths(importer, written string) []string {
+	out := b.rustPaths(b.rustState().modules[importer], written)
+	if first := rustFirstName(written); first == "crate" || first == "self" || first == "super" || strings.HasPrefix(written, "::") {
+		return out
+	}
+	parts := strings.Split(written, "::")
+	var globs []string
+	for _, p := range b.rustGlobModules(importer) {
+		globs = append(globs, joinPath(p, parts))
+	}
+	return slices.Insert(out, 1, globs...)
+}
+
+// rustGlobModules returns the module paths of the glob uses of the module
+// of a file. super in use super::* of an inline module, as mod tests, is
+// the module of the file. Read from the module of the file, it names a
+// sibling module, and a path of a crate with the name of that sibling
+// loses its edge to the crate. So a glob use of an inline module stays out.
+// The index gives an inline module the kind class, and an impl block holds
+// no use, so a glob use whose innermost definition is a class sits in an
+// inline module.
+// The path of a glob use reads no glob use, so no cycle of glob uses can
+// start.
+func (b *builder) rustGlobModules(file string) []string {
+	s := b.rustState()
+	if mods, ok := s.globs[file]; ok {
+		return mods
+	}
+	var mods []string
+	if sc := b.scopes[file]; sc != nil {
+		for _, imp := range sc.wildcards {
+			if def := b.defs[sc.enclosing(imp.Line)]; def != nil && def.Kind == fileindex.DefClass {
+				continue
+			}
+			mods = append(mods, b.rustPaths(s.modules[file], imp.Module)...)
+		}
+	}
+	s.globs[file] = mods
+	return mods
 }
 
 // rustSpaceOf returns the space of a module path: the unit of its root, or
@@ -384,7 +453,7 @@ func (b *builder) resolveRust(importer, written string) (string, bool) {
 	}
 	s.resolving[k] = true
 	defer delete(s.resolving, k)
-	for _, p := range b.rustPaths(s.modules[importer], written) {
+	for _, p := range b.rustScopePaths(importer, written) {
 		if key, ok := b.resolveQualified(langcode.Rust, p); ok {
 			return key, true
 		}
@@ -400,17 +469,213 @@ type rustResolver struct {
 }
 
 func (r rustResolver) Module(importer, spec string) (string, string, bool) {
-	if key, ok := r.b.resolveRust(importer, spec); ok {
-		return key, "path", true
+	t, ok := r.b.rustPath(importer, spec)
+	switch {
+	case !ok:
+		return "", "", false
+	case t.key != "":
+		return t.key, "path", true
+	}
+	// A use can bind an item of the crate, as fl of use crate::ffi::flush
+	// as fl after pub use dep as ffi. A call of fl links the key itself,
+	// so the key needs its node. Without it the edge reached no node, and
+	// the target read as not-found.
+	return r.b.external(r.b.rustCrateKey(t.file, t.path)), "crate", true
+}
+
+// rustTarget is what a path of a file names: a definition or a module of
+// the project, or a path in another crate and the file of the binding
+// that names the crate.
+type rustTarget struct {
+	key, path, file string
+}
+
+// rustPath resolves a path that a file writes: in the project, or else
+// through a name that a module binds to another crate.
+func (b *builder) rustPath(importer, written string) (rustTarget, bool) {
+	if key, ok := b.resolveRust(importer, written); ok {
+		return rustTarget{key: key}, true
+	}
+	if path, file, ok := b.rustCratePath(importer, written); ok {
+		return rustTarget{path: path, file: file}, true
+	}
+	return rustTarget{}, false
+}
+
+// rustCrateKey returns the external key of a path of another crate that a
+// file names, and records the path as an origin of the key. It makes no
+// node: a walk reads the key with no node, and a call of a name under it
+// makes the node of that name. A node of a type that no call reaches would
+// turn a target of the type from no-such-target into not-found.
+func (b *builder) rustCrateKey(file, path string) string {
+	crate, names := rustCrateNames(path)
+	key := fileindex.Namespace(langcode.Rust, path)
+	b.recordOrigin(b.byPath[file], key, crate, modules.FormImport, names)
+	return key
+}
+
+// rustTypePath returns the type that a path of a file names, as a type
+// alias of the file writes it: a type of the crate, or the key of a type of
+// another crate, also through a binding of a module.
+func rustTypePath(b *builder, sc *scope, written string) (string, bool) {
+	if t, ok := b.rustPath(sc.ix.Path, written); ok {
+		if t.key != "" {
+			return b.deref(t.key), true
+		}
+		return b.rustCrateKey(t.file, t.path), true
+	}
+	if !strings.Contains(written, "::") || b.rustLocalRoot(sc.ix.Path, written) {
+		return "", false
+	}
+	return b.rustCrateKey(sc.ix.Path, written), true
+}
+
+// rustCratePath returns the path in another crate that a path of a file
+// names through a name that a module binds to that crate, and the file of
+// the binding. extern crate rand in the module secure binds rand there, so
+// crate::secure::rand::thread_rng is rand::thread_rng. pub use
+// libsqlite3_sys as ffi binds ffi, so crate::ffi::ErrorCode is
+// libsqlite3_sys::ErrorCode. The deepest module of the path that the crate
+// has decides. A path through a use of another module of the crate, as
+// self::rand after use crate::secure::rand, follows that use. So does a
+// path through a use of the module of the file, as sub::f after use
+// dep::sub.
+//
+// A walk asks for the route of each glob use of each module that it reads,
+// so the route of an outer call stays for the build. The route reads only
+// the tables of the build, so only the cycle guard of an outer route can
+// change it.
+func (b *builder) rustCratePath(importer, written string) (string, string, bool) {
+	s := b.rustState()
+	k := [2]string{importer, written}
+	if r, ok := s.routes[k]; ok {
+		return r.path, r.file, r.ok
+	}
+	if s.routing[k] {
+		return "", "", false
+	}
+	outer := len(s.routing) == 0
+	s.routing[k] = true
+	path, file, ok := b.routeCrate(importer, written)
+	delete(s.routing, k)
+	if outer {
+		s.routes[k] = crateRoute{path: path, file: file, ok: ok}
+	}
+	return path, file, ok
+}
+
+func (b *builder) routeCrate(importer, written string) (string, string, bool) {
+	parts := strings.Split(strings.TrimPrefix(written, "::"), "::")
+	for i := len(parts) - 1; i >= 0; i-- {
+		u := b.rustModuleUnit(importer, cmp.Or(strings.Join(parts[:i], "::"), "self"))
+		if u == nil {
+			continue
+		}
+		for _, p := range u.files {
+			for _, imp := range rustBindings(b.scopes[p], parts[i]) {
+				module, _ := importedModule(langcode.Rust, imp)
+				if i == 0 && rustSelfBinding(module, parts) {
+					continue
+				}
+				if crate, file, ok := b.rustCrate(p, module); ok {
+					return joinPath(crate, parts[i+1:]), file, true
+				}
+			}
+		}
+		return "", "", false
 	}
 	return "", "", false
+}
+
+// rustSelfBinding reports whether a use of the module of a path binds the
+// first name of the path to the path itself: use rand binds rand, and use
+// smallvec::smallvec binds smallvec. Rust never reads the binding of a use
+// in its own path, so such a binding routes nothing.
+func rustSelfBinding(module string, parts []string) bool {
+	module = strings.TrimPrefix(module, "::")
+	return module == parts[0] || module == strings.Join(parts, "::")
+}
+
+// rustModuleUnit returns the unit of the module that a path of a file
+// names as written, with no walk through a use. A walk reads the uses and
+// the glob uses of each module on the way, and each of them can ask for a
+// crate route again, so a route through walks grows with the power of the
+// path length.
+func (b *builder) rustModuleUnit(importer, written string) *unit {
+	t := b.namespaces[langcode.Rust]
+	for _, p := range b.rustScopePaths(importer, written) {
+		if u := t.units[p]; u != nil {
+			return u
+		}
+	}
+	return nil
+}
+
+// rustBindings returns the uses and the extern crates of a file that bind
+// a name. extern crate rand and use rand bind the name of the crate, and no
+// alias holds it, so the scope keeps no binding for them. The scope keeps
+// one binding of a name for the file, and an inline module, as mod tests,
+// can bind the name again, so each one counts.
+func rustBindings(sc *scope, name string) []fileindex.Import {
+	var out []fileindex.Import
+	for _, imp := range sc.imports {
+		if !imp.Wildcard && (bindingName(langcode.Rust, imp) == name || imp.Item == "" && imp.Module == name) {
+			out = append(out, imp)
+		}
+	}
+	return out
+}
+
+// rustCrate returns the path in another crate that the module of a use of
+// a file names, and the file that names the crate: the route of the module
+// through a binding, or else the module itself when its first name names
+// no module of the crate, as rand of extern crate rand.
+func (b *builder) rustCrate(file, module string) (string, string, bool) {
+	if path, via, ok := b.rustCratePath(file, module); ok {
+		return path, via, true
+	}
+	if b.rustLocalRoot(file, module) {
+		return "", "", false
+	}
+	return module, file, true
+}
+
+// rustLocalRoot reports whether the first name of a path of a file names
+// the crate of the file or a module of it: crate, self, super, a crate of
+// the project, a child module, or a module of the root of the crate, as a
+// path of the 2015 edition names it. Any other first name names a crate,
+// as schannel of extern crate schannel in src/imp/schannel.rs. A file of
+// the name does not tell it, because the module of that file is no child.
+func (b *builder) rustLocalRoot(file, path string) bool {
+	first := rustFirstName(path)
+	switch first {
+	case "crate", "self", "super":
+		return true
+	}
+	return b.cargoOf(b.spaceOf(file)).Has(first) || b.rustModuleUnit(file, first) != nil || b.rustModuleUnit(file, "crate::"+first) != nil
+}
+
+// rustFirstName returns the first name of a path, as std for ::std::io.
+func rustFirstName(path string) string {
+	first, _, _ := strings.Cut(strings.TrimPrefix(path, "::"), "::")
+	return first
+}
+
+// rustCrateNames splits a path of a crate into the crate and the names
+// under it.
+func rustCrateNames(path string) (string, []string) {
+	crate, rest, ok := strings.Cut(path, "::")
+	if !ok {
+		return crate, nil
+	}
+	return crate, strings.Split(rest, "::")
 }
 
 // FirstParty reports whether a path starts with crate, self or super, with
 // the name of a crate of the project or with the name of a file or a
 // directory of the project, as a child module.
 func (r rustResolver) FirstParty(spec string) bool {
-	first, _, _ := strings.Cut(strings.TrimPrefix(spec, "::"), "::")
+	first := rustFirstName(spec)
 	switch {
 	case first == "crate" || first == "self" || first == "super":
 		return true
@@ -418,6 +683,13 @@ func (r rustResolver) FirstParty(spec string) bool {
 		return false
 	}
 	return r.b.cargoOf(r.sp).Has(first) || r.sp.files.HasName(first)
+}
+
+// FirstPartyFrom reports whether a path of a file can name a module of its
+// crate, by the modules that the file sees, and not by the names of all
+// the files of the project.
+func (r rustResolver) FirstPartyFrom(importer, spec string) bool {
+	return !rustRoots[rustFirstName(spec)] && r.b.rustLocalRoot(importer, spec)
 }
 
 // rustScopeFallback resolves a path that no use and no item of the module
@@ -428,8 +700,12 @@ func (r rustResolver) FirstParty(spec string) bool {
 // a local closure can bind it.
 func (b *builder) rustScopeFallback(sc *scope, _, first string, rest []string, target string) []resolution {
 	written := strings.Join(append([]string{first}, rest...), "::")
-	if key, ok := b.resolveRust(sc.ix.Path, written); ok {
-		return []resolution{b.walkNamespace(key)}
+	if t, ok := b.rustPath(sc.ix.Path, written); ok {
+		if t.key != "" {
+			return []resolution{b.walkNamespace(t.key)}
+		}
+		crate, names := rustCrateNames(t.path)
+		return []resolution{b.importedWalk(b.byPath[t.file], fileindex.Namespace(langcode.Rust, t.path), crate, modules.FormImport, names)}
 	}
 	if len(rest) > 0 {
 		return []resolution{b.importedWalk(sc.ix, target, first, modules.FormImport, rest)}

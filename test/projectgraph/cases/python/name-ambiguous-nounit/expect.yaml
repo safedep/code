@@ -1,0 +1,29 @@
+source: safedep:hand
+description: >-
+  dispatch calls handle on the parameter handler. 24 classes define a method handle, so the site is over
+  the cap of 20 and is ambiguous. main passes an extlib.Handler, and no unit gives extlib. Its handle can
+  call any code of extlib, as extlib.vuln, which only the uncalled unused calls in the project. So the site
+  keeps no method name and concerns every target, and extlib.vuln is uncertain and not not-found.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+unresolved:
+  - caller: main.py//dispatch
+    site: main.py:5
+    reason: ambiguous
+results:
+  - target: extlib//vuln
+    status: uncertain
+    call_sites:
+      - caller: handlers.py//unused
+        site: handlers.py:4
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.py:5
+  - target: extlib//Handler//handle
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: main.py:5

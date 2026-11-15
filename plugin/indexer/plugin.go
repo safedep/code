@@ -50,7 +50,12 @@ func (p *fileIndexPlugin) AnalyzeTree(ctx context.Context, tree core.ParseTree) 
 	if err := p.callback(ctx, ix); err != nil {
 		return err
 	}
+	return complete(ctx, ix)
+}
 
+// complete fails on an index that the deadline cut, so the run does not
+// store it as whole.
+func complete(ctx context.Context, ix *fileindex.Index) error {
 	if partial(ix) {
 		return fmt.Errorf("index of %s is partial: %w", ix.Path, ctx.Err())
 	}

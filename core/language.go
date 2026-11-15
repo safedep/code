@@ -95,3 +95,46 @@ type Language interface {
 type GrammarSelector interface {
 	LanguageForExtension(ext string) Language
 }
+
+// SourceSelector is an optional interface of a Language whose files of some
+// extensions hold their code in blocks among markup, as the script blocks
+// of a Vue component. Source returns the source of the data of a file of
+// the extension. A file of another extension gives the Language and data.
+type SourceSelector interface {
+	Source(ext string, data []byte) Source
+}
+
+// Source is what the grammar of a file parses.
+type Source struct {
+	Language Language
+	// Code is data with each byte outside the code replaced by a space. It
+	// keeps the offsets and the line ends of data, so a node reports its
+	// line and column in the file, and its content in data.
+	Code []byte
+	// Markup is what the file holds outside the code, or nil.
+	Markup *Markup
+}
+
+// Markup is the part of a file that the grammar does not parse, as the
+// template of a Vue component. The framework of the file runs it.
+type Markup struct {
+	// Offset is the offset of the first byte of the markup that is no
+	// space.
+	Offset int
+	// Scripts are the script elements that load a file, in file order.
+	Scripts []Script
+}
+
+// Script is a script element that loads a file, as <script src="./a.js">.
+type Script struct {
+	// Src is the src attribute as written, as ./a.js.
+	Src string
+	// Offset is the offset of the element.
+	Offset int
+}
+
+// MarkupTree is an optional interface of a ParseTree. Markup returns the
+// markup of the file of the tree, or nil.
+type MarkupTree interface {
+	Markup() *Markup
+}

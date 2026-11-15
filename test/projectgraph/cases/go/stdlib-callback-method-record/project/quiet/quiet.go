@@ -1,0 +1,3 @@
+package quiet
+
+func Idle() {}

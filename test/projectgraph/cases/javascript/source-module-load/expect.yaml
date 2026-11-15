@@ -1,0 +1,85 @@
+source: safedep:hand
+description: >-
+  The module top level of handlers.js holds child_process.exec in the array hooks, and fs.rmSync in the
+  property hook of defaults. run calls hooks[0], and runHook calls the property hook of its parameter. The
+  program runs the module top level of handlers.js before run or runHook can run. So a search from run or
+  runHook alone enters it, and each target is found through the reference there. Without that step, the
+  call of o.hook concerns only the targets of the method name hook, and fs.rmSync reads as not-found.
+roots:
+  - key: main.js
+    kind: manifest
+    rule: node.package-json
+exact_edges: true
+edges:
+  - from: handlers.js
+    to: child_process//exec
+    kind: reference
+    confidence: low
+    site: handlers.js:4
+  - from: handlers.js
+    to: fs//rmSync
+    kind: reference
+    confidence: low
+    site: handlers.js:5
+  - from: main.js
+    to: handlers.js
+    kind: import
+    confidence: high
+    site: main.js:1
+  - from: main.js
+    to: handlers.js//run
+    kind: direct
+    confidence: high
+    site: main.js:3
+  - from: main.js
+    to: handlers.js//runHook
+    kind: direct
+    confidence: high
+    site: main.js:4
+unresolved:
+  - caller: handlers.js//run
+    site: handlers.js:8
+    reason: computed-name
+  - caller: handlers.js//runHook
+    site: handlers.js:12
+    reason: unknown-receiver
+    method: hook
+results:
+  - target: child_process//exec
+    sources: [handlers.js//run]
+    sources_only: true
+    status: found
+    path:
+      - key: handlers.js//run
+        root: query
+      - key: handlers.js
+        site: handlers.js
+        kind: import
+        confidence: high
+      - key: child_process//exec
+        site: handlers.js:4
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: handlers.js
+        site: handlers.js:4
+        reached: true
+  - target: fs//rmSync
+    sources: [handlers.js//runHook]
+    sources_only: true
+    status: found
+    path:
+      - key: handlers.js//runHook
+        root: query
+      - key: handlers.js
+        site: handlers.js
+        kind: import
+        confidence: high
+      - key: fs//rmSync
+        site: handlers.js:5
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: handlers.js
+        site: handlers.js:5
+        reached: true

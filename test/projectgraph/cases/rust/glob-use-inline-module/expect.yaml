@@ -1,0 +1,53 @@
+source: safedep:hand
+description: >-
+  The root declares the module log, and the crate depends on the crate log. worker.rs calls log::info at its
+  top level. log is no child module of worker, and no use of the module worker binds it, so log::info names
+  the crate log. The inline module tests has use super::*, which brings the names of worker into tests, and
+  not the names of the root into worker. A link step that reads that glob use from the module worker gives
+  the edge to src/log.rs//info, and the target log//info reads not-found. A path of the 2015 edition can name
+  the module log of the root as log, so the use of log at src/worker.rs:2 keeps its record.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+  - key: src/worker.rs//tests//runs
+    kind: test
+    rule: rust.test.attribute
+edges:
+  - from: src/main.rs//main
+    to: src/worker.rs//go
+    kind: direct
+    confidence: high
+    site: src/main.rs:5
+  - from: src/worker.rs//go
+    to: log//info
+    kind: direct
+    confidence: high
+    site: src/worker.rs:2
+no_edges:
+  - from: src/worker.rs//go
+    to: src/log.rs//info
+unresolved:
+  - caller: src/worker.rs//go
+    site: src/worker.rs:2
+    reason: no-definition
+results:
+  - target: log//info
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/worker.rs//go
+        site: src/main.rs:5
+        kind: direct
+        confidence: high
+      - key: log//info
+        site: src/worker.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/worker.rs//go
+        site: src/worker.rs:2
+        reached: true

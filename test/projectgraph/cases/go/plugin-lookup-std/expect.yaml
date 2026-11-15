@@ -1,0 +1,45 @@
+source: safedep:hand
+description: >-
+  The case go/plugin-lookup with a unit of the standard library. The unit gives the code of plugin, so
+  Open and Lookup resolve into it. That code fills the symbols of a plugin from code of another build,
+  and no reference of the graph names them. So each call of Open or Lookup in a file that imports plugin
+  is a computed-name record with the unit too. os.Remove, which only the plugin calls, and os.Getenv,
+  which no code of the graph names, are uncertain.
+units:
+  goroot/src: go:std@go1.25.1
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+unresolved:
+  - caller: main.go//main
+    site: main.go:6
+    reason: computed-name
+  - caller: main.go//main
+    site: main.go:10
+    reason: computed-name
+  - caller: main.go//main
+    site: main.go:14
+    reason: function-value
+results:
+  - target: os//Remove
+    status: uncertain
+    call_sites:
+      - caller: plugins/hook/hook.go//Run
+        site: plugins/hook/hook.go:6
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:6
+      - kind: unresolved-call
+        site: main.go:10
+  - target: os//Getenv
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:6
+      - kind: unresolved-call
+        site: main.go:10

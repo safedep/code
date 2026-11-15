@@ -18,12 +18,13 @@ import (
 
 // statusOf asks the unit graph from one symbol for the status of every
 // target, as a reach query of the project would with the symbol as its
-// one root. The depth cap is far above the depth of the graph, because a
-// summary has none.
+// one root. The root has the kind query, because a search of any kind
+// reads a summary, as a search from a source does. The depth cap is far
+// above the depth of the graph, because a summary has none.
 func statusOf(t testing.TB, g *projectgraph.Graph, symbol string, targets []reach.Target) map[string]reach.Status {
 	t.Helper()
 	from := *g
-	from.Roots = []projectgraph.Root{{Key: symbol, Kind: projectgraph.RootMain, Rule: "test"}}
+	from.Roots = []projectgraph.Root{{Key: symbol, Kind: reach.RootQuery, Rule: "test"}}
 	from.Stats.RootFallback = false
 	results, err := reach.Reach(context.Background(), &from, reach.Query{Targets: targets, MaxDepth: 1 << 20})
 	require.NoError(t, err)

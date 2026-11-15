@@ -1,0 +1,69 @@
+source: safedep:hand
+description: >-
+  main calls Dispatch of the unit, and Dispatch calls an element of handlers, a map in gen.go, a generated
+  file. The map names remove of kit.go and gen of gen.go. The var data of gen.go holds a string of 60 parts,
+  past the depth limit of the index, so the index blanks the data values of the file. A call of an element of
+  handlers is a call of a function value, which concerns no target. So the skeleton keeps the value of
+  handlers, because it names functions. The import of the unit reaches the module top level of gen.go, and
+  its references reach remove and gen. A skeleton that blanked the map gave not-found for os.Remove and
+  os/exec.Command.
+units:
+  gomod/github.com/acme/kit@v1.0.0: go:github.com/acme/kit@v1.0.0
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+unresolved:
+  - caller: os//Remove
+    reason: no-dependency-source
+    callback: true
+  - caller: os//exec//Command
+    reason: no-dependency-source
+    callback: true
+  - caller: go:github.com/acme/kit@v1.0.0//kit.go//Dispatch
+    site: go:github.com/acme/kit@v1.0.0//kit.go:5
+    reason: function-value
+results:
+  - target: os//Remove
+    status: found
+    path:
+      - key: main.go
+      - key: go:github.com/acme/kit@v1.0.0//gen.go
+        site: main.go:3
+        kind: import
+        confidence: high
+      - key: go:github.com/acme/kit@v1.0.0//kit.go//remove
+        site: go:github.com/acme/kit@v1.0.0//gen.go:9
+        kind: reference
+        confidence: low
+      - key: os//Remove
+        site: go:github.com/acme/kit@v1.0.0//kit.go:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: go:github.com/acme/kit@v1.0.0//kit.go//remove
+        site: go:github.com/acme/kit@v1.0.0//kit.go:7
+        reached: true
+  - target: os//exec//Command
+    status: found
+    path:
+      - key: main.go
+      - key: go:github.com/acme/kit@v1.0.0//gen.go
+        site: main.go:3
+        kind: import
+        confidence: high
+      - key: go:github.com/acme/kit@v1.0.0//gen.go//gen
+        site: go:github.com/acme/kit@v1.0.0//gen.go:9
+        kind: reference
+        confidence: low
+      - key: os//exec//Command
+        site: go:github.com/acme/kit@v1.0.0//gen.go:7
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: go:github.com/acme/kit@v1.0.0//gen.go//gen
+        site: go:github.com/acme/kit@v1.0.0//gen.go:7
+        reached: true

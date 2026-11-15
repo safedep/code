@@ -80,7 +80,7 @@ jobs:
         env:
           PROJECTGRAPH_PUBLIC_REPORT: ${{ runner.temp }}/public.txt
           PROJECTGRAPH_GOVULNCHECK_REPORT: ${{ runner.temp }}/govulncheck.txt
-        run: go test -tags projectgraph -run 'TestPublicSets|TestGovulncheckTraces' -count=1 ./test/projectgraph/
+        run: go test -tags projectgraph -run 'TestPublicSets|TestGovulncheckTraces|TestVulnAgreement' -count=1 ./test/projectgraph/
 
       - name: Check the gates
         run: bash scripts/check_projectgraph_gates.sh "$RUNNER_TEMP/public.txt" "$RUNNER_TEMP/govulncheck.txt" pycg-micro=0.95

@@ -10,3 +10,6 @@ var rustBuiltins = []string{
 	"Some", "None", "Ok", "Err", "drop", "Box", "Vec", "String", "Option", "Result",
 	"std", "core", "alloc",
 }
+
+// rustPointers are the smart pointers of std.
+var rustPointers = []string{"Box", "Rc", "Arc"}

@@ -1,0 +1,87 @@
+source: safedep:hand
+description: >-
+  The file declares the alias Imp two times, as unix::Thing under cfg(unix) and as windows::Thing under
+  cfg(windows). Only the open and the close of unix::Thing call the standard library. main calls Imp::open,
+  and work calls close on a parameter of the type Imp. The index does not know which cfg the build sets, so
+  the alias binds no type. Each call gets the record unknown-receiver and a name edge to the method of each
+  type. So std::fs::remove_file and std::process::Command::new are found. An index that lets the last alias
+  win gives only the methods of windows::Thing, and both targets read not-found.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//main
+    to: src/main.rs//work
+    kind: direct
+    confidence: high
+    site: src/main.rs:40
+  - from: src/main.rs//main
+    to: src/main.rs//unix//Thing//open
+    kind: name
+    confidence: low
+    site: src/main.rs:39
+  - from: src/main.rs//main
+    to: src/main.rs//windows//Thing//open
+    kind: name
+    confidence: low
+    site: src/main.rs:39
+  - from: src/main.rs//work
+    to: src/main.rs//unix//Thing//close
+    kind: name
+    confidence: low
+    site: src/main.rs:35
+  - from: src/main.rs//work
+    to: src/main.rs//windows//Thing//close
+    kind: name
+    confidence: low
+    site: src/main.rs:35
+unresolved:
+  - caller: src/main.rs//work
+    site: src/main.rs:35
+    reason: unknown-receiver
+    method: close
+  - caller: src/main.rs//main
+    site: src/main.rs:39
+    reason: unknown-receiver
+    method: open
+results:
+  - target: std//fs//remove_file
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//unix//Thing//open
+        site: src/main.rs:39
+        kind: name
+        confidence: low
+      - key: std//fs//remove_file
+        site: src/main.rs:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.rs//unix//Thing//open
+        site: src/main.rs:6
+        reached: true
+  - target: std//process//Command//new
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//work
+        site: src/main.rs:40
+        kind: direct
+        confidence: high
+      - key: src/main.rs//unix//Thing//close
+        site: src/main.rs:35
+        kind: name
+        confidence: low
+      - key: std//process//Command//new
+        site: src/main.rs:11
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.rs//unix//Thing//close
+        site: src/main.rs:11
+        reached: true

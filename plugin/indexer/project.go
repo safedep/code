@@ -47,10 +47,18 @@ type projection struct {
 	// members holds the line and the column of each call that names a
 	// member of an object of the file.
 	members map[[2]uint32]bool
+	// binders holds the nodes that bind each name of a function, by the
+	// start of the function, for a language with declaredAt. A nil map is
+	// a function whose walk stopped early.
+	binders map[uint32]map[string][]*sitter.Node
 
 	// exportStatements are the export statements and the CommonJS export
 	// assignments of the file.
 	exportStatements []*sitter.Node
+	// goScoped holds the scopes of the local names of each Go function
+	// whose values the index reads, by the key of the function and the
+	// name.
+	goScoped map[string]map[string][]goScope
 }
 
 // project builds the call graph of tree and projects it into an index. It
@@ -95,6 +103,7 @@ func project(ctx context.Context, tree core.ParseTree) (*fileindex.Index, *callg
 		p.ix.Package = rules.packageOf(p)
 	}
 	p.addImports()
+	p.addMarkup()
 	p.addDefinitions()
 	p.flagModuleGetattr()
 	p.run(rules.exports)
@@ -103,8 +112,8 @@ func project(ctx context.Context, tree core.ParseTree) (*fileindex.Index, *callg
 	p.run(rules.inits)
 	p.walkTree(ctx)
 	p.run(rules.afterWalk)
-	p.addCalls()
-	p.addUnresolved()
+	p.addCalls(ctx)
+	p.addUnresolved(ctx)
 	p.run(rules.prune)
 	if err := p.addClasses(ctx); err != nil {
 		return nil, nil, err
@@ -344,7 +353,7 @@ func decorators(p *projection, node *sitter.Node) []string {
 func (p *projection) addClasses(_ context.Context) error {
 	methods := map[string][]string{}
 	for key, def := range p.defs {
-		if def.Parent != "" {
+		if def.Parent != "" && !def.HoldsData() {
 			methods[def.Parent] = append(methods[def.Parent], key)
 		}
 	}

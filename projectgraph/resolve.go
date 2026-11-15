@@ -87,6 +87,15 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			if r.unbound && sc.profile.literals[r.key] {
 				continue
 			}
+			// A call of a field or a variable runs the function value that
+			// it holds, and no edge names that function. A search from a
+			// source does not reach the code that stores the value.
+			if r.fail == nil && b.holdsData(r.key) {
+				if sc.profile.functionValues {
+					b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: call.Callee, Receiver: call.Receiver, Reason: fileindex.UnresolvedFunctionValue})
+				}
+				continue
+			}
 			if r.unbound && sc.profile.thisCalls {
 				r = b.thisCall(ix, caller, call, r)
 			}
@@ -159,6 +168,11 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 // right: new Yaml().load() in Java, or Yaml().load() in Python or Kotlin,
 // whose classes start with an upper case letter. A Go name starts with an
 // upper case letter when the package exports it, so it tells nothing.
+//
+// A builtin of the language keeps the record too. Some builtins give back
+// a value that the call passes, or an element of it, as new(thing) in Go,
+// max(t, t) in Python or Object.assign(p, o) in JavaScript. The method then
+// runs on a value of the project or of a dependency.
 func (b *builder) onCallResult(p *profile, call fileindex.Call, r resolution) (fileindex.UnresolvedReason, bool) {
 	called, ok := calledName(call.Receiver)
 	if !ok || r.fail != nil || call.Method == "" || b.kindOf(r.key) != NodeExternal {
@@ -338,9 +352,13 @@ func (b *builder) linkReferences(ix *fileindex.Index) {
 		from := b.runner(ref.Caller)
 		site := Site{Path: ix.Path, Line: ref.Line, Column: ref.Column}
 		for _, r := range b.resolveTargets(sc, ref.Caller, ref.Targets) {
+			if r.fail != nil || r.unbound {
+				b.linkUnknownValue(sc, ref, from, site, r)
+				continue
+			}
 			// A Go value of a named type is no function, so passing it
-			// on calls nothing.
-			if r.fail != nil || r.unbound || sc.profile.typeConversions && b.isType(r.key) {
+			// on calls nothing. Nor is a field or a constant.
+			if sc.profile.typeConversions && b.isType(r.key) || b.holdsData(r.key) {
 				continue
 			}
 			b.link(ix.Language, from, r.key, site, EdgeReference, ruleReference)
@@ -540,7 +558,10 @@ func (b *builder) enclosingClass(key string) (string, bool) {
 // caller is a parameter or a local variable of the function, and its
 // declared type gives its class.
 func (b *builder) resolveLocal(sc *scope, caller, target string) resolution {
-	if b.g.Nodes[target] != nil {
+	if b.unboundAlias(fileindex.Parent(target)) {
+		return resolution{fail: unknownReceiver(fileindex.Last(target)), rule: ruleLocal}
+	}
+	if b.g.Nodes[target] != nil || b.holdsData(target) {
 		return b.walkAs(target, nil, ruleLocal)
 	}
 	unit, segs := fileindex.Unit(target), fileindex.Segments(target)

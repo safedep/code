@@ -55,7 +55,7 @@ func (b *builder) markRoots(ctx context.Context) error {
 		entry = entry || r.Kind != RootTest && (helper == nil || !helper(fileindex.Unit(r.Key)))
 		// A Go program initializes its package before main runs, so the
 		// module top level of each file of the package is a root too.
-		if u := b.unitOf[fileindex.Unit(r.Key)]; r.Kind == RootMain && u != nil && b.profileAt(r.Key).mainLoadsPackage {
+		if u := b.unitOf[fileindex.Unit(r.Key)]; r.Kind == RootMain && u != nil && b.profileAt(r.Key).loadsPackages {
 			for _, p := range u.files {
 				b.addRoot(p, r.Kind, r.Rule)
 			}
@@ -71,8 +71,8 @@ func (b *builder) markRoots(ctx context.Context) error {
 			continue
 		}
 		b.addRoot(ix.Path, RootLibrarySurface, string(RootLibrarySurface))
-		for _, def := range ix.Definitions {
-			if def.Exported && def.Key != ix.Path && def.Kind != fileindex.DefVariable && def.Kind != fileindex.DefInterface {
+		for def := range ix.CodeDefinitions() {
+			if isSurfaceDefinition(def, ix.Path) {
 				b.addRoot(def.Key, RootLibrarySurface, string(RootLibrarySurface))
 			}
 		}
@@ -151,8 +151,8 @@ func (b *builder) exportKeys(p string, seen map[string]bool) []string {
 	seen[p] = true
 	var keys []string
 	if sc.profile.definitionExports {
-		for _, def := range sc.ix.Definitions {
-			if def.Exported && def.Key != p && def.Kind != fileindex.DefVariable && def.Kind != fileindex.DefInterface {
+		for def := range sc.ix.CodeDefinitions() {
+			if isSurfaceDefinition(def, p) {
 				keys = append(keys, def.Key)
 			}
 		}
@@ -169,6 +169,13 @@ func (b *builder) exportKeys(p string, seen map[string]bool) []string {
 	}
 	slices.Sort(keys)
 	return slices.Compact(keys)
+}
+
+// isSurfaceDefinition reports whether a definition of code of the file at
+// the path is a part of the surface of its library: an exported definition
+// that runs code. A variable and an interface run no code of their own.
+func isSurfaceDefinition(def *fileindex.Definition, path string) bool {
+	return def.Exported && def.Key != path && def.Kind != fileindex.DefVariable && def.Kind != fileindex.DefInterface
 }
 
 // rootLanguages returns the languages of the files that hold a root other

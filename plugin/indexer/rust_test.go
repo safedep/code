@@ -61,3 +61,116 @@ func TestFileIndexRust(t *testing.T) {
 		assert.Equal(t, []string{"Error", "Note"}, targets)
 	})
 }
+
+func TestFileIndexRustTry(t *testing.T) {
+	source := strings.Join([]string{
+		"fn run() -> Result<(), Error> {",
+		"    let t = dep::load()?;",
+		"    t.save();",
+		"    dep::load()?.check()?.save();",
+		"    dep::find().inspect(|t| {});",
+		"    Ok(())",
+		"}",
+		"fn read() -> std::io::Result<Job> { open() }",
+	}, "\n") + "\n"
+	ix := indexSource(t, core.LanguageCodeRust, "main.rs", source)
+
+	targets := map[string][]string{}
+	for _, call := range ix.Calls {
+		targets[call.Callee] = call.Targets
+	}
+	tests := []struct {
+		callee string
+		want   []string
+	}{
+		{"t.save", []string{"dep//load//?//save"}},
+		{"dep::load()?.check", []string{"dep//load//?//check"}},
+		{"dep::load()?.check()?.save", []string{"dep//load//?//check//?//save"}},
+		{"dep::find().inspect", []string{"dep//find//inspect"}},
+	}
+	for _, tt := range tests {
+		assert.Equal(t, tt.want, targets[tt.callee], tt.callee)
+	}
+
+	read := definitionOf(t, ix, "main.rs//read")
+	assert.Equal(t, "Job", read.Returns)
+	assert.Equal(t, "Result", read.Wraps)
+}
+
+func TestFileIndexRustTypeAlias(t *testing.T) {
+	source := strings.Join([]string{
+		"use image::ImageBuffer;",
+		"pub type Image<P> = ImageBuffer<P, Vec<u8>>;",
+		"mod inner { type Store = crate::store::Store; }",
+		"#[cfg(unix)] type Imp = unix::Thing;",
+		"#[cfg(windows)] type Imp = windows::Thing;",
+		"#[cfg(feature = \"native\")] pub struct Client;",
+		"#[cfg(not(feature = \"native\"))] pub type Client = fallback::Client;",
+		"#[cfg(unix)] type Same = io::Thing;",
+		"#[cfg(windows)] type Same = io::Thing;",
+	}, "\n") + "\n"
+	ix := indexSource(t, core.LanguageCodeRust, "defs.rs", source)
+
+	for key, alias := range map[string]string{"defs.rs//Imp": "", "defs.rs//Client": "", "defs.rs//Same": "io::Thing"} {
+		def := definitionOf(t, ix, key)
+		assert.Equal(t, fileindex.DefAlias, def.Kind, key)
+		assert.Equal(t, alias, def.Alias, key)
+	}
+
+	image := definitionOf(t, ix, "defs.rs//Image")
+	assert.Equal(t, fileindex.DefAlias, image.Kind)
+	assert.Equal(t, "ImageBuffer", image.Alias)
+	assert.True(t, image.Exported)
+	store := definitionOf(t, ix, "defs.rs//inner//Store")
+	assert.Equal(t, fileindex.DefAlias, store.Kind)
+	assert.Equal(t, "crate::store::Store", store.Alias)
+	assert.False(t, store.Exported)
+}
+
+func TestFileIndexRustDeclaredTypes(t *testing.T) {
+	source := strings.Join([]string{
+		"fn plain() { let t: Store = make(); }",
+		"fn sibling() { { use dep::Thing as Store; } let t: Store = make(); }",
+		"fn alias() { type Store = u8; let t: Store = make(); }",
+		"fn after() { let t: Store = make(); use dep::Thing as Store; }",
+		"fn outer() { struct Store; { let t: Store = make(); } }",
+		"fn listed() { use dep::{store::{self}, Other}; let t: store::Store = make(); }",
+		"fn globbed() { use dep::*; let t: Store = make(); }",
+		"fn crated() { extern crate other as dep; let t: dep::Store = make(); }",
+		"fn generic<S>(s: S) { let t: S = s; }",
+		"fn bounded<S: Store>(s: S) {}",
+		"struct Holder<S>(S);",
+		"impl<S> Holder<S> { fn go(&self, s: S) { let t: Self = make(); } }",
+		"mod up { use super::*; fn run() { let t: Store = make(); } }",
+		"mod outer { mod down { use super::*; fn run() { let t: Store = make(); } } }",
+		"mod own { fn run() { let t: self::Store = make(); } }",
+	}, "\n") + "\n"
+	ix := indexSource(t, core.LanguageCodeRust, "main.rs", source)
+
+	store := []fileindex.Typed{{Name: "t", Type: "Store"}}
+	tests := []struct {
+		key    string
+		locals []fileindex.Typed
+		params []fileindex.Typed
+	}{
+		{key: "main.rs//plain", locals: store},
+		{key: "main.rs//sibling", locals: store},
+		{key: "main.rs//alias"},
+		{key: "main.rs//after"},
+		{key: "main.rs//outer"},
+		{key: "main.rs//listed"},
+		{key: "main.rs//globbed"},
+		{key: "main.rs//crated"},
+		{key: "main.rs//generic"},
+		{key: "main.rs//bounded", params: []fileindex.Typed{{Name: "s", Type: "Store"}}},
+		{key: "main.rs//Holder//go", locals: []fileindex.Typed{{Name: "t", Type: "Holder"}}},
+		{key: "main.rs//up//run", locals: store},
+		{key: "main.rs//outer//down//run"},
+		{key: "main.rs//own//run"},
+	}
+	for _, tt := range tests {
+		def := definitionOf(t, ix, tt.key)
+		assert.Equal(t, tt.locals, def.Locals, tt.key)
+		assert.Equal(t, tt.params, def.Params, tt.key)
+	}
+}

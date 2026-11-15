@@ -130,7 +130,7 @@
     "packages/core/util.js": "indexed"
   },
   "stats": {
-    "version": "17",
+    "version": "18",
     "files": 3,
     "nodes": 6,
     "edges": 5,

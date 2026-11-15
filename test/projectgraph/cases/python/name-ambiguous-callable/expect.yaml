@@ -1,0 +1,24 @@
+source: safedep:hand
+description: >-
+  dispatch calls handle on the parameter handler. 24 classes define a method handle, so the site is over
+  the cap of 20 and is ambiguous. H0 holds an object of Cb in its class attribute handle. main passes an H0, so the call runs Cb.__call__, which calls os.remove. That code is no
+  definition of the name handle. So the site keeps no method name and concerns every target, and os.remove
+  is uncertain and not not-found.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+unresolved:
+  - caller: main.py//dispatch
+    site: main.py:4
+    reason: ambiguous
+results:
+  - target: os//remove
+    status: uncertain
+    call_sites:
+      - caller: handlers.py//Cb//__call__
+        site: handlers.py:5
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.py:4

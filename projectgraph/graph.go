@@ -18,7 +18,7 @@ import (
 // Version is the version of the link rules. Bump it when a rule that makes a
 // node, an edge, a root or an unresolved site changes, so a diff of two
 // reports shows the change.
-const Version = "17"
+const Version = "18"
 
 type NodeKind string
 
@@ -35,8 +35,9 @@ const (
 	// through it goes on to the value that it holds.
 	NodeVariable NodeKind = "variable"
 	// NodeExport is a name that a file imports and gives on to its own
-	// importers, as a barrel file or an __init__.py does. The node keeps the
-	// barrel on a path.
+	// importers, as a barrel file or an __init__.py does, or a type alias,
+	// which gives on the type that it names. The node keeps the barrel on a
+	// path.
 	NodeExport   NodeKind = "export"
 	NodeExternal NodeKind = "external"
 )
@@ -202,7 +203,10 @@ type Edge struct {
 // caller and the unit as its site. The code that runs there is code of the
 // unit, so it can reach only what the code of the unit can reach. A site
 // with no caller is a unit that no import names, and it holds for every
-// search.
+// search. Callback marks the site of an external key whose code can call
+// into the graph only through a method of a value that it holds, as the
+// Go standard library with no unit. The reach query applies it to the
+// targets that a method of an exported name reaches.
 type UnresolvedSite struct {
 	Caller       string                     `json:"caller"`
 	Site         Site                       `json:"site"`
@@ -212,6 +216,7 @@ type UnresolvedSite struct {
 	Reason       fileindex.UnresolvedReason `json:"reason"`
 	ImportPrefix string                     `json:"import_prefix,omitempty"`
 	Unit         string                     `json:"unit,omitempty"`
+	Callback     bool                       `json:"callback,omitempty"`
 }
 
 // Root is a node that runs with no caller in the graph. Rule is the id of the
@@ -285,6 +290,17 @@ func (g *Graph) Runs(path string) bool {
 		return langs == nil || slices.Contains(langs, n.Language)
 	}
 	return len(g.Stats.Languages) == 0 || slices.Contains(g.Stats.Languages, n.Language)
+}
+
+// LoadGroup returns the key of the files whose module top levels the
+// program runs before the code of a file runs: the directory of the file,
+// in a language whose program loads a whole package, as Go, and else the
+// file alone.
+func (g *Graph) LoadGroup(path string) string {
+	if n := g.Nodes[path]; n != nil && profileOf(n.Language).loadsPackages {
+		return modules.Dir(path)
+	}
+	return path
 }
 
 // unitLanguages returns the languages of the code that the ecosystem of a

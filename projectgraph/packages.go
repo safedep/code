@@ -219,6 +219,24 @@ func (b *builder) addProblems(sp *space, problems []modules.Problem) {
 	}
 }
 
+// hasUnits reports whether the build links a unit of dependency code. A
+// build with no unit links no external key.
+func (b *builder) hasUnits() bool {
+	return len(b.spaces) > 1
+}
+
+// provided reports whether a unit of dependency code gives the package of
+// an external key.
+func (b *builder) provided(key string) bool {
+	return slices.ContainsFunc(b.origins[key], b.provides)
+}
+
+// provides reports whether a unit of dependency code gives the package
+// that an import names.
+func (b *builder) provides(o origin) bool {
+	return len(b.providers(o)) > 0
+}
+
 // spaceOf returns the space of a key: the space of its unit, or the space
 // of the project.
 func (b *builder) spaceOf(key string) *space {
@@ -277,7 +295,7 @@ func (b *builder) importedExternal(ix *fileindex.Index, key, module string, form
 // recordOrigin records an import as an origin of the key. A graph with no
 // unit of dependency code links no external key, so it records nothing.
 func (b *builder) recordOrigin(ix *fileindex.Index, key, module string, form modules.Form, names []string) {
-	if len(b.spaces) < 2 {
+	if !b.hasUnits() {
 		return
 	}
 	o := origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, module), form: form, names: slices.Clone(names)}
@@ -378,7 +396,7 @@ func (b *builder) provide(sp *space, family langcode.Code, module string, form m
 // package makes at run time, is a record of the unit on the external node.
 // Any code of the unit can run there.
 func (b *builder) linkPackages(ctx context.Context) error {
-	if len(b.spaces) < 2 {
+	if !b.hasUnits() {
 		return nil
 	}
 	for {
@@ -417,7 +435,11 @@ func (b *builder) linkProvision(key string, o origin, pv provision) {
 	}
 	b.named[pv.sp.unit] = true
 	names := o.names
-	if len(names) == 0 {
+	// A Rust use path names a module or an item, so the provision of use
+	// dep::top is the function top itself. Without this check, the key of
+	// the bound name read as a whole module, and got no package edge.
+	item := b.defs[pv.module] != nil && !b.isModule(pv.module)
+	if len(names) == 0 && !item {
 		// The key of a whole module is the value of the module. Only the
 		// default export of JavaScript gives that value code, and an
 		// import edge runs the module top level.
@@ -429,7 +451,11 @@ func (b *builder) linkProvision(key string, o origin, pv provision) {
 	}
 	res := b.walk(pv.module, names)
 	if res.fail != nil {
-		fail(res.fail.reason)
+		fail(b.provisionReason(o.lang, res))
+		return
+	}
+	// A field or a constant holds no code, so a read of it goes nowhere.
+	if b.holdsData(res.key) {
 		return
 	}
 	n := b.g.Nodes[res.key]
@@ -437,6 +463,39 @@ func (b *builder) linkProvision(key string, o origin, pv provision) {
 		return
 	}
 	b.link(o.lang, key, res.key, Site{Path: cmp.Or(n.Path, pv.sp.unit), Line: n.Line}, EdgePackage, r)
+	b.linkPackageLoad(o.lang, key, pv.module)
+}
+
+// linkPackageLoad adds an import edge from an external key to each module
+// top level of its package that runs code at load, in a language whose
+// program loads a package before a symbol of it runs. A search that enters
+// the package by the key, as the search of a summary does, then reaches the
+// init functions and the package-level values. A call of a function value
+// that a package-level value holds finds its function only through them.
+func (b *builder) linkPackageLoad(lang langcode.Code, key, module string) {
+	if !profileOf(lang).loadsPackages {
+		return
+	}
+	for _, p := range b.moduleFiles(module) {
+		b.link(lang, key, p, Site{Path: p}, EdgeImport, ruleImport.via("package"))
+	}
+}
+
+// provisionReason returns the reason of the record of a walk into a unit
+// that fails. A method that an interface of the unit declares, as Close of
+// a struct that embeds the interface Conn, has its code in the type that
+// the interface value holds. The external key gets no edge to such a type,
+// so its record is the one of a call on a value of an interface with no
+// implementation.
+func (b *builder) provisionReason(lang langcode.Code, res resolution) fileindex.UnresolvedReason {
+	reason, abstract := res.fail.reason, profileOf(lang).abstractReceiver
+	if reason != fileindex.UnresolvedNoDefinition || abstract == "" || res.class == "" {
+		return reason
+	}
+	if _, ok := b.declaringInterface(res.class, res.fail.name); ok {
+		return abstract
+	}
+	return reason
 }
 
 // addSurfaces links an external node to each exported symbol of each unit,

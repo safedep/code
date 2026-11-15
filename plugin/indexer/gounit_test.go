@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/fileindex/store/memstore"
 	"github.com/safedep/code/fs"
+	"github.com/safedep/code/langcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -96,6 +98,39 @@ func TestGoSkeletonKeepsTheHashOfTheFile(t *testing.T) {
 	result, err := runIndexer(t, context.Background(), fsys, opts)
 	require.NoError(t, err)
 	assert.Equal(t, fileindex.FileCached, result.Dependencies[goKitUnit+"//tables.go"], "the store serves the skeleton index on the next run")
+}
+
+func TestIndexerStoresNoPartialSkeletonIndex(t *testing.T) {
+	dir := t.TempDir()
+	kit := filepath.Join(dir, "kit")
+	writeFiles(t, kit, goKitFiles())
+	fsys, err := fs.NewLocalFileSystem(fs.LocalFileSystemConfig{AppDirectories: []string{dir}, ImportDirectories: []string{kit}, ImportUnits: map[string]string{kit: goKitUnit}, ExcludePatterns: []*regexp.Regexp{fs.SkipPattern(kit)}})
+	require.NoError(t, err)
+	s := memstore.New()
+	// The deadline cuts the walk of the skeleton of tables.go, after the
+	// skeleton parsed.
+	ctx := &cutContext{Context: context.Background(), at: []string{"indexer.skeletonIndex", "indexer.(*projection).walkTree"}}
+	result, err := runIndexer(t, ctx, fsys, Options{Languages: languages(t, core.LanguageCodeGo), Store: s, Imports: true, Workers: 1})
+	require.ErrorIs(t, err, context.Canceled)
+
+	tables := goKitUnit + "//tables.go"
+	assert.Equal(t, fileindex.FileMissing, result.Dependencies[tables])
+	var stored []string
+	for _, ix := range result.Indexes {
+		assert.NotEqual(t, tables, ix.Path)
+		got, err := s.Get(context.Background(), []fileindex.Key{ix.Key()})
+		require.NoError(t, err)
+		if _, ok := got[ix.Key()]; ok {
+			stored = append(stored, ix.Path)
+		}
+	}
+	assert.ElementsMatch(t, []string{goKitUnit + "//kit.go", goKitUnit + "//kit_linux.go", goKitUnit + "//kit_windows.go"}, stored, "the files before the cut reach the store")
+
+	data, err := os.ReadFile(filepath.Join(kit, "tables.go"))
+	require.NoError(t, err)
+	got, err := s.Get(context.Background(), []fileindex.Key{fileindex.NewKey(tables, fileindex.HashContent(data), langcode.Go)})
+	require.NoError(t, err)
+	assert.Empty(t, got, "the partial skeleton index does not reach the store")
 }
 
 func TestIsGeneratedTable(t *testing.T) {

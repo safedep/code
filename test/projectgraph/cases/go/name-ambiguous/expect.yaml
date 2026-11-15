@@ -1,0 +1,114 @@
+source: safedep:hand
+description: >-
+  serve calls the field Handle of a server, which holds a function value. The link step does not know the
+  value, and 25 types of handlers define a method Handle. That is over the cap of 20, so the site gets no
+  name edge and is ambiguous. A Go call of a name runs a method of the name or a function value, and a
+  reference edge leads to each function value from the code that stores it. So the site keeps the method
+  name Handle. A search from the roots reaches main, which stores os.Chdir in the field, so os.Chdir is
+  found. H0.Handle calls os/exec.Command, so os/exec.Command is uncertain. os.Remove, which only the
+  uncalled Cleanup calls, is not found. A search from serve alone does not reach the code that stores the
+  value, so there the site concerns every target, and os.Chdir and os.Remove are uncertain.
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+exact_edges: true
+edges:
+  - from: handlers/handlers.go//Cleanup
+    to: os//Remove
+    kind: direct
+    confidence: high
+    site: handlers/handlers.go:108
+  - from: handlers/handlers.go//H0//Handle
+    to: os//exec//Command
+    kind: direct
+    confidence: high
+    site: handlers/handlers.go:10
+  - from: main.go//main
+    to: os//Chdir
+    kind: reference
+    confidence: low
+    site: main.go:18
+  - from: main.go//main
+    to: main.go//server//serve
+    kind: member
+    confidence: high
+    site: main.go:19
+unresolved:
+  - caller: main.go//server//serve
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Chdir
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Remove
+    reason: no-dependency-source
+    callback: true
+  - caller: os//exec//Command
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//server//serve
+    site: main.go:14
+    reason: function-value
+  - caller: main.go//server//serve
+    site: main.go:14
+    reason: ambiguous
+    method: Handle
+results:
+  - target: os//Chdir
+    status: found
+    path:
+      - key: main.go//main
+      - key: os//Chdir
+        site: main.go:18
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: main.go//main
+        site: main.go:18
+        reached: true
+  - target: os//exec//Command
+    status: uncertain
+    call_sites:
+      - caller: handlers/handlers.go//H0//Handle
+        site: handlers/handlers.go:10
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:14
+      - kind: unresolved-call
+  - target: os//Remove
+    status: not-found
+    call_sites:
+      - caller: handlers/handlers.go//Cleanup
+        site: handlers/handlers.go:108
+        reached: false
+  - target: os//Chdir
+    sources: [main.go//server//serve]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//main
+        site: main.go:18
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:14
+      - kind: unresolved-call
+        site: main.go:14
+  - target: os//Remove
+    sources: [main.go//server//serve]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: handlers/handlers.go//Cleanup
+        site: handlers/handlers.go:108
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:14
+      - kind: unresolved-call
+        site: main.go:14

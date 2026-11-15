@@ -8,7 +8,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/safedep/code/core"
 	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/pkg/ts"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -189,6 +191,7 @@ const maxKeywordBytes = 16
 var assignableNamePattern = regexp.MustCompile(`^[$@]*[A-Za-z_][A-Za-z0-9_]*$`)
 
 type shapedProcessors struct {
+	code       core.LanguageCode
 	shapes     syntaxShapes
 	separators []string
 }
@@ -197,7 +200,7 @@ type shapedProcessors struct {
 // the reachable scopes. A shape replaces a processor of profile for the same
 // node type.
 func shapedProfile(profile languageProfile, shapes syntaxShapes) languageProfile {
-	p := &shapedProcessors{shapes: shapes, separators: profile.separators}
+	p := &shapedProcessors{code: profile.code, shapes: shapes, separators: profile.separators}
 
 	processors := maps.Clone(profile.processors)
 	if processors == nil {
@@ -650,11 +653,19 @@ func cleanSegment(segment string) string {
 // call of its name makes in a language of class calls, as Parser().
 func (p *shapedProcessors) instanceOf(callee string) (string, bool) {
 	receiver, method, found := cutLast(callee, namespaceSeparator)
-	if found && slices.Contains(p.shapes.constructorMethods, method) {
+	if found && slices.Contains(p.shapes.constructorMethods, method) && !p.isPointer(lastOf(receiver)) {
 		return receiver, true
 	}
 	first, _ := utf8.DecodeRuneInString(lastOf(callee))
 	return callee, p.shapes.classCalls && unicode.IsUpper(first)
+}
+
+// isPointer reports whether a type is a smart pointer whose constructor
+// method holds its argument, as Box in Box::new(Html {}). A method call on
+// the value runs a method of the argument, so the value is no instance of
+// the pointer.
+func (p *shapedProcessors) isPointer(name string) bool {
+	return langcode.IsPointer(p.code, name)
 }
 
 // lastOf returns the last segment of a namespace.

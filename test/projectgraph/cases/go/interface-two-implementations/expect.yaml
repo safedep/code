@@ -23,6 +23,18 @@ no_edges:
     to: sink/db.go//Log//Write
 unresolved:
   - caller: cmd/app/main.go//run
+    reason: no-dependency-source
+    callback: true
+  - caller: database//sql//DB//Exec
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Exit
+    reason: no-dependency-source
+    callback: true
+  - caller: os//WriteFile
+    reason: no-dependency-source
+    callback: true
+  - caller: cmd/app/main.go//run
     site: cmd/app/main.go:10
     reason: no-definition
     method: Write
@@ -56,3 +68,4 @@ results:
     uncertainties:
       - kind: unresolved-call
         site: cmd/app/main.go:10
+      - kind: unresolved-call

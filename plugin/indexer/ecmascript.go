@@ -61,7 +61,12 @@ func ecmascriptRules(typescript bool) languageRules {
 				"binary_expression":        "",
 				"parenthesized_expression": "",
 				"export_statement":         "value",
+				"jsx_expression":           "",
+				"jsx_opening_element":      "name",
+				"jsx_self_closing_element": "name",
 			},
+			spreads:     map[string]string{"jsx_expression": "spread_element"},
+			intrinsic:   jsxIntrinsic,
 			member:      "member_expression",
 			object:      "object",
 			property:    "property",
@@ -84,6 +89,22 @@ func ecmascriptRules(typescript bool) languageRules {
 		r.afterWalk = typescriptDeclaredTypes
 	}
 	return r
+}
+
+// jsxIntrinsic reports whether a JSX element names a tag of the host, as
+// div in <div />. JSX gives such a name as a string, so the element renders
+// no component. An element of a capitalized name or of a member, as
+// <Child /> or <table.Row />, renders the component that the name holds.
+func jsxIntrinsic(p *projection, holder, value *sitter.Node) bool {
+	switch holder.Type() {
+	case "jsx_opening_element", "jsx_self_closing_element":
+		if value == nil || value.Type() != "identifier" {
+			return false
+		}
+		name := p.text(value)
+		return name != "" && 'a' <= name[0] && name[0] <= 'z'
+	}
+	return false
 }
 
 // ecmascriptBases returns the bases of a class from its class heritage, as

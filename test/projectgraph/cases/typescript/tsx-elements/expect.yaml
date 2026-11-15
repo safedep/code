@@ -1,0 +1,119 @@
+source: safedep:hand
+description: The same JSX forms as javascript/jsx-elements, in .tsx files. App renders Child, the imported Other and the member table.Row as JSX elements, and passes press to a button. Each element name and the prop give a reference, so the search reaches what each component calls. The lower case element b is a tag of the host, a string, so it gives no reference to the imported b.
+roots:
+  - key: src/main.ts
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.ts
+    to: src/App.tsx//App
+    kind: reference
+    confidence: low
+    site: src/main.ts:4
+  - from: src/App.tsx//App
+    to: src/App.tsx//Child
+    kind: reference
+    confidence: low
+    site: src/App.tsx:18
+  - from: src/App.tsx//App
+    to: src/Other.tsx//Other
+    kind: reference
+    confidence: low
+    site: src/App.tsx:19
+  - from: src/App.tsx//App
+    to: src/App.tsx//table//Row
+    kind: reference
+    confidence: low
+    site: src/App.tsx:20
+  - from: src/App.tsx//App
+    to: src/App.tsx//press
+    kind: reference
+    confidence: low
+    site: src/App.tsx:21
+no_edges:
+  - from: src/App.tsx//App
+    to: plug//b
+unresolved: []
+results:
+  - target: plug//danger
+    status: found
+    path:
+      - key: src/main.ts
+      - key: src/App.tsx//App
+        site: src/main.ts:4
+        kind: reference
+        confidence: low
+      - key: src/App.tsx//Child
+        site: src/App.tsx:18
+        kind: reference
+        confidence: low
+      - key: plug//danger
+        site: src/App.tsx:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/App.tsx//Child
+        site: src/App.tsx:5
+        reached: true
+  - target: plug//odanger
+    status: found
+    path:
+      - key: src/main.ts
+      - key: src/App.tsx//App
+        site: src/main.ts:4
+        kind: reference
+        confidence: low
+      - key: src/Other.tsx//Other
+        site: src/App.tsx:19
+        kind: reference
+        confidence: low
+      - key: plug//odanger
+        site: src/Other.tsx:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Other.tsx//Other
+        site: src/Other.tsx:4
+        reached: true
+  - target: plug//viaprop
+    status: found
+    path:
+      - key: src/main.ts
+      - key: src/App.tsx//App
+        site: src/main.ts:4
+        kind: reference
+        confidence: low
+      - key: src/App.tsx//table//Row
+        site: src/App.tsx:20
+        kind: reference
+        confidence: low
+      - key: plug//viaprop
+        site: src/App.tsx:9
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/App.tsx//table//Row
+        site: src/App.tsx:9
+        reached: true
+  - target: plug//onpress
+    status: found
+    path:
+      - key: src/main.ts
+      - key: src/App.tsx//App
+        site: src/main.ts:4
+        kind: reference
+        confidence: low
+      - key: src/App.tsx//press
+        site: src/App.tsx:21
+        kind: reference
+        confidence: low
+      - key: plug//onpress
+        site: src/App.tsx:12
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/App.tsx//press
+        site: src/App.tsx:12
+        reached: true
+  - target: plug//b
+    status: no-such-target

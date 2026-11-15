@@ -1360,3 +1360,160 @@ the standard library to the project graph. The case
 that goes on to `os.execvp`. The reach result still reports the shorter
 path through the reference edge of the override rule, because the search
 returns a shortest path.
+
+### The Go standard library unit
+
+FOU-561 adds the `src` tree of the Go release of each Go project to the
+corpus. The release comes from the `go` line of the go.mod of the
+project: go1.12 for colly, go1.13 for goquery and hey, go1.14 for
+go-grpc-middleware, go1.15 for sftp, go1.16 for bluemonday, go1.18 for
+scany, go1.19 for melody and fiber, and go1.20 for go-rabbitmq. The
+measure links the tree as the unit `go:std@<release>`, as vet links
+GOROOT. The advisories of the measure name no symbol of the standard
+library, so the unit adds no target. It adds the code of the standard
+library to each graph, and the types of its receivers.
+
+The rows come from two runs of the branch of FOU-561 and FOU-563, on
+2026-11-14, on the machine above. The run "without" sets
+`PROJECTGRAPH_METHOD_NO_STD=1`. The Python and Rust rows do not change.
+
+| Language | Kind | Run | Targets | found | not-found | no-such-target | unknown-receiver | no-definition | interface-receiver | no-dependency-source | budget | ambiguous | computed-name |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Go | function | without | 256 | 51 | 0 | 0 | 3 | 5 | 0 | 2 | 39 | 106 | 50 |
+| Go | function | with | 256 | 56 | 0 | 0 | 14 | 5 | 0 | 0 | 0 | 154 | 27 |
+| Go | method | without | 1298 | 331 | 0 | 0 | 154 | 71 | 2 | 2 | 109 | 416 | 213 |
+| Go | method | with | 1298 | 366 | 0 | 0 | 256 | 132 | 5 | 0 | 0 | 466 | 73 |
+
+| Run | Go method targets that end as unknown-receiver | Files of the 10 Go graphs |
+| --- | --- | --- |
+| without | 0.119 (154/1298) | 5,286 |
+| with | 0.197 (256/1298) | 23,991 |
+
+- `found` moves from 331 to 366 Go method targets and from 51 to 56 Go
+  function targets. A call on a receiver of a standard library type now
+  has a type, and the graph holds the paths through the standard
+  library, as a handler that `net/http` calls.
+- `unknown-receiver` grows from 154 to 256 Go method targets. The cause
+  counts a target when the search reaches any call site with an unknown
+  receiver and the method name of the target. The standard library adds
+  code that the search reaches, and more sites with the names `String`,
+  `RoundTrip`, `Close`, `Error` and `Write`. So the share rises, and it is
+  not a count of the receiver forms that the unit fixes.
+- `budget` and `computed-name` fall, and `ambiguous` grows. The budget
+  records of scany and the computed names of hey are still in the graph.
+  The first uncertainty of these results is now an ambiguous call of the
+  standard library, as `regexp/regexp.go` of go1.18 for scany.
+- The graphs hold 4.5 times the files. The run of all three languages
+  takes 356 seconds in place of 124 on this machine.
+
+These are the sites with an unknown receiver that the most
+`unknown-receiver` targets reach. A site concerns each target whose
+method name it has.
+
+| Site | Targets | Call | Receiver form |
+| --- | --- | --- | --- |
+| `net/http/server.go:3372` of go1.13 | 16 | `h.c.RemoteAddr().String()` | the result of a method of an interface, `net.Addr` |
+| x/net `http2/frame.go:1553` | 14 | `hdec.Close()` | a local that a field of the receiver gives, `*hpack.Decoder` |
+| x/net `websocket/hybi.go:318` and `:330` | 14 | `w.Close()` | the result of a method of an interface, `io.WriteCloser` |
+| x/net `webdav/internal/xml/xml.go:1916` and `:1919` | 11 | `w.Write(...)` | an `io.Writer` parameter |
+| x/net `webdav/internal/xml/marshal.go:220` to `:247` | 11 | `p.Write(t)` | a method of the embedded field `*bufio.Writer` |
+| hey `requester/report.go:134` | 10 | `buf.String()` | a local of `&bytes.Buffer{}` |
+| hey `requester/print.go:92` | 10 | `res.String()` | a local of `new(bytes.Buffer)` |
+| `net/http/transport.go:533` of go1.13 | 10 | `pconn.alt.RoundTrip(req)` | an interface field, `http.RoundTripper` |
+| `net/http/httputil/reverseproxy.go:249` of go1.13 | 10 | `transport.RoundTrip(outreq)` | an interface local |
+| go-grpc-middleware `validator/validator.go:33` | 8 | `err.Error()` | the `error` interface |
+| go-grpc-middleware `tracing/opentracing/server_interceptors.go:95` | 8 | `err.Error()` | the `error` interface |
+
+Of the 1,810 pairs of a target and such a site, 771 sites are in the
+code of a module, 457 in the standard library and 582 in a project.
+`Error` on the `error` interface and a method of an interface field or
+parameter stay records until the graph has the implementations of the
+method. A method on the result of an interface method, as
+`RemoteAddr().String()`, needs the result type of the interface method.
+The link step does not bind three other forms yet, also with the types
+of the standard library: the two `bytes.Buffer` locals of hey, a method
+of an embedded field, and a local that a field of the receiver gives.
+Each one is a candidate for an issue.
+
+### Agreement with govulncheck
+
+FOU-563 runs govulncheck v1.9.0 on each Go project of the corpus, with no
+network, against the Go advisories of `advisories.json`, and compares
+each Go target. `README.md` says how. The rows come from the same runs
+as the table above.
+
+| Run | govulncheck reaches | reach found | reach uncertain | false negative | govulncheck does not reach | reach not-found | reach uncertain | reach found (review) | unmatched |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| without | 115 | 60 | 55 | 0 | 1439 | 0 | 1117 | 322 | 1 |
+| with | 115 | 62 | 53 | 0 | 1439 | 0 | 1079 | 360 | 1 |
+
+| Run | Agreement, targets that govulncheck reaches | Agreement, targets that govulncheck does not reach |
+| --- | --- | --- |
+| without | 0.522 (60/115) | 0.000 (0/1439) |
+| with | 0.539 (62/115) | 0.000 (0/1439) |
+
+- No target is a false negative. Reach gives no Go target as `not-found`
+  or `no-such-target` yet, so the check has no negative answer to test.
+  The fixes of FOU-557, FOU-558, FOU-559, FOU-560 and FOU-562 turn
+  uncertain answers into definite ones, and the check then tests each of
+  them.
+- 360 targets that reach finds are rows to review in the output of the
+  measure: 75 with a path of `high` and `medium` edges, and 285 with a
+  `low` hop. Reach starts from each exported symbol of a library project.
+  govulncheck starts from the packages of the project and follows the
+  calls that its call graph proves.
+- The unmatched symbol is `utf16Decoder.Transform` of golang.org/x/text,
+  of GO-2020-0015. The build list of colly holds x/text at an affected
+  version, and `corpus.txt` does not list x/text for colly, so the measure
+  has no target for it.
+- govulncheck reaches symbols of the module-wide advisory GO-2026-6372 of
+  amqp091-go in go-rabbitmq, as `Channel.NotifyClose`. The advisory has
+  no symbol list and gives no target, so the comparison leaves out its
+  findings.
+
+### The reach MVP branch
+
+The rows come from two runs of the branch of the reach MVP (FOU-556,
+FOU-557, FOU-558, FOU-560, FOU-561, FOU-562, FOU-563, FOU-575, FOU-576 and
+FOU-578, with the fixes of two reviews), on 2026-11-14, on the machine
+above. The run "without" sets `PROJECTGRAPH_METHOD_NO_STD=1`, as vet runs
+today. `found` counts `found` and `found/low`. The main rows come from the
+same corpus on origin/main at 39cf1e2, without the unit.
+
+| Language | Kind | Run | Targets | found | not-found | no-such-target | no-dependency-source | unknown-receiver | no-definition | interface-receiver | ambiguous | budget | computed-name |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Go | function | main | 256 | 51 | 0 | 0 | 2 | 3 | 5 | 0 | 106 | 39 | 50 |
+| Go | function | without | 256 | 58 | 0 | 0 | 193 | 5 | 0 | 0 | 0 | 0 | 0 |
+| Go | function | with | 256 | 59 | 0 | 0 | 187 | 8 | 2 | 0 | 0 | 0 | 0 |
+| Go | method | main | 1298 | 331 | 0 | 0 | 2 | 154 | 71 | 2 | 416 | 109 | 213 |
+| Go | method | without | 1298 | 343 | 0 | 7 | 776 | 156 | 15 | 1 | 0 | 0 | 0 |
+| Go | method | with | 1298 | 384 | 0 | 0 | 442 | 253 | 205 | 14 | 0 | 0 | 0 |
+| Rust | function | main | 13 | 4 | 0 | 0 | 0 | 0 | 9 | 0 | 0 | 0 | 0 |
+| Rust | function | branch | 13 | 5 | 0 | 0 | 0 | 5 | 1 | 0 | 2 | 0 | 0 |
+| Rust | method | main | 38 | 16 | 0 | 0 | 0 | 0 | 13 | 0 | 0 | 9 | 0 |
+| Rust | method | branch | 38 | 16 | 0 | 0 | 0 | 8 | 1 | 0 | 4 | 9 | 0 |
+
+| Run | govulncheck reaches | reach found | reach uncertain | false negative | govulncheck does not reach | reach not-found or no-such-target | reach found (review) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| without | 115 | 71 | 44 | 0 | 1439 | 7 | 330 |
+| with | 115 | 71 | 44 | 0 | 1439 | 0 | 372 |
+
+- No target is a false negative in either run. A measure run fails on one.
+- Reach finds 71 of the 115 targets that govulncheck reaches. Main found 60.
+- The global causes of main are gone for Go: `ambiguous`, `budget` and
+  `computed-name`. Most of their targets now read `no-dependency-source`.
+  That record marks code outside the graph that can call back into it: a
+  module with no unit, or the standard library with no unit. The corpus
+  gives a unit only to the modules that an advisory names, so most
+  modules of a build have no unit. A consumer that gives a unit to each
+  module with source on the disk, and to GOROOT, removes most of these
+  records.
+- The answers of Python do not change. An ambiguous site of Python,
+  JavaScript, TypeScript, Ruby and PHP concerns every target, as on main,
+  because a call by name there can run a callable object, a
+  `__getattr__` value or a module attribute. Go keeps the method name of an
+  ambiguous site in a search from the roots, and Rust keeps it for a call
+  on a receiver.
+- The Rust `no-definition` records of main fall from 22 to 2. The rest are
+  `unknown-receiver` and `ambiguous` records of calls that the link step
+  does not type yet, as a turbofish or a `<T as Trait>::m` call.

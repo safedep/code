@@ -13,52 +13,39 @@ import (
 // parserWrapper parses the files of the languages that it was built with.
 // It is not safe for concurrent use, because a sitter.Parser is not.
 type parserWrapper struct {
-	byExtension map[string]*grammar
-	maxBytes    int
-}
-
-// grammar is a language with the sitter parser that parses its files.
-type grammar struct {
-	language core.Language
-	parser   *sitter.Parser
+	byExtension map[string]core.Language
+	// parsers holds the sitter parser of each language that parsed a file.
+	parsers  map[core.Language]*sitter.Parser
+	maxBytes int
 }
 
 type parseTree struct {
-	tree *sitter.Tree
-	data *[]byte
-	file core.File
-	lang core.Language
+	tree   *sitter.Tree
+	data   *[]byte
+	file   core.File
+	lang   core.Language
+	markup *core.Markup
 }
 
 var _ core.Parser = (*parserWrapper)(nil)
 var _ core.ParseTree = (*parseTree)(nil)
+var _ core.MarkupTree = (*parseTree)(nil)
 
 // NewParser creates a parser for the given languages. It picks the language
 // of a file by the file extension. A language that implements
-// core.GrammarSelector picks the language of each of its extensions. The
-// caller closes the parser.
+// core.GrammarSelector picks the language of each of its extensions, and a
+// language that implements core.SourceSelector picks the language of the
+// content. The caller closes the parser.
 func NewParser(languages []core.Language, opts ...Option) (*parserWrapper, error) {
 	cfg := newConfig(opts)
-	fileLanguages, err := LanguagesByExtension(languages)
+	byExtension, err := LanguagesByExtension(languages)
 	if err != nil {
 		return nil, err
 	}
 
-	byExtension := make(map[string]*grammar, len(fileLanguages))
-	byLanguage := make(map[core.Language]*grammar)
-	for ext, language := range fileLanguages {
-		g, ok := byLanguage[language]
-		if !ok {
-			parser := sitter.NewParser()
-			parser.SetLanguage(language.Language())
-			g = &grammar{language: language, parser: parser}
-			byLanguage[language] = g
-		}
-		byExtension[ext] = g
-	}
-
 	return &parserWrapper{
 		byExtension: byExtension,
+		parsers:     map[core.Language]*sitter.Parser{},
 		maxBytes:    cfg.maxBytes,
 	}, nil
 }
@@ -86,9 +73,19 @@ func LanguagesByExtension(languages []core.Language) (map[string]core.Language, 
 // Close frees the sitter parsers. The trees that the parser made stay
 // valid. The parser must not parse after Close.
 func (p *parserWrapper) Close() {
-	for _, g := range p.byExtension {
-		g.parser.Close()
+	for _, sp := range p.parsers {
+		sp.Close()
 	}
+}
+
+// Source returns the source of data as the content of the file of the
+// name. language is the language of the extension of the name. A
+// core.SourceSelector picks the source.
+func Source(language core.Language, name string, data []byte) core.Source {
+	if selector, ok := language.(core.SourceSelector); ok {
+		return selector.Source(filepath.Ext(name), data)
+	}
+	return core.Source{Language: language, Code: data}
 }
 
 // Parse parses the file with the language of its extension. It returns an
@@ -105,7 +102,7 @@ func (p *parserWrapper) parse(ctx context.Context, file core.File) (core.ParseTr
 		return nil, core.StageRead, err
 	}
 
-	g, err := p.grammarOf(file)
+	language, err := p.languageOf(file)
 	if err != nil {
 		return nil, core.StageParse, err
 	}
@@ -115,7 +112,7 @@ func (p *parserWrapper) parse(ctx context.Context, file core.File) (core.ParseTr
 		return nil, core.StageRead, err
 	}
 
-	tree, err := p.parseContent(ctx, g, file, data)
+	tree, err := p.ParseSource(ctx, file, data, Source(language, file.Name(), data))
 	return tree, core.StageParse, err
 }
 
@@ -124,42 +121,62 @@ func (p *parserWrapper) parse(ctx context.Context, file core.File) (core.ParseTr
 // file is not read again. The tree keeps data, so the caller must not
 // change data after the call.
 func (p *parserWrapper) ParseContent(ctx context.Context, file core.File, data []byte) (core.ParseTree, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	g, err := p.grammarOf(file)
+	language, err := p.languageOf(file)
 	if err != nil {
 		return nil, err
 	}
-	return p.parseContent(ctx, g, file, data)
+	return p.ParseSource(ctx, file, data, Source(language, file.Name(), data))
 }
 
-func (p *parserWrapper) grammarOf(file core.File) (*grammar, error) {
-	g, ok := p.byExtension[filepath.Ext(file.Name())]
+func (p *parserWrapper) languageOf(file core.File) (core.Language, error) {
+	language, ok := p.byExtension[filepath.Ext(file.Name())]
 	if !ok {
 		return nil, fmt.Errorf("%w: %s", core.ErrNoLanguage, file.Name())
 	}
-	return g, nil
+	return language, nil
 }
 
-func (p *parserWrapper) parseContent(ctx context.Context, g *grammar, file core.File, data []byte) (core.ParseTree, error) {
+// sitterParser returns the sitter parser of the language, and makes it at
+// the first file of the language.
+func (p *parserWrapper) sitterParser(language core.Language) *sitter.Parser {
+	sp, ok := p.parsers[language]
+	if !ok {
+		sp = sitter.NewParser()
+		sp.SetLanguage(language.Language())
+		p.parsers[language] = sp
+	}
+	return sp
+}
+
+// ParseSource parses the source of data that Source gave for file. A
+// caller that already picked the source uses it, so the parse does not pick
+// it again. The tree keeps data, not the code of the source, so the tree
+// data is the bytes of the file. The code keeps the offsets of data, so a
+// node has the same content in both. The caller must not change data after
+// the call.
+func (p *parserWrapper) ParseSource(ctx context.Context, file core.File, data []byte, source core.Source) (core.ParseTree, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if p.maxBytes > 0 && len(data) > p.maxBytes {
 		return nil, fmt.Errorf("%w: %s is over %d bytes", ErrInputTooLarge, file.Name(), p.maxBytes)
 	}
 
-	tree, err := g.parser.ParseCtx(ctx, nil, data)
+	sp := p.sitterParser(source.Language)
+	tree, err := sp.ParseCtx(ctx, nil, source.Code)
 	if err != nil {
 		// A sitter parser resumes a cancelled parse on its next call.
 		// The reset makes the next file parse from its start.
-		g.parser.Reset()
+		sp.Reset()
 		return nil, fmt.Errorf("failed to parse file: %w", err)
 	}
 
 	return &parseTree{
-		tree: tree,
-		data: &data,
-		file: file,
-		lang: g.language,
+		tree:   tree,
+		data:   &data,
+		file:   file,
+		lang:   source.Language,
+		markup: source.Markup,
 	}, nil
 }
 
@@ -177,6 +194,10 @@ func (t *parseTree) File() (core.File, error) {
 
 func (t *parseTree) Language() (core.Language, error) {
 	return t.lang, nil
+}
+
+func (t *parseTree) Markup() *core.Markup {
+	return t.markup
 }
 
 func (t *parseTree) Close() {

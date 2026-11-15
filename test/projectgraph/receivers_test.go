@@ -117,6 +117,12 @@ var goReceiverRows = []receiverRow{
 		want:   "uncertain/no-dependency-source",
 		noDeps: true,
 	},
+	{
+		name:   "method of a first-party type on new",
+		source: "type thing struct{}\n\nfunc (t *thing) vuln() {\n\tdep.NewRunner()\n}\n\nfunc run() {\n\tnew(thing).vuln()\n}",
+		target: "example.com//dep//NewRunner",
+		want:   "found/low",
+	},
 }
 
 var rustReceiverRows = []receiverRow{
@@ -169,6 +175,30 @@ var rustReceiverRows = []receiverRow{
 		want:   "found",
 	},
 	{
+		name:   "anyhow result with ?",
+		source: "fn run() -> anyhow::Result<()> {\n    let mut t = dep::parse_thing()?;\n    t.insert(1);\n    Ok(())\n}",
+		target: "dep//Thing//insert",
+		want:   "found",
+	},
+	{
+		name:   "chained call after ? on a std::io::Result",
+		source: "fn run() -> std::io::Result<()> {\n    dep::read_thing()?.insert(1);\n    Ok(())\n}",
+		target: "dep//Thing//insert",
+		want:   "found",
+	},
+	{
+		name:   "chained call after ? with a name of an Option method",
+		source: "fn run() -> Option<()> {\n    dep::try_thing()?.insert(1);\n    Some(())\n}",
+		target: "dep//Thing//insert",
+		want:   "found",
+	},
+	{
+		name:   "option method with the name of a method of the value inside",
+		source: "fn run() {\n    dep::try_thing().inspect(|t| {});\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
 		name:   "chained call",
 		source: "fn run() {\n    dep::new_thing().insert(1);\n}",
 		target: "dep//Thing//insert",
@@ -199,6 +229,24 @@ var rustReceiverRows = []receiverRow{
 		want:   "found",
 	},
 	{
+		name:   "boxed trait object",
+		source: "fn run() {\n    let d: Box<dyn Doer> = Box::new(Thing::<u8>::new());\n    d.run();\n}",
+		target: "dep//Thing//run",
+		want:   "found",
+	},
+	{
+		name:   "reference-counted trait object",
+		source: "use std::rc::Rc;\n\nfn run() {\n    let d: Rc<dyn Doer> = Rc::new(Thing::<u8>::new());\n    d.run();\n}",
+		target: "dep//Thing//run",
+		want:   "found",
+	},
+	{
+		name:   "boxed value with no declared type",
+		source: "fn run() {\n    let d = Box::new(Thing::<u8>::new());\n    d.run();\n}",
+		target: "dep//Thing//run",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
 		name:   "generic bound",
 		source: "fn run<T: Doer>(d: &T) {\n    d.run();\n}",
 		target: "dep//Thing//run",
@@ -209,6 +257,120 @@ var rustReceiverRows = []receiverRow{
 		source: "fn run(r: &dyn Runner) {\n    r.start();\n}",
 		target: "dep//Job//start",
 		want:   "uncertain/trait-receiver",
+	},
+	{
+		name:   "parameter that a let shadows",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn run(t: Local) {\n    let t = dep::new_thing();\n    t.inspect();\n}",
+		target: "dep//Thing//inspect",
+		want:   "found",
+	},
+	{
+		name:   "parameter that a macro of std reads",
+		source: "fn run(t: Thing<u8>) {\n    println!(\"{}\", t.len());\n    t.inspect();\n}",
+		target: "dep//Thing//inspect",
+		want:   "found",
+	},
+	{
+		name:   "parameter that an if let shadows",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn run(t: Local) {\n    if let Some(t) = dep::try_thing() {\n        t.inspect();\n    }\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "parameter that a match arm shadows",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn run(t: Local) {\n    match dep::try_thing() {\n        Some(t) => t.inspect(),\n        None => {}\n    }\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "parameter that a closure parameter shadows",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn run(t: Local) {\n    let f = |t: Thing<u8>| t.inspect();\n    f(dep::new_thing());\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "parameter that a let of a macro shadows",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nmacro_rules! bind {\n    ($n:ident) => {\n        let $n = dep::new_thing();\n    };\n}\n\nfn run(t: Local) {\n    bind!(t);\n    t.inspect();\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "typed let that a static shadows",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn run(l: Local) {\n    let t: Local = l;\n    {\n        static t: Thing<u8> = Thing::new();\n        t.inspect();\n    }\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "let that a static after the call shadows",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn mk() -> Local {\n    Local\n}\n\nfn run() {\n    let t = mk();\n    {\n        t.inspect();\n        static t: Thing<u8> = Thing::new();\n    }\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "let that an if let shadows",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn mk() -> Local {\n    Local\n}\n\nfn run() {\n    let t = mk();\n    if let Some(t) = dep::try_thing() {\n        t.inspect();\n    }\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "std function that returns its argument",
+		source: "fn run(t: Thing<u8>) {\n    std::convert::identity(t).inspect();\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "typed let of a type alias of the function",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn run() {\n    type Local = dep::Thing<u8>;\n    let t: Local = dep::new_thing();\n    t.inspect();\n}",
+		target: "dep//Thing//inspect",
+		want:   "found",
+	},
+	{
+		name:   "typed let of a use of the function",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn run() {\n    use dep::Thing as Local;\n    let t: Local<u8> = dep::new_thing();\n    t.inspect();\n}",
+		target: "dep//Thing//inspect",
+		want:   "found",
+	},
+	{
+		name:   "typed let of a type alias of an inline module",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nmod inner {\n    pub type Local = dep::Thing<u8>;\n    pub fn go() {\n        let t: Local = dep::new_thing();\n        t.inspect();\n    }\n}\n\nfn run() {\n    inner::go();\n}",
+		target: "dep//Thing//inspect",
+		want:   "found",
+	},
+	{
+		name:   "typed let of a glob use of a block",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn run() {\n    mod m {\n        pub use dep::Thing as Local;\n    }\n    use m::*;\n    let t: Local<u8> = dep::new_thing();\n    t.inspect();\n}",
+		target: "dep//Thing//inspect",
+		want:   "found",
+	},
+	{
+		name:   "parameter of a use of an inline module",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nmod inner {\n    use dep::Thing as Local;\n    pub fn go(t: Local<u8>) {\n        t.inspect();\n    }\n}\n\nfn run() {\n    inner::go(dep::new_thing());\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "parameter of a type alias of the outer function",
+		source: "struct Local;\nimpl Local {\n    fn inspect(&self) {}\n}\n\nfn run() {\n    type Local = dep::Thing<u8>;\n    fn inner(t: Local) {\n        t.inspect();\n    }\n    inner(dep::new_thing());\n}",
+		target: "dep//Thing//inspect",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "parameter of a type parameter of the impl",
+		source: "struct Local;\nimpl Local {\n    fn run(&self) {}\n}\n\nstruct Holder<T>(T);\nimpl<Local: Doer> Holder<Local> {\n    fn go(t: Local) {\n        t.run();\n    }\n}\n\nfn run() {\n    Holder::<Thing<u8>>::go(dep::new_thing());\n}",
+		target: "dep//Thing//run",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "typed let of a type parameter of the impl",
+		source: "struct Local;\nimpl Local {\n    fn run(&self) {}\n}\n\nstruct Holder<T>(T);\nimpl<Local: Doer> Holder<Local> {\n    fn go(t: Local) {\n        let u: Local = t;\n        u.run();\n    }\n}\n\nfn run() {\n    Holder::<Thing<u8>>::go(dep::new_thing());\n}",
+		target: "dep//Thing//run",
+		want:   "uncertain/unknown-receiver",
+	},
+	{
+		name:   "boxed trait object in a module that reads the root",
+		source: "mod inner {\n    use super::*;\n    pub fn go() {\n        let d: Box<dyn Doer> = Box::new(Thing::<u8>::new());\n        d.run();\n    }\n}\n\nfn run() {\n    inner::go();\n}",
+		target: "dep//Thing//run",
+		want:   "found",
 	},
 }
 
@@ -323,6 +485,18 @@ var pythonReceiverRows = []receiverRow{
 		target: "dep//Thing//do",
 		want:   "uncertain/no-dependency-source",
 		noDeps: true,
+	},
+	{
+		name:   "builtin that returns an argument",
+		source: "def run(t):\n    max(t, t).do()",
+		target: "dep//Thing//do",
+		want:   "uncertain/no-dependency-source",
+	},
+	{
+		name:   "builtin that returns an element of an argument",
+		source: "def run(ts):\n    next(iter(ts)).do()",
+		target: "dep//Thing//do",
+		want:   "uncertain/no-dependency-source",
 	},
 }
 

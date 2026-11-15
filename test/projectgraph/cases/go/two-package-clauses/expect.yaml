@@ -29,7 +29,13 @@ no_edges:
     to: lib/gen.go//parse
   - from: cmd/app/main.go
     to: lib/gen.go
-unresolved: []
+unresolved:
+  - caller: encoding//json//Unmarshal
+    reason: no-dependency-source
+    callback: true
+  - caller: os//WriteFile
+    reason: no-dependency-source
+    callback: true
 truncated:
   - kind: package-clauses
     key: lib/gen.go

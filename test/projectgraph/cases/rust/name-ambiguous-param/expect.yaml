@@ -1,0 +1,38 @@
+source: safedep:hand
+description: >-
+  dispatch calls its parameter handle, which holds the function that pick returns. 25 types define a
+  method handle. That is over the cap of 20, so the site gets no name edge and is ambiguous. A Rust call
+  of a name with no receiver can run any function value, and the index records no reference for the tail
+  expression cleanup of pick. So the site keeps no method name and concerns every target, and
+  std::fs::remove_file, which cleanup calls, is uncertain and not not-found. So is std::env::var, which
+  H0.handle calls.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+unresolved:
+  - caller: src/main.rs//dispatch
+    site: src/main.rs:12
+    reason: ambiguous
+results:
+  - target: std//fs//remove_file
+    status: uncertain
+    call_sites:
+      - caller: src/main.rs//cleanup
+        site: src/main.rs:4
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/main.rs:12
+  - target: std//env//var
+    status: uncertain
+    call_sites:
+      - caller: src/handlers.rs//H0//handle
+        site: src/handlers.rs:5
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/main.rs:12

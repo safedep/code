@@ -2,11 +2,18 @@ package projectgraph
 
 import (
 	"cmp"
+	"slices"
 	"strings"
 
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
 )
+
+// unknownReceiver is the failure of a name on a value whose type the walk
+// does not know.
+func unknownReceiver(name string) *failure {
+	return &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+}
 
 // walkTyped resolves the names on a receiver of a declared type.
 func (b *builder) walkTyped(class string, names []string) resolution {
@@ -59,11 +66,21 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 		case isNamespacePackage(r.key) || kind == NodeModule:
 			consumed, done = b.walkModule(&r, name)
 		case kind == NodeExport:
-			r.key = b.bindings[r.key]
+			target, ok := b.bound(r.key)
+			if !ok {
+				r.fail = unknownReceiver(name)
+				return r
+			}
+			r.key = target
 		case kind == NodeVariable:
 			consumed, done = b.walkVariable(&r, name)
 		case kind == NodeClass || kind == NodeInterface:
 			consumed, done = b.walkClass(&r, name, i+1 == len(names), &instance)
+		case b.holdsData(r.key):
+			// The walk does not know the type of a field, a constant or
+			// a variable of data, so it does not know a name on it.
+			r.fail = unknownReceiver(name)
+			return r
 		case kind == NodeExternal || kind == "" && b.g.IsExternal(r.key):
 			// A name before the last one under an external key is a call
 			// of a function or a method whose result has the next name,
@@ -75,7 +92,7 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 					skip, typed := unwrap(res.wraps, names[i+1:])
 					switch {
 					case !typed:
-						r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: names[i+1]}
+						r.fail = unknownReceiver(names[i+1])
 						return r
 					case i+1+skip < len(names):
 						r.key, r.virtual, r.declared = res.class, true, true
@@ -97,7 +114,9 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 			if r.virtual && i+1 == len(names) {
 				r.class = r.key
 			}
-			r.key = b.deriveExternal(r.key, names[i:])
+			// A ? names no member, so the key keeps the names that the
+			// code writes.
+			r.key = b.deriveExternal(r.key, slices.DeleteFunc(slices.Clone(names[i:]), func(n string) bool { return n == fileindex.TryName }))
 			r.rule = cmp.Or(r.rule, ruleExternal)
 			return r
 		case kind == NodeFunction || kind == NodeMethod || kind == NodeConstructor:
@@ -122,7 +141,7 @@ func (b *builder) walkFrom(r resolution, names []string) resolution {
 	if b.kindOf(r.key) == NodeVariable {
 		value, ok := b.variableValue(r.key)
 		if !ok {
-			r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: fileindex.Last(r.key)}
+			r.fail = unknownReceiver(fileindex.Last(r.key))
 			return r
 		}
 		r.key = value
@@ -177,7 +196,7 @@ func (b *builder) walkVariable(r *resolution, name string) (consumed, done bool)
 	}
 	value, ok := b.variableValue(r.key)
 	if !ok {
-		r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+		r.fail = unknownReceiver(name)
 		return false, true
 	}
 	r.key = value
@@ -232,15 +251,20 @@ func (b *builder) walkClass(r *resolution, name string, last bool, instance *boo
 			return true, false
 		}
 	}
+	if member := p.structMember; member != nil {
+		if consumed, done, ok := member(b, r, name, last); ok {
+			return consumed, done
+		}
+	}
 	base, external := b.externalBase(r.key)
 	switch {
 	case b.forwards(r.key):
-		r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+		r.fail = unknownReceiver(name)
 	case external && last:
 		r.key, r.kind, r.rule = b.deriveExternal(base, []string{name}), EdgeMember, ruleMember
 		return true, false
 	case external:
-		r.fail = &failure{reason: fileindex.UnresolvedUnknownReceiver, name: name}
+		r.fail = unknownReceiver(name)
 	default:
 		r.fail = noDefinition(name)
 	}

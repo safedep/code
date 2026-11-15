@@ -1,0 +1,44 @@
+{
+  "version": "3",
+  "index_version": "16",
+  "link_version": "18",
+  "unit": "go:std@go1.25.1",
+  "symbols": [
+    {
+      "key": "os//Remove",
+      "definitions": [
+        "go:std@go1.25.1//os/file.go//Remove"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "plugin//Open",
+      "definitions": [
+        "go:std@go1.25.1//plugin/plugin.go//Open"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "plugin//Plugin",
+      "definitions": [
+        "go:std@go1.25.1//plugin/plugin.go//Plugin"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "plugin//Plugin//Lookup",
+      "definitions": [
+        "go:std@go1.25.1//plugin/plugin.go//Plugin//Lookup"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "plugin//Symbol",
+      "definitions": [
+        "go:std@go1.25.1//plugin/plugin.go//Symbol"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": []
+}

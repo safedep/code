@@ -1,0 +1,4 @@
+{
+  "name": "vue-script-src",
+  "bin": { "app": "src/main.js" }
+}

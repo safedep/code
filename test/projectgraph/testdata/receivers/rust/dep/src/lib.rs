@@ -18,6 +18,8 @@ impl<A> Thing<A> {
     pub fn child(&self) -> &Thing<A> {
         self
     }
+
+    pub fn inspect(&self) {}
 }
 
 impl<A: Clone> Clone for Thing<A> {
@@ -35,6 +37,14 @@ pub fn try_thing() -> Option<Thing<u8>> {
 }
 
 pub fn load_thing() -> Result<Thing<u8>, String> {
+    Ok(Thing::new())
+}
+
+pub fn read_thing() -> std::io::Result<Thing<u8>> {
+    Ok(Thing::new())
+}
+
+pub fn parse_thing() -> anyhow::Result<Thing<u8>> {
     Ok(Thing::new())
 }
 

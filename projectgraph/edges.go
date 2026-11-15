@@ -138,6 +138,15 @@ func (s *edgeSet) joins(from, to string) bool {
 	return ok
 }
 
+// pairs yields each caller and callee that an edge joins.
+func (s *edgeSet) pairs(yield func(from, to string) bool) {
+	for pair := range s.linked {
+		if !yield(s.symbols.strings[pair[0]], s.symbols.strings[pair[1]]) {
+			return
+		}
+	}
+}
+
 // sorted returns the edges by caller, site, callee, kind and resolver.
 func (s *edgeSet) sorted() []Edge {
 	type entry struct {

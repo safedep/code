@@ -68,9 +68,66 @@ line or a name that starts with `tables`, can hit a limit of the index,
 as a table of thousands of entries. Its index then comes from the file
 with each top-level var value that holds only data blanked. Function bodies
 and values with a call or a function literal stay, so the calls of a
-generated file, as a `.pb.go` file, stay in the graph. The index keeps the
+generated file, as a `.pb.go` file, stay in the graph. A var value that
+names a function stays too, as a map of handlers, because a call of a
+function value finds the function only through that reference. The index keeps the
 hash of the file. If the skeleton still hits a limit, the file stays
 truncated, and reach counts it as budget.
+
+The JavaScript language reads `.jsx` files with its grammar, which parses
+JSX. It also reads the component files of Vue, Svelte and Astro (`.vue`,
+`.svelte`, `.astro`). The parse reads only the `<script>` blocks of such a
+file, and the Astro code between the two `---` lines at the top. Each byte
+outside them becomes a space, so each import and call keeps its line and
+column in the file. A file whose blocks have `lang="ts"` or
+`lang="typescript"` is TypeScript, and so is every Astro file. The index
+of the file holds the hash of the bytes of the file. The indexer picks the
+language and the code of a file once, and the parse reads them.
+
+A `<script>` element with a `src` attribute holds no code. The index
+records it as an import of the file that it loads, as
+`import './logic.js'` for `<script src="./logic.js">`, so the search
+reaches the code of that file.
+
+The parse does not read the rest of a component file, the markup: the
+template of a Vue file, the markup of a Svelte file and the body of an
+Astro file. The markup can call each name that the script of the file
+imports or defines, as `danger` in `@click="danger(item)"`, and a function
+that only the markup names, as `onClick` in `@click="onClick"`, has no
+caller in the graph. The markup can also call a name that the script does
+not bind: a component or a property that the app registers for all
+components, and a name that the framework imports with no import
+statement, as Nuxt does. Vue calls the functions of the options object of
+a component, as `mounted` and the functions of `methods`, and no code of
+the project calls them, also in a file with no template.
+
+So the index gives each component file one record with the reason
+`markup`, at the first byte outside the code that is no space. The record
+has no method name, so it concerns every target of a search that reaches
+the file. A narrower scope, as the targets that the names of the script
+reach, would miss a name that the app registers elsewhere, and a target
+that only such a name reaches would read `not-found`. A project of
+component files thus reads `uncertain` for each target that it does not
+find, as it did when the index did not read component files.
+
+A JSX element renders the component that its name holds, so the name is a
+reference, as a function value is. `<Child />` gives a `reference` edge
+to `Child`, and `<table.Row />` to `table.Row`. A lower case name, as
+`div`, is a tag of the host, which JSX gives as a string, so it gives no
+edge. A function in a JSX expression, as `handle` in
+`<button onClick={handle}>`, is a reference too. This holds in `.jsx`,
+`.tsx` and `.js` files.
+
+A spread attribute, as `<button {...handlers}>`, makes each property of
+the object a prop of the element, and React can call each function of it.
+When the object is a definition of the file, as `const handlers = {
+onClick() {} }`, the element gets a reference to each function that the
+definition holds, as `handlers.onClick`. The index cannot name the
+functions of any other object, as a parameter, the result of a call or an
+import. A function of such an object can have no other reference, so the
+spread gets a `computed-name` record, which concerns every target. The
+cases `javascript/jsx-spread-attributes` and
+`javascript/jsx-spread-unknown-object` show each answer.
 
 The index leaves out a Go file of a unit only when no Go build reads it by
 default: a `_test.go` file, a file with `//go:build ignore`, and a file
@@ -83,6 +140,14 @@ When the context ends, `Run` stops, marks each file that it did not index
 as `missing` and returns the result so far with the error of the context.
 The link step takes the partial result, and the reach query reports each
 missing file as a budget cause.
+
+Before it returns, `Run` puts the indexes and the artifacts of the files that
+it finished in the store. A run with the same deadline then reads them from
+the store and gets further into the project. The store gets no index and no
+artifact of a file that the deadline cut. An index with a deadline
+truncation fails its file. A cached plugin that returns after the end of
+the context can have stopped early with no error, so the store gets no
+artifact from such a call. The next run parses that file again.
 
 ### Store
 
@@ -172,19 +237,60 @@ of the highest confidence.
 A call that the link step cannot resolve is an unresolved site with a
 reason: `computed-name`, `dynamic-import`, `unknown-receiver`,
 `no-definition`, `ambiguous`, `limit`, `interface-receiver`,
-`trait-receiver` or `no-dependency-source`. The site keeps the method name of the call, so the
-reach query can tell which targets it concerns.
+`trait-receiver`, `no-dependency-source`, `function-value` or `markup`. The site keeps the method name of the call, so the
+reach query can tell which targets it concerns. A `function-value`
+record concerns no target in a search from the roots that the rules
+mark, and every target in a search with a source and in a summary.
+[A call of a function value](#a-call-of-a-function-value) gives the
+reason.
 
 A site with more than 20 candidates of its method name, as `render` in a
-Django project, is `ambiguous` and keeps no method name. The site gets no
-edge, so the search cannot follow what the candidates call, and the record
-concerns every target. A record with a method name concerns the targets
-that a definition of the name reaches.
+Django project, is `ambiguous`. The site gets no edge, so the search cannot
+follow what the candidates call. A record with a method name concerns the
+targets with that last segment and the targets that a definition of the
+name reaches, so it concerns what each candidate reaches. A candidate can
+also run code that no edge leads to, through an unresolved site of its
+own. So the record also concerns what each uncertainty of the code that a
+candidate reaches concerns, as [The honesty rule](#the-honesty-rule) says.
+
+An ambiguous site keeps its method name only where a call of the name can
+run nothing but a method of the name or a function value that a
+`reference` edge leads to. The profile of the language says where.
+
+- Go. A call runs a method of the name or a function value, as a field of
+  a function type. A function value has a `reference` edge from the code
+  that stores it, as [A call of a function value](#a-call-of-a-function-value)
+  argues. So the site keeps its name, and the search from the roots
+  reaches the stored function through that edge. A search with a source
+  and a summary may not reach the code that stores the value, so there the
+  site concerns every target. The case `go/name-ambiguous` shows each
+  answer.
+- Rust. A call on a receiver, as `h.handle(s)`, runs only a method of the
+  name, because a field that holds a function needs the form `(h.f)(s)`.
+  So the site keeps its name, as in the case `rust/name-ambiguous-method`.
+  A call with no receiver, as `handle(s)` of a parameter, can run any
+  function value, and the Rust index does not record each one. So that
+  site concerns every target, as in the case `rust/name-ambiguous-param`.
+  The reach query does not read the language of a site, so a search with a
+  source and a summary count a Rust site for every target too.
+- Python, JavaScript, TypeScript, Ruby and PHP. A call of a name can run
+  code that no definition of the name holds: an object with `__call__` in a
+  class attribute, a value that `__getattr__` gives, a function that a
+  module binds to the name by an import, or code of a module that no unit
+  gives. So an ambiguous site keeps no method name and concerns every
+  target. The cases `python/name-ambiguous-callable`,
+  `python/name-ambiguous-getattr`, `python/name-ambiguous-module` and
+  `python/name-ambiguous-nounit` show each form.
 
 A call on the result of another call, as `html.NewTokenizer(r).Next()`,
 needs the type of that result. When the link step does not know it, the
 site is a record with the method name, so a target of that method is
-`uncertain` and not `no-such-target`.
+`uncertain` and not `no-such-target`. A call on the result of a builtin of
+the language, as `Promise.resolve(x).then(f)`, is a record too. Some
+builtins give back a value that the call passes, or an element of it, as
+`new(thing)` in Go, `max(t, t)` in Python or `Object.assign(p, o)` in
+JavaScript. The method then runs on a value of the project or of a
+dependency.
 
 ### Result types
 
@@ -220,18 +326,115 @@ Rust follows the same rules, with these additions.
   crate `kit` of the unit. The external node keeps the written name, as
   `helper//serve`, and the package edge goes on to the definition in the
   unit, whose external key is `kit//serve`.
+- A `use` path names a module or an item, so the link step reads all of
+  the path of `use dep::top` as a module. The unit gives the function `top`
+  for that path, and a call of `top()` gets the package edge to it, as a
+  call of `dep::top()` does.
 - The index records the return type of each function and method, with
   `Self` as the type of its `impl`. A type drops `&`, `&mut`, `Box<..>`,
   `Rc<..>`, `Arc<..>` and its type arguments, so `&mut SmallVec<[u8; 4]>`
   is `SmallVec`. An `Option<T>` or a `Result<T, E>` result keeps `T` in
-  `Returns` and its wrapper in `Wraps`. `unwrap` and `expect` give `T`,
-  and so does a `?`, which the index does not record. A call of another
-  method of the wrapper, as `map`, has no type.
+  `Returns` and its wrapper in `Wraps`. A wrapper matches by the last name
+  of its path, so `std::io::Result<T>` and `anyhow::Result<T>` wrap `T`.
+  `unwrap` and `expect` give `T`, and so does a `?`. The index records each
+  `?` in the receiver of a method call as the name `?` in the target, as
+  `dep//load//?//run` for `dep::load()?.run()` and for `t.run()` after
+  `let t = dep::load()?`. A call of any other method of the wrapper, as
+  `map` or `inspect`, has no type, so the site is a record with the reason
+  `unknown-receiver`.
 - A declared type of a parameter, a field or a local that a unit gives
   binds the receiver. An associated function, as `Type::from_vec(v)`,
   binds the type that it returns, and `clone`, `to_owned`, `default` and
   `from` on a type of a unit keep the type also when the crate derives
   them.
+- `Box::new`, `Rc::new` and `Arc::new` hold their argument, so their
+  value is no instance of the pointer. A method call on it runs a method of
+  the argument. With no declared type, as `let w = Box::new(Html {})`, the
+  call is a record with the reason `unknown-receiver`. A declared type of
+  the local, as `let w: Box<dyn Write> = Box::new(Html {})`, binds the
+  receiver. A declared type binds the receiver only where the index of the
+  file knows no type of the value. So `let s: String = String::new()` keeps
+  the target `String//shout` of `s.shout()`.
+- A declared type holds at a call only when the function binds the name
+  once, as a parameter or a typed `let`, before the call. The index checks
+  this for a receiver that the call graph does not type and for a target
+  that goes through a declared type, as `run//t//inspect` for `t.inspect()`
+  in `fn run(t: Local)`. The call graph reads a parameter and a `let` of
+  one name, and no other binder. A `match` arm, an `if let`, a `for`, a
+  closure, another pattern, a `static`, a `const` or a macro can bind the
+  name again with another type. The hygiene of Rust keeps a `let` of a
+  macro body apart from the names of the caller, so a macro binds only a
+  name that its call passes as a token. A macro of std binds no such name,
+  except `thread_local!`, which makes a `static`. So a call on a name that such a binder binds
+  before the call is a record with the reason `unknown-receiver`, and so is
+  a call whose declared type does not hold. A method of the real type then
+  reads as `uncertain` and not as `not-found`.
+- The link step resolves the declared type of a parameter or a `let` at
+  the root of the file. So the index keeps a declared type only when no
+  scope that holds the binder declares the first name of the type. Such a
+  scope is a block or an inline module with an item, a `use` or an
+  `extern crate` of the name, or a function, an `impl` or a trait with a
+  type parameter of the name. A glob `use` can declare any name, except
+  `use super::*` in a module of the root, which reads the names of the
+  root. `self` and `super` in an inline module name other modules. So in
+  `fn run() { type Local = dep::Thing<u8>; let t: Local = dep::new_thing(); t.inspect(); }`
+  with a `struct Local` at the root, `t.inspect()` takes no method of the
+  root `Local`. The call keeps the target that the call graph gives, or a
+  record with the reason `unknown-receiver`. A type parameter with a bound,
+  as `S` in `fn run<S: Store>(s: S)`, names its bound. The type of a field
+  and the result type of a function do not get this check, so a type that
+  an inline module declares for them still resolves at the root.
+- `extern crate x;`, `extern crate x as y;`, `use x;` and `pub use x as y;`
+  of a whole crate bind `x` or `y` in their module to the crate. A path
+  through the binding is a path of the crate, so
+  `crate::secure::rand::thread_rng()` after `extern crate rand;` in the
+  module `secure` calls `rand//thread_rng`, and `crate::ffi::ErrorCode`
+  after `pub use libsqlite3_sys as ffi;` names
+  `libsqlite3_sys//ErrorCode`. A `use` of such a path into a crate that no
+  unit gives is a record with the reason `no-dependency-source` and the
+  crate as its import prefix, so only a target of that crate sees it. A
+  first name that names no module that the file sees, as a child module or
+  a module of the root, names a crate, also when a file of the project has
+  that name, as `extern crate schannel;` in `src/imp/schannel.rs`.
+- A path can start with a name that another `use` of the module binds. So
+  `helpers::run` after `use crate::deep::helpers;` names the function of
+  the module `deep::helpers`, and `sub::f` after `use dep::sub;` names
+  `dep//sub//f`. A `use` never reads its own binding, so
+  `use smallvec::smallvec;` names the crate `smallvec`.
+- A glob `use` brings each name of its module into the module of the
+  file. So `helpers::cleanup` after `use super::*;` in
+  `src/deep/worker.rs` names the function of the module `deep::helpers`,
+  as in the cases `rust/glob-use-module` and `rust/glob-use-crate-module`.
+  Rust reads a name of a glob `use` after a child module and a `use` of
+  the name, and before a crate, and so does the link step. A first name
+  that a glob `use` brings as a module never reads as another crate. The
+  path resolves in the project, or the `use` of the path keeps a record
+  with the reason `no-definition`. So a target under it reads `found` or
+  `uncertain`, and not `not-found`. A glob `use` in an inline module, as
+  `use super::*;` in `mod tests`, names its modules from the inline
+  module, so the link step does not read it for the module of the file.
+  Read from the module of the file, `super` names a sibling module, and a
+  path of a crate with the name of that sibling would lose its edge to the
+  crate, as the case `rust/glob-use-inline-module` shows. The path of a
+  glob `use` reads no other glob `use`.
+- The index records a type alias, as `pub type Image<P> = ImageBuffer<P>;`,
+  as a definition of the kind `alias`. The link step resolves the type
+  that it names, as the file of the alias names it, when a walk first
+  reads the alias. A type of the graph gets an `export` edge from the
+  alias. A type of another crate is its external key, with no node, so a
+  target of the type stays `no-such-target` and does not turn into
+  `not-found`. A path, a call or a declared type through the alias then
+  reads the type.
+  An alias of a type that the file does not resolve, as a primitive type,
+  gives the record `unknown-receiver` for a name after it.
+  Only a `cfg` attribute lets a scope declare a name more than once, as a
+  struct under one `cfg` and an alias under the other, or two aliases of
+  other types. The index does not know which `cfg` the build sets, so such
+  an alias names no type. A call through the name, as `Client::new` or
+  `c.send()` on a parameter of the type `Client`, then gets the record
+  `unknown-receiver` and a `name` edge to the method of each declaration.
+  It does not take the method of one declaration only, which would turn a
+  target of the other declaration into `not-found`.
 - A trait object or a generic bound `T: Trait` of a unit gets the `cha`
   edges to the implementations in the graph, through their external keys.
   With no implementation, the site is a record with the reason
@@ -241,6 +444,49 @@ The standard library is a unit too. Pass `GOROOT/src` as the unit
 `go:std@<version>`, as `-deps $(go env GOROOT)/src=go:std@go1.25.1`. It gives
 each import path whose first element has no dot, as `net/http`. The index
 step leaves out the `cmd` module of it, which no program imports.
+
+### Go fields, constants and variables
+
+The Go index records each named field of a struct as a `field` under the
+key of its type, as `html.go//Node//Data`, each constant as a `constant`,
+and each package variable as a `variable`. A field and a constant hold no
+code. A variable holds no code when the source shows that its value is no
+function: its declared type is a predeclared type or a type literal that
+is no function type, as `int` or `*Client`, or its value is a literal, a
+composite literal, an arithmetic expression, a call of a builtin, or the
+error of `errors.New` or `fmt.Errorf`. The index marks such a variable
+with `data`. A variable whose value is a name, as `run` in
+`var Run = run`, holds that value.
+
+Such a definition of data has no node. A read of it, as `n.Data` or
+`pgx.ErrNoRows`, gives no edge and no record, in the project and in the
+walk of an external key into a unit. A name on it, as `bufPool.Get()`,
+is a record with the reason `unknown-receiver`, because the walk does not
+know its type. A call of it, as `s.cfg.Remove("x")` for a field of a
+function type, runs the function value that it holds. No edge names that
+function, so the call is a record with the reason `function-value`, as
+[A call of a function value](#a-call-of-a-function-value) says. A search
+from a source that does not reach the code that stores the value keeps the
+target `uncertain`. The case `go/source-field-func` shows it.
+
+A call of any other variable keeps its edge or its record. A variable that
+holds a name gives the edge to that name, as a call of `Run` gives the
+edge to `run`. A variable whose value can be a function that the index does
+not know, as `var Handler = func() {...}` or `var h = makeHandler()`, gives
+a record with the reason `unknown-receiver`. So a target that only such a
+function reaches is `uncertain`, never `not-found`.
+
+A struct gets the methods of the types that it embeds. A method that an
+embedded interface declares, as `Close` of `ssh.Client` that embeds the
+interface `Conn`, runs on the value that the field holds, as a call on a
+value of the interface does. The walk of an external key into a unit that
+ends at such a method, or at a method of an interface of the unit, is a
+record with the reason `interface-receiver`. A type alias, as
+`type Context = context.Context`, names its target as a base, so a method
+of the alias is a method of the target type. An import of a package whose
+path has one element, as `context`, binds its name, so the base resolves
+to the external key `context//Context`, and a unit of the standard library
+gives it on.
 
 A `pypi:` unit is a distribution, as a site-packages directory or an
 unpacked wheel holds it. These rules apply to it.
@@ -388,6 +634,14 @@ the sources do.
 | `reach.SourcesAndRoots` | The sources and the roots that the rules marked. It is the default |
 | `reach.SourcesOnly` | The sources alone. The root fallback does not apply, so no result carries a `root-fallback` uncertainty. It needs at least one source |
 
+A search from a source also enters the load code of each package whose
+code it reaches, because the program runs that code before the source. The
+caller of a source can also run other code before it that no root
+reaches, and that code can store a function value. So in a search with a
+source, in either mode, a call of a function value and an ambiguous call
+concern every target. See
+[A call of a function value](#a-call-of-a-function-value).
+
 A source must name a first-party node of the graph. A key of no node, an
 external symbol or a definition of dependency code is an error of `Reach`
 that wraps `reach.ErrUnknownSource`, one per bad source, so a typo never
@@ -439,6 +693,11 @@ dependency code whose `Node.External` is the key, as the unexported
 definition and not to the external key, so a target that only the code of
 its unit calls is found through the definition. The call sites of a
 target leave out the package edges, which join a key to its definition.
+A definition of an internal package of a Go unit has an external key too,
+as `google.golang.org//grpc//internal//transport//NewServerTransport`. Only
+the module can import such a package, so no importer writes the key, but
+an advisory names the symbol by it. An internal package gives no symbol
+to a summary.
 
 `reach.TargetsByKey` reads a list of keys. `Target.Key` returns the key,
 and the JSON form of a target is its key. One breadth-first search from
@@ -511,10 +770,32 @@ causes it.
 An uncertainty concerns every target, unless its site says less. A call
 with an unknown receiver and a method name concerns the targets with that
 last segment, and the targets that any definition of that name reaches. A
+call of a Rust conversion runs a method of another name, as `into` runs the
+`from` of an impl of `From`. So the record concerns the method names that
+the profile of Rust gives for the name too. The reach query does not read
+the language of a site, so a call of the name in another language concerns
+them too. The cases `rust/into-ambiguous` and `rust/into-dependency` show
+it. A
 computed import with a static prefix concerns the targets under the
 prefix. A call into a package at no known definition concerns the targets
-that the code of the package reaches. A result caps the uncertainties that
-it lists at three per kind and keeps the full count in `Searched`.
+that the code of the package reaches. Code of the Go standard library that
+no unit gives concerns the targets that a Go method of an exported name
+reaches, as [Code outside the graph](#code-outside-the-graph) argues. A
+result caps the uncertainties that it lists at three per kind and keeps
+the full count in `Searched`.
+
+The code of such a scope can hold uncertainties of its own: an unresolved
+site, a dynamic flag, a truncation, or a file of a unit that the index
+step did not complete. That code can run code that no edge leads to. So
+the scope also concerns what each of them concerns, as the search of a
+query counts them, and the scope of a method name, a unit or a callback
+that one of them names goes on into that code too. Without that, a target
+that only such code reaches reads as `not-found`. The cases
+`rust/name-ambiguous-method` for a method name,
+`python/dependency-dark-unit-record` for a unit and
+`go/stdlib-callback-record` for a callback show it. A summary keeps the
+same scope: `reach.Scoped` holds the method names and the import prefixes
+of those uncertainties, and `Every` marks one that concerns every target.
 
 A file of dependency code that the index step did not complete counts
 only for a search that enters its package. A file of the project counts
@@ -556,3 +837,266 @@ record.
 
 A summary keeps every uncertainty of a symbol in a table, with the targets
 that its scope concerns, so `Status` applies the same rule with no graph.
+
+### A call of a function value
+
+A Go call of a function value, as `BackoffLinearWithJitter(d, j)(attempt)`
+or `route.Handlers[0](c)`, is a record with the reason `function-value`.
+In a search from the roots that the rules mark, the record concerns no
+target. This is sound because that search reaches each function that such
+a call can run. A Go function value is one of these:
+
+- A function or a method that code uses as a value: an argument, the
+  operand of a conversion, the right side of an assignment or a
+  declaration, a return value, an element of a composite literal, or the
+  value of a send on a channel. The index records a reference there, and
+  the link step adds a `reference` edge from the code that holds the value.
+  The value exists only after that code runs, so the search reaches that
+  code and then the function. The value is a name, as a function of
+  another file of the package, a member chain, a method expression, as
+  `(*T).M`, a method value on a call, a composite literal, a type assertion,
+  `new` or a dereference, as `f().M`, or a generic instantiation, as `F[int]`.
+  Each of them can be in parentheses or behind `&`. The index keeps a
+  predeclared name, as `clear`, as a name too. A declaration of another
+  file of the package can shadow it, and the index of one file does not
+  see that file. The link step resolves the name in the package, or drops
+  it when no declaration binds it. The case `go/predeclared-shadow` shows
+  it. A parameter or a local of a declared type holds a value of the
+  type, so its name gives no reference. The index takes the name as that
+  local only where the declaration is in scope. So a typed local of a
+  closed block does not hide a function of the package with the same name.
+  The case `go/typed-local-block` shows it.
+- A method value whose method the index or the link step cannot name, as
+  `ts[0].Close` or `h.Handle` on a value of an interface. The index or the
+  link step records the reference with the method name. That record
+  concerns the targets that a method of the name reaches, as a call
+  `h.Handle()` does.
+- A function literal. The index gives the calls of the literal to the
+  definition or the module top level that holds it. So a function that
+  returns a literal reaches the calls of the literal.
+- A package-level value, as a map of handlers. Its references start at the
+  module top level of its file. The program loads each package that it
+  imports before any code of the package runs. So a file that imports a
+  package that runs code at load runs code at load too, also when the
+  package is in a unit of dependency code. An import edge joins the
+  importer to the module top level, and a search from `main` reaches it.
+  An external key also has an import edge to each module top level of its
+  package that runs code at load.
+- A value that reflection gives, as `reflect.Value.Call`,
+  `reflect.Value.MethodByName` or `reflect.Value.Method`. No reference
+  leads to such a function. A call or a reference of the methods `Call`,
+  `CallSlice`, `Method` or `MethodByName` in a file that imports `reflect`
+  gets a `computed-name` record, which concerns every target. The link step
+  does not always know that the receiver is a `reflect.Value`, so the rule
+  takes any receiver. Each other form of `reflect` gives back a value that
+  code stored with a reference, or a method that these methods give. So
+  `Value.Interface().(func())` needs no record of its own. `MakeFunc` makes
+  a function that calls the function of its argument, and the argument is
+  a reference.
+- A value that a plugin gives, as `sym.(func())()` after `plugin.Open`
+  and `Plugin.Lookup`. The plugin is code of another build. `Open` runs
+  its init, and `Lookup` gives its functions and variables. No reference
+  of the graph names them, also when a unit gives the standard library. So
+  a call or a reference of `Open` or `Lookup` in a file that imports
+  `plugin` gets a `computed-name` record too, in both modes. The cases
+  `go/plugin-lookup` and `go/plugin-lookup-std` show it.
+
+No other package of the standard library gives a function that no
+reference names. A callback that the standard library stores, as the
+function of `syscall.NewCallback`, `sync.OnceFunc` or `runtime.SetFinalizer`,
+is an argument, so a reference names it. `runtime.FuncForPC` gives no
+function that code can call. A conversion with `unsafe` of a pointer to a
+function value needs that value first, and a reference names it.
+
+A function value that code outside the graph makes, as the result of
+`sync.OnceFunc(g)`, runs code outside the graph. A call of that code makes
+the value, and the call has the record that
+[Code outside the graph](#code-outside-the-graph) gives. The search
+reaches that record where it reaches the code that makes the value.
+
+The argument holds only for a search that starts from the roots that the
+rules mark. Those roots are the entries of the program: `main` with the
+module top level of each file of its package, a test root, or, with the
+root fallback, each module top level and each exported symbol. Code that
+stores a function value runs only after an entry, so the search reaches
+it. An import edge joins a module top level to each module top level of a
+package that it imports and that runs code at load, so the search also
+reaches the load code of each package that the program loads.
+
+A search with a source does not have the argument, in either source mode.
+The caller of a source can run code before the source that no root
+reaches, and that code can store a function value: the init of a package
+that only `main` imports and that fills a registry, or a `setup` that
+`main` calls before `serve`. With `SourcesAndRoots` the source is an entry
+that the rules missed, so its caller can be code that the rules missed
+too. So in a search with a source, a `function-value` record concerns
+every target, as a `computed-name` record does. So does an ambiguous site,
+because a Go call of a name can run a function value in a field. The case
+`go/source-function-value` holds both forms of the store, and
+`go/name-ambiguous` holds a field.
+
+A summary does not have the argument either. A summary is a search from
+one symbol of a unit, and a search of any kind reads it: a search from the
+roots or from a source, of a project that the summary does not see. The
+value can come from that project, from another unit, or from a package of
+the unit that the symbol does not import, as a registry that the init of
+another package fills. So a summary counts a `function-value` record and
+an ambiguous site for every target. `summarytest` checks a summary against
+a reach query of the unit graph from the symbol as a root of kind `query`,
+which has the same rule.
+
+A query with a source, or with `IncludeTests`, adds a load step, and the
+search of a test path adds it too. The program runs the load code of a
+package before the source or the test, and no path from the source or the
+test root leads to it. Each node that the search reaches enters the module
+top level of each file of its load group, as `Graph.LoadGroup` gives it.
+The load group is the package of the file in a language whose program
+loads a whole package before any code of the package runs, as Go. In
+another language it is the file alone, as a Python or a JavaScript module,
+which runs its top level before any of its functions can run. A test file
+is in the load group only of the code of a test. The span of a method
+name, a unit or a callback takes the same step, so the code that a
+candidate of a method name holds in its package counts too. A hop of the
+step has the resolver `load`, and `reach.PathString` writes it as
+`main.go (load)`.
+
+The step keeps two answers sound. A call in the load code, as `var x =
+dep.Init()`, runs before the source, so the search finds its target. A
+value that the load code stores in a variable or an attribute is reached
+through its reference, also where the call of the value is a record with a
+name, as `o.hook()` in the case `python/source-module-load`. The step only
+adds nodes to a search, so it turns no answer into `not-found`. It costs
+precision. A source that calls nothing still reaches the load code of its
+package, as `idle` does in the case `go/source-package-load`. A search from
+the roots alone does not take the step, so its results do not change. The
+summary of a unit does not take it either. A summary answers for a search
+from one symbol of a unit, and the import edges of an external key give
+that search the load code of its Go package. The cases
+`go/source-package-load`, `python/source-module-load` and
+`javascript/source-module-load` hold a value in the load code and call it
+from a source.
+
+A call of a parameter, a local or a field that holds a function, as `f(x)`
+or `t.hook(x)`, is no `function-value` record. It is a record with the
+name, as `f` or `hook`, which concerns what a definition of the name
+reaches. In a search from the roots of a Go program, the `reference` edge
+of the stored function covers the call. In a search with a source, and in
+Rust, a function of another name that no path reaches can run. So such a
+call can read as `not-found`. Only an ambiguous site of the form concerns
+every target.
+
+The rule does not apply to Rust. The Rust index records a function that an
+argument, a `let`, an assignment, a `return`, a field initializer or an
+array names. It does not record a function that the tail expression of a
+block, a match arm, a shorthand field or a tuple holds, and a Rust function
+returns its tail expression. So a call of a Rust function value in an
+expression, as `v[0](x)`, stays a `computed-name` record.
+
+### Unknown code of a unit of dependency code
+
+A failed or truncated file of a unit of dependency code counts for every
+target when the search enters the unit. An unresolved site in the code of a
+unit with no method name, as an import that no file of the unit gives,
+counts for every target too. The closure of the edges of the unit, which
+the scope of a unit reads, does not bound such code, for two reasons.
+
+- The unknown code can call a package that no known code of the unit
+  calls. A failed file has no index, so its imports are not known. The
+  imports of the other files of the unit do not bound them, and neither does
+  the closure of the imports of the packages of the unit, because the
+  import closure reads the same files. Only the manifest of the unit, as the
+  `require` list of a `go.mod`, bounds them. The link step does not record
+  it.
+- The project can give the unit a value of an interface, as a handler. The
+  unknown code can call a method of that value, and the method can call any
+  code of the program. A function value has a reference edge from the code
+  of the project that holds it, so the search reaches the function without
+  the unit. A value of an interface has no such edge. Known code of the unit
+  records such a call with its method name, and the record concerns every
+  target of the name. The unknown code can hold such a call for any name.
+
+So a scope narrower than every target can make a target `not-found` that
+the program reaches. The case `go/dependency-failed-callback` shows it:
+`os/exec.LookPath` stays uncertain only through the budget of the failed
+file.
+
+### Code outside the graph
+
+A Go call or reference of an external key whose package no unit gives
+runs code that the graph does not hold. That code can call back into code
+that the graph holds, and no edge shows it. As an example, `ReadMessage` of
+`gorilla/websocket` passes its reader to `io.ReadAll`, and `io.ReadAll`
+calls `Read` of the reader. With no unit of the standard library, the
+search stops at the key `io//ReadAll`, and `messageReader.Read` reads as
+`not-found`. So the link step gives each such key a record with the reason
+`no-dependency-source`, and its caller is the key. The scope of the record
+depends on what the code can call.
+
+- The Go standard library imports no package outside it. So its code can
+  run code of another module only through a value that it holds: a function
+  value, or a method of a value. A function value has a reference edge from
+  the code that makes it, so the search reaches the function without the
+  standard library. A function of a plugin has no such edge, so a call of
+  `plugin.Open` or `Lookup` concerns every target. See
+  [A call of a function value](#a-call-of-a-function-value).
+  A method of a value runs through an interface or through reflection. A
+  type outside the standard library cannot declare a method of an
+  unexported name of an interface of the standard library. It can only
+  embed a type of the standard library that has the method, and that method
+  is code of the standard library. Reflection gives only the methods of an
+  exported name. So the record of a key of the standard library is a
+  callback, as `Callback` marks it. It concerns the targets that a Go
+  method of an exported name reaches, in the project and in each unit, as
+  the scope of a method name does, and what the uncertainties of that code
+  concern. Each key of the standard library gives
+  the same scope, so a result lists the callback once, with no key.
+- A package of another module can import the package of any target and
+  call any function of it. So its record concerns every target. A summary
+  links one unit alone, and the reader of a summary joins the summary of
+  each module that the unit calls. So the link step gives this record only
+  in a build with a project file.
+- C code that cgo calls, as `C//f`, can call each Go function that an
+  `//export` comment names. So its record concerns every target.
+- A builtin runs no code of the program, except `panic`. The runtime prints
+  the value of a panic that no `recover` stops with its method `Error` or
+  `String`. So `panic` has a record for each of the two methods.
+
+A Go call of a method on a value whose type the link step does not know is
+a record with the method name, as `srv.ListenAndServe()` on a
+package-level variable, on an element of a slice, on a range variable, on a
+parameter of an interface type, or after a dot import of `net/http`. Such a
+call can run a method of a type of a package that no unit gives, and no
+edge leads to that code. So the link step gives the caller of each such
+record the record of that code too.
+
+- When no unit gives the standard library, the caller gets a callback
+  record. Code of the standard library can give a value of its type to any
+  code, as an `error`, so the rule does not ask for an import.
+- When a Go file imports a package of another module that no unit gives,
+  in a build with a project file, the caller gets a record that concerns
+  every target. Only code that imports the module, or code of the module,
+  makes a value of its type, so such an import names the module.
+- A record of the reason `no-dependency-source` names its package, and
+  that package has its own record. It gets no other record.
+
+The cases `go/stdlib-callback-method-record` and
+`go/dependency-no-unit-method` show it.
+
+A target that no Go method of an exported name reaches keeps its answer.
+In the case `go/stdlib-callback-scope`, only the function `Dial` calls
+`handshake`, so `handshake` stays `not-found`. A search that reaches no
+such key keeps every answer. With the unit `go:std@<version>`, the standard
+library is code of the graph and gives no callback. A unit of each module
+removes the records of the other modules.
+
+Two gaps stay.
+
+- A target of a package that no unit gives, which the project names only
+  in a value, as the composite literal `legacy.Config{}`, has no node. The
+  standard library can call a method of that value, and the method can call
+  the target. The graph holds none of that code, so the target reads as
+  `no-such-target`.
+- The rule applies to Go only. Code of another language that no unit gives,
+  as the standard library of Python with no `python:std` unit, can call a
+  method of a value too, and a call of a method on a value of an unknown
+  type can run such code. No record shows it.

@@ -1,0 +1,46 @@
+{
+  "version": "3",
+  "index_version": "16",
+  "link_version": "18",
+  "unit": "go:github.com/acme/kit@v1.0.0",
+  "symbols": [
+    {
+      "key": "github.com//acme//kit//Dispatch",
+      "definitions": [
+        "go:github.com/acme/kit@v1.0.0//kit.go//Dispatch"
+      ],
+      "reaches": [
+        "os//Remove",
+        "os//exec//Command"
+      ],
+      "uncertainties": [
+        0,
+        1
+      ]
+    }
+  ],
+  "targets": [
+    "os//Remove",
+    "os//exec//Command"
+  ],
+  "uncertainties": [
+    {
+      "kind": "unresolved-call",
+      "site": {
+        "path": ""
+      },
+      "text": "the Go standard library, which no unit gives (no-dependency-source)",
+      "callback": true
+    },
+    {
+      "kind": "unresolved-call",
+      "key": "go:github.com/acme/kit@v1.0.0//kit.go//Dispatch",
+      "site": {
+        "path": "go:github.com/acme/kit@v1.0.0//kit.go",
+        "line": 5,
+        "column": 30
+      },
+      "text": "handlers (function-value)"
+    }
+  ]
+}

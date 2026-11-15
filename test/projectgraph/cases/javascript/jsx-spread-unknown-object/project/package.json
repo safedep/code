@@ -1,0 +1,4 @@
+{
+  "name": "jsx-spread-unknown-object",
+  "bin": { "app": "src/main.js" }
+}

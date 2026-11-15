@@ -32,10 +32,22 @@ type referenceSyntax struct {
 	// of a, b := f, g. The last child of each list holds the value, so the
 	// key of a keyed element is no value.
 	lists map[string]bool
+	// spreads maps a holder to the node type of a spread in it, as
+	// {...handlers} in <button {...handlers}>. The spread passes each
+	// property of an object, so each function of the object is a value.
+	spreads map[string]string
+	// intrinsic reports whether a value of the holder names no code of the
+	// file by a rule of the language, as the tag div of a JSX element.
+	intrinsic func(p *projection, holder, value *sitter.Node) bool
 	// rawNames marks a language whose files name the classes of other
 	// files of a unit with no import, as C#. A name that the file does not
 	// bind keeps its text, and the link step resolves it or drops it.
 	rawNames bool
+	// value replaces reference for a language whose function values take
+	// more forms than a name or a member chain, as Go. It gives the member
+	// node of a method value whose receiver the index cannot name, and the
+	// visitor records the method name of that member.
+	value func(p *projection, caller string, value *sitter.Node) (target string, member *sitter.Node)
 }
 
 // referenceVisitor adds each function, method, class or import that the
@@ -89,15 +101,29 @@ func referenceVisitor(p *projection) visitor {
 		}
 		caller := stack[len(stack)-1].key
 		for _, value := range syntax.unlist(values) {
-			target, ok := p.reference(*syntax, caller, value)
-			if !ok {
+			if spread, ok := syntax.spreads[kind]; ok && value.Type() == spread {
+				p.addSpread(*syntax, caller, value)
+				continue
+			}
+			if syntax.intrinsic != nil && syntax.intrinsic(p, node, value) {
+				continue
+			}
+			// A read of a field, a constant or a variable of data runs
+			// no code and gives the reader no function.
+			target, member := p.valueTarget(*syntax, caller, value)
+			if def := p.defs[target]; target == "" && member == nil || def != nil && def.HoldsData() {
 				continue
 			}
 			at := ast.GetNodePosition(value)
-			if k := (site{int(at.StartLine), int(at.StartColumn), caller, p.text(value)}); !seen[k] {
-				seen[k] = true
+			k := site{int(at.StartLine), int(at.StartColumn), caller, p.text(value)}
+			switch {
+			case seen[k]:
+			case target != "":
 				p.addReference(value, caller, p.targets([]string{target}))
+			default:
+				p.addValueRecord(member, caller)
 			}
+			seen[k] = true
 		}
 	}
 }
@@ -115,6 +141,75 @@ func (p *projection) addReference(node *sitter.Node, caller string, targets []st
 		Column:  int(site.StartColumn),
 		Text:    callgraph.ClipText(p.text(node)),
 		Targets: targets,
+	})
+}
+
+// addSpread adds the functions of the object that a spread passes, as
+// handlers in <button {...handlers}>. React makes each property of the
+// object a prop of the element and can call each function. The index names
+// the functions that a definition of the file holds, as handlers//onClick.
+// The index cannot name the functions of any other object, as a parameter,
+// the result of a call or an object with no function definition. A
+// function of such an object can have no reference, so the site gets a
+// computed-name record, which concerns every target.
+func (p *projection) addSpread(syntax referenceSyntax, caller string, spread *sitter.Node) {
+	operand := spread.NamedChild(0)
+	if target, ok := p.reference(syntax, caller, operand); ok {
+		if functions := p.functionsOf(target); len(functions) > 0 {
+			p.addReference(operand, caller, p.targets(functions))
+			return
+		}
+	}
+	site := ast.GetNodePosition(spread)
+	p.ix.Unresolved = append(p.ix.Unresolved, fileindex.Unresolved{
+		Caller: p.caller(caller, site),
+		Line:   int(site.StartLine),
+		Column: int(site.StartColumn),
+		Text:   callgraph.ClipText(p.text(spread)),
+		Reason: fileindex.UnresolvedComputedName,
+	})
+}
+
+// functionsOf returns the functions and the methods that the definition of
+// the key holds directly, as handlers//onClick of handlers.
+func (p *projection) functionsOf(key string) []string {
+	var functions []string
+	for k, def := range p.defs {
+		if fileindex.Parent(k) == key && (def.Kind == fileindex.DefFunction || def.Kind == fileindex.DefMethod) {
+			functions = append(functions, k)
+		}
+	}
+	slices.Sort(functions)
+	return functions
+}
+
+// valueTarget returns the per-file target of a value, or the member node
+// of a method value whose receiver the index cannot name.
+func (p *projection) valueTarget(syntax referenceSyntax, caller string, value *sitter.Node) (string, *sitter.Node) {
+	if syntax.value != nil {
+		return syntax.value(p, caller, value)
+	}
+	target, _ := p.reference(syntax, caller, value)
+	return target, nil
+}
+
+// addValueRecord records a method value whose receiver the index cannot
+// name, as ts[0].Close. The code that gets the value can call any method of
+// the name, so the record keeps the method name, as the record of a call
+// on such a receiver does. Its site is the method name, so it never shares
+// the site of a call that the receiver makes.
+func (p *projection) addValueRecord(member *sitter.Node, caller string) {
+	syntax := p.rules().references
+	name := member.ChildByFieldName(syntax.property)
+	site := ast.GetNodePosition(name)
+	p.ix.Unresolved = append(p.ix.Unresolved, fileindex.Unresolved{
+		Caller:   p.caller(caller, site),
+		Line:     int(site.StartLine),
+		Column:   int(site.StartColumn),
+		Text:     callgraph.ClipText(p.text(member)),
+		Receiver: callgraph.ClipText(p.text(member.ChildByFieldName(syntax.object))),
+		Method:   p.text(name),
+		Reason:   fileindex.UnresolvedUnknownReceiver,
 	})
 }
 
@@ -145,7 +240,9 @@ func (syntax referenceSyntax) unlist(values []*sitter.Node) []*sitter.Node {
 // or a member chain, and a definition, an import or the instance of a
 // class binds its first name.
 func (p *projection) reference(syntax referenceSyntax, caller string, value *sitter.Node) (string, bool) {
-	if value == nil || p.inExport(value) && syntax.identifiers[value.Type()] {
+	// A name in the body of a function that an export statement declares
+	// is a value of that function, not the export.
+	if value == nil || caller == p.cg.FileName && p.inExport(value) && syntax.identifiers[value.Type()] {
 		return "", false
 	}
 	var names []string

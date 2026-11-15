@@ -1,0 +1,37 @@
+source: safedep:hand
+description: The template of App.vue names onClick as a click handler. No code of the script calls onClick, so only the markup record makes danger, which onClick calls, read uncertain and not not-found.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+exact_edges: true
+edges:
+  - from: src/main.js
+    to: src/App.vue
+    kind: import
+    confidence: high
+    site: src/main.js:2
+  - from: src/main.js
+    to: vue//createApp
+    kind: direct
+    confidence: high
+    site: src/main.js:4
+  - from: src/App.vue//onClick
+    to: plug//danger
+    kind: direct
+    confidence: high
+    site: src/App.vue:9
+unresolved:
+  - caller: src/App.vue
+    site: src/App.vue:1
+    reason: markup
+results:
+  - target: plug//danger
+    status: uncertain
+    call_sites:
+      - caller: src/App.vue//onClick
+        site: src/App.vue:9
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/App.vue:1

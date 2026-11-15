@@ -176,3 +176,79 @@ func TestReachRejectsSourcesOnlyWithNoSource(t *testing.T) {
 	_, err := Reach(context.Background(), g, Query{Targets: targetsOf(t, "yaml//load"), SourceMode: SourcesOnly})
 	assert.ErrorContains(t, err, "source mode SourcesOnly needs at least one source")
 }
+
+// loaded has the Go package app of two files, whose b.go holds os.Remove
+// as a value, and the package lib, whose c.go holds os.Chdir. run calls
+// the field hook of a value, and dispatch calls Handle on a value whose
+// type the link step does not know. T.Handle of lib calls the field hook
+// too. The Python module other.py holds os.system as a value.
+const loaded = `
+file app/a.go indexed go
+file app/b.go indexed go
+file lib/c.go indexed go
+file other.py indexed python
+root app/a.go//main
+edge app/a.go//main app/a.go//run direct 3
+edge app/b.go os//Remove reference 3
+edge lib/c.go os//Chdir reference 2
+edge other.py os//system reference 1
+unresolved app/a.go//run 5 unknown-receiver hook
+unresolved app/a.go//dispatch 7 unknown-receiver Handle
+unresolved lib/c.go//T//Handle 4 unknown-receiver hook
+edge other.py//f os//getcwd direct 2
+`
+
+func TestReachFromASourceEntersItsLoadGroup(t *testing.T) {
+	g := graphOf(t, loaded)
+	for _, tt := range []struct {
+		name, source, target string
+		want                 Status
+		path                 []string
+	}{
+		{name: "a file of the package of the source", source: "app/a.go//run", target: "os//Remove", want: Found, path: []string{"app/a.go//run", "app/b.go", "os//Remove"}},
+		{name: "a package that the span of a method enters", source: "app/a.go//dispatch", target: "os//Chdir", want: Uncertain, path: []string{}},
+		{name: "a file of no package of the search", source: "app/a.go//run", target: "os//system", want: NotFound, path: []string{}},
+		{name: "the file of the source", source: "other.py//f", target: "os//system", want: Found, path: []string{"other.py//f", "other.py", "os//system"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			r := reachOne(t, g, Query{Targets: targetsOf(t, tt.target), Sources: sourcesOf(t, tt.source), SourceMode: SourcesOnly})
+			assert.Equal(t, tt.want, r.Status)
+			assert.Equal(t, tt.path, pathKeys(r.Path))
+		})
+	}
+
+	r := reachOne(t, g, Query{Targets: targetsOf(t, "os//Remove")})
+	assert.Equal(t, NotFound, r.Status, "a search from the roots of kind main enters the load code through the roots and the import edges")
+}
+
+// TestReachScopesAValueCallOnlyFromTheRoots checks that a call of a
+// function value concerns no target, and an ambiguous call only what its
+// method name concerns, in a search from the roots that the rules marked.
+// A search with a source and the sets of ExploreAll may not reach the code
+// that stores the value, so there each record concerns every target.
+func TestReachScopesAValueCallOnlyFromTheRoots(t *testing.T) {
+	const spec = `
+root app/a.go//main
+edge app/a.go//main app/a.go//serve direct 3
+edge app/a.go//H//Handle os//Getwd direct 12
+edge app/a.go//dead os//Remove direct 16
+`
+	for _, tt := range []struct{ name, record string }{
+		{name: "a call of a function value", record: "unresolved app/a.go//serve 8 function-value"},
+		{name: "an ambiguous call of a method name", record: "unresolved app/a.go//serve 8 ambiguous Handle"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			g := graphOf(t, spec+tt.record)
+			remove := targetsOf(t, "os//Remove")
+			assert.Equal(t, NotFound, reachOne(t, g, Query{Targets: remove}).Status, "from the roots")
+			for _, mode := range []SourceMode{SourcesAndRoots, SourcesOnly} {
+				r := reachOne(t, g, Query{Targets: remove, Sources: sourcesOf(t, "app/a.go//serve"), SourceMode: mode})
+				assert.Equal(t, Uncertain, r.Status, "source mode %d", mode)
+			}
+			sets, err := NewExplorer(g).ExploreAll(context.Background(), []string{"app/a.go//serve"})
+			require.NoError(t, err)
+			require.Len(t, sets.Sources[0].Uncertainties, 1)
+			assert.True(t, sets.Uncertainties[sets.Sources[0].Uncertainties[0]].Concerns(remove[0]), "a summary")
+		})
+	}
+}

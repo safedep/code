@@ -28,8 +28,26 @@ type profile struct {
 	// link adds the edges that the loader of the language runs, as the
 	// init functions of Go.
 	link func(b *builder, ix *fileindex.Index)
+	// outsideCode adds the records of code outside the graph that code of
+	// the language can run, as the Go standard library with no unit. It
+	// runs once, when every other record of the build is known.
+	outsideCode func(b *builder)
+	// callbackMethod reports whether code outside the graph can call a
+	// definition of the language back on a value that it holds, as a Go
+	// method of an exported name. A record that Callback marks concerns
+	// what such a definition reaches.
+	callbackMethod func(n *Node) bool
+	// structMember reads a name of a class that is no method of it, as a
+	// field of a Go struct or a method that an embedded interface
+	// declares. ok reports whether the class has such a member.
+	structMember func(b *builder, r *resolution, name string, last bool) (consumed, done, ok bool)
 	// qualified resolves a qualified name, as com.x.Service in Java.
 	qualified func(b *builder, name string) (string, bool)
+	// typePath resolves a type path that a file writes and that its scope
+	// does not bind, as kit::Store in type Handle = kit::Store of Rust. It
+	// gives a key and makes no node, where scopeFallback walks the names of
+	// a call and makes the node of the key that the call reaches.
+	typePath func(b *builder, sc *scope, written string) (string, bool)
 	// scopeFallback resolves a name that no scope of the file binds, as a
 	// Java class of a wildcard import of a dependency.
 	scopeFallback func(b *builder, sc *scope, caller, first string, rest []string, target string) []resolution
@@ -180,6 +198,10 @@ type profile struct {
 	// with no item and no alias binds the first segment, as os for import
 	// os.path in Python.
 	importBindsRoot bool
+	// importsBindAlias marks a language where each import binds its alias,
+	// also an alias that is the whole module, as context for import
+	// "context" in Go.
+	importsBindAlias bool
 	// moduleNames marks a language where a module gives on each name that
 	// it binds, imports too, unless it lists its exports, and where a
 	// package gives on its submodules, as Python.
@@ -194,9 +216,24 @@ type profile struct {
 	// exactWildcards marks a language whose wildcard import of a package of
 	// the project names a class exactly, so its edge is direct.
 	exactWildcards bool
-	// mainLoadsPackage marks a language whose program initializes the
-	// package of main before main runs, as Go.
-	mainLoadsPackage bool
+	// loadsPackages marks a language whose program initializes a package
+	// before any code of the package runs, as Go: the package of main
+	// before main, and the package of an external key before the symbol.
+	loadsPackages bool
+	// functionValues marks a language whose function values the link step
+	// joins to the code that holds them, as Go. A call of a function value
+	// gets the reason function-value in place of computed-name, and it
+	// concerns no target in a search from the roots. A reference to a method that the link step cannot
+	// name, as h.Handle on an interface, gets a record with the method name.
+	functionValues bool
+	// receiverMethods marks a language where a call on a receiver, as
+	// x.m(), runs only a method of the name m, as Rust. A Rust field that
+	// holds a function needs another form, as (x.f)().
+	receiverMethods bool
+	// reflection names the packages of the language that give or run a
+	// function that no reference names, and their methods that do it, as
+	// Call of reflect.Value in Go.
+	reflection []reflection
 	// helperProgram reports whether the main of a file is a helper
 	// program of the project and not the program that its users run, as a
 	// build script or an example of a Rust crate. Its root stays, and it
@@ -226,6 +263,32 @@ func profileOf(lang langcode.Code) *profile {
 		return p
 	}
 	return noProfile
+}
+
+// MethodAliases returns the names of the methods that a call of the method
+// name can run by another name, as from for into of Rust. The reach query
+// does not read the language of a site, so it takes the aliases of every
+// language. Without them, a call of into whose From impl calls a target
+// concerns only the targets that a method into reaches, and the target
+// reads as not-found.
+func MethodAliases(method string) []string {
+	var out []string
+	for _, p := range profiles {
+		out = append(out, p.methodAliases[method]...)
+	}
+	return out
+}
+
+// keepsAmbiguousMethod reports whether an ambiguous site with the receiver
+// keeps its method name, so the reach query scopes it by the name. A call
+// on a receiver of a language with receiverMethods runs only a method of
+// the name. A call of a language with functionValues runs a method of the
+// name or a function value, and a reference edge leads to each function
+// value. In another language a call of a name can run code that no
+// definition of the name holds, as a Python class attribute that holds an
+// object with __call__, or a Rust parameter that holds a function.
+func (p *profile) keepsAmbiguousMethod(receiver string) bool {
+	return p.functionValues || p.receiverMethods && receiver != ""
 }
 
 func isInstanceKeyword(lang langcode.Code, name string) bool {

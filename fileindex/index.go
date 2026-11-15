@@ -9,6 +9,7 @@ import (
 	"cmp"
 	"crypto/sha256"
 	"encoding/hex"
+	"iter"
 	"slices"
 	"strings"
 
@@ -19,7 +20,7 @@ import (
 // Version is the version of the index records and of the rules that fill
 // them. Bump it when a field, a kind, an order or a fill rule changes. A
 // store keys an index by Version, so the bump makes every older index miss.
-const Version = "15"
+const Version = "16"
 
 // DefaultTestPaths are the globs that mark the test files of the common
 // layouts, as projectgraph.Options.TestPaths takes them. A glob with no "/"
@@ -57,7 +58,22 @@ const (
 	// DefInterface is a TypeScript or Go interface. It has no code, but a
 	// declared type can name it and a class can implement it.
 	DefInterface DefKind = "interface"
+	// DefField is a named field of a Go struct, under the key of its type,
+	// as Node//Data. It holds data and no code.
+	DefField DefKind = "field"
+	// DefConstant is a constant of a Go package. It holds data and no code.
+	DefConstant DefKind = "constant"
+	// DefAlias is a type alias, as type A = B of Rust. It has no code. A
+	// path through it goes on to the type that it names. A Go alias stays
+	// a class with the type that it names as its base, because a Go method
+	// can name the alias as its receiver, so the alias holds methods.
+	DefAlias DefKind = "alias"
 )
+
+// TryName is the name that a ? of Rust takes in a call target, as
+// dep//load//?//run for dep::load()?.run(). The ? gives the value inside
+// an Option or a Result, so the name after it is a name of that value.
+const TryName = "?"
 
 type CallKind string
 
@@ -96,8 +112,19 @@ const (
 	UnresolvedTraitReceiver UnresolvedReason = "trait-receiver"
 	// UnresolvedNoDependencySource is a call on a value whose type comes
 	// from a package with no code in the graph, as the result of a
-	// function of a module that no unit gives.
+	// function of a module that no unit gives, or an external key of such a
+	// package, whose code can call back into the graph.
 	UnresolvedNoDependencySource UnresolvedReason = "no-dependency-source"
+	// UnresolvedFunctionValue is a call of a function value, as f(x)(y) or
+	// handlers[i](c), in a language whose function values the link step
+	// joins to the code that holds them. The link step gives the reason
+	// in place of computed-name, and the record names no target.
+	UnresolvedFunctionValue UnresolvedReason = "function-value"
+	// UnresolvedMarkup is the markup of a component file, as the template
+	// of a Vue component, which the index does not parse. The framework
+	// runs the markup and calls the functions of the component, so the
+	// record can name any target.
+	UnresolvedMarkup UnresolvedReason = "markup"
 )
 
 type FlagKind string
@@ -206,9 +233,10 @@ type Export struct {
 }
 
 // Definition is one module, function, method, class, constructor, module
-// variable or interface. Key is its symbol key, as src/a.py//Parser//parse.
-// Parent is the class key of a method. A JavaScript function that an object
-// property or a property assignment holds is a method with no parent.
+// variable, interface, field or constant. Key is its symbol key, as
+// src/a.py//Parser//parse. Parent is the class key of a method or a
+// field. A JavaScript function that an object property or a property
+// assignment holds is a method with no parent.
 // Decorators are as written, in source order, and hold the annotations of
 // a Java definition. Values are the per-file targets that a variable
 // holds, as the targets of a Call. Params are the parameters that declare
@@ -223,7 +251,8 @@ type Export struct {
 // "" for a result with no named type. Wraps names the Option or the Result
 // that holds the result of a Rust function, and Returns then names the
 // type inside, as Thing for -> Option<Thing>. Static marks a static method
-// of Java.
+// of Java. Data marks a Go variable whose value the source shows is no
+// function, as var n int or var ErrX = errors.New("x").
 type Definition struct {
 	Key        string   `json:"key"`
 	Kind       DefKind  `json:"kind"`
@@ -242,7 +271,18 @@ type Definition struct {
 	Results    []string `json:"results,omitempty"`
 	Wraps      string   `json:"wraps,omitempty"`
 	Static     bool     `json:"static,omitempty"`
+	Data       bool     `json:"data,omitempty"`
 	Flags      []Flag   `json:"flags,omitempty"`
+	// Alias is the type that a DefAlias names, as written, with no type
+	// arguments, as B for type A = B<u8>.
+	Alias string `json:"alias,omitempty"`
+}
+
+// HoldsData reports whether the definition holds data and no code: a
+// field, a constant or a variable with Data. A read of it runs no code, and
+// a call of it does not compile.
+func (d Definition) HoldsData() bool {
+	return d.Kind == DefField || d.Kind == DefConstant || d.Data
 }
 
 // Class is one class or interface of the file. Bases are as written, in
@@ -452,6 +492,19 @@ func (ix *Index) ExternalCalls() []Call {
 	return calls
 }
 
+// CodeDefinitions returns the definitions of the file that hold code, in
+// the order of Definitions. A definition of data runs no code, so the graph
+// has no node for it and no root or caller is one.
+func (ix *Index) CodeDefinitions() iter.Seq[*Definition] {
+	return func(yield func(*Definition) bool) {
+		for i := range ix.Definitions {
+			if !ix.Definitions[i].HoldsData() && !yield(&ix.Definitions[i]) {
+				return
+			}
+		}
+	}
+}
+
 // DynamicSites returns the flags of the file and of its definitions, by line.
 func (ix *Index) DynamicSites() []Flag {
 	flags := slices.Clone(ix.Flags)
@@ -624,6 +677,7 @@ func (ix *Index) EachString(fn func(string) string) {
 		kind(&def.Returns)
 		strs(def.Results)
 		kind(&def.Wraps)
+		kind(&def.Alias)
 		flags(def.Flags)
 	}
 	for i := range ix.Classes {

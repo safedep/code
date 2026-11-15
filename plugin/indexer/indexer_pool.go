@@ -12,8 +12,10 @@ import (
 	"github.com/safedep/code/plugin/callgraph"
 )
 
-// contentParser parses the bytes of a file that the run already read.
+// contentParser parses the bytes of a file that the run already read, from
+// the source that the run picked or from the bytes alone.
 type contentParser interface {
+	ParseSource(ctx context.Context, file core.File, data []byte, source core.Source) (core.ParseTree, error)
 	ParseContent(ctx context.Context, file core.File, data []byte) (core.ParseTree, error)
 	Close()
 }
@@ -114,7 +116,7 @@ func analyze(ctx context.Context, p contentParser, file pending, keepGraph bool)
 	if ctx.Err() != nil {
 		return outcome{}
 	}
-	tree, err := p.ParseContent(ctx, file.file, file.data)
+	tree, err := p.ParseSource(ctx, file.file, file.data, file.source)
 	if err != nil {
 		return outcome{err: err}
 	}
@@ -124,7 +126,7 @@ func analyze(ctx context.Context, p contentParser, file pending, keepGraph bool)
 		index = ix
 		return nil
 	}}
-	if !slices.Contains(indexPlugin.SupportedLanguages(), file.language.Meta().Code) {
+	if !slices.Contains(indexPlugin.SupportedLanguages(), file.source.Language.Meta().Code) {
 		return outcome{tree: tree}
 	}
 	err = plugin.Analyze(ctx, indexPlugin, file.file, tree)

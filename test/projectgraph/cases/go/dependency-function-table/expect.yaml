@@ -1,0 +1,90 @@
+source: safedep:hand
+description: >-
+  main calls a.F of the unit a, and F calls the function value that b.Get of the unit b returns. Get reads
+  it from the package-level map table, which holds doA. The program loads b, because a imports it, so it
+  runs the module top level of b.go, with the init of b and the reference to doA. The import of b makes a.go
+  run code at load, so main.go reaches a.go and b.go through import edges. So the search finds os.Remove
+  through the reference to doA, and os/exec.Command through init. In a search from the roots, the call of
+  the value concerns no target, and no code uses doB as a value, so os.Getwd is not found. The summary of a
+  counts the call for every target, because the summary does not see the load code of b.
+units:
+  gomod/github.com/acme/a@v1.0.0: go:github.com/acme/a@v1.0.0
+  gomod/github.com/acme/b@v1.0.0: go:github.com/acme/b@v1.0.0
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+no_edges:
+  - from: go:github.com/acme/b@v1.0.0//b.go
+    to: go:github.com/acme/b@v1.0.0//b.go//doB
+unresolved:
+  - caller: os//Getwd
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Remove
+    reason: no-dependency-source
+    callback: true
+  - caller: os//exec//Command
+    reason: no-dependency-source
+    callback: true
+  - caller: go:github.com/acme/a@v1.0.0//a.go//F
+    site: go:github.com/acme/a@v1.0.0//a.go:6
+    reason: function-value
+results:
+  - target: os//Remove
+    status: found
+    path:
+      - key: main.go
+      - key: go:github.com/acme/a@v1.0.0//a.go
+        site: main.go:3
+        kind: import
+        confidence: high
+      - key: go:github.com/acme/b@v1.0.0//b.go
+        site: go:github.com/acme/a@v1.0.0//a.go:3
+        kind: import
+        confidence: high
+      - key: go:github.com/acme/b@v1.0.0//b.go//doA
+        site: go:github.com/acme/b@v1.0.0//b.go:8
+        kind: reference
+        confidence: low
+      - key: os//Remove
+        site: go:github.com/acme/b@v1.0.0//b.go:15
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: go:github.com/acme/b@v1.0.0//b.go//doA
+        site: go:github.com/acme/b@v1.0.0//b.go:15
+        reached: true
+  - target: os//exec//Command
+    status: found
+    path:
+      - key: main.go
+      - key: go:github.com/acme/a@v1.0.0//a.go
+        site: main.go:3
+        kind: import
+        confidence: high
+      - key: go:github.com/acme/b@v1.0.0//b.go
+        site: go:github.com/acme/a@v1.0.0//a.go:3
+        kind: import
+        confidence: high
+      - key: go:github.com/acme/b@v1.0.0//b.go//init
+        site: go:github.com/acme/b@v1.0.0//b.go:10
+        kind: direct
+        confidence: high
+      - key: os//exec//Command
+        site: go:github.com/acme/b@v1.0.0//b.go:11
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: go:github.com/acme/b@v1.0.0//b.go//init
+        site: go:github.com/acme/b@v1.0.0//b.go:11
+        reached: true
+  - target: os//Getwd
+    status: not-found
+    call_sites:
+      - caller: go:github.com/acme/b@v1.0.0//b.go//doB
+        site: go:github.com/acme/b@v1.0.0//b.go:19
+        reached: false

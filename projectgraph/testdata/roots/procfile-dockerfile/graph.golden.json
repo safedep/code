@@ -114,7 +114,7 @@
     "worker.py": "indexed"
   },
   "stats": {
-    "version": "17",
+    "version": "18",
     "files": 6,
     "nodes": 7,
     "edges": 0,

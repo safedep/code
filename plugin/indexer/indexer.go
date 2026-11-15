@@ -161,10 +161,10 @@ func New(opts Options) (*Indexer, error) {
 
 // pending is a file that a run read and has not indexed yet.
 type pending struct {
-	file     core.File
-	language core.Language
-	data     []byte
-	key      fileindex.Key
+	file   core.File
+	source core.Source
+	data   []byte
+	key    fileindex.Key
 
 	// restored names the cached plugins that took their stored artifact
 	// before another plugin rejected its own. They skip the tree.
@@ -194,8 +194,10 @@ type run struct {
 // that the store serves come first, in path order, and then the parsed
 // files, in path order.
 //
-// When ctx is done, Run stops, marks each file that it did not index as
-// missing, and returns the result so far with the error of ctx. Run fails
+// When ctx is done, Run stops and puts the indexes and the artifacts of the
+// files that it finished in the store. It marks each file that it did not
+// index as missing, and returns the result so far with the error of ctx.
+// A file that ctx cut keeps no index and no artifact. Run fails
 // when two files of fsys have one name, as the same relative path under
 // two app roots, because the index keys a file by its name.
 func (ix *Indexer) Run(ctx context.Context, fsys core.ImportAwareFileSystem) (*Result, error) {
@@ -285,9 +287,9 @@ func (r *run) index(ctx context.Context, files []core.File, byExtension map[stri
 			r.exclude(file)
 			continue
 		}
-		r.result.Languages[file.Name()] = language.Meta().Code
 		data, err := read(file, r.opts.MaxFileBytes)
 		if err != nil {
+			r.result.Languages[file.Name()] = language.Meta().Code
 			r.fail(ctx, file, core.StageRead, err)
 			continue
 		}
@@ -295,12 +297,16 @@ func (r *run) index(ctx context.Context, files []core.File, byExtension map[stri
 			r.exclude(file)
 			continue
 		}
+		// The script blocks of a component file name their language, and
+		// the key and the index of the file hold it.
+		source := parser.Source(language, file.Name(), data)
+		r.result.Languages[file.Name()] = source.Language.Meta().Code
 
 		batch = append(batch, pending{
-			file:     file,
-			language: language,
-			data:     data,
-			key:      fileindex.NewKey(file.Name(), fileindex.HashContent(data), language.Meta().Code),
+			file:   file,
+			source: source,
+			data:   data,
+			key:    fileindex.NewKey(file.Name(), fileindex.HashContent(data), source.Language.Meta().Code),
 		})
 		bytes += len(data)
 		if len(batch) == batchSize || bytes >= maxBatchBytes {
@@ -325,7 +331,7 @@ func read(file core.File, limit int) ([]byte, error) {
 }
 
 // flush serves the files of a batch from the store, parses the rest and
-// puts their indexes.
+// puts their indexes and artifacts.
 func (r *run) flush(ctx context.Context, batch []pending) error {
 	if len(batch) == 0 {
 		return nil
@@ -352,20 +358,28 @@ func (r *run) flush(ctx context.Context, batch []pending) error {
 		parse = append(parse, p)
 	}
 
-	put, made, err := r.parse(ctx, parse)
-	if err != nil {
+	put, made, parseErr := r.parse(ctx, parse)
+	// The files that finished before ctx was done hold whole indexes and
+	// artifacts. The store keeps them past the end of ctx, so the next run
+	// with the same deadline does not parse them again.
+	if err := r.save(context.WithoutCancel(ctx), put, made); err != nil {
 		return err
 	}
+	return parseErr
+}
+
+// save stores the new indexes and artifacts of a batch.
+func (r *run) save(ctx context.Context, indexes []*fileindex.Index, artifacts []store.Artifact) error {
 	if r.opts.Store == nil {
 		return nil
 	}
-	if len(put) > 0 {
-		if err := r.opts.Store.Put(ctx, put); err != nil {
+	if len(indexes) > 0 {
+		if err := r.opts.Store.Put(ctx, indexes); err != nil {
 			return fmt.Errorf("failed to store file indexes: %w", err)
 		}
 	}
-	if len(made) > 0 {
-		if err := r.opts.Store.PutArtifacts(ctx, made); err != nil {
+	if len(artifacts) > 0 {
+		if err := r.opts.Store.PutArtifacts(ctx, artifacts); err != nil {
 			return fmt.Errorf("failed to store plugin artifacts: %w", err)
 		}
 	}
@@ -420,7 +434,8 @@ func (r *run) parse(ctx context.Context, files []pending) ([]*fileindex.Index, [
 
 // collect records the outcome of one file, runs the extra plugins on its
 // tree and closes the tree. It returns the index of the file, or nil when
-// the file failed, and the artifacts of the cached plugins.
+// the file failed, and the artifacts of the cached plugins that finished
+// before ctx was done.
 func (r *run) collect(ctx context.Context, p pending, o outcome) (*fileindex.Index, []store.Artifact) {
 	if o.err != nil {
 		r.fail(ctx, p.file, core.StageParse, o.err)
@@ -447,9 +462,13 @@ func (r *run) collect(ctx context.Context, p pending, o outcome) (*fileindex.Ind
 				continue
 			}
 			data, err := analyzeCached(ctx, cached, p.file, o)
-			if err != nil {
+			switch {
+			case err != nil:
 				report.Failed = append(report.Failed, failure(p.file, pl, err))
-			} else {
+			case ctx.Err() == nil:
+				// A plugin can stop at the end of ctx and return a partial
+				// artifact with no error. A live ctx after the return proves
+				// that the plugin saw no end of ctx.
 				artifacts = append(artifacts, store.Artifact{Key: artifactKey(p, cached), Data: data})
 			}
 			continue

@@ -2,7 +2,11 @@
 # Fetch the projects and the dependencies of the method measure into the
 # directory of the first argument. Go modules come from the module proxy
 # into <dir>/gomod, crates from crates.io into <dir>/crates, and PyPI
-# packages from pypi.org into <dir>/pypi/<name>-<version>. A dependency
+# packages from pypi.org into <dir>/pypi/<name>-<version>. Each Go project
+# also gets the modules of its build list into <dir>/gomod, so govulncheck
+# can load it with no network, and the src tree of the Go release of the
+# go line of its go.mod into <dir>/gostd/<release>/src. The file
+# <dir>/gostd/releases.txt gives the release of each Go project. A dependency
 # comes as a wheel, unpacked, so its directory has the layout of
 # site-packages with the .dist-info of the package. A project comes as its
 # sdist, so its directory has the manifests. The list is
@@ -11,9 +15,16 @@
 set -euo pipefail
 
 dir="${1:?usage: fetch_method_corpus.sh <dir>}"
-list="$(dirname "$0")/../test/projectgraph/public/methods/corpus.txt"
-mkdir -p "$dir/gomod" "$dir/crates" "$dir/pypi"
+list="$(cd "$(dirname "$0")/.." && pwd)/test/projectgraph/public/methods/corpus.txt"
+mkdir -p "$dir/gomod" "$dir/crates" "$dir/pypi" "$dir/gostd"
 dir="$(cd "$dir" && pwd)"
+: >"$dir/gostd/releases.txt"
+
+# The go commands fill the module cache of the corpus. They run outside of
+# any module, with the local toolchain and no workspace, so no go.mod or
+# go.work of the caller changes what they fetch.
+cd "$dir"
+export GOMODCACHE="$dir/gomod" GOFLAGS=-modcacherw GOTOOLCHAIN=local GOWORK=off
 
 # pypi_url prints the download URL of a package version: the sdist for
 # the project, and for a dependency a pure wheel, else a manylinux x86_64
@@ -67,6 +78,42 @@ pypi_fetch() {
 	rm -rf "$tmp"
 }
 
+# go_release prints the Go release of the go line of a go.mod, as go1.16
+# for go 1.16 and go1.21.0 for go 1.21. The go command reads a go.mod with
+# no go line as go 1.16.
+go_release() {
+	local version minor
+	version="$(awk '$1 == "go" { print $2; exit }' "$1")"
+	version="${version:-1.16}"
+	minor="${version#1.}"
+	if [ "$minor" = "${minor%%.*}" ] && [ "$minor" -ge 21 ]; then
+		version="$version.0"
+	fi
+	echo "go$version"
+}
+
+# go_project fetches the build list of a Go project and the src tree of its
+# Go release, and records the release.
+go_project() {
+	local project="$1" src release tmp
+	src="$(go mod download -json "$project" | jq -r .Dir)"
+	release="$(go_release "$src/go.mod")"
+	echo "$project $release" >>"$dir/gostd/releases.txt"
+	if [ ! -d "$dir/gostd/$release" ]; then
+		tmp="$(mktemp -d)"
+		curl -sSfL "https://go.dev/dl/$release.src.tar.gz" | tar -xz -C "$tmp" go/src
+		mv "$tmp/go" "$dir/gostd/$release"
+		rm -rf "$tmp"
+	fi
+	# The module cache holds the project read-only, and the go command can
+	# add missing go.sum lines, so it runs on a copy.
+	tmp="$(mktemp -d)"
+	cp -R "$src/." "$tmp"
+	chmod -R u+w "$tmp"
+	(cd "$tmp" && GOFLAGS="$GOFLAGS -mod=mod" go list -deps ./... >/dev/null && GOFLAGS="$GOFLAGS -mod=mod" go list -m all >/dev/null)
+	rm -rf "$tmp"
+}
+
 grep -v '^#' "$list" | while read -r language _ project deps; do
 	if [ "$language" = python ]; then
 		pypi_fetch "$project" project
@@ -75,10 +122,13 @@ grep -v '^#' "$list" | while read -r language _ project deps; do
 		done
 		continue
 	fi
+	if [ "$language" = go ]; then
+		go_project "$project"
+	fi
 	for item in $project $deps; do
 		case "$language" in
 		go)
-			GOFLAGS=-modcacherw GOMODCACHE="$dir/gomod" go mod download "$item"
+			go mod download "$item"
 			;;
 		rust)
 			name="${item%@*}"

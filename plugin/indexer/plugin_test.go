@@ -9,8 +9,10 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/safedep/code/core"
@@ -104,6 +106,7 @@ var goldenHashes = map[string]string{
 	"13": "97614d8b96782e65813ee409e4a3f33c4655157b5dfa58baf17cd3677958c619",
 	"14": "26f22c80fd4120cd04f228a53188accb1695434d0ed1ff5654b110981f8f44dd",
 	"15": "c4b949e72be5b2b4474e06f20ae18b0cc4e080b6c5fe20ccaf712c3714bf2a12",
+	"16": "235591d02eeb5e1bb771fbacf0ba6db228146a6a70c55670de6cb93392d75d81",
 }
 
 func TestFileIndexGoldenHashFollowsVersion(t *testing.T) {
@@ -186,7 +189,7 @@ func TestFileIndexPartialAtTheDeadline(t *testing.T) {
 	}
 	tree := parseSource(t, core.LanguageCodeJavascript, "slow.js", source.String())
 
-	ctx := &buildCutContext{Context: context.Background()}
+	ctx := &cutContext{Context: context.Background(), at: []string{callGraphBuild}}
 
 	var got *fileindex.Index
 	err := NewFileIndexPlugin(func(_ context.Context, ix *fileindex.Index) error {
@@ -198,37 +201,48 @@ func TestFileIndexPartialAtTheDeadline(t *testing.T) {
 	assert.True(t, partial(got))
 }
 
-// buildCutContext is done from the first check inside the build of the
-// call graph on. The import queries before the build see it live, so the
-// build starts and the deadline cuts it. It reads the stack, so it does not
-// depend on the number of checks before the build.
-type buildCutContext struct {
+// callGraphBuild is the function that builds a call graph.
+const callGraphBuild = "callgraph.(*CallGraph).build"
+
+// cutContext is done from the first check of it that runs inside every
+// function of at. The checks before see it live, so the work starts and
+// the deadline cuts it. It reads the stack, so it does not depend on the number of checks
+// before the cut. The workers of a run check it at once, so the cut is
+// atomic.
+type cutContext struct {
 	context.Context
-	cut bool
+	at  []string
+	cut atomic.Bool
 }
 
-func (c *buildCutContext) Err() error {
-	if !c.cut {
-		c.cut = insideBuild()
+func (c *cutContext) Err() error {
+	if !c.cut.Load() && inside(c.at) {
+		c.cut.Store(true)
 	}
-	if c.cut {
+	if c.cut.Load() {
 		return context.Canceled
 	}
 	return nil
 }
 
-func insideBuild() bool {
+// inside reports whether the stack of the caller runs each function of fns.
+func inside(fns []string) bool {
 	pcs := make([]uintptr, 64)
 	frames := runtime.CallersFrames(pcs[:runtime.Callers(2, pcs)])
+	var stack []string
 	for {
 		frame, more := frames.Next()
-		if strings.HasSuffix(frame.Function, "callgraph.(*CallGraph).build") {
-			return true
-		}
+		stack = append(stack, frame.Function)
 		if !more {
+			break
+		}
+	}
+	for _, fn := range fns {
+		if !slices.ContainsFunc(stack, func(f string) bool { return strings.HasSuffix(f, fn) }) {
 			return false
 		}
 	}
+	return true
 }
 
 func parseSource(t *testing.T, code core.LanguageCode, name, source string) core.ParseTree {

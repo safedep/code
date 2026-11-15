@@ -18,7 +18,16 @@ edges:
     kind: direct
     confidence: high
     site: lib/register.go:5
-unresolved: []
+unresolved:
+  - caller: net//http//HandleFunc
+    reason: no-dependency-source
+    callback: true
+  - caller: net//http//ListenAndServe
+    reason: no-dependency-source
+    callback: true
+  - caller: os//exec//Command
+    reason: no-dependency-source
+    callback: true
 results:
   - target: os//exec//Command
     status: found

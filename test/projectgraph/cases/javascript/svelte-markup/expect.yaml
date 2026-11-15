@@ -1,0 +1,49 @@
+source: safedep:hand
+description: An event handler in the markup of Other.svelte calls sdanger, which its script imports. The index does not parse the markup, so the file has a markup record, and sdanger reads uncertain, not no-such-target.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+exact_edges: true
+edges:
+  - from: src/main.js
+    to: src/Other.svelte
+    kind: import
+    confidence: high
+    site: src/main.js:2
+  - from: src/main.js
+    to: svelte//mount
+    kind: direct
+    confidence: high
+    site: src/main.js:4
+  - from: src/Other.svelte
+    to: plug//ssetup
+    kind: direct
+    confidence: high
+    site: src/Other.svelte:3
+unresolved:
+  - caller: src/Other.svelte
+    site: src/Other.svelte:1
+    reason: markup
+results:
+  - target: plug//ssetup
+    status: found
+    path:
+      - key: src/main.js
+      - key: src/Other.svelte
+        site: src/main.js:2
+        kind: import
+        confidence: high
+      - key: plug//ssetup
+        site: src/Other.svelte:3
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/Other.svelte
+        site: src/Other.svelte:3
+        reached: true
+  - target: plug//sdanger
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: src/Other.svelte:1

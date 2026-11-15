@@ -1,0 +1,59 @@
+source: safedep:hand
+description: >-
+  main stores os.Remove in the field Remove of a Config, and run calls s.cfg.Remove. The link step types
+  cfg as Config and resolves Remove to the field, which holds a function value. So the call is a
+  function-value record. A search from the roots reaches main, which stores os.Remove, so os.Remove is
+  found through the reference. A search from run alone does not reach that code, so the record concerns
+  every target, and os.Remove is uncertain. A link step that dropped the call of the field as data gave
+  not-found there.
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+  - key: run.go
+    kind: main
+    rule: go.main
+no_edges:
+  - from: run.go//Svc//run
+    to: os//Remove
+unresolved:
+  - caller: os//Remove
+    reason: no-dependency-source
+    callback: true
+  - caller: run.go//Svc//run
+    reason: no-dependency-source
+    callback: true
+  - caller: run.go//Svc//run
+    site: run.go:12
+    reason: unknown-receiver
+    method: cfg
+  - caller: run.go//Svc//run
+    site: run.go:12
+    reason: function-value
+results:
+  - target: os//Remove
+    status: found
+    path:
+      - key: main.go//main
+      - key: os//Remove
+        site: main.go:6
+        kind: reference
+        confidence: low
+    call_sites:
+      - caller: main.go//main
+        site: main.go:6
+        reached: true
+  - target: os//Remove
+    sources: [run.go//Svc//run]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//main
+        site: main.go:6
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: run.go:12

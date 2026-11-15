@@ -37,7 +37,7 @@ func graphOf(t *testing.T, spec string) *projectgraph.Graph {
 			return n
 		}
 		n := &projectgraph.Node{Key: key, Kind: projectgraph.NodeExternal}
-		if unit := fileindex.Unit(key); strings.HasSuffix(unit, ".py") || strings.HasSuffix(unit, ".js") {
+		if unit := fileindex.Unit(key); strings.HasSuffix(unit, ".py") || strings.HasSuffix(unit, ".js") || strings.HasSuffix(unit, ".go") {
 			n.Kind, n.Path, n.Line, n.Test = projectgraph.NodeFunction, unit, 1, strings.HasPrefix(unit, "tests/")
 			if _, ok := g.Files[unit]; !ok {
 				g.Files[unit] = fileindex.FileIndexed
@@ -86,6 +86,17 @@ func graphOf(t *testing.T, spec string) *projectgraph.Graph {
 			g.Unresolved = append(g.Unresolved, projectgraph.UnresolvedSite{
 				Caller: caller, Site: projectgraph.Site{Path: f[2]}, Text: f[1], Reason: fileindex.UnresolvedNoDefinition, Unit: f[2],
 			})
+		case "callback":
+			node(f[1])
+			g.Unresolved = append(g.Unresolved, projectgraph.UnresolvedSite{
+				Caller: f[1], Text: "the Go standard library, which no unit gives", Reason: fileindex.UnresolvedNoDependencySource, Callback: true,
+			})
+		case "method":
+			n := node(f[1])
+			n.Kind, n.Exported = projectgraph.NodeMethod, arg(f, 2, "") != "unexported"
+			if _, ok := g.Nodes[n.Path]; !ok {
+				g.Nodes[n.Path] = &projectgraph.Node{Key: n.Path, Kind: projectgraph.NodeModule, Path: n.Path, Language: langcode.Go}
+			}
 		case "flag":
 			n := node(f[1])
 			l, err := strconv.Atoi(f[3])
@@ -250,6 +261,51 @@ func TestReachUncertainties(t *testing.T) {
 	}
 }
 
+// TestReachCallback checks the scope of code outside the graph that can
+// call a method of a value that it holds. A target that a Go method of an
+// exported name reaches is uncertain. A target that only a function or a
+// method of an unexported name reaches stays not-found, and so does each
+// target of a search that reaches no such code.
+func TestReachCallback(t *testing.T) {
+	const units = `
+method go:kit@1.0.0//k.go//conn//Read
+edge go:kit@1.0.0//k.go//conn//Read os//remove direct 5
+method go:kit@1.0.0//k.go//conn//reset unexported
+edge go:kit@1.0.0//k.go//conn//reset os//chmod direct 6
+edge go:kit@1.0.0//k.go//dial os//exit direct 7
+callback io//ReadAll
+`
+	tests := []struct {
+		name string
+		spec string
+		want map[string]Status
+	}{
+		{
+			name: "a search that reaches the code",
+			spec: "root main.go//main\nedge main.go//main io//ReadAll direct 3" + units,
+			want: map[string]Status{"os//remove": Uncertain, "os//chmod": NotFound, "os//exit": NotFound},
+		},
+		{
+			name: "a search that does not reach the code",
+			spec: "root main.go//main\nedge main.go//main os//getpid direct 3" + units,
+			want: map[string]Status{"os//remove": NotFound, "os//chmod": NotFound, "os//exit": NotFound},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := graphOf(t, tt.spec)
+			for target, status := range tt.want {
+				r := reachOne(t, g, Query{Targets: targetsOf(t, target)})
+				assert.Equal(t, status, r.Status, target)
+				if status == Uncertain {
+					require.Len(t, r.Uncertainties, 1)
+					assert.True(t, r.Uncertainties[0].Callback)
+				}
+			}
+		})
+	}
+}
+
 // TestReachFileBudgets checks which incomplete files count for a search: a
 // file of a language that the program does not run holds no caller that a
 // search can reach, a test file counts only with the tests, and a file of
@@ -323,6 +379,51 @@ unresolved handlers.py//parse 5 unknown-receiver f
 	assert.Equal(t, NotFound, r.Status)
 	r = reachOne(t, g, Query{Targets: targetsOf(t, "yaml//dump"), IncludeTests: true})
 	assert.Equal(t, Uncertain, r.Status)
+}
+
+// TestReachSpanCountsTheRecordsOfItsCode checks that an unresolved call of a
+// method concerns what its candidates run through their own unresolved
+// calls, as the call handle whose candidate calls load on a value of an
+// unknown type. Reach and the table of ExploreAll give one answer.
+func TestReachSpanCountsTheRecordsOfItsCode(t *testing.T) {
+	const spec = `
+root main.py//run
+unresolved main.py//run 3 unknown-receiver handle
+edge lib.py//H//handle lib.py//helper direct 4
+edge lib.py//Codec//load pickle//loads direct 8
+edge lib.py//dead os//exit direct 12
+`
+	tests := []struct {
+		name   string
+		record string
+		want   map[string]Status
+	}{
+		{
+			name:   "a call of a method in a candidate",
+			record: "unresolved lib.py//helper 5 unknown-receiver load",
+			want:   map[string]Status{"pickle//loads": Uncertain, "json//load": Uncertain, "os//exit": NotFound},
+		},
+		{
+			name:   "a computed call in a candidate",
+			record: "unresolved lib.py//helper 5 computed-name",
+			want:   map[string]Status{"pickle//loads": Uncertain, "json//load": Uncertain, "os//exit": Uncertain},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := graphOf(t, spec+tt.record)
+			sets, err := NewExplorer(g).ExploreAll(context.Background(), []string{"main.py//run"})
+			require.NoError(t, err)
+			require.Len(t, sets.Sources[0].Uncertainties, 1)
+			handle := sets.Uncertainties[sets.Sources[0].Uncertainties[0]]
+			require.Equal(t, "handle", handle.Method)
+			for target, status := range tt.want {
+				r := reachOne(t, g, Query{Targets: targetsOf(t, target)})
+				assert.Equal(t, status, r.Status, target)
+				assert.Equal(t, status == Uncertain, handle.Concerns(targetOf(t, target)), target)
+			}
+		})
+	}
 }
 
 func TestReachCapsUncertaintiesPerKind(t *testing.T) {
@@ -572,7 +673,7 @@ func TestReachDependencyCode(t *testing.T) {
 		{
 			name:   "an entry into a unit with a failed file",
 			extra:  "edge main.py//run kit//load//close direct 4\nentry kit//load//close npm:kit@1.0.0\nfile npm:kit@1.0.0//big.js failed",
-			target: "fs//rm", status: Uncertain, kinds: []UncertaintyKind{Budget},
+			target: "fs//rm", status: Uncertain, kinds: []UncertaintyKind{Budget, UnresolvedCall},
 		},
 	}
 	for _, tt := range tests {
@@ -620,6 +721,9 @@ func TestPathStringNamesAWeakHop(t *testing.T) {
 
 	hops[1].EdgeKind, hops[1].Resolver = projectgraph.EdgeLLM, "model m1, prompt v2"
 	assert.Equal(t, "main.py:3 (llm, model m1, prompt v2) -> app.py:6 -> yaml//load", PathString(hops))
+
+	hops[1] = Hop{Key: "app.py", Site: projectgraph.Site{Path: "app.py"}, EdgeKind: projectgraph.EdgeImport, Confidence: projectgraph.ConfidenceHigh, Resolver: LoadResolver}
+	assert.Equal(t, "app.py (load) -> app.py:6 -> yaml//load", PathString(hops))
 }
 
 func TestResultString(t *testing.T) {
@@ -661,6 +765,17 @@ entry - npm:other@1.0.0
 edge npm:other@1.0.0//o.js//f fs//unlink direct 2
 `,
 	"project with units": dependencies + "edge main.py//run kit//load//close direct 4\nentry kit//load//close npm:kit@1.0.0\nedge npm:kit@1.0.0//k.js//close fs//unlink\n",
+	"code outside the graph that calls a method": `
+edge kit//run go:kit@1.0.0//k.go//run package
+edge go:kit@1.0.0//k.go//run io//ReadAll direct 2
+edge go:kit@1.0.0//k.go//run os//exit direct 3
+callback io//ReadAll
+edge kit//conn//Read go:kit@1.0.0//k.go//conn//Read package
+method go:kit@1.0.0//k.go//conn//Read
+edge go:kit@1.0.0//k.go//conn//Read os//remove direct 5
+edge go:kit@1.0.0//k.go//conn//Read io//Copy direct 6
+callback io//Copy
+`,
 	"two symbols in one cycle": `
 edge a//x npm:a@1.0.0//a.js//x package
 edge npm:a@1.0.0//a.js//x a//y direct 2
@@ -739,6 +854,24 @@ func TestExploreAllScopesTheTargets(t *testing.T) {
 
 	_, err = NewExplorer(g).ExploreAll(context.Background(), []string{"kit//nope"})
 	assert.ErrorContains(t, err, "no node kit//nope")
+}
+
+// TestExploreAllScopesACallback checks that the code outside the graph that
+// can call a method is one entry of the table, whose targets are what the
+// Go methods of an exported name reach.
+func TestExploreAllScopesACallback(t *testing.T) {
+	g := graphOf(t, exploreAllGraphs["code outside the graph that calls a method"])
+	sets, err := NewExplorer(g).ExploreAll(context.Background(), []string{"kit//run", "kit//conn//Read"})
+	require.NoError(t, err)
+	require.Len(t, sets.Uncertainties, 1)
+	callback := sets.Uncertainties[0]
+	assert.True(t, callback.Callback)
+	assert.Equal(t, []string{"io//Copy", "os//remove"}, callback.Targets)
+	assert.True(t, callback.Concerns(targetOf(t, "os//remove")))
+	assert.False(t, callback.Concerns(targetOf(t, "os//exit")))
+	for _, src := range sets.Sources {
+		assert.Equal(t, []int{0}, src.Uncertainties)
+	}
 }
 
 func TestExploreAllSharesTheSetOfAChain(t *testing.T) {

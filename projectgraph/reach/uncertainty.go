@@ -19,18 +19,17 @@ type prefixed struct {
 
 // found collects the uncertainties of the nodes that a search reached, in
 // the order of the search. A record with a method name concerns only the
-// targets with that last segment and the targets that a node with that
-// last segment reaches, unless its reason can name any target.
+// targets with that last segment and the targets that the span of the
+// name concerns, unless its reason can name any target.
 type found struct {
 	global   []Uncertainty
 	byMethod map[string][]Uncertainty
 	methods  []string
 	prefixed []prefixed
 	byUnit   []Uncertainty
-	// reaches reports whether the code of a unit reaches a target, and
-	// methodReaches whether a node with the last segment reaches one.
-	reaches       func(unit string, target Target) bool
-	methodReaches func(name string, target Target) bool
+	callback *Uncertainty
+	// concerns reports whether the span of a scope concerns a target.
+	concerns func(k scopeKey, target Target) bool
 	// units holds the file budgets of each unit of dependency code, and
 	// entered the units that the search entered.
 	units   map[string][]Uncertainty
@@ -55,11 +54,28 @@ type sources struct {
 	testBudgets map[string][]Uncertainty
 	// units lists the units that a search can enter, in key order.
 	units []string
+	// callbacks holds the callers of the records of code outside the graph
+	// that can call a method of a value that it holds, and callback the one
+	// uncertainty that they share. Each such record gives the same scope,
+	// so the search counts it once.
+	callbacks map[string]bool
+	callback  *Uncertainty
+	// valueEdges marks a search that reaches each code that can store a
+	// function value, so a reference edge leads it to each function that
+	// a call of a value can run.
+	valueEdges bool
 }
 
-func newSources(g *projectgraph.Graph) *sources {
-	s := &sources{unresolved: map[string][]projectgraph.UnresolvedSite{}, prefixes: map[projectgraph.Site]string{}, truncated: map[string][]projectgraph.Truncation{}, budgets: map[string][]Uncertainty{}, testBudgets: map[string][]Uncertainty{}}
+func newSources(g *projectgraph.Graph, valueEdges bool) *sources {
+	s := &sources{valueEdges: valueEdges, unresolved: map[string][]projectgraph.UnresolvedSite{}, prefixes: map[projectgraph.Site]string{}, truncated: map[string][]projectgraph.Truncation{}, budgets: map[string][]Uncertainty{}, testBudgets: map[string][]Uncertainty{}, callbacks: map[string]bool{}}
 	for _, u := range g.Unresolved {
+		if u.Callback {
+			s.callbacks[u.Caller] = true
+			if s.callback == nil {
+				s.callback = &Uncertainty{Kind: UnresolvedCall, Text: fmt.Sprintf("%s (%s)", u.Text, u.Reason), Callback: true}
+			}
+			continue
+		}
 		s.unresolved[u.Caller] = append(s.unresolved[u.Caller], u)
 		if u.ImportPrefix != "" {
 			s.prefixes[projectgraph.Site{Path: u.Site.Path, Line: u.Site.Line}] = u.ImportPrefix
@@ -149,13 +165,21 @@ func (s *sources) at(key string, n *projectgraph.Node) []Uncertainty {
 		out = append(out, u)
 	}
 	for _, r := range s.unresolved[key] {
+		// A call of a function value runs a function that the search
+		// reaches through the code that holds the value.
+		if r.Reason == fileindex.UnresolvedFunctionValue && s.valueEdges {
+			continue
+		}
 		u := Uncertainty{Kind: UnresolvedCall, Key: key, Site: r.Site, Text: fmt.Sprintf("%s (%s)", r.Text, r.Reason)}
 		switch {
 		case r.Unit != "":
 			u.Unit = r.Unit
 		case r.ImportPrefix != "":
 			u.ImportPrefix = r.ImportPrefix
-		case r.Method != "" && !projectgraph.ReachesAny(r.Reason):
+		case r.Method != "" && !projectgraph.ReachesAny(r.Reason) && (s.valueEdges || r.Reason != fileindex.UnresolvedAmbiguous):
+			// An ambiguous site that keeps its method name can call a
+			// function value, as a Go field of a function type, so only
+			// a search with valueEdges scopes it by the name.
 			u.Method = r.Method
 		}
 		out = append(out, u)
@@ -183,7 +207,7 @@ func (s *sources) unitsOf(n *projectgraph.Node, key string) []string {
 func (a *adjacency) uncertainties(s *search, maxDepth int) *found {
 	g := a.g
 	src := a.sources()
-	f := &found{byMethod: map[string][]Uncertainty{}, reaches: a.unitReaches, methodReaches: a.methodReaches, units: src.budgets, entered: map[string]bool{}}
+	f := &found{byMethod: map[string][]Uncertainty{}, concerns: a.concerns, units: src.budgets, entered: map[string]bool{}}
 	for _, u := range src.global {
 		f.add(u)
 	}
@@ -208,6 +232,9 @@ func (a *adjacency) uncertainties(s *search, maxDepth int) *found {
 		for _, u := range src.at(key, n) {
 			f.add(u)
 		}
+		if src.callbacks[key] {
+			f.add(*src.callback)
+		}
 	}
 	if s.depthCut {
 		f.global = append(f.global, Uncertainty{Kind: Budget, Text: fmt.Sprintf("the search stopped at depth %d", maxDepth)})
@@ -218,10 +245,15 @@ func (a *adjacency) uncertainties(s *search, maxDepth int) *found {
 	return f
 }
 
-// add routes an uncertainty by what it concerns: a unit, an import
-// prefix, a method name, or every target.
+// add routes an uncertainty by what it concerns: the methods of an
+// exported name, a unit, an import prefix, a method name, or every target.
 func (f *found) add(u Uncertainty) {
 	switch {
+	case u.Callback:
+		// Each callback has the same scope, so a result lists it once.
+		if f.callback == nil {
+			f.callback = &u
+		}
 	case u.Unit != "":
 		f.byUnit = append(f.byUnit, u)
 	case u.ImportPrefix != "":
@@ -247,7 +279,7 @@ func (f *found) enter(unit string) {
 
 // all returns every uncertainty of the search with no cap, in the order of
 // the search: first the ones that concern every target, then the ones
-// that a Method, an ImportPrefix or a Unit scopes.
+// that a Method, an ImportPrefix, a Unit or a Callback scopes.
 func (f *found) all() []Uncertainty {
 	out := slices.Clone(f.global)
 	for _, m := range f.methods {
@@ -256,7 +288,11 @@ func (f *found) all() []Uncertainty {
 	for _, p := range f.prefixed {
 		out = append(out, p.u)
 	}
-	return append(out, f.byUnit...)
+	out = append(out, f.byUnit...)
+	if f.callback != nil {
+		out = append(out, *f.callback)
+	}
+	return out
 }
 
 // forTarget returns the uncertainties of a target, at most maxPerKind of
@@ -265,15 +301,17 @@ func (f *found) all() []Uncertainty {
 func (f *found) forTarget(target Target) ([]Uncertainty, []Uncertainty, int) {
 	all := slices.Clone(f.global)
 	for _, m := range f.methods {
-		if target.hasMethod(m) || f.methodReaches(m, target) {
+		if f.concerns(scopeKey{method: m}, target) {
 			all = append(all, f.byMethod[m]...)
 		}
 	}
-
 	for _, u := range f.byUnit {
-		if f.reaches(u.Unit, target) {
+		if f.concerns(scopeKey{unit: u.Unit}, target) {
 			all = append(all, u)
 		}
+	}
+	if f.callback != nil && f.concerns(scopeKey{callback: true}, target) {
+		all = append(all, *f.callback)
 	}
 
 	var setAside []Uncertainty

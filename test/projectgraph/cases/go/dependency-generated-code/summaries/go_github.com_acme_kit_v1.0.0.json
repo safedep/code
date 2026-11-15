@@ -1,7 +1,7 @@
 {
-  "version": "2",
-  "index_version": "15",
-  "link_version": "17",
+  "version": "3",
+  "index_version": "16",
+  "link_version": "18",
   "unit": "go:github.com/acme/kit@v1.0.0",
   "symbols": [
     {
@@ -11,10 +11,23 @@
       ],
       "reaches": [
         "os//exec//Command"
+      ],
+      "uncertainties": [
+        0
       ]
     }
   ],
   "targets": [
     "os//exec//Command"
+  ],
+  "uncertainties": [
+    {
+      "kind": "unresolved-call",
+      "site": {
+        "path": ""
+      },
+      "text": "the Go standard library, which no unit gives (no-dependency-source)",
+      "callback": true
+    }
   ]
 }

@@ -40,9 +40,9 @@ func (p *projection) defined(node *sitter.Node) bool {
 	return ok
 }
 
-// addBody adds a definition that the call graph does not know and that
-// takes the calls of the node.
-func (p *projection) addBody(key string, kind fileindex.DefKind, node *sitter.Node) {
+// addDefinition adds a definition of the kind with the lines of the node,
+// and returns it.
+func (p *projection) addDefinition(key string, kind fileindex.DefKind, node *sitter.Node) *fileindex.Definition {
 	def := &fileindex.Definition{
 		Key:       key,
 		Kind:      kind,
@@ -51,6 +51,13 @@ func (p *projection) addBody(key string, kind fileindex.DefKind, node *sitter.No
 		EndLine:   int(node.EndPoint().Row) + 1,
 	}
 	p.defs[key] = def
+	return def
+}
+
+// addBody adds a definition that the call graph does not know and that
+// takes the calls of the node.
+func (p *projection) addBody(key string, kind fileindex.DefKind, node *sitter.Node) {
+	def := p.addDefinition(key, kind, node)
 	p.addSyntax(key, node)
 	p.bodies[spanOf(node)] = key
 	p.fillDefinition(def)

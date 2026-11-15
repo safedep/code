@@ -5,7 +5,8 @@ description: >-
   reason is no-dependency-source. The
   target Tokenizer.Next is then uncertain at the site, not no-such-target. The edge to the key
   html//NewTokenizer//Next stays, because a Go call of a type name converts a value, and a method of the type
-  then runs.
+  then runs. The code of x/net is outside the graph, and it can call any function of the module, so
+  Server.ServeConn of http2 is uncertain, not no-such-target.
 roots:
   - key: main.go
     kind: main
@@ -39,6 +40,13 @@ edges:
     confidence: high
     site: tokens.go:10
 unresolved:
+  - caller: golang.org//x//net//html//NewTokenizer
+    reason: no-dependency-source
+  - caller: golang.org//x//net//html//NewTokenizer//Next
+    reason: no-dependency-source
+  - caller: os//Stdin
+    reason: no-dependency-source
+    callback: true
   - caller: tokens.go//run
     site: tokens.go:10
     reason: no-dependency-source
@@ -47,6 +55,8 @@ results:
   - target: golang.org//x//net//html//Tokenizer//Next
     status: uncertain
     uncertainties:
+      - kind: unresolved-call
+      - kind: unresolved-call
       - kind: unresolved-call
         site: tokens.go:10
   - target: golang.org//x//net//html//NewTokenizer
@@ -66,4 +76,9 @@ results:
         site: tokens.go:10
         reached: true
   - target: golang.org//x//net//http2//Server//ServeConn
-    status: no-such-target
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+      - kind: unresolved-call
+      - kind: unresolved-call
+        site: tokens.go:10

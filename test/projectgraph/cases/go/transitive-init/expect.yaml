@@ -21,7 +21,10 @@ edges:
 no_edges:
   - from: cmd/app/main.go
     to: mid/doc.go
-unresolved: []
+unresolved:
+  - caller: net//http//HandleFunc
+    reason: no-dependency-source
+    callback: true
 results:
   - target: net//http//HandleFunc
     status: found

@@ -1,0 +1,43 @@
+source: safedep:hand
+description: >-
+  main passes a value of mine to Serve of the unit srv. Serve calls serve, which big.go defines. big.go is
+  over the size limit, so its index fails, and the graph does not see that serve calls Handle on the value.
+  mine.Handle calls os/exec.LookPath, which no code of srv reaches by an edge. A failed file of a unit can
+  call a method of a value that the project gives to the unit, so its budget concerns every target where
+  the search enters the unit, and os/exec.LookPath is uncertain. A scope by the code that the unit reaches
+  would make it not found. The call of serve can also run a method of the standard library, which no unit
+  gives, so Serve has a callback record, which concerns os/exec.LookPath too.
+units:
+  gomod/github.com/acme/srv@v1.0.0: go:github.com/acme/srv@v1.0.0
+max_file_bytes: 400
+failed:
+  - go:github.com/acme/srv@v1.0.0//big.go
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+unresolved:
+  - caller: go:github.com/acme/srv@v1.0.0//srv.go//Serve
+    reason: no-dependency-source
+    callback: true
+  - caller: os//exec//LookPath
+    reason: no-dependency-source
+    callback: true
+  - caller: go:github.com/acme/srv@v1.0.0//srv.go//Serve
+    site: go:github.com/acme/srv@v1.0.0//srv.go:8
+    reason: unknown-receiver
+    method: serve
+results:
+  - target: os//exec//LookPath
+    status: uncertain
+    call_sites:
+      - caller: main.go//mine//Handle
+        site: main.go:12
+        reached: false
+    uncertainties:
+      - kind: budget
+        site: go:github.com/acme/srv@v1.0.0//big.go
+      - kind: unresolved-call

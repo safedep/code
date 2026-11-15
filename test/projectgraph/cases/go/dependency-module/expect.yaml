@@ -41,7 +41,9 @@ no_edges:
     to: go:github.com/acme/yamlish@v1.2.0//load.go
   - from: main.go//main
     to: go:github.com/acme/yamlish@v1.2.0//load.go//Dump
-unresolved: []
+unresolved:
+  - caller: gopkg.in//yaml.v3//Unmarshal
+    reason: no-dependency-source
 results:
   - target: gopkg.in//yaml.v3//Unmarshal
     status: found

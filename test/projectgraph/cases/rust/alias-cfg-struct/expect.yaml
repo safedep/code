@@ -1,0 +1,89 @@
+source: safedep:hand
+description: >-
+  The file declares Client two times. With the feature native, Client is a struct, and its method send calls
+  std::fs::remove_file. Without the feature, Client is an alias of fallback::Client, whose new calls
+  std::env::set_var. main calls Client::new, and work calls send on a parameter of the type Client. The index
+  does not know which cfg the build sets, so the alias binds no type. Each call gets the record
+  unknown-receiver and a name edge to the method of each declaration. So both targets are found. An index
+  that lets the alias replace the struct gives only fallback::Client.send, and std::fs::remove_file reads
+  not-found. An index that lets the struct win gives only the struct's new, and std::env::set_var reads
+  not-found.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//main
+    to: src/main.rs//work
+    kind: direct
+    confidence: high
+    site: src/main.rs:36
+  - from: src/main.rs//main
+    to: src/main.rs//Client//new
+    kind: name
+    confidence: low
+    site: src/main.rs:36
+  - from: src/main.rs//main
+    to: src/main.rs//fallback//Client//new
+    kind: name
+    confidence: low
+    site: src/main.rs:36
+  - from: src/main.rs//work
+    to: src/main.rs//Client//send
+    kind: name
+    confidence: low
+    site: src/main.rs:32
+  - from: src/main.rs//work
+    to: src/main.rs//fallback//Client//send
+    kind: name
+    confidence: low
+    site: src/main.rs:32
+unresolved:
+  - caller: src/main.rs//work
+    site: src/main.rs:32
+    reason: unknown-receiver
+    method: send
+  - caller: src/main.rs//main
+    site: src/main.rs:36
+    reason: unknown-receiver
+    method: new
+results:
+  - target: std//fs//remove_file
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//work
+        site: src/main.rs:36
+        kind: direct
+        confidence: high
+      - key: src/main.rs//Client//send
+        site: src/main.rs:32
+        kind: name
+        confidence: low
+      - key: std//fs//remove_file
+        site: src/main.rs:24
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.rs//Client//send
+        site: src/main.rs:24
+        reached: true
+  - target: std//env//set_var
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//fallback//Client//new
+        site: src/main.rs:36
+        kind: name
+        confidence: low
+      - key: std//env//set_var
+        site: src/main.rs:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.rs//fallback//Client//new
+        site: src/main.rs:6
+        reached: true

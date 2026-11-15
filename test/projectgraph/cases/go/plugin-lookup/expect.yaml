@@ -1,0 +1,70 @@
+source: safedep:hand
+description: >-
+  main loads a plugin with plugin.Open, gets the function Run of it with Lookup, and calls it. The plugin
+  is code of another build, as plugins/hook, and no reference of the graph names its function. Open runs
+  the init of the plugin, and the function that Lookup gives can call any function. So in a file that
+  imports plugin, each call of Open or Lookup is a computed-name record, as a call of Call or MethodByName
+  in a file that imports reflect. os.Remove, which only the plugin calls, and os.Getenv, which no code of
+  the graph names, are uncertain in a search from the roots and from a source. No unit gives the standard
+  library here. The case go/plugin-lookup-std gives it.
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+unresolved:
+  - caller: os//Remove
+    reason: no-dependency-source
+    callback: true
+  - caller: plugin//Open
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//main
+    site: main.go:6
+    reason: computed-name
+  - caller: main.go//main
+    site: main.go:10
+    reason: computed-name
+  - caller: main.go//main
+    site: main.go:10
+    reason: no-dependency-source
+    method: Lookup
+  - caller: main.go//main
+    site: main.go:14
+    reason: function-value
+results:
+  - target: os//Remove
+    status: uncertain
+    call_sites:
+      - caller: plugins/hook/hook.go//Run
+        site: plugins/hook/hook.go:6
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:6
+      - kind: unresolved-call
+        site: main.go:10
+  - target: os//Getenv
+    status: uncertain
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:6
+      - kind: unresolved-call
+        site: main.go:10
+  - target: os//Remove
+    sources: [main.go//main]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: plugins/hook/hook.go//Run
+        site: plugins/hook/hook.go:6
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:6
+      - kind: unresolved-call
+        site: main.go:10
+      - kind: unresolved-call
+        site: main.go:14

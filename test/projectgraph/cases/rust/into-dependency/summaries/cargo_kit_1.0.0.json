@@ -1,0 +1,37 @@
+{
+  "version": "3",
+  "index_version": "16",
+  "link_version": "18",
+  "unit": "cargo:kit@1.0.0",
+  "symbols": [
+    {
+      "key": "kit//Raw",
+      "definitions": [
+        "cargo:kit@1.0.0//src/lib.rs//Raw"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "kit//Store",
+      "definitions": [
+        "cargo:kit@1.0.0//src/lib.rs//Store"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "kit//Store//from",
+      "definitions": [
+        "cargo:kit@1.0.0//src/lib.rs//Store//from"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "kit//raw",
+      "definitions": [
+        "cargo:kit@1.0.0//src/lib.rs//raw"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": []
+}

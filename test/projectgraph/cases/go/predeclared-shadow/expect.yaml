@@ -1,0 +1,78 @@
+source: safedep:hand
+description: >-
+  other.go declares the function clear and the type any. Both names are predeclared names of Go, and a
+  declaration of the package shadows them in every file of the package. main stores clear in a slice and
+  calls an element of it. The index of main.go does not see the declaration in other.go, so it keeps clear
+  as a name, and the link step resolves it in the package to other.go//clear. The call fs[0]() is a
+  function-value record that concerns no target, so the reference edge is what makes os.Remove found. The
+  variable hook has the type any, which the index of main.go takes for the predeclared any and marks as
+  data. Its value rm is a reference of the file main.go, so os.Getenv is found through the file. No code
+  calls unused or uses it as a value, so os.Getwd is not found.
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+  - key: other.go
+    kind: main
+    rule: go.main
+no_edges:
+  - from: main.go//main
+    to: main.go//unused
+unresolved:
+  - caller: os//Getenv
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Getwd
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Remove
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//main
+    site: main.go:13
+    reason: function-value
+  - caller: main.go//main
+    site: main.go:14
+    reason: function-value
+results:
+  - target: os//Remove
+    status: found
+    path:
+      - key: main.go//main
+      - key: other.go//clear
+        site: main.go:12
+        kind: reference
+        confidence: low
+      - key: os//Remove
+        site: other.go:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: other.go//clear
+        site: other.go:8
+        reached: true
+  - target: os//Getenv
+    status: found
+    path:
+      - key: main.go
+      - key: other.go//rm
+        site: main.go:5
+        kind: reference
+        confidence: low
+      - key: os//Getenv
+        site: other.go:12
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: other.go//rm
+        site: other.go:12
+        reached: true
+  - target: os//Getwd
+    status: not-found
+    call_sites:
+      - caller: main.go//unused
+        site: main.go:8
+        reached: false

@@ -1,0 +1,4 @@
+{
+  "name": "jsx-spread-attributes",
+  "bin": { "app": "src/main.js" }
+}

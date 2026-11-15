@@ -202,7 +202,7 @@ func (f *finder) matchDefinition(r rules.Rule) {
 		if m.InPackage != "" && ix.Package != m.InPackage {
 			continue
 		}
-		for _, def := range ix.Definitions {
+		for def := range ix.CodeDefinitions() {
 			switch {
 			case def.Name != m.Name:
 			case m.Parent != "" && fileindex.Last(def.Parent) != m.Parent:
@@ -233,7 +233,7 @@ func (f *finder) matchTestFiles(r rules.Rule) {
 			continue
 		}
 		f.add(r, ix.Path)
-		for _, def := range ix.Definitions {
+		for def := range ix.CodeDefinitions() {
 			if def.Kind != fileindex.DefClass {
 				f.add(r, def.Key)
 			}

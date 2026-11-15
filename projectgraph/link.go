@@ -370,6 +370,7 @@ func (b *builder) linkAll(ctx context.Context) error {
 		b.linkReferences(ix)
 		b.linkDecorators(ix)
 		b.copyUnresolved(ix)
+		b.linkReflection(ix)
 	}
 	if b.opts.Surface {
 		b.addSurfaces()
@@ -377,9 +378,30 @@ func (b *builder) linkAll(ctx context.Context) error {
 	if err := b.linkPackages(ctx); err != nil {
 		return err
 	}
+	for _, p := range profiles {
+		if p.outsideCode != nil {
+			p.outsideCode(b)
+		}
+	}
 	b.checkUnits()
 	b.linkFields()
 	return nil
+}
+
+// CallbackMethod reports whether code outside the graph that a Callback
+// record stands for can call the definition of the key back, on a value
+// that it holds, as a Go method of an exported name.
+func (g *Graph) CallbackMethod(key string) bool {
+	n := g.Nodes[key]
+	if n == nil {
+		return false
+	}
+	file := g.Nodes[n.Path]
+	if file == nil {
+		return false
+	}
+	callback := profileOf(file.Language).callbackMethod
+	return callback != nil && callback(n)
 }
 
 func (b *builder) status(ix *fileindex.Index) fileindex.FileStatus {
@@ -445,6 +467,12 @@ func (b *builder) copyUnresolved(ix *fileindex.Index) {
 			Receiver: u.Receiver,
 			Method:   u.Method,
 			Reason:   u.Reason,
+		}
+		// The search reaches each function that a call of a function
+		// value can run, so the record names no target. See "A call of a
+		// function value" in docs/projectgraph.md.
+		if u.Reason == fileindex.UnresolvedComputedName && profileOf(ix.Language).functionValues {
+			site.Reason = fileindex.UnresolvedFunctionValue
 		}
 		if u.Reason == fileindex.UnresolvedDynamicImport {
 			site.ImportPrefix = b.importPrefix(ix, u.Line)

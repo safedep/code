@@ -1,0 +1,4 @@
+{
+  "name": "vue-setup-handler",
+  "bin": { "app": "src/main.js" }
+}

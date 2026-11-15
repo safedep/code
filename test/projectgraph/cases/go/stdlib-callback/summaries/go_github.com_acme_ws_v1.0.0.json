@@ -1,0 +1,50 @@
+{
+  "version": "3",
+  "index_version": "16",
+  "link_version": "18",
+  "unit": "go:github.com/acme/ws@v1.0.0",
+  "symbols": [
+    {
+      "key": "github.com//acme//ws//Conn",
+      "definitions": [
+        "go:github.com/acme/ws@v1.0.0//conn.go//Conn"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "github.com//acme//ws//Conn//NextReader",
+      "definitions": [
+        "go:github.com/acme/ws@v1.0.0//conn.go//Conn//NextReader"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "github.com//acme//ws//Conn//ReadMessage",
+      "definitions": [
+        "go:github.com/acme/ws@v1.0.0//conn.go//Conn//ReadMessage"
+      ],
+      "reaches": [
+        "io//ReadAll"
+      ],
+      "uncertainties": [
+        0
+      ]
+    }
+  ],
+  "targets": [
+    "io//ReadAll"
+  ],
+  "uncertainties": [
+    {
+      "kind": "unresolved-call",
+      "site": {
+        "path": ""
+      },
+      "text": "the Go standard library, which no unit gives (no-dependency-source)",
+      "callback": true,
+      "targets": [
+        "io//ReadAll"
+      ]
+    }
+  ]
+}

@@ -23,7 +23,7 @@ import (
 // change. Version 2 added the root kind to the first hop of a path.
 // Version 3 matches a target against the external key of a definition of a
 // unit of dependency code.
-const Version = "4"
+const Version = "5"
 
 const (
 	defaultMaxDepth = 64
@@ -101,8 +101,14 @@ type CallSite struct {
 // dependency code. ImportPrefix scopes a computed import to the targets
 // under the prefix, and Unit scopes a call into a package at no known
 // definition to the targets that the code of the package, and of each
-// package that it calls, reaches. With none of them, the uncertainty
-// concerns every target.
+// package that it calls, reaches. Callback scopes code outside the graph
+// that can call into the graph only through a method of a value that it
+// holds, as the Go standard library with no unit, to the targets that a
+// method that the graph names for it reaches. Such an uncertainty has no
+// key and counts once per search. The code of a Method, a Unit or a
+// Callback scope can hold uncertainties of its own, and the scope also
+// concerns what each of them concerns. With none of the fields, the
+// uncertainty concerns every target.
 type Uncertainty struct {
 	Kind         UncertaintyKind   `json:"kind"`
 	Key          string            `json:"key,omitempty"`
@@ -111,6 +117,7 @@ type Uncertainty struct {
 	Method       string            `json:"method,omitempty"`
 	ImportPrefix string            `json:"import_prefix,omitempty"`
 	Unit         string            `json:"unit,omitempty"`
+	Callback     bool              `json:"callback,omitempty"`
 }
 
 // Searched is what the search did. Version is the Version of the search
@@ -181,7 +188,9 @@ func (r Result) String() string {
 // A hop with low confidence names its edge kind, as main.py:3 (name), so
 // a reader sees the weak hop. An llm hop also names its model and its
 // prompt. A package hop names its kind at the definition in the package,
-// so a reader sees where the path enters dependency code.
+// so a reader sees where the path enters dependency code. A load hop, as
+// main.go (load), enters a module top level that the program runs before
+// the code of the hop before it.
 func PathString(hops []Hop) string {
 	parts := make([]string, 0, len(hops)+1)
 	if hops[0].Root == RootQuery {
@@ -192,6 +201,8 @@ func PathString(hops []Hop) string {
 		switch {
 		case h.EdgeKind == projectgraph.EdgeLLM:
 			part += " (" + string(h.EdgeKind) + ", " + h.Resolver + ")"
+		case h.Resolver == LoadResolver:
+			part += " (" + LoadResolver + ")"
 		case h.Confidence == projectgraph.ConfidenceLow || h.EdgeKind == projectgraph.EdgePackage:
 			part += " (" + string(h.EdgeKind) + ")"
 		}
@@ -216,6 +227,10 @@ func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error
 	}
 	a := newAdjacency(g)
 	a.includeTests = q.IncludeTests
+	// A search from the roots of kind main enters the load code through
+	// the module top levels that the root rules add and through the
+	// import edges. A search from a source or a test root does not.
+	a.loads = len(q.Sources) > 0 || q.IncludeTests
 	depth := cmp.Or(q.MaxDepth, defaultMaxDepth)
 
 	targets := make([][]int, len(q.Targets))
@@ -237,8 +252,14 @@ func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error
 			}
 		}
 	}
+	// The caller of a root of kind query can run code before it that no
+	// root reaches, as a main that fills a table of handlers and then
+	// calls the source. That code can store a function value. So only a
+	// search from the roots that the rules marked reaches each function
+	// that a call of a value can run.
+	a.valueEdges = !slices.ContainsFunc(roots, func(r projectgraph.Root) bool { return r.Kind == RootQuery })
 	kinds := a.rootKinds(roots)
-	s := a.search(ctx, a.ids(roots), depth, targets)
+	s := a.search(ctx, a.ids(roots), depth, targets, a.loads)
 	unc := a.uncertainties(s, depth)
 	// The fallback roots are in the search only with the roots of the
 	// graph, so a search from the sources alone has no fallback to report.
@@ -268,7 +289,7 @@ func Reach(ctx context.Context, g *projectgraph.Graph, q Query) ([]Result, error
 				if tests == nil {
 					all := slices.Concat(roots, testRoots)
 					testKinds = a.rootKinds(all)
-					tests = a.search(ctx, a.ids(all), depth, targets)
+					tests = a.search(ctx, a.ids(all), depth, targets, true)
 				}
 				if node, ok := tests.nearest(targets[i]); ok {
 					r.TestPath = a.path(tests, node, testKinds)
@@ -314,7 +335,11 @@ type Explorer struct {
 	a *adjacency
 }
 
-// NewExplorer builds the adjacency of the graph for the searches of an Explorer.
+// NewExplorer builds the adjacency of the graph for the searches of an
+// Explorer. A summary is the main user of an Explorer, and a search of any
+// kind reads it, from a project that the summary does not see. So the
+// searches of an Explorer do not have valueEdges, as a search from a
+// source does not.
 func NewExplorer(g *projectgraph.Graph) *Explorer {
 	return &Explorer{a: newAdjacency(g)}
 }
@@ -335,7 +360,7 @@ func (x *Explorer) Explore(ctx context.Context, from []string, maxDepth int) (*E
 	}
 	slices.Sort(sources)
 	depth := cmp.Or(maxDepth, defaultMaxDepth)
-	s := a.search(ctx, slices.Compact(sources), depth, nil)
+	s := a.search(ctx, slices.Compact(sources), depth, nil, false)
 
 	e := &Exploration{Reached: []Reached{}}
 	for _, id := range a.externals {
@@ -349,10 +374,14 @@ func (x *Explorer) Explore(ctx context.Context, from []string, maxDepth int) (*E
 
 // adjacency is the graph with integer node ids, in key order, and the edges out
 // of each node. unitNodes holds the nodes of each unit of dependency code,
-// and closures what the code of each unit reaches. byLast holds the nodes
-// by the last segment of their key, and methodClosures what the nodes of
-// each last segment reach. Each table fills on first use. includeTests
-// lets a node of a test file be a source of a method closure.
+// byLast the nodes by the last segment of their key, callbacks the methods
+// that code outside the graph can call, and spans what the code of each
+// scope can run. Each table fills on first use. includeTests lets a node
+// of a test file start the span of a method name or of the callback. loads
+// makes the search of a query and each span enter the load group of each
+// node that they reach, and loadGroups holds the module top levels of each
+// group. valueEdges marks a search that reaches each code that can store a
+// function value, as sources.valueEdges says.
 type adjacency struct {
 	g         *projectgraph.Graph
 	keys      []string
@@ -366,19 +395,22 @@ type adjacency struct {
 	byExternal map[string][]int
 
 	includeTests bool
+	loads        bool
+	valueEdges   bool
 
-	src            *sources
-	unitNodes      map[string][]int
-	closures       map[string][]bool
-	byLast         map[string][]int
-	methodClosures map[string][]bool
+	src        *sources
+	loadGroups map[string]*loadGroup
+	unitNodes  map[string][]int
+	byLast     map[string][]int
+	callbacks  []int
+	spans      map[scopeKey]*span
 }
 
 // sources returns the records, the flags and the budgets of the graph by
 // node, read once.
 func (a *adjacency) sources() *sources {
 	if a.src == nil {
-		a.src = newSources(a.g)
+		a.src = newSources(a.g, a.valueEdges)
 	}
 	return a.src
 }
@@ -417,107 +449,6 @@ func newAdjacency(g *projectgraph.Graph) *adjacency {
 		a.in[to] = append(a.in[to], int32(i))
 	}
 	return a
-}
-
-// unitOf returns the unit of dependency code of a node, or "".
-func (a *adjacency) unitOf(id int) string {
-	if n := a.g.Nodes[a.keys[id]]; n != nil {
-		return fileindex.PackageOf(n.Path)
-	}
-	return ""
-}
-
-// closure returns the nodes that the code of a unit reaches, and the code
-// of each unit that a node of it reaches. A value of the project that the
-// code of a unit calls comes to it on an edge, as a reference, so the
-// search from the project reaches that value already.
-func (a *adjacency) closure(unit string) []bool {
-	if c, ok := a.closures[unit]; ok {
-		return c
-	}
-	if a.unitNodes == nil {
-		a.unitNodes, a.closures = map[string][]int{}, map[string][]bool{}
-		for id := range a.keys {
-			if u := a.unitOf(id); u != "" {
-				a.unitNodes[u] = append(a.unitNodes[u], id)
-			}
-		}
-	}
-	entered := map[string]bool{}
-	seen := a.reachable(a.unitNodes[unit], func(id int) []int {
-		u := a.unitOf(id)
-		if u == "" || entered[u] {
-			return nil
-		}
-		entered[u] = true
-		return a.unitNodes[u]
-	})
-	a.closures[unit] = seen
-	return seen
-}
-
-// reachable returns the nodes that a search from the sources reaches. The
-// search also takes the nodes that more gives for each node that it
-// reaches, as the other nodes of the unit of the node.
-func (a *adjacency) reachable(sources []int, more func(id int) []int) []bool {
-	seen := make([]bool, len(a.keys))
-	var queue []int
-	add := func(id int) {
-		if !seen[id] {
-			seen[id] = true
-			queue = append(queue, id)
-		}
-	}
-	for _, id := range sources {
-		add(id)
-	}
-	for len(queue) > 0 {
-		id := queue[0]
-		queue = queue[1:]
-		for _, v := range more(id) {
-			add(v)
-		}
-		for _, e := range a.out[id] {
-			add(a.id[a.g.Edges[e].To])
-		}
-	}
-	return seen
-}
-
-// unitReaches reports whether the code of a unit reaches a node of the
-// target.
-func (a *adjacency) unitReaches(unit string, target Target) bool {
-	c := a.closure(unit)
-	return slices.ContainsFunc(a.match(target), func(id int) bool { return c[id] })
-}
-
-// methodClosure returns the nodes that the nodes with the last segment
-// reach: the definitions of the name in the project and in each unit of
-// dependency code, and the external keys of the name, which can lead into
-// a unit. An unresolved call of the name can run any of them. A node of a
-// test file is a source only when the query includes the tests.
-func (a *adjacency) methodClosure(name string) []bool {
-	if c, ok := a.methodClosures[name]; ok {
-		return c
-	}
-	if a.byLast == nil {
-		a.byLast, a.methodClosures = map[string][]int{}, map[string][]bool{}
-		for id, key := range a.keys {
-			if n := a.g.Nodes[key]; n != nil && (a.includeTests || !n.Test) {
-				a.byLast[fileindex.Last(key)] = append(a.byLast[fileindex.Last(key)], id)
-			}
-		}
-	}
-	seen := a.reachable(a.byLast[name], func(int) []int { return nil })
-	a.methodClosures[name] = seen
-	return seen
-}
-
-// methodReaches reports whether a node with the last segment reaches a
-// node of the target.
-func (a *adjacency) methodReaches(name string, target Target) bool {
-	c := a.methodClosure(name)
-	return slices.ContainsFunc(a.match(target), func(id int) bool { return c[id] })
 }
 
 // match returns the nodes of a target, by id: the external node of its
@@ -560,7 +491,7 @@ func (a *adjacency) ids(roots []projectgraph.Root) []int {
 
 // search is the state of one breadth-first search. best is the highest
 // lowest confidence rank of a shortest path to each node, and parent is the
-// edge into the node on that path, or -1 at a root.
+// edge into the node on that path, -1 at a root, or a load parent.
 type search struct {
 	dist     []int32
 	best     []int8
@@ -571,7 +502,9 @@ type search struct {
 	stopped  bool
 }
 
-func (a *adjacency) search(ctx context.Context, sources []int, maxDepth int, targets [][]int) *search {
+// search runs one breadth-first search. With loads, it enters the load
+// group of each node that it reaches.
+func (a *adjacency) search(ctx context.Context, sources []int, maxDepth int, targets [][]int, loads bool) *search {
 	n := len(a.keys)
 	s := &search{dist: make([]int32, n), best: make([]int8, n), parent: make([]int32, n)}
 	for i := range s.dist {
@@ -592,26 +525,36 @@ func (a *adjacency) search(ctx context.Context, sources []int, maxDepth int, tar
 		if len(targets) > 0 && s.allFound(targets) {
 			return s
 		}
+		unseen := func(v int) bool { return s.dist[v] < 0 }
 		if depth == maxDepth {
 			s.depthCut = slices.ContainsFunc(frontier, func(u int) bool {
-				return slices.ContainsFunc(a.out[u], func(e int32) bool { return s.dist[a.id[a.g.Edges[e].To]] < 0 })
+				return slices.ContainsFunc(a.out[u], func(e int32) bool { return unseen(a.id[a.g.Edges[e].To]) }) ||
+					loads && slices.ContainsFunc(a.loadsOf(u), unseen)
 			})
 			return s
 		}
 		var next []int
+		visit := func(v int, rank int8, parent int32) {
+			switch {
+			case s.dist[v] < 0:
+				s.dist[v], s.best[v], s.parent[v] = int32(depth+1), rank, parent
+				next = append(next, v)
+			case s.dist[v] == int32(depth+1) && rank > s.best[v]:
+				s.best[v], s.parent[v] = rank, parent
+			}
+		}
 		for _, u := range frontier {
 			for _, e := range a.out[u] {
 				s.edges++
 				edge := &a.g.Edges[e]
-				v := a.id[edge.To]
-				rank := min(s.best[u], int8(edge.Confidence.Rank()))
-				switch {
-				case s.dist[v] < 0:
-					s.dist[v], s.best[v], s.parent[v] = int32(depth+1), rank, e
-					next = append(next, v)
-				case s.dist[v] == int32(depth+1) && rank > s.best[v]:
-					s.best[v], s.parent[v] = rank, e
-				}
+				visit(a.id[edge.To], min(s.best[u], int8(edge.Confidence.Rank())), e)
+			}
+			if !loads {
+				continue
+			}
+			for _, v := range a.loadsOf(u) {
+				s.edges++
+				visit(v, s.best[u], loadParent(u))
 			}
 		}
 		s.order = append(s.order, next...)
@@ -649,8 +592,8 @@ func (s *search) nearest(ids []int) (int, bool) {
 // exploration, passes nil.
 func (a *adjacency) path(s *search, node int, kinds rootKinds) []Hop {
 	var hops []Hop
-	for s.parent[node] >= 0 {
-		e := a.g.Edges[s.parent[node]]
+	for s.parent[node] != -1 {
+		e := a.edgeInto(s, node)
 		hops = append(hops, Hop{Key: e.To, Site: e.Site, EdgeKind: e.Kind, Confidence: e.Confidence, Resolver: e.Resolver})
 		node = a.id[e.From]
 	}

@@ -53,7 +53,10 @@ func (b *builder) linkFields() {
 		}
 		if len(candidates) > maxNameCandidates {
 			delete(b.unresolved, u)
-			u.Reason, u.Method = fileindex.UnresolvedAmbiguous, ""
+			u.Reason = fileindex.UnresolvedAmbiguous
+			if !profileOf(ix.Language).keepsAmbiguousMethod(u.Receiver) {
+				u.Method = ""
+			}
 			b.addUnresolved(u)
 			continue
 		}

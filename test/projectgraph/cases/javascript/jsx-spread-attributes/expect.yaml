@@ -1,0 +1,48 @@
+source: safedep:hand
+description: >-
+  App spreads the object handlers into a button, as <button {...handlers}>. React binds each property of the
+  object as a prop of the element, so a click runs handlers.onClick, which calls danger of plug. The spread
+  attribute names the object, so App must get a reference to each function that the object holds, and
+  plug.danger is found. An index that reads no value of a spread attribute gives no edge and no record, and
+  plug.danger reads not-found.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.js
+    to: src/App.jsx//App
+    kind: reference
+    confidence: low
+    site: src/main.js:5
+  - from: src/App.jsx//App
+    to: src/App.jsx//handlers//onClick
+    kind: reference
+    confidence: low
+    site: src/App.jsx:10
+unresolved:
+  - caller: src/main.js
+    site: src/main.js:5
+    reason: no-dependency-source
+    method: render
+results:
+  - target: plug//danger
+    status: found
+    path:
+      - key: src/main.js
+      - key: src/App.jsx//App
+        site: src/main.js:5
+        kind: reference
+        confidence: low
+      - key: src/App.jsx//handlers//onClick
+        site: src/App.jsx:10
+        kind: reference
+        confidence: low
+      - key: plug//danger
+        site: src/App.jsx:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/App.jsx//handlers//onClick
+        site: src/App.jsx:5
+        reached: true

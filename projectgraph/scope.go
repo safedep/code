@@ -79,7 +79,7 @@ func newScope(ix *fileindex.Index) *scope {
 // or the module key.
 func (sc *scope) enclosing(line int) string {
 	key, span := sc.ix.Path, -1
-	for _, def := range sc.ix.Definitions {
+	for def := range sc.ix.CodeDefinitions() {
 		if def.StartLine > line || def.EndLine < line {
 			continue
 		}
@@ -122,7 +122,7 @@ func bindingName(lang langcode.Code, imp fileindex.Import) string {
 	switch {
 	case imp.Item != "":
 		return lastDotted(cmp.Or(imp.Alias, imp.Item))
-	case imp.Alias != "" && imp.Alias != imp.Module:
+	case imp.Alias != "" && (imp.Alias != imp.Module || profileOf(lang).importsBindAlias):
 		return imp.Alias
 	case profileOf(lang).importBindsRoot:
 		return firstDotted(imp.Module)

@@ -15,7 +15,8 @@ import (
 // the run gives each plugin its stored artifact in place of a tree. The
 // run keys an artifact by the fileindex.Key of the file and the Name and
 // the Version of the plugin, so a new Version makes every older artifact
-// miss.
+// miss. The run stores no artifact that the plugin returns after ctx is
+// done, because the end of ctx can have cut it.
 type CachedPlugin interface {
 	core.Plugin
 
@@ -61,7 +62,7 @@ func artifactKey(p pending, pl CachedPlugin) store.ArtifactKey {
 
 // supports reports whether a plugin runs on the language of a file.
 func supports(pl core.Plugin, p pending) bool {
-	return slices.Contains(pl.SupportedLanguages(), p.language.Meta().Code)
+	return slices.Contains(pl.SupportedLanguages(), p.source.Language.Meta().Code)
 }
 
 // needsParse reports whether a file with a stored index still needs its
