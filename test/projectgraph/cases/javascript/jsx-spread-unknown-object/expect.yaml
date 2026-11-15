@@ -1,0 +1,46 @@
+source: safedep:hand
+description: >-
+  App spreads the result of make into Button, as <Button {...make()} />, and Button spreads its parameter props
+  into a button, as <button {...props}>. React binds each property of the object as a prop, so a click runs the
+  onClick of the object that make returns, which calls danger of plug. The index cannot name the functions of a
+  call result or of a parameter. So each spread site gets a computed-name record, which concerns every target,
+  and plug.danger reads uncertain. An index that reads no value of a spread attribute gives no record, and
+  plug.danger reads not-found.
+roots:
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+edges:
+  - from: src/main.js
+    to: src/App.jsx//App
+    kind: reference
+    confidence: low
+    site: src/main.js:5
+  - from: src/App.jsx//App
+    to: src/App.jsx//Button
+    kind: reference
+    confidence: low
+    site: src/App.jsx:16
+unresolved:
+  - caller: src/App.jsx//Button
+    site: src/App.jsx:12
+    reason: computed-name
+  - caller: src/App.jsx//App
+    site: src/App.jsx:16
+    reason: computed-name
+  - caller: src/main.js
+    site: src/main.js:5
+    reason: no-dependency-source
+    method: render
+results:
+  - target: plug//danger
+    status: uncertain
+    call_sites:
+      - caller: src/App.jsx//make//onClick
+        site: src/App.jsx:6
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/App.jsx:16
+      - kind: unresolved-call
+        site: src/App.jsx:12

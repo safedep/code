@@ -118,6 +118,17 @@ edge. A function in a JSX expression, as `handle` in
 `<button onClick={handle}>`, is a reference too. This holds in `.jsx`,
 `.tsx` and `.js` files.
 
+A spread attribute, as `<button {...handlers}>`, makes each property of
+the object a prop of the element, and React can call each function of it.
+When the object is a definition of the file, as `const handlers = {
+onClick() {} }`, the element gets a reference to each function that the
+definition holds, as `handlers.onClick`. The index cannot name the
+functions of any other object, as a parameter, the result of a call or an
+import. A function of such an object can have no other reference, so the
+spread gets a `computed-name` record, which concerns every target. The
+cases `javascript/jsx-spread-attributes` and
+`javascript/jsx-spread-unknown-object` show each answer.
+
 The index leaves out a Go file of a unit only when no Go build reads it by
 default: a `_test.go` file, a file with `//go:build ignore`, and a file
 whose constraint needs a tag that the go command never sets, as `purego`.

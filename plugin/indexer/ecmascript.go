@@ -65,6 +65,7 @@ func ecmascriptRules(typescript bool) languageRules {
 				"jsx_opening_element":      "name",
 				"jsx_self_closing_element": "name",
 			},
+			spreads:     map[string]string{"jsx_expression": "spread_element"},
 			intrinsic:   jsxIntrinsic,
 			member:      "member_expression",
 			object:      "object",

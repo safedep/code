@@ -32,6 +32,10 @@ type referenceSyntax struct {
 	// of a, b := f, g. The last child of each list holds the value, so the
 	// key of a keyed element is no value.
 	lists map[string]bool
+	// spreads maps a holder to the node type of a spread in it, as
+	// {...handlers} in <button {...handlers}>. The spread passes each
+	// property of an object, so each function of the object is a value.
+	spreads map[string]string
 	// intrinsic reports whether a value of the holder names no code of the
 	// file by a rule of the language, as the tag div of a JSX element.
 	intrinsic func(p *projection, holder, value *sitter.Node) bool
@@ -97,6 +101,10 @@ func referenceVisitor(p *projection) visitor {
 		}
 		caller := stack[len(stack)-1].key
 		for _, value := range syntax.unlist(values) {
+			if spread, ok := syntax.spreads[kind]; ok && value.Type() == spread {
+				p.addSpread(*syntax, caller, value)
+				continue
+			}
 			if syntax.intrinsic != nil && syntax.intrinsic(p, node, value) {
 				continue
 			}
@@ -134,6 +142,44 @@ func (p *projection) addReference(node *sitter.Node, caller string, targets []st
 		Text:    callgraph.ClipText(p.text(node)),
 		Targets: targets,
 	})
+}
+
+// addSpread adds the functions of the object that a spread passes, as
+// handlers in <button {...handlers}>. React makes each property of the
+// object a prop of the element and can call each function. The index names
+// the functions that a definition of the file holds, as handlers//onClick.
+// The index cannot name the functions of any other object, as a parameter,
+// the result of a call or an object with no function definition. A
+// function of such an object can have no reference, so the site gets a
+// computed-name record, which concerns every target.
+func (p *projection) addSpread(syntax referenceSyntax, caller string, spread *sitter.Node) {
+	operand := spread.NamedChild(0)
+	if target, ok := p.reference(syntax, caller, operand); ok {
+		if functions := p.functionsOf(target); len(functions) > 0 {
+			p.addReference(operand, caller, p.targets(functions))
+			return
+		}
+	}
+	site := ast.GetNodePosition(spread)
+	p.ix.Unresolved = append(p.ix.Unresolved, fileindex.Unresolved{
+		Caller: p.caller(caller, site),
+		Line:   int(site.StartLine),
+		Column: int(site.StartColumn),
+		Text:   callgraph.ClipText(p.text(spread)),
+		Reason: fileindex.UnresolvedComputedName,
+	})
+}
+
+// functionsOf returns the functions and the methods that the definition of
+// the key holds directly, as handlers//onClick of handlers.
+func (p *projection) functionsOf(key string) []string {
+	var functions []string
+	for k, def := range p.defs {
+		if fileindex.Parent(k) == key && (def.Kind == fileindex.DefFunction || def.Kind == fileindex.DefMethod) {
+			functions = append(functions, k)
+		}
+	}
+	return functions
 }
 
 // valueTarget returns the per-file target of a value, or the member node
