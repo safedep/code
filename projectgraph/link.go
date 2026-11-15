@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/safedep/code/fileindex"
@@ -78,10 +79,16 @@ func Build(ctx context.Context, indexes []*fileindex.Index, opts Options) (*Grap
 	if err != nil {
 		return nil, err
 	}
+	defer context.AfterFunc(ctx, func() { b.stopped.Store(true) })()
 	if err := b.linkAll(ctx); err != nil {
 		return nil, err
 	}
 	if err := b.markRoots(ctx); err != nil {
+		return nil, err
+	}
+	// A stop cuts the resolutions short, so the graph of a stopped build
+	// lacks edges and goes to no caller.
+	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 	g := b.finish()
@@ -137,6 +144,11 @@ type builder struct {
 	// expanding holds the scopes whose wildcard imports a resolution reads
 	// now, with the modules of the last whole pass.
 	expanding map[*scope]*wildcardRead
+	// stopped marks a build whose context ended. The walk and the reads of
+	// wildcard imports then end at once. A context check only between files
+	// lets the resolutions of one file run on past the budget of the caller,
+	// and a cycle of glob uses can keep them running for hours.
+	stopped atomic.Bool
 	// unitTypes holds the type that a unit of dependency code gives for
 	// each external key, or "".
 	unitTypes map[string]string

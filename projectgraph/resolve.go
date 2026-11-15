@@ -518,6 +518,9 @@ type wildcardRead struct {
 // with the number of files. A file that each other file of the cycle reads
 // with a glob use of a name that no file defines is such a cycle.
 func (b *builder) wildcardModules(sc *scope) []string {
+	if b.stopped.Load() {
+		return nil
+	}
 	if r := b.expanding[sc]; r != nil {
 		r.read = true
 		return r.mods
