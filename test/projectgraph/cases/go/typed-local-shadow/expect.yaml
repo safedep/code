@@ -1,25 +1,24 @@
 source: safedep:hand
 description: >-
-  main declares x as a local, and an inner block declares x again as a remote. The call x.run() in the
-  block runs remote.run, which calls os/exec.LookPath. The index records the typed locals of a function
-  with no extent, and the link step reads the type of the first one. So the index checks that the binding
-  of x in scope at the call is the binding whose type the link step reads. Here it is not. The method
-  value x.stop is an unknown-receiver record with the method name stop, which gets a name edge to
-  remote.stop. A type of the first x gave not-found for os/exec.LookPath. The call x.run() before the
-  block keeps its member edge to local.run. pick binds r once and types it by the assignment r =
-  &remote{}, and named types its named result l by an assignment. Each function binds the name once, so
-  the assignment types that variable, and the call keeps its member edge. A record there gave a name edge
-  to the run of the other type, and a target behind it read found. The binding of x in the block of main
-  has a type of its own, so the index gives the call the target of that binding under an alias, and the
-  call gets a member edge to remote.run. siblings does the same in each of two blocks. viaLit calls run on
-  the parameter x of a function literal, which no type of the index names, so the call is a record.
-  pickIface types r by an assignment, but r holds the interface runner from the field r, so the writes do
-  not agree and the call is a record too. A type of local for each of the two gave not-found for
-  os/exec.LookPath. In idiom.go, parse declares url from url.Parse, and the local binds no name at the
-  call, so the call keeps its edge to the import. viaParam and viaRange bind log, which shadows the import
-  of log, so the index takes no target of the import. The parameter of the type logger gives a member edge
-  to logger.Println, and the range variable a record with a name edge. In shadowedParam of main.go a local o shadows
-  the parameter o, so the field r of the parameter type does not type x, and the call x.run() is a record.
+  main declares x as a local, and an inner block declares x again as a remote. The call x.run() in the block runs
+  remote.run, which calls os/exec.LookPath. The index records the typed locals of a function with no extent, and the
+  link step reads the type of the first one. So the index checks that the binding of x in scope at the call is the
+  binding whose type the link step reads. Here it is not. The method value x.stop is an unknown-receiver record with
+  the method name stop, which gets a name edge to remote.stop. Without the rule, a type of the first x gives
+  not-found for os/exec.LookPath. The call x.run() before the block keeps its member edge to local.run. pick binds r
+  once and types it by the assignment r = &remote{}, and named types its named result l by an assignment. Each
+  function binds the name once, so the assignment types that variable, and the call keeps its member edge. Without
+  the rule, a record there gives a name edge to the run of the other type, and a target behind it reads found. The
+  binding of x in the block of main has a type of its own, so the index gives the call the target of that binding
+  under an alias, and the call gets a member edge to remote.run. siblings does the same in each of two blocks.
+  viaLit calls run on the parameter x of a function literal, which no type of the index names, so the call is a
+  record. pickIface types r by an assignment, but r holds the interface runner from the field r, so the writes do
+  not agree and the call is a record too. Without the rule, a type of local for each of the two gives not-found for
+  os/exec.LookPath. In idiom.go, parse declares url from url.Parse, and the local binds no name at the call, so the
+  call keeps its edge to the import. viaParam and viaRange bind log, which shadows the import of log, so the index
+  takes no target of the import. The parameter of the type logger gives a member edge to logger.Println, and the
+  range variable a record with a name edge. In shadowedParam of main.go a local o shadows the parameter o, so the
+  field r of the parameter type does not type x, and the call x.run() is a record.
 roots:
   - key: idiom.go
     kind: main

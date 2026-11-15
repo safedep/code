@@ -1,7 +1,7 @@
 source: safedep:hand
 description: >-
   The route files export values that are no object literal. handle is the result of sequence, and the
-  index now records the arguments first and second of the call in the export statement as references, so
+  index records the arguments first and second of the call in the export statement as references, so
   h1 and h2 are found. other names the variable named, which holds table, so the export reaches table and
   the rule marks save. PUT takes the default fallback, because handlers has no PUT. GET and actions are
   results of calls, and the functions that the framework calls on them are no definition that an edge

@@ -2,26 +2,26 @@ source: safedep:hand
 description: >-
   main ranges over the function walk and over the method value t.All, as Go 1.23 allows. The range calls
   the function, and the function calls the body of the loop through yield. So the range expression is a
-  reference, as an argument is, and os.Remove and os/exec.LookPath are found through it. A range clause
-  with no reference lost both. The range over a slice names no function. No code uses unused, so os.Getwd
-  is not found. consume ranges over its parameter seq of a function type, and drain over the field each of
-  a function type. Each range calls a function value that a search from a source does not reach, so it is
-  a function-value record, and each target is uncertain from consume and from drain. A range with no
-  record read not-found there. attrs ranges over the member Attr of a range variable n, whose type the
-  index does not know. The field Attr of node holds a slice, but the method element.Attr can make n.Attr a
-  method value. So the range is a record with the method name, and os.Chdir is found from attrs through
-  the name edge. attrsTyped ranges over n.Attr of a parameter n *node. The reference at the site names the
-  field, which holds data, so the range has no record, and os.Chdir is not found from it. typed ranges
-  over a parameter of the type Seq of another file, and viaLocal over a local that holds the field Each of
-  a holder. The index cannot show that either value is data, so each range is a function-value record, and
-  os.Remove is uncertain from each. The record of viaLocal is at the field that gives the local.
-  dataRanges ranges over a slice of a slice, a value of the type List of another file, an element of a map
-  of slices, the result of names and of node.Children, which give slices, and a local that holds such a
-  result. stdRange ranges over the result of strings.Fields, code outside the graph whose own record
-  covers a function that it makes. The link step reads the types and the results of the graph and drops
-  each record. So os.Remove is not found from dataRanges. From stdRange only the callback of
-  strings.Fields concerns it, because tree.All, a method of an exported name, holds a function-value
-  record.
+  reference, as an argument is, and os.Remove and os/exec.LookPath are found through it. Without the
+  reference, both read not-found. The range over a slice names no function. No code uses unused, so
+  os.Getwd is not found. consume ranges over its parameter seq of a function type, and drain over the
+  field each of a function type. Each range calls a function value that a search from a source does not
+  reach, so it is a function-value record, and each target is uncertain from consume and from drain.
+  Without the record, each target reads not-found there. attrs ranges over the member Attr of a range
+  variable n, whose type the index does not know. The field Attr of node holds a slice, but the method
+  element.Attr can make n.Attr a method value. So the range is a record with the method name, and os.Chdir
+  is found from attrs through the name edge. attrsTyped ranges over n.Attr of a parameter n *node. The
+  reference at the site names the field, which holds data, so the range has no record, and os.Chdir is not
+  found from it. typed ranges over a parameter of the type Seq of another file, and viaLocal over a local
+  that holds the field Each of a holder. The index cannot show that either value is data, so each range is
+  a function-value record, and os.Remove is uncertain from each. The record of viaLocal is at the field
+  that gives the local. dataRanges ranges over a slice of a slice, a value of the type List of another
+  file, an element of a map of slices, the result of names and of node.Children, which give slices, and a
+  local that holds such a result. stdRange ranges over the result of strings.Fields, code outside the
+  graph whose own record covers a function that it makes. The link step reads the types and the results of
+  the graph and drops each record. So os.Remove is not found from dataRanges. From stdRange only the
+  callback of strings.Fields concerns it, because tree.All, a method of an exported name, holds a
+  function-value record.
 roots:
   - key: main.go
     kind: main

@@ -3,8 +3,8 @@ description: >-
   build has the type parameter Local with the bound Maker, which shadows the struct Local of the file. So
   Local::make() in build runs make of the type that the caller gives, Real here, whose make calls
   std::fs::create_dir. The make of the struct Local calls std::fs::remove_file and nothing calls it. The call
-  graph reads no type parameter, so it sends the call to Local::make of the struct, and std::fs::create_dir
-  reads not-found. The index makes the call a record with the reason unknown-receiver.
+  graph reads no type parameter, so it sends the call to Local::make of the struct. Without the rule,
+  std::fs::create_dir reads not-found. The index makes the call a record with the reason unknown-receiver.
 roots:
   - key: src/main.rs
     kind: main

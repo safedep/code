@@ -545,10 +545,10 @@ func (r rustResolver) Module(importer, spec string) (string, string, bool) {
 	}
 	// A use can bind an item of the crate, as fl of use crate::ffi::flush
 	// as fl after pub use dep as ffi. A call of fl links the key itself,
-	// so the key needs its node. Without it the edge reached no node, and
-	// the target read as not-found. A module of a unit, as html of
-	// dep::html, runs no code, and its node would get a record of the unit
-	// for a walk that ends on a module.
+	// so the key needs its node. An edge to a key with no node leaves the
+	// target not-found. A module of a unit, as html of dep::html, runs no
+	// code, and its node would get a record of the unit for a walk that ends
+	// on a module.
 	key := r.b.rustCrateKey(t.file, t.path)
 	if r.b.rustUnitModule(t.file, t.path) {
 		return key, "crate", true
@@ -1018,8 +1018,8 @@ func (b *builder) rustExports(mod, name string, seen map[string]bool) bool {
 }
 
 // rustNestedName reports whether an inline module of the graph defines a
-// type of the name. Most names in a Rust file name no such type, and a walk
-// up the classes that hold each name cost a fifth of the link step.
+// type of the name. Most names name no such type, so the set skips the walk
+// up the classes.
 func (b *builder) rustNestedName(name string) bool {
 	s := b.rustState()
 	if s.nested == nil {
@@ -1035,9 +1035,8 @@ func (b *builder) rustNestedName(name string) bool {
 
 // rustCrateMember returns the external key of a path of another crate that
 // a use of a file of a unit binds, as inner::text of pub use inner::text in
-// the prelude of dep. The walk then goes on in the unit of that crate.
-// Without the key, dep::prelude::text named nothing, and text::fmt after
-// use dep::prelude::* read as a crate text.
+// the prelude of dep. The walk then goes on in the unit of that crate. The
+// key lets dep::prelude::text name the item.
 func (b *builder) rustCrateMember(sc *scope, path string) (string, bool) {
 	if !b.rustUnitFile(sc.ix) || b.rustLocalRoot(sc.ix.Path, path) {
 		return "", false
@@ -1200,10 +1199,8 @@ func (b *builder) rustUnitFile(ix *fileindex.Index) bool {
 // with the type, as impl Store for FileStore after use crate::FileStore.
 // Only a use at the root of the file counts. The root cannot define a type
 // of a name that such a use binds, so the class is an impl block. A use of
-// an inline module, as use crate::other::A in mod deep, binds A in deep
-// only. Read for the root, it joined a struct A of the root with the A of
-// the other module, and a call of a method of the root A went to the other
-// A with no record.
+// an inline module, as use crate::other::A in mod deep, binds A in that
+// module only.
 func (b *builder) joinImplBlocks() {
 	var groups [][]string
 	for _, p := range b.paths {

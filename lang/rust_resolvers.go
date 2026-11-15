@@ -113,8 +113,8 @@ func rustInlineModules(data *[]byte, node *sitter.Node) []string {
 // module as a path from the module of the file, as self::outer::x for
 // super::x in mod outer { mod inner { .. } }. The index keeps the uses of a
 // file in one scope, which reads such a path from the module of the file.
-// So self::x in mod m named the x of the file, and a call through it lost
-// its edge to m::x.
+// A scope that reads self::x in mod m from the file names the x of the
+// file, not m::x.
 func rustFromFile(path string, mods []string) string {
 	parts := strings.Split(path, "::")
 	ups := 0

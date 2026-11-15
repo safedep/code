@@ -4,7 +4,7 @@ description: >-
   cache::deep has use crate::store::Item, so x in by_new and in by_value holds the Item of the root, and x.save()
   runs Item::save of the root, which calls std::fs::write. The call graph reads no use, so it finds the Item of
   cache for Item::new() and for Item, and sends x.save() to cache::Item::save, which calls std::fs::create_dir.
-  std::fs::write then reads not-found. The index gives the call the path of the use.
+  Without the rule, std::fs::write reads not-found. The index gives the call the path of the use.
 roots:
   - key: src/main.rs
     kind: main

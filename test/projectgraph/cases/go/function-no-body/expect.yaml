@@ -8,11 +8,11 @@ description: >-
   its package and of the runtime, so its record concerns what the code of the unit reaches.
   os/exec.LookPath is uncertain from viaUnit, and os.Getwd is not found from it. The code of the standard
   library calls back only a method of an exported name, so the record of now is a callback. os.Chdir,
-  which closer.Close calls, is uncertain from viaLinkname, and os.Getwd is not found from it. With no
-  record, each search ended at the stub, and each target read not-found. alias is bound by //go:linkname
+  which closer.Close calls, is uncertain from viaLinkname, and os.Getwd is not found from it. Without the
+  record, each search ends at the stub, and each target reads not-found. alias is bound by //go:linkname
   to aliased of its own package main. The path main has no dot, as a path of the standard library, but a
   package of the graph gives it. So the link step joins alias to aliased with an edge, and os.Mkdir is
-  found from viaAlias. A callback there read not-found.
+  found from viaAlias. Without the edge, a callback there gives not-found.
 units:
   gomod/github.com/acme/fast@v1.0.0: go:github.com/acme/fast@v1.0.0
 roots:

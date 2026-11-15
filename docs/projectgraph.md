@@ -806,7 +806,7 @@ skip a test path, because a route can have one, as `app/api/test`. The
 cases `typescript/next-route-test-dir` and `javascript/sveltekit-test-dir`
 show it. A component file holds a `markup` record, so this root makes each
 JavaScript target that the search does not find read `uncertain`. A static import
-of a component file already did that in most such projects. The rule keeps
+of a component file does that too in most such projects. The rule keeps
 the fallback on, because a Vite app starts at `index.html`, which no rule
 reads. The rules `node.sveltekit.route` and `node.astro.page` mark the
 route files of SvelteKit and the pages of Astro, as `+page.ts`,

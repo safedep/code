@@ -4,8 +4,8 @@ description: >-
   The inline module worker has use crate::store::util, and the function flush has the same use in its block. So
   util::wipe in worker::go and in flush names the module src/store/util.rs, whose wipe calls
   std::fs::remove_dir_all. The call graph reads no use, so it finds util in the scope of the file and sends both
-  calls to the inline util. std::fs::remove_dir_all then reads not-found. The index gives each call the path
-  of its use.
+  calls to the inline util. Without the rule, std::fs::remove_dir_all reads not-found. The index gives each call
+  the path of its use.
 roots:
   - key: src/main.rs
     kind: main

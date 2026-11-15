@@ -2,10 +2,10 @@ source: safedep:hand
 description: >-
   go binds t with a let to a Disk and calls t.save(), then binds t again with a second let to a Cloud and
   calls t.save() again. The second call runs Cloud::save, which calls std::fs::remove_dir_all. The call graph
-  binds a name to the value of its first let, so it sends both calls to Disk::save. The second call then gets
-  no record and no edge to Cloud::save, and std::fs::remove_dir_all reads not-found. The index keeps the first
-  call and makes the second one a record with the reason unknown-receiver, so the second call gets the low
-  name edges of save.
+  binds a name to the value of its first let, so it sends both calls to Disk::save. Without the rule, the
+  second call gets no record and no edge to Cloud::save, and std::fs::remove_dir_all reads not-found. The
+  index keeps the first call and makes the second one a record with the reason unknown-receiver, so the second
+  call gets the low name edges of save.
 roots:
   - key: src/main.rs
     kind: main

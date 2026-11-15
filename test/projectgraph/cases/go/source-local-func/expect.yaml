@@ -7,21 +7,21 @@ description: >-
   each function as a value, so os.Remove is found through the reference. A search from run, each, fire,
   call or pick alone does not reach main. Each call there runs a function value that the search does not
   reach, so the call is a function-value record, which concerns every target in a search with a source.
-  Each target is then uncertain. A record with the name alone, as f or fn, gave not-found there. show
-  calls Name on a range variable of an interface. The field Name of user holds a string, so the call runs
-  no function value, and os.Getwd is not found from show. closure calls its local f, which holds a
-  function literal and nothing else. The index gives the calls of the literal to closure, so the call of f
-  is no record, and os.Getwd is not found from closure. In other.go, serveLocal calls a local of the type
-  http.HandlerFunc, rangeAssign calls a local that a range assigns after the literal, anonSteps calls the
-  field act of an anonymous struct, and deref calls (*p). Each call runs a function value, so each is a
-  function-value record, and os.Getwd is uncertain from each. keepRead reads the field fn of a hook and
-  calls nothing. The read is a record with no receiver, so the link step does not take it for a call of a
-  field, and os.Getwd is not found from keepRead. conv.go converts pointers, as (*T)(p) and
-  *(*uintptr)(unsafe.Pointer(k)). The operand of each dereference is a type and no value, so no call runs
-  a function value, and os.Getwd is not found from convs. runTable calls the field exec of the anonymous
-  struct of table, which anon.go declares, and localJob calls the field trigger of a struct type that the
-  function declares. The index gives each such field a definition under the key struct of its file, so the
-  link step sees that the call can run a function value. os.Getwd is uncertain from each.
+  Each target is then uncertain. Without the rule, a record with the name alone, as f or fn, gives
+  not-found there. show calls Name on a range variable of an interface. The field Name of user holds a
+  string, so the call runs no function value, and os.Getwd is not found from show. closure calls its local
+  f, which holds a function literal and nothing else. The index gives the calls of the literal to closure,
+  so the call of f is no record, and os.Getwd is not found from closure. In other.go, serveLocal calls a
+  local of the type http.HandlerFunc, rangeAssign calls a local that a range assigns after the literal,
+  anonSteps calls the field act of an anonymous struct, and deref calls (*p). Each call runs a function
+  value, so each is a function-value record, and os.Getwd is uncertain from each. keepRead reads the field
+  fn of a hook and calls nothing. The read is a record with no receiver, so the link step does not take it
+  for a call of a field, and os.Getwd is not found from keepRead. conv.go converts pointers, as (*T)(p)
+  and *(*uintptr)(unsafe.Pointer(k)). The operand of each dereference is a type and no value, so no call
+  runs a function value, and os.Getwd is not found from convs. runTable calls the field exec of the
+  anonymous struct of table, which anon.go declares, and localJob calls the field trigger of a struct type
+  that the function declares. The index gives each such field a definition under the key struct of its
+  file, so the link step sees that the call can run a function value. os.Getwd is uncertain from each.
 roots:
   - key: anon.go
     kind: main

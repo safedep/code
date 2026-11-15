@@ -61,8 +61,8 @@ func (b *builder) resolveQualified(family langcode.Code, name string) (string, b
 		key, rest := u.key, parts[i:]
 		// A Rust use can bind a module, as util of use deep::util. A walk
 		// that ends on a unit fails, so the path through such a binding
-		// steps from unit to unit here. Without the step, a path of a
-		// chained use or of a glob use named no module.
+		// steps from unit to unit here. The step lets a path of a chained
+		// use or of a glob use name its module.
 		for len(rest) > 0 && b.units[key] != nil && len(b.units[key].names[rest[0]]) == 0 {
 			member, ok := b.unitMember(key, rest[0])
 			if !ok {

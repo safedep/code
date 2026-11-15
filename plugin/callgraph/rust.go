@@ -128,8 +128,7 @@ func rustTokenTreeProcessor(node *sitter.Node, treeData []byte, currentNamespace
 
 // rustPathToken reports whether a token of a macro can start or continue a
 // path: a name, or $crate, which names the crate of the macro as crate does.
-// Without $crate, $crate::sink() of a macro read as a call of the name sink,
-// which the file of the macro does not bind.
+// $crate::sink() names sink of the crate of the macro.
 func rustPathToken(token *sitter.Node, treeData []byte) bool {
 	return token.Type() == "identifier" || token.Type() == "metavariable" && token.Content(treeData) == "$crate"
 }

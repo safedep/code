@@ -478,17 +478,9 @@ func (b *builder) linkGoStub(ix *fileindex.Index, site UnresolvedSite) bool {
 // scopeGoStub gives the record of a Go function with no body the scope of
 // the code that runs in its place, when no package of the graph holds
 // that code. The receiver of the record names the package of a
-// //go:linkname target.
-//
-//   - Code of the standard library calls back only a method of an exported
-//     name, as goOutsideRecords argues. So a linkname into the standard
-//     library, or a stub of assembly in it, gets the callback. A path with
-//     no dot can also name a package of a module, as app/internal/impl in
-//     the module app, so the path must name no package of the graph.
-//   - The assembly of a package of a unit calls code of its package and of
-//     the runtime. So its record concerns what the code of its unit reaches.
-//   - A linkname into another package and the assembly of the project can
-//     call any function, so their records concern every target.
+// //go:linkname target. A record into the standard library is a callback.
+// The assembly of a unit concerns what its unit reaches. Any other record
+// concerns every target. docs/projectgraph.md has the rules.
 func (b *builder) scopeGoStub(ix *fileindex.Index, site *UnresolvedSite) {
 	unit, _ := fileindex.ParseUnit(ix.Unit)
 	std := site.Receiver != "" && site.Receiver != ix.Package && modules.IsStdPath(site.Receiver) && len(b.resolveModules(ix, site.Receiver, modules.FormImport)) == 0

@@ -2,9 +2,9 @@ source: safedep:hand
 description: >-
   The inline module m declares a struct A, and its inline module n has use crate::other::*. n sees no item of m
   with no use, so A in f names the A of src/other.rs, whose run calls std::fs::remove_file. The call graph
-  reads no use and finds the A of m, whose run calls std::fs::remove_dir. A call of A::new() and of run in f
-  then goes to m::A with no record, and std::fs::remove_file reads not-found. The index makes each such call a
-  record, so the target reads found through the low name edges of run.
+  reads no use and finds the A of m, whose run calls std::fs::remove_dir. Without the rule, a call of A::new()
+  and of run in f goes to m::A with no record, and std::fs::remove_file reads not-found. The index makes each
+  such call a record, so the target reads found through the low name edges of run.
 roots:
   - key: src/main.rs
     kind: main
