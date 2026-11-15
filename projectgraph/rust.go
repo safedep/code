@@ -160,6 +160,9 @@ type rustState struct {
 	globbing  map[[2]string]bool
 	globPaths map[[2]string]globPath
 	members   map[[2]string]bool
+	// memberAnswers holds the answers of rustGlobUnitMember that no cut
+	// gave.
+	memberAnswers map[[2]string]memberAnswer
 }
 
 // crateRoute is the path in another crate that a path of a file names, and
@@ -200,6 +203,7 @@ func (b *builder) addRustUnits() {
 	s.globbing = map[[2]string]bool{}
 	s.globPaths = map[[2]string]globPath{}
 	s.members = map[[2]string]bool{}
+	s.memberAnswers = map[[2]string]memberAnswer{}
 	files := map[string][]string{}
 	for _, p := range b.paths {
 		if ix := b.byPath[p]; ix != nil && ix.Language == langcode.Rust {
@@ -956,18 +960,41 @@ func (b *builder) rustGlobMember(sc *scope, name string) (string, bool) {
 // rustGlobUnitMember returns what a glob use of a module brings for a name
 // that no definition of the module has: a child module, or the target of a
 // use or of a glob use of the module, as leaf for use crate::sub::* with
-// pub mod leaf in sub. Two modules can bring each other with glob uses, so
-// the guard cuts a read that asks for the same name again.
+// pub mod leaf in sub.
+//
+// Modules can bring each other with glob uses, in a diamond or in a cycle.
+// A walk of each path through them grows with the number of paths. So one
+// lookup reads each module once: a module that the lookup reads again
+// counts as a cut, and the lookup keeps no answer that a cut gave. An
+// answer that no cut gave stays for the build, so a diamond reads each
+// module once in all.
 func (b *builder) rustGlobUnitMember(mod, name string) (string, bool) {
 	s := b.rustState()
 	k := [2]string{mod, name}
+	if m, ok := s.memberAnswers[k]; ok {
+		return m.key, m.ok
+	}
 	if s.members[k] {
 		b.cuts++
 		return "", false
 	}
+	if len(s.members) == 0 {
+		defer clear(s.members)
+	}
 	s.members[k] = true
-	defer delete(s.members, k)
-	return b.unitMember(mod, name)
+	cuts := b.cuts
+	key, ok := b.unitMember(mod, name)
+	if b.cuts == cuts {
+		s.memberAnswers[k] = memberAnswer{key: key, ok: ok}
+		b.memo(func() { delete(s.memberAnswers, k) })
+	}
+	return key, ok
+}
+
+// memberAnswer is the answer of rustGlobUnitMember for a module and a name.
+type memberAnswer struct {
+	key string
+	ok  bool
 }
 
 // rustUnitFile reports whether a file is Rust code of a unit of dependency

@@ -622,12 +622,15 @@ func (b *builder) undo(mark int) {
 // path in progress was set before the read, and the guard cut the read if
 // the read asked for it.
 //
+// The guards of a Rust glob path and of a member of a glob module cut a
+// read too, so a read under them is no whole read.
+//
 // uncut compares the paths of the resolving guard only. On the Rust
 // corpus, the reads under any other guard cost less than 3% of the read
 // time. So any other state in progress fails the check.
 func (b *builder) uncut(asked map[[2]string]bool) bool {
 	s := b.rustState()
-	if len(b.expanding)+len(b.visiting)+len(b.reading)+len(b.stepping)+len(b.findingBases)+len(s.routing)+b.ordering > 0 {
+	if len(b.expanding)+len(b.visiting)+len(b.reading)+len(b.stepping)+len(b.findingBases)+len(s.routing)+len(s.globbing)+len(s.members)+b.ordering > 0 {
 		return false
 	}
 	for k := range s.resolving {

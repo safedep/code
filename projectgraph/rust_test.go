@@ -103,3 +103,22 @@ func TestRustHelperProgram(t *testing.T) {
 		})
 	}
 }
+
+// TestUncutCountsTheRustGlobGuards checks that a read of the wildcard
+// imports of a scope under the guard of a Rust glob path or of a glob
+// member is no whole read. Such a guard cuts the read of a module, and a
+// list of modules that a cut read gave stayed for the build.
+func TestUncutCountsTheRustGlobGuards(t *testing.T) {
+	for name, set := range map[string]func(s *rustState){
+		"globbing": func(s *rustState) { s.globbing = map[[2]string]bool{{"src/a.rs", "x"}: true} },
+		"members":  func(s *rustState) { s.members = map[[2]string]bool{{"rust:app::c", "x"}: true} },
+	} {
+		t.Run(name, func(t *testing.T) {
+			b, err := newBuilder(nil, Options{})
+			require.NoError(t, err)
+			require.True(t, b.uncut(nil))
+			set(b.rustState())
+			assert.False(t, b.uncut(nil))
+		})
+	}
+}
