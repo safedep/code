@@ -487,8 +487,12 @@ func (b *builder) wildcardImported(sc *scope, name string) []string {
 	var keys []string
 	for _, mod := range b.wildcardModules(sc) {
 		switch {
-		case b.units[mod] != nil:
+		case b.units[mod] != nil && len(b.units[mod].names[name]) > 0:
 			keys = append(keys, b.units[mod].names[name]...)
+		case b.units[mod] != nil && sc.profile.unitImports:
+			if key, ok := b.rustGlobUnitMember(mod, name); ok {
+				keys = append(keys, key)
+			}
 		case b.isType(mod):
 			if key, fail := b.method(mod, name); fail == nil {
 				keys = append(keys, key)

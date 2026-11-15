@@ -17,9 +17,11 @@ func (b *builder) resolveName(module, name string, hops int) (string, *failure) 
 		return r.key, r.fail
 	}
 	if b.visiting[k] {
+		b.cuts++
 		return "", &failure{reason: fileindex.UnresolvedNoDefinition, name: name, cut: true}
 	}
 	if hops > b.opts.MaxExportHops {
+		b.cuts++
 		path := strings.TrimSuffix(module, "/")
 		b.truncations[Truncation{Kind: TruncationExportHops, Key: fileindex.Join(path, name), Site: Site{Path: path}}] = true
 		return "", &failure{reason: fileindex.UnresolvedLimit, name: name, cut: true}
@@ -205,7 +207,11 @@ func (b *builder) bound(key string) (string, bool) {
 		return target, true
 	}
 	def := b.defs[key]
-	if def == nil || def.Kind != fileindex.DefAlias || b.reading[key] {
+	if def == nil || def.Kind != fileindex.DefAlias {
+		return "", false
+	}
+	if b.reading[key] {
+		b.cuts++
 		return "", false
 	}
 	b.reading[key] = true

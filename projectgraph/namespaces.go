@@ -114,10 +114,15 @@ func (b *builder) unitMember(key, name string) (string, bool) {
 				if r := b.walk(mod, lead); r.fail == nil {
 					return r.key, true
 				}
+			} else if key, ok := b.rustCrateMember(sc, joinPath(module, lead)); ok {
+				return key, true
 			}
 		}
 		if keys := b.wildcardImported(sc, name); len(keys) > 0 {
 			return keys[0], true
+		}
+		if key, ok := b.rustGlobMember(sc, name); ok {
+			return key, true
 		}
 	}
 	return "", false

@@ -157,6 +157,8 @@ type rustState struct {
 	globs     map[string][]string
 	macros    map[*space]map[string]string
 	nested    map[string]bool
+	globbing  map[[2]string]bool
+	members   map[[2]string]bool
 }
 
 // crateRoute is the path in another crate that a path of a file names, and
@@ -194,6 +196,8 @@ func (b *builder) addRustUnits() {
 	s.routing = map[[2]string]bool{}
 	s.routes = map[[2]string]crateRoute{}
 	s.globs = map[string][]string{}
+	s.globbing = map[[2]string]bool{}
+	s.members = map[[2]string]bool{}
 	files := map[string][]string{}
 	for _, p := range b.paths {
 		if ix := b.byPath[p]; ix != nil && ix.Language == langcode.Rust {
@@ -503,6 +507,7 @@ func (b *builder) resolveRust(importer, written string) (string, bool) {
 		b.asked[k] = true
 	}
 	if s.resolving[k] {
+		b.cuts++
 		return "", false
 	}
 	s.resolving[k] = true
@@ -623,6 +628,7 @@ func (b *builder) rustCratePath(importer, written string) (string, string, bool)
 		return r.path, r.file, r.ok
 	}
 	if s.routing[k] {
+		b.cuts++
 		return "", "", false
 	}
 	outer := len(s.routing) == 0
@@ -829,6 +835,10 @@ func (b *builder) rustMacroCrate(ix *fileindex.Index, name string) (string, bool
 // of a crate that no unit gives can bring any name, and the path then
 // resolves as before. A glob use of an inline module stays out, as
 // rustGlobModules says.
+//
+// A unit can bring the name by a glob use of a third crate, so the read of
+// the unit can ask for the same path again. The guard cuts such a cycle,
+// and providers keeps no answer that a cut gave.
 func (b *builder) rustGlobPath(importer, written string) (string, string, bool) {
 	sc := b.scopes[importer]
 	first := rustFirstName(written)
@@ -839,6 +849,14 @@ func (b *builder) rustGlobPath(importer, written string) (string, string, bool) 
 	case "crate", "self", "super":
 		return "", "", false
 	}
+	s := b.rustState()
+	k := [2]string{importer, first}
+	if s.globbing[k] {
+		b.cuts++
+		return "", "", false
+	}
+	s.globbing[k] = true
+	defer delete(s.globbing, k)
 	for _, imp := range sc.wildcards {
 		if def := b.defs[sc.enclosing(imp.Line)]; def != nil && def.Kind == fileindex.DefClass {
 			continue
@@ -874,6 +892,56 @@ func (b *builder) rustNestedName(name string) bool {
 		}
 	}
 	return s.nested[name]
+}
+
+// rustCrateMember returns the external key of a path of another crate that
+// a use of a file of a unit binds, as inner::text of pub use inner::text in
+// the prelude of dep. The walk then goes on in the unit of that crate.
+// Without the key, dep::prelude::text named nothing, and text::fmt after
+// use dep::prelude::* read as a crate text.
+func (b *builder) rustCrateMember(sc *scope, path string) (string, bool) {
+	if !b.rustUnitFile(sc.ix) || b.rustLocalRoot(sc.ix.Path, path) {
+		return "", false
+	}
+	return b.rustCrateKey(sc.ix.Path, path), true
+}
+
+// rustGlobMember returns the external key of a name that a glob use of a
+// file of a unit brings from another crate, as inner::ifn for ifn after
+// pub use inner::*. A file of the project reads such a name in rustPath,
+// which keeps the record of a single name.
+func (b *builder) rustGlobMember(sc *scope, name string) (string, bool) {
+	if !b.rustUnitFile(sc.ix) {
+		return "", false
+	}
+	path, file, ok := b.rustGlobPath(sc.ix.Path, name)
+	if !ok {
+		return "", false
+	}
+	return b.rustCrateKey(file, path), true
+}
+
+// rustGlobUnitMember returns what a glob use of a module brings for a name
+// that no definition of the module has: a child module, or the target of a
+// use or of a glob use of the module, as leaf for use crate::sub::* with
+// pub mod leaf in sub. Two modules can bring each other with glob uses, so
+// the guard cuts a read that asks for the same name again.
+func (b *builder) rustGlobUnitMember(mod, name string) (string, bool) {
+	s := b.rustState()
+	k := [2]string{mod, name}
+	if s.members[k] {
+		b.cuts++
+		return "", false
+	}
+	s.members[k] = true
+	defer delete(s.members, k)
+	return b.unitMember(mod, name)
+}
+
+// rustUnitFile reports whether a file is Rust code of a unit of dependency
+// code.
+func (b *builder) rustUnitFile(ix *fileindex.Index) bool {
+	return ix.Language == langcode.Rust && ix.Unit != ""
 }
 
 // joinImplBlocks makes an impl block of a type of another module one class

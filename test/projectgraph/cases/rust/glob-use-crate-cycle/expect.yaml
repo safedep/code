@@ -1,0 +1,49 @@
+source: safedep:hand
+description: >-
+  src/a.rs has use dep_b::* and src/b.rs has use dep_a::*, and both call n::f. dep_b has pub use dep_a::* and then
+  pub use dep_c::*, dep_a has pub use dep_b::*, and n is a module of dep_c. Cargo rejects such a cycle of crates,
+  but the read of a glob use must still end and give each path its answer. The read of n for src/a.rs asks dep_a,
+  which asks dep_b again, and the cycle guard cuts that inner read. A memo that keeps the answer of the cut read
+  for dep_a gives src/b.rs no module n, so its call reads n as a crate, and dep_c//n//f reads not-found from it.
+units:
+  vendor/dep_a: cargo:dep_a@1.0.0
+  vendor/dep_b: cargo:dep_b@1.0.0
+  vendor/dep_c: cargo:dep_c@1.0.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/a.rs//go
+    to: dep_b//n//f
+    kind: direct
+    confidence: high
+    site: src/a.rs:4
+  - from: src/b.rs//go
+    to: dep_a//n//f
+    kind: direct
+    confidence: high
+    site: src/b.rs:4
+unresolved: []
+results:
+  - target: dep_c//n//f
+    status: found
+    sources: [src/b.rs//go]
+    sources_only: true
+    path:
+      - key: src/b.rs//go
+      - key: dep_a//n//f
+        site: src/b.rs:4
+        kind: direct
+        confidence: high
+      - key: dep_b//n//f
+        site: cargo:dep_a@1.0.0
+        kind: package
+        confidence: high
+      - key: dep_c//n//f
+        site: cargo:dep_b@1.0.0
+        kind: package
+        confidence: high

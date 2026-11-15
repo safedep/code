@@ -188,6 +188,10 @@ type builder struct {
 	// tentative holds an undo step for each memo write made while a read
 	// of wildcard imports is in progress, as wildcardModules describes.
 	tentative []func()
+	// cuts counts the answers that a cycle guard or the hop limit cut
+	// short. A memo that a read with a cut gives can lack an answer that
+	// another way in finds.
+	cuts int
 	children  map[string][]string
 	// aliases holds the definitions of each class that the language joins
 	// to one class, the class too.

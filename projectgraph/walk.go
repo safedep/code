@@ -321,6 +321,7 @@ func (b *builder) defaultValue(module, name string) (string, bool) {
 // variable that holds a variable of another file walks on to that value.
 func (b *builder) variableValue(key string) (string, bool) {
 	if b.reading[key] {
+		b.cuts++
 		return "", false
 	}
 	b.reading[key] = true

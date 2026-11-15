@@ -494,7 +494,13 @@ Rust follows the same rules, with these additions.
   and `html::render()` after `use dep::*;` names it too, and not a crate
   `html`, as in the case `rust/glob-use-dependency-module`. A glob `use`
   of a crate that no unit gives can bring any name, so the path resolves
-  as if the glob `use` were not there. A local closure or a parameter can
+  as if the glob `use` were not there. The unit can bring the name from a
+  third crate by a `use` or a glob `use`, or a child module by a glob
+  `use` of its own crate, as `text` after `pub use inner::*;` and `leaf`
+  after `pub use crate::sub::*;` in the case `rust/glob-use-reexport`. Two
+  crates can bring each other's names, so a cycle guard cuts the read, and
+  the link step keeps no provision of a unit that a cut read gives, as the
+  case `rust/glob-use-crate-cycle` shows. A local closure or a parameter can
   bind a single name, so such a call keeps its record too.
 - `#[macro_export]` puts a macro at the root of its crate, from any module
   of the crate. So `dep::wipe` names the macro `wipe` of a private module

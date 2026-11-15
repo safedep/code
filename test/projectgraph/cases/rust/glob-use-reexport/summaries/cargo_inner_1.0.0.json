@@ -1,0 +1,23 @@
+{
+  "version": "3",
+  "index_version": "17",
+  "link_version": "20",
+  "unit": "cargo:inner@1.0.0",
+  "symbols": [
+    {
+      "key": "inner//text//fmt",
+      "definitions": [
+        "cargo:inner@1.0.0//src/text.rs//fmt"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "inner//tools//run",
+      "definitions": [
+        "cargo:inner@1.0.0//src/tools.rs//run"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": []
+}

@@ -364,6 +364,7 @@ func (b *builder) providers(o origin) []provision {
 	if out, ok := b.provisions[k]; ok {
 		return out
 	}
+	cuts := b.cuts
 	var out []provision
 	for _, sp := range b.ordered {
 		if sp.unit != "" {
@@ -373,8 +374,13 @@ func (b *builder) providers(o origin) []provision {
 	if narrow := profileOf(family).narrowProviders; narrow != nil {
 		out = narrow(out)
 	}
-	b.provisions[k] = out
-	b.memo(func() { delete(b.provisions, k) })
+	// A cycle guard of an outer resolution can cut the read of the unit,
+	// and the same module can resolve on another way in. So only an answer
+	// that no guard cut stays.
+	if b.cuts == cuts {
+		b.provisions[k] = out
+		b.memo(func() { delete(b.provisions, k) })
+	}
 	return out
 }
 

@@ -1,0 +1,16 @@
+{
+  "version": "3",
+  "index_version": "17",
+  "link_version": "20",
+  "unit": "cargo:dep_c@1.0.0",
+  "symbols": [
+    {
+      "key": "dep_c//n//f",
+      "definitions": [
+        "cargo:dep_c@1.0.0//src/n.rs//f"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": []
+}
