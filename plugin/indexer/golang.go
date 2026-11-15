@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"iter"
 	"slices"
 	"strings"
 	"unicode"
@@ -25,7 +26,7 @@ var goRules = languageRules{
 	signature:   goSignature,
 	exported:    goExported,
 	definitions: goDefinitions,
-	typedAt:     goTypedCall,
+	typedCall:   goTypedCall,
 	literalCall: goLiteralCall,
 	visitors:    []func(p *projection) visitor{referenceVisitor, goValueVisitor},
 	references: &referenceSyntax{
@@ -164,17 +165,29 @@ func (p *projection) goFileType(t *sitter.Node) *sitter.Node {
 		return nil
 	}
 	name := p.text(t)
-	for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
-		if statement.Type() != "type_declaration" {
-			continue
-		}
-		for _, spec := range ts.NamedChildren(statement) {
-			if spec.Type() == "type_spec" && p.text(spec.ChildByFieldName("name")) == name {
-				return spec.ChildByFieldName("type")
-			}
+	for spec := range p.goTypeSpecs() {
+		if p.text(spec.ChildByFieldName("name")) == name {
+			return spec.ChildByFieldName("type")
 		}
 	}
 	return nil
+}
+
+// goTypeSpecs returns the type specs of the type declarations at the top
+// level of the file.
+func (p *projection) goTypeSpecs() iter.Seq[*sitter.Node] {
+	return func(yield func(*sitter.Node) bool) {
+		for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
+			if statement.Type() != "type_declaration" {
+				continue
+			}
+			for _, spec := range ts.NamedChildren(statement) {
+				if spec.Type() == "type_spec" && !yield(spec) {
+					return
+				}
+			}
+		}
+	}
 }
 
 // goVarSpecs returns the specs of a var declaration. A declaration with

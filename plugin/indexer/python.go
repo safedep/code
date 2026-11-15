@@ -125,8 +125,7 @@ func pythonCheck(p *projection, holder *sitter.Node) bool {
 	switch holder.Type() {
 	case "keyword_argument":
 		list := holder.Parent()
-		name := holder.ChildByFieldName("name")
-		return name != nil && p.text(name) == "metaclass" && list != nil && list.Parent() != nil && list.Parent().Type() == "class_definition"
+		return p.pythonMetaclassArg(holder) && list != nil && list.Parent() != nil && list.Parent().Type() == "class_definition"
 	case "tuple":
 		if holder = holder.Parent(); holder == nil || holder.Type() != "argument_list" {
 			return false
@@ -151,11 +150,17 @@ func pythonMetaclass(p *projection, class *sitter.Node) string {
 		return ""
 	}
 	for _, arg := range ts.NamedChildren(list) {
-		if name := arg.ChildByFieldName("name"); arg.Type() == "keyword_argument" && name != nil && p.text(name) == "metaclass" {
+		if p.pythonMetaclassArg(arg) {
 			return p.text(arg.ChildByFieldName("value"))
 		}
 	}
 	return ""
+}
+
+// pythonMetaclassArg reports whether an argument is metaclass=.
+func (p *projection) pythonMetaclassArg(arg *sitter.Node) bool {
+	name := arg.ChildByFieldName("name")
+	return arg.Type() == "keyword_argument" && name != nil && p.text(name) == "metaclass"
 }
 
 // pythonAssigned returns the name of a top-level assignment, as x in x = f().

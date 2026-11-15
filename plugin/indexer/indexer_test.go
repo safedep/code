@@ -191,9 +191,6 @@ func (s *hangingStore) Put(ctx context.Context, _ []*fileindex.Index) error {
 }
 
 func TestIndexerEndsAHangingStoreWriteAfterTheGrace(t *testing.T) {
-	defer func(grace time.Duration) { saveGrace = grace }(saveGrace)
-	saveGrace = 50 * time.Millisecond
-
 	dir := t.TempDir()
 	writeFiles(t, dir, map[string]string{"a.js": "function a() {}\n"})
 	ctx, cancel := context.WithCancel(context.Background())
@@ -204,6 +201,7 @@ func TestIndexerEndsAHangingStoreWriteAfterTheGrace(t *testing.T) {
 		_, err := runIndexer(t, ctx, appFileSystem(t, dir), Options{
 			Languages: languages(t, core.LanguageCodeJavascript),
 			Store:     &hangingStore{Store: memstore.New(), cancel: cancel},
+			saveGrace: 50 * time.Millisecond,
 		})
 		done <- err
 	}()

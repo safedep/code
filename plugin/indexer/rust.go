@@ -370,15 +370,11 @@ func (p *projection) rustDeclaredType(binder *sitter.Node, bounds map[string]str
 }
 
 // rustScopedType returns a type that a node names, as the link step reads
-// it. The link step resolves a type at the root of the file, or as a type of
-// an inline module that holds the node. So Local in fn run() { type Local =
-// dep::Thing<u8>; let t: Local = ... } resolved to a struct Local of the
-// root. A call on t then took the method of that struct with no record, and
-// a method of dep::Thing read as not-found. So when a scope that holds the
-// node declares the first name of the type, the type is "", and the call
-// keeps the target of the call graph or its record. A use that declares the
-// name gives its path instead, as crate::store::Item for Item after use
-// crate::store::Item in an inline module.
+// it. The link step resolves Local at the root. A local type alias of the
+// name, as in fn run() { type Local = dep::Thing<u8>; let t: Local }, must
+// not take a struct Local of the root. So a type whose first name a scope
+// of the node declares is "", or the path of a use that declares the name.
+// docs/projectgraph.md has the rule.
 func (p *projection) rustScopedType(node *sitter.Node, typ string) string {
 	first, rest, nested := strings.Cut(typ, "::")
 	if typ == "" || !p.rustScopeDeclares(node, nil, first) {
@@ -572,19 +568,16 @@ func rustRebound(ctx context.Context, p *projection, call fileindex.Call, name s
 		return true
 	}
 	var lets []*sitter.Node
-	if slices.ContainsFunc(binders[name], func(binder *sitter.Node) bool {
+	for _, binder := range binders[name] {
 		item := binder.Type() == "static_item" || binder.Type() == "const_item"
 		switch {
 		case !item && !startsBefore(binder, call):
-			return false
+			continue
 		case !rustPlainBinder(binder):
 			return true
 		case binder.Type() == "let_declaration" && endsBefore(binder, call):
 			lets = append(lets, binder)
 		}
-		return false
-	}) {
-		return true
 	}
 	if len(lets) < 2 {
 		return false
@@ -644,7 +637,7 @@ func (p *projection) rustValueType(binders map[string][]*sitter.Node, value *sit
 			if typ := p.rustResultOf(path, p.text(fn.ChildByFieldName("name"))); typ != "" {
 				return typ
 			}
-			return rustConstructorPath(path, p.text(fn))
+			return rustConstructorType(path, p.text(fn))
 		}
 	}
 	return ""
@@ -654,11 +647,11 @@ func (p *projection) rustValueType(binders map[string][]*sitter.Node, value *sit
 // whatever type the caller infers, as Default::default().
 var rustGenericTraits = map[string]bool{"Default": true, "From": true, "Into": true, "FromStr": true, "TryFrom": true, "FromIterator": true}
 
-// rustConstructorPath returns a function of a type as a type of its own,
+// rustConstructorType returns a function of a type as a type of its own,
 // as A::new for let t = A::new() when A is a type of another file. Two lets
 // whose values call the same function of the same type hold one type. A
 // trait of std that gives an inferred type names no type.
-func rustConstructorPath(typ, fn string) string {
+func rustConstructorType(typ, fn string) string {
 	last := rustLastName(typ)
 	if last == "" || !unicode.IsUpper(rune(last[0])) || rustGenericTraits[last] {
 		return ""
@@ -814,12 +807,11 @@ func rustBoundName(pattern *sitter.Node) *sitter.Node {
 
 // rustShadowed fixes a target that the call graph finds for the path of a
 // call in an outer scope, when a scope between the call and that scope
-// binds the first name of the path again. The call graph reads no use and
-// no type parameter. So util::g() after use crate::deep::util in a block
-// went to the module util of the file, and the real target read as
-// not-found. A use gives the target through the path of the use. A type
-// parameter names a type that the call does not know, so the call is a
-// record.
+// binds the first name of the path again, as util::g() after use
+// crate::deep::util in a block. The call graph reads no use, so it gives
+// util::g() the module util of the file. A use gives the target through
+// the path of the use. A type parameter names a type that the call does not
+// know, so the call is a record.
 func rustShadowed(p *projection, call *fileindex.Call, callee ast.NodePosition) bool {
 	node := p.descendant(callee)
 	if node != nil && rustMethod(node) != nil {
@@ -839,17 +831,12 @@ func rustShadowed(p *projection, call *fileindex.Call, callee ast.NodePosition) 
 		if !ok || !fileindex.HasKeyPrefix(scope, p.cg.FileName) {
 			continue
 		}
-		binder, use := p.rustRebinder(node, p.syntax[scope], names[0])
-		switch {
-		case binder == nil:
-		case !use:
+		rebound, ok := p.rustUseTarget(node, p.syntax[scope], names[0], names[1:]...)
+		if !ok {
 			return false
-		default:
-			namespace, ok := p.rustUseNamespace(binder, names[0])
-			if !ok {
-				return false
-			}
-			call.Targets[i] = fileindex.Join(namespace, names[1:]...)
+		}
+		if rebound != "" {
+			call.Targets[i] = rebound
 		}
 	}
 	return true
@@ -857,30 +844,43 @@ func rustShadowed(p *projection, call *fileindex.Call, callee ast.NodePosition) 
 
 // rustShadowedMethod fixes a target of a method call that the call graph
 // finds as a method of a type of an outer scope, when a scope between the
-// call and that scope binds the name of the type again. So x.save() after
-// let x = Item::new() and use crate::store::Item in mod deep went to the
-// Item of the parent of deep, and the real save read as not-found.
+// call and that scope binds the name of the type again, as x.save() after
+// let x = Item::new() and use crate::store::Item in mod deep. The call graph
+// reads no use, so it gives x.save() the Item of the parent of deep.
 func (p *projection) rustShadowedMethod(call *fileindex.Call, node *sitter.Node) bool {
 	for i, target := range call.Targets {
 		class := fileindex.Parent(target)
 		if def := p.defs[class]; def == nil || def.Kind != fileindex.DefClass || !fileindex.HasKeyPrefix(class, p.cg.FileName) {
 			continue
 		}
-		name := fileindex.Last(class)
-		binder, use := p.rustRebinder(node, p.syntax[fileindex.Parent(class)], name)
-		switch {
-		case binder == nil:
-		case !use:
+		rebound, ok := p.rustUseTarget(node, p.syntax[fileindex.Parent(class)], fileindex.Last(class), fileindex.Last(target))
+		if !ok {
 			return false
-		default:
-			namespace, ok := p.rustUseNamespace(binder, name)
-			if !ok {
-				return false
-			}
-			call.Targets[i] = fileindex.Join(namespace, fileindex.Last(target))
+		}
+		if rebound != "" {
+			call.Targets[i] = rebound
 		}
 	}
 	return true
+}
+
+// rustUseTarget returns the target of the names under a name that a use
+// between a node and a scope binds again, or "" when no scope between them
+// binds the name. It reports false when an item or a type parameter binds
+// the name, because the call then names a type that it does not know.
+func (p *projection) rustUseTarget(node, scope *sitter.Node, name string, rest ...string) (string, bool) {
+	binder, use := p.rustRebinder(node, scope, name)
+	switch {
+	case binder == nil:
+		return "", true
+	case !use:
+		return "", false
+	}
+	namespace, ok := p.rustUseNamespace(binder, name)
+	if !ok {
+		return "", false
+	}
+	return fileindex.Join(namespace, rest...), true
 }
 
 // rustRebinder returns the innermost use or item with type parameters

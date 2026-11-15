@@ -61,6 +61,10 @@ type Options struct {
 	// because a key of dependency code needs its unit. The report lists
 	// any other import file as skipped.
 	Imports bool
+
+	// saveGrace is the time that a store write has after the context of
+	// the run ends. Zero selects 10 seconds.
+	saveGrace time.Duration
 }
 
 // Result is what one run of an Indexer did.
@@ -157,6 +161,7 @@ func New(opts Options) (*Indexer, error) {
 	opts.Plugins = slices.Clone(opts.Plugins)
 	opts.MaxFileBytes = cmp.Or(opts.MaxFileBytes, parser.DefaultMaxBytes)
 	opts.Workers = cmp.Or(opts.Workers, runtime.GOMAXPROCS(0))
+	opts.saveGrace = cmp.Or(opts.saveGrace, 10*time.Second)
 	return &Indexer{opts: opts, byExtension: byExtension}, nil
 }
 
@@ -365,7 +370,7 @@ func (r *run) flush(ctx context.Context, batch []pending) error {
 	// with the same deadline does not parse them again. A store that hangs
 	// must not hold the caller long past its budget, so the write ends
 	// saveGrace after ctx.
-	saveCtx, cancel := graceContext(ctx, saveGrace)
+	saveCtx, cancel := graceContext(ctx, r.opts.saveGrace)
 	defer cancel()
 	if err := r.save(saveCtx, put, made); err != nil {
 		if ctx.Err() != nil {
@@ -375,10 +380,6 @@ func (r *run) flush(ctx context.Context, batch []pending) error {
 	}
 	return parseErr
 }
-
-// saveGrace is the time that a store write has after the context of the
-// run ends.
-var saveGrace = 10 * time.Second
 
 // graceContext returns a context that ends grace after ctx ends, or grace
 // after the call if ctx has ended before it. The timer stops when the

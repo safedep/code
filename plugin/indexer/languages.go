@@ -46,12 +46,12 @@ type languageRules struct {
 	// if let Some(t) = x. The call graph then binds a call on the name to
 	// the value of another binding.
 	rebound func(ctx context.Context, p *projection, call fileindex.Call, name string) bool
-	// typedAt reports whether the declared type that the link step reads
+	// typedCall reports whether the declared type that the link step reads
 	// for the receiver of a call holds at the call, and can retarget the
 	// call to the binding in scope. The Go index records the typed locals
 	// of a function with no extent, so an inner block can bind the name of
 	// the receiver again. A false result makes the call a record.
-	typedAt func(p *projection, call *fileindex.Call) bool
+	typedCall func(p *projection, call *fileindex.Call) bool
 	// literalCall reports whether a call runs a function literal whose
 	// calls the index gives to the caller already, as f() after
 	// f := func() {...} in Go. Such a call needs no edge and no record.

@@ -5,6 +5,7 @@ import (
 
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/pkg/ts"
+	"github.com/safedep/code/plugin/callgraph"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -28,20 +29,22 @@ func (p *projection) local(name string) string {
 	return fileindex.Join(p.cg.FileName, name)
 }
 
-// export adds the export of a local name as name. A name that an import
-// binds is given on, and Item holds the local name when it is not name.
-func (p *projection) export(name, local string, line int) {
+// export adds the export of a local name as name and returns it. A name
+// that an import binds is given on, and Item holds the local name when it
+// is not name.
+func (p *projection) export(name, local string, line int) *fileindex.Export {
 	if p.bindings[local] {
 		item := local
 		if item == name {
 			item = ""
 		}
 		p.ix.Exports = append(p.ix.Exports, fileindex.Export{Name: name, Item: item, Line: line})
-		return
+	} else {
+		target := p.local(local)
+		p.exports[target] = true
+		p.ix.Exports = append(p.ix.Exports, fileindex.Export{Name: name, Target: target, Line: line})
 	}
-	target := p.local(local)
-	p.exports[target] = true
-	p.ix.Exports = append(p.ix.Exports, fileindex.Export{Name: name, Target: target, Line: line})
+	return &p.ix.Exports[len(p.ix.Exports)-1]
 }
 
 // reexport adds an export of item of the module from as name. An empty
@@ -94,8 +97,7 @@ func (p *projection) addExportStatement(statement *sitter.Node) {
 		case opaque(value):
 			// A default of a call, as export default NextAuth({...}), has
 			// no definition. The record keeps it for a rule that roots it.
-			p.export(defaultExport, defaultExport, line)
-			p.ix.Exports[len(p.ix.Exports)-1].Opaque = true
+			p.export(defaultExport, defaultExport, line).Opaque = true
 		}
 		return
 	}
@@ -171,8 +173,7 @@ func (p *projection) exportDeclarators(declaration *sitter.Node, line int) {
 			p.exportPattern(pattern, []string{p.text(value)}, line)
 		default:
 			for _, name := range patternNames(p, pattern) {
-				p.export(name, name, line)
-				p.ix.Exports[len(p.ix.Exports)-1].Opaque = true
+				p.export(name, name, line).Opaque = true
 			}
 		}
 	}
@@ -187,23 +188,15 @@ func (p *projection) exportValue(name, local string, value *sitter.Node, line in
 	if value != nil && value.Type() == "identifier" && p.text(value) != local {
 		p.export(name, p.text(value), line)
 	}
-	p.export(name, local, line)
+	export := p.export(name, local, line)
 	if value != nil && value.Type() != "identifier" && opaque(value) {
-		p.ix.Exports[len(p.ix.Exports)-1].Opaque = true
+		export.Opaque = true
 	}
-}
-
-// typeWrappers hold a value with a type or a check of TypeScript, as
-// x satisfies T, x as T and x!, or in parentheses. The value is the value
-// of the wrapper.
-var typeWrappers = map[string]bool{
-	"satisfies_expression": true, "as_expression": true, "non_null_expression": true,
-	"parenthesized_expression": true, "type_assertion": true,
 }
 
 // unwrap returns the value that type wrappers hold.
 func unwrap(value *sitter.Node) *sitter.Node {
-	for value != nil && typeWrappers[value.Type()] {
+	for value != nil && callgraph.IsTypeWrapper(value.Type()) {
 		value = value.NamedChild(0)
 	}
 	return value
