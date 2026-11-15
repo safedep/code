@@ -15,8 +15,15 @@ description: >-
   the parameter x of a function literal, which no type of the index names, so the call is a record.
   pickIface types r by an assignment, but r holds the interface runner from the field r, so the writes do
   not agree and the call is a record too. A type of local for each of the two gave not-found for
-  os/exec.LookPath.
+  os/exec.LookPath. In idiom.go, parse declares url from url.Parse, and the local binds no name at the
+  call, so the call keeps its edge to the import. viaParam and viaRange bind log, which shadows the import
+  of log, so the index takes no target of the import. The parameter of the type logger gives a member edge
+  to logger.Println, and the range variable a record with a name edge. In shadowedParam of main.go a local o shadows
+  the parameter o, so the field r of the parameter type does not type x, and the call x.run() is a record.
 roots:
+  - key: idiom.go
+    kind: main
+    rule: go.main
   - key: main.go
     kind: main
     rule: go.main
@@ -72,6 +79,12 @@ no_edges:
   - from: main.go//named
     to: main.go//remote//run
 unresolved:
+  - caller: idiom.go//viaRange
+    reason: no-dependency-source
+    callback: true
+  - caller: log//Println
+    reason: no-dependency-source
+    callback: true
   - caller: main.go//local//viaLit
     reason: no-dependency-source
     callback: true
@@ -81,7 +94,16 @@ unresolved:
   - caller: main.go//pickIface
     reason: no-dependency-source
     callback: true
+  - caller: main.go//shadowedParam
+    reason: no-dependency-source
+    callback: true
+  - caller: net//url//Parse
+    reason: no-dependency-source
+    callback: true
   - caller: os//Getwd
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Mkdir
     reason: no-dependency-source
     callback: true
   - caller: os//Remove
@@ -90,6 +112,14 @@ unresolved:
   - caller: os//exec//LookPath
     reason: no-dependency-source
     callback: true
+  - caller: idiom.go//parse
+    site: idiom.go:14
+    reason: no-dependency-source
+    method: Host
+  - caller: idiom.go//viaRange
+    site: idiom.go:23
+    reason: unknown-receiver
+    method: Println
   - caller: main.go//main
     site: main.go:24
     reason: unknown-receiver
@@ -107,6 +137,14 @@ unresolved:
     method: run
   - caller: main.go//pickIface
     site: main.go:62
+    reason: unknown-receiver
+    method: run
+  - caller: main.go//shadowedParam
+    site: main.go:79
+    reason: unknown-receiver
+    method: r
+  - caller: main.go//shadowedParam
+    site: main.go:81
     reason: unknown-receiver
     method: run
 results:
@@ -209,4 +247,80 @@ results:
     call_sites:
       - caller: main.go//remote//run
         site: main.go:14
+        reached: true
+  - target: net//url//Parse
+    sources: [idiom.go//parse]
+    sources_only: true
+    status: found
+    path:
+      - key: idiom.go//parse
+      - key: net//url//Parse
+        site: idiom.go:10
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: idiom.go//parse
+        site: idiom.go:10
+        reached: true
+  - target: os//Mkdir
+    sources: [idiom.go//viaParam]
+    sources_only: true
+    status: found
+    path:
+      - key: idiom.go//viaParam
+      - key: idiom.go//logger//Println
+        site: idiom.go:28
+        kind: member
+        confidence: high
+      - key: os//Mkdir
+        site: idiom.go:19
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: idiom.go//logger//Println
+        site: idiom.go:19
+        reached: true
+  - target: log//Println
+    sources: [idiom.go//viaParam]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: idiom.go//keepLog
+        site: idiom.go:31
+        reached: false
+  - target: os//Mkdir
+    sources: [idiom.go//viaRange]
+    sources_only: true
+    status: found
+    path:
+      - key: idiom.go//viaRange
+      - key: idiom.go//logger//Println
+        site: idiom.go:23
+        kind: name
+        confidence: low
+      - key: os//Mkdir
+        site: idiom.go:19
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: idiom.go//logger//Println
+        site: idiom.go:19
+        reached: true
+  - target: os//Getwd
+    sources: [main.go//shadowedParam]
+    sources_only: true
+    status: found
+    path:
+      - key: main.go//shadowedParam
+      - key: main.go//local//run
+        site: main.go:81
+        kind: name
+        confidence: low
+      - key: os//Getwd
+        site: main.go:10
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//local//run
+        site: main.go:10
         reached: true

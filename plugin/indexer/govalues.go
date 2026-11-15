@@ -330,6 +330,11 @@ func (p *projection) goFieldValueType(caller string, value *sitter.Node) (filein
 	if i < 0 {
 		return fileindex.Typed{}, false
 	}
+	// A local can shadow the parameter, as o in o := other{} after
+	// func f(o opts), and hold a value of another type.
+	if binding, ok := p.goBinding(caller, p.text(operand), operand.StartByte()); !ok || binding.from != goParamOrigin(p.syntax[caller]) {
+		return fileindex.Typed{}, false
+	}
 	t := p.goFileField(def.Params[i].Type, p.text(field))
 	if typ := p.goTypeName(t); typ != "" {
 		return fileindex.Typed{Type: typ}, true
@@ -430,27 +435,53 @@ func (p *projection) goTypedAt(caller, name string, at uint32) bool {
 // call. The call graph can keep a raw target for a name that a function
 // literal binds, as x//run for x.run() in go func(x B) { x.run() }(b),
 // and the link step then reads the type of the parameter x of the caller.
-// When the binding in scope has a type of its own, as file in a second
+// It can also bind a local that shadows an import to the import, as
+// log//printf for log.printf() in for _, log := range ls. Such a call gets
+// the target of the local, which the link step types or records. When the
+// binding in scope has another type of its own, as file in a second
 // file, err := os.Create(p) of a sibling block, the call gets the target
-// of that binding under its alias.
+// of that binding under its alias. A receiver that binds no local at the
+// call, as url in url, err := url.Parse(raw), names the import.
 func goTypedCall(p *projection, call *fileindex.Call) bool {
 	at := p.byteAt(call.Line, call.Column)
 	names := strings.Split(call.Receiver, ".")
 	name := names[0]
-	if !isIdentifier(name) || p.goTypedAt(call.Caller, name, at) {
-		for _, target := range call.Targets {
-			if n, ok := p.typedName(call.Caller, target); ok && n != name && !p.goTypedAt(call.Caller, n, at) {
-				return false
-			}
+	if _, bound := p.goBinding(call.Caller, name, at); !isIdentifier(name) || !bound {
+		return p.goTypedTargets(call, at)
+	}
+	local := name
+	if p.goTypedAt(call.Caller, name, at) {
+		if !slices.ContainsFunc(call.Targets, func(t string) bool { return p.goImportTarget(name, t) }) {
+			return p.goTypedTargets(call, at)
 		}
-		return true
+	} else {
+		alias, ok := p.goAlias(call.Caller, name, at)
+		if !ok {
+			return false
+		}
+		local = alias
 	}
-	alias, ok := p.goAlias(call.Caller, name, at)
-	if !ok {
-		return false
-	}
-	call.Targets = []string{fileindex.Join(call.Caller, append(append([]string{alias}, names[1:]...), call.Method)...)}
+	call.Targets = []string{fileindex.Join(call.Caller, append(append([]string{local}, names[1:]...), call.Method)...)}
 	return true
+}
+
+// goTypedTargets reports whether the type that the link step reads for
+// each typed name that starts a target of a call holds at the call.
+func (p *projection) goTypedTargets(call *fileindex.Call, at uint32) bool {
+	for _, target := range call.Targets {
+		if n, ok := p.typedName(call.Caller, target); ok && !p.goTypedAt(call.Caller, n, at) {
+			return false
+		}
+	}
+	return true
+}
+
+// goImportTarget reports whether a target names a member of the import
+// that binds the name.
+func (p *projection) goImportTarget(name, target string) bool {
+	return slices.ContainsFunc(p.ix.Imports, func(imp fileindex.Import) bool {
+		return imp.Alias == name && imp.Namespace != "" && fileindex.HasKeyPrefix(target, imp.Namespace)
+	})
 }
 
 // goAlias returns a name under which the link step reads the type of the
@@ -502,14 +533,15 @@ func goValueVisitor(p *projection) visitor {
 			if value == nil {
 				return
 			}
-			if method, ok := p.goRangeRecord(value); ok {
-				p.goValueRecord(value, method)
+			if r, ok := p.goRangeRecord(value, 0); ok {
+				p.goRangeValue(r)
 			}
 		case "call_expression":
 			function := goUnparen(node.ChildByFieldName("function"))
 			switch {
 			case function == nil:
-			case function.Type() == "unary_expression" && (goOperator(function) == "*" || goOperator(function) == "<-"):
+			case function.Type() == "unary_expression" && goOperator(function) == "<-",
+				function.Type() == "unary_expression" && goOperator(function) == "*" && p.goValueOperand(function.ChildByFieldName("operand")):
 				p.goValueRecord(node, "")
 			case function.Type() == "selector_expression" && p.goAnonFields()[p.text(function.ChildByFieldName("field"))]:
 				p.goValueRecord(node, "")
@@ -518,54 +550,137 @@ func goValueVisitor(p *projection) visitor {
 	}
 }
 
-// goValueRecord adds the record of a call of a function value at the node.
-// A record with a member name is a candidate that the link step checks.
-func (p *projection) goValueRecord(node *sitter.Node, member string) {
-	site := ast.GetNodePosition(node)
-	u := fileindex.Unresolved{
-		Caller: p.caller(p.innermost(node.StartByte()), site),
-		Line:   int(site.StartLine),
-		Column: int(site.StartColumn),
-		Text:   callgraph.ClipText(p.text(node)),
-		Reason: fileindex.UnresolvedComputedName,
+// goValueOperand reports whether the operand of a dereference in the
+// function of a call is a value, as p in (*p)(), and no type, as T in the
+// conversion (*T)(v) or reflect.SliceHeader in (*reflect.SliceHeader)(v).
+// A value is a local, a variable of the file, or any expression other
+// than a name or a member of an import.
+func (p *projection) goValueOperand(operand *sitter.Node) bool {
+	operand = goUnparen(operand)
+	if operand == nil {
+		return false
 	}
-	if member != "" {
-		u.Receiver = callgraph.ClipText(p.text(node.ChildByFieldName("operand")))
-		u.Method, u.Reason = member, fileindex.UnresolvedFunctionValue
+	switch operand.Type() {
+	case "identifier", "type_identifier":
+		name := p.text(operand)
+		if _, ok := p.goBinding(p.innermost(operand.StartByte()), name, operand.StartByte()); ok {
+			return true
+		}
+		def := p.defs[p.local(name)]
+		return def != nil && def.Kind == fileindex.DefVariable
+	case "selector_expression", "qualified_type":
+		object := operand.ChildByFieldName("operand")
+		if object == nil {
+			object = operand.ChildByFieldName("package")
+		}
+		return object == nil || p.goImportPath(p.text(object)) == ""
 	}
-	p.ix.Unresolved = append(p.ix.Unresolved, u)
+	return !strings.HasSuffix(operand.Type(), "_type")
 }
 
-// goRangeRecord reports whether a range over a value needs a record, and
-// the member name that the link step checks. A value that the source
-// shows to be data needs none: a literal, a value of a type of data, or a
-// local whose declaration gives it such a value. A name of the package
-// reaches its value through the load code of the package. A member is a
-// candidate that the link step checks against the fields and the
-// references of the graph.
-func (p *projection) goRangeRecord(value *sitter.Node) (string, bool) {
-	caller := p.innermost(value.StartByte())
+// goValueRecord adds the record of a call of a function value at the node.
+func (p *projection) goValueRecord(node *sitter.Node, member string) {
+	p.goRangeValue(goRange{node: node, reason: fileindex.UnresolvedComputedName, method: member})
+}
+
+// goRange is the record of a range over a value: its site and what the
+// link step reads to decide it, as fileindex.UnresolvedRangeValue says.
+type goRange struct {
+	node             *sitter.Node
+	reason           fileindex.UnresolvedReason
+	receiver, method string
+}
+
+// goRangeValue adds the record of a range.
+func (p *projection) goRangeValue(r goRange) {
+	site := ast.GetNodePosition(r.node)
+	p.ix.Unresolved = append(p.ix.Unresolved, fileindex.Unresolved{
+		Caller:   p.caller(p.innermost(r.node.StartByte()), site),
+		Line:     int(site.StartLine),
+		Column:   int(site.StartColumn),
+		Text:     callgraph.ClipText(p.text(r.node)),
+		Receiver: r.receiver,
+		Method:   r.method,
+		Reason:   r.reason,
+	})
+}
+
+// goRangeRecord returns the record of a range over a value, or false for
+// a value that the source shows to be data: a literal, a slice of a value,
+// a value of a type of data, an element of a map or a slice of a declared
+// type of data, or a local whose declaration gives such a value. A name of
+// the package reaches its value through the load code of the package. A
+// member, a value of a named type and the result of a call are records of
+// the reason range-value, which the link step decides from the fields, the
+// types and the functions of the graph. A local that a call gives has the
+// record at the call.
+func (p *projection) goRangeRecord(value *sitter.Node, depth int) (goRange, bool) {
+	value = goUnparen(value)
+	plain := goRange{node: value, reason: fileindex.UnresolvedComputedName}
+	if value == nil || depth > maxReferenceSegments {
+		return plain, value != nil
+	}
 	if p.goDataValue(value) {
-		return "", false
+		return goRange{}, false
 	}
 	switch value.Type() {
+	case "slice_expression":
+		return goRange{}, false
 	case "identifier":
-		binding, ok := p.goBinding(caller, p.text(value), value.StartByte())
+		binding, ok := p.goBinding(p.innermost(value.StartByte()), p.text(value), value.StartByte())
 		switch {
 		case !ok:
-			return "", false
+			return goRange{}, false
 		case binding.typ != nil:
-			return "", !p.goDataField(binding.typ)
+			return p.goRangeType(binding.typ, value)
 		case binding.value != nil:
-			return "", !p.goDataValue(goUnparen(binding.value))
+			return p.goRangeRecord(binding.value, depth+1)
 		}
-		return "", true
 	case "selector_expression":
-		return p.text(value.ChildByFieldName("field")), true
+		return goRange{node: value, reason: fileindex.UnresolvedRangeValue, receiver: callgraph.ClipText(p.text(value.ChildByFieldName("operand"))), method: p.text(value.ChildByFieldName("field"))}, true
+	case "index_expression":
+		if t := p.goElementType(value.ChildByFieldName("operand")); t != nil {
+			return p.goRangeType(t, value)
+		}
 	case "type_assertion_expression":
-		return "", !p.goDataField(value.ChildByFieldName("type"))
+		return p.goRangeType(value.ChildByFieldName("type"), value)
+	case "call_expression":
+		return goRange{node: value, reason: fileindex.UnresolvedRangeValue}, true
 	}
-	return "", true
+	return plain, true
+}
+
+// goRangeType returns the record of a range over a value of a declared
+// type, or false for a type of data. A named type that the file does not
+// declare is a record with its name.
+func (p *projection) goRangeType(t, at *sitter.Node) (goRange, bool) {
+	if p.goDataField(t) {
+		return goRange{}, false
+	}
+	if name := p.goTypeName(t); name != "" && t.Type() != "function_type" {
+		return goRange{node: at, reason: fileindex.UnresolvedRangeValue, method: name}, true
+	}
+	return goRange{node: at, reason: fileindex.UnresolvedComputedName}, true
+}
+
+// goElementType returns the declared type of an element of a map, a slice
+// or an array that a local of a declared type holds, or nil.
+func (p *projection) goElementType(operand *sitter.Node) *sitter.Node {
+	operand = goUnparen(operand)
+	if operand == nil || operand.Type() != "identifier" {
+		return nil
+	}
+	binding, ok := p.goBinding(p.innermost(operand.StartByte()), p.text(operand), operand.StartByte())
+	if !ok || binding.typ == nil {
+		return nil
+	}
+	switch binding.typ.Type() {
+	case "map_type":
+		return binding.typ.ChildByFieldName("value")
+	case "slice_type", "array_type":
+		return binding.typ.ChildByFieldName("element")
+	}
+	return nil
 }
 
 // goUnparen returns the expression in parentheses.
@@ -577,7 +692,8 @@ func goUnparen(node *sitter.Node) *sitter.Node {
 }
 
 // goAnonFields returns the names of the fields of each anonymous struct of
-// the file that can hold a function.
+// the file and of each struct type that a function declares, true for a
+// name that a field which can hold a function has.
 func (p *projection) goAnonFields() map[string]bool {
 	if p.anonFields != nil {
 		return p.anonFields
@@ -588,14 +704,11 @@ func (p *projection) goAnonFields() map[string]bool {
 		if depth > maxLocalDepth {
 			return
 		}
-		if node.Type() == "struct_type" {
-			if parent := node.Parent(); parent == nil || parent.Type() != "type_spec" {
-				for _, field := range p.goStructFields(node) {
-					if !p.goDataField(field.ChildByFieldName("type")) {
-						for _, name := range childrenByField(field, "name") {
-							p.anonFields[p.text(name)] = true
-						}
-					}
+		if node.Type() == "struct_type" && !goTopLevelType(node) {
+			for _, field := range p.goStructFields(node) {
+				holds := !p.goDataField(field.ChildByFieldName("type"))
+				for _, name := range childrenByField(field, "name") {
+					p.anonFields[p.text(name)] = p.anonFields[p.text(name)] || holds
 				}
 			}
 		}
@@ -605,6 +718,28 @@ func (p *projection) goAnonFields() map[string]bool {
 	}
 	walk(p.tree.Tree().RootNode(), 0)
 	return p.anonFields
+}
+
+// goTopLevelType reports whether a type is the type of a type declaration
+// at the top level of the file, whose fields are definitions of their type.
+func goTopLevelType(t *sitter.Node) bool {
+	spec := t.Parent()
+	if spec == nil || spec.Type() != "type_spec" {
+		return false
+	}
+	decl := spec.Parent()
+	return decl != nil && decl.Parent() != nil && decl.Parent().Type() == "source_file"
+}
+
+// goAnonFieldDefinitions adds a field definition under the key struct of
+// the file for each name of goAnonFields, as file.go//struct//run. The
+// keyword struct names no type, so the key binds no name. The link step
+// reads the fields of the graph by their names to tell a call of a field
+// that can hold a function, as s.run(), from a call of a method.
+func (p *projection) goAnonFieldDefinitions() {
+	for name, holds := range p.goAnonFields() {
+		p.addDefinition(fileindex.Join(p.cg.FileName, "struct", name), fileindex.DefField, p.tree.Tree().RootNode()).Data = !holds
+	}
 }
 
 // goLiteralCall reports whether a call names a local that the caller

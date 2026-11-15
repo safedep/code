@@ -51,7 +51,8 @@
       "name": "Server",
       "start_line": 18,
       "end_line": 24,
-      "exported": true
+      "exported": true,
+      "value_data": true
     },
     {
       "key": "app.go//Server//addr",
@@ -99,7 +100,8 @@
       "name": "Box",
       "start_line": 26,
       "end_line": 26,
-      "exported": true
+      "exported": true,
+      "value_data": true
     },
     {
       "key": "app.go//Box//v",
@@ -139,7 +141,8 @@
       "results": [
         "Server",
         ""
-      ]
+      ],
+      "value_data": true
     },
     {
       "key": "app.go//Server//Run",
@@ -228,7 +231,8 @@
           "name": "s",
           "type": "Server"
         }
-      ]
+      ],
+      "value_data": true
     }
   ],
   "classes": [

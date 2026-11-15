@@ -16,8 +16,19 @@ description: >-
   field act of an anonymous struct, and deref calls (*p). Each call runs a function value, so each is a
   function-value record, and os.Getwd is uncertain from each. keepRead reads the field fn of a hook and
   calls nothing. The read is a record with no receiver, so the link step does not take it for a call of a
-  field, and os.Getwd is not found from keepRead.
+  field, and os.Getwd is not found from keepRead. conv.go converts pointers, as (*T)(p) and
+  *(*uintptr)(unsafe.Pointer(k)). The operand of each dereference is a type and no value, so no call runs
+  a function value, and os.Getwd is not found from convs. runTable calls the field exec of the anonymous
+  struct of table, which anon.go declares, and localJob calls the field trigger of a struct type that the
+  function declares. The index gives each such field a definition under the key struct of its file, so the
+  link step sees that the call can run a function value. os.Getwd is uncertain from each.
 roots:
+  - key: anon.go
+    kind: main
+    rule: go.main
+  - key: conv.go
+    kind: main
+    rule: go.main
   - key: main.go
     kind: main
     rule: go.main
@@ -33,6 +44,12 @@ no_edges:
   - from: main.go//run
     to: os//Remove
 unresolved:
+  - caller: anon.go//localJob
+    reason: no-dependency-source
+    callback: true
+  - caller: conv.go//runTable
+    reason: no-dependency-source
+    callback: true
   - caller: main.go//each
     reason: no-dependency-source
     callback: true
@@ -78,6 +95,23 @@ unresolved:
   - caller: other.go//rangeAssign
     reason: no-dependency-source
     callback: true
+  - caller: unsafe//Pointer
+    reason: no-dependency-source
+    callback: true
+  - caller: anon.go//localJob
+    site: anon.go:8
+    reason: unknown-receiver
+    method: trigger
+  - caller: anon.go//localJob
+    site: anon.go:8
+    reason: function-value
+  - caller: conv.go//runTable
+    site: conv.go:15
+    reason: function-value
+  - caller: conv.go//runTable
+    site: conv.go:15
+    reason: unknown-receiver
+    method: exec
   - caller: main.go//run
     site: main.go:23
     reason: function-value
@@ -291,3 +325,33 @@ results:
       - caller: main.go//getwd
         site: main.go:18
         reached: false
+  - target: os//Getwd
+    sources: [conv.go//convs]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+  - target: os//Getwd
+    sources: [conv.go//runTable]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: conv.go:15
+  - target: os//Getwd
+    sources: [anon.go//localJob]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: anon.go:8

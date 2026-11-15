@@ -108,6 +108,7 @@ func goDefinitions(p *projection) {
 	for i, spec := range specs {
 		p.goVariableValues(spec, vars[i])
 	}
+	p.goAnonFieldDefinitions()
 }
 
 // goTypes adds each named type of a type declaration. An interface is an
@@ -127,7 +128,7 @@ func (p *projection) goTypes(statement *sitter.Node) {
 		if t != nil && t.Type() == "interface_type" {
 			kind = fileindex.DefInterface
 		}
-		p.addDefinition(key, kind, spec)
+		p.addDefinition(key, kind, spec).ValueData = t != nil && kind == fileindex.DefClass && p.goDataField(t)
 		p.addSyntax(key, spec)
 		if t == nil || t.Type() != "struct_type" || spec.Type() != "type_spec" {
 			continue
@@ -404,6 +405,7 @@ func goSignature(p *projection, def *fileindex.Definition, node *sitter.Node) {
 	var params []fileindex.Typed
 	params, def.Arity, def.Variadic = p.goParams(node.ChildByFieldName("parameters"), p.goConstraints(node))
 	def.Params = append(def.Params, params...)
+	def.ValueData = p.goResultData(node.ChildByFieldName("result"))
 	results := p.goResults(node.ChildByFieldName("result"))
 	if len(results) > 0 {
 		def.Returns = results[0]
@@ -534,6 +536,18 @@ func (p *projection) goParams(list *sitter.Node, constraints map[string]string) 
 		}
 	}
 	return typed, arity, variadic
+}
+
+// goResultData reports whether the first result of a function holds no
+// function, as []string.
+func (p *projection) goResultData(result *sitter.Node) bool {
+	if result != nil && result.Type() == "parameter_list" {
+		result = ts.ChildOfType(result, "parameter_declaration")
+		if result != nil {
+			result = result.ChildByFieldName("type")
+		}
+	}
+	return p.goDataField(result)
 }
 
 // goResults returns the type name of each result of a function, by

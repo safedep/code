@@ -73,3 +73,24 @@ func viaLocal(h holder) {
 	for range seq {
 	}
 }
+
+func attrsTyped(n *node) {
+	for range n.Attr {
+	}
+}
+
+func dataRanges(b []byte, l List, m map[string][]string, n *node) {
+	for range b[:2] {
+	}
+	for range l {
+	}
+	for range m["a"] {
+	}
+	for range names() {
+	}
+	for range n.Children() {
+	}
+	kids := n.Children()
+	for range kids {
+	}
+}

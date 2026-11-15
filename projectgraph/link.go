@@ -143,9 +143,15 @@ type builder struct {
 	// hold a function has.
 	defs       map[string]*fileindex.Definition
 	fieldNames map[string]bool
+	// methodNames holds the names of the Go methods among them.
+	methodNames map[string]bool
+	// callees holds the definitions and the external keys that the calls
+	// at each site resolve to.
+	callees map[Site][]string
 	// valueSites holds the sites of the references to a function or a
-	// method.
+	// method, and dataSites the sites of the references to data.
 	valueSites map[Site]bool
+	dataSites  map[Site]bool
 	// reading holds the variables whose value a walk reads now, so a cycle
 	// of variables across files stops. stepping holds the names that a
 	// walk of a unit reads now for the result type of an external key.
@@ -309,6 +315,8 @@ func newTables(indexes []*fileindex.Index, opts Options) *builder {
 		checks:       map[edgeSlot]bool{},
 		unresolved:   map[UnresolvedSite]bool{},
 		valueSites:   map[Site]bool{},
+		dataSites:    map[Site]bool{},
+		callees:      map[Site][]string{},
 		truncations:  map[Truncation]bool{},
 		names:        map[nameKey]resolution{},
 		visiting:     map[nameKey]bool{},
@@ -524,11 +532,11 @@ func (b *builder) copyUnresolved(ix *fileindex.Index) {
 		}
 		// The Go index gives a range over a member the member name, and
 		// the fields of the graph decide whether the range reads data.
-		if u.Reason == fileindex.UnresolvedFunctionValue && u.Method != "" {
-			if b.rangesNoValue(u, at) {
-				continue
+		if u.Reason == fileindex.UnresolvedRangeValue {
+			for _, r := range b.rangeRecords(ix, u, site) {
+				b.addUnresolved(r)
 			}
-			site.Method = ""
+			continue
 		}
 		if u.Reason == fileindex.UnresolvedDynamicImport {
 			site.ImportPrefix = b.importPrefix(ix, u.Line)

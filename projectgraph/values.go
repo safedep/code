@@ -86,15 +86,86 @@ func (b *builder) valueField(name string) (holds, known bool) {
 	return holds, known
 }
 
-// rangesNoValue reports whether the index record of a range over a member
-// needs no record: each field of the member name in the graph holds data,
-// or the member is a function or a method with a reference edge at the
-// site, as t.All in for x := range t.All. A member that no field of the
-// graph names, as a field of a type of a package that no unit gives, can
-// hold a function.
-func (b *builder) rangesNoValue(u fileindex.Unresolved, at Site) bool {
+// rangeRecords returns the records of the index record of a range over a
+// value that the index cannot show to be data, at the site. A record that
+// the graph shows to read data has none. Otherwise it is a function-value
+// record, as fileindex.UnresolvedRangeValue says.
+func (b *builder) rangeRecords(ix *fileindex.Index, u fileindex.Unresolved, site UnresolvedSite) []UnresolvedSite {
+	site.Reason, site.Method, site.Receiver = fileindex.UnresolvedFunctionValue, "", ""
+	switch {
+	case u.Receiver != "" && u.Method != "":
+		return b.rangeMember(u, site)
+	case u.Method != "":
+		if key, ok := b.resolveType(b.scopes[ix.Path], u.Caller, u.Method); ok && b.valueData(key) {
+			return nil
+		}
+	case b.callsData(site.Site):
+		return nil
+	}
+	return []UnresolvedSite{site}
+}
+
+// rangeMember returns the records of a range over a member. A field of the
+// name that can hold a function, or no field and no method of the name, as
+// a field of a type of a package that no unit gives, makes it a
+// function-value record. A method of the name makes it a record with the
+// method name too, so a name edge leads the search to each method of the
+// name, as the range calls a method value. A reference at the site that
+// names a function, as t.All of a typed t, or data, as n.Attr of a typed
+// n, needs no record, and neither does a member whose fields hold data
+// only.
+func (b *builder) rangeMember(u fileindex.Unresolved, site UnresolvedSite) []UnresolvedSite {
+	if b.valueSites[site.Site] || b.dataSites[site.Site] {
+		return nil
+	}
 	holds, known := b.valueField(u.Method)
-	return known && !holds || b.valueSites[at]
+	method := b.goMethodNamed(u.Method)
+	var out []UnresolvedSite
+	if holds || !known && !method {
+		out = append(out, site)
+	}
+	if method {
+		named := site
+		named.Reason, named.Receiver, named.Method = fileindex.UnresolvedUnknownReceiver, u.Receiver, u.Method
+		out = append(out, named)
+	}
+	return out
+}
+
+// callsData reports whether each call at a site gives data: a function or
+// a method whose first result holds no function, or code outside the graph,
+// whose own record covers a function that it makes, as a function value
+// that a package of the standard library with no unit gives.
+func (b *builder) callsData(site Site) bool {
+	callees := b.callees[site]
+	return len(callees) > 0 && !slices.ContainsFunc(callees, func(key string) bool {
+		if b.kindOf(key) != NodeExternal {
+			return !b.valueData(key)
+		}
+		defs, provided := b.unitDefinitions(b.origins[key])
+		return provided && slices.ContainsFunc(defs, func(d string) bool { return !b.valueData(d) })
+	})
+}
+
+// valueData reports whether the definition of a key marks its values as
+// data, as fileindex.Definition.ValueData says.
+func (b *builder) valueData(key string) bool {
+	def := b.defs[key]
+	return def != nil && def.ValueData
+}
+
+// goMethodNamed reports whether a method of a language with functionValues
+// has the name.
+func (b *builder) goMethodNamed(name string) bool {
+	if b.methodNames == nil {
+		b.methodNames = map[string]bool{}
+		for key, def := range b.defs {
+			if def.Kind == fileindex.DefMethod && profileOf(b.languageOf(key)).functionValues {
+				b.methodNames[def.Name] = true
+			}
+		}
+	}
+	return b.methodNames[name]
 }
 
 // reflection is a package of a language that gives or runs a function

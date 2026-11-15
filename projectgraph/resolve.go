@@ -156,6 +156,7 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			if r.kind == EdgeMember && r.declared {
 				r.rule = ruleDeclaredType
 			}
+			b.callees[site] = append(b.callees[site], r.key)
 			b.link(ix.Language, from, r.key, site, r.kind, r.rule)
 		}
 	}
@@ -366,6 +367,11 @@ func (b *builder) linkReferences(ix *fileindex.Index) {
 			// A Go value of a named type is no function, so passing it
 			// on calls nothing. Nor is a field or a constant.
 			if sc.profile.typeConversions && b.isType(r.key) || b.holdsData(r.key) {
+				// A Go field holds data only when the index marks it, as
+				// a field of a function type can hold a function.
+				if def := b.defs[r.key]; b.holdsData(r.key) && (def == nil || def.Kind != fileindex.DefField || def.Data) {
+					b.dataSites[site] = true
+				}
 				continue
 			}
 			if b.isFunction(r.key) {

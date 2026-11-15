@@ -119,11 +119,16 @@ const (
 	// UnresolvedFunctionValue is a call of a function value, as f(x)(y) or
 	// handlers[i](c), in a language whose function values the link step
 	// joins to the code that holds them. The link step gives the reason
-	// in place of computed-name, and the record names no target. The Go
-	// index gives it to a range over a member, with the member name in
-	// Method. The link step drops that record when each field of the name
-	// holds data, and clears the name otherwise.
+	// in place of computed-name, and the record names no target.
 	UnresolvedFunctionValue UnresolvedReason = "function-value"
+	// UnresolvedRangeValue is a Go range over a value that the index cannot
+	// show to be data. A range over a function calls it. The link step
+	// makes the record a function-value record, or drops it when the graph
+	// shows that the value is data. Receiver and Method name a member, as
+	// n and Kids for n.Kids. Method alone names the type of the value, as
+	// List. With neither, the value is the result of the call at the site.
+	// The link step never keeps the reason.
+	UnresolvedRangeValue UnresolvedReason = "range-value"
 	// UnresolvedMarkup is the markup of a component file, as the template
 	// of a Vue component, which the index does not parse. The framework
 	// runs the markup and calls the functions of the component, so the
@@ -280,6 +285,10 @@ type Definition struct {
 	Wraps      string   `json:"wraps,omitempty"`
 	Static     bool     `json:"static,omitempty"`
 	Data       bool     `json:"data,omitempty"`
+	// ValueData marks a Go function whose first result holds no function,
+	// and a Go named type whose values hold no function, as []string or a
+	// struct. A range over such a value reads data.
+	ValueData bool `json:"value_data,omitempty"`
 	Flags      []Flag   `json:"flags,omitempty"`
 	// Alias is the type that a DefAlias names, as written, with no type
 	// arguments, as B for type A = B<u8>.

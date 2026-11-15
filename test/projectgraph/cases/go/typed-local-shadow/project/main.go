@@ -72,3 +72,12 @@ func siblings() {
 		x.run()
 	}
 }
+
+func shadowedParam(o opts, rs []runner) {
+	{
+		o := struct{ r runner }{rs[0]}
+		x := o.r
+		x = &remote{}
+		x.run()
+	}
+}
