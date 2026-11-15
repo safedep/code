@@ -396,7 +396,9 @@ Rust follows the same rules, with these additions.
   name again with another type. The hygiene of Rust keeps a `let` of a
   macro body apart from the names of the caller, so a macro binds only a
   name that its call passes as a token. A macro of std binds no such name,
-  except `thread_local!`, which makes a `static`. So a call on a name that such a binder binds
+  except `thread_local!`, which makes a `static`. A `macro_rules!` or a
+  `use` of the file can give the name of a macro of std to a macro that
+  binds a name, as in the case `rust/macro-std-name`. So a call on a name that such a binder binds
   before the call is a record with the reason `unknown-receiver`, and so is
   a call whose declared type does not hold. The call graph binds a name to
   the value of its first `let`, so a call after a second `let` of the name

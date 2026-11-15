@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"context"
+	"maps"
 	"slices"
 	"strings"
 
@@ -621,7 +622,9 @@ func (p *projection) rustBinder(id *sitter.Node) *sitter.Node {
 // rustBindingMacro returns the call of the macro that holds a token tree,
 // when the macro can bind a name of its caller, as bind!(t) with the rule
 // ($n:ident) => { let $n = dep::new_thing(); }. A macro of std binds no
-// name of its caller, except thread_local!, which makes a static.
+// name of its caller, except thread_local!, which makes a static. A
+// macro_rules! or a use of the file can give a name of std to another
+// macro, which can bind a name.
 func (p *projection) rustBindingMacro(tree *sitter.Node) *sitter.Node {
 	for tree != nil && tree.Type() == "token_tree" {
 		tree = tree.Parent()
@@ -629,10 +632,25 @@ func (p *projection) rustBindingMacro(tree *sitter.Node) *sitter.Node {
 	if tree == nil || tree.Type() != "macro_invocation" {
 		return nil
 	}
-	if name := rustLastName(p.text(tree.ChildByFieldName("macro"))); langcode.IsBuiltin(langcode.Rust, name) && name != "thread_local" {
+	name := rustLastName(p.text(tree.ChildByFieldName("macro")))
+	if langcode.IsBuiltin(langcode.Rust, name) && name != "thread_local" && !p.rustOwnMacro(name) {
 		return nil
 	}
 	return tree
+}
+
+// rustOwnMacro reports whether the file defines a macro of the name with
+// macro_rules! or binds the name with a use.
+func (p *projection) rustOwnMacro(name string) bool {
+	if p.rustMacros == nil {
+		p.rustMacros = maps.Clone(p.bindings)
+		for key, node := range p.syntax {
+			if node.Type() == "macro_definition" {
+				p.rustMacros[fileindex.Last(key)] = true
+			}
+		}
+	}
+	return p.rustMacros[name]
 }
 
 // rustBoundName returns the name that a pattern binds, as t for t or for
