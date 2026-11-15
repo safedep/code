@@ -558,6 +558,9 @@ func (b *builder) enclosingClass(key string) (string, bool) {
 // caller is a parameter or a local variable of the function, and its
 // declared type gives its class.
 func (b *builder) resolveLocal(sc *scope, caller, target string) resolution {
+	if b.unboundAlias(fileindex.Parent(target)) {
+		return resolution{fail: unknownReceiver(fileindex.Last(target)), rule: ruleLocal}
+	}
 	if b.g.Nodes[target] != nil || b.holdsData(target) {
 		return b.walkAs(target, nil, ruleLocal)
 	}

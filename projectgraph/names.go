@@ -228,3 +228,16 @@ func (b *builder) bound(key string) (string, bool) {
 	}
 	return target, true
 }
+
+// unboundAlias reports whether the key is a type alias that binds no type.
+// A struct and an alias of one name under two cfg attributes give such an
+// alias, and the methods of the struct stay under its key. A path to one of
+// them, as Client::new, can also run the method of the type of the alias,
+// so it gets the record of an unknown receiver and not a single edge.
+func (b *builder) unboundAlias(key string) bool {
+	if def := b.defs[key]; def == nil || def.Kind != fileindex.DefAlias {
+		return false
+	}
+	_, ok := b.bound(key)
+	return !ok
+}

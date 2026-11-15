@@ -3,6 +3,7 @@ mod fallback {
 
     impl Client {
         pub fn new() -> Client {
+            std::env::set_var("MODE", "fallback");
             Client
         }
 

@@ -400,6 +400,14 @@ Rust follows the same rules, with these additions.
   reads the type.
   An alias of a type that the file does not resolve, as a primitive type,
   gives the record `unknown-receiver` for a name after it.
+  Only a `cfg` attribute lets a scope declare a name more than once, as a
+  struct under one `cfg` and an alias under the other, or two aliases of
+  other types. The index does not know which `cfg` the build sets, so such
+  an alias names no type. A call through the name, as `Client::new` or
+  `c.send()` on a parameter of the type `Client`, then gets the record
+  `unknown-receiver` and a `name` edge to the method of each declaration.
+  It does not take the method of one declaration only, which would turn a
+  target of the other declaration into `not-found`.
 - A trait object or a generic bound `T: Trait` of a unit gets the `cha`
   edges to the implementations in the graph, through their external keys.
   With no implementation, the site is a record with the reason

@@ -62,6 +62,7 @@ var rustTypeItems = []string{"struct_item", "enum_item", "union_item"}
 func rustTypes(p *projection) {
 	var walk func(scope string, list *sitter.Node)
 	walk = func(scope string, list *sitter.Node) {
+		targets := p.rustAliasTargets(list)
 		for _, item := range ts.NamedChildren(list) {
 			switch {
 			case item.Type() == "mod_item":
@@ -76,13 +77,44 @@ func rustTypes(p *projection) {
 				p.addDefinition(key, fileindex.DefClass, item)
 				p.addSyntax(key, item)
 			case item.Type() == "type_item":
-				key := fileindex.Join(scope, p.text(item.ChildByFieldName("name")))
-				p.addDefinition(key, fileindex.DefAlias, item).Alias = p.rustTypeName(item.ChildByFieldName("type"), nil)
+				name := p.text(item.ChildByFieldName("name"))
+				key := fileindex.Join(scope, name)
+				p.addDefinition(key, fileindex.DefAlias, item).Alias = targets[name]
 				p.addSyntax(key, item)
 			}
 		}
 	}
 	walk(p.cg.FileName, p.tree.Tree().RootNode())
+}
+
+// rustAliasTargets returns the type that each alias of a list of items
+// names. Only a cfg attribute lets a scope declare a name more than once,
+// as a struct under one cfg and an alias under the other, or two aliases.
+// The index does not know which cfg the build sets, and one definition
+// holds the key. So an alias with another meaning in its scope names no
+// type, and a call through it gets the record unknown-receiver. A target
+// of each meaning then stays uncertain and does not read not-found.
+func (p *projection) rustAliasTargets(list *sitter.Node) map[string]string {
+	aliases := map[string][]string{}
+	types := map[string]bool{}
+	for _, item := range ts.NamedChildren(list) {
+		name := p.text(item.ChildByFieldName("name"))
+		switch {
+		case item.Type() == "type_item":
+			if target := p.rustTypeName(item.ChildByFieldName("type"), nil); !slices.Contains(aliases[name], target) {
+				aliases[name] = append(aliases[name], target)
+			}
+		case slices.Contains(rustTypeItems, item.Type()):
+			types[name] = true
+		}
+	}
+	targets := map[string]string{}
+	for name, named := range aliases {
+		if len(named) == 1 && !types[name] {
+			targets[name] = named[0]
+		}
+	}
+	return targets
 }
 
 // rustSiblings returns the items of the scope of an item that define or

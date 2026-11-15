@@ -102,8 +102,20 @@ func TestFileIndexRustTypeAlias(t *testing.T) {
 		"use image::ImageBuffer;",
 		"pub type Image<P> = ImageBuffer<P, Vec<u8>>;",
 		"mod inner { type Store = crate::store::Store; }",
+		"#[cfg(unix)] type Imp = unix::Thing;",
+		"#[cfg(windows)] type Imp = windows::Thing;",
+		"#[cfg(feature = \"native\")] pub struct Client;",
+		"#[cfg(not(feature = \"native\"))] pub type Client = fallback::Client;",
+		"#[cfg(unix)] type Same = io::Thing;",
+		"#[cfg(windows)] type Same = io::Thing;",
 	}, "\n") + "\n"
 	ix := indexSource(t, core.LanguageCodeRust, "defs.rs", source)
+
+	for key, alias := range map[string]string{"defs.rs//Imp": "", "defs.rs//Client": "", "defs.rs//Same": "io::Thing"} {
+		def := definitionOf(t, ix, key)
+		assert.Equal(t, fileindex.DefAlias, def.Kind, key)
+		assert.Equal(t, alias, def.Alias, key)
+	}
 
 	image := definitionOf(t, ix, "defs.rs//Image")
 	assert.Equal(t, fileindex.DefAlias, image.Kind)
