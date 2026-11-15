@@ -28,6 +28,7 @@ var rustRules = languageRules{
 	exported:    rustPublic,
 	definitions: rustTypes,
 	markTries:   rustMarkTries,
+	shadowed:    rustShadowed,
 	visitors:    []func(p *projection) visitor{referenceVisitor, rustVisitor},
 	declaredAt:  rustDeclaredAt,
 	rebound:     rustRebound,
@@ -663,6 +664,84 @@ func rustBoundName(pattern *sitter.Node) *sitter.Node {
 		return nil
 	}
 	return pattern
+}
+
+// rustShadowed fixes a target that the call graph finds for the path of a
+// call in an outer scope, when a scope between the call and that scope
+// binds the first name of the path again. The call graph reads no use and
+// no type parameter. So util::g() after use crate::deep::util in a block
+// went to the module util of the file, and the real target read as
+// not-found. A use gives the target through the path of the use. A type
+// parameter names a type that the call does not know, so the call is a
+// record.
+func rustShadowed(p *projection, call *fileindex.Call, callee ast.NodePosition) bool {
+	node := p.descendant(callee)
+	if node == nil || node.Type() != "identifier" && node.Type() != "scoped_identifier" {
+		return true
+	}
+	names := strings.Split(p.text(node), "::")
+	switch names[0] {
+	case "crate", "self", "super", "Self", "":
+		return true
+	}
+	written := strings.Join(names, fileindex.Separator)
+	for i, target := range call.Targets {
+		scope, ok := strings.CutSuffix(target, fileindex.Separator+written)
+		if !ok || !fileindex.HasKeyPrefix(scope, p.cg.FileName) {
+			continue
+		}
+		binder, use := p.rustRebinder(node, p.syntax[scope], names[0])
+		switch {
+		case binder == nil:
+		case !use:
+			return false
+		default:
+			namespace, ok := p.rustUseNamespace(binder, names[0])
+			if !ok {
+				return false
+			}
+			call.Targets[i] = fileindex.Join(namespace, names[1:]...)
+		}
+	}
+	return true
+}
+
+// rustRebinder returns the innermost use or item with type parameters
+// between a node and the definition of a scope that binds a name, and
+// whether it is a use. A nil scope is the file.
+func (p *projection) rustRebinder(node, scope *sitter.Node, name string) (*sitter.Node, bool) {
+	for n := node.Parent(); n != nil && (scope == nil || !ts.SameNode(n, scope)); n = n.Parent() {
+		switch n.Type() {
+		case "block", "declaration_list":
+			for _, item := range ts.NamedChildren(n) {
+				if item.Type() != "use_declaration" {
+					continue
+				}
+				if names, _ := p.rustUseNames(item.ChildByFieldName("argument"), nil); slices.Contains(names, name) {
+					return item, true
+				}
+			}
+		case "function_item", "impl_item", "trait_item":
+			if slices.ContainsFunc(ts.NamedChildren(n.ChildByFieldName("type_parameters")), func(param *sitter.Node) bool {
+				return p.rustTypeParameter(param) == name
+			}) {
+				return n, false
+			}
+		}
+	}
+	return nil, false
+}
+
+// rustUseNamespace returns the namespace of the import of a use that binds
+// a name.
+func (p *projection) rustUseNamespace(use *sitter.Node, name string) (string, bool) {
+	first, last := lineOf(use), int(use.EndPoint().Row)+1
+	for _, imp := range p.ix.Imports {
+		if imp.Line >= first && imp.Line <= last && imp.Alias == name && imp.Namespace != "" {
+			return imp.Namespace, true
+		}
+	}
+	return "", false
 }
 
 // rustMarkTries marks each ? in the receiver of a method call in the

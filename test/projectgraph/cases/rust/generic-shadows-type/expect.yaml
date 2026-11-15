@@ -1,0 +1,32 @@
+source: safedep:hand
+description: >-
+  build has the type parameter Local with the bound Maker, which shadows the struct Local of the file. So
+  Local::make() in build runs make of the type that the caller gives, Real here, whose make calls
+  std::fs::create_dir. The make of the struct Local calls std::fs::remove_file and nothing calls it. The call
+  graph reads no type parameter, so it sends the call to Local::make of the struct, and std::fs::create_dir
+  reads not-found. The index makes the call a record with the reason unknown-receiver.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+no_edges:
+  - from: src/main.rs//build
+    to: src/main.rs//Local//make
+edges: []
+unresolved:
+  - caller: src/main.rs//build
+    site: src/main.rs:24
+    reason: unknown-receiver
+results:
+  - target: std//fs//create_dir
+    status: uncertain
+    call_sites:
+      - caller: src/main.rs//Real//make
+        site: src/main.rs:17
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/main.rs:24

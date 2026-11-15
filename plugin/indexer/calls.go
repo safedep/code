@@ -113,6 +113,10 @@ func (p *projection) addCalls(ctx context.Context) {
 				Args:     p.arguments(key, ref.Site),
 			}
 			p.retargetTyped(ctx, &call, untyped[[2]uint32{ref.Site.StartLine, ref.Site.StartColumn}])
+			if shadowed := p.rules().shadowed; shadowed != nil && !shadowed(p, &call, ref.Site) {
+				p.addRecord(call, fileindex.UnresolvedUnknownReceiver)
+				continue
+			}
 			if !p.bindsAsWritten(ctx, call) {
 				p.addRecord(call, fileindex.UnresolvedUnknownReceiver)
 				continue

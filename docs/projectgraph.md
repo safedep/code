@@ -445,6 +445,13 @@ Rust follows the same rules, with these additions.
   path from the module of the file, as `self::client::tls::conn` for
   `use self::tls::conn;` in `mod client`, as in the cases
   `rust/use-self-inline-module` and `rust/use-super-inline-module`.
+- The call graph finds the first name of a path in the scopes that hold
+  the call, and reads no `use` and no type parameter. A `use` in a block
+  or in an inline module can bind the name again, and the index then gives
+  the call the path of that `use`, as in the case `rust/use-shadows-module`.
+  A type parameter of the name names a type that the caller gives, so the
+  call is a record with the reason `unknown-receiver`, as in the case
+  `rust/generic-shadows-type`.
 - A glob `use` brings each name of its module into the module of the
   file. So `helpers::cleanup` after `use super::*;` in
   `src/deep/worker.rs` names the function of the module `deep::helpers`,

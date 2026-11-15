@@ -91,6 +91,10 @@ type languageRules struct {
 	// prune drops the definitions that hold no record, after the records.
 	prune func(p *projection)
 
+	// shadowed fixes the targets of a call whose first name a scope between
+	// the call and the definition of the target binds again, as a use in a
+	// block of Rust. It reports false when the call is a record.
+	shadowed func(p *projection, call *fileindex.Call, callee ast.NodePosition) bool
 	// markTries marks each ? in the targets of a call from the syntax of
 	// its callee, as the ? of Rust in dep//load//?//run. The call graph
 	// keeps no such mark.
