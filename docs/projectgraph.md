@@ -282,6 +282,24 @@ run nothing but a method of the name or a function value that a
   `python/name-ambiguous-getattr`, `python/name-ambiguous-module` and
   `python/name-ambiguous-nounit` show each form.
 
+Python runs some methods of an instance with no call of their name. A
+call of the instance runs `__call__`. A read of an attribute runs
+`__getattribute__`, `__getattr__` for a name that the class does not
+define, and `__get__` of a descriptor in a class attribute. The code that
+calls or reads the instance often has an unknown receiver, or is code
+outside the graph. So a `reference` edge with the rule `implicit` joins
+each Python class to the method of each of these names that an instance
+of the class runs, from the class or from a base in its MRO. The code that
+makes the instance reaches the class, so a search from the roots reaches
+the method, as it reaches a stored function value. A call with an unknown
+receiver keeps its record with the method name. The target is then
+found. The edge proves only that an instance exists, and not that code
+calls it. The cases
+`python/unknown-receiver-callable` and `python/unknown-receiver-getattr`
+show it. A function that code binds to a module attribute, as
+`hooks.handler = wipe`, has a `reference` edge from that code, and the
+assignment has the flag `monkey-patch`, so it needs no rule of its own.
+
 A call on the result of another call, as `html.NewTokenizer(r).Next()`,
 needs the type of that result. When the link step does not know it, the
 site is a record with the method name, so a target of that method is

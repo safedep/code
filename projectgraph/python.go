@@ -32,6 +32,33 @@ var pythonProfile = profile{
 	importBindsRoot:    true,
 	moduleNames:        true,
 	starImports:        true,
+	implicitMethods:    pythonImplicit,
+	link:               (*builder).linkInstanceMethods,
+}
+
+// pythonImplicit names the methods that Python runs on an instance with no
+// call of the name. A call of the instance runs __call__. A read of an
+// attribute runs __getattribute__, __getattr__ for a name that the class
+// does not define, and __get__ of a descriptor in a class attribute. The
+// code that calls or reads the instance often has an unknown receiver, or
+// it is code outside the graph. No call edge then names these methods.
+var pythonImplicit = map[string]bool{"__call__": true, "__getattr__": true, "__getattribute__": true, "__get__": true}
+
+// linkInstanceMethods adds a reference edge from each class to the method
+// of each implicit name that an instance of the class runs, from the class
+// or from a base in its MRO. Code that makes an instance reaches the class,
+// so a search reaches these methods as it reaches a stored function value.
+// Without the edge, a target that only such a method calls reads as
+// not-found, as for a class attribute that holds an object with __call__.
+func (b *builder) linkInstanceMethods(ix *fileindex.Index) {
+	names := slices.Sorted(maps.Keys(profileOf(ix.Language).implicitMethods))
+	for _, c := range ix.Classes {
+		for _, name := range names {
+			if m, ok := b.ownMethod(c.Key, name); ok && b.isMethod(m) {
+				b.link(ix.Language, c.Key, m, b.siteOf(m), EdgeReference, ruleImplicit)
+			}
+		}
+	}
 }
 
 // pythonDependencies returns the requirements of the Python manifests of

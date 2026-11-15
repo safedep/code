@@ -1,24 +1,49 @@
 source: safedep:hand
 description: >-
   dispatch calls handle on the parameter handler. 24 classes define a method handle, so the site is over
-  the cap of 20 and is ambiguous. H0 holds an object of Cb in its class attribute handle. main passes an H0, so the call runs Cb.__call__, which calls os.remove. That code is no
-  definition of the name handle. So the site keeps no method name and concerns every target, and os.remove
-  is uncertain and not not-found.
+  the cap of 20 and is ambiguous. H0 holds an object of Cb in its class attribute handle. main passes an H0, so
+  the call runs Cb.__call__, which calls os.remove. That code is no definition of the name handle, so the site
+  keeps no method name and concerns every target. The class body of H0 makes the object, and a call of an
+  object of Cb runs Cb.__call__, so a reference edge joins Cb to Cb.__call__ and os.remove is found. No code
+  calls shutil.rmtree, and the ambiguous site makes it uncertain and not not-found.
 roots:
   - key: main.py
     kind: manifest
     rule: procfile
+no_edges:
+  - from: main.py//dispatch
+    to: handlers.py//Cb//__call__
 unresolved:
   - caller: main.py//dispatch
     site: main.py:4
     reason: ambiguous
 results:
   - target: os//remove
-    status: uncertain
+    status: found
+    path:
+      - key: main.py
+      - key: handlers.py
+        site: main.py:1
+        kind: import
+        confidence: high
+      - key: handlers.py//Cb
+        site: handlers.py:8
+        kind: direct
+        confidence: high
+      - key: handlers.py//Cb//__call__
+        site: handlers.py:4
+        kind: reference
+        confidence: low
+      - key: os//remove
+        site: handlers.py:5
+        kind: direct
+        confidence: high
     call_sites:
       - caller: handlers.py//Cb//__call__
         site: handlers.py:5
-        reached: false
+        reached: true
+  - target: shutil//rmtree
+    status: uncertain
     uncertainties:
       - kind: unresolved-call
         site: main.py:4

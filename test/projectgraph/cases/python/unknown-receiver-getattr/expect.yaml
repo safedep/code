@@ -1,0 +1,73 @@
+source: safedep:hand
+description: >-
+  Handler defines no handle, and its __getattr__ gives cleanup for any name. dispatch calls handle on its
+  parameter, so the receiver is unknown and the site is a record with the method name handle. No definition
+  of the name handle exists, and the call runs cleanup, which calls os.remove. main makes a Handler, and a
+  read of an attribute of a Handler can run Handler.__getattr__, so a reference edge joins Handler to
+  Handler.__getattr__. The function that __getattr__ returns is a reference of it.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+exact_edges: true
+edges:
+  - from: handlers.py//Handler
+    to: handlers.py//Handler//__getattr__
+    kind: reference
+    confidence: low
+    site: handlers.py:9
+  - from: handlers.py//Handler//__getattr__
+    to: handlers.py//cleanup
+    kind: reference
+    confidence: low
+    site: handlers.py:10
+  - from: handlers.py//cleanup
+    to: os//remove
+    kind: direct
+    confidence: high
+    site: handlers.py:5
+  - from: main.py
+    to: handlers.py
+    kind: import
+    confidence: high
+    site: main.py:1
+  - from: main.py
+    to: main.py//dispatch
+    kind: direct
+    confidence: high
+    site: main.py:8
+  - from: main.py
+    to: handlers.py//Handler
+    kind: direct
+    confidence: high
+    site: main.py:8
+unresolved:
+  - caller: main.py//dispatch
+    site: main.py:5
+    reason: unknown-receiver
+    method: handle
+results:
+  - target: os//remove
+    status: found
+    path:
+      - key: main.py
+      - key: handlers.py//Handler
+        site: main.py:8
+        kind: direct
+        confidence: high
+      - key: handlers.py//Handler//__getattr__
+        site: handlers.py:9
+        kind: reference
+        confidence: low
+      - key: handlers.py//cleanup
+        site: handlers.py:10
+        kind: reference
+        confidence: low
+      - key: os//remove
+        site: handlers.py:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: handlers.py//cleanup
+        site: handlers.py:5
+        reached: true

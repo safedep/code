@@ -1,0 +1,78 @@
+source: safedep:hand
+description: >-
+  The class attribute handle of Handler holds an object of Cleaner, which inherits __call__ from Base.
+  dispatch calls handle on its parameter, so the receiver is unknown and the site is a record with the
+  method name handle. No definition of the name handle exists, and the call runs Base.__call__, which calls
+  os.remove. The class body of Handler makes the object, so the search reaches Cleaner, and a reference
+  edge joins Cleaner to the __call__ of its MRO.
+roots:
+  - key: main.py
+    kind: manifest
+    rule: procfile
+exact_edges: true
+edges:
+  - from: handlers.py
+    to: handlers.py//Cleaner
+    kind: direct
+    confidence: high
+    site: handlers.py:14
+  - from: handlers.py//Base
+    to: handlers.py//Base//__call__
+    kind: reference
+    confidence: low
+    site: handlers.py:5
+  - from: handlers.py//Base//__call__
+    to: os//remove
+    kind: direct
+    confidence: high
+    site: handlers.py:6
+  - from: handlers.py//Cleaner
+    to: handlers.py//Base//__call__
+    kind: reference
+    confidence: low
+    site: handlers.py:5
+  - from: main.py
+    to: handlers.py
+    kind: import
+    confidence: high
+    site: main.py:1
+  - from: main.py
+    to: main.py//dispatch
+    kind: direct
+    confidence: high
+    site: main.py:8
+  - from: main.py
+    to: handlers.py//Handler
+    kind: direct
+    confidence: high
+    site: main.py:8
+unresolved:
+  - caller: main.py//dispatch
+    site: main.py:5
+    reason: unknown-receiver
+    method: handle
+results:
+  - target: os//remove
+    status: found
+    path:
+      - key: main.py
+      - key: handlers.py
+        site: main.py:1
+        kind: import
+        confidence: high
+      - key: handlers.py//Cleaner
+        site: handlers.py:14
+        kind: direct
+        confidence: high
+      - key: handlers.py//Base//__call__
+        site: handlers.py:5
+        kind: reference
+        confidence: low
+      - key: os//remove
+        site: handlers.py:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: handlers.py//Base//__call__
+        site: handlers.py:6
+        reached: true
