@@ -166,6 +166,8 @@ type rustState struct {
 	// useScopes holds the classes of each file that hold a use, which are
 	// inline modules.
 	useScopes map[string]map[string]bool
+	// spaceNames holds the names of the definitions of each space.
+	spaceNames map[*space]map[string]bool
 }
 
 // crateRoute is the path in another crate that a path of a file names, and
@@ -208,6 +210,7 @@ func (b *builder) addRustUnits() {
 	s.members = map[[2]string]bool{}
 	s.memberAnswers = map[[2]string]memberAnswer{}
 	s.useScopes = map[string]map[string]bool{}
+	s.spaceNames = map[*space]map[string]bool{}
 	files := map[string][]string{}
 	for _, p := range b.paths {
 		if ix := b.byPath[p]; ix != nil && ix.Language == langcode.Rust {
@@ -824,6 +827,24 @@ func (b *builder) rustScopeFallback(sc *scope, caller, first string, rest []stri
 	return nil
 }
 
+// rustSpaceNames returns the last name of each definition of a space.
+func (b *builder) rustSpaceNames(sp *space) map[string]bool {
+	s := b.rustState()
+	if names, ok := s.spaceNames[sp]; ok {
+		return names
+	}
+	names := map[string]bool{}
+	for _, p := range b.paths {
+		if ix := b.byPath[p]; ix != nil && ix.Language == langcode.Rust && b.spaceOf(p) == sp {
+			for _, def := range ix.Definitions {
+				names[def.Name] = true
+			}
+		}
+	}
+	s.spaceNames[sp] = names
+	return names
+}
+
 // rustInUseScope reports whether a key of a file sits in an inline module
 // with a use of its own. The index keeps the uses of a file in one scope,
 // and an impl block holds no use, so a class of the file that holds a use
@@ -854,6 +875,12 @@ func (b *builder) rustInUseScope(sc *scope, key string) bool {
 // tell a call of a macro from a call of a function, so the caller keeps
 // the record of the name too.
 func (b *builder) rustMacroCrate(ix *fileindex.Index, name string) (string, bool) {
+	// A macro of the crate of the file shadows a macro of a dependency.
+	// The index does not tell a macro from a function, so a definition of
+	// the name in the space of the file counts.
+	if b.rustSpaceNames(b.spaceOf(ix.Path))[name] {
+		return "", false
+	}
 	exported := false
 	for _, macros := range b.rustMacros() {
 		_, ok := macros[name]
