@@ -289,45 +289,129 @@ func (p *projection) goAssignedType(caller, name string, binding goScope, read f
 		if i < 0 {
 			return
 		}
-		if len(values) != len(names) {
+		var value *sitter.Node
+		switch {
+		case len(values) == len(names):
+			value = values[i]
+		case len(values) == 1 && len(names) == 2 && i == 0 && goCommaOk(values[0]):
+			// The first name of v, ok := m[k] or v, ok := x.(T) takes the
+			// value of the expression.
+			value = values[0]
+		default:
 			agree = false
 			return
 		}
-		t, ok := p.goValueType(values[i])
-		if !ok {
-			t, ok = p.goFieldValueType(caller, values[i])
-		}
+		t, ok := p.goWriteType(caller, value)
 		agree = agree && ok && !t.Result && t.Type == read.Type
 	})
 	return agree
+}
+
+// goCommaOk reports whether an expression gives a second value of the form
+// ok when two names take it: an index of a map or a type assertion.
+func goCommaOk(value *sitter.Node) bool {
+	value = goUnparen(value)
+	return value != nil && (value.Type() == "index_expression" || value.Type() == "type_assertion_expression")
+}
+
+// goWriteType returns the type that a value written to a variable gives:
+// the type that it constructs or asserts, the declared type of a field of a
+// parameter that it reads, or the declared element type of a map or a slice
+// that it indexes, as addConnCall for p.conns[key] with a field
+// conns map[string]*addConnCall of the type of the receiver p.
+func (p *projection) goWriteType(caller string, value *sitter.Node) (fileindex.Typed, bool) {
+	value = goUnparen(value)
+	if t, ok := p.goValueType(value); ok {
+		return t, true
+	}
+	if t, ok := p.goFieldValueType(caller, value); ok {
+		return t, true
+	}
+	if value.Type() != "index_expression" {
+		return fileindex.Typed{}, false
+	}
+	var elem *sitter.Node
+	switch container := p.goDeclaredType(caller, value.ChildByFieldName("operand")); {
+	case container == nil:
+	case container.Type() == "map_type":
+		elem = container.ChildByFieldName("value")
+	case container.Type() == "slice_type" || container.Type() == "array_type":
+		elem = container.ChildByFieldName("element")
+	}
+	if typ := p.goTypeName(elem); typ != "" {
+		return fileindex.Typed{Type: typ}, true
+	}
+	return fileindex.Typed{}, false
+}
+
+// goDeclaredType returns the type node that the source declares for a
+// value: a parameter or a local of a declared type in scope, a variable
+// of the file with a declared type, or a field of a struct of the file
+// that a parameter reads. It returns nil for any other value.
+func (p *projection) goDeclaredType(caller string, value *sitter.Node) *sitter.Node {
+	value = goUnparen(value)
+	if value == nil {
+		return nil
+	}
+	switch value.Type() {
+	case "identifier":
+		if binding, ok := p.goBinding(caller, p.text(value), value.StartByte()); ok {
+			return binding.typ
+		}
+		return p.goFileVarType(p.text(value))
+	case "selector_expression":
+		return p.goParamField(caller, value)
+	}
+	return nil
+}
+
+// goFileVarType returns the declared type of a variable at the top level
+// of the file, or nil.
+func (p *projection) goFileVarType(name string) *sitter.Node {
+	for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
+		if statement.Type() != "var_declaration" {
+			continue
+		}
+		for _, spec := range goVarSpecs(statement) {
+			if slices.ContainsFunc(goNames(spec), func(n *sitter.Node) bool { return p.text(n) == name }) {
+				return spec.ChildByFieldName("type")
+			}
+		}
+	}
+	return nil
 }
 
 // goFieldValueType returns the declared type of a field that a value
 // reads, as client for o.c with a parameter o opts and a field c *client
 // of the struct opts of the file.
 func (p *projection) goFieldValueType(caller string, value *sitter.Node) (fileindex.Typed, bool) {
+	if typ := p.goTypeName(p.goParamField(caller, value)); typ != "" {
+		return fileindex.Typed{Type: typ}, true
+	}
+	return fileindex.Typed{}, false
+}
+
+// goParamField returns the declared type of a field of a struct of the file
+// that a parameter of the caller reads, as the type of c in o.c, or nil.
+func (p *projection) goParamField(caller string, value *sitter.Node) *sitter.Node {
 	def := p.defs[caller]
 	if def == nil || value.Type() != "selector_expression" {
-		return fileindex.Typed{}, false
+		return nil
 	}
 	operand, field := value.ChildByFieldName("operand"), value.ChildByFieldName("field")
 	if operand == nil || field == nil || operand.Type() != "identifier" {
-		return fileindex.Typed{}, false
+		return nil
 	}
 	i := slices.IndexFunc(def.Params, func(t fileindex.Typed) bool { return t.Name == p.text(operand) })
 	if i < 0 {
-		return fileindex.Typed{}, false
+		return nil
 	}
 	// A local can shadow the parameter, as o in o := other{} after
 	// func f(o opts), and hold a value of another type.
 	if binding, ok := p.goBinding(caller, p.text(operand), operand.StartByte()); !ok || binding.from != goParamOrigin(p.syntax[caller]) {
-		return fileindex.Typed{}, false
+		return nil
 	}
-	t := p.goFileField(def.Params[i].Type, p.text(field))
-	if typ := p.goTypeName(t); typ != "" {
-		return fileindex.Typed{Type: typ}, true
-	}
-	return fileindex.Typed{}, false
+	return p.goFileField(def.Params[i].Type, p.text(field))
 }
 
 // goFileField returns the type of a field of a struct that the file

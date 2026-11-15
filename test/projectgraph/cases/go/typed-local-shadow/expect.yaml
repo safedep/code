@@ -4,21 +4,25 @@ description: >-
   remote.run, which calls os/exec.LookPath. The index records the typed locals of a function with no extent, and the
   link step reads the type of the first one. So the index checks that the binding of x in scope at the call is the
   binding whose type the link step reads. Here it is not. The method value x.stop is an unknown-receiver record with
-  the method name stop, which gets a name edge to remote.stop. Without the rule, a type of the first x gives
-  not-found for os/exec.LookPath. The call x.run() before the block keeps its member edge to local.run. pick binds r
-  once and types it by the assignment r = &remote{}, and named types its named result l by an assignment. Each
-  function binds the name once, so the assignment types that variable, and the call keeps its member edge. Without
-  the rule, a record there gives a name edge to the run of the other type, and a target behind it reads found. The
-  binding of x in the block of main has a type of its own, so the index gives the call the target of that binding
-  under an alias, and the call gets a member edge to remote.run. siblings does the same in each of two blocks.
-  viaLit calls run on the parameter x of a function literal, which no type of the index names, so the call is a
-  record. pickIface types r by an assignment, but r holds the interface runner from the field r, so the writes do
-  not agree and the call is a record too. Without the rule, a type of local for each of the two gives not-found for
-  os/exec.LookPath. In idiom.go, parse declares url from url.Parse, and the local binds no name at the call, so the
-  call keeps its edge to the import. viaParam and viaRange bind log, which shadows the import of log, so the index
-  takes no target of the import. The parameter of the type logger gives a member edge to logger.Println, and the
-  range variable a record with a name edge. In shadowedParam of main.go a local o shadows the parameter o, so the
-  field r of the parameter type does not type x, and the call x.run() is a record.
+  the method name stop, which gets a name edge to remote.stop. Without the rule, a type of the first x gives not-found
+  for os/exec.LookPath. The call x.run() before the block keeps its member edge to local.run. pick binds r once and
+  types it by the assignment r = &remote{}, and named types its named result l by an assignment. Each function binds
+  the name once, so the assignment types that variable, and the call keeps its member edge. Without the rule, a record
+  there gives a name edge to the run of the other type, and a target behind it reads found. The binding of x in the
+  block of main has a type of its own, so the index gives the call the target of that binding under an alias, and the
+  call gets a member edge to remote.run. siblings does the same in each of two blocks. viaLit calls run on the
+  parameter x of a function literal, which no type of the index names, so the call is a record. pickIface types r by
+  an assignment, but r holds the interface runner from the field r, so the writes do not agree and the call is a
+  record too. Without the rule, a type of local for each of the two gives not-found for os/exec.LookPath. In idiom.go,
+  parse declares url from url.Parse, and the local binds no name at the call, so the call keeps its edge to the
+  import. viaParam and viaRange bind log, which shadows the import of log, so the index takes no target of the import.
+  The parameter of the type logger gives a member edge to logger.Println, and the range variable a record with a name
+  edge. In shadowedParam of main.go a local o shadows the parameter o, so the field r of the parameter type does not
+  type x, and the call x.run() is a record. pool.get declares call from an element of the field calls
+  map[string]*remote, in the form call, dup := p.calls[key], and fromSlice declares r from an element of a parameter
+  []*remote. The declared element type of the map and of the slice gives the write its type, so each write gives
+  remote, and each call keeps its member edge to remote.run. Without the rule, a write of no known type there makes
+  the call a record with a name edge to local.run.
 roots:
   - key: idiom.go
     kind: main
@@ -70,7 +74,21 @@ edges:
     kind: member
     confidence: high
     site: main.go:43
+  - from: main.go//pool//get
+    to: main.go//remote//run
+    kind: member
+    confidence: high
+    site: main.go:95
+  - from: main.go//fromSlice
+    to: main.go//remote//run
+    kind: member
+    confidence: high
+    site: main.go:103
 no_edges:
+  - from: main.go//pool//get
+    to: main.go//local//run
+  - from: main.go//fromSlice
+    to: main.go//local//run
   - from: main.go//local//run
     to: os//exec//LookPath
   - from: main.go//pick
@@ -323,3 +341,19 @@ results:
       - caller: main.go//local//run
         site: main.go:10
         reached: true
+  - target: os//Getwd
+    sources: [main.go//pool//get]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: main.go//local//run
+        site: main.go:10
+        reached: false
+  - target: os//Getwd
+    sources: [main.go//fromSlice]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: main.go//local//run
+        site: main.go:10
+        reached: false

@@ -384,7 +384,12 @@ An assignment can type a variable that the function binds once, as `r` in
 only when it is the type of the variable. A declared type must be that
 type, and with no declared type each write must give it, as the field `r`
 of the struct `opts` of the file does for a parameter `o opts`, and not for
-a local that shadows the parameter. A variable that can hold an
+a local that shadows the parameter. A write of an element of a map or a
+slice gives the element type that the source declares for it, as
+`call, dup := p.calls[key]` with a field `calls map[string]*remote`, or a
+parameter, a local or a variable of the file of a map or slice type. A
+write that constructs or asserts a type, as `&remote{}`, `new(remote)` or
+`x.(*remote)`, gives that type. A variable that can hold an
 interface, as `r` of a field `r runner`, a range variable or `l := ls[0]`,
 can hold another type, so its call is a record. The case
 `go/typed-local-shadow` shows each form.

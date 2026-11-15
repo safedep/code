@@ -81,3 +81,24 @@ func shadowedParam(o opts, rs []runner) {
 		x.run()
 	}
 }
+
+type pool struct {
+	calls map[string]*remote
+}
+
+func (p *pool) get(key string) {
+	call, dup := p.calls[key]
+	if !dup {
+		call = &remote{}
+		p.calls[key] = call
+	}
+	call.run()
+}
+
+func fromSlice(rs []*remote, i int) {
+	r := rs[i]
+	if r == nil {
+		r = &remote{}
+	}
+	r.run()
+}
