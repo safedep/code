@@ -145,8 +145,8 @@ var rustRoots = map[string]bool{"std": true, "core": true, "alloc": true}
 
 // rustState is the state of Rust in a build: the crates of each space, the
 // module path of each Rust file, the paths that a resolution or a crate
-// route reads now, by the file that writes them, and the module paths of
-// the glob uses of each file.
+// route reads now, by the file that writes them, the module paths of the
+// glob uses of each file, and the exported macros of each unit by name.
 type rustState struct {
 	cargo     map[*space]*modules.Cargo
 	modules   map[string]string
@@ -154,6 +154,7 @@ type rustState struct {
 	routing   map[[2]string]bool
 	routes    map[[2]string]crateRoute
 	globs     map[string][]string
+	macros    map[*space]map[string]string
 }
 
 // crateRoute is the path in another crate that a path of a file names, and
@@ -362,8 +363,46 @@ func rustProvide(b *builder, sp *space, module string, _ modules.Form) []provisi
 	if key, ok := b.resolveQualified(langcode.Rust, joinPath(sp.unit, parts[1:])); ok {
 		return []provision{{sp: sp, module: key, via: "crate"}}
 	}
+	if key, ok := b.rustExportedMacro(sp, parts[1:]); ok {
+		return []provision{{sp: sp, module: key, via: "crate"}}
+	}
 	return []provision{{sp: sp}}
 }
+
+// rustExportedMacro returns the macro of a unit that #[macro_export] puts
+// at the root of its crate, as from_sub of src/macros.rs for
+// dep::from_sub. A walk of the modules of the crate does not find it.
+func (b *builder) rustExportedMacro(sp *space, names []string) (string, bool) {
+	if len(names) != 1 {
+		return "", false
+	}
+	s := b.rustState()
+	if s.macros == nil {
+		s.macros = map[*space]map[string]string{}
+	}
+	macros, ok := s.macros[sp]
+	if !ok {
+		macros = map[string]string{}
+		for _, p := range b.paths {
+			ix := b.byPath[p]
+			if ix == nil || ix.Language != langcode.Rust || fileindex.PackageOf(p) != sp.unit {
+				continue
+			}
+			for _, def := range ix.Definitions {
+				if _, taken := macros[def.Name]; !taken && slices.Contains(def.Decorators, rustMacroExport) {
+					macros[def.Name] = def.Key
+				}
+			}
+		}
+		s.macros[sp] = macros
+	}
+	key, ok := macros[names[0]]
+	return key, ok
+}
+
+// rustMacroExport is the attribute that puts a macro at the root of its
+// crate.
+const rustMacroExport = "@macro_export"
 
 // rustImportedModule returns the path of the package that a path of a file
 // names. A path writes the name that the Cargo.toml of its crate gives a
@@ -483,8 +522,22 @@ func (r rustResolver) Module(importer, spec string) (string, string, bool) {
 	// A use can bind an item of the crate, as fl of use crate::ffi::flush
 	// as fl after pub use dep as ffi. A call of fl links the key itself,
 	// so the key needs its node. Without it the edge reached no node, and
-	// the target read as not-found.
-	return r.b.external(r.b.rustCrateKey(t.file, t.path)), "crate", true
+	// the target read as not-found. A module of a unit, as html of
+	// dep::html, runs no code, and its node would get a record of the unit
+	// for a walk that ends on a module.
+	key := r.b.rustCrateKey(t.file, t.path)
+	if r.b.rustUnitModule(t.file, t.path) {
+		return key, "crate", true
+	}
+	return r.b.external(key), "crate", true
+}
+
+// rustUnitModule reports whether a path of another crate that a file names
+// is a module of a unit.
+func (b *builder) rustUnitModule(file, path string) bool {
+	ix := b.byPath[file]
+	o := origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, path), form: modules.FormImport}
+	return slices.ContainsFunc(b.providers(o), func(pv provision) bool { return b.units[pv.module] != nil })
 }
 
 // rustTarget is what a path of a file names: a definition or a module of
@@ -501,6 +554,9 @@ func (b *builder) rustPath(importer, written string) (rustTarget, bool) {
 		return rustTarget{key: key}, true
 	}
 	if path, file, ok := b.rustCratePath(importer, written); ok {
+		return rustTarget{path: path, file: file}, true
+	}
+	if path, file, ok := b.rustGlobPath(importer, written); ok {
 		return rustTarget{path: path, file: file}, true
 	}
 	return rustTarget{}, false
@@ -701,20 +757,91 @@ func (r rustResolver) FirstPartyFrom(importer, spec string) bool {
 // child module, or else a path of another crate, as serde_json::to_string,
 // whose external key the edge gets. The crate is the origin of the key, so a
 // unit of dependency code that gives the crate links it. A single name stays a record, because
-// a local closure can bind it.
+// a local closure or a parameter can bind it. A single name that a glob use
+// of another crate or an exported macro of a dependency gives also gets the
+// edge to that item.
 func (b *builder) rustScopeFallback(sc *scope, _, first string, rest []string, target string) []resolution {
 	written := strings.Join(append([]string{first}, rest...), "::")
-	if t, ok := b.rustPath(sc.ix.Path, written); ok {
-		if t.key != "" {
-			return []resolution{b.walkNamespace(t.key)}
-		}
+	record := resolution{fail: unknownReceiver(first)}
+	t, ok := b.rustPath(sc.ix.Path, written)
+	switch {
+	case ok && t.key != "":
+		return []resolution{b.walkNamespace(t.key)}
+	case ok:
 		crate, names := rustCrateNames(t.path)
-		return []resolution{b.importedWalk(b.byPath[t.file], fileindex.Namespace(langcode.Rust, t.path), crate, modules.FormImport, names)}
-	}
-	if len(rest) > 0 {
+		r := b.importedWalk(b.byPath[t.file], fileindex.Namespace(langcode.Rust, t.path), crate, modules.FormImport, names)
+		if len(rest) > 0 {
+			return []resolution{r}
+		}
+		return []resolution{r, record}
+	case len(rest) > 0:
 		return []resolution{b.importedWalk(sc.ix, target, first, modules.FormImport, rest)}
 	}
+	if crate, ok := b.rustMacroCrate(sc.ix, first); ok {
+		return []resolution{b.importedWalk(sc.ix, fileindex.Join(crate, first), crate, modules.FormImport, []string{first}), record}
+	}
 	return nil
+}
+
+// rustMacroCrate returns a dependency of the crate of a file whose unit
+// exports a macro of the name with #[macro_export], as dep for
+// render_now!() after #[macro_use] extern crate dep. The index does not
+// tell a call of a macro from a call of a function, so the caller keeps
+// the record of the name too.
+func (b *builder) rustMacroCrate(ix *fileindex.Index, name string) (string, bool) {
+	if !b.hasUnits() {
+		return "", false
+	}
+	for _, dep := range b.cargoOf(b.spaceOf(ix.Path)).Dependencies() {
+		crate := strings.ReplaceAll(dep, "-", "_")
+		o := origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, crate+"::"+name), form: modules.FormImport}
+		if slices.ContainsFunc(b.providers(o), func(pv provision) bool {
+			def := b.defs[pv.module]
+			return def != nil && slices.Contains(def.Decorators, rustMacroExport)
+		}) {
+			return crate, true
+		}
+	}
+	return "", false
+}
+
+// rustGlobPath returns the path in another crate that a path of a file
+// names through a glob use of a module of that crate, as dep::html::render
+// for render after use dep::html::*, when a unit gives the crate and the
+// first name of the path in the module. Rust reads a name of a glob use
+// before a crate, and rejects a name that two glob uses bring. A glob use
+// of a crate that no unit gives can bring any name, and the path then
+// resolves as before. A glob use of an inline module stays out, as
+// rustGlobModules says.
+func (b *builder) rustGlobPath(importer, written string) (string, string, bool) {
+	sc := b.scopes[importer]
+	first := rustFirstName(written)
+	if sc == nil || len(sc.wildcards) == 0 || !b.hasUnits() || strings.HasPrefix(written, "::") {
+		return "", "", false
+	}
+	switch first {
+	case "crate", "self", "super":
+		return "", "", false
+	}
+	for _, imp := range sc.wildcards {
+		if def := b.defs[sc.enclosing(imp.Line)]; def != nil && def.Kind == fileindex.DefClass {
+			continue
+		}
+		path, file, ok := b.rustCratePath(importer, imp.Module)
+		switch {
+		case ok:
+		case b.rustLocalRoot(importer, imp.Module):
+			continue
+		default:
+			path, file = imp.Module, importer
+		}
+		ix := b.byPath[file]
+		o := origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, joinPath(path, []string{first})), form: modules.FormImport}
+		if slices.ContainsFunc(b.providers(o), func(pv provision) bool { return pv.module != "" }) {
+			return joinPath(path, strings.Split(written, "::")), file, true
+		}
+	}
+	return "", "", false
 }
 
 // joinImplBlocks makes an impl block of a type of another module one class

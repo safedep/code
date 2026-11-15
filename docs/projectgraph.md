@@ -472,6 +472,23 @@ Rust follows the same rules, with these additions.
   path of a crate with the name of that sibling would lose its edge to the
   crate, as the case `rust/glob-use-inline-module` shows. The path of a
   glob `use` reads no other glob `use`.
+- A glob `use` of a module of another crate, as `use dep::html::*;`,
+  brings a name when a unit gives the crate and the name in that module.
+  So `render()` names `dep//html//render`, as in the case `rust/glob-use`,
+  and `html::render()` after `use dep::*;` names it too, and not a crate
+  `html`, as in the case `rust/glob-use-dependency-module`. A glob `use`
+  of a crate that no unit gives can bring any name, so the path resolves
+  as if the glob `use` were not there. A local closure or a parameter can
+  bind a single name, so such a call keeps its record too.
+- `#[macro_export]` puts a macro at the root of its crate, from any module
+  of the crate. So `dep::wipe` names the macro `wipe` of a private module
+  of the unit, as in the case `rust/macro-export-module`. A call of a
+  single name that no item binds, as `render_now!()` after
+  `#[macro_use] extern crate dep;`, gets the edge to such a macro of a
+  dependency of the crate, as in the case `rust/macro-import`. The index
+  does not tell a call of a macro from a call of a function value, so the
+  call keeps its record. A macro reads `$crate::sink` as `crate::sink` of
+  the crate of the macro.
 - The index records a type alias, as `pub type Image<P> = ImageBuffer<P>;`,
   as a definition of the kind `alias`. The link step resolves the type
   that it names, as the file of the alias names it, when a walk first

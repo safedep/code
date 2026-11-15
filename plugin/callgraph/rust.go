@@ -91,7 +91,7 @@ func rustTokenTreeProcessor(node *sitter.Node, treeData []byte, currentNamespace
 			continue
 		}
 		start := i - 1
-		for start >= 2 && tokens[start-1].Type() == "::" && tokens[start-2].Type() == "identifier" {
+		for start >= 2 && tokens[start-1].Type() == "::" && rustPathToken(tokens[start-2], treeData) {
 			start -= 2
 		}
 		name := tokens[i-1]
@@ -104,7 +104,7 @@ func rustTokenTreeProcessor(node *sitter.Node, treeData []byte, currentNamespace
 		}
 		var path strings.Builder
 		for _, t := range tokens[start:i] {
-			path.WriteString(t.Content(treeData))
+			path.WriteString(strings.TrimPrefix(t.Content(treeData), "$"))
 		}
 		kind := CallCall
 		if creation {
@@ -114,4 +114,12 @@ func rustTokenTreeProcessor(node *sitter.Node, treeData []byte, currentNamespace
 		callGraph.addEdge(currentNamespace, kind, name, callee, nil, []CallArgument{})
 	}
 	return newProcessorResult()
+}
+
+// rustPathToken reports whether a token of a macro can start or continue a
+// path: a name, or $crate, which names the crate of the macro as crate does.
+// Without $crate, $crate::sink() of a macro read as a call of the name sink,
+// which the file of the macro does not bind.
+func rustPathToken(token *sitter.Node, treeData []byte) bool {
+	return token.Type() == "identifier" || token.Type() == "metavariable" && token.Content(treeData) == "$crate"
 }

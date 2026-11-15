@@ -1,0 +1,43 @@
+source: safedep:hand
+description: >-
+  main.rs has use dep::*, which brings the module html of the crate dep into scope, and main calls html::render.
+  The code of the crate dep is the unit cargo:dep@1.2.0. Rust reads a name of a glob use before a crate, so html
+  names dep::html and no crate html. A link step that reads html as a crate gives the call the key html//render
+  with no record, and dep//html//render reads not-found. Nothing calls escape, so dep//html//escape is not-found.
+units:
+  vendor/dep: cargo:dep@1.2.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+exact_edges: true
+edges:
+  - from: src/main.rs//main
+    to: dep//html//render
+    kind: direct
+    confidence: high
+    site: src/main.rs:4
+  - from: dep//html//render
+    to: cargo:dep@1.2.0//src/html.rs//render
+    kind: package
+    confidence: high
+    site: cargo:dep@1.2.0//src/html.rs:1
+unresolved: []
+results:
+  - target: dep//html//render
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: dep//html//render
+        site: src/main.rs:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.rs//main
+        site: src/main.rs:4
+        reached: true
+  - target: dep//html//escape
+    status: not-found
