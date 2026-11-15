@@ -10,6 +10,7 @@ import (
 	"path"
 	"runtime"
 	"slices"
+	"time"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/fileindex"
@@ -361,11 +362,29 @@ func (r *run) flush(ctx context.Context, batch []pending) error {
 	put, made, parseErr := r.parse(ctx, parse)
 	// The files that finished before ctx was done hold whole indexes and
 	// artifacts. The store keeps them past the end of ctx, so the next run
-	// with the same deadline does not parse them again.
-	if err := r.save(context.WithoutCancel(ctx), put, made); err != nil {
-		return err
+	// with the same deadline does not parse them again. A store that hangs
+	// must not hold the caller long past its budget, so the write ends
+	// saveGrace after ctx.
+	saveCtx, cancel := graceContext(ctx, saveGrace)
+	defer cancel()
+	if err := r.save(saveCtx, put, made); err != nil {
+		return errors.Join(err, ctx.Err())
 	}
 	return parseErr
+}
+
+// saveGrace is the time that a store write has after the context of the
+// run ends.
+var saveGrace = 10 * time.Second
+
+// graceContext returns a context that ends grace after ctx ends.
+func graceContext(ctx context.Context, grace time.Duration) (context.Context, context.CancelFunc) {
+	out, cancel := context.WithCancel(context.WithoutCancel(ctx))
+	stop := context.AfterFunc(ctx, func() { time.AfterFunc(grace, cancel) })
+	return out, func() {
+		stop()
+		cancel()
+	}
 }
 
 // save stores the new indexes and artifacts of a batch.

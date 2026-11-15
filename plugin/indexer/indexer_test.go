@@ -177,6 +177,44 @@ func TestIndexerStopsAfterTheDeadline(t *testing.T) {
 	assert.Len(t, result.Indexes, batchSize)
 }
 
+// hangingStore cancels the run at its first Put, then blocks until the
+// context of the write ends.
+type hangingStore struct {
+	store.Store
+	cancel context.CancelFunc
+}
+
+func (s *hangingStore) Put(ctx context.Context, _ []*fileindex.Index) error {
+	s.cancel()
+	<-ctx.Done()
+	return ctx.Err()
+}
+
+func TestIndexerEndsAHangingStoreWriteAfterTheGrace(t *testing.T) {
+	defer func(grace time.Duration) { saveGrace = grace }(saveGrace)
+	saveGrace = 50 * time.Millisecond
+
+	dir := t.TempDir()
+	writeFiles(t, dir, map[string]string{"a.js": "function a() {}\n"})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := runIndexer(t, ctx, appFileSystem(t, dir), Options{
+			Languages: languages(t, core.LanguageCodeJavascript),
+			Store:     &hangingStore{Store: memstore.New(), cancel: cancel},
+		})
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		assert.ErrorIs(t, err, context.Canceled)
+	case <-time.After(10 * time.Second):
+		require.Fail(t, "the store write did not end after the grace")
+	}
+}
+
 // recordingPlugin records the name of each file that it analyzes.
 type recordingPlugin struct {
 	mu    sync.Mutex
