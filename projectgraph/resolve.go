@@ -563,6 +563,7 @@ func (b *builder) wildcardModules(sc *scope) []string {
 	// A read inside another read adds the paths that it asks for to the
 	// record of the outer one.
 	outer := b.wildcardMods != nil && b.asked == nil
+	whole := b.globRead()
 	if outer {
 		b.asked = map[[2]string]bool{}
 	}
@@ -589,8 +590,9 @@ func (b *builder) wildcardModules(sc *scope) []string {
 		clear(b.tentative)
 		b.tentative = b.tentative[:0]
 	}
+	readWhole := whole()
 	if outer {
-		if b.uncut(b.asked) {
+		if readWhole && b.uncut(b.asked) {
 			b.wildcardMods[sc] = &wildcardMods{mods: r.mods, asked: b.asked}
 		}
 		b.asked = nil
@@ -622,15 +624,19 @@ func (b *builder) undo(mark int) {
 // path in progress was set before the read, and the guard cut the read if
 // the read asked for it.
 //
-// The guards of a Rust glob path and of a member of a glob module cut a
-// read too, so a read under them is no whole read.
+// The guards of a Rust glob path and of a glob member tell globRead the
+// depth of each read that they cut. A read with a cut of a lookup that
+// began before the read is no whole read, so wildcardModules keeps no list
+// of it. A cut of a lookup that the read began leaves out no path. A check
+// of any glob lookup in progress kept no list under a lookup, and made the
+// link step of the Rust corpus a third slower.
 //
 // uncut compares the paths of the resolving guard only. On the Rust
 // corpus, the reads under any other guard cost less than 3% of the read
 // time. So any other state in progress fails the check.
 func (b *builder) uncut(asked map[[2]string]bool) bool {
 	s := b.rustState()
-	if len(b.expanding)+len(b.visiting)+len(b.reading)+len(b.stepping)+len(b.findingBases)+len(s.routing)+len(s.globbing)+len(s.members)+b.ordering > 0 {
+	if len(b.expanding)+len(b.visiting)+len(b.reading)+len(b.stepping)+len(b.findingBases)+len(s.routing)+b.ordering > 0 {
 		return false
 	}
 	for k := range s.resolving {

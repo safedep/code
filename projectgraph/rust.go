@@ -2,6 +2,7 @@ package projectgraph
 
 import (
 	"cmp"
+	"math"
 	"slices"
 	"strings"
 
@@ -157,17 +158,26 @@ type rustState struct {
 	globs     map[string][]string
 	macros    map[*space]map[string]string
 	nested    map[string]bool
-	globbing  map[[2]string]bool
 	globPaths map[[2]string]globPath
-	members   map[[2]string]bool
-	// memberAnswers holds the answers of rustGlobUnitMember that no cut
-	// gave.
+	// globbing and members hold the depth of each glob path and glob
+	// member that a lookup reads now. depth is the depth of the last one,
+	// and low the least depth that a cut of the read in progress hit.
+	globbing map[[2]string]int
+	members  map[[2]string]int
+	depth    int
+	low      int
+	// memberAnswers holds the answers of rustGlobUnitMember that no cut of
+	// an outer read gave, and visited the other answers of the lookup in
+	// progress.
 	memberAnswers map[[2]string]memberAnswer
+	visited       map[[2]string]memberAnswer
 	// useScopes holds the classes of each file that hold a use, which are
 	// inline modules.
 	useScopes map[string]map[string]bool
 	// spaceNames holds the names of the definitions of each space.
 	spaceNames map[*space]map[string]bool
+	// cuts counts the cuts of the glob guards, a part of b.cuts.
+	cuts int
 }
 
 // crateRoute is the path in another crate that a path of a file names, and
@@ -205,9 +215,11 @@ func (b *builder) addRustUnits() {
 	s.routing = map[[2]string]bool{}
 	s.routes = map[[2]string]crateRoute{}
 	s.globs = map[string][]string{}
-	s.globbing = map[[2]string]bool{}
+	s.globbing = map[[2]string]int{}
+	s.low = math.MaxInt
+	s.visited = map[[2]string]memberAnswer{}
 	s.globPaths = map[[2]string]globPath{}
-	s.members = map[[2]string]bool{}
+	s.members = map[[2]string]int{}
 	s.memberAnswers = map[[2]string]memberAnswer{}
 	s.useScopes = map[string]map[string]bool{}
 	s.spaceNames = map[*space]map[string]bool{}
@@ -929,14 +941,16 @@ func (b *builder) rustGlobPath(importer, written string) (string, string, bool) 
 	if g, ok := s.globPaths[k]; ok {
 		return g.join(written)
 	}
-	if s.globbing[k] {
-		b.cuts++
+	if d, ok := s.globbing[k]; ok {
+		b.globCut(d)
 		return "", "", false
 	}
-	s.globbing[k] = true
+	s.depth++
+	s.globbing[k] = s.depth
 	cuts := b.cuts
 	g := b.findGlobPath(sc, first)
 	delete(s.globbing, k)
+	s.depth--
 	// The answer reads providers, so it follows the rule of that memo.
 	if b.cuts == cuts {
 		s.globPaths[k] = g
@@ -1044,37 +1058,77 @@ func (b *builder) rustGlobMember(sc *scope, name string) (string, bool) {
 //
 // Modules can bring each other with glob uses, in a diamond or in a cycle.
 // A walk of each path through them grows with the number of paths. So one
-// lookup reads each module once: a module that the lookup reads again
-// counts as a cut, and the lookup keeps no answer that a cut gave. An
-// answer that no cut gave stays for the build, so a diamond reads each
-// module once in all.
+// lookup reads each module once, and a module that it reads again gives
+// its first answer. A read of a module that the lookup reads now is a cut.
+// An answer stays for the build when each cut under it hit the module or a
+// module under it, as the low link of Tarjan tells. Such a cut leaves out
+// no path, because the module in progress reads that path itself.
 func (b *builder) rustGlobUnitMember(mod, name string) (string, bool) {
 	s := b.rustState()
 	k := [2]string{mod, name}
 	if m, ok := s.memberAnswers[k]; ok {
 		return m.key, m.ok
 	}
-	if s.members[k] {
-		b.cuts++
+	if d, ok := s.members[k]; ok {
+		b.globCut(d)
 		return "", false
 	}
-	if len(s.members) == 0 {
-		defer clear(s.members)
+	if m, ok := s.visited[k]; ok {
+		b.globCut(m.low)
+		return m.key, m.ok
 	}
-	s.members[k] = true
-	cuts := b.cuts
+	if len(s.members) == 0 {
+		defer clear(s.visited)
+	}
+	s.depth++
+	d := s.depth
+	s.members[k] = d
+	low, cuts := s.low, b.cuts-s.cuts
+	s.low = math.MaxInt
 	key, ok := b.unitMember(mod, name)
-	if b.cuts == cuts {
-		s.memberAnswers[k] = memberAnswer{key: key, ok: ok}
+	m := memberAnswer{key: key, ok: ok, low: s.low}
+	s.low = min(low, s.low)
+	delete(s.members, k)
+	s.depth--
+	if m.low >= d && b.cuts-s.cuts == cuts {
+		s.memberAnswers[k] = m
 		b.memo(func() { delete(s.memberAnswers, k) })
+	} else {
+		s.visited[k] = m
 	}
 	return key, ok
 }
 
-// memberAnswer is the answer of rustGlobUnitMember for a module and a name.
+// globCut counts a read that the guard of a glob path or of a glob member
+// cuts at the depth.
+func (b *builder) globCut(depth int) {
+	s := b.rustState()
+	b.cuts++
+	s.cuts++
+	s.low = min(s.low, depth)
+}
+
+// globRead starts a read that the cuts of the glob guards can make
+// incomplete. The function that it returns ends the read and reports
+// whether no cut of the read hit a module that a lookup read before the
+// read began.
+func (b *builder) globRead() func() bool {
+	s := b.rustState()
+	depth, low := s.depth, s.low
+	s.low = math.MaxInt
+	return func() bool {
+		whole := s.low > depth
+		s.low = min(low, s.low)
+		return whole
+	}
+}
+
+// memberAnswer is the answer of rustGlobUnitMember for a module and a name,
+// with the least depth that a cut under it hit.
 type memberAnswer struct {
 	key string
 	ok  bool
+	low int
 }
 
 // rustUnitFile reports whether a file is Rust code of a unit of dependency

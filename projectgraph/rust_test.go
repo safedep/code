@@ -2,8 +2,14 @@ package projectgraph
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 	"testing/fstest"
+
+	codefs "github.com/safedep/code/fs"
+	"github.com/safedep/code/lang"
+	"github.com/safedep/code/plugin/indexer"
 
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
@@ -104,21 +110,41 @@ func TestRustHelperProgram(t *testing.T) {
 	}
 }
 
-// TestUncutCountsTheRustGlobGuards checks that a read of the wildcard
-// imports of a scope under the guard of a Rust glob path or of a glob
-// member is no whole read. Such a guard cuts the read of a module, and a
-// list of modules that a cut read gave stayed for the build.
-func TestUncutCountsTheRustGlobGuards(t *testing.T) {
-	for name, set := range map[string]func(s *rustState){
-		"globbing": func(s *rustState) { s.globbing = map[[2]string]bool{{"src/a.rs", "x"}: true} },
-		"members":  func(s *rustState) { s.members = map[[2]string]bool{{"rust:app::c", "x"}: true} },
-	} {
-		t.Run(name, func(t *testing.T) {
-			b, err := newBuilder(nil, Options{})
-			require.NoError(t, err)
-			require.True(t, b.uncut(nil))
-			set(b.rustState())
-			assert.False(t, b.uncut(nil))
-		})
+// TestBuildRustKeepsNoGlobListThatACutGave links src/other.rs, which glob
+// uses crate::sub::x and crate::c. sub gives x only through its own glob use
+// of other, so the read of the glob uses of other asks for other again
+// under the guard of a glob member. That read gets no module for
+// crate::sub::x. A list of the modules of other that such a read gave
+// stayed for the build without the module c::x, and a name of c::x read
+// missing for every later lookup.
+func TestBuildRustKeepsNoGlobListThatACutGave(t *testing.T) {
+	files := map[string]string{
+		"Cargo.toml":   "[package]\nname = \"app\"\nversion = \"1.0.0\"\nedition = \"2021\"\n",
+		"src/main.rs":  "mod c;\nmod other;\nmod sub;\n\nuse sub::*;\n\nfn main() {\n    x::g();\n    other::run();\n}\n",
+		"src/c/mod.rs": "pub mod x;\n",
+		"src/c/x.rs":   "pub fn g() {}\n",
+		"src/other.rs": "use crate::sub::x::*;\npub use crate::c::*;\n\npub fn run() {\n    g();\n}\n",
+		"src/sub.rs":   "pub use crate::other::*;\n",
+	}
+	dir := t.TempDir()
+	for p, text := range files {
+		require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(dir, p)), 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, p), []byte(text), 0o644))
+	}
+	languages, err := lang.AllLanguages()
+	require.NoError(t, err)
+	fsys, err := codefs.NewLocalFileSystem(codefs.LocalFileSystemConfig{AppDirectories: []string{dir}})
+	require.NoError(t, err)
+	ix, err := indexer.New(indexer.Options{Languages: languages})
+	require.NoError(t, err)
+	indexed, err := ix.Run(context.Background(), fsys)
+	require.NoError(t, err)
+	b, err := newBuilder(indexed.Indexes, Options{Root: os.DirFS(dir), Files: indexed.Statuses(), Languages: indexed.Languages})
+	require.NoError(t, err)
+	require.NoError(t, b.linkAll(context.Background()))
+
+	w := b.wildcardMods[b.scopes["src/other.rs"]]
+	if w != nil {
+		assert.Equal(t, []string{"rust:app::c::x", "rust:app::c"}, w.mods)
 	}
 }
