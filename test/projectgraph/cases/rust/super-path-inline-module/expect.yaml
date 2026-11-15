@@ -1,0 +1,69 @@
+source: safedep:hand
+description: >-
+  The inline module other of src/store.rs calls super::Item::new and self::inner::run. super of other is the
+  module store, and self is other. The call graph reads no inline module, and the link step reads such a path
+  from the module of the file. So super::Item::new goes to the external key super//Item//new, and
+  std::fs::write reads not-found. self::inner::run names an inner of the module store, which does not exist.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/store.rs//other//sib
+    to: src/store.rs//Item//new
+    kind: direct
+    confidence: high
+    site: src/store.rs:12
+  - from: src/store.rs//other//sib
+    to: src/store.rs//other//inner//run
+    kind: direct
+    confidence: high
+    site: src/store.rs:13
+no_edges:
+  - from: src/store.rs//other//sib
+    to: super//Item//new
+unresolved: []
+results:
+  - target: std//fs//write
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/store.rs//other//sib
+        site: src/main.rs:4
+        kind: direct
+        confidence: high
+      - key: src/store.rs//Item//new
+        site: src/store.rs:12
+        kind: direct
+        confidence: high
+      - key: std//fs//write
+        site: src/store.rs:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/store.rs//Item//new
+        site: src/store.rs:5
+        reached: true
+  - target: std//fs//create_dir
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/store.rs//other//sib
+        site: src/main.rs:4
+        kind: direct
+        confidence: high
+      - key: src/store.rs//other//inner//run
+        site: src/store.rs:13
+        kind: direct
+        confidence: high
+      - key: std//fs//create_dir
+        site: src/store.rs:18
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/store.rs//other//inner//run
+        site: src/store.rs:18
+        reached: true

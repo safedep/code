@@ -1,4 +1,4 @@
-package lang
+package langcode
 
 import (
 	"testing"
@@ -22,7 +22,7 @@ func TestRustFromFile(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.path, func(t *testing.T) {
-			assert.Equal(t, c.want, rustFromFile(c.path, c.mods))
+			assert.Equal(t, c.want, RustFromFile(c.path, c.mods))
 		})
 	}
 }

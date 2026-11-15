@@ -822,7 +822,10 @@ func rustShadowed(p *projection, call *fileindex.Call, callee ast.NodePosition) 
 	}
 	names := strings.Split(p.text(node), "::")
 	switch names[0] {
-	case "crate", "self", "super", "Self", "":
+	case "self", "super":
+		p.rustFromFile(call, node, names)
+		return true
+	case "crate", "Self", "":
 		return true
 	}
 	written := strings.Join(names, fileindex.Separator)
@@ -840,6 +843,33 @@ func rustShadowed(p *projection, call *fileindex.Call, callee ast.NodePosition) 
 		}
 	}
 	return true
+}
+
+// rustFromFile writes the target of a call whose path starts with self or
+// super in an inline module as a path from the module of the file. The call
+// graph reads no inline module, and the link step reads such a path from the
+// module of the file. So super::Item::new() in mod other went to an external
+// super//Item//new, and the real Item::new of the file read as not-found.
+// Only the target that the call writes changes. A use already gives its
+// target from the module of the file.
+func (p *projection) rustFromFile(call *fileindex.Call, node *sitter.Node, names []string) {
+	var mods []string
+	for n := node.Parent(); n != nil; n = n.Parent() {
+		if n.Type() == "mod_item" {
+			mods = append(mods, p.text(n.ChildByFieldName("name")))
+		}
+	}
+	if len(mods) == 0 {
+		return
+	}
+	slices.Reverse(mods)
+	written := strings.Join(names, fileindex.Separator)
+	path := langcode.RustFromFile(strings.Join(names, "::"), mods)
+	for i, target := range call.Targets {
+		if target == written {
+			call.Targets[i] = strings.ReplaceAll(path, "::", fileindex.Separator)
+		}
+	}
 }
 
 // rustShadowedMethod fixes a target of a method call that the call graph

@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 	"unicode"
 	"unicode/utf8"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
+	"github.com/safedep/code/langcode"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -50,7 +50,7 @@ func (r *rustResolvers) ResolveImports(ctx context.Context, tree core.ParseTree)
 			uses := rustUseImports(data, node.ChildByFieldName("argument"), nil, nil)
 			if mods := rustInlineModules(data, node); len(mods) > 0 {
 				for _, imp := range uses {
-					imp.SetModuleName(rustFromFile(imp.ModuleName(), mods))
+					imp.SetModuleName(langcode.RustFromFile(imp.ModuleName(), mods))
 				}
 			}
 			imports = append(imports, uses...)
@@ -107,29 +107,6 @@ func rustInlineModules(data *[]byte, node *sitter.Node) []string {
 	}
 	slices.Reverse(mods)
 	return mods
-}
-
-// rustFromFile writes a path that starts with self or super in an inline
-// module as a path from the module of the file, as self::outer::x for
-// super::x in mod outer { mod inner { .. } }. The index keeps the uses of a
-// file in one scope, which reads such a path from the module of the file.
-// A scope that reads self::x in mod m from the file names the x of the
-// file, not m::x.
-func rustFromFile(path string, mods []string) string {
-	parts := strings.Split(path, "::")
-	ups := 0
-	for ups < len(parts) && parts[ups] == "super" {
-		ups++
-	}
-	switch {
-	case parts[0] == "self":
-		return strings.Join(slices.Concat([]string{"self"}, mods, parts[1:]), "::")
-	case ups == 0:
-		return path
-	case ups > len(mods):
-		return strings.Join(slices.Concat(slices.Repeat([]string{"super"}, ups-len(mods)), parts[ups:]), "::")
-	}
-	return strings.Join(slices.Concat([]string{"self"}, mods[:len(mods)-ups], parts[ups:]), "::")
 }
 
 // rustUseImports returns the imports of a use tree. The prefix is the path of
