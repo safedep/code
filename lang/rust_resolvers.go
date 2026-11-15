@@ -3,6 +3,8 @@ package lang
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 
@@ -45,7 +47,13 @@ func (r *rustResolvers) ResolveImports(ctx context.Context, tree core.ParseTree)
 	err = walkNamed(ctx, tree.Tree().RootNode(), func(node *sitter.Node) bool {
 		switch node.Type() {
 		case "use_declaration":
-			imports = append(imports, rustUseImports(data, node.ChildByFieldName("argument"), nil, nil)...)
+			uses := rustUseImports(data, node.ChildByFieldName("argument"), nil, nil)
+			if mods := rustInlineModules(data, node); len(mods) > 0 {
+				for _, imp := range uses {
+					imp.SetModuleName(rustFromFile(imp.ModuleName(), mods))
+				}
+			}
+			imports = append(imports, uses...)
 			return false
 		case "extern_crate_declaration":
 			name := node.ChildByFieldName("name")
@@ -82,6 +90,54 @@ func (r *rustResolvers) ResolveImports(ctx context.Context, tree core.ParseTree)
 	}
 
 	return imports, nil
+}
+
+// rustInlineModules returns the names of the inline modules that hold a
+// node, the outermost first, as [outer inner] for a use in mod outer { mod
+// inner { .. } }.
+func rustInlineModules(data *[]byte, node *sitter.Node) []string {
+	var mods []string
+	for n := node.Parent(); n != nil; n = n.Parent() {
+		if n.Type() != "mod_item" {
+			continue
+		}
+		if name := n.ChildByFieldName("name"); name != nil {
+			mods = append(mods, name.Content(*data))
+		}
+	}
+	slices.Reverse(mods)
+	return mods
+}
+
+// rustFromFile writes a path that starts with self or super in an inline
+// module as a path from the module of the file, as self::outer::x for
+// super::x in mod outer { mod inner { .. } }. The index keeps the uses of a
+// file in one scope, which reads such a path from the module of the file.
+// So self::x in mod m named the x of the file, and a call through it lost
+// its edge to m::x.
+func rustFromFile(path string, mods []string) string {
+	parts := strings.Split(path, "::")
+	ups := 0
+	switch {
+	case parts[0] == "self":
+		parts = parts[1:]
+	case parts[0] == "super":
+		for ups < len(parts) && parts[ups] == "super" {
+			ups++
+		}
+		parts = parts[ups:]
+	default:
+		return path
+	}
+	var out []string
+	if ups > len(mods) {
+		for range ups - len(mods) {
+			out = append(out, "super")
+		}
+	} else {
+		out = append(append(out, "self"), mods[:len(mods)-ups]...)
+	}
+	return strings.Join(append(out, parts...), "::")
 }
 
 // rustUseImports returns the imports of a use tree. The prefix is the path of

@@ -440,6 +440,11 @@ Rust follows the same rules, with these additions.
   `use deep::util;` names the module `deep::util::helpers`, as in the case
   `rust/use-chain-module`. A glob `use` brings such a binding of its
   module too, as in the case `rust/glob-use-binding`.
+- A `use` in an inline module reads `self` and `super` from that module.
+  The index keeps the uses of a file in one scope, so it writes such a
+  path from the module of the file, as `self::client::tls::conn` for
+  `use self::tls::conn;` in `mod client`, as in the cases
+  `rust/use-self-inline-module` and `rust/use-super-inline-module`.
 - A glob `use` brings each name of its module into the module of the
   file. So `helpers::cleanup` after `use super::*;` in
   `src/deep/worker.rs` names the function of the module `deep::helpers`,
