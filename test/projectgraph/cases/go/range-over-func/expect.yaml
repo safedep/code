@@ -1,27 +1,25 @@
 source: safedep:hand
 description: >-
-  main ranges over the function walk and over the method value t.All, as Go 1.23 allows. The range calls
-  the function, and the function calls the body of the loop through yield. So the range expression is a
-  reference, as an argument is, and os.Remove and os/exec.LookPath are found through it. Without the
-  reference, both read not-found. The range over a slice names no function. No code uses unused, so
-  os.Getwd is not found. consume ranges over its parameter seq of a function type, and drain over the
-  field each of a function type. Each range calls a function value that a search from a source does not
-  reach, so it is a function-value record, and each target is uncertain from consume and from drain.
-  Without the record, each target reads not-found there. attrs ranges over the member Attr of a range
-  variable n, whose type the index does not know. The field Attr of node holds a slice, but the method
-  element.Attr can make n.Attr a method value. So the range is a record with the method name, and os.Chdir
-  is found from attrs through the name edge. attrsTyped ranges over n.Attr of a parameter n *node. The
-  reference at the site names the field, which holds data, so the range has no record, and os.Chdir is not
-  found from it. typed ranges over a parameter of the type Seq of another file, and viaLocal over a local
-  that holds the field Each of a holder. The index cannot show that either value is data, so each range is
-  a function-value record, and os.Remove is uncertain from each. The record of viaLocal is at the field
-  that gives the local. dataRanges ranges over a slice of a slice, a value of the type List of another
-  file, an element of a map of slices, the result of names and of node.Children, which give slices, and a
-  local that holds such a result. stdRange ranges over the result of strings.Fields, code outside the
-  graph whose own record covers a function that it makes. The link step reads the types and the results of
-  the graph and drops each record. So os.Remove is not found from dataRanges. From stdRange only the
-  callback of strings.Fields concerns it, because tree.All, a method of an exported name, holds a
-  function-value record.
+  main ranges over the function walk and over the method value t.All, as Go 1.23 allows. The range calls the function,
+  and the function calls the body of the loop through yield. So the range expression is a reference, as an argument
+  is, and os.Remove and os/exec.LookPath are found through it. Without the reference, both read not-found. The range
+  over a slice names no function. No code uses unused, so os.Getwd is not found. consume ranges over its parameter seq
+  of a function type, and drain over the field each of a function type. Each range calls a function value that a
+  search from a source does not reach, so it is a function-value record, and each target is uncertain from consume and
+  from drain. Without the record, each target reads not-found there. attrs ranges over the member Attr of a range
+  variable n over ns []*node, and attrsIndexed over ns[0].Attr. The range clause and the index give n and ns[0] the
+  element type node, so the reference at each site names the field Attr of node, which holds a slice. Each range then
+  has no record, and os.Chdir, which the method element.Attr calls, is not found from attrs, attrsIndexed or
+  attrsTyped. Without the type, a range over a member keeps a record with the method name, which gives a name edge to
+  element.Attr. typed ranges over a parameter of the type Seq of another file, and viaLocal over a local that holds
+  the field Each of a holder. The index cannot show that either value is data, so each range is a function-value
+  record, and os.Remove is uncertain from each. The record of viaLocal is at the field that gives the local.
+  dataRanges ranges over a slice of a slice, a value of the type List of another file, an element of a map of slices,
+  the result of names and of node.Children, which give slices, and a local that holds such a result. stdRange ranges
+  over the result of strings.Fields, code outside the graph whose own record covers a function that it makes. The link
+  step reads the types and the results of the graph and drops each record. So os.Remove is not found from dataRanges.
+  From stdRange only the callback of strings.Fields concerns it, because tree.All, a method of an exported name, holds
+  a function-value record.
 roots:
   - key: main.go
     kind: main
@@ -51,9 +49,6 @@ no_edges:
   - from: main.go//main
     to: os//exec//LookPath
 unresolved:
-  - caller: main.go//attrs
-    reason: no-dependency-source
-    callback: true
   - caller: main.go//tree//All
     reason: no-dependency-source
     callback: true
@@ -95,10 +90,6 @@ unresolved:
   - caller: main.go//drain
     site: main.go:46
     reason: function-value
-  - caller: main.go//attrs
-    site: main.go:60
-    reason: unknown-receiver
-    method: Attr
   - caller: main.go//typed
     site: main.go:67
     reason: function-value
@@ -169,21 +160,19 @@ results:
   - target: os//Chdir
     sources: [main.go//attrs]
     sources_only: true
-    status: found
-    path:
-      - key: main.go//attrs
-      - key: main.go//element//Attr
-        site: main.go:60
-        kind: name
-        confidence: low
-      - key: os//Chdir
-        site: main.go:54
-        kind: direct
-        confidence: high
+    status: not-found
     call_sites:
       - caller: main.go//element//Attr
         site: main.go:54
-        reached: true
+        reached: false
+  - target: os//Chdir
+    sources: [main.go//attrsIndexed]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: main.go//element//Attr
+        site: main.go:54
+        reached: false
   - target: os//Chdir
     sources: [main.go//attrsTyped]
     sources_only: true

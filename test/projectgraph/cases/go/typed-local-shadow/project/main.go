@@ -102,3 +102,11 @@ func fromSlice(rs []*remote, i int) {
 	}
 	r.run()
 }
+
+func loopThenVar(rs []*remote) {
+	for _, r := range rs {
+		r.run()
+	}
+	var r *local
+	_ = r
+}

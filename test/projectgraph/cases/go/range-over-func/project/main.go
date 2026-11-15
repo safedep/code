@@ -94,3 +94,8 @@ func dataRanges(b []byte, l List, m map[string][]string, n *node) {
 	for range kids {
 	}
 }
+
+func attrsIndexed(ns []*node) {
+	for range ns[0].Attr {
+	}
+}

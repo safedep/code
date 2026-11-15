@@ -115,6 +115,10 @@ func (p *projection) goOperand(caller string, node *sitter.Node) (string, bool) 
 		return p.goTypeTarget(caller, node.ChildByFieldName("type"))
 	case "call_expression":
 		return p.goResultOperand(caller, node)
+	case "index_expression":
+		// An element of a map or a slice of a declared type, as ns[0] of
+		// ns []*node, holds a value of the element type.
+		return p.goTypeTarget(caller, p.goElementOf(caller, node))
 	}
 	return "", false
 }
@@ -330,18 +334,23 @@ func (p *projection) goWriteType(caller string, value *sitter.Node) (fileindex.T
 	if value.Type() != "index_expression" {
 		return fileindex.Typed{}, false
 	}
-	var elem *sitter.Node
-	switch container := p.goDeclaredType(caller, value.ChildByFieldName("operand")); {
-	case container == nil:
-	case container.Type() == "map_type":
-		elem = container.ChildByFieldName("value")
-	case container.Type() == "slice_type" || container.Type() == "array_type":
-		elem = container.ChildByFieldName("element")
-	}
-	if typ := p.goTypeName(elem); typ != "" {
+	if typ := p.goTypeName(p.goElementOf(caller, value)); typ != "" {
 		return fileindex.Typed{Type: typ}, true
 	}
 	return fileindex.Typed{}, false
+}
+
+// goElementOf returns the element type that the source declares for the
+// map or the slice that an index expression indexes, or nil.
+func (p *projection) goElementOf(caller string, index *sitter.Node) *sitter.Node {
+	switch container := p.goDeclaredType(caller, index.ChildByFieldName("operand")); {
+	case container == nil:
+	case container.Type() == "map_type":
+		return container.ChildByFieldName("value")
+	case container.Type() == "slice_type" || container.Type() == "array_type":
+		return container.ChildByFieldName("element")
+	}
+	return nil
 }
 
 // goDeclaredType returns the type node that the source declares for a

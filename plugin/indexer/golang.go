@@ -426,7 +426,7 @@ func goSignature(p *projection, def *fileindex.Definition, node *sitter.Node) {
 	if len(results) > 1 {
 		def.Results = results
 	}
-	def.Locals, p.goOrigins[def.Key] = p.goLocals(node.ChildByFieldName("body"))
+	def.Locals, p.goOrigins[def.Key] = p.goLocals(def.Key, node.ChildByFieldName("body"))
 	if node.ChildByFieldName("body") == nil {
 		p.goStub(def, node)
 	}
@@ -592,7 +592,7 @@ func (p *projection) goResults(result *sitter.Node) []string {
 // the body shares the scope of the body, so its names count too. It also
 // returns the origin of each local: the start of its scope as goScopes
 // records it, or goAssignedOrigin for an assignment.
-func (p *projection) goLocals(body *sitter.Node) ([]fileindex.Typed, []uint32) {
+func (p *projection) goLocals(key string, body *sitter.Node) ([]fileindex.Typed, []uint32) {
 	var locals []fileindex.Typed
 	var origins []uint32
 	add := func(typed []fileindex.Typed, origin uint32) {
@@ -620,9 +620,42 @@ func (p *projection) goLocals(body *sitter.Node) ([]fileindex.Typed, []uint32) {
 			if left := node.ChildByFieldName("left"); left != nil {
 				add(p.goAssigned(ts.NamedChildren(left), node.ChildByFieldName("right")), origin)
 			}
+		case "range_clause":
+			if goDeclares(node) {
+				add(p.goRangeTyped(key, node), node.EndByte())
+			}
 		}
 	})
 	return locals, origins
+}
+
+// goRangeTyped returns the typed names that a range clause declares over a
+// map, a slice or an array whose element type the source declares, as c
+// in for _, c := range cs with cs []*Client. The key of a map takes the key
+// type, and the value of a map or a slice the element type.
+func (p *projection) goRangeTyped(key string, clause *sitter.Node) []fileindex.Typed {
+	left := clause.ChildByFieldName("left")
+	container := p.goDeclaredType(key, clause.ChildByFieldName("right"))
+	if left == nil || container == nil {
+		return nil
+	}
+	var types []*sitter.Node
+	switch container.Type() {
+	case "map_type":
+		types = []*sitter.Node{container.ChildByFieldName("key"), container.ChildByFieldName("value")}
+	case "slice_type", "array_type":
+		types = []*sitter.Node{nil, container.ChildByFieldName("element")}
+	}
+	var typed []fileindex.Typed
+	for i, name := range ts.NamedChildren(left) {
+		if i >= len(types) || name.Type() != "identifier" || p.text(name) == "_" {
+			continue
+		}
+		if typ := p.goTypeName(types[i]); typ != "" {
+			typed = append(typed, fileindex.Typed{Name: p.text(name), Type: typ})
+		}
+	}
+	return typed
 }
 
 // goAssigned returns the typed names of an assignment. One call on the

@@ -2,14 +2,17 @@ source: safedep:hand
 description: >-
   No unit gives the standard library. handler.ServeHTTP calls os.Remove, and each via function calls
   ListenAndServe of an http.Server, or of http, on a value whose type the link step does not know: a
-  package-level variable, an element of a slice, a range variable, a parameter of a first-party interface, a
-  method value, and a dot import. viaField calls a function value that a field holds. Each call is a record
-  with a method name, and such a call can run a method of the standard library, which calls back ServeHTTP.
-  So the caller of each record also has a callback record, and os.Remove is uncertain from each via
-  function. A call of a function value, as the field of viaField or a name that no definition of the file
-  binds, as ListenAndServe after the dot import, also concerns every target from a source. quiet.Idle calls nothing, and its package holds no load code, so os.Remove is not found from it.
-  A source in package main would enter the module top level of main.go, which holds http.ListenAndServe as a
-  value.
+  package-level variable, an element of a slice, a parameter of a first-party interface, a method value,
+  and a dot import. viaRange calls it on a range variable over a map of a declared type, so the variable
+  has the type http.Server, and the call names the external key Server.ListenAndServe. The callback record
+  of that key makes os.Remove uncertain from viaRange too. viaField calls a function value that a field
+  holds. Each call is a record with a method name, and such a call can run a method of the standard
+  library, which calls back ServeHTTP. So the caller of each record also has a callback record, and
+  os.Remove is uncertain from each via function. A call of a function value, as the field of viaField or a
+  name that no definition of the file binds, as ListenAndServe after the dot import, also concerns every
+  target from a source. quiet.Idle calls nothing, and its package holds no load code, so os.Remove is not
+  found from it. A source in package main would enter the module top level of main.go, which holds
+  http.ListenAndServe as a value.
 roots:
   - key: dot.go
     kind: main
@@ -36,13 +39,13 @@ unresolved:
   - caller: main.go//viaMethodValue
     reason: no-dependency-source
     callback: true
-  - caller: main.go//viaRange
-    reason: no-dependency-source
-    callback: true
   - caller: main.go//viaVariable
     reason: no-dependency-source
     callback: true
   - caller: net//http//ListenAndServe
+    reason: no-dependency-source
+    callback: true
+  - caller: net//http//Server//ListenAndServe
     reason: no-dependency-source
     callback: true
   - caller: os//Remove
@@ -61,10 +64,6 @@ unresolved:
     method: ListenAndServe
   - caller: main.go//viaIndex
     site: main.go:33
-    reason: unknown-receiver
-    method: ListenAndServe
-  - caller: main.go//viaRange
-    site: main.go:38
     reason: unknown-receiver
     method: ListenAndServe
   - caller: main.go//viaInterface
@@ -120,8 +119,6 @@ results:
         site: main.go:11
         reached: false
     uncertainties:
-      - kind: unresolved-call
-        site: main.go:38
       - kind: unresolved-call
   - target: os//Remove
     sources: [main.go//viaInterface]

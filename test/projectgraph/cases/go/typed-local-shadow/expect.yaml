@@ -16,13 +16,15 @@ description: >-
   record too. Without the rule, a type of local for each of the two gives not-found for os/exec.LookPath. In idiom.go,
   parse declares url from url.Parse, and the local binds no name at the call, so the call keeps its edge to the
   import. viaParam and viaRange bind log, which shadows the import of log, so the index takes no target of the import.
-  The parameter of the type logger gives a member edge to logger.Println, and the range variable a record with a name
-  edge. In shadowedParam of main.go a local o shadows the parameter o, so the field r of the parameter type does not
-  type x, and the call x.run() is a record. pool.get declares call from an element of the field calls
-  map[string]*remote, in the form call, dup := p.calls[key], and fromSlice declares r from an element of a parameter
-  []*remote. The declared element type of the map and of the slice gives the write its type, so each write gives
-  remote, and each call keeps its member edge to remote.run. Without the rule, a write of no known type there makes
-  the call a record with a name edge to local.run.
+  The parameter of the type logger and the range variable over ls []logger each give a member edge to logger.Println.
+  In shadowedParam of main.go a local o shadows the parameter o, so the field r of the parameter type does not type x,
+  and the call x.run() is a record. pool.get declares call from an element of the field calls map[string]*remote, in
+  the form call, dup := p.calls[key], and fromSlice declares r from an element of a parameter []*remote. The declared
+  element type of the map and of the slice gives the write its type, so each write gives remote, and each call keeps
+  its member edge to remote.run. Without the rule, a write of no known type there makes the call a record with a name
+  edge to local.run. loopThenVar calls run on a range variable over rs []*remote and declares r *local after the loop.
+  The range clause gives r the element type remote, so the call keeps its member edge to remote.run. Without the type,
+  the call is a record with a name edge to local.run.
 roots:
   - key: idiom.go
     kind: main
@@ -84,7 +86,14 @@ edges:
     kind: member
     confidence: high
     site: main.go:103
+  - from: main.go//loopThenVar
+    to: main.go//remote//run
+    kind: member
+    confidence: high
+    site: main.go:108
 no_edges:
+  - from: main.go//loopThenVar
+    to: main.go//local//run
   - from: main.go//pool//get
     to: main.go//local//run
   - from: main.go//fromSlice
@@ -96,9 +105,6 @@ no_edges:
   - from: main.go//named
     to: main.go//remote//run
 unresolved:
-  - caller: idiom.go//viaRange
-    reason: no-dependency-source
-    callback: true
   - caller: log//Println
     reason: no-dependency-source
     callback: true
@@ -133,10 +139,6 @@ unresolved:
     site: idiom.go:14
     reason: no-dependency-source
     method: Host
-  - caller: idiom.go//viaRange
-    site: idiom.go:23
-    reason: unknown-receiver
-    method: Println
   - caller: main.go//main
     site: main.go:24
     reason: unknown-receiver
@@ -313,8 +315,8 @@ results:
       - key: idiom.go//viaRange
       - key: idiom.go//logger//Println
         site: idiom.go:23
-        kind: name
-        confidence: low
+        kind: member
+        confidence: high
       - key: os//Mkdir
         site: idiom.go:19
         kind: direct
@@ -351,6 +353,14 @@ results:
         reached: false
   - target: os//Getwd
     sources: [main.go//fromSlice]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: main.go//local//run
+        site: main.go:10
+        reached: false
+  - target: os//Getwd
+    sources: [main.go//loopThenVar]
     sources_only: true
     status: not-found
     call_sites:

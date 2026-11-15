@@ -389,7 +389,9 @@ slice gives the element type that the source declares for it, as
 `call, dup := p.calls[key]` with a field `calls map[string]*remote`, or a
 parameter, a local or a variable of the file of a map or slice type. A
 write that constructs or asserts a type, as `&remote{}`, `new(remote)` or
-`x.(*remote)`, gives that type. A variable that can hold an
+`x.(*remote)`, gives that type. The same element types type a range
+variable, as `c` in `for _, c := range cs` with `cs []*Client`, and the
+receiver of a member, as `ns[0]` in `ns[0].Attr` with `ns []*node`. A variable that can hold an
 interface, as `r` of a field `r runner`, a range variable or `l := ls[0]`,
 can hold another type, so its call is a record. The case
 `go/typed-local-shadow` shows each form.

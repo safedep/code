@@ -53,9 +53,6 @@ unresolved:
   - caller: main.go//each
     reason: no-dependency-source
     callback: true
-  - caller: main.go//fire
-    reason: no-dependency-source
-    callback: true
   - caller: main.go//pick
     reason: no-dependency-source
     callback: true
@@ -87,9 +84,6 @@ unresolved:
     reason: no-dependency-source
     callback: true
   - caller: other.go//anonSteps
-    reason: no-dependency-source
-    callback: true
-  - caller: other.go//keepRead
     reason: no-dependency-source
     callback: true
   - caller: other.go//rangeAssign
@@ -129,10 +123,6 @@ unresolved:
   - caller: main.go//fire
     site: main.go:34
     reason: function-value
-  - caller: main.go//fire
-    site: main.go:34
-    reason: unknown-receiver
-    method: fn
   - caller: main.go//call
     site: main.go:40
     reason: function-value
@@ -145,7 +135,7 @@ unresolved:
     method: m
   - caller: main.go//show
     site: main.go:65
-    reason: unknown-receiver
+    reason: interface-receiver
     method: Name
   - caller: other.go//serveLocal
     site: other.go:7
@@ -167,10 +157,6 @@ unresolved:
   - caller: other.go//deref
     site: other.go:24
     reason: function-value
-  - caller: other.go//keepRead
-    site: other.go:29
-    reason: unknown-receiver
-    method: fn
 results:
   - target: os//Remove
     status: found
