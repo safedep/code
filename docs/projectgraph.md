@@ -401,6 +401,22 @@ Rust follows the same rules, with these additions.
   the module `deep::helpers`, and `sub::f` after `use dep::sub;` names
   `dep//sub//f`. A `use` never reads its own binding, so
   `use smallvec::smallvec;` names the crate `smallvec`.
+- A glob `use` brings each name of its module into the module of the
+  file. So `helpers::cleanup` after `use super::*;` in
+  `src/deep/worker.rs` names the function of the module `deep::helpers`,
+  as in the cases `rust/glob-use-module` and `rust/glob-use-crate-module`.
+  Rust reads a name of a glob `use` after a child module and a `use` of
+  the name, and before a crate, and so does the link step. A first name
+  that a glob `use` brings as a module never reads as another crate. The
+  path resolves in the project, or the `use` of the path keeps a record
+  with the reason `no-definition`. So a target under it reads `found` or
+  `uncertain`, and not `not-found`. A glob `use` in an inline module, as
+  `use super::*;` in `mod tests`, names its modules from the inline
+  module, so the link step does not read it for the module of the file.
+  Read from the module of the file, `super` names a sibling module, and a
+  path of a crate with the name of that sibling would lose its edge to the
+  crate, as the case `rust/glob-use-inline-module` shows. The path of a
+  glob `use` reads no other glob `use`.
 - The index records a type alias, as `pub type Image<P> = ImageBuffer<P>;`,
   as a definition of the kind `alias`. The link step resolves the type
   that it names, as the file of the alias names it, when a walk first

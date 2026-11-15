@@ -143,14 +143,16 @@ var rustUnwraps = map[string]bool{"unwrap": true, "expect": true, "unwrap_unchec
 var rustRoots = map[string]bool{"std": true, "core": true, "alloc": true}
 
 // rustState is the state of Rust in a build: the crates of each space, the
-// module path of each Rust file, and the paths that a resolution or a
-// crate route reads now, by the file that writes them.
+// module path of each Rust file, the paths that a resolution or a crate
+// route reads now, by the file that writes them, and the module paths of
+// the glob uses of each file.
 type rustState struct {
 	cargo     map[*space]*modules.Cargo
 	modules   map[string]string
 	resolving map[[2]string]bool
 	routing   map[[2]string]bool
 	routes    map[[2]string]crateRoute
+	globs     map[string][]string
 }
 
 // crateRoute is the path in another crate that a path of a file names, and
@@ -187,6 +189,7 @@ func (b *builder) addRustUnits() {
 	s.resolving = map[[2]string]bool{}
 	s.routing = map[[2]string]bool{}
 	s.routes = map[[2]string]crateRoute{}
+	s.globs = map[string][]string{}
 	files := map[string][]string{}
 	for _, p := range b.paths {
 		if ix := b.byPath[p]; ix != nil && ix.Language == langcode.Rust {
@@ -274,6 +277,56 @@ func (b *builder) rustPaths(module, written string) []string {
 		out = append(out, written)
 	}
 	return out
+}
+
+// rustScopePaths returns the module paths that a path of a file can name:
+// the paths of rustPaths, with the path under the module of each glob use
+// of the file after the path of a child item. use super::* in
+// src/deep/worker.rs brings the module helpers of src/deep/mod.rs into
+// scope, so helpers::cleanup names crate::deep::helpers::cleanup. Rust
+// reads a name of a glob use after an item of the module and before a
+// crate. Without the glob paths the first name reads as another crate, the
+// edge goes to an external key with no record, and a target under it reads
+// not-found.
+func (b *builder) rustScopePaths(importer, written string) []string {
+	out := b.rustPaths(b.rustState().modules[importer], written)
+	if first := rustFirstName(written); first == "crate" || first == "self" || first == "super" || strings.HasPrefix(written, "::") {
+		return out
+	}
+	parts := strings.Split(written, "::")
+	var globs []string
+	for _, p := range b.rustGlobModules(importer) {
+		globs = append(globs, joinPath(p, parts))
+	}
+	return slices.Insert(out, 1, globs...)
+}
+
+// rustGlobModules returns the module paths of the glob uses of the module
+// of a file. super in use super::* of an inline module, as mod tests, is
+// the module of the file. Read from the module of the file, it names a
+// sibling module, and a path of a crate with the name of that sibling
+// loses its edge to the crate. So a glob use of an inline module stays out.
+// The index gives an inline module the kind class, and an impl block holds
+// no use, so a glob use whose innermost definition is a class sits in an
+// inline module.
+// The path of a glob use reads no glob use, so no cycle of glob uses can
+// start.
+func (b *builder) rustGlobModules(file string) []string {
+	s := b.rustState()
+	if mods, ok := s.globs[file]; ok {
+		return mods
+	}
+	var mods []string
+	if sc := b.scopes[file]; sc != nil {
+		for _, imp := range sc.wildcards {
+			if def := b.defs[sc.enclosing(imp.Line)]; def != nil && def.Kind == fileindex.DefClass {
+				continue
+			}
+			mods = append(mods, b.rustPaths(s.modules[file], imp.Module)...)
+		}
+	}
+	s.globs[file] = mods
+	return mods
 }
 
 // rustSpaceOf returns the space of a module path: the unit of its root, or
@@ -400,7 +453,7 @@ func (b *builder) resolveRust(importer, written string) (string, bool) {
 	}
 	s.resolving[k] = true
 	defer delete(s.resolving, k)
-	for _, p := range b.rustPaths(s.modules[importer], written) {
+	for _, p := range b.rustScopePaths(importer, written) {
 		if key, ok := b.resolveQualified(langcode.Rust, p); ok {
 			return key, true
 		}
@@ -550,7 +603,7 @@ func rustSelfBinding(module string, parts []string) bool {
 // path length.
 func (b *builder) rustModuleUnit(importer, written string) *unit {
 	t := b.namespaces[langcode.Rust]
-	for _, p := range b.rustPaths(b.rustState().modules[importer], written) {
+	for _, p := range b.rustScopePaths(importer, written) {
 		if u := t.units[p]; u != nil {
 			return u
 		}
