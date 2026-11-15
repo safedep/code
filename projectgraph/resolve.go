@@ -569,7 +569,7 @@ func (b *builder) wildcardModules(sc *scope) []string {
 	// A read inside another read adds the paths that it asks for to the
 	// record of the outer one.
 	outer := b.wildcardMods != nil && b.asked == nil
-	whole := b.globRead()
+	whole := b.rustState().glob.read()
 	if outer {
 		b.asked = map[[2]string]bool{}
 	}
@@ -614,6 +614,18 @@ func (b *builder) memo(undo func()) {
 	}
 }
 
+// remember writes an answer to a memo table, and logs its undo as memo
+// does.
+func remember[K comparable, V any](b *builder, table map[K]V, k K, v V) {
+	table[k] = v
+	b.memo(func() { delete(table, k) })
+}
+
+// cut counts an answer that a cycle guard or the hop limit cuts.
+func (b *builder) cut() {
+	b.cuts++
+}
+
 // undo reverts the memo writes after the mark, newest first.
 func (b *builder) undo(mark int) {
 	for i := len(b.tentative) - 1; i >= mark; i-- {
@@ -629,8 +641,14 @@ func (b *builder) undo(mark int) {
 // nothing by it.
 func (b *builder) idle() bool {
 	s := b.rustState()
+	return !b.guarded() && len(s.resolving)+len(s.glob.active) == 0
+}
+
+// guarded reports whether a cycle guard other than the resolving guard and
+// the glob guards of Rust is in progress.
+func (b *builder) guarded() bool {
 	return len(b.expanding)+len(b.visiting)+len(b.reading)+len(b.stepping)+len(b.findingBases)+
-		len(s.routing)+b.ordering+len(s.resolving)+len(s.active) == 0
+		len(b.rustState().routing)+b.ordering > 0
 }
 
 // uncut reports whether a read of the wildcard imports of a scope that
@@ -640,22 +658,19 @@ func (b *builder) idle() bool {
 // path in progress was set before the read, and the guard cut the read if
 // the read asked for it.
 //
-// The guards of a Rust glob path and of a glob member tell globRead the
-// depth of each read that they cut. A read with a cut of a lookup that
+// The guards of a Rust glob path and of a glob member tell globMemo.read
+// the depth of each read that they cut. A read with a cut of a lookup that
 // began before the read is no whole read, so wildcardModules keeps no list
-// of it. A cut of a lookup that the read began leaves out no path. A check
-// of any glob lookup in progress kept no list under a lookup, and made the
-// link step of the Rust corpus a third slower.
+// of it. A cut of a lookup that the read began leaves out no path.
 //
 // uncut compares the paths of the resolving guard only. On the Rust
 // corpus, the reads under any other guard cost less than 3% of the read
 // time. So any other state in progress fails the check.
 func (b *builder) uncut(asked map[[2]string]bool) bool {
-	s := b.rustState()
-	if len(b.expanding)+len(b.visiting)+len(b.reading)+len(b.stepping)+len(b.findingBases)+len(s.routing)+b.ordering > 0 {
+	if b.guarded() {
 		return false
 	}
-	for k := range s.resolving {
+	for k := range b.rustState().resolving {
 		if asked[k] {
 			return false
 		}

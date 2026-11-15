@@ -74,16 +74,35 @@ func (b *builder) callsValue(u UnresolvedSite) bool {
 // of the name at all. The index marks a field of a type of data, as
 // Name string, with Data.
 func (b *builder) valueField(name string) (holds, known bool) {
-	if b.fieldNames == nil {
-		b.fieldNames = map[string]bool{}
-		for key, def := range b.defs {
-			if def.Kind == fileindex.DefField && profileOf(b.languageOf(key)).functionValues {
-				b.fieldNames[def.Name] = b.fieldNames[def.Name] || !def.Data
-			}
-		}
-	}
+	b.readValueNames()
 	holds, known = b.fieldNames[name]
 	return holds, known
+}
+
+// valueMethod reports whether a method of a language with functionValues
+// has the name.
+func (b *builder) valueMethod(name string) bool {
+	b.readValueNames()
+	return b.methodNames[name]
+}
+
+// readValueNames reads the names of the fields and of the methods of the
+// languages with functionValues once.
+func (b *builder) readValueNames() {
+	if b.fieldNames != nil {
+		return
+	}
+	b.fieldNames, b.methodNames = map[string]bool{}, map[string]bool{}
+	for key, def := range b.defs {
+		if def.Kind != fileindex.DefField && def.Kind != fileindex.DefMethod || !profileOf(b.languageOf(key)).functionValues {
+			continue
+		}
+		if def.Kind == fileindex.DefField {
+			b.fieldNames[def.Name] = b.fieldNames[def.Name] || !def.Data
+		} else {
+			b.methodNames[def.Name] = true
+		}
+	}
 }
 
 // rangeRecords returns the records of the index record of a range over a
@@ -119,7 +138,7 @@ func (b *builder) rangeMember(u fileindex.Unresolved, site UnresolvedSite) []Unr
 		return nil
 	}
 	holds, known := b.valueField(u.Method)
-	method := b.goMethodNamed(u.Method)
+	method := b.valueMethod(u.Method)
 	var out []UnresolvedSite
 	if holds || !known && !method {
 		out = append(out, site)
@@ -152,20 +171,6 @@ func (b *builder) callsData(site Site) bool {
 func (b *builder) valueData(key string) bool {
 	def := b.defs[key]
 	return def != nil && def.ValueData
-}
-
-// goMethodNamed reports whether a method of a language with functionValues
-// has the name.
-func (b *builder) goMethodNamed(name string) bool {
-	if b.methodNames == nil {
-		b.methodNames = map[string]bool{}
-		for key, def := range b.defs {
-			if def.Kind == fileindex.DefMethod && profileOf(b.languageOf(key)).functionValues {
-				b.methodNames[def.Name] = true
-			}
-		}
-	}
-	return b.methodNames[name]
 }
 
 // reflection is a package of a language that gives or runs a function

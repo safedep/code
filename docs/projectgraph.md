@@ -715,6 +715,34 @@ that only C gives, as `_thread`, stays an external key. The index step
 leaves out the test suite under `test`, the IDLE, the turtle demos and
 `lib2to3`, which no program imports.
 
+### Rust glob lookups
+
+Rust reads a name of a glob `use` before a crate, and rejects a name that
+two glob `use`s bring. A glob `use` of an inline module stays out of the
+module of the file. Modules and crates can bring each other with glob
+`use`s, in a diamond or in a cycle. A unit can bring a name by a glob
+`use` of a third crate, so the read of the unit can ask for the same path
+again. A walk of each path through such `use`s grows with the number of
+paths.
+
+So the link step reads each glob lookup once: the glob path of a file and
+a first name, or the glob member of a module and a name. The outermost
+lookup reads each lookup once, and a lookup that it reads again gives its
+first answer. A read of a lookup in progress is a cut. An answer stays for
+the build when each cut under it hit the lookup or a lookup under it, as
+the low link of Tarjan tells, and when no other guard cut it. Such a cut
+leaves out no path, because the lookup in progress reads that path itself.
+`providers` keeps no answer that a cut gave.
+
+A visited answer is part of the lookup that read it. When that lookup
+stays for the build, a visited answer under it that found its item stays
+too. The kept answers give each later read the same way through a cycle
+of crates. Any other visited answer under it goes. A later read with
+another depth would take its low for its own, and the answer can lack an
+item that the lookup found after it. When the lookup does not stay, the
+low of each visited answer under it falls to the low of the lookup,
+because they lack what it lacks.
+
 ## Overlay
 
 An overlay is a file of `llm` edges that resolve unresolved sites of a

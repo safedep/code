@@ -158,25 +158,12 @@ type rustState struct {
 	globs     map[string][]string
 	macros    map[*space]map[string]string
 	nested    map[string]bool
-	// active holds the depth of each glob path and glob member that a
-	// lookup reads now. depth is the depth of the last one, and low the
-	// least depth that a cut of the read in progress hit.
-	active map[globKey]int
-	depth  int
-	low    int
-	// kept holds the answers of the glob lookups that no cut of an outer
-	// read gave, for the build. visited holds the other answers of the
-	// outermost lookup in progress, and visits the order of their reads.
-	kept    map[globKey]globAnswer
-	visited map[globKey]globAnswer
-	visits  []globKey
+	glob      globMemo
 	// useScopes holds the classes of each file that hold a use, which are
 	// inline modules.
 	useScopes map[string]map[string]bool
 	// spaceMacros holds the names of the macro_rules! of each space.
 	spaceMacros map[*space]map[string]bool
-	// cuts counts the cuts of the glob guards, a part of b.cuts.
-	cuts int
 }
 
 // crateRoute is the path in another crate that a path of a file names, and
@@ -214,12 +201,8 @@ func (b *builder) addRustUnits() {
 	s.routing = map[[2]string]bool{}
 	s.routes = map[[2]string]crateRoute{}
 	s.globs = map[string][]string{}
-	s.active = map[globKey]int{}
-	s.low = math.MaxInt
-	s.kept = map[globKey]globAnswer{}
-	s.visited = map[globKey]globAnswer{}
+	s.glob = globMemo{active: map[globKey]int{}, low: math.MaxInt, kept: map[globKey]globAnswer{}, visited: map[globKey]globAnswer{}}
 	s.useScopes = map[string]map[string]bool{}
-	s.spaceMacros = map[*space]map[string]bool{}
 	files := map[string][]string{}
 	for _, p := range b.paths {
 		if ix := b.byPath[p]; ix != nil && ix.Language == langcode.Rust {
@@ -391,39 +374,42 @@ func rustProvide(b *builder, sp *space, module string, _ modules.Form) []provisi
 	if key, ok := b.resolveQualified(langcode.Rust, joinPath(sp.unit, parts[1:])); ok {
 		return []provision{{sp: sp, module: key, via: "crate"}}
 	}
-	if key, ok := b.rustExportedMacro(sp, parts[1:]); ok {
-		return []provision{{sp: sp, module: key, via: "crate"}}
+	// #[macro_export] puts a macro at the root of its crate, as from_sub of
+	// src/macros.rs for dep::from_sub. A walk of the modules of the crate
+	// does not find it.
+	if len(parts) == 2 {
+		exported, _ := b.rustMacros()
+		if key, ok := exported[sp][parts[1]]; ok {
+			return []provision{{sp: sp, module: key, via: "crate"}}
+		}
 	}
 	return []provision{{sp: sp}}
 }
 
-// rustExportedMacro returns the macro of a unit that #[macro_export] puts
-// at the root of its crate, as from_sub of src/macros.rs for
-// dep::from_sub. A walk of the modules of the crate does not find it.
-func (b *builder) rustExportedMacro(sp *space, names []string) (string, bool) {
-	if len(names) != 1 {
-		return "", false
-	}
-	key, ok := b.rustMacros()[sp][names[0]]
-	return key, ok
-}
-
 // rustMacros returns the macros that #[macro_export] puts at the root of
-// the crate of each unit, by name.
-func (b *builder) rustMacros() map[*space]map[string]string {
+// the crate of each unit, by name, and the names of the macro_rules! of
+// each space.
+func (b *builder) rustMacros() (exported map[*space]map[string]string, rules map[*space]map[string]bool) {
 	s := b.rustState()
 	if s.macros != nil {
-		return s.macros
+		return s.macros, s.spaceMacros
 	}
 	s.macros = map[*space]map[string]string{}
+	s.spaceMacros = map[*space]map[string]bool{}
 	for _, p := range b.paths {
 		ix := b.byPath[p]
-		sp := b.spaces[fileindex.PackageOf(p)]
-		if ix == nil || ix.Language != langcode.Rust || sp == nil || sp.unit == "" {
+		if ix == nil || ix.Language != langcode.Rust {
 			continue
 		}
+		sp := b.spaceOf(p)
 		for _, def := range ix.Definitions {
-			if !slices.Contains(def.Decorators, rustMacroExport) {
+			if slices.Contains(def.Decorators, fileindex.RustMacroRules) {
+				if s.spaceMacros[sp] == nil {
+					s.spaceMacros[sp] = map[string]bool{}
+				}
+				s.spaceMacros[sp][def.Name] = true
+			}
+			if sp.unit == "" || !slices.Contains(def.Decorators, rustMacroExport) {
 				continue
 			}
 			if s.macros[sp] == nil {
@@ -434,7 +420,7 @@ func (b *builder) rustMacros() map[*space]map[string]string {
 			}
 		}
 	}
-	return s.macros
+	return s.macros, s.spaceMacros
 }
 
 // rustMacroExport is the attribute that puts a macro at the root of its
@@ -529,7 +515,7 @@ func (b *builder) resolveRust(importer, written string) (string, bool) {
 		b.asked[k] = true
 	}
 	if s.resolving[k] {
-		b.cuts++
+		b.cut()
 		return "", false
 	}
 	s.resolving[k] = true
@@ -574,7 +560,7 @@ func (r rustResolver) Module(importer, spec string) (string, string, bool) {
 // is a module of a unit.
 func (b *builder) rustUnitModule(file, path string) bool {
 	ix := b.byPath[file]
-	o := origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, path), form: modules.FormImport}
+	o := b.importOrigin(ix, path, modules.FormImport)
 	return slices.ContainsFunc(b.providers(o), func(pv provision) bool { return b.units[pv.module] != nil })
 }
 
@@ -591,10 +577,7 @@ func (b *builder) rustPath(importer, written string) (rustTarget, bool) {
 	if t, ok := b.rustLocalPath(importer, written); ok {
 		return t, true
 	}
-	if path, file, ok := b.rustGlobPath(importer, written); ok {
-		return rustTarget{path: path, file: file}, true
-	}
-	return rustTarget{}, false
+	return b.rustGlobPath(importer, written)
 }
 
 // rustLocalPath resolves a path that a file writes as rustPath does, with
@@ -659,7 +642,7 @@ func (b *builder) rustCratePath(importer, written string) (string, string, bool)
 		return r.path, r.file, r.ok
 	}
 	if s.routing[k] {
-		b.cuts++
+		b.cut()
 		return "", "", false
 	}
 	outer := len(s.routing) == 0
@@ -815,7 +798,7 @@ func (b *builder) rustScopeFallback(sc *scope, caller, first string, rest []stri
 	// reads its own uses.
 	t, ok := b.rustLocalPath(sc.ix.Path, written)
 	if !ok && !b.rustInUseScope(sc, caller) {
-		t.path, t.file, ok = b.rustGlobPath(sc.ix.Path, written)
+		t, ok = b.rustGlobPath(sc.ix.Path, written)
 	}
 	switch {
 	case ok && t.key != "":
@@ -834,26 +817,6 @@ func (b *builder) rustScopeFallback(sc *scope, caller, first string, rest []stri
 		return []resolution{b.importedWalk(sc.ix, fileindex.Join(crate, first), crate, modules.FormImport, []string{first}), record}
 	}
 	return nil
-}
-
-// rustSpaceMacros returns the name of each macro_rules! of a space.
-func (b *builder) rustSpaceMacros(sp *space) map[string]bool {
-	s := b.rustState()
-	if names, ok := s.spaceMacros[sp]; ok {
-		return names
-	}
-	names := map[string]bool{}
-	for _, p := range b.paths {
-		if ix := b.byPath[p]; ix != nil && ix.Language == langcode.Rust && b.spaceOf(p) == sp {
-			for _, def := range ix.Definitions {
-				if slices.Contains(def.Decorators, fileindex.RustMacroRules) {
-					names[def.Name] = true
-				}
-			}
-		}
-	}
-	s.spaceMacros[sp] = names
-	return names
 }
 
 // rustInUseScope reports whether a key of a file sits in an inline module
@@ -891,20 +854,21 @@ func (b *builder) rustMacroCrate(ix *fileindex.Index, name string) (string, bool
 	// macro call reads macros only. The rule does not read the textual
 	// scope of the macro, so a macro of the crate that the call cannot see
 	// shadows too.
-	if b.rustSpaceMacros(b.spaceOf(ix.Path))[name] {
+	exported, rules := b.rustMacros()
+	if rules[b.spaceOf(ix.Path)][name] {
 		return "", false
 	}
-	exported := false
-	for _, macros := range b.rustMacros() {
+	found := false
+	for _, macros := range exported {
 		_, ok := macros[name]
-		exported = exported || ok
+		found = found || ok
 	}
-	if !exported {
+	if !found {
 		return "", false
 	}
 	for _, dep := range b.cargoOf(b.spaceOf(ix.Path)).Dependencies() {
 		crate := strings.ReplaceAll(dep, "-", "_")
-		o := origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, crate+"::"+name), form: modules.FormImport}
+		o := b.importOrigin(ix, crate+"::"+name, modules.FormImport)
 		if slices.ContainsFunc(b.providers(o), func(pv provision) bool {
 			def := b.defs[pv.module]
 			return def != nil && slices.Contains(def.Decorators, rustMacroExport)
@@ -915,29 +879,23 @@ func (b *builder) rustMacroCrate(ix *fileindex.Index, name string) (string, bool
 	return "", false
 }
 
-// rustGlobPath returns the path in another crate that a path of a file
+// rustGlobPath returns the target in another crate that a path of a file
 // names through a glob use of a module of that crate, as dep::html::render
 // for render after use dep::html::*, when a unit gives the crate and the
-// first name of the path in the module. Rust reads a name of a glob use
-// before a crate, and rejects a name that two glob uses bring. A glob use
-// of a crate that no unit gives can bring any name, and the path then
-// resolves as before. A glob use of an inline module stays out, as
-// rustGlobModules says.
-//
-// A unit can bring the name by a glob use of a third crate, so the read of
-// the unit can ask for the same path again. The guard cuts such a cycle,
-// and providers keeps no answer that a cut gave.
-func (b *builder) rustGlobPath(importer, written string) (string, string, bool) {
+// first name of the path in the module. A glob use of a crate that no unit
+// gives can bring any name, so the path then resolves with no glob path.
+// docs/projectgraph.md has the rules of the cycles of glob uses.
+func (b *builder) rustGlobPath(importer, written string) (rustTarget, bool) {
 	sc := b.scopes[importer]
 	first := rustFirstName(written)
 	if sc == nil || len(sc.wildcards) == 0 || !b.hasUnits() || strings.HasPrefix(written, "::") {
-		return "", "", false
+		return rustTarget{}, false
 	}
 	switch first {
 	case "crate", "self", "super":
-		return "", "", false
+		return rustTarget{}, false
 	}
-	a := b.globLookup(globKey{path: true, a: importer, b: first}, func() globAnswer {
+	a := b.rustState().glob.lookup(b, globKey{path: true, scope: importer, name: first}, func() globAnswer {
 		return globAnswer{path: b.findGlobPath(sc, first)}
 	})
 	return a.path.join(written)
@@ -961,12 +919,12 @@ type globPath struct {
 	ok         bool
 }
 
-// join returns the path of a written path under the module.
-func (g globPath) join(written string) (string, string, bool) {
+// join returns the target of a written path under the module.
+func (g globPath) join(written string) (rustTarget, bool) {
 	if !g.ok {
-		return "", "", false
+		return rustTarget{}, false
 	}
-	return joinPath(g.path, strings.Split(written, "::")), g.file, true
+	return rustTarget{path: joinPath(g.path, strings.Split(written, "::")), file: g.file}, true
 }
 
 func (b *builder) findGlobPath(sc *scope, first string) globPath {
@@ -984,7 +942,7 @@ func (b *builder) findGlobPath(sc *scope, first string) globPath {
 			path, file = imp.Module, importer
 		}
 		ix := b.byPath[file]
-		o := origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, joinPath(path, []string{first})), form: modules.FormImport}
+		o := b.importOrigin(ix, joinPath(path, []string{first}), modules.FormImport)
 		if slices.ContainsFunc(b.providers(o), b.rustPublic) && b.rustGlobGives(ix, path, first) {
 			return globPath{path: path, file: file, ok: true}
 		}
@@ -999,7 +957,7 @@ func (b *builder) findGlobPath(sc *scope, first string) globPath {
 // stays out, as render of use crate::inner::render in dep::html. A glob of
 // what is no module, as an enum, brings the item that the provision gives.
 func (b *builder) rustGlobGives(ix *fileindex.Index, path, name string) bool {
-	o := origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, path), form: modules.FormImport}
+	o := b.importOrigin(ix, path, modules.FormImport)
 	read := false
 	for _, pv := range b.providers(o) {
 		if b.units[pv.module] == nil {
@@ -1048,7 +1006,7 @@ func (b *builder) rustExports(mod, name string, seen map[string]bool) bool {
 				}
 				continue
 			}
-			o := origin{lang: sc.ix.Language, unit: sc.ix.Unit, module: b.packageModule(sc.ix, imp.Module), form: modules.FormImport}
+			o := b.importOrigin(sc.ix, imp.Module, modules.FormImport)
 			if slices.ContainsFunc(b.providers(o), func(pv provision) bool {
 				return b.units[pv.module] != nil && b.rustExports(pv.module, name, seen)
 			}) {
@@ -1095,11 +1053,11 @@ func (b *builder) rustGlobMember(sc *scope, name string) (string, bool) {
 	if !b.rustUnitFile(sc.ix) {
 		return "", false
 	}
-	path, file, ok := b.rustGlobPath(sc.ix.Path, name)
+	t, ok := b.rustGlobPath(sc.ix.Path, name)
 	if !ok {
 		return "", false
 	}
-	return b.rustCrateKey(file, path), true
+	return b.rustCrateKey(t.file, t.path), true
 }
 
 // rustGlobUnitMember returns what a glob use of a module brings for a name
@@ -1107,7 +1065,7 @@ func (b *builder) rustGlobMember(sc *scope, name string) (string, bool) {
 // use or of a glob use of the module, as leaf for use crate::sub::* with
 // pub mod leaf in sub.
 func (b *builder) rustGlobUnitMember(mod, name string) (string, bool) {
-	a := b.globLookup(globKey{a: mod, b: name}, func() globAnswer {
+	a := b.rustState().glob.lookup(b, globKey{scope: mod, name: name}, func() globAnswer {
 		key, ok := b.unitMember(mod, name)
 		return globAnswer{key: key, ok: ok}
 	})
@@ -1117,8 +1075,8 @@ func (b *builder) rustGlobUnitMember(mod, name string) (string, bool) {
 // globKey names a glob lookup: the glob path of a file and a first name, or
 // the glob member of a module and a name.
 type globKey struct {
-	path bool
-	a, b string
+	path        bool
+	scope, name string
 }
 
 // globAnswer is the answer of a glob lookup, with the least depth that a cut
@@ -1135,105 +1093,99 @@ func (a globAnswer) found() bool {
 	return a.ok || a.path.ok
 }
 
-// keep keeps the answer of a glob lookup for the build.
-func (b *builder) keep(k globKey, a globAnswer) {
-	s := b.rustState()
-	s.kept[k] = a
-	b.memo(func() { delete(s.kept, k) })
+// globMemo holds the glob lookups of Rust that a build reads now and has
+// read, as lookup says.
+type globMemo struct {
+	// active holds the depth of each glob path and glob member that a
+	// lookup reads now. depth is the depth of the last one, and low the
+	// least depth that a cut of the read in progress hit.
+	active map[globKey]int
+	depth  int
+	low    int
+	// kept holds the answers of the glob lookups that no cut of an outer
+	// read gave, for the build. visited holds the other answers of the
+	// outermost lookup in progress, and visits the order of their reads.
+	kept    map[globKey]globAnswer
+	visited map[globKey]globAnswer
+	visits  []globKey
+	// cuts counts the cuts of the glob guards, a part of b.cuts.
+	cuts int
 }
 
-// globLookup reads a glob lookup once. Modules and crates can bring each
-// other with glob uses, in a diamond or in a cycle, and a walk of each path
-// through them grows with the number of paths. So the outermost lookup
-// reads each lookup once, and a lookup that it reads again gives its first
-// answer. A read of a lookup in progress is a cut. An answer stays for the
-// build when each cut under it hit the lookup or a lookup under it, as the
-// low link of Tarjan tells, and when no other guard cut it. Such a cut
-// leaves out no path, because the lookup in progress reads that path
-// itself.
-//
-// A visited answer is part of the lookup that read it. When that lookup
-// stays for the build, a visited answer under it that found its item stays
-// too, so a later read takes the same way through a cycle of crates. A
-// later read of dep_3 of a cycle dep_0 to dep_3 with pub use dep_d::* in
-// dep_3 took dep_0 first and sent the cycle round with no end. Any other
-// visited answer under it goes, because a later read with another depth
-// would take its low for its own, and it can lack an item that the lookup
-// found after it. When the lookup does not stay, their low falls to its
-// low, because they lack what it lacks.
-func (b *builder) globLookup(k globKey, read func() globAnswer) globAnswer {
-	s := b.rustState()
-	if a, ok := s.kept[k]; ok {
+// lookup reads a glob lookup once. Modules and crates can bring each other
+// with glob uses, so the outermost lookup reads each lookup once, and a
+// lookup that it reads again gives its first answer. An answer stays for
+// the build when each cut under it hit the lookup or a lookup under it, as
+// the low link of Tarjan tells. docs/projectgraph.md has the rules for the
+// visited answers under it.
+func (g *globMemo) lookup(b *builder, k globKey, read func() globAnswer) globAnswer {
+	if a, ok := g.kept[k]; ok {
 		return a
 	}
-	if d, ok := s.active[k]; ok {
-		b.globCut(d)
+	if d, ok := g.active[k]; ok {
+		g.cut(b, d)
 		return globAnswer{}
 	}
-	if a, ok := s.visited[k]; ok {
-		b.globCut(a.low)
+	if a, ok := g.visited[k]; ok {
+		g.cut(b, a.low)
 		return a
 	}
-	if len(s.active) == 0 {
+	if len(g.active) == 0 {
 		defer func() {
-			clear(s.visited)
-			s.visits = s.visits[:0]
+			clear(g.visited)
+			g.visits = g.visits[:0]
 		}()
 	}
-	s.depth++
-	d := s.depth
-	s.active[k] = d
-	low, cuts, mark := s.low, b.cuts-s.cuts, len(s.visits)
-	s.low = math.MaxInt
+	g.depth++
+	d := g.depth
+	g.active[k] = d
+	low, cuts, mark := g.low, b.cuts-g.cuts, len(g.visits)
+	g.low = math.MaxInt
 	a := read()
-	a.low = s.low
-	s.low = min(low, s.low)
-	delete(s.active, k)
-	s.depth--
-	under := s.visits[mark:]
-	if a.low >= d && b.cuts-s.cuts == cuts {
-		b.keep(k, a)
+	a.low = g.low
+	g.low = min(low, g.low)
+	delete(g.active, k)
+	g.depth--
+	under := g.visits[mark:]
+	if a.low >= d && b.cuts-g.cuts == cuts {
+		remember(b, g.kept, k, a)
 		for _, v := range under {
-			if e, ok := s.visited[v]; ok && e.found() && e.low >= d {
-				b.keep(v, e)
+			if e, ok := g.visited[v]; ok && e.found() && e.low >= d {
+				remember(b, g.kept, v, e)
 			}
-			delete(s.visited, v)
+			delete(g.visited, v)
 		}
-		s.visits = s.visits[:mark]
+		g.visits = g.visits[:mark]
 		return a
 	}
 	for _, v := range under {
-		if e, ok := s.visited[v]; ok && e.low > a.low {
+		if e, ok := g.visited[v]; ok && e.low > a.low {
 			e.low = a.low
-			s.visited[v] = e
+			g.visited[v] = e
 		}
 	}
-	s.visited[k] = a
-	s.visits = append(s.visits, k)
-	b.memo(func() { delete(s.visited, k) })
+	g.visits = append(g.visits, k)
+	remember(b, g.visited, k, a)
 	return a
 }
 
-// globCut counts a read that the guard of a glob path or of a glob member
-// cuts at the depth.
-func (b *builder) globCut(depth int) {
-	s := b.rustState()
-	b.cuts++
-	s.cuts++
-	s.low = min(s.low, depth)
+// cut counts a read that the guard of a glob path or of a glob member cuts
+// at the depth.
+func (g *globMemo) cut(b *builder, depth int) {
+	b.cut()
+	g.cuts++
+	g.low = min(g.low, depth)
 }
 
-// globRead starts a read that the cuts of the glob guards can make
-// incomplete. The function that it returns ends the read and reports
-// whether no cut of the read hit a module that a lookup read before the
-// read began.
-func (b *builder) globRead() func() bool {
-	s := b.rustState()
-	depth, low := s.depth, s.low
-	s.low = math.MaxInt
+// read starts a read that the cuts of the glob guards can make incomplete.
+// The function that it returns ends the read and reports whether no cut of
+// the read hit a module that a lookup read before the read began.
+func (g *globMemo) read() func() bool {
+	depth, low := g.depth, g.low
+	g.low = math.MaxInt
 	return func() bool {
-		whole := s.low > depth
-		s.low = min(low, s.low)
+		whole := g.low > depth
+		g.low = min(low, g.low)
 		return whole
 	}
 }

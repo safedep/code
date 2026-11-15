@@ -17,11 +17,11 @@ func (b *builder) resolveName(module, name string, hops int) (string, *failure) 
 		return r.key, r.fail
 	}
 	if b.visiting[k] {
-		b.cuts++
+		b.cut()
 		return "", &failure{reason: fileindex.UnresolvedNoDefinition, name: name, cut: true}
 	}
 	if hops > b.opts.MaxExportHops {
-		b.cuts++
+		b.cut()
 		path := strings.TrimSuffix(module, "/")
 		b.truncations[Truncation{Kind: TruncationExportHops, Key: fileindex.Join(path, name), Site: Site{Path: path}}] = true
 		return "", &failure{reason: fileindex.UnresolvedLimit, name: name, cut: true}
@@ -30,8 +30,7 @@ func (b *builder) resolveName(module, name string, hops int) (string, *failure) 
 	key, fail := b.lookupName(module, name, hops)
 	delete(b.visiting, k)
 	if fail == nil || !fail.cut {
-		b.names[k] = resolution{key: key, fail: fail}
-		b.memo(func() { delete(b.names, k) })
+		remember(b, b.names, k, resolution{key: key, fail: fail})
 	}
 	return key, fail
 }
@@ -211,7 +210,7 @@ func (b *builder) bound(key string) (string, bool) {
 		return "", false
 	}
 	if b.reading[key] {
-		b.cuts++
+		b.cut()
 		return "", false
 	}
 	b.reading[key] = true
@@ -229,8 +228,7 @@ func (b *builder) bound(key string) (string, bool) {
 	if !ok || target == key {
 		return "", false
 	}
-	b.bindings[key] = target
-	b.memo(func() { delete(b.bindings, key) })
+	remember(b, b.bindings, key, target)
 	if b.g.Nodes[target] != nil {
 		b.link(sc.ix.Language, key, target, b.siteOf(key), EdgeExport, ruleAlias)
 	}

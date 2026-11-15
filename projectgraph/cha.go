@@ -75,8 +75,7 @@ func (b *builder) mro(class string) []string {
 		order = b.depthFirst(class, 0, map[string]bool{})
 	}
 	b.ordering--
-	b.mros[class] = order
-	b.memo(func() { delete(b.mros, class) })
+	remember(b, b.mros, class, order)
 	return order
 }
 
@@ -188,8 +187,7 @@ func (b *builder) externalBase(class string) (string, bool) {
 		idle, cuts := b.idle(), b.cuts
 		base, _ = b.findExternalBase(class)
 		if idle || b.cuts == cuts {
-			b.externalBases[class] = base
-			b.memo(func() { delete(b.externalBases, class) })
+			remember(b, b.externalBases, class, base)
 		}
 	}
 	return base, base != ""
@@ -202,7 +200,7 @@ func (b *builder) externalBase(class string) (string, bool) {
 // that the search reads now has no external base, so the search ends.
 func (b *builder) findExternalBase(class string) (string, bool) {
 	if b.findingBases[class] {
-		b.cuts++
+		b.cut()
 		return "", false
 	}
 	b.findingBases[class] = true

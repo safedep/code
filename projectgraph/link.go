@@ -138,12 +138,12 @@ type builder struct {
 	visiting map[nameKey]bool
 	bindings map[string]string
 	classes  map[string]classRecord
-	// defs holds the definition records by key, and fieldNames the names
-	// of the Go fields among them, true for a name that a field which can
-	// hold a function has.
-	defs       map[string]*fileindex.Definition
-	fieldNames map[string]bool
-	// methodNames holds the names of the Go methods among them.
+	// defs holds the definition records by key. fieldNames holds the
+	// names of the fields among them of the languages with functionValues,
+	// true for a name that a field which can hold a function has.
+	// methodNames holds the names of the methods of those languages.
+	defs        map[string]*fileindex.Definition
+	fieldNames  map[string]bool
 	methodNames map[string]bool
 	// callees holds the definitions and the external keys that the calls
 	// at each site resolve to.

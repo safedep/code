@@ -298,10 +298,17 @@ func (b *builder) recordOrigin(ix *fileindex.Index, key, module string, form mod
 	if !b.hasUnits() {
 		return
 	}
-	o := origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, module), form: form, names: slices.Clone(names)}
+	o := b.importOrigin(ix, module, form)
+	o.names = slices.Clone(names)
 	if !slices.ContainsFunc(b.origins[key], o.equal) {
 		b.origins[key] = append(b.origins[key], o)
 	}
+}
+
+// importOrigin returns the origin of an import of the file that names the
+// module in the form.
+func (b *builder) importOrigin(ix *fileindex.Index, module string, form modules.Form) origin {
+	return origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, module), form: form}
 }
 
 // packageModule returns the module of the package that an import of the
@@ -378,8 +385,7 @@ func (b *builder) providers(o origin) []provision {
 	// and the same module can resolve on another way in. So only an answer
 	// that no guard cut stays.
 	if b.cuts == cuts {
-		b.provisions[k] = out
-		b.memo(func() { delete(b.provisions, k) })
+		remember(b, b.provisions, k, out)
 	}
 	return out
 }

@@ -122,7 +122,7 @@ func (b *builder) unitDefinitions(origins []origin) ([]string, bool) {
 			}
 			k := nameKey{module: pv.module, name: fileindex.Join("", o.names...)}
 			if b.stepping[k] {
-				b.cuts++
+				b.cut()
 				continue
 			}
 			b.stepping[k] = true
