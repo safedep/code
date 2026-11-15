@@ -789,7 +789,11 @@ manifest of the project depends on the framework that it names, or when a
 file imports it.
 
 With no root of kind `main`, `manifest` or `framework`, every exported
-definition is a root, and `Graph.Stats.RootFallback` says so. Each result
+definition is a root, and `Graph.Stats.RootFallback` says so. The link
+step decides it per language family. A family with no such root of its
+own gets the library-surface roots, whatever another family has, as a
+Python Lambda handler next to a JavaScript package with a `main`. The
+case `python/handler-beside-js-package` shows it. Each result
 of a reach query then carries a `root-fallback` uncertainty. A root of a
 rule with `keeps_fallback` does not count here. Such a rule names files
 that a framework loads, but not the entry that loads them.

@@ -1,0 +1,69 @@
+source: safedep:hand
+description: >-
+  handlers/api.py holds a Lambda handler with no main guard, so no rule marks a root of Python. ui holds a
+  JavaScript package with a main. The fallback is decided per language family, so the Python file gets
+  the library-surface roots although JavaScript has an entry, and yaml.load is found.
+roots:
+  - key: handlers/api.py
+    kind: library-surface
+    rule: library-surface
+  - key: handlers/api.py//handler
+    kind: library-surface
+    rule: library-surface
+  - key: ui/src/App.vue
+    kind: framework
+    rule: node.component
+  - key: ui/src/index.js
+    kind: manifest
+    rule: node.package-json
+exact_edges: true
+edges:
+  - from: handlers/api.py//handler
+    to: yaml//load
+    kind: direct
+    confidence: high
+    site: handlers/api.py:5
+  - from: ui/src/App.vue
+    to: plug//render
+    kind: direct
+    confidence: high
+    site: ui/src/App.vue:4
+  - from: ui/src/index.js
+    to: ui/src/App.vue
+    kind: import
+    confidence: high
+    site: ui/src/index.js:2
+  - from: ui/src/index.js
+    to: vue//createApp
+    kind: direct
+    confidence: high
+    site: ui/src/index.js:4
+  - from: ui/src/index.js
+    to: vue//createApp//mount
+    kind: direct
+    confidence: high
+    site: ui/src/index.js:4
+unresolved:
+  - caller: ui/src/App.vue
+    site: ui/src/App.vue:1
+    reason: markup
+  - caller: ui/src/index.js
+    site: ui/src/index.js:4
+    reason: no-dependency-source
+    method: mount
+results:
+  - target: yaml//load
+    status: found
+    path:
+      - key: handlers/api.py//handler
+        root: library-surface
+      - key: yaml//load
+        site: handlers/api.py:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: handlers/api.py//handler
+        site: handlers/api.py:5
+        reached: true
+    uncertainties:
+      - kind: root-fallback

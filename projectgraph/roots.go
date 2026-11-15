@@ -53,7 +53,11 @@ func (b *builder) markRoots(ctx context.Context) error {
 	for _, r := range b.rules {
 		keeps[r.ID] = r.KeepsFallback
 	}
-	entry := false
+	// A family of languages with no entry root of its own gets the
+	// library-surface roots, whatever another family has. A Lambda handler
+	// in Python has no root that a rule marks, and the main of a
+	// JavaScript package next to it says nothing of the Python code.
+	entries := map[langcode.Code]bool{}
 	for _, r := range found {
 		// The framework calls the functions of the value of an opaque
 		// export, and no edge names them. The record keeps a target that
@@ -66,7 +70,9 @@ func (b *builder) markRoots(ctx context.Context) error {
 		}
 		b.addRootAt(r.Key, r.Kind, r.Rule, Site(r.Site))
 		helper := b.profileAt(r.Key).helperProgram
-		entry = entry || r.Kind != RootTest && !keeps[r.Rule] && (helper == nil || !helper(fileindex.Unit(r.Key)))
+		if r.Kind != RootTest && !keeps[r.Rule] && (helper == nil || !helper(fileindex.Unit(r.Key))) {
+			entries[b.familyOf(r.Key)] = true
+		}
 		// A Go program initializes its package before main runs, so the
 		// module top level of each file of the package is a root too.
 		if u := b.unitOf[fileindex.Unit(r.Key)]; r.Kind == RootMain && u != nil && b.profileAt(r.Key).loadsPackages {
@@ -75,15 +81,12 @@ func (b *builder) markRoots(ctx context.Context) error {
 			}
 		}
 	}
-	if entry {
-		return nil
-	}
-
-	b.g.Stats.RootFallback = true
+	b.g.Stats.RootFallback = len(entries) == 0
 	for _, ix := range indexes {
-		if b.test[ix.Path] || isDeclarationFile(ix.Path) {
+		if b.test[ix.Path] || isDeclarationFile(ix.Path) || entries[ix.Language.Family()] {
 			continue
 		}
+		b.g.Stats.RootFallback = true
 		b.addRoot(ix.Path, RootLibrarySurface, string(RootLibrarySurface))
 		for def := range ix.CodeDefinitions() {
 			if isSurfaceDefinition(def, ix.Path) {
@@ -221,4 +224,12 @@ func (b *builder) rootLanguages() []langcode.Code {
 		}
 	}
 	return slices.Sorted(maps.Keys(set))
+}
+
+// familyOf returns the language family of the file of a key.
+func (b *builder) familyOf(key string) langcode.Code {
+	if ix := b.byPath[fileindex.Unit(key)]; ix != nil {
+		return ix.Language.Family()
+	}
+	return ""
 }

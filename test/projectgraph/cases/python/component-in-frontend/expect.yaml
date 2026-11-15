@@ -6,10 +6,15 @@ description: >-
   edge tells who calls it, and the record keeps it uncertain. Only dead Python code calls
   jsonschema.validate, but App.vue imports validate from jsonschema and its template calls it, so the
   record keeps jsonschema.validate uncertain.
+  The frontend has no entry of its own, as main of a package.json, so its files get the library-surface
+  roots, and each result carries the root-fallback uncertainty.
 roots:
   - key: frontend/src/App.vue
     kind: framework
     rule: node.component
+  - key: frontend/src/App.vue
+    kind: library-surface
+    rule: library-surface
   - key: main.py
     kind: manifest
     rule: procfile
@@ -46,11 +51,14 @@ results:
       - caller: main.py//unused
         site: main.py:8
         reached: false
+    uncertainties:
+      - kind: root-fallback
   - target: plug//other
     status: uncertain
     uncertainties:
       - kind: unresolved-call
         site: frontend/src/App.vue:1
+      - kind: root-fallback
   - target: jsonschema//validate
     status: uncertain
     call_sites:
@@ -60,3 +68,4 @@ results:
     uncertainties:
       - kind: unresolved-call
         site: frontend/src/App.vue:1
+      - kind: root-fallback
