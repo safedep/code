@@ -267,10 +267,11 @@ type Graph struct {
 	Files      map[string]fileindex.FileStatus `json:"files"`
 	Truncated  []Truncation                    `json:"truncated,omitempty"`
 	Problems   []modules.Problem               `json:"problems,omitempty"`
-	// Imports holds the module keys that each file with a site of a
-	// Language scope imports from outside the project, as jsonschema. Such
-	// a site can run a name of the module that the file imports and no
-	// edge names, as a function that only the markup of the file calls.
+	// Imports holds, by language family, the module keys that the files
+	// of a family with a site of a Language scope import from outside the
+	// project, as jsonschema. Such a site can run a name of such a module
+	// that no edge names, as a function that only the markup of a
+	// component calls.
 	Imports map[string][]string `json:"imports,omitempty"`
 	Stats   Stats               `json:"stats"`
 

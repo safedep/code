@@ -445,28 +445,48 @@ func (b *builder) linkAll(ctx context.Context) error {
 }
 
 // scopeToLanguage scopes a site to the targets that code of the language
-// family of its file calls, and keeps the modules that the file imports
-// from outside the project, as the markup of a component runs only code
-// of its script and of what the script imports.
+// family of its file calls, as the markup of a component runs only code of
+// its family. It keeps the modules that the files of the family import or
+// give on from outside the project, as plug for export * from 'plug'. Code
+// of the family can call a name of such a module that no edge names.
 func (b *builder) scopeToLanguage(ix *fileindex.Index, site *UnresolvedSite) {
-	site.Language = ix.Language.Family()
-	if _, done := b.g.Imports[ix.Path]; done {
+	family := ix.Language.Family()
+	site.Language = family
+	if _, done := b.g.Imports[string(family)]; done {
 		return
 	}
 	var keys []string
-	for _, imp := range ix.Imports {
-		if imp.Kind == fileindex.ImportTypeOnly || imp.Namespace == "" || strings.HasPrefix(imp.Module, ".") {
+	for _, p := range b.paths {
+		other := b.byPath[p]
+		if other == nil || other.Language.Family() != family {
 			continue
 		}
-		if _, _, ok := b.resolveModule(ix, imp.Module); !ok {
-			keys = append(keys, imp.Namespace)
+		for _, imp := range other.Imports {
+			if imp.Kind != fileindex.ImportTypeOnly {
+				keys = append(keys, b.outsideModules(other, imp.Module)...)
+			}
+		}
+		for _, ex := range other.Exports {
+			keys = append(keys, b.outsideModules(other, ex.From)...)
 		}
 	}
 	slices.Sort(keys)
 	if b.g.Imports == nil {
 		b.g.Imports = map[string][]string{}
 	}
-	b.g.Imports[ix.Path] = slices.Compact(keys)
+	b.g.Imports[string(family)] = slices.Compact(keys)
+}
+
+// outsideModules returns the key of a module that a file names and that no
+// file of the project or of a unit gives, as plug, or nothing.
+func (b *builder) outsideModules(ix *fileindex.Index, module string) []string {
+	if module == "" || strings.HasPrefix(module, ".") {
+		return nil
+	}
+	if _, _, ok := b.resolveModule(ix, module); ok {
+		return nil
+	}
+	return []string{fileindex.Namespace(ix.Language, module)}
 }
 
 // CallbackMethod reports whether code outside the graph that a Callback

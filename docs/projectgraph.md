@@ -108,9 +108,12 @@ script reach, would miss a name that the app registers elsewhere, and a
 target that only such a name reaches would read `not-found`. The markup
 runs only code of the JavaScript family, so the reach query scopes the
 record by its language with `Uncertainty.Language`. It concerns a target
-under a module that the file imports from outside the project, as
-`jsonschema` for `import { validate } from 'jsonschema'`, which
-`Graph.Imports` holds. It also concerns a target that a definition of the
+under a module that a file of the family imports or gives on from outside
+the project, as `jsonschema` for `import { validate } from 'jsonschema'`
+or `plug` for `export * from 'plug'`, which `Graph.Imports` holds by
+family. The case `javascript/component-reexport-star` shows it. The key
+forms of npm and of Go coincide, so an import of `os` in JavaScript also
+concerns a Go target under `os`. It also concerns a target that a definition of the
 family is, or that an edge from a file of the family leads to, and a
 target with no node. A JavaScript project of
 component files thus reads `uncertain` for each JavaScript target that it

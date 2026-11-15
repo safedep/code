@@ -366,13 +366,13 @@ func (s *sources) language(path string) langcode.Code {
 }
 
 // speaks reports whether the code of a site of a language scope can call
-// a target: the file of the site imports the module of the target, a node
+// a target: a file of the family imports the module of the target, a node
 // of the target is a definition in a file of the family, or an edge from
 // such a file leads to it. A target with no node keeps every uncertainty,
 // because no edge tells who calls it.
 func (a *adjacency) speaks(u Uncertainty, target Target) bool {
 	lang := u.Language
-	if slices.ContainsFunc(a.g.Imports[u.Site.Path], func(module string) bool { return target.under(module) }) {
+	if slices.ContainsFunc(a.g.Imports[string(lang)], func(module string) bool { return target.under(module) }) {
 		return true
 	}
 	ids := a.match(target)

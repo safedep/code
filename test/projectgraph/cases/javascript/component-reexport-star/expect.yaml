@@ -1,0 +1,70 @@
+source: safedep:hand
+description: >-
+  The template of App.vue calls api.t5, and api is the module reexport.js, which gives on each name of
+  plug. Only the Python test calls plug.t5 by an edge. A file of the JavaScript family gives on the module
+  plug, so the markup record concerns plug.t5, and it reads uncertain and not not-found.
+test_paths: [tests]
+roots:
+  - key: src/App.vue
+    kind: framework
+    rule: node.component
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+  - key: tests/test_api.py
+    kind: test
+    rule: test.files
+  - key: tests/test_api.py//test_t5
+    kind: test
+    rule: test.files
+exact_edges: true
+edges:
+  - from: src/App.vue
+    to: src/reexport.js
+    kind: import
+    confidence: high
+    site: src/App.vue:2
+  - from: src/main.js
+    to: src/App.vue
+    kind: import
+    confidence: high
+    site: src/main.js:2
+  - from: src/main.js
+    to: vue//createApp
+    kind: direct
+    confidence: high
+    site: src/main.js:4
+  - from: src/main.js
+    to: vue//createApp//mount
+    kind: direct
+    confidence: high
+    site: src/main.js:4
+  - from: tests/test_api.py//test_t5
+    to: plug//t5
+    kind: direct
+    confidence: high
+    site: tests/test_api.py:5
+unresolved:
+  - caller: src/App.vue
+    site: src/App.vue:1
+    reason: markup
+  - caller: src/main.js
+    site: src/main.js:4
+    reason: no-dependency-source
+    method: mount
+results:
+  - target: plug//t5
+    status: uncertain
+    test_path:
+      - key: tests/test_api.py//test_t5
+      - key: plug//t5
+        site: tests/test_api.py:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: tests/test_api.py//test_t5
+        site: tests/test_api.py:5
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/App.vue:1
