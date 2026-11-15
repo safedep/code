@@ -234,6 +234,10 @@ type Export struct {
 	From   string `json:"from,omitempty"`
 	Item   string `json:"item,omitempty"`
 	Line   int    `json:"line"`
+	// Opaque marks a name whose value the index does not follow, as the
+	// result of a call in export const actions = makeActions(). Code that
+	// calls a function of the value can run any code of it.
+	Opaque bool `json:"opaque,omitempty"`
 }
 
 // Definition is one module, function, method, class, constructor, module

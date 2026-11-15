@@ -1,0 +1,207 @@
+source: safedep:hand
+description: >-
+  The route files export values that are no object literal. handle is the result of sequence, and the
+  index now records the arguments first and second of the call in the export statement as references, so
+  h1 and h2 are found. other names the variable named, which holds table, so the export reaches table and
+  the rule marks save. PUT takes the default fallback, because handlers has no PUT. GET and actions are
+  results of calls, and the functions that the framework calls on them are no definition that an edge
+  names. So each of the two exports gets a computed-name record in place of a root, and a1 and a4 read
+  uncertain and not not-found.
+roots:
+  - key: server.js
+    kind: manifest
+    rule: node.package-json
+  - key: src/hooks.server.ts
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/hooks.server.ts//handle
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/a/+server.ts
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/a/+server.ts//fallback
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/b/+page.server.ts
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/b/+page.server.ts//actions
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/b/+page.server.ts//named
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/b/+page.server.ts//table
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/b/+page.server.ts//table//save
+    kind: framework
+    rule: node.sveltekit.route
+exact_edges: true
+edges:
+  - from: server.js
+    to: plug//listen
+    kind: direct
+    confidence: high
+    site: server.js:3
+  - from: src/hooks.server.ts
+    to: "@sveltejs//kit//hooks//sequence"
+    kind: direct
+    confidence: high
+    site: src/hooks.server.ts:14
+  - from: src/hooks.server.ts
+    to: src/hooks.server.ts//first
+    kind: reference
+    confidence: low
+    site: src/hooks.server.ts:14
+  - from: src/hooks.server.ts
+    to: src/hooks.server.ts//second
+    kind: reference
+    confidence: low
+    site: src/hooks.server.ts:14
+  - from: src/hooks.server.ts//first
+    to: plug//h1
+    kind: direct
+    confidence: high
+    site: src/hooks.server.ts:5
+  - from: src/hooks.server.ts//second
+    to: plug//h2
+    kind: direct
+    confidence: high
+    site: src/hooks.server.ts:10
+  - from: src/routes/a/+server.ts
+    to: src/routes/a/+server.ts//make
+    kind: direct
+    confidence: high
+    site: src/routes/a/+server.ts:7
+  - from: src/routes/a/+server.ts//fallback
+    to: plug//a3
+    kind: direct
+    confidence: high
+    site: src/routes/a/+server.ts:9
+  - from: src/routes/a/+server.ts//make//GET
+    to: plug//a1
+    kind: direct
+    confidence: high
+    site: src/routes/a/+server.ts:4
+  - from: src/routes/b/+page.server.ts
+    to: src/routes/b/+page.server.ts//makeActions
+    kind: direct
+    confidence: high
+    site: src/routes/b/+page.server.ts:7
+  - from: src/routes/b/+page.server.ts//makeActions//default
+    to: plug//a4
+    kind: direct
+    confidence: high
+    site: src/routes/b/+page.server.ts:4
+  - from: src/routes/b/+page.server.ts//table//save
+    to: plug//a5
+    kind: direct
+    confidence: high
+    site: src/routes/b/+page.server.ts:9
+unresolved:
+  - caller: src/hooks.server.ts//first
+    site: src/hooks.server.ts:6
+    reason: unknown-receiver
+    method: resolve
+  - caller: src/hooks.server.ts//second
+    site: src/hooks.server.ts:11
+    reason: unknown-receiver
+    method: resolve
+  - caller: src/hooks.server.ts
+    site: src/hooks.server.ts:14
+    reason: computed-name
+  - caller: src/routes/a/+server.ts
+    site: src/routes/a/+server.ts:7
+    reason: computed-name
+  - caller: src/routes/b/+page.server.ts
+    site: src/routes/b/+page.server.ts:7
+    reason: computed-name
+results:
+  - target: plug//h1
+    status: found
+    path:
+      - key: src/hooks.server.ts
+        root: framework
+      - key: src/hooks.server.ts//first
+        site: src/hooks.server.ts:14
+        kind: reference
+        confidence: low
+      - key: plug//h1
+        site: src/hooks.server.ts:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/hooks.server.ts//first
+        site: src/hooks.server.ts:5
+        reached: true
+  - target: plug//h2
+    status: found
+    path:
+      - key: src/hooks.server.ts
+        root: framework
+      - key: src/hooks.server.ts//second
+        site: src/hooks.server.ts:14
+        kind: reference
+        confidence: low
+      - key: plug//h2
+        site: src/hooks.server.ts:10
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/hooks.server.ts//second
+        site: src/hooks.server.ts:10
+        reached: true
+  - target: plug//a1
+    status: uncertain
+    call_sites:
+      - caller: src/routes/a/+server.ts//make//GET
+        site: src/routes/a/+server.ts:4
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/hooks.server.ts:14
+      - kind: unresolved-call
+        site: src/routes/a/+server.ts:7
+      - kind: unresolved-call
+        site: src/routes/b/+page.server.ts:7
+  - target: plug//a3
+    status: found
+    path:
+      - key: src/routes/a/+server.ts//fallback
+        root: framework
+      - key: plug//a3
+        site: src/routes/a/+server.ts:9
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/routes/a/+server.ts//fallback
+        site: src/routes/a/+server.ts:9
+        reached: true
+  - target: plug//a4
+    status: uncertain
+    call_sites:
+      - caller: src/routes/b/+page.server.ts//makeActions//default
+        site: src/routes/b/+page.server.ts:4
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/hooks.server.ts:14
+      - kind: unresolved-call
+        site: src/routes/a/+server.ts:7
+      - kind: unresolved-call
+        site: src/routes/b/+page.server.ts:7
+  - target: plug//a5
+    status: found
+    path:
+      - key: src/routes/b/+page.server.ts//table//save
+        root: framework
+      - key: plug//a5
+        site: src/routes/b/+page.server.ts:9
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/routes/b/+page.server.ts//table//save
+        site: src/routes/b/+page.server.ts:9
+        reached: true

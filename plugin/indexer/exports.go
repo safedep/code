@@ -76,10 +76,13 @@ func (p *projection) addExportStatement(statement *sitter.Node) {
 	}
 
 	if declaration := statement.ChildByFieldName("declaration"); declaration != nil {
+		if t := declaration.Type(); t == "lexical_declaration" || t == "variable_declaration" {
+			p.exportDeclarators(declaration, line)
+			return
+		}
 		for _, name := range p.declaredNames(declaration) {
 			p.export(named(name), name, line)
 		}
-		p.exportPatterns(declaration, line)
 		return
 	}
 	if value := statement.ChildByFieldName("value"); value != nil {
@@ -109,7 +112,7 @@ func (p *projection) addExportStatement(statement *sitter.Node) {
 				if source != "" {
 					p.reexport(name, source, local, line)
 				} else {
-					p.export(name, local, line)
+					p.exportValue(name, local, p.topValue(local), line)
 				}
 			}
 		case "namespace_export":
@@ -144,25 +147,100 @@ func (p *projection) declaredNames(declaration *sitter.Node) []string {
 	return nil
 }
 
-// exportPatterns adds the exports of the names that a destructuring
-// declaration binds, as GET in export const { GET } = handlers. The
-// target of a name is the member of the object that it takes, as
-// handlers//GET. A framework calls the function of an exported name, and
-// without the record no root names the function. A name of an array
-// pattern or a rest element takes no member that a key names, so its
-// target is the object that holds it. A value that is no name of the file
-// gives no target, and the call of the value holds its code.
-func (p *projection) exportPatterns(declaration *sitter.Node, line int) {
-	if t := declaration.Type(); t != "lexical_declaration" && t != "variable_declaration" {
-		return
-	}
+// exportDeclarators adds the exports of the names that an exported
+// variable declaration binds. A name of a destructuring pattern, as GET in
+// export const { GET } = handlers, takes the member of the value that it
+// names, as handlers//GET. A framework calls the function of an exported
+// name, and without the record no root names the function. A name of an
+// array pattern or a rest element takes no member that a key names, so
+// its target is the object that holds it.
+func (p *projection) exportDeclarators(declaration *sitter.Node, line int) {
 	for _, declarator := range ts.NamedChildren(declaration) {
 		pattern, value := declarator.ChildByFieldName("name"), declarator.ChildByFieldName("value")
-		if pattern == nil || pattern.Type() == "identifier" || value == nil || value.Type() != "identifier" {
+		switch {
+		case pattern == nil:
+		case pattern.Type() == "identifier":
+			name := p.text(pattern)
+			p.exportValue(name, name, value, line)
+		case value != nil && value.Type() == "identifier" && !opaque(p.topValue(p.text(value))):
+			p.exportPattern(pattern, []string{p.text(value)}, line)
+		default:
+			for _, name := range patternNames(p, pattern) {
+				p.export(name, name, line)
+				p.ix.Exports[len(p.ix.Exports)-1].Opaque = true
+			}
+		}
+	}
+}
+
+// exportValue adds the export of a local name that holds a value. A name
+// that holds another name gives that name first, as handler for GET in
+// export const GET = handler, so the export reaches its function. A value
+// that is no literal, as the result of a call, is opaque.
+func (p *projection) exportValue(name, local string, value *sitter.Node, line int) {
+	if value != nil && value.Type() == "identifier" && p.text(value) != local {
+		p.export(name, p.text(value), line)
+	}
+	p.export(name, local, line)
+	if value != nil && value.Type() != "identifier" && opaque(value) {
+		p.ix.Exports[len(p.ix.Exports)-1].Opaque = true
+	}
+}
+
+// opaque reports whether a value runs code that the index does not follow
+// to a definition, as a call. A nil value is a name that no top-level
+// declaration of the file binds, as an import.
+func opaque(value *sitter.Node) bool {
+	return value != nil && value.Type() != "identifier" && !functionValues[value.Type()] && !literalValues[value.Type()]
+}
+
+// literalValues are the JavaScript values that run no code of their own
+// when code reads them. A function of an object or an array is a
+// definition of the file.
+var literalValues = map[string]bool{
+	"string": true, "template_string": true, "number": true, "true": true, "false": true, "null": true,
+	"undefined": true, "regex": true, "object": true, "array": true, "class": true,
+}
+
+// topValue returns the value of a top-level variable of the file, or nil.
+func (p *projection) topValue(name string) *sitter.Node {
+	for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
+		if statement.Type() == "export_statement" {
+			statement = statement.ChildByFieldName("declaration")
+		}
+		if statement == nil || statement.Type() != "lexical_declaration" && statement.Type() != "variable_declaration" {
 			continue
 		}
-		p.exportPattern(pattern, []string{p.text(value)}, line)
+		for _, declarator := range ts.NamedChildren(statement) {
+			if n := declarator.ChildByFieldName("name"); n != nil && n.Type() == "identifier" && p.text(n) == name {
+				return declarator.ChildByFieldName("value")
+			}
+		}
 	}
+	return nil
+}
+
+// patternNames returns the names that a destructuring pattern binds.
+func patternNames(p *projection, pattern *sitter.Node) []string {
+	switch pattern.Type() {
+	case "identifier", "shorthand_property_identifier_pattern":
+		return []string{p.text(pattern)}
+	case "assignment_pattern", "object_assignment_pattern":
+		if left := pattern.ChildByFieldName("left"); left != nil {
+			return patternNames(p, left)
+		}
+	case "pair_pattern":
+		if value := pattern.ChildByFieldName("value"); value != nil {
+			return patternNames(p, value)
+		}
+	case "object_pattern", "array_pattern", "rest_pattern":
+		var names []string
+		for _, child := range ts.NamedChildren(pattern) {
+			names = append(names, patternNames(p, child)...)
+		}
+		return names
+	}
+	return nil
 }
 
 // exportPattern adds the exports of the names of a pattern whose value is
@@ -176,8 +254,17 @@ func (p *projection) exportPattern(pattern *sitter.Node, path []string, line int
 		name := p.text(pattern)
 		p.export(name, fileindex.Join(path[0], append(slices.Clip(path[1:]), name)...), line)
 	case "assignment_pattern", "object_assignment_pattern":
-		if left := pattern.ChildByFieldName("left"); left != nil {
-			p.exportPattern(left, path, line)
+		// A default holds the value when the member is undefined, as fb
+		// for PUT in { PUT = fb } = h.
+		left, right := pattern.ChildByFieldName("left"), pattern.ChildByFieldName("right")
+		if left == nil {
+			return
+		}
+		p.exportPattern(left, path, line)
+		if right != nil && right.Type() == "identifier" {
+			for _, name := range patternNames(p, left) {
+				p.export(name, p.text(right), line)
+			}
 		}
 	case "pair_pattern":
 		key, value := pattern.ChildByFieldName("key"), pattern.ChildByFieldName("value")

@@ -55,6 +55,13 @@ func (b *builder) markRoots(ctx context.Context) error {
 	}
 	entry := false
 	for _, r := range found {
+		// The framework calls the functions of the value of an opaque
+		// export, and no edge names them. The record keeps a target that
+		// only they call uncertain and not not-found.
+		if r.Opaque != "" {
+			b.addUnresolved(UnresolvedSite{Caller: r.Key, Site: Site(r.Site), Text: "export " + r.Opaque, Reason: fileindex.UnresolvedComputedName})
+			continue
+		}
 		b.addRootAt(r.Key, r.Kind, r.Rule, Site(r.Site))
 		helper := b.profileAt(r.Key).helperProgram
 		entry = entry || r.Kind != RootTest && !keeps[r.Rule] && (helper == nil || !helper(fileindex.Unit(r.Key)))
@@ -162,9 +169,25 @@ func (b *builder) exportKeys(p string, seen map[string]bool) []string {
 			}
 		}
 	}
-	for name := range sc.exports {
-		if key, fail := b.resolveName(p, name, 0); fail == nil && b.kindOf(b.deref(key)) != NodeInterface {
-			keys = append(keys, key)
+	// A name can have more than one export record, as PUT in
+	// export const { PUT = fb } = h, which is h.PUT or fb. Each record that
+	// resolves gives a key.
+	add := func(key string) bool {
+		if b.kindOf(b.deref(key)) == NodeInterface {
+			return false
+		}
+		keys = append(keys, key)
+		return true
+	}
+	for name, exs := range sc.exports {
+		found := false
+		for _, ex := range exs {
+			if key, fail := b.followExport(sc, ex, 0); fail == nil {
+				found = add(key) || found
+			}
+		}
+		if key, fail := b.resolveName(p, name, 0); !found && fail == nil {
+			add(key)
 		}
 	}
 	for _, st := range sc.stars {

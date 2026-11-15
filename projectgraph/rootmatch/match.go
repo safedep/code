@@ -30,6 +30,11 @@ type Root struct {
 	Kind rules.Kind
 	Rule string
 	Site Site
+	// Opaque names an export of the file of Key whose value the index
+	// does not follow, as the result of a call. The framework calls the
+	// functions of the value, so the link step gives the site a record in
+	// place of a root.
+	Opaque string
 }
 
 // Site is a place in a file. Lines and columns are 1-based.

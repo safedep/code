@@ -29,7 +29,23 @@ func (f *finder) matchPath(r rules.Rule) {
 			f.add(r, key)
 		}
 		f.addMembers(r, ix, exports)
+		for _, ex := range ix.Exports {
+			if ex.Opaque {
+				f.addOpaque(r, ix.Path, ex)
+			}
+		}
 	}
+}
+
+// addOpaque marks an export whose value the index does not follow.
+func (f *finder) addOpaque(r rules.Rule, path string, ex fileindex.Export) {
+	root := Root{Key: path, Kind: r.Kind, Rule: r.ID, Opaque: ex.Name}
+	if f.seen[root] {
+		return
+	}
+	f.seen[root] = true
+	root.Site = Site{Path: path, Line: ex.Line}
+	f.roots = append(f.roots, root)
 }
 
 // addMembers marks each function under an exported object of the file. The

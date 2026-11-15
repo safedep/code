@@ -764,7 +764,18 @@ edge leads from the object to it. A destructured export, as
 the member that the name takes, as `handlers//GET`, also through a nested
 pattern and a rename. A name of an array pattern or a rest element takes
 the object that holds it. The case `javascript/sveltekit-destructured-export`
-shows each form. The resolver maps the alias `$lib` of SvelteKit
+shows each form.
+A default of a pattern, as `fb` in `{ PUT = fb } = h`, is a second export
+record of the name, and a path rule marks each record that resolves. An
+export of a name that holds another name, as `export const GET = handler`,
+gives that name first. An exported name whose value is no literal, as the
+result of a call in `export const actions = makeActions()`, is `Opaque` in
+the index. The framework calls the functions of such a value, and no edge
+names them, so a path rule gives the export a `computed-name` record in
+place of a root. The index records a function that an argument of a call
+in an export statement names, as `first` in
+`export const handle = sequence(first)`, as a reference. The case
+`javascript/sveltekit-opaque-exports` shows each form. The resolver maps the alias `$lib` of SvelteKit
 to `src/lib` of the nearest package that depends on `@sveltejs/kit`. It
 does not read `svelte.config.js`, which can move the directory. So an
 import of `$lib` that names no file is first party, and it is a record

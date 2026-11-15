@@ -261,7 +261,7 @@ func (syntax referenceSyntax) unlist(values []*sitter.Node) []*sitter.Node {
 func (p *projection) reference(syntax referenceSyntax, caller string, value *sitter.Node) (string, bool) {
 	// A name in the body of a function that an export statement declares
 	// is a value of that function, not the export.
-	if value == nil || caller == p.cg.FileName && p.inExport(value) && syntax.identifiers[value.Type()] {
+	if value == nil || caller == p.cg.FileName && p.exportsName(value) && syntax.identifiers[value.Type()] {
 		return "", false
 	}
 	var names []string
@@ -320,6 +320,22 @@ func (p *projection) valueOf(syntax referenceSyntax, caller, name string) (strin
 		}
 	}
 	return "", false
+}
+
+// exportsName reports whether a name in an export statement or a CommonJS
+// export assignment is a name that the export gives, as a in export { a }.
+// An argument of a call in the statement is a value that the callee gets,
+// as g in export const handle = sequence(g), so it is no export name.
+func (p *projection) exportsName(node *sitter.Node) bool {
+	if !p.inExport(node) {
+		return false
+	}
+	for n := node.Parent(); n != nil; n = n.Parent() {
+		if n.Type() == "arguments" {
+			return false
+		}
+	}
+	return true
 }
 
 // inExport reports whether the node is part of an export statement or a
