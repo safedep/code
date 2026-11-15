@@ -433,7 +433,9 @@ Rust follows the same rules, with these additions.
   with another type is a record too, as in the case
   `rust/shadowed-let-type`. A `let` counts once its statement ends, and
   `let`s of one type keep the target, as `c.send()` after
-  `let c = c.with_retry();` in the case `rust/let-same-type`. A method of the
+  `let c = c.with_retry();` in the case `rust/let-same-type`. Two `let`s
+  that call one function of one type hold one type, also when the type is
+  in another file, as in the case `rust/let-same-constructor`. A method of the
   real type then reads as `uncertain` and not as `not-found`.
 - The link step resolves a type that a parameter, a `let`, a field or the
   result of a function declares at the root of the file, or as a struct,
@@ -537,8 +539,13 @@ Rust follows the same rules, with these additions.
   `#[macro_use] extern crate dep;`, gets the edge to such a macro of a
   dependency of the crate, as in the case `rust/macro-import`. The index
   does not tell a call of a macro from a call of a function value, so the
-  call keeps its record. A macro reads `$crate::sink` as `crate::sink` of
-  the crate of the macro.
+  call keeps its record. A definition of the name in the crate of the file,
+  as a `macro_rules!` of a module with `#[macro_use]`, shadows such a
+  macro, so the call keeps its record alone, as in the case
+  `rust/macro-local-shadows-dependency`. A macro reads `$crate::sink` as
+  `crate::sink` of the crate of the macro. A call of a metavariable, as
+  `$f()`, is a record with the reason `computed-name`, as in the case
+  `rust/macro-metavariable-call`.
 - The index records a type alias, as `pub type Image<P> = ImageBuffer<P>;`,
   as a definition of the kind `alias`. The link step resolves the type
   that it names, as the file of the alias names it, when a walk first
