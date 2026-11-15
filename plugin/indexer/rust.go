@@ -274,7 +274,8 @@ func (p *projection) rustBounds(fn *sitter.Node) map[string]string {
 
 // rustAttributes returns the attributes before an item as written, with no
 // arguments, as @tokio::main for #[tokio::main] or @get for
-// #[get("/")].
+// #[get("/")]. A macro_rules! gets the mark macro_rules! too, so the link
+// step can tell a macro from a function of the name.
 func rustAttributes(p *projection, node *sitter.Node) []string {
 	var attributes []string
 	for sibling := node.PrevNamedSibling(); sibling != nil && sibling.Type() == "attribute_item"; sibling = sibling.PrevNamedSibling() {
@@ -283,6 +284,9 @@ func rustAttributes(p *projection, node *sitter.Node) []string {
 		}
 	}
 	slices.Reverse(attributes)
+	if node.Type() == "macro_definition" {
+		attributes = append(attributes, fileindex.RustMacroRules)
+	}
 	return attributes
 }
 

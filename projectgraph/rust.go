@@ -173,8 +173,8 @@ type rustState struct {
 	// useScopes holds the classes of each file that hold a use, which are
 	// inline modules.
 	useScopes map[string]map[string]bool
-	// spaceNames holds the names of the definitions of each space.
-	spaceNames map[*space]map[string]bool
+	// spaceMacros holds the names of the macro_rules! of each space.
+	spaceMacros map[*space]map[string]bool
 	// cuts counts the cuts of the glob guards, a part of b.cuts.
 	cuts int
 }
@@ -219,7 +219,7 @@ func (b *builder) addRustUnits() {
 	s.kept = map[globKey]globAnswer{}
 	s.visited = map[globKey]globAnswer{}
 	s.useScopes = map[string]map[string]bool{}
-	s.spaceNames = map[*space]map[string]bool{}
+	s.spaceMacros = map[*space]map[string]bool{}
 	files := map[string][]string{}
 	for _, p := range b.paths {
 		if ix := b.byPath[p]; ix != nil && ix.Language == langcode.Rust {
@@ -836,21 +836,23 @@ func (b *builder) rustScopeFallback(sc *scope, caller, first string, rest []stri
 	return nil
 }
 
-// rustSpaceNames returns the last name of each definition of a space.
-func (b *builder) rustSpaceNames(sp *space) map[string]bool {
+// rustSpaceMacros returns the name of each macro_rules! of a space.
+func (b *builder) rustSpaceMacros(sp *space) map[string]bool {
 	s := b.rustState()
-	if names, ok := s.spaceNames[sp]; ok {
+	if names, ok := s.spaceMacros[sp]; ok {
 		return names
 	}
 	names := map[string]bool{}
 	for _, p := range b.paths {
 		if ix := b.byPath[p]; ix != nil && ix.Language == langcode.Rust && b.spaceOf(p) == sp {
 			for _, def := range ix.Definitions {
-				names[def.Name] = true
+				if slices.Contains(def.Decorators, fileindex.RustMacroRules) {
+					names[def.Name] = true
+				}
 			}
 		}
 	}
-	s.spaceNames[sp] = names
+	s.spaceMacros[sp] = names
 	return names
 }
 
@@ -884,10 +886,12 @@ func (b *builder) rustInUseScope(sc *scope, key string) bool {
 // tell a call of a macro from a call of a function, so the caller keeps
 // the record of the name too.
 func (b *builder) rustMacroCrate(ix *fileindex.Index, name string) (string, bool) {
-	// A macro of the crate of the file shadows a macro of a dependency.
-	// The index does not tell a macro from a function, so a definition of
-	// the name in the space of the file counts.
-	if b.rustSpaceNames(b.spaceOf(ix.Path))[name] {
+	// A macro_rules! of the crate of the file shadows a macro of a
+	// dependency. A function or a method of the name does not, because a
+	// macro call reads macros only. The rule does not read the textual
+	// scope of the macro, so a macro of the crate that the call cannot see
+	// shadows too.
+	if b.rustSpaceMacros(b.spaceOf(ix.Path))[name] {
 		return "", false
 	}
 	exported := false

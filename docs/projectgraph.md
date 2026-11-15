@@ -558,10 +558,12 @@ Rust follows the same rules, with these additions.
   `#[macro_use] extern crate dep;`, gets the edge to such a macro of a
   dependency of the crate, as in the case `rust/macro-import`. The index
   does not tell a call of a macro from a call of a function value, so the
-  call keeps its record. A definition of the name in the crate of the file,
-  as a `macro_rules!` of a module with `#[macro_use]`, shadows such a
-  macro, so the call keeps its record alone, as in the case
-  `rust/macro-local-shadows-dependency`. A macro reads `$crate::sink` as
+  call keeps its record. A `macro_rules!` of the name in the crate of the
+  file, as one of a module with `#[macro_use]`, shadows such a macro, so
+  the call keeps its record alone, as in the case
+  `rust/macro-local-shadows-dependency`. A function or a method of the name
+  does not, as in the case `rust/macro-dependency-function-name`. The index
+  marks a `macro_rules!` with the decorator `macro_rules!`. A macro reads `$crate::sink` as
   `crate::sink` of the crate of the macro. A call of a metavariable, as
   `$f()`, is a record with the reason `computed-name`, as in the case
   `rust/macro-metavariable-call`.

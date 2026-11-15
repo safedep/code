@@ -210,6 +210,10 @@ type Index struct {
 	Truncated   []Truncation `json:"truncated,omitempty"`
 }
 
+// RustMacroRules is the decorator that marks a definition of a Rust
+// macro_rules!, which the index otherwise gives the kind function.
+const RustMacroRules = "macro_rules!"
+
 // Import is one import of the file. Module is the module as written, as
 // ./utils or .foo, and the link step resolves it. Namespace is the per-file
 // "//" form of the import, which loses the leading dots of a relative module.
