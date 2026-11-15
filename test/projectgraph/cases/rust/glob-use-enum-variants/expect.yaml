@@ -1,0 +1,71 @@
+source: safedep:hand
+description: >-
+  src/main.rs has pub use kinds::* and pub use kinds::Kind::*. src/kinds.rs has pub use
+  crate::Mode::*, so a read of the glob uses of kinds.rs reads the glob uses of main.rs, and that read
+  reads kinds.rs again. Kind implements the trait Tr of src/traits.rs, and run calls k.area(), so the
+  call has a member edge to Tr::area, and dep::danger is found. A link step that keeps a result made
+  from the modules of a pass that has not ended loses the module of traits.rs for the build. The call
+  then gets a no-definition record and no edge.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+exact_edges: true
+edges:
+  - from: src/main.rs//main
+    to: src/app.rs//start
+    kind: direct
+    confidence: high
+    site: src/main.rs:8
+  - from: src/app.rs//start
+    to: crate//kinds//Fast
+    kind: reference
+    confidence: low
+    site: src/app.rs:5
+  - from: src/app.rs//start
+    to: src/kinds.rs//run
+    kind: direct
+    confidence: high
+    site: src/app.rs:6
+  - from: src/kinds.rs//run
+    to: src/traits.rs//Tr//area
+    kind: member
+    confidence: high
+    site: src/kinds.rs:10
+  - from: src/traits.rs//Tr//area
+    to: dep//danger
+    kind: direct
+    confidence: high
+    site: src/traits.rs:3
+unresolved:
+  - caller: src/app.rs
+    site: src/app.rs:1
+    reason: no-definition
+results:
+  - target: dep//danger
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/app.rs//start
+        site: src/main.rs:8
+        kind: direct
+        confidence: high
+      - key: src/kinds.rs//run
+        site: src/app.rs:6
+        kind: direct
+        confidence: high
+      - key: src/traits.rs//Tr//area
+        site: src/kinds.rs:10
+        kind: member
+        confidence: high
+      - key: dep//danger
+        site: src/traits.rs:3
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/traits.rs//Tr//area
+        site: src/traits.rs:3
+        reached: true

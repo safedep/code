@@ -86,12 +86,13 @@ func Build(ctx context.Context, indexes []*fileindex.Index, opts Options) (*Grap
 	if err := b.markRoots(ctx); err != nil {
 		return nil, err
 	}
+	g := b.finish()
 	// A stop cuts the resolutions short, so the graph of a stopped build
-	// lacks edges and goes to no caller.
+	// lacks edges and goes to no caller. finish resolves the external keys
+	// of the units, so the check comes after it.
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	g := b.finish()
 	g.Stats.Duration = time.Since(start)
 	return g, nil
 }
@@ -182,7 +183,10 @@ type builder struct {
 	// ordering counts the classes whose MRO a lookup reads now. A read of
 	// such a class gets the class alone.
 	ordering int
-	children map[string][]string
+	// tentative holds an undo step for each memo write made while a read
+	// of wildcard imports is in progress, as wildcardModules describes.
+	tentative []func()
+	children  map[string][]string
 	// aliases holds the definitions of each class that the language joins
 	// to one class, the class too.
 	aliases map[string][]string

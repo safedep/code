@@ -517,6 +517,10 @@ type wildcardMods struct {
 // So a read of a scope that a resolution reads now gets the modules of the
 // last whole pass, and the passes repeat until the modules stay the same.
 // A module that only an import after it brings into scope thus resolves.
+// A memo that a pass writes from the modules of the last pass can lack a
+// module for the whole build. The MRO of a class whose base only the next
+// pass brings into scope is such a memo, and a call of a method of the base
+// then gets no edge. So a pass whose modules change undoes its memo writes.
 //
 // A cycle guard that an outer resolution holds can cut a read short.
 // app/src/prelude.rs has pub use core_lib::*, and the resolution of that
@@ -549,6 +553,7 @@ func (b *builder) wildcardModules(sc *scope) []string {
 	b.expanding[sc] = r
 	for range len(sc.wildcards) + 1 {
 		r.read = false
+		mark := len(b.tentative)
 		var mods []string
 		for _, imp := range sc.wildcards {
 			if mod, _, ok := b.resolveModule(sc.ix, imp.Module); ok {
@@ -560,8 +565,13 @@ func (b *builder) wildcardModules(sc *scope) []string {
 		if !r.read || same {
 			break
 		}
+		b.undo(mark)
 	}
 	delete(b.expanding, sc)
+	if len(b.expanding) == 0 {
+		clear(b.tentative)
+		b.tentative = b.tentative[:0]
+	}
 	if outer {
 		if b.uncut(b.asked) {
 			b.wildcardMods[sc] = &wildcardMods{mods: r.mods, asked: b.asked}
@@ -569,6 +579,23 @@ func (b *builder) wildcardModules(sc *scope) []string {
 		b.asked = nil
 	}
 	return r.mods
+}
+
+// memo logs the undo step of a memo write while a read of wildcard imports
+// is in progress.
+func (b *builder) memo(undo func()) {
+	if len(b.expanding) > 0 {
+		b.tentative = append(b.tentative, undo)
+	}
+}
+
+// undo reverts the memo writes after the mark, newest first.
+func (b *builder) undo(mark int) {
+	for i := len(b.tentative) - 1; i >= mark; i-- {
+		b.tentative[i]()
+	}
+	clear(b.tentative[mark:])
+	b.tentative = b.tentative[:mark]
 }
 
 // uncut reports whether a read of the wildcard imports of a scope that

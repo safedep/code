@@ -1,0 +1,75 @@
+source: safedep:hand
+description: >-
+  Outer extends Base of com.y, and Outer.java has import com.y.* and import static
+  com.x.Outer.Inner.*. A extends Outer, and A.java comes first. The read of the static import
+  resolves Outer.Inner, which builds the MRO of Outer. The MRO looks up the base Base through the same
+  wildcard imports while that read is in progress. The call baseMethod() in Outer.run has a member edge
+  to Base.baseMethod. A link step that keeps the MRO made from the imports of a pass that has not
+  ended gives a cha edge and a no-definition record instead.
+roots:
+  - key: com/x/A.java//A//main
+    kind: main
+    rule: java.main
+exact_edges: true
+edges:
+  - from: com/x/A.java//A//main
+    to: com/x/A.java//A
+    kind: direct
+    confidence: high
+    site: com/x/A.java:5
+  - from: com/x/A.java//A//main
+    to: com/x/A.java//A//go
+    kind: member
+    confidence: high
+    site: com/x/A.java:5
+  - from: com/x/A.java//A//go
+    to: com/y/Base.java//Base//baseMethod
+    kind: member
+    confidence: high
+    site: com/x/A.java:9
+  - from: com/x/Outer.java//Outer//run
+    to: com/y/Base.java//Base//baseMethod
+    kind: member
+    confidence: high
+    site: com/x/Outer.java:12
+  - from: com/x/Outer.java//Outer//run
+    to: com/x/Outer.java//Outer//Inner//help
+    kind: direct
+    confidence: high
+    site: com/x/Outer.java:13
+  - from: com/y/Base.java//Base//baseMethod
+    to: com/y/Danger.java//Danger//run
+    kind: member
+    confidence: high
+    site: com/y/Base.java:5
+  - from: com/y/Danger.java//Danger//run
+    to: org//danger//Lib//call
+    kind: direct
+    confidence: high
+    site: com/y/Danger.java:5
+unresolved: []
+results:
+  - target: org//danger//Lib//call
+    status: found
+    path:
+      - key: com/x/A.java//A//main
+      - key: com/x/A.java//A//go
+        site: com/x/A.java:5
+        kind: member
+        confidence: high
+      - key: com/y/Base.java//Base//baseMethod
+        site: com/x/A.java:9
+        kind: member
+        confidence: high
+      - key: com/y/Danger.java//Danger//run
+        site: com/y/Base.java:5
+        kind: member
+        confidence: high
+      - key: org//danger//Lib//call
+        site: com/y/Danger.java:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: com/y/Danger.java//Danger//run
+        site: com/y/Danger.java:5
+        reached: true

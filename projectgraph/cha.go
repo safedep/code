@@ -76,6 +76,7 @@ func (b *builder) mro(class string) []string {
 	}
 	b.ordering--
 	b.mros[class] = order
+	b.memo(func() { delete(b.mros, class) })
 	return order
 }
 
@@ -183,6 +184,7 @@ func (b *builder) externalBase(class string) (string, bool) {
 	if !ok {
 		base, _ = b.findExternalBase(class)
 		b.externalBases[class] = base
+		b.memo(func() { delete(b.externalBases, class) })
 	}
 	return base, base != ""
 }
