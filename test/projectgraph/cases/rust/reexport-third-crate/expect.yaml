@@ -1,0 +1,114 @@
+source: safedep:hand
+description: >-
+  main calls dep1::bound::save and dep1::glob::load. The unit cargo:dep1@1.0.0 has pub use dep2::store::save
+  in bound and pub use dep2::store::* in glob, and the unit cargo:dep2@1.0.0 defines save and load in store.
+  bound also defines audit, so the summary of dep1 has a symbol. The walk of each key of dep1 ends on the key
+  of dep2, which no call names, so it has no node. A link step that links only to a node gives the keys of
+  dep1 no edge and no record, and std::fs::remove_file and std::fs::remove_dir read not-found.
+units:
+  vendor/dep1: cargo:dep1@1.0.0
+  vendor/dep2: cargo:dep2@1.0.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+exact_edges: true
+edges:
+  - from: src/main.rs//main
+    to: dep1//bound//save
+    kind: direct
+    confidence: high
+    site: src/main.rs:2
+  - from: src/main.rs//main
+    to: dep1//glob//load
+    kind: direct
+    confidence: high
+    site: src/main.rs:3
+  - from: dep1//bound//save
+    to: dep2//store//save
+    kind: package
+    confidence: high
+    site: cargo:dep1@1.0.0
+  - from: dep1//glob//load
+    to: dep2//store//load
+    kind: package
+    confidence: high
+    site: cargo:dep1@1.0.0
+  - from: dep2//store//save
+    to: cargo:dep2@1.0.0//src/store.rs//save
+    kind: package
+    confidence: high
+    site: cargo:dep2@1.0.0//src/store.rs:1
+  - from: dep2//store//load
+    to: cargo:dep2@1.0.0//src/store.rs//load
+    kind: package
+    confidence: high
+    site: cargo:dep2@1.0.0//src/store.rs:5
+  - from: cargo:dep2@1.0.0//src/store.rs//save
+    to: std//fs//remove_file
+    kind: direct
+    confidence: high
+    site: cargo:dep2@1.0.0//src/store.rs:2
+  - from: cargo:dep2@1.0.0//src/store.rs//load
+    to: std//fs//remove_dir
+    kind: direct
+    confidence: high
+    site: cargo:dep2@1.0.0//src/store.rs:6
+  - from: cargo:dep1@1.0.0//src/bound.rs//audit
+    to: std//fs//read
+    kind: direct
+    confidence: high
+    site: cargo:dep1@1.0.0//src/bound.rs:4
+unresolved: []
+results:
+  - target: std//fs//remove_file
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: dep1//bound//save
+        site: src/main.rs:2
+        kind: direct
+        confidence: high
+      - key: dep2//store//save
+        site: cargo:dep1@1.0.0
+        kind: package
+        confidence: high
+      - key: cargo:dep2@1.0.0//src/store.rs//save
+        site: cargo:dep2@1.0.0//src/store.rs:1
+        kind: package
+        confidence: high
+      - key: std//fs//remove_file
+        site: cargo:dep2@1.0.0//src/store.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: cargo:dep2@1.0.0//src/store.rs//save
+        site: cargo:dep2@1.0.0//src/store.rs:2
+        reached: true
+  - target: std//fs//remove_dir
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: dep1//glob//load
+        site: src/main.rs:3
+        kind: direct
+        confidence: high
+      - key: dep2//store//load
+        site: cargo:dep1@1.0.0
+        kind: package
+        confidence: high
+      - key: cargo:dep2@1.0.0//src/store.rs//load
+        site: cargo:dep2@1.0.0//src/store.rs:5
+        kind: package
+        confidence: high
+      - key: std//fs//remove_dir
+        site: cargo:dep2@1.0.0//src/store.rs:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: cargo:dep2@1.0.0//src/store.rs//load
+        site: cargo:dep2@1.0.0//src/store.rs:6
+        reached: true

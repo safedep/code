@@ -1,0 +1,23 @@
+{
+  "version": "3",
+  "index_version": "17",
+  "link_version": "20",
+  "unit": "cargo:dep2@1.0.0",
+  "symbols": [
+    {
+      "key": "dep2//store//load",
+      "definitions": [
+        "cargo:dep2@1.0.0//src/store.rs//load"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "dep2//store//save",
+      "definitions": [
+        "cargo:dep2@1.0.0//src/store.rs//save"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": []
+}

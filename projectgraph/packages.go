@@ -472,12 +472,50 @@ func (b *builder) linkProvision(key string, o origin, pv provision) {
 	if b.holdsData(res.key) {
 		return
 	}
-	n := b.g.Nodes[res.key]
-	if res.key == key || n == nil {
+	if res.key == key {
 		return
+	}
+	n := b.g.Nodes[res.key]
+	if n == nil {
+		// The walk can end on the key of a third crate, as dep2::m4::f0
+		// of pub use dep2::m4::f0 in dep1::m2. That key has no node until
+		// a call names it, so the edge went nowhere, and a target under
+		// it read not-found. The key gets its node, and the next pass
+		// links it to the unit of its crate. A module of a unit runs no
+		// code, and a key that no origin names cannot link on.
+		if len(b.origins[res.key]) == 0 || b.unitModuleKey(res.key) {
+			return
+		}
+		n = b.g.Nodes[b.external(res.key)]
 	}
 	b.link(o.lang, key, res.key, Site{Path: cmp.Or(n.Path, pv.sp.unit), Line: n.Line}, EdgePackage, r)
 	b.linkPackageLoad(o.lang, key, pv.module)
+}
+
+// unitModuleKey reports whether a unit gives an external key as a module,
+// as inner//tools for the module tools of the crate inner.
+func (b *builder) unitModuleKey(key string) bool {
+	for _, o := range b.origins[key] {
+		for _, pv := range b.providers(o) {
+			mod := pv.module
+			for _, name := range o.names {
+				if b.units[mod] == nil {
+					mod = ""
+					break
+				}
+				next, ok := b.unitMember(mod, name)
+				if !ok || b.units[next] == nil {
+					mod = ""
+					break
+				}
+				mod = next
+			}
+			if b.units[mod] != nil {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // linkPackageLoad adds an import edge from an external key to each module
