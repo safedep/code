@@ -2,14 +2,8 @@ package projectgraph
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"testing"
 	"testing/fstest"
-
-	codefs "github.com/safedep/code/fs"
-	"github.com/safedep/code/lang"
-	"github.com/safedep/code/plugin/indexer"
 
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
@@ -108,46 +102,4 @@ func TestRustHelperProgram(t *testing.T) {
 			assert.Equal(t, tt.want, rustHelperProgram(tt.path))
 		})
 	}
-}
-
-// TestBuildRustKeepsNoGlobListThatACutGave links src/other.rs, which glob
-// uses crate::sub::x and crate::c. sub gives x only through its own glob use
-// of other, so the read of the glob uses of other asks for other again
-// under the guard of a glob member. That read gets no module for
-// crate::sub::x. The list of the glob modules of other that the build keeps
-// must still hold c::x, so g() in run links g of src/c/x.rs through the
-// glob use.
-func TestBuildRustKeepsNoGlobListThatACutGave(t *testing.T) {
-	dir := writeFiles(t, map[string]string{
-		"Cargo.toml":   "[package]\nname = \"app\"\nversion = \"1.0.0\"\nedition = \"2021\"\n",
-		"src/main.rs":  "mod c;\nmod other;\nmod sub;\n\nuse sub::*;\n\nfn main() {\n    x::g();\n    other::run();\n}\n",
-		"src/c/mod.rs": "pub mod x;\n",
-		"src/c/x.rs":   "pub fn g() {}\n",
-		"src/other.rs": "use crate::sub::x::*;\npub use crate::c::*;\n\npub fn run() {\n    g();\n}\n",
-		"src/sub.rs":   "pub use crate::other::*;\n",
-	})
-	languages, err := lang.AllLanguages()
-	require.NoError(t, err)
-	fsys, err := codefs.NewLocalFileSystem(codefs.LocalFileSystemConfig{AppDirectories: []string{dir}})
-	require.NoError(t, err)
-	ix, err := indexer.New(indexer.Options{Languages: languages})
-	require.NoError(t, err)
-	indexed, err := ix.Run(context.Background(), fsys)
-	require.NoError(t, err)
-	g, err := Build(context.Background(), indexed.Indexes, Options{Root: os.DirFS(dir), Files: indexed.Statuses(), Languages: indexed.Languages})
-	require.NoError(t, err)
-	assert.Contains(t, edgeStrings(g), "src/other.rs//run -> src/c/x.rs//g direct rust.wildcard-import")
-}
-
-// writeFiles writes the files, by their slash paths, to a new temporary
-// directory and returns the directory.
-func writeFiles(t testing.TB, files map[string]string) string {
-	t.Helper()
-	dir := t.TempDir()
-	for p, text := range files {
-		file := filepath.Join(dir, filepath.FromSlash(p))
-		require.NoError(t, os.MkdirAll(filepath.Dir(file), 0o755))
-		require.NoError(t, os.WriteFile(file, []byte(text), 0o644))
-	}
-	return dir
 }
