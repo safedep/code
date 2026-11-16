@@ -34,7 +34,7 @@ var graphHashes = map[string]string{
 	"15/17": "d823ce8ba221c534ab062f7e48abfe91d1c90d50b2a2fdb00d41183dc0e9da09",
 	"16/18": "bb92620bf9903e8d19b52b62198a0bfd69d67856f9db226112b2cedf537b312b",
 	"16/19": "51ba3e925c628602b3a53c1a6e68b379022a410bb5b749062b3045fef082ac8f",
-	"17/20": "aeef882849539833bea2e9c584d02e9e81389539a61cee4384e0046e7c126796",
+	"17/20": "0d7814e01ccbe1cf0bfa9c9e5d2eb2b4c4d11f0206c9ea64393a529b3e5ea953",
 }
 
 // resultHashes records the hash of the reach results of every case for
@@ -53,7 +53,7 @@ var resultHashes = map[string]string{
 	"15/17/4": "1b32d7c1dbb0a4637853eb7a00b0db91a0a4e1a31f221b37ed0d0654a66ed13e",
 	"16/18/5": "e0c6093df3a85353ee15c8a90ef7c2a441f23348ce80c9d49793c256bddeffc5",
 	"16/19/5": "a935650f8e4d01c0abdceeefb3332bf779927693a1c48b28263da5365db752cd",
-	"17/20/6": "a6d059a795ef42aa79d6f2a004d030330d8988e7384a0c28568ece8be2178294",
+	"17/20/6": "24b033c4d012537b2a21767163ca37d4bcaace31da92c68f6f517721a391a2ed",
 }
 
 // summaryHashes records the hash of the golden summaries of the cases for
