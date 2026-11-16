@@ -1002,7 +1002,14 @@ func (b *builder) rustExports(mod, name string, seen map[string]bool) bool {
 		return true
 	}
 	if _, pkg, ok := strings.Cut(mod, ":"); ok && b.namespaces[langcode.Rust].units[pkg+"::"+name] != nil {
-		return true
+		// A child module is a unit of its own file, and only a pub mod
+		// gives it to another crate. Without the check, dep::hidden of mod
+		// hidden; took the call hidden::run() of use dep::* from the crate
+		// that has pub mod hidden.
+		return !slices.ContainsFunc(u.files, func(p string) bool {
+			ix := b.byPath[p]
+			return ix != nil && slices.Contains(ix.PrivateModules, name)
+		})
 	}
 	for _, p := range u.files {
 		sc := b.scopes[p]

@@ -71,8 +71,12 @@ func rustTypes(p *projection) {
 		for _, item := range ts.NamedChildren(list) {
 			switch {
 			case item.Type() == "mod_item":
-				if body := item.ChildByFieldName("body"); body != nil {
+				body := item.ChildByFieldName("body")
+				switch {
+				case body != nil:
 					walk(fileindex.Join(scope, p.text(item.ChildByFieldName("name"))), body)
+				case scope == p.cg.FileName && !p.rustPub(item):
+					p.ix.PrivateModules = append(p.ix.PrivateModules, p.text(item.ChildByFieldName("name")))
 				}
 			case slices.Contains(rustTypeItems, item.Type()):
 				key := fileindex.Join(scope, p.text(item.ChildByFieldName("name")))

@@ -198,6 +198,10 @@ type Index struct {
 	// if __FILE__ == $0 of Ruby. A root rule reads it, so the link step
 	// reads no source file.
 	MainGuard bool `json:"main_guard,omitempty"`
+	// PrivateModules holds the child modules that a Rust file declares in
+	// a file of their own with no plain pub, as hidden of mod hidden;.
+	// Another crate sees no such module through a glob use.
+	PrivateModules []string `json:"private_modules,omitempty"`
 
 	Imports     []Import     `json:"imports,omitempty"`
 	Exports     []Export     `json:"exports,omitempty"`
@@ -682,6 +686,7 @@ func (ix *Index) EachString(fn func(string) string) {
 	kind(&ix.ContentHash)
 	kind(&ix.Package)
 	kind(&ix.Unit)
+	strs(ix.PrivateModules)
 	for i := range ix.Imports {
 		imp := &ix.Imports[i]
 		kind(&imp.Module)
