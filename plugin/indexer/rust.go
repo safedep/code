@@ -815,8 +815,12 @@ func rustBoundName(pattern *sitter.Node) *sitter.Node {
 func rustShadowed(ctx context.Context, p *projection, call *fileindex.Call, callee ast.NodePosition) bool {
 	node := p.descendant(callee)
 	if method := rustMethod(node); node != nil && method != nil {
-		if binders, ok := p.rustBinders(ctx, call.Caller); ok {
-			p.rustFromFile(call, node, p.rustReceiverPath(binders, method))
+		// Only a target from a self or super path can change, so the walk
+		// of the binders of the function runs only for such a target.
+		if slices.ContainsFunc(call.Targets, rustFromModule) {
+			if binders, ok := p.rustBinders(ctx, call.Caller); ok {
+				p.rustFromFile(call, node, p.rustReceiverPath(binders, method))
+			}
 		}
 		return p.rustShadowedMethod(call, node)
 	}
@@ -881,6 +885,11 @@ func (p *projection) rustFromFile(call *fileindex.Call, node *sitter.Node, writt
 			call.Targets[i] = to + rest
 		}
 	}
+}
+
+// rustFromModule reports whether a target starts with self or super.
+func rustFromModule(target string) bool {
+	return strings.HasPrefix(target, "self"+fileindex.Separator) || strings.HasPrefix(target, "super"+fileindex.Separator)
 }
 
 // rustReceiverPath returns the path of the type that the let of the
@@ -958,16 +967,12 @@ func (p *projection) rustRebinder(node, scope *sitter.Node, name string) (*sitte
 		switch n.Type() {
 		case "block", "declaration_list":
 			var globbed *sitter.Node
-			for _, item := range ts.NamedChildren(n) {
-				if item.Type() != "use_declaration" {
-					continue
+			for _, u := range p.rustUsesOf(n) {
+				if slices.Contains(u.names, name) {
+					return u.item, true
 				}
-				names, glob := p.rustUseNames(item.ChildByFieldName("argument"), nil)
-				if slices.Contains(names, name) {
-					return item, true
-				}
-				if glob && !p.rustOuterGlob(item) {
-					globbed = item
+				if u.glob {
+					globbed = u.item
 				}
 			}
 			if globbed != nil {
@@ -982,6 +987,39 @@ func (p *projection) rustRebinder(node, scope *sitter.Node, name string) (*sitte
 		}
 	}
 	return nil, false
+}
+
+// rustUse is a use of a block or a declaration list: the names that it
+// binds, and whether it is a glob use that can bring a name of an outer
+// scope, as rustOuterGlob says.
+type rustUse struct {
+	item  *sitter.Node
+	names []string
+	glob  bool
+}
+
+// rustUsesOf returns the uses of a block or a declaration list, read once
+// for the file. rustRebinder reads them for each call in the list, and a
+// list such as an impl body with many methods made that read grow with the
+// square of the list.
+func (p *projection) rustUsesOf(list *sitter.Node) []rustUse {
+	k := [2]uint32{list.StartByte(), list.EndByte()}
+	if uses, ok := p.rustUses[k]; ok {
+		return uses
+	}
+	var uses []rustUse
+	for _, item := range ts.NamedChildren(list) {
+		if item.Type() != "use_declaration" {
+			continue
+		}
+		names, glob := p.rustUseNames(item.ChildByFieldName("argument"), nil)
+		uses = append(uses, rustUse{item: item, names: names, glob: glob && !p.rustOuterGlob(item)})
+	}
+	if p.rustUses == nil {
+		p.rustUses = map[[2]uint32][]rustUse{}
+	}
+	p.rustUses[k] = uses
+	return uses
 }
 
 // rustOuterGlob reports whether a glob use brings no name that the call

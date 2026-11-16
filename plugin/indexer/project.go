@@ -79,6 +79,9 @@ type projection struct {
 	// rustMacros holds the names that a macro_rules! or a use of a Rust
 	// file binds, once a call of a macro reads them.
 	rustMacros map[string]bool
+	// rustUses holds the uses of each block and declaration list of a Rust
+	// file, by the start and the end of the list.
+	rustUses map[[2]uint32][]rustUse
 }
 
 // project builds the call graph of tree and projects it into an index. It
