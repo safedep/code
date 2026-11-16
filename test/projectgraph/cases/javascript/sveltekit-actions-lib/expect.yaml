@@ -5,7 +5,9 @@ description: >-
   of a route file, so a1 and a2 are found. The API route imports helper by the alias $lib, which SvelteKit
   maps to src/lib of the package that depends on @sveltejs/kit, so the call of helper reaches c1. The
   object actions of items/+page.server.ts has a satisfies type, and its functions keep their names under
-  actions, so a6 is found.
+  actions, so a6 is found. The function unused inside save is a helper of save, not a member of actions.
+  No code calls it, so a7 is not-found. Without the rule that skips such a helper, unused is a root and
+  a7 reads found.
 roots:
   - key: server.js
     kind: manifest
@@ -39,6 +41,11 @@ roots:
     rule: node.sveltekit.route
 exact_edges: true
 edges:
+  - from: src/routes/form/+page.server.ts//actions//save//unused
+    to: plug//a7
+    kind: direct
+    confidence: high
+    site: src/routes/form/+page.server.ts:9
   - from: server.js
     to: plug//listen
     kind: direct
@@ -68,7 +75,7 @@ edges:
     to: plug//a2
     kind: direct
     confidence: high
-    site: src/routes/form/+page.server.ts:8
+    site: src/routes/form/+page.server.ts:11
   - from: src/routes/items/+page.server.ts//actions//default
     to: plug//a6
     kind: direct
@@ -95,12 +102,12 @@ results:
       - key: src/routes/form/+page.server.ts//actions//save
         root: framework
       - key: plug//a2
-        site: src/routes/form/+page.server.ts:8
+        site: src/routes/form/+page.server.ts:11
         kind: direct
         confidence: high
     call_sites:
       - caller: src/routes/form/+page.server.ts//actions//save
-        site: src/routes/form/+page.server.ts:8
+        site: src/routes/form/+page.server.ts:11
         reached: true
   - target: plug//c1
     status: found
@@ -132,3 +139,9 @@ results:
       - caller: src/routes/items/+page.server.ts//actions//default
         site: src/routes/items/+page.server.ts:6
         reached: true
+  - target: plug//a7
+    status: not-found
+    call_sites:
+      - caller: src/routes/form/+page.server.ts//actions//save//unused
+        site: src/routes/form/+page.server.ts:9
+        reached: false

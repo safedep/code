@@ -61,13 +61,30 @@ func (f *finder) addOpaque(r rules.Rule, path string, ex fileindex.Export) {
 // addMembers marks each function under an exported object of the file. The
 // framework calls a function of the object by its name, as the actions of
 // a SvelteKit page, and no edge of the graph leads from the object to it.
+// A function that another function of the object holds is a helper of
+// that function, and it runs only when a call reaches it.
 func (f *finder) addMembers(r rules.Rule, ix *fileindex.Index, exports []string) {
 	objects := slices.DeleteFunc(slices.Clone(exports), func(key string) bool {
 		def, ok := f.defs[key]
 		return !ok || def.Kind != fileindex.DefVariable
 	})
+	code := map[string]bool{}
 	for def := range ix.CodeDefinitions() {
-		if slices.ContainsFunc(objects, func(key string) bool { return def.Key != key && fileindex.HasKeyPrefix(def.Key, key) }) {
+		code[def.Key] = true
+	}
+	member := func(key, object string) bool {
+		if key == object || !fileindex.HasKeyPrefix(key, object) {
+			return false
+		}
+		for p := fileindex.Parent(key); p != object; p = fileindex.Parent(p) {
+			if code[p] {
+				return false
+			}
+		}
+		return true
+	}
+	for def := range ix.CodeDefinitions() {
+		if slices.ContainsFunc(objects, func(object string) bool { return member(def.Key, object) }) {
 			f.add(r, def.Key)
 		}
 	}
