@@ -289,8 +289,9 @@ type Definition struct {
 	Returns    string   `json:"returns,omitempty"`
 	Results    []string `json:"results,omitempty"`
 	Wraps      string   `json:"wraps,omitempty"`
-	// ClassParam is the first parameter of a Python classmethod, which
-	// holds the class of the method or a subclass, as cls or klass.
+	// ClassParam is the name that holds the class of a Python classmethod,
+	// as cls or klass: its first parameter, also in a function that the
+	// classmethod defines and that does not bind the name again.
 	ClassParam string `json:"class_param,omitempty"`
 	Static     bool   `json:"static,omitempty"`
 	Data       bool   `json:"data,omitempty"`

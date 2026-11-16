@@ -262,15 +262,13 @@ func (b *builder) classCalls() []classCall {
 // method that holds the call.
 func (b *builder) callsClass(ix *fileindex.Index, call fileindex.Call) (string, bool) {
 	instance := slices.Contains(profileOf(ix.Language).instanceClass, call.Callee)
+	if caller := b.defs[call.Caller]; !instance && (caller == nil || caller.ClassParam == "" || call.Callee != caller.ClassParam) {
+		return "", false
+	}
 	for key := call.Caller; key != "" && key != ix.Path; key = fileindex.Parent(key) {
-		def := b.defs[key]
-		if def == nil || def.Parent == "" || b.kindOf(def.Parent) != NodeClass {
-			continue
-		}
-		if instance || def.ClassParam != "" && call.Callee == def.ClassParam {
+		if def := b.defs[key]; def != nil && def.Parent != "" && b.kindOf(def.Parent) == NodeClass {
 			return def.Parent, true
 		}
-		return "", false
 	}
 	return "", false
 }

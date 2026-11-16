@@ -236,31 +236,78 @@ func pythonSignature(p *projection, def *fileindex.Definition, node *sitter.Node
 	def.Locals = p.pythonLocals(node.ChildByFieldName("body"), "")
 }
 
-// pythonClassParam returns the name of the first parameter of a method
-// that the decorator @classmethod marks, or "".
+// pythonClassParam returns the name that holds the class of a classmethod
+// in a function: the first parameter of a method that the decorator
+// @classmethod marks, or the name of the classmethod that holds a nested
+// function, unless the nested function binds the name again, as a
+// parameter or by an assignment. Otherwise "".
 func (p *projection) pythonClassParam(node *sitter.Node) string {
 	decorated := node.Parent()
-	if decorated == nil || decorated.Type() != "decorated_definition" || !slices.ContainsFunc(ts.NamedChildren(decorated), func(d *sitter.Node) bool {
+	if decorated != nil && decorated.Type() == "decorated_definition" && slices.ContainsFunc(ts.NamedChildren(decorated), func(d *sitter.Node) bool {
 		return d.Type() == "decorator" && p.text(d) == "@classmethod"
 	}) {
-		return ""
-	}
-	params := node.ChildByFieldName("parameters")
-	if params == nil || params.NamedChildCount() == 0 {
-		return ""
-	}
-	first := params.NamedChild(0)
-	switch first.Type() {
-	case "identifier":
-		return p.text(first)
-	case "typed_parameter":
-		if first.NamedChildCount() > 0 && first.NamedChild(0).Type() == "identifier" {
-			return p.text(first.NamedChild(0))
+		params := p.pythonParamNames(node)
+		if len(params) == 0 {
+			return ""
 		}
-	case "default_parameter", "typed_default_parameter":
-		return p.text(first.ChildByFieldName("name"))
+		return params[0]
 	}
-	return ""
+	outer := node.Parent()
+	for outer != nil && outer.Type() != "function_definition" && outer.Type() != "class_definition" {
+		outer = outer.Parent()
+	}
+	if outer == nil || outer.Type() != "function_definition" {
+		return ""
+	}
+	name := p.pythonClassParam(outer)
+	if name == "" || slices.Contains(p.pythonParamNames(node), name) || p.pythonAssigns(node.ChildByFieldName("body"), name) {
+		return ""
+	}
+	return name
+}
+
+// pythonParamNames returns the names of the parameters of a function.
+func (p *projection) pythonParamNames(function *sitter.Node) []string {
+	params := function.ChildByFieldName("parameters")
+	if params == nil {
+		return nil
+	}
+	var names []string
+	for _, param := range ts.NamedChildren(params) {
+		switch param.Type() {
+		case "identifier":
+			names = append(names, p.text(param))
+		case "typed_parameter", "list_splat_pattern", "dictionary_splat_pattern":
+			if param.NamedChildCount() > 0 && param.NamedChild(0).Type() == "identifier" {
+				names = append(names, p.text(param.NamedChild(0)))
+			}
+		case "default_parameter", "typed_default_parameter":
+			names = append(names, p.text(param.ChildByFieldName("name")))
+		}
+	}
+	return names
+}
+
+// pythonAssigns reports whether the code of a body assigns the name, out
+// of the functions and the classes that it defines.
+func (p *projection) pythonAssigns(body *sitter.Node, name string) bool {
+	if body == nil {
+		return false
+	}
+	for _, child := range ts.NamedChildren(body) {
+		switch child.Type() {
+		case "function_definition", "class_definition", "lambda", "decorated_definition":
+			continue
+		case "assignment", "augmented_assignment":
+			if left := child.ChildByFieldName("left"); left != nil && left.Type() == "identifier" && p.text(left) == name {
+				return true
+			}
+		}
+		if p.pythonAssigns(child, name) {
+			return true
+		}
+	}
+	return false
 }
 
 // pythonParams returns the parameters of a function that declare a type

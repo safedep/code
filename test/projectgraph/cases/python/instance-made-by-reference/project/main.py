@@ -48,6 +48,22 @@ class ByKlass:
         return inner()
 
 
+class Shadowed:
+    def __call__(self):
+        os.kill(0, 0)
+
+    @classmethod
+    def build(klass):
+        def inner(klass):
+            return klass()
+
+        def local():
+            klass = int
+            return klass()
+
+        return inner(lambda: 1), local()
+
+
 class ByInstanceClass:
     def __getattr__(self, name):
         os.rename("f", "g")
@@ -103,6 +119,7 @@ if __name__ == "__main__":
     print(Holder().d.anything)
     check(1)
     run(ByKlass.build())
+    Shadowed.build()
     copies(None)
     fail()
     check_more(1, True)
