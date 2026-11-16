@@ -1,0 +1,343 @@
+source: safedep:hand
+description: >-
+  main passes remove to run, lookup to each in a slice, getwd to fire in the field fn of a hook, and
+  getenv to call, which stores it in the typed local g, and chdir to pick in a map. run calls its
+  parameter f, each its range variable g, fire the field fn of its range variable h, call its local g, and
+  pick the element of its parameter m at a variable key. A search from the roots reaches main, which holds
+  each function as a value, so os.Remove is found through the reference. A search from run, each, fire,
+  call or pick alone does not reach main. Each call there runs a function value that the search does not
+  reach, so the call is a function-value record, which concerns every target in a search with a source.
+  Each target is then uncertain. Without the rule, a record with the name alone, as f or fn, gives
+  not-found there. show calls Name on a range variable of an interface. The field Name of user holds a
+  string, so the call runs no function value, and os.Getwd is not found from show. closure calls its local
+  f, which holds a function literal and nothing else. The index gives the calls of the literal to closure,
+  so the call of f is no record, and os.Getwd is not found from closure. In other.go, serveLocal calls a
+  local of the type http.HandlerFunc, rangeAssign calls a local that a range assigns after the literal,
+  anonSteps calls the field act of an anonymous struct, and deref calls (*p). Each call runs a function
+  value, so each is a function-value record, and os.Getwd is uncertain from each. keepRead reads the field
+  fn of a hook and calls nothing. The read is a record with no receiver, so the link step does not take it
+  for a call of a field, and os.Getwd is not found from keepRead. conv.go converts pointers, as (*T)(p)
+  and *(*uintptr)(unsafe.Pointer(k)). The operand of each dereference is a type and no value, so no call
+  runs a function value, and os.Getwd is not found from convs. runTable calls the field exec of the
+  anonymous struct of table, which anon.go declares, and localJob calls the field trigger of a struct type
+  that the function declares. The index gives each such field a definition under the key struct of its
+  file, so the link step sees that the call can run a function value. os.Getwd is uncertain from each.
+roots:
+  - key: anon.go
+    kind: main
+    rule: go.main
+  - key: conv.go
+    kind: main
+    rule: go.main
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+  - key: other.go
+    kind: main
+    rule: go.main
+no_edges:
+  - from: main.go//run
+    to: main.go//remove
+  - from: main.go//run
+    to: os//Remove
+unresolved:
+  - caller: anon.go//localJob
+    reason: no-dependency-source
+    callback: true
+  - caller: conv.go//runTable
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//each
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//pick
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//run
+    reason: no-dependency-source
+    callback: true
+  - caller: main.go//show
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Args
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Chdir
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Getenv
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Getwd
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Hostname
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Remove
+    reason: no-dependency-source
+    callback: true
+  - caller: os//exec//LookPath
+    reason: no-dependency-source
+    callback: true
+  - caller: other.go//anonSteps
+    reason: no-dependency-source
+    callback: true
+  - caller: other.go//rangeAssign
+    reason: no-dependency-source
+    callback: true
+  - caller: unsafe//Pointer
+    reason: no-dependency-source
+    callback: true
+  - caller: anon.go//localJob
+    site: anon.go:8
+    reason: unknown-receiver
+    method: trigger
+  - caller: anon.go//localJob
+    site: anon.go:8
+    reason: function-value
+  - caller: conv.go//runTable
+    site: conv.go:15
+    reason: function-value
+  - caller: conv.go//runTable
+    site: conv.go:15
+    reason: unknown-receiver
+    method: exec
+  - caller: main.go//run
+    site: main.go:23
+    reason: function-value
+  - caller: main.go//run
+    site: main.go:23
+    reason: unknown-receiver
+    method: f
+  - caller: main.go//each
+    site: main.go:28
+    reason: function-value
+  - caller: main.go//each
+    site: main.go:28
+    reason: unknown-receiver
+    method: g
+  - caller: main.go//fire
+    site: main.go:34
+    reason: function-value
+  - caller: main.go//call
+    site: main.go:40
+    reason: function-value
+  - caller: main.go//pick
+    site: main.go:54
+    reason: function-value
+  - caller: main.go//pick
+    site: main.go:54
+    reason: unknown-receiver
+    method: m
+  - caller: main.go//show
+    site: main.go:65
+    reason: interface-receiver
+    method: Name
+  - caller: other.go//serveLocal
+    site: other.go:7
+    reason: function-value
+  - caller: other.go//rangeAssign
+    site: other.go:14
+    reason: function-value
+  - caller: other.go//rangeAssign
+    site: other.go:14
+    reason: unknown-receiver
+    method: f
+  - caller: other.go//anonSteps
+    site: other.go:19
+    reason: unknown-receiver
+    method: act
+  - caller: other.go//anonSteps
+    site: other.go:19
+    reason: function-value
+  - caller: other.go//deref
+    site: other.go:24
+    reason: function-value
+results:
+  - target: os//Remove
+    status: found
+    path:
+      - key: main.go//main
+      - key: main.go//remove
+        site: main.go:44
+        kind: reference
+        confidence: low
+      - key: os//Remove
+        site: main.go:14
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//remove
+        site: main.go:14
+        reached: true
+  - target: os//Remove
+    sources: [main.go//run]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//remove
+        site: main.go:14
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:23
+  - target: os//exec//LookPath
+    sources: [main.go//each]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//lookup
+        site: main.go:16
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:28
+  - target: os//Getwd
+    sources: [main.go//fire]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:34
+  - target: os//Getenv
+    sources: [main.go//call]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//getenv
+        site: main.go:20
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:40
+  - target: os//Chdir
+    sources: [main.go//pick]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//chdir
+        site: main.go:51
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: main.go:54
+  - target: os//Getwd
+    sources: [main.go//show]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+  - target: os//Hostname
+    sources: [main.go//closure]
+    sources_only: true
+    status: found
+    path:
+      - key: main.go//closure
+      - key: os//Hostname
+        site: main.go:70
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//closure
+        site: main.go:70
+        reached: true
+  - target: os//Getwd
+    sources: [main.go//closure]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+  - target: os//Getwd
+    sources: [other.go//serveLocal]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: other.go:7
+  - target: os//Getwd
+    sources: [other.go//rangeAssign]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: other.go:14
+  - target: os//Getwd
+    sources: [other.go//anonSteps]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: other.go:19
+  - target: os//Getwd
+    sources: [other.go//deref]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: other.go:24
+  - target: os//Getwd
+    sources: [other.go//keepRead]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+  - target: os//Getwd
+    sources: [conv.go//convs]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+  - target: os//Getwd
+    sources: [conv.go//runTable]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: conv.go:15
+  - target: os//Getwd
+    sources: [anon.go//localJob]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//getwd
+        site: main.go:18
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: anon.go:8

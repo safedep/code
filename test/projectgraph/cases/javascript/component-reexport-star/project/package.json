@@ -1,0 +1,1 @@
+{ "name": "component-reexport-star", "main": "src/main.js", "dependencies": { "vue": "^3.4.0" } }

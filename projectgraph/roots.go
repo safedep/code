@@ -16,8 +16,9 @@ import (
 // markRoots adds the roots that the rules mark. With no root of kind main,
 // manifest or framework, every exported definition and every module top
 // level of a file that is not a test becomes a root of kind
-// library-surface. Dependency code runs only when the project calls it, so
-// it holds no root.
+// library-surface. A root of a rule that keeps the fallback does not count
+// here. Dependency code runs only when the project calls it, so it holds no
+// root.
 func (b *builder) markRoots(ctx context.Context) error {
 	indexes := make([]*fileindex.Index, 0, len(b.byPath))
 	for _, p := range b.paths {
@@ -48,11 +49,30 @@ func (b *builder) markRoots(ctx context.Context) error {
 	}
 	b.problems = append(b.problems, problems...)
 
-	entry := false
+	keeps := map[string]bool{}
+	for _, r := range b.rules {
+		keeps[r.ID] = r.KeepsFallback
+	}
+	// A family of languages with no entry root of its own gets the
+	// library-surface roots, whatever another family has. A Lambda handler
+	// in Python has no root that a rule marks, and the main of a
+	// JavaScript package next to it says nothing of the Python code.
+	entries := map[langcode.Code]bool{}
 	for _, r := range found {
+		// The framework calls the functions of the value of an opaque
+		// export, and no edge names them. The record keeps a target that
+		// only they call uncertain and not not-found.
+		if r.Opaque != "" {
+			site := UnresolvedSite{Caller: r.Key, Site: Site(r.Site), Text: "export " + r.Opaque, Reason: fileindex.UnresolvedComputedName}
+			b.scopeToLanguage(b.byPath[r.Key], &site)
+			b.addUnresolved(site)
+			continue
+		}
 		b.addRootAt(r.Key, r.Kind, r.Rule, Site(r.Site))
 		helper := b.profileAt(r.Key).helperProgram
-		entry = entry || r.Kind != RootTest && (helper == nil || !helper(fileindex.Unit(r.Key)))
+		if r.Kind != RootTest && !keeps[r.Rule] && (helper == nil || !helper(fileindex.Unit(r.Key))) {
+			entries[b.familyOf(r.Key)] = true
+		}
 		// A Go program initializes its package before main runs, so the
 		// module top level of each file of the package is a root too.
 		if u := b.unitOf[fileindex.Unit(r.Key)]; r.Kind == RootMain && u != nil && b.profileAt(r.Key).loadsPackages {
@@ -61,15 +81,12 @@ func (b *builder) markRoots(ctx context.Context) error {
 			}
 		}
 	}
-	if entry {
-		return nil
-	}
-
-	b.g.Stats.RootFallback = true
+	b.g.Stats.RootFallback = len(entries) == 0
 	for _, ix := range indexes {
-		if b.test[ix.Path] || isDeclarationFile(ix.Path) {
+		if b.test[ix.Path] || isDeclarationFile(ix.Path) || entries[ix.Language.Family()] {
 			continue
 		}
+		b.g.Stats.RootFallback = true
 		b.addRoot(ix.Path, RootLibrarySurface, string(RootLibrarySurface))
 		for def := range ix.CodeDefinitions() {
 			if isSurfaceDefinition(def, ix.Path) {
@@ -157,9 +174,25 @@ func (b *builder) exportKeys(p string, seen map[string]bool) []string {
 			}
 		}
 	}
-	for name := range sc.exports {
-		if key, fail := b.resolveName(p, name, 0); fail == nil && b.kindOf(b.deref(key)) != NodeInterface {
-			keys = append(keys, key)
+	// A name can have more than one export record, as PUT in
+	// export const { PUT = fb } = h, which is h.PUT or fb. Each record that
+	// resolves gives a key.
+	add := func(key string) bool {
+		if b.kindOf(b.deref(key)) == NodeInterface {
+			return false
+		}
+		keys = append(keys, key)
+		return true
+	}
+	for name, exs := range sc.exports {
+		found := false
+		for _, ex := range exs {
+			if key, fail := b.followExport(sc, ex, 0); fail == nil {
+				found = add(key) || found
+			}
+		}
+		if key, fail := b.resolveName(p, name, 0); !found && fail == nil {
+			add(key)
 		}
 	}
 	for _, st := range sc.stars {
@@ -191,4 +224,12 @@ func (b *builder) rootLanguages() []langcode.Code {
 		}
 	}
 	return slices.Sorted(maps.Keys(set))
+}
+
+// familyOf returns the language family of the file of a key.
+func (b *builder) familyOf(key string) langcode.Code {
+	if ix := b.byPath[fileindex.Unit(key)]; ix != nil {
+		return ix.Language.Family()
+	}
+	return ""
 }

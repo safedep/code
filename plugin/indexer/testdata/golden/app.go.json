@@ -1,5 +1,5 @@
 {
-  "version": "16",
+  "version": "17",
   "path": "app.go",
   "language": "go",
   "content_hash": "3d65f36ed0edfd5e009c06d07d3d038337e9faebaca6c9762b5c473a14826166",
@@ -51,7 +51,8 @@
       "name": "Server",
       "start_line": 18,
       "end_line": 24,
-      "exported": true
+      "exported": true,
+      "value_data": true
     },
     {
       "key": "app.go//Server//addr",
@@ -60,7 +61,8 @@
       "start_line": 21,
       "end_line": 21,
       "exported": false,
-      "parent": "app.go//Server"
+      "parent": "app.go//Server",
+      "data": true
     },
     {
       "key": "app.go//Server//name",
@@ -69,7 +71,8 @@
       "start_line": 21,
       "end_line": 21,
       "exported": false,
-      "parent": "app.go//Server"
+      "parent": "app.go//Server",
+      "data": true
     },
     {
       "key": "app.go//Server//db",
@@ -78,7 +81,8 @@
       "start_line": 22,
       "end_line": 22,
       "exported": false,
-      "parent": "app.go//Server"
+      "parent": "app.go//Server",
+      "data": true
     },
     {
       "key": "app.go//Server//cache",
@@ -87,7 +91,8 @@
       "start_line": 23,
       "end_line": 23,
       "exported": false,
-      "parent": "app.go//Server"
+      "parent": "app.go//Server",
+      "data": true
     },
     {
       "key": "app.go//Box",
@@ -95,7 +100,8 @@
       "name": "Box",
       "start_line": 26,
       "end_line": 26,
-      "exported": true
+      "exported": true,
+      "value_data": true
     },
     {
       "key": "app.go//Box//v",
@@ -135,7 +141,8 @@
       "results": [
         "Server",
         ""
-      ]
+      ],
+      "value_data": true
     },
     {
       "key": "app.go//Server//Run",
@@ -224,7 +231,8 @@
           "name": "s",
           "type": "Server"
         }
-      ]
+      ],
+      "value_data": true
     }
   ],
   "classes": [

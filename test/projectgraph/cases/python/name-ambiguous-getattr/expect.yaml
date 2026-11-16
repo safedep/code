@@ -2,23 +2,44 @@ source: safedep:hand
 description: >-
   dispatch calls handle on the parameter handler. 24 classes define a method handle, so the site is over
   the cap of 20 and is ambiguous. main passes an H0, which defines no handle. Its __getattr__ gives cleanup,
-  which calls os.remove. That code is no definition of the name handle. So the site keeps no method name
-  and concerns every target, and os.remove is uncertain and not not-found.
+  which calls os.remove. That code is no definition of the name handle, so the site keeps no method name and
+  concerns every target. A read of an attribute of an H0 can run H0.__getattr__, so a reference edge joins the
+  call that makes the H0 to H0.__getattr__ and os.remove is found. No code calls shutil.rmtree, and the ambiguous site makes it
+  uncertain and not not-found.
 roots:
   - key: main.py
     kind: manifest
     rule: procfile
+no_edges:
+  - from: main.py//dispatch
+    to: handlers.py//H0//__getattr__
 unresolved:
   - caller: main.py//dispatch
     site: main.py:4
     reason: ambiguous
 results:
   - target: os//remove
-    status: uncertain
+    status: found
+    path:
+      - key: main.py
+      - key: handlers.py//H0//__getattr__
+        site: main.py:6
+        kind: reference
+        confidence: low
+      - key: handlers.py//cleanup
+        site: handlers.py:8
+        kind: reference
+        confidence: low
+      - key: os//remove
+        site: handlers.py:4
+        kind: direct
+        confidence: high
     call_sites:
       - caller: handlers.py//cleanup
         site: handlers.py:4
-        reached: false
+        reached: true
+  - target: shutil//rmtree
+    status: uncertain
     uncertainties:
       - kind: unresolved-call
         site: main.py:4

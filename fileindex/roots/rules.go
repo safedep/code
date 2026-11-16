@@ -57,13 +57,20 @@ var manifestFields = map[string][]string{
 // on one of them: a package.json, a pyproject.toml, a setup.py, a Pipfile,
 // a requirements file, a go.mod, a composer.json or a Cargo.toml. A project
 // whose manifests declare no dependency gives no evidence, so the rule
-// applies.
+// applies. KeepsFallback marks a rule whose roots do not turn off the
+// library-surface roots. Such a rule names files that a framework loads,
+// but not the entry that loads them, as the index.html of a Vite app.
+// SkipsTests marks a rule that does not mark a file of a test path, as a
+// component fixture of a test. A route rule names its files by their path
+// in the app, and a route can have a test path, as app/api/test/route.ts.
 type Rule struct {
-	ID       string   `yaml:"id"`
-	Language string   `yaml:"language"`
-	Kind     Kind     `yaml:"kind"`
-	Requires []string `yaml:"requires,omitempty"`
-	Match    Match    `yaml:"match"`
+	ID            string   `yaml:"id"`
+	Language      string   `yaml:"language"`
+	Kind          Kind     `yaml:"kind"`
+	Requires      []string `yaml:"requires,omitempty"`
+	KeepsFallback bool     `yaml:"keeps_fallback,omitempty"`
+	SkipsTests    bool     `yaml:"skips_tests,omitempty"`
+	Match         Match    `yaml:"match"`
 }
 
 // MatchKey names one key of a Match.

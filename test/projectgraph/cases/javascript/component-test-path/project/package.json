@@ -1,0 +1,5 @@
+{
+  "name": "component-test-path",
+  "main": "server.js",
+  "dependencies": { "vue": "^3.4.0" }
+}

@@ -94,6 +94,16 @@ func (t Target) hasMethod(method string) bool {
 	return ok || fileindex.Last(t.key) == method
 }
 
+// under reports whether the target is a key under a module, or a
+// wildcard of a module that holds the module or that the module holds.
+func (t Target) under(module string) bool {
+	if fileindex.HasKeyPrefix(t.key, module) {
+		return true
+	}
+	prefix, ok := t.wildcard()
+	return ok && (fileindex.HasKeyPrefix(prefix, module) || fileindex.HasKeyPrefix(module, prefix))
+}
+
 // mayImport reports whether a computed import with a static prefix can load
 // the module of the target. A prefix longer than the module of a wildcard
 // must continue at a separator, so yamlx// does not load yaml//*.

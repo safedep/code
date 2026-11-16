@@ -1,0 +1,16 @@
+{
+  "version": "3",
+  "index_version": "17",
+  "link_version": "20",
+  "unit": "cargo:other@1.0.0",
+  "symbols": [
+    {
+      "key": "other//hidden//run",
+      "definitions": [
+        "cargo:other@1.0.0//src/hidden.rs//run"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": []
+}

@@ -15,15 +15,77 @@ import (
 // script, and only its top level runs.
 func (f *finder) matchPath(r rules.Rule) {
 	for _, ix := range f.applying(r) {
-		if !pathglob.MatchAny(r.Match.Path, ix.Path) {
+		if !pathglob.MatchAny(r.Match.Path, ix.Path) || r.SkipsTests && f.IsTest(ix.Path) {
 			continue
 		}
 		f.add(r, ix.Path)
 		if r.Kind == rules.Main {
 			continue
 		}
-		for _, key := range f.Exports(ix.Path) {
-			f.add(r, key)
+		f.addExports(r, ix)
+	}
+}
+
+// addExports marks the exports of a file that a framework or a user of a
+// library loads, the functions under an exported object, and each export
+// whose value the index does not follow: an opaque value, as the result of
+// a call, or a name that no record resolves, as GET of
+// export const { GET } = handlers for an imported handlers.
+func (f *finder) addExports(r rules.Rule, ix *fileindex.Index) {
+	exports := f.Exports(ix.Path)
+	for _, key := range exports {
+		f.add(r, key)
+	}
+	f.addMembers(r, ix, exports)
+	for _, ex := range ix.Exports {
+		if ex.From != "" {
+			continue
+		}
+		if _, ok := f.Export(ix.Path, ex.Name); ex.Opaque || !ok {
+			f.addOpaque(r, ix.Path, ex)
+		}
+	}
+}
+
+// addOpaque marks an export whose value the index does not follow.
+func (f *finder) addOpaque(r rules.Rule, path string, ex fileindex.Export) {
+	root := Root{Key: path, Kind: r.Kind, Rule: r.ID, Opaque: ex.Name}
+	if f.seen[root] {
+		return
+	}
+	f.seen[root] = true
+	root.Site = Site{Path: path, Line: ex.Line}
+	f.roots = append(f.roots, root)
+}
+
+// addMembers marks each function under an exported object of the file. The
+// framework calls a function of the object by its name, as the actions of
+// a SvelteKit page, and no edge of the graph leads from the object to it.
+// A function that another function of the object holds is a helper of
+// that function, and it runs only when a call reaches it.
+func (f *finder) addMembers(r rules.Rule, ix *fileindex.Index, exports []string) {
+	objects := slices.DeleteFunc(slices.Clone(exports), func(key string) bool {
+		def, ok := f.defs[key]
+		return !ok || def.Kind != fileindex.DefVariable
+	})
+	code := map[string]bool{}
+	for def := range ix.CodeDefinitions() {
+		code[def.Key] = true
+	}
+	member := func(key, object string) bool {
+		if key == object || !fileindex.HasKeyPrefix(key, object) {
+			return false
+		}
+		for p := fileindex.Parent(key); p != object; p = fileindex.Parent(p) {
+			if code[p] {
+				return false
+			}
+		}
+		return true
+	}
+	for def := range ix.CodeDefinitions() {
+		if slices.ContainsFunc(objects, func(object string) bool { return member(def.Key, object) }) {
+			f.add(r, def.Key)
 		}
 	}
 }

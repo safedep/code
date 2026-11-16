@@ -43,6 +43,19 @@ type referenceSyntax struct {
 	// files of a unit with no import, as C#. A name that the file does not
 	// bind keeps its text, and the link step resolves it or drops it.
 	rawNames bool
+	// namedOnly holds the holders whose value counts only when the index
+	// names its function, as the expression of a Go range. A range over a
+	// member that the index cannot name, as n.Attr, mostly reads a slice or
+	// a map, and a record with the method name would give it a name edge
+	// to each method of the name.
+	namedOnly map[string]bool
+	// bareValues marks a language whose record of a method value keeps no
+	// receiver, as Go. The link step then tells it from a call, which can
+	// run a function value of a field.
+	bareValues bool
+	// check reports whether the values of a holder are classes that the
+	// code only tests a value against, as the arguments of isinstance.
+	check func(p *projection, holder *sitter.Node) bool
 	// value replaces reference for a language whose function values take
 	// more forms than a name or a member chain, as Go. It gives the member
 	// node of a method value whose receiver the index cannot name, and the
@@ -100,6 +113,7 @@ func referenceVisitor(p *projection) visitor {
 			values = []*sitter.Node{node.ChildByFieldName(field)}
 		}
 		caller := stack[len(stack)-1].key
+		check := syntax.check != nil && syntax.check(p, node)
 		for _, value := range syntax.unlist(values) {
 			if spread, ok := syntax.spreads[kind]; ok && value.Type() == spread {
 				p.addSpread(*syntax, caller, value)
@@ -119,8 +133,8 @@ func referenceVisitor(p *projection) visitor {
 			switch {
 			case seen[k]:
 			case target != "":
-				p.addReference(value, caller, p.targets([]string{target}))
-			default:
+				p.addReference(value, caller, p.targets([]string{target})).Check = check
+			case !syntax.namedOnly[kind]:
 				p.addValueRecord(member, caller)
 			}
 			seen[k] = true
@@ -133,7 +147,7 @@ func referenceVisitor(p *projection) visitor {
 // node, and a static initializer or a property function that the call
 // graph does not know takes it from there, as a call does. The text is
 // bounded as the text of a record is.
-func (p *projection) addReference(node *sitter.Node, caller string, targets []string) {
+func (p *projection) addReference(node *sitter.Node, caller string, targets []string) *fileindex.Reference {
 	site := ast.GetNodePosition(node)
 	p.ix.References = append(p.ix.References, fileindex.Reference{
 		Caller:  p.caller(caller, site),
@@ -142,6 +156,7 @@ func (p *projection) addReference(node *sitter.Node, caller string, targets []st
 		Text:    callgraph.ClipText(p.text(node)),
 		Targets: targets,
 	})
+	return &p.ix.References[len(p.ix.References)-1]
 }
 
 // addSpread adds the functions of the object that a spread passes, as
@@ -202,12 +217,16 @@ func (p *projection) addValueRecord(member *sitter.Node, caller string) {
 	syntax := p.rules().references
 	name := member.ChildByFieldName(syntax.property)
 	site := ast.GetNodePosition(name)
+	receiver := callgraph.ClipText(p.text(member.ChildByFieldName(syntax.object)))
+	if syntax.bareValues {
+		receiver = ""
+	}
 	p.ix.Unresolved = append(p.ix.Unresolved, fileindex.Unresolved{
 		Caller:   p.caller(caller, site),
 		Line:     int(site.StartLine),
 		Column:   int(site.StartColumn),
 		Text:     callgraph.ClipText(p.text(member)),
-		Receiver: callgraph.ClipText(p.text(member.ChildByFieldName(syntax.object))),
+		Receiver: receiver,
 		Method:   p.text(name),
 		Reason:   fileindex.UnresolvedUnknownReceiver,
 	})
@@ -242,7 +261,7 @@ func (syntax referenceSyntax) unlist(values []*sitter.Node) []*sitter.Node {
 func (p *projection) reference(syntax referenceSyntax, caller string, value *sitter.Node) (string, bool) {
 	// A name in the body of a function that an export statement declares
 	// is a value of that function, not the export.
-	if value == nil || caller == p.cg.FileName && p.inExport(value) && syntax.identifiers[value.Type()] {
+	if value == nil || caller == p.cg.FileName && p.exportsName(value) && syntax.identifiers[value.Type()] {
 		return "", false
 	}
 	var names []string
@@ -301,6 +320,22 @@ func (p *projection) valueOf(syntax referenceSyntax, caller, name string) (strin
 		}
 	}
 	return "", false
+}
+
+// exportsName reports whether a name in an export statement or a CommonJS
+// export assignment is a name that the export gives, as a in export { a }.
+// An argument of a call in the statement is a value that the callee gets,
+// as g in export const handle = sequence(g), so it is no export name.
+func (p *projection) exportsName(node *sitter.Node) bool {
+	if !p.inExport(node) {
+		return false
+	}
+	for n := node.Parent(); n != nil; n = n.Parent() {
+		if n.Type() == "arguments" {
+			return false
+		}
+	}
+	return true
 }
 
 // inExport reports whether the node is part of an export statement or a

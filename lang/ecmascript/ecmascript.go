@@ -873,10 +873,18 @@ func (a *Analysis) Name(n *sitter.Node) string {
 }
 
 // Unparen returns the expression inside parentheses, comma expressions,
-// assignments and TypeScript assertions, as eval in (0, eval), in
-// (e = eval) and in (require as any). Each step goes to a child, so the
-// loop ends.
+// assignments and TypeScript assertions, as Unparen of the package does
+// for the dialect of the analysis.
 func (a *Analysis) Unparen(n *sitter.Node) *sitter.Node {
+	return Unparen(n, a.typescript)
+}
+
+// Unparen returns the expression inside parentheses, comma expressions,
+// assignments and, for TypeScript, assertions, as eval in (0, eval), in
+// (e = eval), in (require as any) and in <Handler>make(). An angle-bracket
+// assertion holds its type first, so its value is its last expression.
+// Each step goes to a child, so the loop ends.
+func Unparen(n *sitter.Node, typescript bool) *sitter.Node {
 	for n != nil {
 		switch n.Type() {
 		case "parenthesized_expression", "sequence_expression":
@@ -884,12 +892,12 @@ func (a *Analysis) Unparen(n *sitter.Node) *sitter.Node {
 		case "assignment_expression":
 			n = n.ChildByFieldName("right")
 		case "as_expression", "satisfies_expression", "non_null_expression":
-			if !a.typescript {
+			if !typescript {
 				return n
 			}
 			n = n.NamedChild(0)
 		case "type_assertion":
-			if !a.typescript {
+			if !typescript {
 				return n
 			}
 			n = lastExpression(n)

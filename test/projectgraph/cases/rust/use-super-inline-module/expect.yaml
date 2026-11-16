@@ -1,0 +1,51 @@
+source: safedep:hand
+description: >-
+  src/net.rs declares the module tls in the file src/net/tls.rs and the inline module client. client has
+  use super::tls, and super of client is the module net, so tls names net::tls, and go calls tls::open, which
+  calls std::fs::create_dir. The root declares a module tls of its own in src/tls.rs, whose open calls
+  std::fs::read and which nothing calls. A link step that reads super of the inline module from the module of
+  the file names the tls of the root, so std::fs::create_dir reads not-found and std::fs::read reads found.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/net.rs//client//go
+    to: src/net/tls.rs//open
+    kind: direct
+    confidence: high
+    site: src/net.rs:7
+no_edges:
+  - from: src/net.rs//client//go
+    to: src/tls.rs//open
+unresolved: []
+results:
+  - target: std//fs//create_dir
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/net.rs//client//go
+        site: src/main.rs:5
+        kind: direct
+        confidence: high
+      - key: src/net/tls.rs//open
+        site: src/net.rs:7
+        kind: direct
+        confidence: high
+      - key: std//fs//create_dir
+        site: src/net/tls.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/net/tls.rs//open
+        site: src/net/tls.rs:2
+        reached: true
+  - target: std//fs//read
+    status: not-found
+    call_sites:
+      - caller: src/tls.rs//open
+        site: src/tls.rs:2
+        reached: false

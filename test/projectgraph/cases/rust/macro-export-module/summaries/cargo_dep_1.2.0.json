@@ -1,0 +1,23 @@
+{
+  "version": "3",
+  "index_version": "17",
+  "link_version": "20",
+  "unit": "cargo:dep@1.2.0",
+  "symbols": [
+    {
+      "key": "dep//sink",
+      "definitions": [
+        "cargo:dep@1.2.0//src/lib.rs//sink"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "dep//unused",
+      "definitions": [
+        "cargo:dep@1.2.0//src/lib.rs//unused"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": []
+}

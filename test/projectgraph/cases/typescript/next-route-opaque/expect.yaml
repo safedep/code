@@ -1,0 +1,77 @@
+source: safedep:hand
+description: >-
+  app/api/auth/route.ts exports the result of the call NextAuth as its default, and app/api/x/route.ts
+  exports GET and POST from handlers, which lib/auth.ts makes by a call. Next.js calls the functions of
+  these values, and no edge names them. So each export gets a computed-name record of the JavaScript
+  family in place of a root, and a1 and a2 read uncertain and not not-found.
+roots:
+  - key: app/api/auth/route.ts
+    kind: framework
+    rule: node.next.route
+  - key: app/api/x/route.ts
+    kind: framework
+    rule: node.next.route
+exact_edges: true
+edges:
+  - from: app/api/auth/route.ts
+    to: next-auth
+    kind: direct
+    confidence: high
+    site: app/api/auth/route.ts:4
+  - from: app/api/auth/route.ts//callbacks//signIn
+    to: plug//a1
+    kind: direct
+    confidence: high
+    site: app/api/auth/route.ts:4
+  - from: app/api/x/route.ts
+    to: lib/auth.ts
+    kind: import
+    confidence: high
+    site: app/api/x/route.ts:1
+  - from: lib/auth.ts
+    to: lib/auth.ts//makeAll
+    kind: direct
+    confidence: high
+    site: lib/auth.ts:7
+  - from: lib/auth.ts//makeAll//GET
+    to: plug//a2
+    kind: direct
+    confidence: high
+    site: lib/auth.ts:4
+unresolved:
+  - caller: app/api/auth/route.ts
+    site: app/api/auth/route.ts:4
+    reason: computed-name
+  - caller: app/api/x/route.ts
+    site: app/api/x/route.ts:3
+    reason: computed-name
+  - caller: app/api/x/route.ts
+    site: app/api/x/route.ts:3
+    reason: computed-name
+results:
+  - target: plug//a1
+    status: uncertain
+    call_sites:
+      - caller: app/api/auth/route.ts//callbacks//signIn
+        site: app/api/auth/route.ts:4
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: app/api/auth/route.ts:4
+      - kind: unresolved-call
+        site: app/api/x/route.ts:3
+      - kind: unresolved-call
+        site: app/api/x/route.ts:3
+  - target: plug//a2
+    status: uncertain
+    call_sites:
+      - caller: lib/auth.ts//makeAll//GET
+        site: lib/auth.ts:4
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: app/api/auth/route.ts:4
+      - kind: unresolved-call
+        site: app/api/x/route.ts:3
+      - kind: unresolved-call
+        site: app/api/x/route.ts:3

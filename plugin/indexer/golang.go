@@ -1,10 +1,13 @@
 package indexer
 
 import (
+	"iter"
 	"slices"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/safedep/code/core/ast"
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/pkg/ts"
@@ -23,7 +26,9 @@ var goRules = languageRules{
 	signature:   goSignature,
 	exported:    goExported,
 	definitions: goDefinitions,
-	visitors:    []func(p *projection) visitor{referenceVisitor},
+	typedCall:   goTypedCall,
+	literalCall: goLiteralCall,
+	visitors:    []func(p *projection) visitor{referenceVisitor, goValueVisitor},
 	references: &referenceSyntax{
 		holders: map[string]string{
 			"argument_list":         "",
@@ -33,11 +38,16 @@ var goRules = languageRules{
 			"return_statement":      "",
 			"literal_value":         "",
 			"send_statement":        "value",
+			// A range over a function calls it, as walk in
+			// for x := range walk.
+			"range_clause": "right",
 			// A conversion, as (func())(f), or a call of a generic
 			// function with type arguments, as id[func()](f), which the
 			// grammar parses as a conversion.
 			"type_conversion_expression": "operand",
 		},
+		namedOnly:   map[string]bool{"range_clause": true},
+		bareValues:  true,
 		member:      "selector_expression",
 		object:      "operand",
 		property:    "field",
@@ -99,6 +109,7 @@ func goDefinitions(p *projection) {
 	for i, spec := range specs {
 		p.goVariableValues(spec, vars[i])
 	}
+	p.goAnonFieldDefinitions()
 }
 
 // goTypes adds each named type of a type declaration. An interface is an
@@ -118,14 +129,73 @@ func (p *projection) goTypes(statement *sitter.Node) {
 		if t != nil && t.Type() == "interface_type" {
 			kind = fileindex.DefInterface
 		}
-		p.addDefinition(key, kind, spec)
+		p.addDefinition(key, kind, spec).ValueData = t != nil && kind == fileindex.DefClass && p.goDataField(t)
 		p.addSyntax(key, spec)
 		if t == nil || t.Type() != "struct_type" || spec.Type() != "type_spec" {
 			continue
 		}
 		for _, field := range p.goStructFields(t) {
+			data := p.goDataField(field.ChildByFieldName("type"))
 			for _, name := range childrenByField(field, "name") {
-				p.addDefinition(fileindex.Join(key, p.text(name)), fileindex.DefField, field)
+				p.addDefinition(fileindex.Join(key, p.text(name)), fileindex.DefField, field).Data = data
+			}
+		}
+	}
+}
+
+// goDataField reports whether a field of the type holds no function: a
+// type that goDataType reads as data, or a type of the file whose
+// declaration is such a type. A call x.f() can run the function value of a
+// field f, so the link step reads the fields that can hold one.
+func (p *projection) goDataField(t *sitter.Node) bool {
+	if t == nil {
+		return false
+	}
+	if p.goDataType(t) {
+		return true
+	}
+	declared := p.goFileType(t)
+	return declared != nil && p.goDataType(declared)
+}
+
+// goFileType returns the type that a type declaration of the file gives a
+// type name, as struct{...} for Config in type Config struct{...}.
+func (p *projection) goFileType(t *sitter.Node) *sitter.Node {
+	if t.Type() != "type_identifier" {
+		return nil
+	}
+	return p.goFileTypes()[p.text(t)]
+}
+
+// goFileTypes returns the type that the first type spec of each name at
+// the top level of the file gives the name, read once per file. A type
+// check of a value asks for it often, and each walk of the top level
+// costs a call of the tree per statement.
+func (p *projection) goFileTypes() map[string]*sitter.Node {
+	if p.fileTypes == nil {
+		p.fileTypes = map[string]*sitter.Node{}
+		for spec := range p.goTypeSpecs() {
+			name := p.text(spec.ChildByFieldName("name"))
+			if _, ok := p.fileTypes[name]; !ok {
+				p.fileTypes[name] = spec.ChildByFieldName("type")
+			}
+		}
+	}
+	return p.fileTypes
+}
+
+// goTypeSpecs returns the type specs of the type declarations at the top
+// level of the file.
+func (p *projection) goTypeSpecs() iter.Seq[*sitter.Node] {
+	return func(yield func(*sitter.Node) bool) {
+		for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
+			if statement.Type() != "type_declaration" {
+				continue
+			}
+			for _, spec := range ts.NamedChildren(statement) {
+				if spec.Type() == "type_spec" && !yield(spec) {
+					return
+				}
 			}
 		}
 	}
@@ -359,6 +429,7 @@ func goSignature(p *projection, def *fileindex.Definition, node *sitter.Node) {
 	var params []fileindex.Typed
 	params, def.Arity, def.Variadic = p.goParams(node.ChildByFieldName("parameters"), p.goConstraints(node))
 	def.Params = append(def.Params, params...)
+	def.ValueData = p.goResultData(node.ChildByFieldName("result"))
 	results := p.goResults(node.ChildByFieldName("result"))
 	if len(results) > 0 {
 		def.Returns = results[0]
@@ -366,7 +437,64 @@ func goSignature(p *projection, def *fileindex.Definition, node *sitter.Node) {
 	if len(results) > 1 {
 		def.Results = results
 	}
-	def.Locals = p.goLocals(node.ChildByFieldName("body"))
+	def.Locals, p.goOrigins[def.Key] = p.goLocals(def.Key, node.ChildByFieldName("body"))
+	if node.ChildByFieldName("body") == nil {
+		p.goStub(def, node)
+	}
+}
+
+// goStub records a function with no body, as a stub of assembly or a
+// function that //go:linkname binds to a function of another package. Its
+// code is not Go source of the file, and that code can call code of the
+// graph. With no record, a path ends at the stub, and what the code calls
+// reads not-found. The receiver of the record is the import path of a
+// linkname, so the link step can give the record the scope of that
+// package.
+func (p *projection) goStub(def *fileindex.Definition, node *sitter.Node) {
+	site := ast.GetNodePosition(node)
+	text, pkg := def.Name, ""
+	if remote, ok := p.goLinknames()[def.Name]; ok && def.Kind == fileindex.DefFunction {
+		text, pkg = remote, goLinknamePackage(remote)
+	}
+	p.ix.Unresolved = append(p.ix.Unresolved, fileindex.Unresolved{
+		Caller:   def.Key,
+		Line:     int(site.StartLine),
+		Column:   int(site.StartColumn),
+		Text:     text,
+		Receiver: pkg,
+		Reason:   fileindex.UnresolvedNoDependencySource,
+	})
+}
+
+// goLinknames returns the remote name of each local name that a
+// //go:linkname directive of the file binds, as runtime.nanotime for
+// nanotime.
+func (p *projection) goLinknames() map[string]string {
+	if p.linknames != nil {
+		return p.linknames
+	}
+	p.linknames = map[string]string{}
+	for _, node := range ts.NamedChildren(p.tree.Tree().RootNode()) {
+		if node.Type() != "comment" {
+			continue
+		}
+		fields := strings.Fields(p.text(node))
+		if len(fields) == 3 && fields[0] == "//go:linkname" {
+			p.linknames[fields[1]] = fields[2]
+		}
+	}
+	return p.linknames
+}
+
+// goLinknamePackage returns the import path of a linkname target, as
+// crypto/internal/boring for crypto/internal/boring.Encrypt or
+// example.com/x for example.com/x.(*T).m.
+func goLinknamePackage(remote string) string {
+	slash := strings.LastIndex(remote, "/") + 1
+	if dot := strings.Index(remote[slash:], "."); dot >= 0 {
+		return remote[:slash+dot]
+	}
+	return remote
 }
 
 // goExported reports that a name starts with an upper case letter, a
@@ -434,6 +562,18 @@ func (p *projection) goParams(list *sitter.Node, constraints map[string]string) 
 	return typed, arity, variadic
 }
 
+// goResultData reports whether the first result of a function holds no
+// function, as []string.
+func (p *projection) goResultData(result *sitter.Node) bool {
+	if result != nil && result.Type() == "parameter_list" {
+		result = ts.ChildOfType(result, "parameter_declaration")
+		if result != nil {
+			result = result.ChildByFieldName("type")
+		}
+	}
+	return p.goDataField(result)
+}
+
 // goResults returns the type name of each result of a function, by
 // position. A result with no named type, as int or func(), gives "".
 func (p *projection) goResults(result *sitter.Node) []string {
@@ -460,27 +600,73 @@ func (p *projection) goResults(result *sitter.Node) []string {
 // source declares, as var p Parser, or constructs, as p := &Parser{},
 // p := new(Parser) or p := v.(*Parser). A name that holds the first result
 // of a call, as p := NewParser(), names the function. A function literal in
-// the body shares the scope of the body, so its names count too.
-func (p *projection) goLocals(body *sitter.Node) []fileindex.Typed {
+// the body shares the scope of the body, so its names count too. It also
+// returns the origin of each local: the start of its scope as goScopes
+// records it, or goAssignedOrigin for an assignment.
+func (p *projection) goLocals(key string, body *sitter.Node) ([]fileindex.Typed, []uint32) {
 	var locals []fileindex.Typed
+	var origins []uint32
+	add := func(typed []fileindex.Typed, origin uint32) {
+		locals = append(locals, typed...)
+		for range typed {
+			origins = append(origins, origin)
+		}
+	}
 	walkBody(body, nil, func(node *sitter.Node) {
 		switch node.Type() {
 		case "var_spec":
 			names := childrenByField(node, "name")
 			if typ := p.goTypeName(node.ChildByFieldName("type")); typ != "" {
 				for _, name := range names {
-					locals = append(locals, fileindex.Typed{Name: p.text(name), Type: typ})
+					add([]fileindex.Typed{{Name: p.text(name), Type: typ}}, node.EndByte())
 				}
 			} else {
-				locals = append(locals, p.goAssigned(names, node.ChildByFieldName("value"))...)
+				add(p.goAssigned(names, node.ChildByFieldName("value")), node.EndByte())
 			}
 		case "short_var_declaration", "assignment_statement":
+			origin := node.EndByte()
+			if node.Type() == "assignment_statement" {
+				origin = goAssignedOrigin
+			}
 			if left := node.ChildByFieldName("left"); left != nil {
-				locals = append(locals, p.goAssigned(ts.NamedChildren(left), node.ChildByFieldName("right"))...)
+				add(p.goAssigned(ts.NamedChildren(left), node.ChildByFieldName("right")), origin)
+			}
+		case "range_clause":
+			if goDeclares(node) {
+				add(p.goRangeTyped(key, node), node.EndByte())
 			}
 		}
 	})
-	return locals
+	return locals, origins
+}
+
+// goRangeTyped returns the typed names that a range clause declares over a
+// map, a slice or an array whose element type the source declares, as c
+// in for _, c := range cs with cs []*Client. The key of a map takes the key
+// type, and the value of a map or a slice the element type.
+func (p *projection) goRangeTyped(key string, clause *sitter.Node) []fileindex.Typed {
+	left := clause.ChildByFieldName("left")
+	container := p.goDeclaredType(key, clause.ChildByFieldName("right"))
+	if left == nil || container == nil {
+		return nil
+	}
+	var types []*sitter.Node
+	switch container.Type() {
+	case "map_type":
+		types = []*sitter.Node{container.ChildByFieldName("key"), container.ChildByFieldName("value")}
+	case "slice_type", "array_type":
+		types = []*sitter.Node{nil, container.ChildByFieldName("element")}
+	}
+	var typed []fileindex.Typed
+	for i, name := range ts.NamedChildren(left) {
+		if i >= len(types) || name.Type() != "identifier" || p.text(name) == "_" {
+			continue
+		}
+		if typ := p.goTypeName(types[i]); typ != "" {
+			typed = append(typed, fileindex.Typed{Name: p.text(name), Type: typ})
+		}
+	}
+	return typed
 }
 
 // goAssigned returns the typed names of an assignment. One call on the

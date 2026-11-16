@@ -144,7 +144,9 @@ type profile struct {
 	// class with no instance keyword, as Java.
 	implicitFields bool
 	// nestedTypes marks a language where a class names the classes nested
-	// in the classes that hold it with no qualifier, as Java.
+	// in the classes that hold it with no qualifier, as Java. The index of
+	// Rust gives an inline module the kind class, and a name in the module
+	// names a type of the module before a type of the file.
 	nestedTypes bool
 	// implicitInterfaces marks a language where a type implements an
 	// interface with no declaration, as Go. Only an interface type can
@@ -177,6 +179,21 @@ type profile struct {
 	// implicitMethods name the methods that the language calls with no
 	// call of the name, as an operator of Kotlin.
 	implicitMethods map[string]bool
+	// builtinModules name the modules that the runtime of the language
+	// gives, as fs of Node.js, by their first segment.
+	builtinModules map[string]bool
+	// instanceMethods name the methods that an instance runs with no call
+	// of the name, as __call__ of Python. A call that makes an instance
+	// links them, and a reference to the class alone does not.
+	instanceMethods map[string]bool
+	// metaclassCall names the method of a metaclass that a call of a class
+	// runs, as __call__ of Python.
+	metaclassCall string
+	// instanceClass names the callees that give the class of the instance
+	// of a method, as self.__class__ of Python. A call of one makes an
+	// instance, and so does a call of the class parameter of a class
+	// method, which the index records.
+	instanceClass []string
 	// forwardMethod names the method of a class that forwards a call that
 	// the class has no method for to another type, as deref of Rust. A
 	// declared type with it does not narrow the receiver.

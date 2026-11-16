@@ -1,0 +1,54 @@
+source: safedep:hand
+description: >-
+  tests/fixtures/T.vue is a component under a test path, so it runs only under a test. The rule
+  node.component skips a test file, so fixture is not-found in the program and found only on a test path.
+  The directory weird.vue holds a plain module that no file imports. The rule matches the name of a file
+  and not of a directory, so helper is not-found.
+test_paths: [tests]
+roots:
+  - key: server.js
+    kind: manifest
+    rule: node.package-json
+  - key: tests/fixtures/T.vue
+    kind: test
+    rule: test.files
+exact_edges: true
+edges:
+  - from: server.js
+    to: plug//listen
+    kind: direct
+    confidence: high
+    site: server.js:3
+  - from: tests/fixtures/T.vue
+    to: plug//fixture
+    kind: direct
+    confidence: high
+    site: tests/fixtures/T.vue:4
+  - from: weird.vue/helper.js
+    to: plug//helper
+    kind: direct
+    confidence: high
+    site: weird.vue/helper.js:3
+unresolved:
+  - caller: tests/fixtures/T.vue
+    site: tests/fixtures/T.vue:1
+    reason: markup
+results:
+  - target: plug//fixture
+    status: not-found
+    test_path:
+      - key: tests/fixtures/T.vue
+      - key: plug//fixture
+        site: tests/fixtures/T.vue:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: tests/fixtures/T.vue
+        site: tests/fixtures/T.vue:4
+        reached: false
+  - target: plug//helper
+    status: not-found
+    call_sites:
+      - caller: weird.vue/helper.js
+        site: weird.vue/helper.js:3
+        reached: false

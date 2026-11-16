@@ -298,10 +298,17 @@ func (b *builder) recordOrigin(ix *fileindex.Index, key, module string, form mod
 	if !b.hasUnits() {
 		return
 	}
-	o := origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, module), form: form, names: slices.Clone(names)}
+	o := b.importOrigin(ix, module, form)
+	o.names = slices.Clone(names)
 	if !slices.ContainsFunc(b.origins[key], o.equal) {
 		b.origins[key] = append(b.origins[key], o)
 	}
+}
+
+// importOrigin returns the origin of an import of the file that names the
+// module in the form.
+func (b *builder) importOrigin(ix *fileindex.Index, module string, form modules.Form) origin {
+	return origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, module), form: form}
 }
 
 // packageModule returns the module of the package that an import of the
@@ -356,13 +363,15 @@ type provisionKey struct {
 // package has the name of the import: the npm name for JavaScript, the
 // module path for Go, and the top-level package for Python. The answer
 // depends only on the family, the module and the form, so the builder
-// keeps it.
+// keeps it. The Rust profile resolves a path of the unit, which can read
+// glob uses, so a pass of a glob read that does not settle undoes it.
 func (b *builder) providers(o origin) []provision {
 	family := o.lang.Family()
 	k := provisionKey{family: family, module: o.module, form: o.form}
 	if out, ok := b.provisions[k]; ok {
 		return out
 	}
+	cuts := b.cuts
 	var out []provision
 	for _, sp := range b.ordered {
 		if sp.unit != "" {
@@ -372,7 +381,12 @@ func (b *builder) providers(o origin) []provision {
 	if narrow := profileOf(family).narrowProviders; narrow != nil {
 		out = narrow(out)
 	}
-	b.provisions[k] = out
+	// A cycle guard of an outer resolution can cut the read of the unit,
+	// and the same module can resolve on another way in. So only an answer
+	// that no guard cut stays.
+	if b.cuts == cuts {
+		remember(b, b.provisions, k, out)
+	}
 	return out
 }
 
@@ -458,12 +472,50 @@ func (b *builder) linkProvision(key string, o origin, pv provision) {
 	if b.holdsData(res.key) {
 		return
 	}
-	n := b.g.Nodes[res.key]
-	if res.key == key || n == nil {
+	if res.key == key {
 		return
+	}
+	n := b.g.Nodes[res.key]
+	if n == nil {
+		// The walk can end on the key of a third crate, as dep2::m4::f0
+		// of pub use dep2::m4::f0 in dep1::m2. That key has no node until
+		// a call names it, so the edge went nowhere, and a target under
+		// it read not-found. The key gets its node, and the next pass
+		// links it to the unit of its crate. A module of a unit runs no
+		// code, and a key that no origin names cannot link on.
+		if len(b.origins[res.key]) == 0 || b.unitModuleKey(res.key) {
+			return
+		}
+		n = b.g.Nodes[b.external(res.key)]
 	}
 	b.link(o.lang, key, res.key, Site{Path: cmp.Or(n.Path, pv.sp.unit), Line: n.Line}, EdgePackage, r)
 	b.linkPackageLoad(o.lang, key, pv.module)
+}
+
+// unitModuleKey reports whether a unit gives an external key as a module,
+// as inner//tools for the module tools of the crate inner.
+func (b *builder) unitModuleKey(key string) bool {
+	for _, o := range b.origins[key] {
+		for _, pv := range b.providers(o) {
+			mod := pv.module
+			for _, name := range o.names {
+				if b.units[mod] == nil {
+					mod = ""
+					break
+				}
+				next, ok := b.unitMember(mod, name)
+				if !ok || b.units[next] == nil {
+					mod = ""
+					break
+				}
+				mod = next
+			}
+			if b.units[mod] != nil {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // linkPackageLoad adds an import edge from an external key to each module

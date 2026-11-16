@@ -59,6 +59,7 @@ func testProject(root fstest.MapFS) Project {
 	}
 	defined := map[string]bool{}
 	exports := map[string][]string{}
+	named := map[[2]string]string{}
 	var paths []string
 	for _, ix := range indexes {
 		paths = append(paths, ix.Path)
@@ -67,6 +68,7 @@ func testProject(root fstest.MapFS) Project {
 		}
 		for _, e := range ix.Exports {
 			exports[ix.Path] = append(exports[ix.Path], e.Target)
+			named[[2]string{ix.Path, e.Name}] = e.Target
 		}
 	}
 	files := modules.NewFiles(paths)
@@ -83,12 +85,8 @@ func testProject(root fstest.MapFS) Project {
 		Defined: func(key string) bool { return defined[key] },
 		Exports: func(p string) []string { return exports[p] },
 		Export: func(p, name string) (string, bool) {
-			for _, key := range exports[p] {
-				if fileindex.Last(key) == name {
-					return key, true
-				}
-			}
-			return "", false
+			key, ok := named[[2]string{p, name}]
+			return key, ok
 		},
 		Resolve: func(_ *fileindex.Index, _ string, targets []string) []string { return targets },
 		ResolveName: func(p, name string) (string, bool) {

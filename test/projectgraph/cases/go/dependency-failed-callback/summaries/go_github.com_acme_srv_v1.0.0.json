@@ -1,7 +1,7 @@
 {
   "version": "3",
-  "index_version": "16",
-  "link_version": "19",
+  "index_version": "17",
+  "link_version": "20",
   "unit": "go:github.com/acme/srv@v1.0.0",
   "symbols": [
     {
@@ -23,7 +23,8 @@
       "uncertainties": [
         0,
         1,
-        2
+        2,
+        3
       ]
     }
   ],
@@ -44,6 +45,16 @@
       },
       "text": "the Go standard library, which no unit gives (no-dependency-source)",
       "callback": true
+    },
+    {
+      "kind": "unresolved-call",
+      "key": "go:github.com/acme/srv@v1.0.0//srv.go//Serve",
+      "site": {
+        "path": "go:github.com/acme/srv@v1.0.0//srv.go",
+        "line": 8,
+        "column": 2
+      },
+      "text": "serve (function-value)"
     },
     {
       "kind": "unresolved-call",

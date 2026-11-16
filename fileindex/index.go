@@ -20,7 +20,7 @@ import (
 // Version is the version of the index records and of the rules that fill
 // them. Bump it when a field, a kind, an order or a fill rule changes. A
 // store keys an index by Version, so the bump makes every older index miss.
-const Version = "16"
+const Version = "17"
 
 // DefaultTestPaths are the globs that mark the test files of the common
 // layouts, as projectgraph.Options.TestPaths takes them. A glob with no "/"
@@ -113,13 +113,22 @@ const (
 	// UnresolvedNoDependencySource is a call on a value whose type comes
 	// from a package with no code in the graph, as the result of a
 	// function of a module that no unit gives, or an external key of such a
-	// package, whose code can call back into the graph.
+	// package, whose code can call back into the graph. A Go function with
+	// no body, as a stub of assembly, has the reason too.
 	UnresolvedNoDependencySource UnresolvedReason = "no-dependency-source"
 	// UnresolvedFunctionValue is a call of a function value, as f(x)(y) or
 	// handlers[i](c), in a language whose function values the link step
 	// joins to the code that holds them. The link step gives the reason
 	// in place of computed-name, and the record names no target.
 	UnresolvedFunctionValue UnresolvedReason = "function-value"
+	// UnresolvedRangeValue is a Go range over a value that the index cannot
+	// show to be data. A range over a function calls it. The link step
+	// makes the record a function-value record, or drops it when the graph
+	// shows that the value is data. Receiver and Method name a member, as
+	// n and Kids for n.Kids. Method alone names the type of the value, as
+	// List. With neither, the value is the result of the call at the site.
+	// The link step never keeps the reason.
+	UnresolvedRangeValue UnresolvedReason = "range-value"
 	// UnresolvedMarkup is the markup of a component file, as the template
 	// of a Vue component, which the index does not parse. The framework
 	// runs the markup and calls the functions of the component, so the
@@ -189,6 +198,10 @@ type Index struct {
 	// if __FILE__ == $0 of Ruby. A root rule reads it, so the link step
 	// reads no source file.
 	MainGuard bool `json:"main_guard,omitempty"`
+	// PrivateModules holds the child modules that a Rust file declares in
+	// a file of their own with no plain pub, as hidden of mod hidden;.
+	// Another crate sees no such module through a glob use.
+	PrivateModules []string `json:"private_modules,omitempty"`
 
 	Imports     []Import     `json:"imports,omitempty"`
 	Exports     []Export     `json:"exports,omitempty"`
@@ -200,6 +213,10 @@ type Index struct {
 	Flags       []Flag       `json:"flags,omitempty"`
 	Truncated   []Truncation `json:"truncated,omitempty"`
 }
+
+// RustMacroRules is the decorator that marks a definition of a Rust
+// macro_rules!, which the index otherwise gives the kind function.
+const RustMacroRules = "macro_rules!"
 
 // Import is one import of the file. Module is the module as written, as
 // ./utils or .foo, and the link step resolves it. Namespace is the per-file
@@ -216,6 +233,8 @@ type Import struct {
 	Kind      ImportKind `json:"kind"`
 	Namespace string     `json:"namespace"`
 	Require   bool       `json:"require,omitempty"`
+	// Exported marks a Rust pub use, whose binding another crate can name.
+	Exported bool `json:"exported,omitempty"`
 }
 
 // Export is one export of the file. Name is "default" for a default export.
@@ -230,6 +249,10 @@ type Export struct {
 	From   string `json:"from,omitempty"`
 	Item   string `json:"item,omitempty"`
 	Line   int    `json:"line"`
+	// Opaque marks a name whose value the index does not follow, as the
+	// result of a call in export const actions = makeActions(). Code that
+	// calls a function of the value can run any code of it.
+	Opaque bool `json:"opaque,omitempty"`
 }
 
 // Definition is one module, function, method, class, constructor, module
@@ -270,9 +293,17 @@ type Definition struct {
 	Returns    string   `json:"returns,omitempty"`
 	Results    []string `json:"results,omitempty"`
 	Wraps      string   `json:"wraps,omitempty"`
-	Static     bool     `json:"static,omitempty"`
-	Data       bool     `json:"data,omitempty"`
-	Flags      []Flag   `json:"flags,omitempty"`
+	// ClassParam is the name that holds the class of a Python classmethod,
+	// as cls or klass: its first parameter, also in a function that the
+	// classmethod defines and that does not bind the name again.
+	ClassParam string `json:"class_param,omitempty"`
+	Static     bool   `json:"static,omitempty"`
+	Data       bool   `json:"data,omitempty"`
+	// ValueData marks a Go function whose first result holds no function,
+	// and a Go named type whose values hold no function, as []string or a
+	// struct. A range over such a value reads data.
+	ValueData bool   `json:"value_data,omitempty"`
+	Flags     []Flag `json:"flags,omitempty"`
 	// Alias is the type that a DefAlias names, as written, with no type
 	// arguments, as B for type A = B<u8>.
 	Alias string `json:"alias,omitempty"`
@@ -290,13 +321,15 @@ func (d Definition) HoldsData() bool {
 // keys. Fields are the fields that declare the type of a class, in source
 // order. Abstract are the methods that a Go interface declares, in source
 // order. They have no definition, and a type implements the interface when
-// its methods hold them.
+// its methods hold them. Metaclass is the metaclass of a Python class as
+// written, as M in class A(metaclass=M).
 type Class struct {
-	Key      string      `json:"key"`
-	Bases    []string    `json:"bases,omitempty"`
-	Methods  []string    `json:"methods,omitempty"`
-	Fields   []Typed     `json:"fields,omitempty"`
-	Abstract []Signature `json:"abstract,omitempty"`
+	Key       string      `json:"key"`
+	Bases     []string    `json:"bases,omitempty"`
+	Metaclass string      `json:"metaclass,omitempty"`
+	Methods   []string    `json:"methods,omitempty"`
+	Fields    []Typed     `json:"fields,omitempty"`
+	Abstract  []Signature `json:"abstract,omitempty"`
 }
 
 // Signature is a method that an interface declares: its name, the count of
@@ -353,12 +386,16 @@ type Arg struct {
 // uses as a value and does not call, as yaml.load in run(yaml.load). The
 // code that gets the value can call it, so the link step counts the target
 // as possibly called. Targets are per-file resolutions, as in a Call.
+// Check marks a class that the code only tests a value against, as the
+// second argument of isinstance in Python, or names as the metaclass of a
+// class statement. Such a use makes no instance that code can call.
 type Reference struct {
 	Caller  string   `json:"caller"`
 	Line    int      `json:"line"`
 	Column  int      `json:"column"`
 	Text    string   `json:"text"`
 	Targets []string `json:"targets"`
+	Check   bool     `json:"check,omitempty"`
 }
 
 // Unresolved is a call site whose callee the index does not know in full.
@@ -649,6 +686,7 @@ func (ix *Index) EachString(fn func(string) string) {
 	kind(&ix.ContentHash)
 	kind(&ix.Package)
 	kind(&ix.Unit)
+	strs(ix.PrivateModules)
 	for i := range ix.Imports {
 		imp := &ix.Imports[i]
 		kind(&imp.Module)
@@ -673,6 +711,7 @@ func (ix *Index) EachString(fn func(string) string) {
 		strs(def.Decorators)
 		strs(def.Values)
 		typed(def.Params)
+		kind(&def.ClassParam)
 		typed(def.Locals)
 		kind(&def.Returns)
 		strs(def.Results)
@@ -684,6 +723,7 @@ func (ix *Index) EachString(fn func(string) string) {
 		c := &ix.Classes[i]
 		kind(&c.Key)
 		strs(c.Bases)
+		kind(&c.Metaclass)
 		strs(c.Methods)
 		typed(c.Fields)
 		for j := range c.Abstract {

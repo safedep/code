@@ -2,6 +2,7 @@ package projectgraph
 
 import (
 	"cmp"
+	"maps"
 	"slices"
 	"strings"
 
@@ -125,6 +126,164 @@ func (b *builder) linkConstructors(ix *fileindex.Index) {
 		}
 		b.link(ix.Language, c.Key, ctor, b.siteOf(ctor), EdgeDirect, ruleConstructor)
 	}
+}
+
+// linkInstances adds a reference edge from each edge that can make an
+// instance of a class to the method of each instance method name that the
+// instance runs, from the class or from a base in its MRO. A call makes an
+// instance, and so can the code that gets a reference to the class, as
+// functools.partial(C) or map(C, xs). The code that makes the instance
+// holds it, so a search reaches the method as it reaches a stored function
+// value. A reference that only tests a value against the class, as in
+// isinstance(x, C), makes no instance and gets no edge. An edge reaches the
+// class through export hops and the package edge of a unit.
+func (b *builder) linkInstances() {
+	str := b.edges.symbols.strings
+	hops := map[string][]string{}
+	for slot, v := range b.edges.slots {
+		if k := EdgeKind(str[v.kind]); k == EdgeExport || k == EdgePackage {
+			hops[str[slot.from]] = append(hops[str[slot.from]], str[slot.to])
+		}
+	}
+	memo := map[string][]string{}
+	methodsOf := func(key string) []string {
+		m, ok := memo[key]
+		if !ok {
+			m = b.instanceMethods(key, hops)
+			memo[key] = m
+		}
+		return m
+	}
+	var out []Edge
+	add := func(from string, site Site, methods []string) {
+		for _, key := range methods {
+			out = append(out, newEdge(from, key, site, EdgeReference, resolverName(b.profileAt(key).code, ruleImplicit)))
+		}
+	}
+	for slot, v := range b.edges.slots {
+		kind := EdgeKind(str[v.kind])
+		if kind == EdgeImport || kind == EdgeExport || kind == EdgePackage || b.checks[slot] {
+			continue
+		}
+		add(str[slot.from], Site{Path: str[slot.path], Line: int(slot.line), Column: int(slot.column)}, methodsOf(str[slot.to]))
+	}
+	for _, c := range b.classCalls() {
+		for _, class := range append([]string{c.class}, b.subclasses(c.class)...) {
+			add(c.from, c.site, methodsOf(class))
+		}
+	}
+	slices.SortFunc(out, func(x, y Edge) int {
+		return cmp.Or(cmp.Compare(x.From, y.From), cmp.Compare(x.Site.Path, y.Site.Path), cmp.Compare(x.Site.Line, y.Site.Line),
+			cmp.Compare(x.Site.Column, y.Site.Column), cmp.Compare(x.To, y.To))
+	})
+	for _, e := range out {
+		b.addEdge(e)
+	}
+}
+
+// instanceMethods returns the instance methods of each class that a key
+// names through its hops. A call of a class also runs __call__ of its
+// metaclass, as M in class A(metaclass=M).
+func (b *builder) instanceMethods(key string, hops map[string][]string) []string {
+	var out []string
+	seen := map[string]bool{}
+	next := []string{key}
+	for depth := 0; len(next) > 0 && depth <= b.opts.MaxExportHops; depth++ {
+		var later []string
+		for _, k := range next {
+			if seen[k] {
+				continue
+			}
+			seen[k] = true
+			later = append(later, hops[k]...)
+			p := b.profileAt(k)
+			if b.kindOf(k) != NodeClass || len(p.instanceMethods) == 0 {
+				continue
+			}
+			for _, name := range slices.Sorted(maps.Keys(p.instanceMethods)) {
+				if method, ok := b.ownMethod(k, name); ok && b.isMethod(method) {
+					out = append(out, method)
+				}
+			}
+			for _, meta := range b.metaclasses(k) {
+				if method, ok := b.ownMethod(meta, p.metaclassCall); ok && b.isMethod(method) {
+					out = append(out, method)
+				}
+			}
+		}
+		next = later
+	}
+	return out
+}
+
+// metaclasses returns the metaclass of a class. Python takes the most
+// derived of the metaclasses that the classes of the MRO name, as M2 for
+// bases with metaclass=M1 and metaclass=M2 when M2 subclasses M1. When no
+// one of them derives from all the others, as when their common subclass
+// is a metaclass outside the graph, it returns each of them. A call of the
+// class then reaches each __call__ that Python can run.
+func (b *builder) metaclasses(class string) []string {
+	var metas []string
+	for _, c := range b.mro(class) {
+		for _, rec := range b.records(c) {
+			if rec.class.Metaclass == "" {
+				continue
+			}
+			key, ok := b.resolveNameIn(b.scopes[rec.ix.Path], fileindex.Parent(rec.class.Key), rec.class.Metaclass)
+			if ok && b.kindOf(key) == NodeClass && !slices.Contains(metas, key) {
+				metas = append(metas, key)
+			}
+		}
+	}
+	for _, m := range metas {
+		order := b.mro(m)
+		if !slices.ContainsFunc(metas, func(other string) bool { return !slices.Contains(order, other) }) {
+			return []string{m}
+		}
+	}
+	return metas
+}
+
+// classCall is a call of the class of a method from the method itself, as
+// cls() in a classmethod of Python.
+type classCall struct {
+	from, class string
+	site        Site
+}
+
+// classCalls returns each call that makes an instance of the class of the
+// method that holds it, or of a subclass: a call of the first parameter of
+// a classmethod, also from a function that the method defines, and a call
+// of the class of the instance, as self.__class__() or type(self)().
+func (b *builder) classCalls() []classCall {
+	var out []classCall
+	for _, p := range b.paths {
+		ix := b.byPath[p]
+		if ix == nil || len(profileOf(ix.Language).instanceClass) == 0 {
+			continue
+		}
+		for _, call := range ix.Calls {
+			if class, ok := b.callsClass(ix, call); ok {
+				out = append(out, classCall{from: b.runner(call.Caller), class: class, site: Site{Path: ix.Path, Line: call.Line, Column: call.Column}})
+			}
+		}
+	}
+	return out
+}
+
+// callsClass returns the class that a call makes an instance of, by the
+// method that holds the call.
+func (b *builder) callsClass(ix *fileindex.Index, call fileindex.Call) (string, bool) {
+	instance := slices.Contains(profileOf(ix.Language).instanceClass, call.Callee)
+	if caller := b.defs[call.Caller]; !instance && (caller == nil || caller.ClassParam == "" || call.Callee != caller.ClassParam) {
+		return "", false
+	}
+	for key := call.Caller; key != "" && key != ix.Path; key = fileindex.Parent(key) {
+		if def := b.defs[key]; def != nil && def.Parent != "" && b.kindOf(def.Parent) == NodeClass {
+			return def.Parent, true
+		}
+	}
+	return "", false
 }
 
 // linkOverrides adds a reference edge from each class with a base of a

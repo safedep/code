@@ -1,0 +1,7 @@
+[package]
+name = "dep"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+inner = "1.0.0"

@@ -1,6 +1,9 @@
 source: safedep:hand
 description: An expression in the body of Page.astro calls adanger, which its fence imports. The index does not parse the body, so the file has a markup record, and adanger reads uncertain, not no-such-target.
 roots:
+  - key: src/Page.astro
+    kind: framework
+    rule: node.component
   - key: src/main.js
     kind: manifest
     rule: node.package-json
@@ -24,11 +27,7 @@ results:
   - target: plug//asetup
     status: found
     path:
-      - key: src/main.js
       - key: src/Page.astro
-        site: src/main.js:1
-        kind: import
-        confidence: high
       - key: plug//asetup
         site: src/Page.astro:3
         kind: direct

@@ -2,13 +2,17 @@ package indexer
 
 import (
 	"context"
+	"maps"
 	"slices"
 	"strings"
+	"sync"
+	"unicode"
 
 	"github.com/safedep/code/core/ast"
 	"github.com/safedep/code/fileindex"
 	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/pkg/ts"
+	"github.com/safedep/code/plugin/callgraph"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -20,16 +24,18 @@ var rustRules = languageRules{
 		"mod_item":         fileindex.DefClass,
 		"trait_item":       fileindex.DefInterface,
 	},
-	bases:       rustBases,
-	fields:      rustFields,
-	decorators:  rustAttributes,
-	signature:   rustSignature,
-	exported:    rustPublic,
-	definitions: rustTypes,
-	markTries:   rustMarkTries,
-	visitors:    []func(p *projection) visitor{referenceVisitor, rustVisitor},
-	declaredAt:  rustDeclaredAt,
-	rebound:     rustRebound,
+	bases:          rustBases,
+	fields:         rustFields,
+	decorators:     rustAttributes,
+	signature:      rustSignature,
+	exported:       rustPublic,
+	definitions:    rustTypes,
+	markTries:      rustMarkTries,
+	importExported: rustImportExported,
+	shadowed:       rustShadowed,
+	visitors:       []func(p *projection) visitor{referenceVisitor, rustVisitor},
+	declaredAt:     rustDeclaredAt,
+	rebound:        rustRebound,
 	// A Rust path to a function, as handler in get(handler) or
 	// Self::visit in items.iter().for_each(Self::visit), is a value that
 	// the code that gets it calls.
@@ -66,8 +72,12 @@ func rustTypes(p *projection) {
 		for _, item := range ts.NamedChildren(list) {
 			switch {
 			case item.Type() == "mod_item":
-				if body := item.ChildByFieldName("body"); body != nil {
+				body := item.ChildByFieldName("body")
+				switch {
+				case body != nil:
 					walk(fileindex.Join(scope, p.text(item.ChildByFieldName("name"))), body)
+				case scope == p.cg.FileName && !p.rustPub(item):
+					p.ix.PrivateModules = append(p.ix.PrivateModules, p.text(item.ChildByFieldName("name")))
 				}
 			case slices.Contains(rustTypeItems, item.Type()):
 				key := fileindex.Join(scope, p.text(item.ChildByFieldName("name")))
@@ -180,7 +190,7 @@ func rustFields(p *projection, item *sitter.Node) []fileindex.Typed {
 			if field.Type() != "field_declaration" {
 				continue
 			}
-			if typ := p.rustTypeName(field.ChildByFieldName("type"), nil); typ != "" {
+			if typ := p.rustScopedType(field, p.rustTypeName(field.ChildByFieldName("type"), nil)); typ != "" {
 				fields = append(fields, fileindex.Typed{Name: p.text(field.ChildByFieldName("name")), Type: typ})
 			}
 		}
@@ -269,7 +279,8 @@ func (p *projection) rustBounds(fn *sitter.Node) map[string]string {
 
 // rustAttributes returns the attributes before an item as written, with no
 // arguments, as @tokio::main for #[tokio::main] or @get for
-// #[get("/")].
+// #[get("/")]. A macro_rules! gets the mark macro_rules! too, so the link
+// step can tell a macro from a function of the name.
 func rustAttributes(p *projection, node *sitter.Node) []string {
 	var attributes []string
 	for sibling := node.PrevNamedSibling(); sibling != nil && sibling.Type() == "attribute_item"; sibling = sibling.PrevNamedSibling() {
@@ -278,6 +289,9 @@ func rustAttributes(p *projection, node *sitter.Node) []string {
 		}
 	}
 	slices.Reverse(attributes)
+	if node.Type() == "macro_definition" {
+		attributes = append(attributes, fileindex.RustMacroRules)
+	}
 	return attributes
 }
 
@@ -305,7 +319,12 @@ func rustSignature(p *projection, def *fileindex.Definition, node *sitter.Node) 
 			def.Params = append(def.Params, fileindex.Typed{Name: p.text(name), Type: typ})
 		}
 	}
-	def.Returns, def.Wraps = p.rustResult(node.ChildByFieldName("return_type"), bounds)
+	result := node.ChildByFieldName("return_type")
+	if def.Returns, def.Wraps = p.rustResult(result, bounds); def.Returns != "" {
+		if def.Returns = p.rustScopedType(result, def.Returns); def.Returns == "" {
+			def.Wraps = ""
+		}
+	}
 	def.Locals = p.rustLocals(node.ChildByFieldName("body"), bounds)
 	if impl := rustImpl(node); impl != nil && !def.Static && !p.rustDefinesType(impl) {
 		def.Params = append([]fileindex.Typed{{Name: extensionParam, Type: p.rustItemName(impl)}}, def.Params...)
@@ -350,29 +369,50 @@ func (p *projection) rustLocals(body *sitter.Node, bounds map[string]string) []f
 
 // rustDeclaredType returns the type that a let or a parameter declares, or
 // "" when a scope that holds the binder declares the first name of the
-// type. The link step resolves a declared type at the root of the file. So
-// Local in fn run() { type Local = dep::Thing<u8>; let t: Local = ... }
-// resolved to a struct Local of the root. A call on t then took the method
-// of that struct with no record, and a method of dep::Thing read as
-// not-found. Without the type, the call keeps the target of the call graph
-// or its record.
+// type.
 func (p *projection) rustDeclaredType(binder *sitter.Node, bounds map[string]string) string {
-	typ := p.rustTypeName(binder.ChildByFieldName("type"), bounds)
-	first, _, _ := strings.Cut(typ, "::")
-	if typ == "" || p.rustScopeDeclares(binder, first) {
+	return p.rustScopedType(binder, p.rustTypeName(binder.ChildByFieldName("type"), bounds))
+}
+
+// rustScopedType returns a type that a node names, as the link step reads
+// it. The link step resolves Local at the root. A local type alias of the
+// name, as in fn run() { type Local = dep::Thing<u8>; let t: Local }, must
+// not take a struct Local of the root. So a type whose first name a scope
+// of the node declares is "", or the path of a use that declares the name.
+// A type of the wrong scope sends the call to a method that it does not run.
+// test/projectgraph/cases/rust/inline-module-types and
+// test/projectgraph/cases/rust/use-type-result pin the rule.
+func (p *projection) rustScopedType(node *sitter.Node, typ string) string {
+	first, rest, nested := strings.Cut(typ, "::")
+	if typ == "" || !p.rustScopeDeclares(node, nil, first) {
+		return typ
+	}
+	use, isUse := p.rustRebinder(node, nil, first)
+	if !isUse || p.rustScopeDeclares(node, use.Parent(), first) {
 		return ""
 	}
-	return typ
+	namespace, ok := p.rustUseNamespace(use, first)
+	if !ok {
+		return ""
+	}
+	path := strings.ReplaceAll(namespace, fileindex.Separator, "::")
+	if nested {
+		path += "::" + rest
+	}
+	return path
 }
 
 // rustScopeDeclares reports whether a scope between a node and the root of
-// the file can give a name another meaning than the root gives it: an item
+// the file, or a stop node, can give a name another meaning than the root gives it: an item
 // or a use of a block or of an inline module, or a type parameter of a
-// function, an impl or a trait. A glob use can declare any name, except
-// use super::* in a module of the root, which reads the names of the root.
-// In an inline module, self and super name other modules than the root.
-func (p *projection) rustScopeDeclares(node *sitter.Node, name string) bool {
-	for scope := node.Parent(); scope != nil; scope = scope.Parent() {
+// function, an impl, a trait or a type. A glob use can declare any name,
+// except use super::* in a module of the root, which reads the names of the
+// root. In an inline module, self and super name other modules than the
+// root. A struct, an enum, a union or a trait of the inline module that
+// declares the name first does not count, because the link step looks for
+// a type of the name in the inline modules that hold the node.
+func (p *projection) rustScopeDeclares(node, stop *sitter.Node, name string) bool {
+	for scope := node.Parent(); scope != nil && (stop == nil || !ts.SameNode(scope, stop)); scope = scope.Parent() {
 		switch scope.Type() {
 		case "block":
 			if p.rustItemsDeclare(scope, name, false) {
@@ -384,10 +424,16 @@ func (p *projection) rustScopeDeclares(node *sitter.Node, name string) bool {
 				continue
 			}
 			ofRoot := mod.Parent() != nil && mod.Parent().Type() == "source_file"
-			if name == "self" || name == "super" || p.rustItemsDeclare(scope, name, ofRoot) {
+			if name == "self" || name == "super" {
 				return true
 			}
-		case "function_item", "impl_item", "trait_item":
+			if p.rustItemsDefineType(scope, name) {
+				return false
+			}
+			if p.rustItemsDeclare(scope, name, ofRoot) {
+				return true
+			}
+		case "function_item", "impl_item", "trait_item", "struct_item", "enum_item", "union_item":
 			if slices.ContainsFunc(ts.NamedChildren(scope.ChildByFieldName("type_parameters")), func(param *sitter.Node) bool {
 				return p.rustTypeParameter(param) == name
 			}) {
@@ -396,6 +442,19 @@ func (p *projection) rustScopeDeclares(node *sitter.Node, name string) bool {
 		}
 	}
 	return false
+}
+
+// rustItemsDefineType reports whether the items of a module define a
+// struct, an enum, a union or a trait of the name. The index gives each one
+// a key under the module.
+func (p *projection) rustItemsDefineType(list *sitter.Node, name string) bool {
+	return slices.ContainsFunc(ts.NamedChildren(list), func(item *sitter.Node) bool {
+		switch item.Type() {
+		case "struct_item", "enum_item", "union_item", "trait_item":
+			return p.text(item.ChildByFieldName("name")) == name
+		}
+		return false
+	})
 }
 
 // rustItemsDeclare reports whether the items of a block or of a module
@@ -502,18 +561,119 @@ func rustDeclaredAt(ctx context.Context, p *projection, call fileindex.Call, nam
 }
 
 // rustRebound reports whether the function binds a name before a call by a
-// binder that the call graph does not read. A static or a const binds its
-// name in the whole block, also before it. A function whose walk stopped
-// early can bind any name.
+// binder that the call graph does not read, or by a second let of another
+// type. A static or a const binds its name in the whole block, also before
+// it. The call graph binds a name to the value of its first let, so it sends
+// t.run() after let t = B to A::run when let t = A comes first. A let counts
+// once its statement ends, because the call in its value, as c.with_retry()
+// in let c = c.with_retry(), still sees the binding before it. Lets of one
+// type, as let c = c.with_retry() after let c = Client::new(), keep the
+// target. A function whose walk stopped early can bind any name.
 func rustRebound(ctx context.Context, p *projection, call fileindex.Call, name string) bool {
 	binders, ok := p.rustBinders(ctx, call.Caller)
 	if !ok {
 		return true
 	}
-	return slices.ContainsFunc(binders[name], func(binder *sitter.Node) bool {
+	var lets []*sitter.Node
+	for _, binder := range binders[name] {
 		item := binder.Type() == "static_item" || binder.Type() == "const_item"
-		return (item || startsBefore(binder, call)) && !rustPlainBinder(binder)
+		switch {
+		case !item && !startsBefore(binder, call):
+			continue
+		case !rustPlainBinder(binder):
+			return true
+		case binder.Type() == "let_declaration" && endsBefore(binder, call):
+			lets = append(lets, binder)
+		}
+	}
+	if len(lets) < 2 {
+		return false
+	}
+	first := p.rustLetType(binders, lets[0], 0)
+	return first == "" || slices.ContainsFunc(lets[1:], func(let *sitter.Node) bool {
+		return p.rustLetType(binders, let, 0) != first
 	})
+}
+
+// endsBefore reports whether a node ends before the site of a call.
+func endsBefore(node *sitter.Node, call fileindex.Call) bool {
+	at := node.EndPoint()
+	line, column := int(at.Row)+1, int(at.Column)+1
+	return line < call.Line || line == call.Line && column <= call.Column
+}
+
+// rustMaxLetDepth bounds the lets that the type of one let reads, as c of
+// let c = c.with_retry().
+const rustMaxLetDepth = 4
+
+// rustLetType returns the name of the type of the value of a let, as the
+// file writes it, or "" when the index does not know it: the declared type,
+// a struct, a function or a method of the file with a result, or the let of
+// a name that the value reads.
+func (p *projection) rustLetType(binders map[string][]*sitter.Node, let *sitter.Node, depth int) string {
+	if typ := p.rustTypeName(let.ChildByFieldName("type"), nil); typ != "" {
+		return typ
+	}
+	return p.rustValueType(binders, let.ChildByFieldName("value"), depth)
+}
+
+func (p *projection) rustValueType(binders map[string][]*sitter.Node, value *sitter.Node, depth int) string {
+	if value == nil || depth > rustMaxLetDepth {
+		return ""
+	}
+	switch value.Type() {
+	case "struct_expression":
+		return p.rustTypeName(value.ChildByFieldName("name"), nil)
+	case "identifier":
+		if name := p.text(value); name != "" && unicode.IsUpper(rune(name[0])) {
+			return name
+		}
+		if let := rustLetOf(binders[p.text(value)], value); let != nil {
+			return p.rustLetType(binders, let, depth+1)
+		}
+	case "call_expression":
+		fn := value.ChildByFieldName("function")
+		if method := rustMethod(fn); method != nil {
+			if typ := p.rustValueType(binders, method.ChildByFieldName("value"), depth+1); typ != "" {
+				return p.rustResultOf(typ, p.text(method.ChildByFieldName("field")))
+			}
+			return ""
+		}
+		if fn != nil && fn.Type() == "scoped_identifier" {
+			path := p.text(fn.ChildByFieldName("path"))
+			if typ := p.rustResultOf(path, p.text(fn.ChildByFieldName("name"))); typ != "" {
+				return typ
+			}
+			return rustConstructorType(path, p.text(fn))
+		}
+	}
+	return ""
+}
+
+// rustGenericTraits are the traits of std whose associated function gives
+// whatever type the caller infers, as Default::default().
+var rustGenericTraits = map[string]bool{"Default": true, "From": true, "Into": true, "FromStr": true, "TryFrom": true, "FromIterator": true}
+
+// rustConstructorType returns a function of a type as a type of its own,
+// as A::new for let t = A::new() when A is a type of another file. Two lets
+// whose values call the same function of the same type hold one type. A
+// trait of std that gives an inferred type names no type.
+func rustConstructorType(typ, fn string) string {
+	last := rustLastName(typ)
+	if last == "" || !unicode.IsUpper(rune(last[0])) || rustGenericTraits[last] {
+		return ""
+	}
+	return fn + "()"
+}
+
+// rustResultOf returns the result type of a function of a type of the
+// file, with no Option or Result around it.
+func (p *projection) rustResultOf(typ, name string) string {
+	def := p.defs[fileindex.Join(p.cg.FileName, append(strings.Split(typ, "::"), name)...)]
+	if def == nil || def.Wraps != "" {
+		return ""
+	}
+	return def.Returns
 }
 
 // startsBefore reports whether a node starts before the site of a call.
@@ -609,7 +769,9 @@ func (p *projection) rustBinder(id *sitter.Node) *sitter.Node {
 // rustBindingMacro returns the call of the macro that holds a token tree,
 // when the macro can bind a name of its caller, as bind!(t) with the rule
 // ($n:ident) => { let $n = dep::new_thing(); }. A macro of std binds no
-// name of its caller, except thread_local!, which makes a static.
+// name of its caller, except thread_local!, which makes a static. A
+// macro_rules! or a use of the file can give a name of std to another
+// macro, which can bind a name.
 func (p *projection) rustBindingMacro(tree *sitter.Node) *sitter.Node {
 	for tree != nil && tree.Type() == "token_tree" {
 		tree = tree.Parent()
@@ -617,10 +779,25 @@ func (p *projection) rustBindingMacro(tree *sitter.Node) *sitter.Node {
 	if tree == nil || tree.Type() != "macro_invocation" {
 		return nil
 	}
-	if name := rustLastName(p.text(tree.ChildByFieldName("macro"))); langcode.IsBuiltin(langcode.Rust, name) && name != "thread_local" {
+	name := rustLastName(p.text(tree.ChildByFieldName("macro")))
+	if langcode.IsBuiltin(langcode.Rust, name) && name != "thread_local" && !p.rustOwnMacro(name) {
 		return nil
 	}
 	return tree
+}
+
+// rustOwnMacro reports whether the file defines a macro of the name with
+// macro_rules! or binds the name with a use.
+func (p *projection) rustOwnMacro(name string) bool {
+	if p.rustMacros == nil {
+		p.rustMacros = maps.Clone(p.bindings)
+		for key, node := range p.syntax {
+			if node.Type() == "macro_definition" {
+				p.rustMacros[fileindex.Last(key)] = true
+			}
+		}
+	}
+	return p.rustMacros[name]
 }
 
 // rustBoundName returns the name that a pattern binds, as t for t or for
@@ -633,6 +810,272 @@ func rustBoundName(pattern *sitter.Node) *sitter.Node {
 		return nil
 	}
 	return pattern
+}
+
+// rustShadowed fixes a target that the call graph finds for the path of a
+// call in an outer scope, when a scope between the call and that scope
+// binds the first name of the path again, as util::g() after use
+// crate::deep::util in a block. The call graph reads no use, so it gives
+// util::g() the module util of the file. A use gives the target through
+// the path of the use. A type parameter names a type that the call does not
+// know, so the call is a record.
+func rustShadowed(ctx context.Context, p *projection, call *fileindex.Call, callee ast.NodePosition) bool {
+	node := p.descendant(callee)
+	if method := rustMethod(node); node != nil && method != nil {
+		// The walk of the binders of the function runs only for a target
+		// that the path of the receiver can change.
+		written := sync.OnceValue(func() string {
+			if binders, ok := p.rustBinders(ctx, call.Caller); ok {
+				return p.rustReceiverPath(binders, method)
+			}
+			return ""
+		})
+		if slices.ContainsFunc(call.Targets, rustFromModule) {
+			p.rustFromFile(call, node, written())
+		}
+		return p.rustShadowedMethod(call, node, written)
+	}
+	if node != nil && node.Type() == "scoped_type_identifier" {
+		p.rustFromFile(call, node, p.text(node))
+		return true
+	}
+	if node == nil || node.Type() != "identifier" && node.Type() != "scoped_identifier" {
+		return true
+	}
+	names := strings.Split(p.text(node), "::")
+	switch names[0] {
+	case "self", "super":
+		p.rustFromFile(call, node, p.text(node))
+		return true
+	case "crate", "Self", "":
+		return true
+	}
+	written := strings.Join(names, fileindex.Separator)
+	for i, target := range call.Targets {
+		scope, ok := strings.CutSuffix(target, fileindex.Separator+written)
+		if !ok || !fileindex.HasKeyPrefix(scope, p.cg.FileName) {
+			continue
+		}
+		rebound, ok := p.rustUseTarget(node, p.syntax[scope], names[0], names[1:]...)
+		if !ok {
+			return false
+		}
+		if rebound != "" {
+			call.Targets[i] = rebound
+		}
+	}
+	return true
+}
+
+// rustFromFile writes the targets of a call under a path that the call
+// writes, when the path starts with self or super in an inline module, as a
+// path from the module of the file. The call graph reads no inline module,
+// and the link step reads such a path from the module of the file. So
+// super::Item::new() in mod other went to an external super//Item//new, and
+// the real Item::new of the file read as not-found. A method of a value of
+// such a path, as i.save() after let i = super::Item::new(), gets the same
+// fix. A use already gives its target from the module of the file.
+func (p *projection) rustFromFile(call *fileindex.Call, node *sitter.Node, written string) {
+	if first, _, _ := strings.Cut(written, "::"); first != "self" && first != "super" {
+		return
+	}
+	var mods []string
+	for n := node.Parent(); n != nil; n = n.Parent() {
+		if n.Type() == "mod_item" {
+			mods = append(mods, p.text(n.ChildByFieldName("name")))
+		}
+	}
+	if len(mods) == 0 {
+		return
+	}
+	slices.Reverse(mods)
+	from := strings.ReplaceAll(written, "::", fileindex.Separator)
+	to := strings.ReplaceAll(langcode.RustFromFile(written, mods), "::", fileindex.Separator)
+	for i, target := range call.Targets {
+		if rest, ok := strings.CutPrefix(target, from); ok && (rest == "" || strings.HasPrefix(rest, fileindex.Separator)) {
+			call.Targets[i] = to + rest
+		}
+	}
+}
+
+// rustFromModule reports whether a target starts with self or super.
+func rustFromModule(target string) bool {
+	return strings.HasPrefix(target, "self"+fileindex.Separator) || strings.HasPrefix(target, "super"+fileindex.Separator)
+}
+
+// rustReceiverPath returns the path of the type that the let of the
+// receiver of a method call writes, as super::Item of let i =
+// super::Item::new() or of let i = super::Item {}. The call graph types the
+// receiver by that path.
+func (p *projection) rustReceiverPath(binders map[string][]*sitter.Node, method *sitter.Node) string {
+	receiver := method.ChildByFieldName("value")
+	if receiver.Type() != "identifier" {
+		return ""
+	}
+	let := rustLetOf(binders[p.text(receiver)], receiver)
+	if let == nil {
+		return ""
+	}
+	if typ := let.ChildByFieldName("type"); typ != nil {
+		return p.text(typ)
+	}
+	value := let.ChildByFieldName("value")
+	switch {
+	case value == nil:
+	case value.Type() == "struct_expression":
+		return p.text(value.ChildByFieldName("name"))
+	case value.Type() == "call_expression":
+		if fn := value.ChildByFieldName("function"); fn != nil && fn.Type() == "scoped_identifier" {
+			return p.text(fn.ChildByFieldName("path"))
+		}
+	}
+	return ""
+}
+
+// rustShadowedMethod fixes a target of a method call that the call graph
+// finds as a method of a type of an outer scope, when a scope between the
+// call and that scope binds the name of the type again, as x.save() after
+// let x = Item::new() and use crate::store::Item in mod deep. The call graph
+// reads no use, so it gives x.save() the Item of the parent of deep. A
+// receiver whose type the code writes with a path, as a::Item::new(), names
+// its type through the first name of the path. A use of Item does not bind
+// that name, so x.save() keeps a::Item::save. written gives that path.
+func (p *projection) rustShadowedMethod(call *fileindex.Call, node *sitter.Node, written func() string) bool {
+	for i, target := range call.Targets {
+		class := fileindex.Parent(target)
+		if def := p.defs[class]; def == nil || def.Kind != fileindex.DefClass || !fileindex.HasKeyPrefix(class, p.cg.FileName) {
+			continue
+		}
+		name := fileindex.Last(class)
+		rebound, ok := p.rustUseTarget(node, p.syntax[fileindex.Parent(class)], name, fileindex.Last(target))
+		if (rebound != "" || !ok) && rustQualified(written(), name) {
+			continue
+		}
+		if !ok {
+			return false
+		}
+		if rebound != "" {
+			call.Targets[i] = rebound
+		}
+	}
+	return true
+}
+
+// rustQualified reports whether a type path that the code writes names its
+// type through another first name than the name of the type, as a::Item.
+func rustQualified(path, name string) bool {
+	first, _, _ := strings.Cut(path, "::")
+	return first != "" && first != name
+}
+
+// rustUseTarget returns the target of the names under a name that a use
+// between a node and a scope binds again, or "" when no scope between them
+// binds the name. It reports false when an item or a type parameter binds
+// the name, because the call then names a type that it does not know.
+func (p *projection) rustUseTarget(node, scope *sitter.Node, name string, rest ...string) (string, bool) {
+	binder, use := p.rustRebinder(node, scope, name)
+	switch {
+	case binder == nil:
+		return "", true
+	case !use:
+		return "", false
+	}
+	namespace, ok := p.rustUseNamespace(binder, name)
+	if !ok {
+		return "", false
+	}
+	return fileindex.Join(namespace, rest...), true
+}
+
+// rustRebinder returns the innermost use or item with type parameters
+// between a node and the definition of a scope that binds a name, and
+// whether it is a use. A nil scope is the file.
+func (p *projection) rustRebinder(node, scope *sitter.Node, name string) (*sitter.Node, bool) {
+	for n := node.Parent(); n != nil && (scope == nil || !ts.SameNode(n, scope)); n = n.Parent() {
+		switch n.Type() {
+		case "block", "declaration_list":
+			var globbed *sitter.Node
+			for _, u := range p.rustUsesOf(n) {
+				if slices.Contains(u.names, name) {
+					return u.item, true
+				}
+				if u.glob {
+					globbed = u.item
+				}
+			}
+			if globbed != nil {
+				return globbed, false
+			}
+		case "function_item", "impl_item", "trait_item":
+			if slices.ContainsFunc(ts.NamedChildren(n.ChildByFieldName("type_parameters")), func(param *sitter.Node) bool {
+				return p.rustTypeParameter(param) == name
+			}) {
+				return n, false
+			}
+		}
+	}
+	return nil, false
+}
+
+// rustUse is a use of a block or a declaration list: the names that it
+// binds, and whether it is a glob use that can bring a name of an outer
+// scope, as rustOuterGlob says.
+type rustUse struct {
+	item  *sitter.Node
+	names []string
+	glob  bool
+}
+
+// rustUsesOf returns the uses of a block or a declaration list, read once
+// for the file. rustRebinder reads them for each call in the list, and a
+// list such as an impl body with many methods made that read grow with the
+// square of the list.
+func (p *projection) rustUsesOf(list *sitter.Node) []rustUse {
+	k := [2]uint32{list.StartByte(), list.EndByte()}
+	if uses, ok := p.rustUses[k]; ok {
+		return uses
+	}
+	var uses []rustUse
+	for _, item := range ts.NamedChildren(list) {
+		if item.Type() != "use_declaration" {
+			continue
+		}
+		names, glob := p.rustUseNames(item.ChildByFieldName("argument"), nil)
+		uses = append(uses, rustUse{item: item, names: names, glob: glob && !p.rustOuterGlob(item)})
+	}
+	if p.rustUses == nil {
+		p.rustUses = map[[2]uint32][]rustUse{}
+	}
+	p.rustUses[k] = uses
+	return uses
+}
+
+// rustOuterGlob reports whether a glob use brings no name that the call
+// graph would find in an outer scope instead: a glob of super or self, which
+// brings the names of the scopes that hold it, or of std, core or alloc,
+// which define no item of the crate. Any other glob use can bring the name,
+// as A of use crate::other::* in mod n inside mod m with a struct A.
+func (p *projection) rustOuterGlob(use *sitter.Node) bool {
+	first := rustFirstName(p.text(use.ChildByFieldName("argument")))
+	return first == "super" || first == "self" || first == "std" || first == "core" || first == "alloc"
+}
+
+// rustFirstName returns the first name of a path, as std for ::std::io.
+func rustFirstName(path string) string {
+	first, _, _ := strings.Cut(strings.TrimPrefix(path, "::"), "::")
+	return first
+}
+
+// rustUseNamespace returns the namespace of the import of a use that binds
+// a name.
+func (p *projection) rustUseNamespace(use *sitter.Node, name string) (string, bool) {
+	first, last := lineOf(use), int(use.EndPoint().Row)+1
+	for _, imp := range p.ix.Imports {
+		if imp.Line >= first && imp.Line <= last && imp.Alias == name && imp.Namespace != "" {
+			return imp.Namespace, true
+		}
+	}
+	return "", false
 }
 
 // rustMarkTries marks each ? in the receiver of a method call in the
@@ -746,10 +1189,10 @@ func rustPublic(p *projection, def *fileindex.Definition) bool {
 	}
 	if node.Type() == "impl_item" {
 		return slices.ContainsFunc(p.rustSiblings(node, p.rustItemName(node)), func(item *sitter.Node) bool {
-			return item.Type() != "impl_item" && ts.ChildOfType(item, "visibility_modifier") != nil
+			return item.Type() != "impl_item" && p.rustPub(item)
 		})
 	}
-	if ts.ChildOfType(node, "visibility_modifier") != nil {
+	if p.rustPub(node) {
 		return true
 	}
 	if impl := rustImpl(node); impl != nil {
@@ -757,6 +1200,24 @@ func rustPublic(p *projection, def *fileindex.Definition) bool {
 	}
 	parent := p.syntax[fileindex.Parent(def.Key)]
 	return parent != nil && parent.Type() == "trait_item"
+}
+
+// rustPub reports whether an item is pub for every crate. pub(crate),
+// pub(super) and pub(in path) keep the item in its crate, so another crate
+// cannot name it, and a glob use of another crate does not bring it.
+func (p *projection) rustPub(item *sitter.Node) bool {
+	return p.text(ts.ChildOfType(item, "visibility_modifier")) == "pub"
+}
+
+// rustImportExported reports whether a use is pub, as pub use
+// inner::render, so another crate can name what it binds.
+func rustImportExported(p *projection, imp callgraph.Import) bool {
+	for node := p.descendant(imp.Position); node != nil; node = node.Parent() {
+		if node.Type() == "use_declaration" {
+			return p.rustPub(node)
+		}
+	}
+	return false
 }
 
 // rustVisitor marks an include! of a source file, whose code the index

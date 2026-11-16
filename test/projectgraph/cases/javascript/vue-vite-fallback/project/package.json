@@ -1,0 +1,5 @@
+{
+  "name": "vue-vite-fallback",
+  "private": true,
+  "dependencies": { "vue": "^3.4.0" }
+}

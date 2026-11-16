@@ -1,0 +1,5 @@
+{
+  "name": "vue-alias-import",
+  "main": "src/main.js",
+  "dependencies": { "vue": "^3.4.0" }
+}

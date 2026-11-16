@@ -108,7 +108,18 @@ func (p *projection) addCalls(ctx context.Context) {
 				Kind:     kind,
 				Args:     p.arguments(key, ref.Site),
 			}
+			if literal := p.rules().literalCall; literal != nil && literal(p, call) {
+				continue
+			}
 			p.retargetTyped(ctx, &call, untyped[[2]uint32{ref.Site.StartLine, ref.Site.StartColumn}])
+			if shadowed := p.rules().shadowed; shadowed != nil && !shadowed(ctx, p, &call, ref.Site) {
+				p.addRecord(call, fileindex.UnresolvedUnknownReceiver)
+				continue
+			}
+			if typed := p.rules().typedCall; typed != nil && !typed(p, &call) {
+				p.addRecord(call, fileindex.UnresolvedUnknownReceiver)
+				continue
+			}
 			if !p.bindsAsWritten(ctx, call) {
 				p.addRecord(call, fileindex.UnresolvedUnknownReceiver)
 				continue

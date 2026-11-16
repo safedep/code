@@ -3,11 +3,13 @@ package lang
 import (
 	"context"
 	"fmt"
+	"slices"
 	"unicode"
 	"unicode/utf8"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
+	"github.com/safedep/code/langcode"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -45,7 +47,13 @@ func (r *rustResolvers) ResolveImports(ctx context.Context, tree core.ParseTree)
 	err = walkNamed(ctx, tree.Tree().RootNode(), func(node *sitter.Node) bool {
 		switch node.Type() {
 		case "use_declaration":
-			imports = append(imports, rustUseImports(data, node.ChildByFieldName("argument"), nil, nil)...)
+			uses := rustUseImports(data, node.ChildByFieldName("argument"), nil, nil)
+			if mods := rustInlineModules(data, node); len(mods) > 0 {
+				for _, imp := range uses {
+					imp.SetModuleName(langcode.RustFromFile(imp.ModuleName(), mods))
+				}
+			}
+			imports = append(imports, uses...)
 			return false
 		case "extern_crate_declaration":
 			name := node.ChildByFieldName("name")
@@ -82,6 +90,23 @@ func (r *rustResolvers) ResolveImports(ctx context.Context, tree core.ParseTree)
 	}
 
 	return imports, nil
+}
+
+// rustInlineModules returns the names of the inline modules that hold a
+// node, the outermost first, as [outer inner] for a use in mod outer { mod
+// inner { .. } }.
+func rustInlineModules(data *[]byte, node *sitter.Node) []string {
+	var mods []string
+	for n := node.Parent(); n != nil; n = n.Parent() {
+		if n.Type() != "mod_item" {
+			continue
+		}
+		if name := n.ChildByFieldName("name"); name != nil {
+			mods = append(mods, name.Content(*data))
+		}
+	}
+	slices.Reverse(mods)
+	return mods
 }
 
 // rustUseImports returns the imports of a use tree. The prefix is the path of

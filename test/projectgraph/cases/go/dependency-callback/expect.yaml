@@ -52,6 +52,9 @@ unresolved:
     callback: true
   - caller: go:github.com/acme/srv@v1.0.0//srv.go//Run
     site: go:github.com/acme/srv@v1.0.0//srv.go:12
+    reason: function-value
+  - caller: go:github.com/acme/srv@v1.0.0//srv.go//Run
+    site: go:github.com/acme/srv@v1.0.0//srv.go:12
     reason: unknown-receiver
     method: f
   - caller: go:github.com/acme/srv@v1.0.0//srv.go//Each
@@ -61,6 +64,9 @@ unresolved:
     site: go:github.com/acme/srv@v1.0.0//srv.go:20
     reason: interface-receiver
     method: Handle
+  - caller: go:github.com/acme/srv@v1.0.0//srv.go//Bind
+    site: go:github.com/acme/srv@v1.0.0//srv.go:24
+    reason: function-value
   - caller: go:github.com/acme/srv@v1.0.0//srv.go//Bind
     site: go:github.com/acme/srv@v1.0.0//srv.go:24
     reason: unknown-receiver

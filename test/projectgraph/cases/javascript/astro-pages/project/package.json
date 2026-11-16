@@ -1,0 +1,5 @@
+{
+  "name": "astro-pages",
+  "main": "server.js",
+  "dependencies": { "astro": "^4.5.0" }
+}

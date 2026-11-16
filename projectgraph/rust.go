@@ -2,6 +2,7 @@ package projectgraph
 
 import (
 	"cmp"
+	"math"
 	"slices"
 	"strings"
 
@@ -29,6 +30,7 @@ var rustProfile = profile{
 	symbol:            rustSymbol,
 	surface:           rustSurface,
 	unitTypes:         true,
+	nestedTypes:       true,
 	receiverMethods:   true,
 	sameTypeMethods:   map[string]bool{"clone": true, "to_owned": true, "default": true, "from": true},
 	abstractReceiver:  fileindex.UnresolvedTraitReceiver,
@@ -144,8 +146,9 @@ var rustRoots = map[string]bool{"std": true, "core": true, "alloc": true}
 
 // rustState is the state of Rust in a build: the crates of each space, the
 // module path of each Rust file, the paths that a resolution or a crate
-// route reads now, by the file that writes them, and the module paths of
-// the glob uses of each file.
+// route reads now, by the file that writes them, the module paths of the
+// glob uses of each file, the exported macros of each unit by name, and
+// the names of the types of the inline modules.
 type rustState struct {
 	cargo     map[*space]*modules.Cargo
 	modules   map[string]string
@@ -153,6 +156,16 @@ type rustState struct {
 	routing   map[[2]string]bool
 	routes    map[[2]string]crateRoute
 	globs     map[string][]string
+	macros    map[*space]map[string]string
+	nested    map[string]bool
+	glob      globMemo
+	// asker is the file of the innermost resolveRust in progress.
+	asker string
+	// useScopes holds the classes of each file that hold a use, which are
+	// inline modules.
+	useScopes map[string]map[string]bool
+	// spaceMacros holds the names of the macro_rules! of each space.
+	spaceMacros map[*space]map[string]bool
 }
 
 // crateRoute is the path in another crate that a path of a file names, and
@@ -190,6 +203,8 @@ func (b *builder) addRustUnits() {
 	s.routing = map[[2]string]bool{}
 	s.routes = map[[2]string]crateRoute{}
 	s.globs = map[string][]string{}
+	s.glob = globMemo{active: map[globKey]int{}, low: math.MaxInt, kept: map[globKey]globAnswer{}, visited: map[globKey]globAnswer{}}
+	s.useScopes = map[string]map[string]bool{}
 	files := map[string][]string{}
 	for _, p := range b.paths {
 		if ix := b.byPath[p]; ix != nil && ix.Language == langcode.Rust {
@@ -290,7 +305,7 @@ func (b *builder) rustPaths(module, written string) []string {
 // not-found.
 func (b *builder) rustScopePaths(importer, written string) []string {
 	out := b.rustPaths(b.rustState().modules[importer], written)
-	if first := rustFirstName(written); first == "crate" || first == "self" || first == "super" || strings.HasPrefix(written, "::") {
+	if rustCrateRoot(rustFirstName(written)) || strings.HasPrefix(written, "::") {
 		return out
 	}
 	parts := strings.Split(written, "::")
@@ -361,8 +376,58 @@ func rustProvide(b *builder, sp *space, module string, _ modules.Form) []provisi
 	if key, ok := b.resolveQualified(langcode.Rust, joinPath(sp.unit, parts[1:])); ok {
 		return []provision{{sp: sp, module: key, via: "crate"}}
 	}
+	// #[macro_export] puts a macro at the root of its crate, as from_sub of
+	// src/macros.rs for dep::from_sub. A walk of the modules of the crate
+	// does not find it.
+	if len(parts) == 2 {
+		exported, _ := b.rustMacros()
+		if key, ok := exported[sp][parts[1]]; ok {
+			return []provision{{sp: sp, module: key, via: "crate"}}
+		}
+	}
 	return []provision{{sp: sp}}
 }
+
+// rustMacros returns the macros that #[macro_export] puts at the root of
+// the crate of each unit, by name, and the names of the macro_rules! of
+// each space.
+func (b *builder) rustMacros() (exported map[*space]map[string]string, rules map[*space]map[string]bool) {
+	s := b.rustState()
+	if s.macros != nil {
+		return s.macros, s.spaceMacros
+	}
+	s.macros = map[*space]map[string]string{}
+	s.spaceMacros = map[*space]map[string]bool{}
+	for _, p := range b.paths {
+		ix := b.byPath[p]
+		if ix == nil || ix.Language != langcode.Rust {
+			continue
+		}
+		sp := b.spaceOf(p)
+		for _, def := range ix.Definitions {
+			if slices.Contains(def.Decorators, fileindex.RustMacroRules) {
+				if s.spaceMacros[sp] == nil {
+					s.spaceMacros[sp] = map[string]bool{}
+				}
+				s.spaceMacros[sp][def.Name] = true
+			}
+			if sp.unit == "" || !slices.Contains(def.Decorators, rustMacroExport) {
+				continue
+			}
+			if s.macros[sp] == nil {
+				s.macros[sp] = map[string]string{}
+			}
+			if _, taken := s.macros[sp][def.Name]; !taken {
+				s.macros[sp][def.Name] = def.Key
+			}
+		}
+	}
+	return s.macros, s.spaceMacros
+}
+
+// rustMacroExport is the attribute that puts a macro at the root of its
+// crate.
+const rustMacroExport = "@macro_export"
 
 // rustImportedModule returns the path of the package that a path of a file
 // names. A path writes the name that the Cargo.toml of its crate gives a
@@ -452,10 +517,13 @@ func (b *builder) resolveRust(importer, written string) (string, bool) {
 		b.asked[k] = true
 	}
 	if s.resolving[k] {
+		b.cut()
 		return "", false
 	}
 	s.resolving[k] = true
 	defer delete(s.resolving, k)
+	defer func(asker string) { s.asker = asker }(s.asker)
+	s.asker = importer
 	for _, p := range b.rustScopePaths(importer, written) {
 		if key, ok := b.resolveQualified(langcode.Rust, p); ok {
 			return key, true
@@ -480,10 +548,30 @@ func (r rustResolver) Module(importer, spec string) (string, string, bool) {
 		return t.key, "path", true
 	}
 	// A use can bind an item of the crate, as fl of use crate::ffi::flush
-	// as fl after pub use dep as ffi. A call of fl links the key itself,
-	// so the key needs its node. Without it the edge reached no node, and
-	// the target read as not-found.
-	return r.b.external(r.b.rustCrateKey(t.file, t.path)), "crate", true
+	// as fl after pub use dep as ffi.
+	return r.b.rustCrateTarget(t.file, t.path), "crate", true
+}
+
+// rustCrateTarget returns the key of a path of another crate that a use or
+// a glob use of a file of the project binds. A call of the name links the
+// key itself, so the key needs its node. An edge to a key with no node
+// leaves the target not-found. A module of a unit, as html of dep::html,
+// runs no code, and its node would get a record of the unit for a walk that
+// ends on a module.
+func (b *builder) rustCrateTarget(file, path string) string {
+	key := b.rustCrateKey(file, path)
+	if b.rustUnitModule(file, path) {
+		return key
+	}
+	return b.external(key)
+}
+
+// rustUnitModule reports whether a path of another crate that a file names
+// is a module of a unit.
+func (b *builder) rustUnitModule(file, path string) bool {
+	ix := b.byPath[file]
+	o := b.importOrigin(ix, path, modules.FormImport)
+	return slices.ContainsFunc(b.providers(o), func(pv provision) bool { return b.units[pv.module] != nil })
 }
 
 // rustTarget is what a path of a file names: a definition or a module of
@@ -496,6 +584,15 @@ type rustTarget struct {
 // rustPath resolves a path that a file writes: in the project, or else
 // through a name that a module binds to another crate.
 func (b *builder) rustPath(importer, written string) (rustTarget, bool) {
+	if t, ok := b.rustLocalPath(importer, written); ok {
+		return t, true
+	}
+	return b.rustGlobPath(importer, written)
+}
+
+// rustLocalPath resolves a path that a file writes as rustPath does, with
+// no glob use of another crate.
+func (b *builder) rustLocalPath(importer, written string) (rustTarget, bool) {
 	if key, ok := b.resolveRust(importer, written); ok {
 		return rustTarget{key: key}, true
 	}
@@ -555,6 +652,7 @@ func (b *builder) rustCratePath(importer, written string) (string, string, bool)
 		return r.path, r.file, r.ok
 	}
 	if s.routing[k] {
+		b.cut()
 		return "", "", false
 	}
 	outer := len(s.routing) == 0
@@ -651,11 +749,16 @@ func (b *builder) rustCrate(file, module string) (string, string, bool) {
 // the name does not tell it, because the module of that file is no child.
 func (b *builder) rustLocalRoot(file, path string) bool {
 	first := rustFirstName(path)
-	switch first {
-	case "crate", "self", "super":
+	if rustCrateRoot(first) {
 		return true
 	}
 	return b.cargoOf(b.spaceOf(file)).Has(first) || b.rustModuleUnit(file, first) != nil || b.rustModuleUnit(file, "crate::"+first) != nil
+}
+
+// rustCrateRoot reports whether the first name of a path names the crate
+// of the file or a module of it by a keyword: crate, self or super.
+func rustCrateRoot(first string) bool {
+	return first == "crate" || first == "self" || first == "super"
 }
 
 // rustFirstName returns the first name of a path, as std for ::std::io.
@@ -680,7 +783,7 @@ func rustCrateNames(path string) (string, []string) {
 func (r rustResolver) FirstParty(spec string) bool {
 	first := rustFirstName(spec)
 	switch {
-	case first == "crate" || first == "self" || first == "super":
+	case rustCrateRoot(first):
 		return true
 	case rustRoots[first]:
 		return false
@@ -700,24 +803,448 @@ func (r rustResolver) FirstPartyFrom(importer, spec string) bool {
 // child module, or else a path of another crate, as serde_json::to_string,
 // whose external key the edge gets. The crate is the origin of the key, so a
 // unit of dependency code that gives the crate links it. A single name stays a record, because
-// a local closure can bind it.
-func (b *builder) rustScopeFallback(sc *scope, _, first string, rest []string, target string) []resolution {
+// a local closure or a parameter can bind it. A single name that a glob use
+// of another crate or an exported macro of a dependency gives also gets the
+// edge to that item.
+func (b *builder) rustScopeFallback(sc *scope, caller, first string, rest []string, target string) []resolution {
 	written := strings.Join(append([]string{first}, rest...), "::")
-	if t, ok := b.rustPath(sc.ix.Path, written); ok {
-		if t.key != "" {
-			return []resolution{b.walkNamespace(t.key)}
-		}
-		crate, names := rustCrateNames(t.path)
-		return []resolution{b.importedWalk(b.byPath[t.file], fileindex.Namespace(langcode.Rust, t.path), crate, modules.FormImport, names)}
+	record := resolution{fail: unknownReceiver(first)}
+	// A glob use of the file brings no name into an inline module, which
+	// reads its own uses.
+	t, ok := b.rustLocalPath(sc.ix.Path, written)
+	if !ok && !b.rustInUseScope(sc, caller) {
+		t, ok = b.rustGlobPath(sc.ix.Path, written)
 	}
-	if len(rest) > 0 {
+	switch {
+	case ok && t.key != "":
+		return []resolution{b.walkNamespace(t.key)}
+	case ok:
+		crate, names := rustCrateNames(t.path)
+		r := b.importedWalk(b.byPath[t.file], fileindex.Namespace(langcode.Rust, t.path), crate, modules.FormImport, names)
+		if len(rest) > 0 {
+			return []resolution{r}
+		}
+		return []resolution{r, record}
+	case len(rest) > 0 && rustCrateRoot(first):
+		// crate, self or super names no other crate. A path of the crate
+		// that does not resolve, as crate::m0::f0 for a name of a glob use
+		// of a crate with no source, is a record and no edge to the
+		// external key crate//m0//f0.
+		return []resolution{record}
+	case len(rest) > 0:
 		return []resolution{b.importedWalk(sc.ix, target, first, modules.FormImport, rest)}
+	}
+	if crate, ok := b.rustMacroCrate(sc.ix, first); ok {
+		return []resolution{b.importedWalk(sc.ix, fileindex.Join(crate, first), crate, modules.FormImport, []string{first}), record}
 	}
 	return nil
 }
 
+// rustInUseScope reports whether a key of a file sits in an inline module
+// with a use of its own. The index keeps the uses of a file in one scope,
+// and an impl block holds no use, so a class of the file that holds a use
+// is an inline module.
+func (b *builder) rustInUseScope(sc *scope, key string) bool {
+	s := b.rustState()
+	scopes, ok := s.useScopes[sc.ix.Path]
+	if !ok {
+		scopes = map[string]bool{}
+		for _, imp := range sc.imports {
+			if k := sc.enclosing(imp.Line); k != sc.ix.Path && b.kindOf(k) == NodeClass {
+				scopes[k] = true
+			}
+		}
+		s.useScopes[sc.ix.Path] = scopes
+	}
+	for k := fileindex.Parent(key); k != sc.ix.Path && fileindex.HasKeyPrefix(k, sc.ix.Path); k = fileindex.Parent(k) {
+		if scopes[k] {
+			return true
+		}
+	}
+	return false
+}
+
+// rustMacroCrate returns a dependency of the crate of a file whose unit
+// exports a macro of the name with #[macro_export], as dep for
+// render_now!() after #[macro_use] extern crate dep. The index does not
+// tell a call of a macro from a call of a function, so the caller keeps
+// the record of the name too.
+func (b *builder) rustMacroCrate(ix *fileindex.Index, name string) (string, bool) {
+	// A macro_rules! of the crate of the file shadows a macro of a
+	// dependency. A function or a method of the name does not, because a
+	// macro call reads macros only. The rule does not read the textual
+	// scope of the macro, so a macro of the crate that the call cannot see
+	// shadows too.
+	exported, rules := b.rustMacros()
+	if rules[b.spaceOf(ix.Path)][name] {
+		return "", false
+	}
+	found := false
+	for _, macros := range exported {
+		_, ok := macros[name]
+		found = found || ok
+	}
+	if !found {
+		return "", false
+	}
+	for _, dep := range b.cargoOf(b.spaceOf(ix.Path)).Dependencies() {
+		crate := strings.ReplaceAll(dep, "-", "_")
+		o := b.importOrigin(ix, crate+"::"+name, modules.FormImport)
+		if slices.ContainsFunc(b.providers(o), func(pv provision) bool {
+			def := b.defs[pv.module]
+			return def != nil && slices.Contains(def.Decorators, rustMacroExport)
+		}) {
+			return crate, true
+		}
+	}
+	return "", false
+}
+
+// rustGlobPath returns the target in another crate that a path of a file
+// names through a glob use of a module of that crate, as dep::html::render
+// for render after use dep::html::*, when a unit gives the crate and the
+// first name of the path in the module. A glob use of a crate that no unit
+// gives can bring any name, so the path then resolves with no glob path.
+// Crates can bring each other's names with glob uses, and globMemo.lookup
+// keeps each such read finite.
+// test/projectgraph/cases/rust/glob-use-crate-cycle pins a cycle.
+func (b *builder) rustGlobPath(importer, written string) (rustTarget, bool) {
+	sc := b.scopes[importer]
+	first := rustFirstName(written)
+	if sc == nil || len(sc.wildcards) == 0 || !b.hasUnits() || strings.HasPrefix(written, "::") || rustCrateRoot(first) {
+		return rustTarget{}, false
+	}
+	a := b.rustState().glob.lookup(b, globKey{path: true, scope: importer, name: first}, func() globAnswer {
+		return globAnswer{path: b.findGlobPath(sc, first)}
+	})
+	return a.path.join(written)
+}
+
+// rustPublic reports whether a provision gives an item that a glob use of
+// another crate brings: a module, a key of a third crate, or a pub item. A
+// private item stays out, as fn render of dep::html for use dep::html::*.
+func (b *builder) rustPublic(pv provision) bool {
+	if pv.module == "" {
+		return false
+	}
+	def := b.defs[pv.module]
+	return def == nil || def.Exported
+}
+
+// globPath is the path of the module of another crate that a glob use of
+// a file brings a name from, and the file that names the crate.
+type globPath struct {
+	path, file string
+	ok         bool
+}
+
+// join returns the target of a written path under the module.
+func (g globPath) join(written string) (rustTarget, bool) {
+	if !g.ok {
+		return rustTarget{}, false
+	}
+	return rustTarget{path: joinPath(g.path, strings.Split(written, "::")), file: g.file}, true
+}
+
+func (b *builder) findGlobPath(sc *scope, first string) globPath {
+	importer := sc.ix.Path
+	for _, imp := range sc.wildcards {
+		if def := b.defs[sc.enclosing(imp.Line)]; def != nil && def.Kind == fileindex.DefClass {
+			continue
+		}
+		path, file, ok := b.rustCratePath(importer, imp.Module)
+		switch {
+		case ok:
+		case b.rustLocalRoot(importer, imp.Module):
+			continue
+		default:
+			path, file = imp.Module, importer
+		}
+		ix := b.byPath[file]
+		o := b.importOrigin(ix, joinPath(path, []string{first}), modules.FormImport)
+		if slices.ContainsFunc(b.providers(o), b.rustPublic) && b.rustGlobGives(ix, path, first) {
+			return globPath{path: path, file: file, ok: true}
+		}
+	}
+	return globPath{}
+}
+
+// rustGlobGives reports whether a glob use of the module of another crate
+// at a path brings a name. Another crate sees only what is pub for every
+// crate: a pub item of the module, a child module, or the binding of a pub
+// use or of a pub glob use. A private use or a pub(crate) item of the module
+// stays out, as render of use crate::inner::render in dep::html. A glob of
+// what is no module, as an enum, brings the item that the provision gives.
+func (b *builder) rustGlobGives(ix *fileindex.Index, path, name string) bool {
+	o := b.importOrigin(ix, path, modules.FormImport)
+	read := false
+	for _, pv := range b.providers(o) {
+		if b.units[pv.module] == nil {
+			continue
+		}
+		read = true
+		if b.rustExports(pv.module, name, map[string]bool{}) {
+			return true
+		}
+	}
+	return !read
+}
+
+// rustExports reports whether a module of the project or of a unit gives a
+// name to another crate, as rustGlobGives says.
+func (b *builder) rustExports(mod, name string, seen map[string]bool) bool {
+	if seen[mod] {
+		return false
+	}
+	seen[mod] = true
+	u := b.units[mod]
+	if slices.ContainsFunc(u.names[name], func(k string) bool { return b.defs[k] != nil && b.defs[k].Exported }) {
+		return true
+	}
+	if _, pkg, ok := strings.Cut(mod, ":"); ok && b.namespaces[langcode.Rust].units[pkg+"::"+name] != nil {
+		// A child module is a unit of its own file, and only a pub mod
+		// gives it to another crate. Without the check, dep::hidden of mod
+		// hidden; took the call hidden::run() of use dep::* from the crate
+		// that has pub mod hidden.
+		return !slices.ContainsFunc(u.files, func(p string) bool {
+			ix := b.byPath[p]
+			return ix != nil && slices.Contains(ix.PrivateModules, name)
+		})
+	}
+	for _, p := range u.files {
+		sc := b.scopes[p]
+		if sc == nil {
+			continue
+		}
+		for _, imp := range sc.imports {
+			if !imp.Exported || sc.enclosing(imp.Line) != p {
+				continue
+			}
+			if !imp.Wildcard {
+				if bindingName(langcode.Rust, imp) == name {
+					return true
+				}
+				continue
+			}
+			if b.rustLocalRoot(p, imp.Module) {
+				if m, _, ok := b.resolveModule(sc.ix, imp.Module); ok && b.units[m] != nil && b.rustExports(m, name, seen) {
+					return true
+				}
+				continue
+			}
+			o := b.importOrigin(sc.ix, imp.Module, modules.FormImport)
+			if slices.ContainsFunc(b.providers(o), func(pv provision) bool {
+				return b.units[pv.module] != nil && b.rustExports(pv.module, name, seen)
+			}) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// rustNestedName reports whether an inline module of the graph defines a
+// type of the name. Most names name no such type, so the set skips the walk
+// up the classes.
+func (b *builder) rustNestedName(name string) bool {
+	s := b.rustState()
+	if s.nested == nil {
+		s.nested = map[string]bool{}
+		for key := range b.g.Nodes {
+			if b.isType(key) && b.isType(fileindex.Parent(key)) {
+				s.nested[fileindex.Last(key)] = true
+			}
+		}
+	}
+	return s.nested[name]
+}
+
+// rustCrateMember returns the external key of a path of another crate that
+// a use of a file of a unit binds, as inner::text of pub use inner::text in
+// the prelude of dep. The walk then goes on in the unit of that crate. The
+// key lets dep::prelude::text name the item.
+func (b *builder) rustCrateMember(sc *scope, path string) (string, bool) {
+	if !b.rustUnitFile(sc.ix) || b.rustLocalRoot(sc.ix.Path, path) {
+		return "", false
+	}
+	return b.rustCrateKey(sc.ix.Path, path), true
+}
+
+// rustGlobMember returns the external key of a name that a glob use of a
+// file brings from another crate, as inner::ifn for ifn after pub use
+// inner::*. A path through a module of the project reads it, as
+// crate::m0::f0 after pub use dep::m::* in m0. Without it the path read as
+// a crate of its own, crate//m0//f0. A file of the project reads a name of
+// its own glob uses in rustScopeFallback, which keeps the record of a
+// single name and knows the inline modules.
+func (b *builder) rustGlobMember(sc *scope, name string) (string, bool) {
+	unit := b.rustUnitFile(sc.ix)
+	if s := b.rustState(); !unit && sc.ix.Path == s.asker {
+		// A glob lookup keys its answer by the module, not by the asker,
+		// so it keeps no answer that this skip gave.
+		if len(s.glob.active) > 0 {
+			b.cut()
+		}
+		return "", false
+	}
+	t, ok := b.rustGlobPath(sc.ix.Path, name)
+	switch {
+	case !ok:
+		return "", false
+	case unit:
+		return b.rustCrateKey(t.file, t.path), true
+	case !b.rustUnitModule(t.file, strings.TrimSuffix(t.path, "::"+name)):
+		// A glob use of a crate with no source can give any name, so a
+		// later glob use can give the item. The path stays a record.
+		return "", false
+	}
+	return b.rustCrateTarget(t.file, t.path), true
+}
+
+// rustGlobUnitMember returns what a glob use of a module brings for a name
+// that no definition of the module has: a child module, or the target of a
+// use or of a glob use of the module, as leaf for use crate::sub::* with
+// pub mod leaf in sub.
+func (b *builder) rustGlobUnitMember(mod, name string) (string, bool) {
+	a := b.rustState().glob.lookup(b, globKey{scope: mod, name: name}, func() globAnswer {
+		key, ok := b.unitMember(mod, name)
+		return globAnswer{key: key, ok: ok}
+	})
+	return a.key, a.ok
+}
+
+// globKey names a glob lookup: the glob path of a file and a first name, or
+// the glob member of a module and a name.
+type globKey struct {
+	path        bool
+	scope, name string
+}
+
+// globAnswer is the answer of a glob lookup, with the least depth that a cut
+// under it hit.
+type globAnswer struct {
+	key  string
+	ok   bool
+	path globPath
+	low  int
+}
+
+// found reports whether a glob lookup found its item.
+func (a globAnswer) found() bool {
+	return a.ok || a.path.ok
+}
+
+// globMemo holds the glob lookups of Rust that a build reads now and has
+// read, as lookup says.
+type globMemo struct {
+	// active holds the depth of each glob path and glob member that a
+	// lookup reads now. depth is the depth of the last one, and low the
+	// least depth that a cut of the read in progress hit.
+	active map[globKey]int
+	depth  int
+	low    int
+	// kept holds the answers of the glob lookups that no cut of an outer
+	// read gave, for the build. visited holds the other answers of the
+	// outermost lookup in progress, and visits the order of their reads.
+	kept    map[globKey]globAnswer
+	visited map[globKey]globAnswer
+	visits  []globKey
+	// cuts counts the cuts of the glob guards, a part of b.cuts.
+	cuts int
+}
+
+// lookup reads a glob lookup once. Modules and crates can bring each other
+// with glob uses, so the outermost lookup reads each lookup once, and a
+// lookup that it reads again gives its first answer. An answer stays for
+// the build when each cut under it hit the lookup or a lookup under it, as
+// the low link of Tarjan tells. A visited answer under a kept lookup stays
+// only when it found its item. Any other visited answer can lack an item that
+// the lookup found later, and a later read at another depth would keep it.
+// test/projectgraph/cases/rust/glob-use-stale-visit pins that case.
+func (g *globMemo) lookup(b *builder, k globKey, read func() globAnswer) globAnswer {
+	if a, ok := g.kept[k]; ok {
+		return a
+	}
+	if d, ok := g.active[k]; ok {
+		g.cut(b, d)
+		return globAnswer{}
+	}
+	if a, ok := g.visited[k]; ok {
+		g.cut(b, a.low)
+		return a
+	}
+	if len(g.active) == 0 {
+		defer func() {
+			clear(g.visited)
+			g.visits = g.visits[:0]
+		}()
+	}
+	g.depth++
+	d := g.depth
+	g.active[k] = d
+	low, cuts, mark := g.low, b.cuts-g.cuts, len(g.visits)
+	g.low = math.MaxInt
+	a := read()
+	a.low = g.low
+	g.low = min(low, g.low)
+	delete(g.active, k)
+	g.depth--
+	under := g.visits[mark:]
+	if a.low >= d && b.cuts-g.cuts == cuts {
+		remember(b, g.kept, k, a)
+		for _, v := range under {
+			if e, ok := g.visited[v]; ok && e.found() && e.low >= d {
+				remember(b, g.kept, v, e)
+			}
+			delete(g.visited, v)
+		}
+		g.visits = g.visits[:mark]
+		return a
+	}
+	for _, v := range under {
+		if e, ok := g.visited[v]; ok && e.low > a.low {
+			e.low = a.low
+			g.visited[v] = e
+		}
+	}
+	g.visits = append(g.visits, k)
+	remember(b, g.visited, k, a)
+	return a
+}
+
+// cut counts a read that the guard of a glob path or of a glob member cuts
+// at the depth.
+func (g *globMemo) cut(b *builder, depth int) {
+	b.cut()
+	g.cuts++
+	g.low = min(g.low, depth)
+}
+
+// read starts a read that the cuts of the glob guards can make incomplete.
+// The function that it returns ends the read and reports whether no cut of
+// the read hit a module that a lookup read before the read began.
+func (g *globMemo) read() func() bool {
+	depth, low := g.depth, g.low
+	g.low = math.MaxInt
+	return func() bool {
+		whole := g.low > depth
+		g.low = min(low, g.low)
+		return whole
+	}
+}
+
+// rustUnitFile reports whether a file is Rust code of a unit of dependency
+// code.
+func (b *builder) rustUnitFile(ix *fileindex.Index) bool {
+	return ix.Language == langcode.Rust && ix.Unit != ""
+}
+
 // joinImplBlocks makes an impl block of a type of another module one class
 // with the type, as impl Store for FileStore after use crate::FileStore.
+// Only a use at the root of the file counts. The root cannot define a type
+// of a name that such a use binds, so the class is an impl block. A use of
+// an inline module, as use crate::other::A in mod deep, binds A in that
+// module only.
 func (b *builder) joinImplBlocks() {
 	var groups [][]string
 	for _, p := range b.paths {
@@ -727,13 +1254,17 @@ func (b *builder) joinImplBlocks() {
 		}
 		sc := b.scopes[p]
 		for _, c := range ix.Classes {
-			imp, ok := sc.bindings[fileindex.Last(c.Key)]
-			if !ok || len(fileindex.Segments(c.Key)) != 1 {
+			if len(fileindex.Segments(c.Key)) != 1 {
 				continue
 			}
-			module, _ := importedModule(ix.Language, imp)
-			if key, _, found := b.resolveModule(ix, module); found && key != c.Key && b.isType(key) {
-				groups = append(groups, []string{key, c.Key})
+			for _, imp := range rustBindings(sc, fileindex.Last(c.Key)) {
+				if imp.Item == "" && imp.Alias == "" || sc.enclosing(imp.Line) != p {
+					continue
+				}
+				module, _ := importedModule(ix.Language, imp)
+				if key, _, found := b.resolveModule(ix, module); found && key != c.Key && b.isType(key) {
+					groups = append(groups, []string{key, c.Key})
+				}
 			}
 		}
 	}

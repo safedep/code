@@ -59,6 +59,29 @@ type projection struct {
 	// whose values the index reads, by the key of the function and the
 	// name.
 	goScoped map[string]map[string][]goScope
+	// goOrigins holds the origin of each typed local of each Go function,
+	// by the key of the function, as goLocals gives it.
+	goOrigins map[string][]uint32
+	// linknames holds the remote name of each local name that a
+	// //go:linkname directive of a Go file binds.
+	linknames map[string]string
+	// anonFields holds the names of the fields of the anonymous structs of
+	// a Go file that can hold a function.
+	anonFields map[string]bool
+	// fileTypes and fileVars hold the declared type of each type and each
+	// variable at the top level of a Go file, read once.
+	fileTypes, fileVars map[string]*sitter.Node
+	// extents holds the bytes of each definition node in start order, for
+	// innermost. A new definition node clears it.
+	extents []extent
+	// lineStarts holds the byte where each line of the source starts.
+	lineStarts []uint32
+	// rustMacros holds the names that a macro_rules! or a use of a Rust
+	// file binds, once a call of a macro reads them.
+	rustMacros map[string]bool
+	// rustUses holds the uses of each block and declaration list of a Rust
+	// file, by the start and the end of the list.
+	rustUses map[[2]uint32][]rustUse
 }
 
 // project builds the call graph of tree and projects it into an index. It
@@ -89,13 +112,14 @@ func project(ctx context.Context, tree core.ParseTree) (*fileindex.Index, *callg
 			ContentHash: fileindex.HashContent(*data),
 			Unit:        unitOf(cg.FileName),
 		},
-		defs:     map[string]*fileindex.Definition{},
-		syntax:   map[string]*sitter.Node{},
-		spans:    map[span]string{},
-		bodies:   map[span]string{},
-		exports:  map[string]bool{},
-		bindings: map[string]bool{},
-		members:  map[[2]uint32]bool{},
+		defs:      map[string]*fileindex.Definition{},
+		syntax:    map[string]*sitter.Node{},
+		spans:     map[span]string{},
+		bodies:    map[span]string{},
+		exports:   map[string]bool{},
+		bindings:  map[string]bool{},
+		members:   map[[2]uint32]bool{},
+		goOrigins: map[string][]uint32{},
 	}
 
 	rules := p.rules()
@@ -141,9 +165,11 @@ func unitOf(name string) string {
 }
 
 func (p *projection) addImports() {
+	exported := p.rules().importExported
 	for _, imp := range p.cg.Imports {
 		kind, require := p.importForm(imp)
 		p.ix.Imports = append(p.ix.Imports, fileindex.Import{
+			Exported:  exported != nil && exported(p, imp),
 			Line:      int(imp.Position.StartLine),
 			Module:    imp.Module,
 			Item:      imp.Item,
@@ -366,7 +392,7 @@ func (p *projection) addClasses(_ context.Context) error {
 		case node == nil:
 			p.ix.Classes = append(p.ix.Classes, fileindex.Class{Key: key, Methods: methods[key]})
 		default:
-			p.ix.Classes = append(p.ix.Classes, fileindex.Class{Key: key, Bases: p.bases(node), Methods: methods[key], Fields: p.fields(node)})
+			p.ix.Classes = append(p.ix.Classes, fileindex.Class{Key: key, Bases: p.bases(node), Metaclass: p.metaclass(node), Methods: methods[key], Fields: p.fields(node)})
 		}
 	}
 	return nil

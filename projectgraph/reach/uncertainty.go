@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/langcode"
 	"github.com/safedep/code/projectgraph"
 )
 
@@ -27,6 +28,12 @@ type found struct {
 	methods  []string
 	prefixed []prefixed
 	byUnit   []Uncertainty
+	// byLanguage holds the markup records, which concern the targets that
+	// code of their language family calls.
+	byLanguage []Uncertainty
+	// speaks reports whether the code of a site of a language scope can
+	// call a target.
+	speaks   func(u Uncertainty, target Target) bool
 	callback *Uncertainty
 	// concerns reports whether the span of a scope concerns a target.
 	concerns func(k scopeKey, target Target) bool
@@ -39,6 +46,7 @@ type found struct {
 // sources holds the records, the import prefixes and the truncations of a
 // graph by node, so a search and a set computation read them once.
 type sources struct {
+	g          *projectgraph.Graph
 	unresolved map[string][]projectgraph.UnresolvedSite
 	prefixes   map[projectgraph.Site]string
 	truncated  map[string][]projectgraph.Truncation
@@ -67,7 +75,7 @@ type sources struct {
 }
 
 func newSources(g *projectgraph.Graph, valueEdges bool) *sources {
-	s := &sources{valueEdges: valueEdges, unresolved: map[string][]projectgraph.UnresolvedSite{}, prefixes: map[projectgraph.Site]string{}, truncated: map[string][]projectgraph.Truncation{}, budgets: map[string][]Uncertainty{}, testBudgets: map[string][]Uncertainty{}, callbacks: map[string]bool{}}
+	s := &sources{g: g, valueEdges: valueEdges, unresolved: map[string][]projectgraph.UnresolvedSite{}, prefixes: map[projectgraph.Site]string{}, truncated: map[string][]projectgraph.Truncation{}, budgets: map[string][]Uncertainty{}, testBudgets: map[string][]Uncertainty{}, callbacks: map[string]bool{}}
 	for _, u := range g.Unresolved {
 		if u.Callback {
 			s.callbacks[u.Caller] = true
@@ -172,6 +180,10 @@ func (s *sources) at(key string, n *projectgraph.Node) []Uncertainty {
 		}
 		u := Uncertainty{Kind: UnresolvedCall, Key: key, Site: r.Site, Text: fmt.Sprintf("%s (%s)", r.Text, r.Reason)}
 		switch {
+		case r.Language != "":
+			u.Language = r.Language
+		case r.Reason == fileindex.UnresolvedMarkup:
+			u.Language = s.language(r.Site.Path)
 		case r.Unit != "":
 			u.Unit = r.Unit
 		case r.ImportPrefix != "":
@@ -207,7 +219,7 @@ func (s *sources) unitsOf(n *projectgraph.Node, key string) []string {
 func (a *adjacency) uncertainties(s *search, maxDepth int) *found {
 	g := a.g
 	src := a.sources()
-	f := &found{byMethod: map[string][]Uncertainty{}, concerns: a.concerns, units: src.budgets, entered: map[string]bool{}}
+	f := &found{byMethod: map[string][]Uncertainty{}, concerns: a.concerns, speaks: a.speaks, units: src.budgets, entered: map[string]bool{}}
 	for _, u := range src.global {
 		f.add(u)
 	}
@@ -254,6 +266,8 @@ func (f *found) add(u Uncertainty) {
 		if f.callback == nil {
 			f.callback = &u
 		}
+	case u.Language != "":
+		f.byLanguage = append(f.byLanguage, u)
 	case u.Unit != "":
 		f.byUnit = append(f.byUnit, u)
 	case u.ImportPrefix != "":
@@ -289,6 +303,7 @@ func (f *found) all() []Uncertainty {
 		out = append(out, p.u)
 	}
 	out = append(out, f.byUnit...)
+	out = append(out, f.byLanguage...)
 	if f.callback != nil {
 		out = append(out, *f.callback)
 	}
@@ -307,6 +322,11 @@ func (f *found) forTarget(target Target) ([]Uncertainty, []Uncertainty, int) {
 	}
 	for _, u := range f.byUnit {
 		if f.concerns(scopeKey{unit: u.Unit}, target) {
+			all = append(all, u)
+		}
+	}
+	for _, u := range f.byLanguage {
+		if f.speaks(u, target) {
 			all = append(all, u)
 		}
 	}
@@ -334,4 +354,45 @@ func (f *found) forTarget(target Target) ([]Uncertainty, []Uncertainty, int) {
 		count[u.Kind]++
 	}
 	return capped, setAside, len(all)
+}
+
+// language returns the language family of the file at the path, or "" for
+// a file with no node.
+func (s *sources) language(path string) langcode.Code {
+	if n := s.g.Nodes[path]; n != nil && n.Language != "" {
+		return n.Language.Family()
+	}
+	return ""
+}
+
+// speaks reports whether the code of a site of a language scope can call
+// a target: a file of the family imports the module of the target, a node
+// of the target is a definition in a file of the family, or an edge from
+// such a file leads to it. A target with no node keeps every uncertainty,
+// because no edge tells who calls it.
+func (a *adjacency) speaks(u Uncertainty, target Target) bool {
+	lang := u.Language
+	if slices.ContainsFunc(a.g.Imports[string(lang)], func(module string) bool { return target.under(module) }) {
+		return true
+	}
+	ids := a.match(target)
+	if len(ids) == 0 {
+		return true
+	}
+	src := a.sources()
+	of := func(key string) bool {
+		n := a.g.Nodes[key]
+		return n != nil && n.Path != "" && src.language(n.Path) == lang
+	}
+	for _, id := range ids {
+		if of(a.keys[id]) {
+			return true
+		}
+		for _, e := range a.in[id] {
+			if of(a.g.Edges[e].From) {
+				return true
+			}
+		}
+	}
+	return false
 }

@@ -1,0 +1,72 @@
+source: safedep:hand
+description: >-
+  go binds t with a let to a Disk and calls t.save(), then binds t again with a second let to a Cloud and
+  calls t.save() again. The second call runs Cloud::save, which calls std::fs::remove_dir_all. The call graph
+  binds a name to the value of its first let, so it sends both calls to Disk::save. Without the rule, the
+  second call gets no record and no edge to Cloud::save, and std::fs::remove_dir_all reads not-found. The
+  index keeps the first call and makes the second one a record with the reason unknown-receiver, so the second
+  call gets the low name edges of save.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//go
+    to: src/main.rs//Disk//save
+    kind: member
+    confidence: high
+    site: src/main.rs:18
+  - from: src/main.rs//go
+    to: src/main.rs//Cloud//save
+    kind: name
+    confidence: low
+    site: src/main.rs:20
+unresolved:
+  - caller: src/main.rs//go
+    site: src/main.rs:20
+    reason: unknown-receiver
+    method: save
+results:
+  - target: std//fs//write
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//go
+        site: src/main.rs:24
+        kind: direct
+        confidence: high
+      - key: src/main.rs//Disk//save
+        site: src/main.rs:18
+        kind: member
+        confidence: high
+      - key: std//fs//write
+        site: src/main.rs:6
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.rs//Disk//save
+        site: src/main.rs:6
+        reached: true
+  - target: std//fs//remove_dir_all
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//go
+        site: src/main.rs:24
+        kind: direct
+        confidence: high
+      - key: src/main.rs//Cloud//save
+        site: src/main.rs:20
+        kind: name
+        confidence: low
+      - key: std//fs//remove_dir_all
+        site: src/main.rs:12
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.rs//Cloud//save
+        site: src/main.rs:12
+        reached: true

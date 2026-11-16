@@ -1,0 +1,40 @@
+source: safedep:hand
+description: >-
+  main.rs has #[macro_use] extern crate dep and #[macro_use] mod macros. The crate dep exports a macro log with
+  #[macro_export], and src/macros.rs defines its own macro_rules! log, which comes later in the text and so
+  shadows the macro of dep. log!() in src/job.rs runs the local macro, which calls crate::flush. A link step
+  that gives the call the edge to the macro of dep reads dep//sink as found. The call keeps its record alone, so
+  dep//sink reads uncertain.
+units:
+  vendor/dep: cargo:dep@1.0.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/job.rs//go
+    to: src/macros.rs//log
+    kind: name
+    confidence: low
+    site: src/job.rs:2
+no_edges:
+  - from: src/job.rs//go
+    to: dep//log
+unresolved:
+  - caller: src/job.rs//go
+    site: src/job.rs:2
+    reason: unknown-receiver
+    method: log
+results:
+  - target: dep//sink
+    status: uncertain
+    call_sites:
+      - caller: cargo:dep@1.0.0//src/lib.rs//log
+        site: cargo:dep@1.0.0//src/lib.rs:4
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/job.rs:2

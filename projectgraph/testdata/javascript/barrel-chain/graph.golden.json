@@ -178,7 +178,7 @@
     "src/main.js": "indexed"
   },
   "stats": {
-    "version": "19",
+    "version": "20",
     "files": 4,
     "nodes": 7,
     "edges": 6,

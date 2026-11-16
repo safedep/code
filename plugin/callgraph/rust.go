@@ -59,6 +59,7 @@ var rustProfile = shapedProfile(languageProfile{
 		"macro_definition": {name: named("name"), header: true, reachable: true},
 	},
 	skipped:            []string{"use_declaration", "extern_crate_declaration", "attribute_item", "inner_attribute_item"},
+	paths:              []string{"scoped_identifier"},
 	values:             map[string]childRef{"generic_function": named("function"), "type_cast_expression": named("value")},
 	constructorMethods: []string{"new", "default"},
 	classKeywords:      []string{"Self"},
@@ -83,7 +84,17 @@ func rustTokenTreeProcessor(node *sitter.Node, treeData []byte, currentNamespace
 			continue
 		}
 		rustTokenTreeProcessor(token, treeData, currentNamespace, callGraph, metadata)
-		if i == 0 || tokens[i-1].Type() != "identifier" {
+		if i == 0 {
+			continue
+		}
+		// A metavariable before a group in parentheses, as $f() in a rule
+		// of a macro, calls whatever function the call of the macro
+		// passes. The tokens do not name it, so the call is a record.
+		if prev := tokens[i-1]; prev.Type() == "metavariable" && !rustPathToken(prev, treeData) && strings.HasPrefix(token.Content(treeData), "(") {
+			callGraph.addRecord(currentNamespace, prev, "", "", treeData, UnresolvedComputedName)
+			continue
+		}
+		if tokens[i-1].Type() != "identifier" {
 			continue
 		}
 		creation := strings.HasPrefix(token.Content(treeData), "{")
@@ -91,7 +102,7 @@ func rustTokenTreeProcessor(node *sitter.Node, treeData []byte, currentNamespace
 			continue
 		}
 		start := i - 1
-		for start >= 2 && tokens[start-1].Type() == "::" && tokens[start-2].Type() == "identifier" {
+		for start >= 2 && tokens[start-1].Type() == "::" && rustPathToken(tokens[start-2], treeData) {
 			start -= 2
 		}
 		name := tokens[i-1]
@@ -104,7 +115,7 @@ func rustTokenTreeProcessor(node *sitter.Node, treeData []byte, currentNamespace
 		}
 		var path strings.Builder
 		for _, t := range tokens[start:i] {
-			path.WriteString(t.Content(treeData))
+			path.WriteString(strings.TrimPrefix(t.Content(treeData), "$"))
 		}
 		kind := CallCall
 		if creation {
@@ -114,4 +125,11 @@ func rustTokenTreeProcessor(node *sitter.Node, treeData []byte, currentNamespace
 		callGraph.addEdge(currentNamespace, kind, name, callee, nil, []CallArgument{})
 	}
 	return newProcessorResult()
+}
+
+// rustPathToken reports whether a token of a macro can start or continue a
+// path: a name, or $crate, which names the crate of the macro as crate does.
+// $crate::sink() names sink of the crate of the macro.
+func rustPathToken(token *sitter.Node, treeData []byte) bool {
+	return token.Type() == "identifier" || token.Type() == "metavariable" && token.Content(treeData) == "$crate"
 }

@@ -1,0 +1,56 @@
+source: safedep:hand
+description: >-
+  main.js imports Panel.vue by the alias @/ of the bundler, and the project has no tsconfig paths, so the
+  import names an external key and no path leads to Panel.vue. Each component file is a root of the rule
+  node.component, so the call of danger in the script of Panel.vue is found.
+roots:
+  - key: src/components/Panel.vue
+    kind: framework
+    rule: node.component
+  - key: src/main.js
+    kind: manifest
+    rule: node.package-json
+exact_edges: true
+edges:
+  - from: src/components/Panel.vue
+    to: plug//danger
+    kind: direct
+    confidence: high
+    site: src/components/Panel.vue:4
+  - from: src/main.js
+    to: vue//createApp
+    kind: direct
+    confidence: high
+    site: src/main.js:4
+  - from: src/main.js
+    to: vue//createApp//mount
+    kind: direct
+    confidence: high
+    site: src/main.js:4
+  - from: src/main.js
+    to: "@//components//Panel.vue"
+    kind: reference
+    confidence: low
+    site: src/main.js:4
+unresolved:
+  - caller: src/components/Panel.vue
+    site: src/components/Panel.vue:1
+    reason: markup
+  - caller: src/main.js
+    site: src/main.js:4
+    reason: no-dependency-source
+    method: mount
+results:
+  - target: plug//danger
+    status: found
+    path:
+      - key: src/components/Panel.vue
+        root: framework
+      - key: plug//danger
+        site: src/components/Panel.vue:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/components/Panel.vue
+        site: src/components/Panel.vue:4
+        reached: true

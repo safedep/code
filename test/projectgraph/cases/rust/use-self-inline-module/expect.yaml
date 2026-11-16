@@ -1,0 +1,51 @@
+source: safedep:hand
+description: >-
+  src/net.rs declares the module tls at its top level and the inline module client, which declares its own
+  module tls. client has use self::tls::conn, so conn names client::tls::conn, and go calls conn::open, which
+  calls std::fs::create_dir. The tls of the top level has its own conn::open, which calls std::fs::read and
+  which nothing calls. A link step that reads self of the inline module as the module of the file gives the call
+  the edge to the wrong open, so std::fs::create_dir reads not-found and std::fs::read reads found.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/net.rs//client//go
+    to: src/net.rs//client//tls//conn//open
+    kind: member
+    confidence: high
+    site: src/net.rs:21
+no_edges:
+  - from: src/net.rs//client//go
+    to: src/net.rs//tls//conn//open
+unresolved: []
+results:
+  - target: std//fs//create_dir
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/net.rs//client//go
+        site: src/main.rs:4
+        kind: direct
+        confidence: high
+      - key: src/net.rs//client//tls//conn//open
+        site: src/net.rs:21
+        kind: member
+        confidence: high
+      - key: std//fs//create_dir
+        site: src/net.rs:13
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/net.rs//client//tls//conn//open
+        site: src/net.rs:13
+        reached: true
+  - target: std//fs//read
+    status: not-found
+    call_sites:
+      - caller: src/net.rs//tls//conn//open
+        site: src/net.rs:4
+        reached: false

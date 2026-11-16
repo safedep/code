@@ -1,0 +1,46 @@
+source: safedep:hand
+description: >-
+  svelte.config.js moves the library directory of SvelteKit to src/library, and the resolver does not read
+  it. So $lib/helper names no file. The alias $lib names a directory of the project, so the import is a
+  record with the reason no-definition and not an external key, and c1 reads uncertain and not not-found.
+roots:
+  - key: server.js
+    kind: manifest
+    rule: node.package-json
+  - key: src/routes/api/+server.js
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/api/+server.js//POST
+    kind: framework
+    rule: node.sveltekit.route
+exact_edges: true
+edges:
+  - from: server.js
+    to: plug//listen
+    kind: direct
+    confidence: high
+    site: server.js:3
+  - from: src/library/helper.js//helper
+    to: plug//c1
+    kind: direct
+    confidence: high
+    site: src/library/helper.js:4
+  - from: src/routes/api/+server.js//POST
+    to: $lib//helper//helper
+    kind: direct
+    confidence: high
+    site: src/routes/api/+server.js:4
+unresolved:
+  - caller: src/routes/api/+server.js
+    site: src/routes/api/+server.js:1
+    reason: no-definition
+results:
+  - target: plug//c1
+    status: uncertain
+    call_sites:
+      - caller: src/library/helper.js//helper
+        site: src/library/helper.js:4
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: src/routes/api/+server.js:1

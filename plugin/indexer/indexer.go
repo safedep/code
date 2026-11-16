@@ -10,6 +10,7 @@ import (
 	"path"
 	"runtime"
 	"slices"
+	"time"
 
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/fileindex"
@@ -60,6 +61,10 @@ type Options struct {
 	// because a key of dependency code needs its unit. The report lists
 	// any other import file as skipped.
 	Imports bool
+
+	// saveGrace is the time that a store write has after the context of
+	// the run ends. Zero selects 10 seconds.
+	saveGrace time.Duration
 }
 
 // Result is what one run of an Indexer did.
@@ -156,6 +161,7 @@ func New(opts Options) (*Indexer, error) {
 	opts.Plugins = slices.Clone(opts.Plugins)
 	opts.MaxFileBytes = cmp.Or(opts.MaxFileBytes, parser.DefaultMaxBytes)
 	opts.Workers = cmp.Or(opts.Workers, runtime.GOMAXPROCS(0))
+	opts.saveGrace = cmp.Or(opts.saveGrace, 10*time.Second)
 	return &Indexer{opts: opts, byExtension: byExtension}, nil
 }
 
@@ -361,11 +367,38 @@ func (r *run) flush(ctx context.Context, batch []pending) error {
 	put, made, parseErr := r.parse(ctx, parse)
 	// The files that finished before ctx was done hold whole indexes and
 	// artifacts. The store keeps them past the end of ctx, so the next run
-	// with the same deadline does not parse them again.
-	if err := r.save(context.WithoutCancel(ctx), put, made); err != nil {
+	// with the same deadline does not parse them again. A store that hangs
+	// must not hold the caller long past its budget, so the write ends
+	// saveGrace after ctx.
+	saveCtx, cancel := graceContext(ctx, r.opts.saveGrace)
+	defer cancel()
+	if err := r.save(saveCtx, put, made); err != nil {
+		if ctx.Err() != nil {
+			return errors.Join(err, ctx.Err())
+		}
 		return err
 	}
 	return parseErr
+}
+
+// graceContext returns a context that ends grace after ctx ends, or grace
+// after the call if ctx has ended before it. The timer stops when the
+// returned context ends, so a write that returns early holds nothing.
+func graceContext(ctx context.Context, grace time.Duration) (context.Context, context.CancelFunc) {
+	out, cancel := context.WithCancel(context.WithoutCancel(ctx))
+	stop := context.AfterFunc(ctx, func() {
+		t := time.NewTimer(grace)
+		defer t.Stop()
+		select {
+		case <-t.C:
+			cancel()
+		case <-out.Done():
+		}
+	})
+	return out, func() {
+		stop()
+		cancel()
+	}
 }
 
 // save stores the new indexes and artifacts of a batch.

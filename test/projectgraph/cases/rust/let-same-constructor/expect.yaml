@@ -1,0 +1,31 @@
+source: safedep:hand
+description: >-
+  go binds t to A::new(), drops it, binds t again to A::new() and calls t.run(). A and B are types of
+  src/types.rs. Both lets call the same function of the same type, so t holds an A at the call, and the call
+  keeps the target A::run of the call graph. An index that knows the result of a function only in the file of
+  the call makes the call a record, and B::run, whose std::fs::remove_dir nothing calls, reads found through the
+  low name edges of run.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//go
+    to: src/types.rs//A//run
+    kind: member
+    confidence: high
+    site: src/main.rs:9
+no_edges:
+  - from: src/main.rs//go
+    to: src/types.rs//B//run
+unresolved: []
+results:
+  - target: std//fs//remove_dir
+    status: not-found
+    call_sites:
+      - caller: src/types.rs//B//run
+        site: src/types.rs:20
+        reached: false

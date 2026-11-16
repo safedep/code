@@ -30,6 +30,11 @@ type Root struct {
 	Kind rules.Kind
 	Rule string
 	Site Site
+	// Opaque names an export of the file of Key whose value the index
+	// does not follow, as the result of a call. The framework calls the
+	// functions of the value, so the link step gives the site a record in
+	// place of a root.
+	Opaque string
 }
 
 // Site is a place in a file. Lines and columns are 1-based.
@@ -76,16 +81,16 @@ type Project struct {
 // context ends.
 func Find(ctx context.Context, p Project, rs []rules.Rule) ([]Root, []modules.Problem, error) {
 	f := &finder{
-		Project:   p,
-		languages: map[string]langcode.Code{},
-		seen:      map[Root]bool{},
-		defs:      map[string]*fileindex.Definition{},
-		calls:     map[*fileindex.Call][]string{},
-		deps:      map[langcode.Code]map[string]bool{},
-		imported:  map[langcode.Code]map[string]bool{},
+		Project:  p,
+		indexes:  map[string]*fileindex.Index{},
+		seen:     map[Root]bool{},
+		defs:     map[string]*fileindex.Definition{},
+		calls:    map[*fileindex.Call][]string{},
+		deps:     map[langcode.Code]map[string]bool{},
+		imported: map[langcode.Code]map[string]bool{},
 	}
 	for _, ix := range p.Indexes {
-		f.languages[ix.Path] = ix.Language
+		f.indexes[ix.Path] = ix
 		for i := range ix.Definitions {
 			f.defs[ix.Definitions[i].Key] = &ix.Definitions[i]
 		}
@@ -110,8 +115,8 @@ func state[T any](p Project, code langcode.Code) *T {
 
 type finder struct {
 	Project
-	languages map[string]langcode.Code
-	defs      map[string]*fileindex.Definition
+	indexes map[string]*fileindex.Index
+	defs    map[string]*fileindex.Definition
 	// calls holds the keys that each call resolves to.
 	calls map[*fileindex.Call][]string
 	// deps holds the packages that the manifests declare, and imported the
@@ -142,7 +147,7 @@ func (f *finder) addAt(r rules.Rule, key string, site Site) {
 // addFile marks the module top level of a file whose language the rule
 // takes.
 func (f *finder) addFile(r rules.Rule, file string) {
-	if lang, ok := f.languages[file]; ok && r.Applies(lang) {
+	if ix := f.indexes[file]; ix != nil && r.Applies(ix.Language) {
 		f.add(r, file)
 	}
 }
@@ -309,10 +314,8 @@ func (f *finder) matchPackageJSON(r rules.Rule) {
 		}
 		for _, file := range f.entryFiles(js, pj.Dir, libraries) {
 			f.addFile(r, file)
-			if lang, ok := f.languages[file]; ok && r.Applies(lang) {
-				for _, key := range f.Exports(file) {
-					f.add(r, key)
-				}
+			if ix := f.indexes[file]; ix != nil && r.Applies(ix.Language) {
+				f.addExports(r, ix)
 			}
 		}
 	}
@@ -352,7 +355,7 @@ func (f *finder) addPythonEntry(r rules.Rule, dir, entry string) {
 	if !ok || strings.HasSuffix(file, "/") {
 		return
 	}
-	if lang, ok := f.languages[file]; !ok || !r.Applies(lang) {
+	if ix := f.indexes[file]; ix == nil || !r.Applies(ix.Language) {
 		return
 	}
 	f.add(r, file)

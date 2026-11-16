@@ -1,0 +1,54 @@
+source: safedep:hand
+description: >-
+  src/main.rs declares a struct A at its root, and src/other.rs declares another A. The inline module deep has
+  use crate::other::A, and the function by_block has the same use in its block. So the field a of Holder, the
+  parameter x of by_param, the let x of by_new and the calls in by_block hold the A of src/other.rs, whose run
+  calls std::fs::remove_file. Nothing calls run of the root A, which calls std::fs::remove_dir. A link step that
+  reads a use of an inline module or of a block for the root of the file joins the root A with the A of
+  src/other.rs as one class, so each call goes to the run of the root A, std::fs::remove_file reads not-found
+  and std::fs::remove_dir reads found.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+no_edges:
+  - from: src/main.rs//deep//by_field
+    to: src/main.rs//A//run
+  - from: src/main.rs//deep//by_param
+    to: src/main.rs//A//run
+  - from: src/main.rs//deep//by_new
+    to: src/main.rs//A//run
+  - from: src/main.rs//by_block
+    to: src/main.rs//A//run
+edges:
+  - from: src/main.rs//deep//by_field
+    to: src/other.rs//A//run
+    kind: member
+    confidence: high
+    site: src/main.rs:23
+  - from: src/main.rs//deep//by_param
+    to: src/other.rs//A//run
+    kind: member
+    confidence: high
+    site: src/main.rs:27
+  - from: src/main.rs//deep//by_new
+    to: src/other.rs//A//run
+    kind: member
+    confidence: high
+    site: src/main.rs:32
+  - from: src/main.rs//by_block
+    to: src/other.rs//A//run
+    kind: member
+    confidence: high
+    site: src/main.rs:38
+unresolved: []
+results:
+  - target: std//fs//remove_dir
+    status: not-found
+    call_sites:
+      - caller: src/main.rs//A//run
+        site: src/main.rs:11
+        reached: false

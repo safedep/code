@@ -1,0 +1,8 @@
+[package]
+name = "dep_b"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+dep_a = "1.0.0"
+dep_c = "1.0.0"

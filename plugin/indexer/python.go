@@ -20,6 +20,7 @@ var pythonRules = languageRules{
 	constructor:    "__init__",
 	typedReceivers: true,
 	bases:          pythonBases,
+	metaclass:      pythonMetaclass,
 	fields:         pythonFields,
 	decorators:     decorators,
 	signature:      pythonSignature,
@@ -58,6 +59,8 @@ var pythonRules = languageRules{
 			"conditional_expression":   "",
 			"boolean_operator":         "",
 			"parenthesized_expression": "",
+			// raise K makes an instance of K, as raise K() does.
+			"raise_statement": "",
 		},
 		member:      "attribute",
 		object:      "object",
@@ -65,6 +68,7 @@ var pythonRules = languageRules{
 		identifiers: map[string]bool{"identifier": true},
 		instances:   map[string]bool{"self": true, "cls": true},
 		bases:       map[string]string{"class_definition": "superclasses"},
+		check:       pythonCheck,
 	},
 	arguments: &argumentSyntax{
 		calls: map[string]string{"call": "function"},
@@ -93,6 +97,70 @@ func pythonBases(p *projection, class *sitter.Node) []string {
 		}
 	}
 	return bases
+}
+
+// pythonChecks name the functions that test a value against a class or
+// read a class and make no instance of it: isinstance, issubclass,
+// typing.cast, hasattr and getattr.
+var pythonChecks = map[string]bool{
+	"isinstance": true, "issubclass": true, "cast": true, "typing.cast": true, "hasattr": true, "getattr": true,
+}
+
+// pythonCheckWrappers hold a value of an argument and give it on, as
+// K if c else J or (K).
+var pythonCheckWrappers = map[string]bool{"conditional_expression": true, "parenthesized_expression": true, "boolean_operator": true}
+
+// pythonCheck reports whether a holder holds classes that the code only
+// tests a value against or reads. Such a holder is the argument list of a
+// function of pythonChecks, a tuple or a conditional in it, or
+// metaclass=M in a class statement. A class statement makes an instance of
+// M, and a call of the class that it makes runs M.__call__. So the call of
+// that class owns the edge.
+func pythonCheck(p *projection, holder *sitter.Node) bool {
+	for pythonCheckWrappers[holder.Type()] {
+		if holder = holder.Parent(); holder == nil {
+			return false
+		}
+	}
+	switch holder.Type() {
+	case "keyword_argument":
+		list := holder.Parent()
+		return p.pythonMetaclassArg(holder) && list != nil && list.Parent() != nil && list.Parent().Type() == "class_definition"
+	case "tuple":
+		if holder = holder.Parent(); holder == nil || holder.Type() != "argument_list" {
+			return false
+		}
+	case "argument_list":
+	default:
+		return false
+	}
+	call := holder.Parent()
+	if call == nil || call.Type() != "call" {
+		return false
+	}
+	function := call.ChildByFieldName("function")
+	return function != nil && pythonChecks[p.text(function)]
+}
+
+// pythonMetaclass returns the metaclass of a Python class as written, as M
+// in class A(Base, metaclass=M), or "".
+func pythonMetaclass(p *projection, class *sitter.Node) string {
+	list := class.ChildByFieldName("superclasses")
+	if class.Type() != "class_definition" || list == nil {
+		return ""
+	}
+	for _, arg := range ts.NamedChildren(list) {
+		if p.pythonMetaclassArg(arg) {
+			return p.text(arg.ChildByFieldName("value"))
+		}
+	}
+	return ""
+}
+
+// pythonMetaclassArg reports whether an argument is metaclass=.
+func (p *projection) pythonMetaclassArg(arg *sitter.Node) bool {
+	name := arg.ChildByFieldName("name")
+	return arg.Type() == "keyword_argument" && name != nil && p.text(name) == "metaclass"
 }
 
 // pythonAssigned returns the name of a top-level assignment, as x in x = f().
@@ -158,6 +226,7 @@ func pythonSignature(p *projection, def *fileindex.Definition, node *sitter.Node
 		return
 	}
 	def.Params = p.pythonParams(node.ChildByFieldName("parameters"))
+	def.ClassParam = p.pythonClassParam(node)
 	if ret := node.ChildByFieldName("return_type"); ret != nil {
 		def.Returns = p.pythonTypeName(ret)
 		if results := p.pythonTupleTypes(ret); len(results) > 1 {
@@ -165,6 +234,80 @@ func pythonSignature(p *projection, def *fileindex.Definition, node *sitter.Node
 		}
 	}
 	def.Locals = p.pythonLocals(node.ChildByFieldName("body"), "")
+}
+
+// pythonClassParam returns the name that holds the class of a classmethod
+// in a function: the first parameter of a method that the decorator
+// @classmethod marks, or the name of the classmethod that holds a nested
+// function, unless the nested function binds the name again, as a
+// parameter or by an assignment. Otherwise "".
+func (p *projection) pythonClassParam(node *sitter.Node) string {
+	decorated := node.Parent()
+	if decorated != nil && decorated.Type() == "decorated_definition" && slices.ContainsFunc(ts.NamedChildren(decorated), func(d *sitter.Node) bool {
+		return d.Type() == "decorator" && p.text(d) == "@classmethod"
+	}) {
+		params := p.pythonParamNames(node)
+		if len(params) == 0 {
+			return ""
+		}
+		return params[0]
+	}
+	outer := node.Parent()
+	for outer != nil && outer.Type() != "function_definition" && outer.Type() != "class_definition" {
+		outer = outer.Parent()
+	}
+	if outer == nil || outer.Type() != "function_definition" {
+		return ""
+	}
+	name := p.pythonClassParam(outer)
+	if name == "" || slices.Contains(p.pythonParamNames(node), name) || p.pythonAssigns(node.ChildByFieldName("body"), name) {
+		return ""
+	}
+	return name
+}
+
+// pythonParamNames returns the names of the parameters of a function.
+func (p *projection) pythonParamNames(function *sitter.Node) []string {
+	params := function.ChildByFieldName("parameters")
+	if params == nil {
+		return nil
+	}
+	var names []string
+	for _, param := range ts.NamedChildren(params) {
+		switch param.Type() {
+		case "identifier":
+			names = append(names, p.text(param))
+		case "typed_parameter", "list_splat_pattern", "dictionary_splat_pattern":
+			if param.NamedChildCount() > 0 && param.NamedChild(0).Type() == "identifier" {
+				names = append(names, p.text(param.NamedChild(0)))
+			}
+		case "default_parameter", "typed_default_parameter":
+			names = append(names, p.text(param.ChildByFieldName("name")))
+		}
+	}
+	return names
+}
+
+// pythonAssigns reports whether the code of a body assigns the name, out
+// of the functions and the classes that it defines.
+func (p *projection) pythonAssigns(body *sitter.Node, name string) bool {
+	if body == nil {
+		return false
+	}
+	for _, child := range ts.NamedChildren(body) {
+		switch child.Type() {
+		case "function_definition", "class_definition", "lambda", "decorated_definition":
+			continue
+		case "assignment", "augmented_assignment":
+			if left := child.ChildByFieldName("left"); left != nil && left.Type() == "identifier" && p.text(left) == name {
+				return true
+			}
+		}
+		if p.pythonAssigns(child, name) {
+			return true
+		}
+	}
+	return false
 }
 
 // pythonParams returns the parameters of a function that declare a type

@@ -1,0 +1,73 @@
+source: safedep:hand
+description: >-
+  src/m0.rs has pub use dep::m::*, and src/m1.rs has pub use other::*. go calls crate::m0::run and
+  crate::m1::make. The unit cargo:dep@1.0.0 gives dep, and its module m defines run, so crate::m0::run names
+  dep::m::run. No unit gives other, so its glob use can bring any name, and crate::m1::make is a record. A link
+  step that reads no glob use of a module of the project for a path gives both calls the external keys
+  crate//m0//run and crate//m1//make with no record, and dep//m//run reads not-found.
+units:
+  vendor/dep: cargo:dep@1.0.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/ac.rs//go
+    to: dep//m//run
+    kind: direct
+    confidence: high
+    site: src/ac.rs:2
+no_edges:
+  - from: src/ac.rs//go
+    to: crate//m0//run
+  - from: src/ac.rs//go
+    to: crate//m1//make
+unresolved:
+  - caller: src/ac.rs//go
+    site: src/ac.rs:3
+    reason: unknown-receiver
+    method: crate
+results:
+  - target: dep//m//run
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/ac.rs//go
+        site: src/main.rs:6
+        kind: direct
+        confidence: high
+      - key: dep//m//run
+        site: src/ac.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/ac.rs//go
+        site: src/ac.rs:2
+        reached: true
+  - target: std//fs//remove_file
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/ac.rs//go
+        site: src/main.rs:6
+        kind: direct
+        confidence: high
+      - key: dep//m//run
+        site: src/ac.rs:2
+        kind: direct
+        confidence: high
+      - key: cargo:dep@1.0.0//src/m.rs//run
+        site: cargo:dep@1.0.0//src/m.rs:1
+        kind: package
+        confidence: high
+      - key: std//fs//remove_file
+        site: cargo:dep@1.0.0//src/m.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: cargo:dep@1.0.0//src/m.rs//run
+        site: cargo:dep@1.0.0//src/m.rs:2
+        reached: true

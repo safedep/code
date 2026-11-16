@@ -1,0 +1,121 @@
+source: safedep:hand
+description: >-
+  SvelteKit loads the files of src/routes by their names, and no file imports them. Each component file
+  is a root of the rule node.component. The rule node.sveltekit.route marks each route file and its
+  exports, so load of +page.ts and POST of +server.ts are roots too, and store and fetchData are found
+  and not only uncertain by the markup records.
+roots:
+  - key: server.js
+    kind: manifest
+    rule: node.package-json
+  - key: src/routes/+layout.svelte
+    kind: framework
+    rule: node.component
+  - key: src/routes/+layout.svelte
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/+page.svelte
+    kind: framework
+    rule: node.component
+  - key: src/routes/+page.svelte
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/+page.ts
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/+page.ts//load
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/api/+server.ts
+    kind: framework
+    rule: node.sveltekit.route
+  - key: src/routes/api/+server.ts//POST
+    kind: framework
+    rule: node.sveltekit.route
+exact_edges: true
+edges:
+  - from: server.js
+    to: plug//listen
+    kind: direct
+    confidence: high
+    site: server.js:3
+  - from: src/routes/+layout.svelte
+    to: plug//frame
+    kind: direct
+    confidence: high
+    site: src/routes/+layout.svelte:3
+  - from: src/routes/+page.svelte
+    to: plug//danger
+    kind: direct
+    confidence: high
+    site: src/routes/+page.svelte:3
+  - from: src/routes/+page.ts//load
+    to: plug//fetchData
+    kind: direct
+    confidence: high
+    site: src/routes/+page.ts:4
+  - from: src/routes/api/+server.ts//POST
+    to: plug//store
+    kind: direct
+    confidence: high
+    site: src/routes/api/+server.ts:4
+unresolved:
+  - caller: src/routes/+layout.svelte
+    site: src/routes/+layout.svelte:1
+    reason: markup
+  - caller: src/routes/+page.svelte
+    site: src/routes/+page.svelte:1
+    reason: markup
+results:
+  - target: plug//danger
+    status: found
+    path:
+      - key: src/routes/+page.svelte
+        root: framework
+      - key: plug//danger
+        site: src/routes/+page.svelte:3
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/routes/+page.svelte
+        site: src/routes/+page.svelte:3
+        reached: true
+  - target: plug//frame
+    status: found
+    path:
+      - key: src/routes/+layout.svelte
+        root: framework
+      - key: plug//frame
+        site: src/routes/+layout.svelte:3
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/routes/+layout.svelte
+        site: src/routes/+layout.svelte:3
+        reached: true
+  - target: plug//fetchData
+    status: found
+    path:
+      - key: src/routes/+page.ts//load
+        root: framework
+      - key: plug//fetchData
+        site: src/routes/+page.ts:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/routes/+page.ts//load
+        site: src/routes/+page.ts:4
+        reached: true
+  - target: plug//store
+    status: found
+    path:
+      - key: src/routes/api/+server.ts//POST
+        root: framework
+      - key: plug//store
+        site: src/routes/api/+server.ts:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/routes/api/+server.ts//POST
+        site: src/routes/api/+server.ts:4
+        reached: true

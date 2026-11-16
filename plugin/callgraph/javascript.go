@@ -504,7 +504,13 @@ func objectNames(object *sitter.Node, treeData []byte, depth int) []string {
 		}
 		return names
 	case "object":
-		switch parent := object.Parent(); {
+		// A type of TypeScript, as { ... } satisfies Actions, or
+		// parentheses, wrap the object and leave its names.
+		parent := object.Parent()
+		for parent != nil && typeWrappers[parent.Type()] {
+			parent = parent.Parent()
+		}
+		switch {
 		case parent == nil:
 		case parent.Type() == "variable_declarator":
 			if name := parent.ChildByFieldName("name"); name != nil && name.Type() == "identifier" {
@@ -519,6 +525,14 @@ func objectNames(object *sitter.Node, treeData []byte, depth int) []string {
 		}
 	}
 	return nil
+}
+
+// typeWrappers hold a value with a type or a check of TypeScript, as
+// x satisfies T, x as T and x!, or in parentheses. The value is the value
+// of the wrapper.
+var typeWrappers = map[string]bool{
+	"satisfies_expression": true, "as_expression": true, "non_null_expression": true,
+	"parenthesized_expression": true, "type_assertion": true,
 }
 
 // jsMethodDefinitionProcessor processes a method of a class or of an object

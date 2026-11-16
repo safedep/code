@@ -1,9 +1,9 @@
 source: safedep:hand
 description: >-
   The case of the vet reach corpus rust/glob-use. main brings in every item of the module dep::html with a glob use
-  and calls render. The code of the crate dep is the unit cargo:dep@1.2.0. The link step does not resolve a name
-  that a glob use of a module of a unit brings in, so the call stays a record of the method render. The record makes
-  render uncertain, and not not-found. No record names escape, so escape is not-found.
+  and calls render. The code of the crate dep is the unit cargo:dep@1.2.0, which gives render in that module, so the
+  call gets the edge to dep//html//render and its package edge. A local closure or a parameter can also bind a
+  single name, so the call keeps its record of the method render. Nothing calls escape, so escape is not-found.
 units:
   vendor/dep: cargo:dep@1.2.0
 roots:
@@ -14,6 +14,17 @@ roots:
     kind: main
     rule: rust.main
 exact_edges: true
+edges:
+  - from: src/main.rs//main
+    to: dep//html//render
+    kind: direct
+    confidence: high
+    site: src/main.rs:4
+  - from: dep//html//render
+    to: cargo:dep@1.2.0//src/html.rs//render
+    kind: package
+    confidence: high
+    site: cargo:dep@1.2.0//src/html.rs:1
 unresolved:
   - caller: src/main.rs//main
     site: src/main.rs:4
@@ -21,9 +32,16 @@ unresolved:
     method: render
 results:
   - target: dep//html//render
-    status: uncertain
-    uncertainties:
-      - kind: unresolved-call
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: dep//html//render
         site: src/main.rs:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.rs//main
+        site: src/main.rs:4
+        reached: true
   - target: dep//html//escape
     status: not-found

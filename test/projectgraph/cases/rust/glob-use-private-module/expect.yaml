@@ -1,0 +1,80 @@
+source: safedep:hand
+description: >-
+  main.rs has use dep::* and use other::*, and calls hidden::run(). dep declares mod hidden; with no pub, and
+  other declares pub mod hidden;. Each hidden is a file of its own with a pub run. Another crate sees only the
+  hidden of other, so the call runs other::hidden::run, which calls std::fs::remove_file. A link step that takes
+  the file of a child module for an export gives the call the edge to dep::hidden::run, and std::fs::remove_dir
+  reads found. The crate also declares the private mod inner;, and src/user.rs has use crate::*. A glob use in
+  the same crate brings a private module, so inner::go() runs and std::fs::create_dir reads found.
+units:
+  vendor/dep: cargo:dep@1.0.0
+  vendor/other: cargo:other@1.0.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//main
+    to: other//hidden//run
+    kind: direct
+    confidence: high
+    site: src/main.rs:8
+  - from: src/user.rs//call
+    to: src/inner.rs//go
+    kind: direct
+    confidence: high
+    site: src/user.rs:4
+no_edges:
+  - from: src/main.rs//main
+    to: dep//hidden//run
+unresolved: []
+results:
+  - target: std//fs//remove_file
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: other//hidden//run
+        site: src/main.rs:8
+        kind: direct
+        confidence: high
+      - key: cargo:other@1.0.0//src/hidden.rs//run
+        site: cargo:other@1.0.0//src/hidden.rs:1
+        kind: package
+        confidence: high
+      - key: std//fs//remove_file
+        site: cargo:other@1.0.0//src/hidden.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: cargo:other@1.0.0//src/hidden.rs//run
+        site: cargo:other@1.0.0//src/hidden.rs:2
+        reached: true
+  - target: std//fs//remove_dir
+    status: not-found
+    call_sites:
+      - caller: cargo:dep@1.0.0//src/hidden.rs//run
+        site: cargo:dep@1.0.0//src/hidden.rs:2
+        reached: false
+  - target: std//fs//create_dir
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/user.rs//call
+        site: src/main.rs:9
+        kind: direct
+        confidence: high
+      - key: src/inner.rs//go
+        site: src/user.rs:4
+        kind: direct
+        confidence: high
+      - key: std//fs//create_dir
+        site: src/inner.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/inner.rs//go
+        site: src/inner.rs:2
+        reached: true

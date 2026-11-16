@@ -2,8 +2,9 @@ source: safedep:hand
 description: >-
   The case of the vet reach corpus rust/macro-import. main uses the macro render_now of the crate dep, which
   #[macro_use] extern crate dep brings in. The macro expands to a call of dep::render. The code of the crate dep is
-  the unit cargo:dep@1.2.0. The link step does not resolve a macro that #[macro_export] gives at the root of a crate
-  of a unit, so the call of render_now stays a record. The record makes render uncertain, and not not-found.
+  the unit cargo:dep@1.2.0, and #[macro_export] gives render_now at the root of the crate. So the call of
+  render_now gets the edge to dep//render_now, whose package edge leads to the macro and on to render. The index
+  does not tell a call of a macro from a call of a function value, so the call keeps its record too.
 units:
   vendor/dep: cargo:dep@1.2.0
 roots:
@@ -15,6 +16,16 @@ roots:
     rule: rust.main
 exact_edges: true
 edges:
+  - from: src/main.rs//main
+    to: dep//render_now
+    kind: direct
+    confidence: high
+    site: src/main.rs:5
+  - from: dep//render_now
+    to: cargo:dep@1.2.0//src/lib.rs//render_now
+    kind: package
+    confidence: high
+    site: cargo:dep@1.2.0//src/lib.rs:4
   - from: cargo:dep@1.2.0//src/lib.rs//render_now
     to: cargo:dep@1.2.0//src/lib.rs//render
     kind: direct
@@ -27,11 +38,22 @@ unresolved:
     method: render_now
 results:
   - target: dep//render
-    status: uncertain
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: dep//render_now
+        site: src/main.rs:5
+        kind: direct
+        confidence: high
+      - key: cargo:dep@1.2.0//src/lib.rs//render_now
+        site: cargo:dep@1.2.0//src/lib.rs:4
+        kind: package
+        confidence: high
+      - key: cargo:dep@1.2.0//src/lib.rs//render
+        site: cargo:dep@1.2.0//src/lib.rs:6
+        kind: direct
+        confidence: high
     call_sites:
       - caller: cargo:dep@1.2.0//src/lib.rs//render_now
         site: cargo:dep@1.2.0//src/lib.rs:6
-        reached: false
-    uncertainties:
-      - kind: unresolved-call
-        site: src/main.rs:5
+        reached: true

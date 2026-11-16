@@ -1,0 +1,59 @@
+source: safedep:hand
+description: >-
+  src/jobs.rs declares its own inline module util, whose wipe calls std::fs::remove_file and which nothing calls.
+  The inline module worker has use crate::store::util, and the function flush has the same use in its block. So
+  util::wipe in worker::go and in flush names the module src/store/util.rs, whose wipe calls
+  std::fs::remove_dir_all. The call graph reads no use, so it finds util in the scope of the file and sends both
+  calls to the inline util. Without the rule, std::fs::remove_dir_all reads not-found. The index gives each call
+  the path of its use.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/jobs.rs//worker//go
+    to: src/store/util.rs//wipe
+    kind: direct
+    confidence: high
+    site: src/jobs.rs:11
+  - from: src/jobs.rs//flush
+    to: src/store/util.rs//wipe
+    kind: direct
+    confidence: high
+    site: src/jobs.rs:17
+no_edges:
+  - from: src/jobs.rs//worker//go
+    to: src/jobs.rs//util//wipe
+  - from: src/jobs.rs//flush
+    to: src/jobs.rs//util//wipe
+unresolved: []
+results:
+  - target: std//fs//remove_dir_all
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/jobs.rs//worker//go
+        site: src/main.rs:5
+        kind: direct
+        confidence: high
+      - key: src/store/util.rs//wipe
+        site: src/jobs.rs:11
+        kind: direct
+        confidence: high
+      - key: std//fs//remove_dir_all
+        site: src/store/util.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/store/util.rs//wipe
+        site: src/store/util.rs:2
+        reached: true
+  - target: std//fs//remove_file
+    status: not-found
+    call_sites:
+      - caller: src/jobs.rs//util//wipe
+        site: src/jobs.rs:3
+        reached: false

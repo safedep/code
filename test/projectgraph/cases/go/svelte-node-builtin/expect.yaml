@@ -1,0 +1,89 @@
+source: safedep:hand
+description: >-
+  A Go service ships a Svelte page. hash.js imports crypto, a builtin module of Node.js, and only the dead
+  Go function unused calls crypto/tls.Client. The key of a Node.js builtin can name a module of Go, so the
+  import does not make the markup record of App.svelte concern crypto//tls//Client, and it stays
+  not-found.
+roots:
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+  - key: web/src/App.svelte
+    kind: framework
+    rule: node.component
+  - key: web/src/App.svelte
+    kind: library-surface
+    rule: library-surface
+  - key: web/src/hash.js
+    kind: library-surface
+    rule: library-surface
+  - key: web/src/hash.js//digest
+    kind: library-surface
+    rule: library-surface
+exact_edges: true
+edges:
+  - from: main.go//main
+    to: fmt//Println
+    kind: direct
+    confidence: high
+    site: main.go:10
+  - from: main.go//unused
+    to: crypto//tls//Client
+    kind: direct
+    confidence: high
+    site: main.go:14
+  - from: web/src/App.svelte
+    to: web/src/hash.js
+    kind: import
+    confidence: high
+    site: web/src/App.svelte:2
+  - from: web/src/hash.js//digest
+    to: crypto//createHash
+    kind: direct
+    confidence: high
+    site: web/src/hash.js:4
+  - from: web/src/hash.js//digest
+    to: crypto//createHash//update
+    kind: direct
+    confidence: high
+    site: web/src/hash.js:4
+  - from: web/src/hash.js//digest
+    to: crypto//createHash//update//digest
+    kind: direct
+    confidence: high
+    site: web/src/hash.js:4
+  - from: web/src/hash.js//digest
+    to: web/src/hash.js//digest
+    kind: field
+    confidence: low
+    site: web/src/hash.js:4
+unresolved:
+  - caller: crypto//tls//Client
+    reason: no-dependency-source
+    callback: true
+  - caller: fmt//Println
+    reason: no-dependency-source
+    callback: true
+  - caller: web/src/App.svelte
+    site: web/src/App.svelte:1
+    reason: markup
+  - caller: web/src/hash.js//digest
+    site: web/src/hash.js:4
+    reason: no-dependency-source
+    method: update
+  - caller: web/src/hash.js//digest
+    site: web/src/hash.js:4
+    reason: no-dependency-source
+    method: digest
+results:
+  - target: crypto//tls//Client
+    status: not-found
+    call_sites:
+      - caller: main.go//unused
+        site: main.go:14
+        reached: false
+    uncertainties:
+      - kind: root-fallback

@@ -1,0 +1,47 @@
+source: safedep:hand
+description: >-
+  The file defines its own macro_rules! vec, whose rule binds the name that its call passes to a Cloud. go
+  binds t to a Disk, calls vec!(t), and calls t.save(), which runs Cloud::save. Cloud::save calls
+  std::fs::remove_dir_all. A macro of std binds no name of its caller, but this vec is no macro of std. An
+  index that takes vec! for the macro of std keeps the call graph target Disk::save with no record, and
+  std::fs::remove_dir_all reads not-found. The index makes the call a record with the reason
+  unknown-receiver, so it gets the low name edges of save.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//go
+    to: src/main.rs//Cloud//save
+    kind: name
+    confidence: low
+    site: src/main.rs:25
+unresolved:
+  - caller: src/main.rs//go
+    site: src/main.rs:25
+    reason: unknown-receiver
+    method: save
+results:
+  - target: std//fs//remove_dir_all
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//go
+        site: src/main.rs:29
+        kind: direct
+        confidence: high
+      - key: src/main.rs//Cloud//save
+        site: src/main.rs:25
+        kind: name
+        confidence: low
+      - key: std//fs//remove_dir_all
+        site: src/main.rs:12
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.rs//Cloud//save
+        site: src/main.rs:12
+        reached: true

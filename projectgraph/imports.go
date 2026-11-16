@@ -106,7 +106,7 @@ func (b *builder) importedModules(ix *fileindex.Index, spec string, form modules
 	}
 	var mods []moduleRef
 	var missing []provision
-	for _, pv := range b.providers(origin{lang: ix.Language, unit: ix.Unit, module: b.packageModule(ix, spec), form: form}) {
+	for _, pv := range b.providers(b.importOrigin(ix, spec, form)) {
 		if pv.module == "" {
 			missing = append(missing, pv)
 			continue

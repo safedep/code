@@ -1,0 +1,81 @@
+source: safedep:hand
+description: >-
+  Vite loads src/main.js from index.html, which no rule reads, and package.json names no entry. So the
+  roots fall back to the library surface. App.vue is a root of the rule node.component, and that rule
+  keeps the fallback on, so init, which only main.js calls, stays found.
+roots:
+  - key: src/App.vue
+    kind: framework
+    rule: node.component
+  - key: src/App.vue
+    kind: library-surface
+    rule: library-surface
+  - key: src/main.js
+    kind: library-surface
+    rule: library-surface
+exact_edges: true
+edges:
+  - from: src/App.vue
+    to: plug//danger
+    kind: direct
+    confidence: high
+    site: src/App.vue:4
+  - from: src/main.js
+    to: src/App.vue
+    kind: import
+    confidence: high
+    site: src/main.js:3
+  - from: src/main.js
+    to: plug//init
+    kind: direct
+    confidence: high
+    site: src/main.js:5
+  - from: src/main.js
+    to: vue//createApp
+    kind: direct
+    confidence: high
+    site: src/main.js:6
+  - from: src/main.js
+    to: vue//createApp//mount
+    kind: direct
+    confidence: high
+    site: src/main.js:6
+unresolved:
+  - caller: src/App.vue
+    site: src/App.vue:1
+    reason: markup
+  - caller: src/main.js
+    site: src/main.js:6
+    reason: no-dependency-source
+    method: mount
+results:
+  - target: plug//init
+    status: found
+    path:
+      - key: src/main.js
+        root: library-surface
+      - key: plug//init
+        site: src/main.js:5
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.js
+        site: src/main.js:5
+        reached: true
+    uncertainties:
+      - kind: root-fallback
+  - target: plug//danger
+    status: found
+    path:
+      - key: src/App.vue
+        root: framework
+      - key: plug//danger
+        site: src/App.vue:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/App.vue
+        site: src/App.vue:4
+        reached: true
+    uncertainties:
+      - kind: root-fallback

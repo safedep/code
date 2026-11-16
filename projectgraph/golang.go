@@ -404,8 +404,11 @@ var goPanicMethods = []string{"Error", "String"}
 const goStdText = "the Go standard library, which no unit gives"
 
 // recordGoOutsideCode adds a record for Go code that the graph does not
-// hold. docs/projectgraph.md, "Code outside the graph", gives the argument
-// for the scope of each record.
+// hold. That code can call back into the graph, and no edge shows it, so
+// without a record a target that only the callback reaches reads not-found.
+// goOutsideRecords gives the scope of each record.
+// test/projectgraph/cases/go/stdlib-callback-scope and
+// test/projectgraph/cases/go/dependency-no-unit pin it.
 func (b *builder) recordGoOutsideCode() {
 	for from, to := range b.edges.pairs {
 		if b.kindOf(to) == NodeExternal && b.languageOf(from) == langcode.Go && !b.provided(to) {
@@ -445,6 +448,53 @@ func (b *builder) goOutsideRecords(key string) []UnresolvedSite {
 		return nil
 	}
 	return []UnresolvedSite{{Caller: key, Text: key, Reason: fileindex.UnresolvedNoDependencySource}}
+}
+
+// linkGoStub joins a Go function with no body to the function that a
+// //go:linkname binds it to, when a package of the graph holds that
+// function, and reports whether it did. The receiver of the record names
+// the package of the linkname and the text its full name, as
+// app/internal/impl.secret, or main.target for the package of the file.
+func (b *builder) linkGoStub(ix *fileindex.Index, site UnresolvedSite) bool {
+	pkg := site.Receiver
+	name, ok := strings.CutPrefix(site.Text, pkg+".")
+	if pkg == "" || !ok || !isIdentifier(name) {
+		return false
+	}
+	var keys []string
+	if pkg == ix.Package {
+		if key, ok := b.resolveScopeName(b.scopes[ix.Path], name); ok && !b.g.IsExternal(key) {
+			keys = append(keys, key)
+		}
+	}
+	for _, m := range b.resolveModules(ix, pkg, modules.FormImport) {
+		if r := b.walk(m.key, []string{name}); r.fail == nil && !b.g.IsExternal(r.key) {
+			keys = append(keys, r.key)
+		}
+	}
+	for _, key := range keys {
+		b.link(ix.Language, site.Caller, key, site.Site, EdgeDirect, ruleLocal)
+	}
+	return len(keys) > 0
+}
+
+// scopeGoStub gives the record of a Go function with no body the scope of
+// the code that runs in its place, when no package of the graph holds
+// that code. The receiver of the record names the package of a
+// //go:linkname target. A record into the standard library is a callback.
+// The assembly of a unit concerns what its unit reaches. Any other record
+// concerns every target, because a linkname or the assembly of the project
+// can call any function. test/projectgraph/cases/go/function-no-body pins
+// each form.
+func (b *builder) scopeGoStub(ix *fileindex.Index, site *UnresolvedSite) {
+	unit, _ := fileindex.ParseUnit(ix.Unit)
+	std := site.Receiver != "" && site.Receiver != ix.Package && modules.IsStdPath(site.Receiver) && len(b.resolveModules(ix, site.Receiver, modules.FormImport)) == 0
+	switch {
+	case std, site.Receiver == "" && unit.Ecosystem == "go" && unit.Name == modules.StdModule:
+		site.Callback = true
+	case site.Receiver == "" && ix.Unit != "":
+		site.Unit = ix.Unit
+	}
 }
 
 // recordGoMethodsOutside adds the records of code outside the graph to each

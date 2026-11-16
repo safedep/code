@@ -3,6 +3,7 @@ package projectgraph
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/safedep/code/core"
@@ -46,4 +47,17 @@ func linkProject(t testing.TB, root string, indexed *indexer.Result, opts projec
 	g, err := projectgraph.Build(context.Background(), indexed.Indexes, opts)
 	require.NoError(t, err)
 	return g
+}
+
+// writeFiles writes the files, by their slash paths, to a new temporary
+// directory and returns the directory.
+func writeFiles(t testing.TB, files map[string]string) string {
+	t.Helper()
+	dir := t.TempDir()
+	for p, text := range files {
+		file := filepath.Join(dir, filepath.FromSlash(p))
+		require.NoError(t, os.MkdirAll(filepath.Dir(file), 0o755))
+		require.NoError(t, os.WriteFile(file, []byte(text), 0o644))
+	}
+	return dir
 }

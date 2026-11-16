@@ -1,0 +1,1 @@
+{ "name": "ui", "main": "src/index.js", "dependencies": { "vue": "^3.4.0" } }

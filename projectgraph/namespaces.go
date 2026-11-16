@@ -58,7 +58,22 @@ func (b *builder) resolveQualified(family langcode.Code, name string) (string, b
 		if keys := u.names[parts[i]]; i == len(parts)-1 && len(keys) > 0 {
 			return keys[0], true
 		}
-		if r := b.walk(u.key, parts[i:]); r.fail == nil {
+		key, rest := u.key, parts[i:]
+		// A Rust use can bind a module, as util of use deep::util. A walk
+		// that ends on a unit fails, so the path through such a binding
+		// steps from unit to unit here. The step lets a path of a chained
+		// use or of a glob use name its module.
+		for len(rest) > 0 && b.units[key] != nil && len(b.units[key].names[rest[0]]) == 0 {
+			member, ok := b.unitMember(key, rest[0])
+			if !ok {
+				return "", false
+			}
+			key, rest = member, rest[1:]
+		}
+		if len(rest) == 0 && b.units[key] != nil {
+			return key, true
+		}
+		if r := b.walk(key, rest); r.fail == nil {
 			return r.key, true
 		}
 		return "", false
@@ -99,10 +114,15 @@ func (b *builder) unitMember(key, name string) (string, bool) {
 				if r := b.walk(mod, lead); r.fail == nil {
 					return r.key, true
 				}
+			} else if key, ok := b.rustCrateMember(sc, joinPath(module, lead)); ok {
+				return key, true
 			}
 		}
 		if keys := b.wildcardImported(sc, name); len(keys) > 0 {
 			return keys[0], true
+		}
+		if key, ok := b.rustGlobMember(sc, name); ok {
+			return key, true
 		}
 	}
 	return "", false

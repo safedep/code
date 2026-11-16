@@ -32,7 +32,18 @@ var pythonProfile = profile{
 	importBindsRoot:    true,
 	moduleNames:        true,
 	starImports:        true,
+	instanceMethods:    pythonInstanceMethods,
+	metaclassCall:      "__call__",
+	instanceClass:      []string{"self.__class__", "type(self)"},
 }
+
+// pythonInstanceMethods names the methods that Python runs on an instance
+// with no call of the name. A call of the instance runs __call__. A read of
+// an attribute runs __getattribute__, __getattr__ for a name that the class
+// does not define, and __get__ of a descriptor in a class attribute. The
+// code that calls or reads the instance often has an unknown receiver, or
+// it is code outside the graph. No call edge then names these methods.
+var pythonInstanceMethods = map[string]bool{"__call__": true, "__getattr__": true, "__getattribute__": true, "__get__": true}
 
 // pythonDependencies returns the requirements of the Python manifests of
 // the project.

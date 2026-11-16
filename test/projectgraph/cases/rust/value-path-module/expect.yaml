@@ -1,0 +1,59 @@
+source: safedep:hand
+description: >-
+  main reads the constant config::LIMIT and the variant config::Mode::Fast into variables, and then calls
+  config::load and config::apply. A path that names a value starts with a module, never with a variable. A call
+  graph that reads config of config::LIMIT as a variable of main binds config there, so config::load(limit)
+  reads config as a receiver and gets the record unknown-receiver with no edge. std::fs::remove_file and
+  std::fs::remove_dir then read not-found.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/main.rs//main
+    to: src/config.rs//load
+    kind: direct
+    confidence: high
+    site: src/main.rs:5
+  - from: src/main.rs//main
+    to: src/config.rs//apply
+    kind: direct
+    confidence: high
+    site: src/main.rs:7
+unresolved: []
+results:
+  - target: std//fs//remove_file
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/config.rs//load
+        site: src/main.rs:5
+        kind: direct
+        confidence: high
+      - key: std//fs//remove_file
+        site: src/config.rs:8
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/config.rs//load
+        site: src/config.rs:8
+        reached: true
+  - target: std//fs//remove_dir
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/config.rs//apply
+        site: src/main.rs:7
+        kind: direct
+        confidence: high
+      - key: std//fs//remove_dir
+        site: src/config.rs:12
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/config.rs//apply
+        site: src/config.rs:12
+        reached: true

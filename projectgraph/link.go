@@ -126,7 +126,10 @@ type builder struct {
 	// form.
 	provisions map[provisionKey][]provision
 
-	edges       *edgeSet
+	edges *edgeSet
+	// checks holds the reference edges that only test a value against a
+	// class, as isinstance(x, C). They make no instance.
+	checks      map[edgeSlot]bool
 	unresolved  map[UnresolvedSite]bool
 	truncations map[Truncation]bool
 	problems    []modules.Problem
@@ -135,8 +138,20 @@ type builder struct {
 	visiting map[nameKey]bool
 	bindings map[string]string
 	classes  map[string]classRecord
-	// defs holds the definition records by key.
-	defs map[string]*fileindex.Definition
+	// defs holds the definition records by key. fieldNames holds the
+	// names of the fields among them of the languages with functionValues,
+	// true for a name that a field which can hold a function has.
+	// methodNames holds the names of the methods of those languages.
+	defs        map[string]*fileindex.Definition
+	fieldNames  map[string]bool
+	methodNames map[string]bool
+	// callees holds the definitions and the external keys that the calls
+	// at each site resolve to.
+	callees map[Site][]string
+	// valueSites holds the sites of the references to a function or a
+	// method, and dataSites the sites of the references to data.
+	valueSites map[Site]bool
+	dataSites  map[Site]bool
 	// reading holds the variables whose value a walk reads now, so a cycle
 	// of variables across files stops. stepping holds the names that a
 	// walk of a unit reads now for the result type of an external key.
@@ -186,7 +201,11 @@ type builder struct {
 	// tentative holds an undo step for each memo write made while a read
 	// of wildcard imports is in progress, as wildcardModules describes.
 	tentative []func()
-	children  map[string][]string
+	// cuts counts the answers that a cycle guard or the hop limit cut
+	// short. A memo that a read with a cut gives can lack an answer that
+	// another way in finds.
+	cuts     int
+	children map[string][]string
 	// aliases holds the definitions of each class that the language joins
 	// to one class, the class too.
 	aliases map[string][]string
@@ -293,7 +312,11 @@ func newTables(indexes []*fileindex.Index, opts Options) *builder {
 		byPath:       make(map[string]*fileindex.Index, len(indexes)),
 		scopes:       make(map[string]*scope, len(indexes)),
 		edges:        newEdgeSet(sites),
+		checks:       map[edgeSlot]bool{},
 		unresolved:   map[UnresolvedSite]bool{},
+		valueSites:   map[Site]bool{},
+		dataSites:    map[Site]bool{},
+		callees:      map[Site][]string{},
 		truncations:  map[Truncation]bool{},
 		names:        map[nameKey]resolution{},
 		visiting:     map[nameKey]bool{},
@@ -403,6 +426,7 @@ func (b *builder) linkAll(ctx context.Context) error {
 		b.copyUnresolved(ix)
 		b.linkReflection(ix)
 	}
+	b.recordValueCalls()
 	if b.opts.Surface {
 		b.addSurfaces()
 	}
@@ -416,7 +440,56 @@ func (b *builder) linkAll(ctx context.Context) error {
 	}
 	b.checkUnits()
 	b.linkFields()
+	b.linkInstances()
 	return nil
+}
+
+// scopeToLanguage scopes a site to the targets that code of the language
+// family of its file calls, as the markup of a component runs only code of
+// its family. It keeps the modules that the files of the family import or
+// give on from outside the project, as plug for export * from 'plug'. Code
+// of the family can call a name of such a module that no edge names.
+func (b *builder) scopeToLanguage(ix *fileindex.Index, site *UnresolvedSite) {
+	family := ix.Language.Family()
+	site.Language = family
+	if _, done := b.g.Imports[string(family)]; done {
+		return
+	}
+	var keys []string
+	for _, p := range b.paths {
+		other := b.byPath[p]
+		if other == nil || other.Language.Family() != family {
+			continue
+		}
+		for _, imp := range other.Imports {
+			if imp.Kind != fileindex.ImportTypeOnly {
+				keys = append(keys, b.outsideModules(other, imp.Module)...)
+			}
+		}
+		for _, ex := range other.Exports {
+			keys = append(keys, b.outsideModules(other, ex.From)...)
+		}
+	}
+	slices.Sort(keys)
+	if b.g.Imports == nil {
+		b.g.Imports = map[string][]string{}
+	}
+	b.g.Imports[string(family)] = slices.Compact(keys)
+}
+
+// outsideModules returns the key of a module that a file names and that no
+// file of the project or of a unit gives, as plug, or nothing. A builtin
+// module of the runtime gives nothing, because its key can name a module
+// of another language, as crypto of Go.
+func (b *builder) outsideModules(ix *fileindex.Index, module string) []string {
+	first, _, _ := strings.Cut(strings.TrimPrefix(module, "node:"), "/")
+	if module == "" || strings.HasPrefix(module, ".") || profileOf(ix.Language).builtinModules[first] {
+		return nil
+	}
+	if _, _, ok := b.resolveModule(ix, module); ok {
+		return nil
+	}
+	return []string{fileindex.Namespace(ix.Language, module)}
 }
 
 // CallbackMethod reports whether code outside the graph that a Callback
@@ -499,14 +572,34 @@ func (b *builder) copyUnresolved(ix *fileindex.Index) {
 			Method:   u.Method,
 			Reason:   u.Reason,
 		}
-		// The search reaches each function that a call of a function
-		// value can run, so the record names no target. See "A call of a
-		// function value" in docs/projectgraph.md.
+		// The search from the roots reaches each function that a call of
+		// a function value can run, through the reference edge of the code
+		// that stores the value. So the record names no target there. A
+		// search from a source or a summary counts it for every target.
+		// test/projectgraph/cases/go/function-value-call and
+		// test/projectgraph/cases/go/source-function-value pin both.
 		if u.Reason == fileindex.UnresolvedComputedName && profileOf(ix.Language).functionValues {
 			site.Reason = fileindex.UnresolvedFunctionValue
 		}
+		// The Go index gives a range over a member the member name, and
+		// the fields of the graph decide whether the range reads data.
+		if u.Reason == fileindex.UnresolvedRangeValue {
+			for _, r := range b.rangeRecords(ix, u, site) {
+				b.addUnresolved(r)
+			}
+			continue
+		}
 		if u.Reason == fileindex.UnresolvedDynamicImport {
 			site.ImportPrefix = b.importPrefix(ix, u.Line)
+		}
+		if u.Reason == fileindex.UnresolvedMarkup {
+			b.scopeToLanguage(ix, &site)
+		}
+		if u.Reason == fileindex.UnresolvedNoDependencySource && ix.Language == langcode.Go {
+			if b.linkGoStub(ix, site) {
+				continue
+			}
+			b.scopeGoStub(ix, &site)
 		}
 		b.addUnresolved(site)
 	}

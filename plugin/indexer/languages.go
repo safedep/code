@@ -6,6 +6,7 @@ import (
 	"github.com/safedep/code/core"
 	"github.com/safedep/code/core/ast"
 	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/plugin/callgraph"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -45,6 +46,16 @@ type languageRules struct {
 	// if let Some(t) = x. The call graph then binds a call on the name to
 	// the value of another binding.
 	rebound func(ctx context.Context, p *projection, call fileindex.Call, name string) bool
+	// typedCall reports whether the declared type that the link step reads
+	// for the receiver of a call holds at the call, and can retarget the
+	// call to the binding in scope. The Go index records the typed locals
+	// of a function with no extent, so an inner block can bind the name of
+	// the receiver again. A false result makes the call a record.
+	typedCall func(p *projection, call *fileindex.Call) bool
+	// literalCall reports whether a call runs a function literal whose
+	// calls the index gives to the caller already, as f() after
+	// f := func() {...} in Go. Such a call needs no edge and no record.
+	literalCall func(p *projection, call fileindex.Call) bool
 
 	// packageOf returns the package or the namespace of the file, which the
 	// files of one unit share.
@@ -54,7 +65,10 @@ type languageRules struct {
 	kindOf func(p *projection, node *sitter.Node, kind fileindex.DefKind) fileindex.DefKind
 	// bases returns the classes and the interfaces that a class or an
 	// interface names as its bases, as written.
-	bases func(p *projection, class *sitter.Node) []string
+	// metaclass returns the metaclass of a class as written, as M in
+	// class A(metaclass=M).
+	metaclass func(p *projection, class *sitter.Node) string
+	bases     func(p *projection, class *sitter.Node) []string
 	// fields returns the fields of a class that declare a type.
 	fields func(p *projection, class *sitter.Node) []fileindex.Typed
 	// abstract returns the methods that an interface declares.
@@ -86,6 +100,13 @@ type languageRules struct {
 	// prune drops the definitions that hold no record, after the records.
 	prune func(p *projection)
 
+	// importExported reports whether an import gives its binding on to
+	// other crates or modules, as pub use of Rust.
+	importExported func(p *projection, imp callgraph.Import) bool
+	// shadowed fixes the targets of a call whose first name a scope between
+	// the call and the definition of the target binds again, as a use in a
+	// block of Rust. It reports false when the call is a record.
+	shadowed func(ctx context.Context, p *projection, call *fileindex.Call, callee ast.NodePosition) bool
 	// markTries marks each ? in the targets of a call from the syntax of
 	// its callee, as the ? of Rust in dep//load//?//run. The call graph
 	// keeps no such mark.

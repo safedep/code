@@ -1,0 +1,91 @@
+source: safedep:hand
+description: >-
+  The crate dep, the unit cargo:dep@1.0.0, has pub use inner::* and pub use crate::sub::* at its root, and its
+  module prelude has pub use inner::tools. inner is the unit cargo:inner@1.0.0. src/a.rs has use dep::*, so text
+  names the module text of inner and leaf names the module sub::leaf of dep. src/b.rs has use dep::prelude::*, so
+  tools names the module tools of inner. A link step that reads no name that a unit brings from another crate or
+  by its own glob use reads each first name as a crate, gives each call an external key with no record, and
+  each target reads not-found.
+units:
+  vendor/dep: cargo:dep@1.0.0
+  vendor/inner: cargo:inner@1.0.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+no_edges:
+  - from: src/a.rs//go
+    to: text//fmt
+  - from: src/a.rs//go
+    to: leaf//leaffn
+  - from: src/b.rs//go
+    to: tools//run
+edges:
+  - from: src/a.rs//go
+    to: dep//text//fmt
+    kind: direct
+    confidence: high
+    site: src/a.rs:4
+  - from: src/a.rs//go
+    to: dep//leaf//leaffn
+    kind: direct
+    confidence: high
+    site: src/a.rs:5
+  - from: src/b.rs//go
+    to: dep//prelude//tools//run
+    kind: direct
+    confidence: high
+    site: src/b.rs:4
+unresolved: []
+results:
+  - target: inner//text//fmt
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/a.rs//go
+        site: src/main.rs:5
+        kind: direct
+        confidence: high
+      - key: dep//text//fmt
+        site: src/a.rs:4
+        kind: direct
+        confidence: high
+      - key: inner//text//fmt
+        site: cargo:dep@1.0.0
+        kind: package
+        confidence: high
+  - target: dep//sub//leaf//leaffn
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/a.rs//go
+        site: src/main.rs:5
+        kind: direct
+        confidence: high
+      - key: dep//leaf//leaffn
+        site: src/a.rs:5
+        kind: direct
+        confidence: high
+      - key: cargo:dep@1.0.0//src/sub/leaf.rs//leaffn
+        site: cargo:dep@1.0.0//src/sub/leaf.rs:1
+        kind: package
+        confidence: high
+  - target: inner//tools//run
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/b.rs//go
+        site: src/main.rs:6
+        kind: direct
+        confidence: high
+      - key: dep//prelude//tools//run
+        site: src/b.rs:4
+        kind: direct
+        confidence: high
+      - key: inner//tools//run
+        site: cargo:dep@1.0.0
+        kind: package
+        confidence: high

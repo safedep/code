@@ -1,0 +1,40 @@
+source: safedep:hand
+description: >-
+  The modules a, b, c, d, e and hub bring each other's names with glob uses, and leaf defines f. main first
+  calls e::f(), whose lookup reads c, hub, a, leaf and b, and then other::go() calls crate::d::f(). d brings f
+  through b, a and hub from leaf. The first lookup reads b while hub is in progress and finds no f there, so the
+  answer of b is not whole. A link step that keeps that answer of b for the lookup of d, under another depth,
+  keeps the lookup of d with no f for the build, and std::fs::remove_file reads not-found from other::go.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/other.rs//go
+    to: src/leaf.rs//f
+    kind: direct
+    confidence: high
+    site: src/other.rs:2
+unresolved: []
+results:
+  - target: std//fs//remove_file
+    status: found
+    sources: [src/other.rs//go]
+    sources_only: true
+    path:
+      - key: src/other.rs//go
+      - key: src/leaf.rs//f
+        site: src/other.rs:2
+        kind: direct
+        confidence: high
+      - key: std//fs//remove_file
+        site: src/leaf.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/leaf.rs//f
+        site: src/leaf.rs:2
+        reached: true

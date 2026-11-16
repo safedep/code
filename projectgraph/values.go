@@ -24,6 +24,155 @@ func (b *builder) linkUnknownValue(sc *scope, ref fileindex.Reference, from stri
 	b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: ref.Text, Method: lastWritten(ref.Text), Reason: reason})
 }
 
+// recordValueCalls adds a function-value record at each call that can run
+// a function value and that has only a record with its name: a call of a
+// parameter or a local, as f(x), or a call of a member whose name a field
+// of the graph has, as h.fn(). The name scopes the record to the
+// definitions of the name, and a function value has another name. A search
+// from the roots reaches the reference to the function, but a search from a
+// source can miss the code that stores the value. A field of a type that
+// no unit gives can also hold a function, and no definition shows it.
+func (b *builder) recordValueCalls() {
+	recorded := map[Site]bool{}
+	for u := range b.unresolved {
+		if u.Reason == fileindex.UnresolvedFunctionValue {
+			recorded[u.Site] = true
+		}
+	}
+	var add []UnresolvedSite
+	for u := range b.unresolved {
+		if u.Reason != fileindex.UnresolvedUnknownReceiver || u.Site.Path == "" || recorded[u.Site] || !b.callsValue(u) {
+			continue
+		}
+		ix := b.byPath[u.Site.Path]
+		if ix == nil || !profileOf(ix.Language).functionValues {
+			continue
+		}
+		recorded[u.Site] = true
+		add = append(add, UnresolvedSite{Caller: u.Caller, Site: u.Site, Text: u.Text, Receiver: u.Receiver, Reason: fileindex.UnresolvedFunctionValue})
+	}
+	for _, u := range add {
+		b.addUnresolved(u)
+	}
+}
+
+// callsValue reports whether a call with an unknown receiver can call a
+// function value: a name with no receiver, or a member that a field of the
+// graph names and that can hold a function. A record of a method value, as
+// the index gives it for x.f in g(x.f), has no receiver, so only a call
+// counts.
+func (b *builder) callsValue(u UnresolvedSite) bool {
+	if u.Receiver == "" {
+		return isIdentifier(u.Text)
+	}
+	holds, _ := b.valueField(u.Method)
+	return holds
+}
+
+// valueField reports whether a field of the name in a language with
+// functionValues can hold a function, and whether the graph has a field
+// of the name at all. The index marks a field of a type of data, as
+// Name string, with Data.
+func (b *builder) valueField(name string) (holds, known bool) {
+	b.readValueNames()
+	holds, known = b.fieldNames[name]
+	return holds, known
+}
+
+// valueMethod reports whether a method of a language with functionValues
+// has the name.
+func (b *builder) valueMethod(name string) bool {
+	b.readValueNames()
+	return b.methodNames[name]
+}
+
+// readValueNames reads the names of the fields and of the methods of the
+// languages with functionValues once.
+func (b *builder) readValueNames() {
+	if b.fieldNames != nil {
+		return
+	}
+	b.fieldNames, b.methodNames = map[string]bool{}, map[string]bool{}
+	for key, def := range b.defs {
+		if def.Kind != fileindex.DefField && def.Kind != fileindex.DefMethod || !profileOf(b.languageOf(key)).functionValues {
+			continue
+		}
+		if def.Kind == fileindex.DefField {
+			b.fieldNames[def.Name] = b.fieldNames[def.Name] || !def.Data
+		} else {
+			b.methodNames[def.Name] = true
+		}
+	}
+}
+
+// rangeRecords returns the records of the index record of a range over a
+// value that the index cannot show to be data, at the site. A record that
+// the graph shows to read data has none. Otherwise it is a function-value
+// record, as fileindex.UnresolvedRangeValue says.
+func (b *builder) rangeRecords(ix *fileindex.Index, u fileindex.Unresolved, site UnresolvedSite) []UnresolvedSite {
+	site.Reason, site.Method, site.Receiver = fileindex.UnresolvedFunctionValue, "", ""
+	switch {
+	case u.Receiver != "" && u.Method != "":
+		return b.rangeMember(u, site)
+	case u.Method != "":
+		if key, ok := b.resolveType(b.scopes[ix.Path], u.Caller, u.Method); ok && b.valueData(key) {
+			return nil
+		}
+	case b.callsData(site.Site):
+		return nil
+	}
+	return []UnresolvedSite{site}
+}
+
+// rangeMember returns the records of a range over a member. A field of the
+// name that can hold a function, or no field and no method of the name, as
+// a field of a type of a package that no unit gives, makes it a
+// function-value record. A method of the name makes it a record with the
+// method name too, so a name edge leads the search to each method of the
+// name, as the range calls a method value. A reference at the site that
+// names a function, as t.All of a typed t, or data, as n.Attr of a typed
+// n, needs no record, and neither does a member whose fields hold data
+// only.
+func (b *builder) rangeMember(u fileindex.Unresolved, site UnresolvedSite) []UnresolvedSite {
+	if b.valueSites[site.Site] || b.dataSites[site.Site] {
+		return nil
+	}
+	holds, known := b.valueField(u.Method)
+	method := b.valueMethod(u.Method)
+	var out []UnresolvedSite
+	if holds || !known && !method {
+		out = append(out, site)
+	}
+	if method {
+		named := site
+		named.Reason, named.Receiver, named.Method = fileindex.UnresolvedUnknownReceiver, u.Receiver, u.Method
+		out = append(out, named)
+	}
+	return out
+}
+
+// callsData reports whether each call at a site gives data: a function or
+// a method whose first result holds no function, or code outside the graph,
+// whose own record covers a function that it makes, as a function value
+// that a package of the standard library with no unit gives.
+func (b *builder) callsData(site Site) bool {
+	callees := b.callees[site]
+	return len(callees) > 0 && !slices.ContainsFunc(callees, func(key string) bool {
+		if b.kindOf(key) != NodeExternal {
+			return !b.valueData(key)
+		}
+		defs, provided := b.unitDefinitions(b.origins[key])
+		return provided && slices.ContainsFunc(defs, func(d string) bool { return !b.valueData(d) })
+	})
+}
+
+// valueData reports whether the definition of a key marks its values as
+// data, as fileindex.Definition.ValueData says.
+func (b *builder) valueData(key string) bool {
+	def := b.defs[key]
+	return def != nil && def.ValueData
+}
+
 // reflection is a package of a language that gives or runs a function
 // that no reference names, and the methods of it that do it.
 type reflection struct {

@@ -1,0 +1,30 @@
+{
+  "version": "3",
+  "index_version": "17",
+  "link_version": "20",
+  "unit": "cargo:other@1.0.0",
+  "symbols": [
+    {
+      "key": "other//load",
+      "definitions": [
+        "cargo:other@1.0.0//src/lib.rs//load"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "other//render",
+      "definitions": [
+        "cargo:other@1.0.0//src/lib.rs//render"
+      ],
+      "reaches": []
+    },
+    {
+      "key": "other//save",
+      "definitions": [
+        "cargo:other@1.0.0//src/lib.rs//save"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": []
+}

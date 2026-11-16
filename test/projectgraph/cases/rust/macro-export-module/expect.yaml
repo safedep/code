@@ -1,0 +1,57 @@
+source: safedep:hand
+description: >-
+  The crate dep, the unit cargo:dep@1.2.0, defines the macro wipe in its private module macros with
+  #[macro_export], which puts the macro at the root of the crate. Its rule calls $crate::sink, the function sink
+  of the root of dep. main.rs has use dep::wipe and calls wipe!(). A link step that looks for wipe in the root
+  module of dep finds no definition and records the unit, so every target of dep reads uncertain. A macro that
+  reads $crate::sink as the name sink records the call too.
+units:
+  vendor/dep: cargo:dep@1.2.0
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+exact_edges: true
+edges:
+  - from: src/main.rs//main
+    to: dep//wipe
+    kind: direct
+    confidence: high
+    site: src/main.rs:4
+  - from: dep//wipe
+    to: cargo:dep@1.2.0//src/macros.rs//wipe
+    kind: package
+    confidence: high
+    site: cargo:dep@1.2.0//src/macros.rs:2
+  - from: cargo:dep@1.2.0//src/macros.rs//wipe
+    to: cargo:dep@1.2.0//src/lib.rs//sink
+    kind: direct
+    confidence: high
+    site: cargo:dep@1.2.0//src/macros.rs:4
+unresolved: []
+results:
+  - target: dep//sink
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: dep//wipe
+        site: src/main.rs:4
+        kind: direct
+        confidence: high
+      - key: cargo:dep@1.2.0//src/macros.rs//wipe
+        site: cargo:dep@1.2.0//src/macros.rs:2
+        kind: package
+        confidence: high
+      - key: cargo:dep@1.2.0//src/lib.rs//sink
+        site: cargo:dep@1.2.0//src/macros.rs:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: cargo:dep@1.2.0//src/macros.rs//wipe
+        site: cargo:dep@1.2.0//src/macros.rs:4
+        reached: true
+  - target: dep//unused
+    status: not-found

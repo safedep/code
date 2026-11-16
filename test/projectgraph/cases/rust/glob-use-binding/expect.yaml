@@ -1,0 +1,53 @@
+source: safedep:hand
+description: >-
+  src/jobs/mod.rs has use crate::store::disk, so disk names the module src/store/disk.rs in the module jobs.
+  src/jobs/worker.rs has use super::*, which brings each name of jobs into worker, the binding disk too. So
+  disk::wipe in go calls the function wipe of src/store/disk.rs, which calls std::fs::remove_dir_all. No module
+  disk is a child of worker or of the root. A link step that stops the glob path on the module that a use
+  binds gives the call the key disk//wipe with no record, and std::fs::remove_dir_all reads not-found.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+exact_edges: true
+edges:
+  - from: src/main.rs//main
+    to: src/jobs/worker.rs//go
+    kind: direct
+    confidence: high
+    site: src/main.rs:5
+  - from: src/jobs/worker.rs//go
+    to: src/store/disk.rs//wipe
+    kind: direct
+    confidence: high
+    site: src/jobs/worker.rs:4
+  - from: src/store/disk.rs//wipe
+    to: std//fs//remove_dir_all
+    kind: direct
+    confidence: high
+    site: src/store/disk.rs:2
+unresolved: []
+results:
+  - target: std//fs//remove_dir_all
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/jobs/worker.rs//go
+        site: src/main.rs:5
+        kind: direct
+        confidence: high
+      - key: src/store/disk.rs//wipe
+        site: src/jobs/worker.rs:4
+        kind: direct
+        confidence: high
+      - key: std//fs//remove_dir_all
+        site: src/store/disk.rs:2
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/store/disk.rs//wipe
+        site: src/store/disk.rs:2
+        reached: true

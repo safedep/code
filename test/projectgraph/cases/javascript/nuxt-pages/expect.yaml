@@ -1,0 +1,65 @@
+source: safedep:hand
+description: >-
+  Nuxt loads pages/index.vue and layouts/default.vue by their paths, and no file imports them. Each
+  component file is a root of the rule node.component, so the calls in their scripts are found.
+roots:
+  - key: layouts/default.vue
+    kind: framework
+    rule: node.component
+  - key: pages/index.vue
+    kind: framework
+    rule: node.component
+  - key: server.js
+    kind: manifest
+    rule: node.package-json
+exact_edges: true
+edges:
+  - from: layouts/default.vue
+    to: plug//frame
+    kind: direct
+    confidence: high
+    site: layouts/default.vue:4
+  - from: pages/index.vue
+    to: plug//danger
+    kind: direct
+    confidence: high
+    site: pages/index.vue:4
+  - from: server.js
+    to: plug//listen
+    kind: direct
+    confidence: high
+    site: server.js:3
+unresolved:
+  - caller: layouts/default.vue
+    site: layouts/default.vue:1
+    reason: markup
+  - caller: pages/index.vue
+    site: pages/index.vue:1
+    reason: markup
+results:
+  - target: plug//danger
+    status: found
+    path:
+      - key: pages/index.vue
+        root: framework
+      - key: plug//danger
+        site: pages/index.vue:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: pages/index.vue
+        site: pages/index.vue:4
+        reached: true
+  - target: plug//frame
+    status: found
+    path:
+      - key: layouts/default.vue
+        root: framework
+      - key: plug//frame
+        site: layouts/default.vue:4
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: layouts/default.vue
+        site: layouts/default.vue:4
+        reached: true

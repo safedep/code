@@ -1,0 +1,16 @@
+{
+  "version": "3",
+  "index_version": "17",
+  "link_version": "20",
+  "unit": "cargo:dep_b@1.0.0",
+  "symbols": [
+    {
+      "key": "dep_b//b",
+      "definitions": [
+        "cargo:dep_b@1.0.0//src/lib.rs//b"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": []
+}

@@ -1,7 +1,10 @@
 package indexer
 
 import (
+	"slices"
+
 	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/lang/ecmascript"
 	"github.com/safedep/code/pkg/ts"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -26,20 +29,22 @@ func (p *projection) local(name string) string {
 	return fileindex.Join(p.cg.FileName, name)
 }
 
-// export adds the export of a local name as name. A name that an import
-// binds is given on, and Item holds the local name when it is not name.
-func (p *projection) export(name, local string, line int) {
+// export adds the export of a local name as name and returns it. A name
+// that an import binds is given on, and Item holds the local name when it
+// is not name.
+func (p *projection) export(name, local string, line int) *fileindex.Export {
 	if p.bindings[local] {
 		item := local
 		if item == name {
 			item = ""
 		}
 		p.ix.Exports = append(p.ix.Exports, fileindex.Export{Name: name, Item: item, Line: line})
-		return
+	} else {
+		target := p.local(local)
+		p.exports[target] = true
+		p.ix.Exports = append(p.ix.Exports, fileindex.Export{Name: name, Target: target, Line: line})
 	}
-	target := p.local(local)
-	p.exports[target] = true
-	p.ix.Exports = append(p.ix.Exports, fileindex.Export{Name: name, Target: target, Line: line})
+	return &p.ix.Exports[len(p.ix.Exports)-1]
 }
 
 // reexport adds an export of item of the module from as name. An empty
@@ -74,6 +79,10 @@ func (p *projection) addExportStatement(statement *sitter.Node) {
 	}
 
 	if declaration := statement.ChildByFieldName("declaration"); declaration != nil {
+		if t := declaration.Type(); t == "lexical_declaration" || t == "variable_declaration" {
+			p.exportDeclarators(declaration, line)
+			return
+		}
 		for _, name := range p.declaredNames(declaration) {
 			p.export(named(name), name, line)
 		}
@@ -85,6 +94,10 @@ func (p *projection) addExportStatement(statement *sitter.Node) {
 			p.export(defaultExport, p.text(value), line)
 		case functionValues[value.Type()] || value.Type() == "class":
 			p.export(defaultExport, defaultExport, line)
+		case opaque(value):
+			// A default of a call, as export default NextAuth({...}), has
+			// no definition. The record keeps it for a rule that roots it.
+			p.export(defaultExport, defaultExport, line).Opaque = true
 		}
 		return
 	}
@@ -106,7 +119,7 @@ func (p *projection) addExportStatement(statement *sitter.Node) {
 				if source != "" {
 					p.reexport(name, source, local, line)
 				} else {
-					p.export(name, local, line)
+					p.exportValue(name, local, p.topValue(local), line)
 				}
 			}
 		case "namespace_export":
@@ -139,6 +152,166 @@ func (p *projection) declaredNames(declaration *sitter.Node) []string {
 		return []string{p.text(name)}
 	}
 	return nil
+}
+
+// exportDeclarators adds the exports of the names that an exported
+// variable declaration binds. A name of a destructuring pattern, as GET in
+// export const { GET } = handlers, takes the member of the value that it
+// names, as handlers//GET. A framework calls the function of an exported
+// name, and without the record no root names the function. A name of an
+// array pattern or a rest element takes no member that a key names, so
+// its target is the object that holds it.
+func (p *projection) exportDeclarators(declaration *sitter.Node, line int) {
+	for _, declarator := range ts.NamedChildren(declaration) {
+		pattern, value := declarator.ChildByFieldName("name"), unwrap(declarator.ChildByFieldName("value"))
+		switch {
+		case pattern == nil:
+		case pattern.Type() == "identifier":
+			name := p.text(pattern)
+			p.exportValue(name, name, value, line)
+		case value != nil && value.Type() == "identifier" && !opaque(p.topValue(p.text(value))):
+			p.exportPattern(pattern, []string{p.text(value)}, line)
+		default:
+			for _, name := range patternNames(p, pattern) {
+				p.export(name, name, line).Opaque = true
+			}
+		}
+	}
+}
+
+// exportValue adds the export of a local name that holds a value. A name
+// that holds another name gives that name first, as handler for GET in
+// export const GET = handler, so the export reaches its function. A value
+// that is no literal, as the result of a call, is opaque.
+func (p *projection) exportValue(name, local string, value *sitter.Node, line int) {
+	value = unwrap(value)
+	if value != nil && value.Type() == "identifier" && p.text(value) != local {
+		p.export(name, p.text(value), line)
+	}
+	export := p.export(name, local, line)
+	if value != nil && value.Type() != "identifier" && opaque(value) {
+		export.Opaque = true
+	}
+}
+
+// unwrap returns the value that parentheses and TypeScript assertions
+// hold, as make() in <Handler>make() or in make() satisfies Handler. A
+// JavaScript file has no assertion, so the TypeScript rule reads both.
+func unwrap(value *sitter.Node) *sitter.Node {
+	return ecmascript.Unparen(value, true)
+}
+
+// opaqueParts are the expressions that can give a function that no
+// definition of the file names: a call, a new, an await, and a read of a
+// member, which can hold a function of another object.
+var opaqueParts = map[string]bool{
+	"call_expression": true, "new_expression": true, "await_expression": true,
+	"member_expression": true, "subscript_expression": true,
+}
+
+// opaque reports whether a value runs code that the index does not follow
+// to a definition, as a call. A value with no call, new, await or read of
+// a member, as 60 * 60 or 'x' as const, is a literal. A nil value is a
+// name that no top-level declaration of the file binds, as an import.
+func opaque(value *sitter.Node) bool {
+	value = unwrap(value)
+	if value == nil || value.Type() == "identifier" || functionValues[value.Type()] || literalValues[value.Type()] {
+		return false
+	}
+	if opaqueParts[value.Type()] {
+		return true
+	}
+	return slices.ContainsFunc(ts.NamedChildren(value), func(child *sitter.Node) bool {
+		return opaqueParts[child.Type()] || opaque(child)
+	})
+}
+
+// literalValues are the JavaScript values that run no code of their own
+// when code reads them. A function of an object or an array is a
+// definition of the file.
+var literalValues = map[string]bool{
+	"string": true, "template_string": true, "number": true, "true": true, "false": true, "null": true,
+	"undefined": true, "regex": true, "object": true, "array": true, "class": true,
+}
+
+// topValue returns the value of a top-level variable of the file, or nil.
+func (p *projection) topValue(name string) *sitter.Node {
+	for _, statement := range ts.NamedChildren(p.tree.Tree().RootNode()) {
+		if statement.Type() == "export_statement" {
+			statement = statement.ChildByFieldName("declaration")
+		}
+		if statement == nil || statement.Type() != "lexical_declaration" && statement.Type() != "variable_declaration" {
+			continue
+		}
+		for _, declarator := range ts.NamedChildren(statement) {
+			if n := declarator.ChildByFieldName("name"); n != nil && n.Type() == "identifier" && p.text(n) == name {
+				return declarator.ChildByFieldName("value")
+			}
+		}
+	}
+	return nil
+}
+
+// patternNames returns the names that a destructuring pattern binds.
+func patternNames(p *projection, pattern *sitter.Node) []string {
+	switch pattern.Type() {
+	case "identifier", "shorthand_property_identifier_pattern":
+		return []string{p.text(pattern)}
+	case "assignment_pattern", "object_assignment_pattern":
+		if left := pattern.ChildByFieldName("left"); left != nil {
+			return patternNames(p, left)
+		}
+	case "pair_pattern":
+		if value := pattern.ChildByFieldName("value"); value != nil {
+			return patternNames(p, value)
+		}
+	case "object_pattern", "array_pattern", "rest_pattern":
+		var names []string
+		for _, child := range ts.NamedChildren(pattern) {
+			names = append(names, patternNames(p, child)...)
+		}
+		return names
+	}
+	return nil
+}
+
+// exportPattern adds the exports of the names of a pattern whose value is
+// the member at the path. A name of an object pattern takes the member of
+// its own name, as GET in { GET }.
+func (p *projection) exportPattern(pattern *sitter.Node, path []string, line int) {
+	switch pattern.Type() {
+	case "identifier":
+		p.export(p.text(pattern), fileindex.Join(path[0], path[1:]...), line)
+	case "shorthand_property_identifier_pattern":
+		name := p.text(pattern)
+		p.export(name, fileindex.Join(path[0], append(slices.Clip(path[1:]), name)...), line)
+	case "assignment_pattern", "object_assignment_pattern":
+		// A default holds the value when the member is undefined, as fb
+		// for PUT in { PUT = fb } = h.
+		left, right := pattern.ChildByFieldName("left"), pattern.ChildByFieldName("right")
+		if left == nil {
+			return
+		}
+		p.exportPattern(left, path, line)
+		if right != nil && right.Type() == "identifier" {
+			for _, name := range patternNames(p, left) {
+				p.export(name, p.text(right), line)
+			}
+		}
+	case "pair_pattern":
+		key, value := pattern.ChildByFieldName("key"), pattern.ChildByFieldName("value")
+		if key == nil || value == nil {
+			return
+		}
+		if key.Type() == "property_identifier" {
+			path = append(slices.Clip(path), p.text(key))
+		}
+		p.exportPattern(value, path, line)
+	case "object_pattern", "array_pattern", "rest_pattern":
+		for _, child := range ts.NamedChildren(pattern) {
+			p.exportPattern(child, path, line)
+		}
+	}
 }
 
 // addExportAssignment adds the exports of a CommonJS assignment, as

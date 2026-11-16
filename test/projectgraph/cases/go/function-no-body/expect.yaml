@@ -1,0 +1,133 @@
+source: safedep:hand
+description: >-
+  Three functions have no body. add of the project and Sum of the unit fast are stubs of assembly, and the
+  assembly calls slow and fallback. now is a function that //go:linkname binds to runtime.nanotime. The
+  code of each one is not Go source of the graph, so the index gives each stub a record with the reason
+  no-dependency-source. The assembly of the project can call any function, so its record concerns every
+  target, and os.Remove and os.Getwd are uncertain from viaAsm. The assembly of a unit calls the code of
+  its package and of the runtime, so its record concerns what the code of the unit reaches.
+  os/exec.LookPath is uncertain from viaUnit, and os.Getwd is not found from it. The code of the standard
+  library calls back only a method of an exported name, so the record of now is a callback. os.Chdir,
+  which closer.Close calls, is uncertain from viaLinkname, and os.Getwd is not found from it. Without the
+  record, each search ends at the stub, and each target reads not-found. alias is bound by //go:linkname
+  to aliased of its own package main. The path main has no dot, as a path of the standard library, but a
+  package of the graph gives it. So the link step joins alias to aliased with an edge, and os.Mkdir is
+  found from viaAlias. Without the edge, a callback there gives not-found.
+units:
+  gomod/github.com/acme/fast@v1.0.0: go:github.com/acme/fast@v1.0.0
+roots:
+  - key: asm.go
+    kind: main
+    rule: go.main
+  - key: main.go
+    kind: main
+    rule: go.main
+  - key: main.go//main
+    kind: main
+    rule: go.main
+unresolved:
+  - caller: os//Chdir
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Getwd
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Mkdir
+    reason: no-dependency-source
+    callback: true
+  - caller: os//Remove
+    reason: no-dependency-source
+    callback: true
+  - caller: os//exec//LookPath
+    reason: no-dependency-source
+    callback: true
+  - caller: asm.go//add
+    site: asm.go:6
+    reason: no-dependency-source
+  - caller: go:github.com/acme/fast@v1.0.0//fast.go//Sum
+    site: go:github.com/acme/fast@v1.0.0//fast.go:6
+    reason: no-dependency-source
+  - caller: main.go//now
+    site: main.go:11
+    reason: no-dependency-source
+    callback: true
+results:
+  - target: os//Remove
+    status: uncertain
+    call_sites:
+      - caller: asm.go//slow
+        site: asm.go:8
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: asm.go:6
+  - target: os//Getwd
+    sources: [main.go//viaAsm]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//unused
+        site: main.go:17
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: asm.go:6
+  - target: os//exec//LookPath
+    sources: [main.go//viaUnit]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: go:github.com/acme/fast@v1.0.0//fast.go//fallback
+        site: go:github.com/acme/fast@v1.0.0//fast.go:8
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: go:github.com/acme/fast@v1.0.0//fast.go:6
+  - target: os//Getwd
+    sources: [main.go//viaUnit]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: main.go//unused
+        site: main.go:17
+        reached: false
+  - target: os//Chdir
+    sources: [main.go//viaLinkname]
+    sources_only: true
+    status: uncertain
+    call_sites:
+      - caller: main.go//closer//Close
+        site: main.go:15
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+  - target: os//Getwd
+    sources: [main.go//viaLinkname]
+    sources_only: true
+    status: not-found
+    call_sites:
+      - caller: main.go//unused
+        site: main.go:17
+        reached: false
+  - target: os//Mkdir
+    sources: [main.go//viaAlias]
+    sources_only: true
+    status: found
+    path:
+      - key: main.go//viaAlias
+      - key: main.go//alias
+        site: main.go:36
+        kind: direct
+        confidence: high
+      - key: main.go//aliased
+        site: main.go:32
+        kind: direct
+        confidence: high
+      - key: os//Mkdir
+        site: main.go:34
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.go//aliased
+        site: main.go:34
+        reached: true

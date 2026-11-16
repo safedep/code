@@ -1,0 +1,16 @@
+{
+  "version": "3",
+  "index_version": "17",
+  "link_version": "20",
+  "unit": "cargo:dep1@1.0.0",
+  "symbols": [
+    {
+      "key": "dep1//bound//audit",
+      "definitions": [
+        "cargo:dep1@1.0.0//src/bound.rs//audit"
+      ],
+      "reaches": []
+    }
+  ],
+  "targets": []
+}

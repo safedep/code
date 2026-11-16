@@ -1,0 +1,39 @@
+source: safedep:hand
+description: >-
+  src/store.rs declares the struct Item, and its inline module cache declares another Item. The inline module
+  cache::deep has use crate::store::Item, so the result of make and the field item of Holder hold the Item of the
+  root. make().save() and h.item.save() run Item::save of the root, which calls std::fs::write. The save of
+  cache::Item calls std::fs::create_dir and nothing calls it. An index that drops a type that a use declares
+  gives each call a record and the low name edges of both save methods, so std::fs::create_dir reads found. The
+  index writes the path of the use, crate::store::Item, so each call keeps one edge.
+roots:
+  - key: src/main.rs
+    kind: main
+    rule: rust.main
+  - key: src/main.rs//main
+    kind: main
+    rule: rust.main
+edges:
+  - from: src/store.rs//cache//deep//by_result
+    to: src/store.rs//Item//save
+    kind: member
+    confidence: high
+    site: src/store.rs:30
+  - from: src/store.rs//cache//deep//by_field
+    to: src/store.rs//Item//save
+    kind: member
+    confidence: high
+    site: src/store.rs:35
+no_edges:
+  - from: src/store.rs//cache//deep//by_result
+    to: src/store.rs//cache//Item//save
+  - from: src/store.rs//cache//deep//by_field
+    to: src/store.rs//cache//Item//save
+unresolved: []
+results:
+  - target: std//fs//create_dir
+    status: not-found
+    call_sites:
+      - caller: src/store.rs//cache//Item//save
+        site: src/store.rs:14
+        reached: false

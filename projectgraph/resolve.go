@@ -96,6 +96,13 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 				}
 				continue
 			}
+			// A local of a declared function type, as g in var g F = h or
+			// h in var h http.HandlerFunc = m["a"], holds a function value.
+			// The walk ends at the type, a node of the graph or an external
+			// key, and no edge names the function.
+			if r.fail == nil && r.declared && call.Receiver == "" && sc.profile.functionValues && !b.isFunction(r.key) {
+				b.addUnresolved(UnresolvedSite{Caller: from, Site: site, Text: call.Callee, Reason: fileindex.UnresolvedFunctionValue})
+			}
 			if r.unbound && sc.profile.thisCalls {
 				r = b.thisCall(ix, caller, call, r)
 			}
@@ -149,6 +156,7 @@ func (b *builder) linkCalls(ix *fileindex.Index) {
 			if r.kind == EdgeMember && r.declared {
 				r.rule = ruleDeclaredType
 			}
+			b.callees[site] = append(b.callees[site], r.key)
 			b.link(ix.Language, from, r.key, site, r.kind, r.rule)
 		}
 	}
@@ -359,9 +367,20 @@ func (b *builder) linkReferences(ix *fileindex.Index) {
 			// A Go value of a named type is no function, so passing it
 			// on calls nothing. Nor is a field or a constant.
 			if sc.profile.typeConversions && b.isType(r.key) || b.holdsData(r.key) {
+				// A Go field holds data only when the index marks it, as
+				// a field of a function type can hold a function.
+				if def := b.defs[r.key]; b.holdsData(r.key) && (def == nil || def.Kind != fileindex.DefField || def.Data) {
+					b.dataSites[site] = true
+				}
 				continue
 			}
+			if b.isFunction(r.key) {
+				b.valueSites[site] = true
+			}
 			b.link(ix.Language, from, r.key, site, EdgeReference, ruleReference)
+			if ref.Check {
+				b.checks[b.edges.slot(Edge{From: from, To: r.key, Site: site})] = true
+			}
 		}
 	}
 }
@@ -481,8 +500,12 @@ func (b *builder) wildcardImported(sc *scope, name string) []string {
 	var keys []string
 	for _, mod := range b.wildcardModules(sc) {
 		switch {
-		case b.units[mod] != nil:
+		case b.units[mod] != nil && len(b.units[mod].names[name]) > 0:
 			keys = append(keys, b.units[mod].names[name]...)
+		case b.units[mod] != nil && sc.profile.unitImports:
+			if key, ok := b.rustGlobUnitMember(mod, name); ok {
+				keys = append(keys, key)
+			}
 		case b.isType(mod):
 			if key, fail := b.method(mod, name); fail == nil {
 				keys = append(keys, key)
@@ -546,6 +569,7 @@ func (b *builder) wildcardModules(sc *scope) []string {
 	// A read inside another read adds the paths that it asks for to the
 	// record of the outer one.
 	outer := b.wildcardMods != nil && b.asked == nil
+	whole := b.rustState().glob.read()
 	if outer {
 		b.asked = map[[2]string]bool{}
 	}
@@ -572,8 +596,9 @@ func (b *builder) wildcardModules(sc *scope) []string {
 		clear(b.tentative)
 		b.tentative = b.tentative[:0]
 	}
+	readWhole := whole()
 	if outer {
-		if b.uncut(b.asked) {
+		if readWhole && b.uncut(b.asked) {
 			b.wildcardMods[sc] = &wildcardMods{mods: r.mods, asked: b.asked}
 		}
 		b.asked = nil
@@ -589,6 +614,18 @@ func (b *builder) memo(undo func()) {
 	}
 }
 
+// remember writes an answer to a memo table, and logs its undo as memo
+// does.
+func remember[K comparable, V any](b *builder, table map[K]V, k K, v V) {
+	table[k] = v
+	b.memo(func() { delete(table, k) })
+}
+
+// cut counts an answer that a cycle guard or the hop limit cuts.
+func (b *builder) cut() {
+	b.cuts++
+}
+
 // undo reverts the memo writes after the mark, newest first.
 func (b *builder) undo(mark int) {
 	for i := len(b.tentative) - 1; i >= mark; i-- {
@@ -598,6 +635,22 @@ func (b *builder) undo(mark int) {
 	b.tentative = b.tentative[:mark]
 }
 
+// idle reports whether no cycle guard is in progress. A search that starts
+// idle meets only the guards that it sets itself. A cut under it ends a
+// cycle back through the search, and the answer of the search loses
+// nothing by it.
+func (b *builder) idle() bool {
+	s := b.rustState()
+	return !b.guarded() && len(s.resolving)+len(s.glob.active) == 0
+}
+
+// guarded reports whether a cycle guard other than the resolving guard and
+// the glob guards of Rust is in progress.
+func (b *builder) guarded() bool {
+	return len(b.expanding)+len(b.visiting)+len(b.reading)+len(b.stepping)+len(b.findingBases)+
+		len(b.rustState().routing)+b.ordering > 0
+}
+
 // uncut reports whether a read of the wildcard imports of a scope that
 // asks the resolving guard for the paths gets no answer from a resolution
 // in progress. Such a read gives the same modules each time. The guards
@@ -605,15 +658,19 @@ func (b *builder) undo(mark int) {
 // path in progress was set before the read, and the guard cut the read if
 // the read asked for it.
 //
+// The guards of a Rust glob path and of a glob member tell globMemo.read
+// the depth of each read that they cut. A read with a cut of a lookup that
+// began before the read is no whole read, so wildcardModules keeps no list
+// of it. A cut of a lookup that the read began leaves out no path.
+//
 // uncut compares the paths of the resolving guard only. On the Rust
 // corpus, the reads under any other guard cost less than 3% of the read
 // time. So any other state in progress fails the check.
 func (b *builder) uncut(asked map[[2]string]bool) bool {
-	s := b.rustState()
-	if len(b.expanding)+len(b.visiting)+len(b.reading)+len(b.stepping)+len(b.findingBases)+len(s.routing)+b.ordering > 0 {
+	if b.guarded() {
 		return false
 	}
-	for k := range s.resolving {
+	for k := range b.rustState().resolving {
 		if asked[k] {
 			return false
 		}
