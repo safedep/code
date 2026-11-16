@@ -535,12 +535,6 @@ var typeWrappers = map[string]bool{
 	"parenthesized_expression": true, "type_assertion": true,
 }
 
-// IsTypeWrapper reports whether a JavaScript node of the type holds a value
-// with a type or a check of TypeScript, or in parentheses.
-func IsTypeWrapper(nodeType string) bool {
-	return typeWrappers[nodeType]
-}
-
 // jsMethodDefinitionProcessor processes a method of a class or of an object
 // literal. A method of an object is keyed under the names that hold the
 // object, as api//run in const api = { run() {} }, as a function that a

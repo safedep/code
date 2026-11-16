@@ -4,8 +4,8 @@ import (
 	"slices"
 
 	"github.com/safedep/code/fileindex"
+	"github.com/safedep/code/lang/ecmascript"
 	"github.com/safedep/code/pkg/ts"
-	"github.com/safedep/code/plugin/callgraph"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -194,12 +194,11 @@ func (p *projection) exportValue(name, local string, value *sitter.Node, line in
 	}
 }
 
-// unwrap returns the value that type wrappers hold.
+// unwrap returns the value that parentheses and TypeScript assertions
+// hold, as make() in <Handler>make() or in make() satisfies Handler. A
+// JavaScript file has no assertion, so the TypeScript rule reads both.
 func unwrap(value *sitter.Node) *sitter.Node {
-	for value != nil && callgraph.IsTypeWrapper(value.Type()) {
-		value = value.NamedChild(0)
-	}
-	return value
+	return ecmascript.Unparen(value, true)
 }
 
 // opaqueParts are the expressions that can give a function that no

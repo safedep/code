@@ -1,0 +1,39 @@
+source: safedep:hand
+description: >-
+  The route exports GET as the result of the call createHandler under an angle-bracket assertion. The
+  assertion holds its type first and its value last, so the index reads the call, and the export is
+  opaque. kit calls onRequest of its argument, and no edge names it. So the export gets a computed-name
+  record, and a3 reads uncertain and not not-found.
+roots:
+  - key: app/api/x/route.ts
+    kind: framework
+    rule: node.next.route
+  - key: app/api/x/route.ts//GET
+    kind: framework
+    rule: node.next.route
+exact_edges: true
+edges:
+  - from: app/api/x/route.ts
+    to: kit//createHandler
+    kind: direct
+    confidence: high
+    site: app/api/x/route.ts:6
+  - from: app/api/x/route.ts//onRequest
+    to: plug//a3
+    kind: direct
+    confidence: high
+    site: app/api/x/route.ts:8
+unresolved:
+  - caller: app/api/x/route.ts
+    site: app/api/x/route.ts:6
+    reason: computed-name
+results:
+  - target: plug//a3
+    status: uncertain
+    call_sites:
+      - caller: app/api/x/route.ts//onRequest
+        site: app/api/x/route.ts:8
+        reached: false
+    uncertainties:
+      - kind: unresolved-call
+        site: app/api/x/route.ts:6
