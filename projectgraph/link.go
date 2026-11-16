@@ -478,9 +478,12 @@ func (b *builder) scopeToLanguage(ix *fileindex.Index, site *UnresolvedSite) {
 }
 
 // outsideModules returns the key of a module that a file names and that no
-// file of the project or of a unit gives, as plug, or nothing.
+// file of the project or of a unit gives, as plug, or nothing. A builtin
+// module of the runtime gives nothing, because its key can name a module
+// of another language, as crypto of Go.
 func (b *builder) outsideModules(ix *fileindex.Index, module string) []string {
-	if module == "" || strings.HasPrefix(module, ".") {
+	first, _, _ := strings.Cut(strings.TrimPrefix(module, "node:"), "/")
+	if module == "" || strings.HasPrefix(module, ".") || profileOf(ix.Language).builtinModules[first] {
 		return nil
 	}
 	if _, _, ok := b.resolveModule(ix, module); ok {

@@ -25,6 +25,7 @@ func ecmascriptProfile(code langcode.Code, typescript bool) profile {
 		openBases:       true,
 		structuralTypes: true,
 		memberFields:    true,
+		builtinModules:  nodeBuiltins,
 	}
 	// The hooks of a family live on the profile of the family.
 	if !typescript {
@@ -33,6 +34,21 @@ func ecmascriptProfile(code langcode.Code, typescript bool) profile {
 		p.dependencies = javascriptDependencies
 	}
 	return p
+}
+
+// nodeBuiltins are the modules that Node.js gives, with or without the
+// prefix node:. A key under one of them can also be a key of another
+// language, as crypto//tls//Client of Go, so an import of one tells
+// nothing of a target that only another family calls.
+var nodeBuiltins = map[string]bool{
+	"assert": true, "async_hooks": true, "buffer": true, "child_process": true, "cluster": true,
+	"console": true, "constants": true, "crypto": true, "dgram": true, "diagnostics_channel": true,
+	"dns": true, "domain": true, "events": true, "fs": true, "http": true, "http2": true, "https": true,
+	"inspector": true, "module": true, "net": true, "os": true, "path": true, "perf_hooks": true,
+	"process": true, "punycode": true, "querystring": true, "readline": true, "repl": true,
+	"stream": true, "string_decoder": true, "sys": true, "timers": true, "tls": true, "trace_events": true,
+	"tty": true, "url": true, "util": true, "v8": true, "vm": true, "wasi": true, "worker_threads": true,
+	"zlib": true, "test": true, "sqlite": true, "sea": true,
 }
 
 // javascriptDependencies returns the packages that the package.json files

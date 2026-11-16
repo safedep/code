@@ -179,6 +179,9 @@ type profile struct {
 	// implicitMethods name the methods that the language calls with no
 	// call of the name, as an operator of Kotlin.
 	implicitMethods map[string]bool
+	// builtinModules name the modules that the runtime of the language
+	// gives, as fs of Node.js, by their first segment.
+	builtinModules map[string]bool
 	// instanceMethods name the methods that an instance runs with no call
 	// of the name, as __call__ of Python. A call that makes an instance
 	// links them, and a reference to the class alone does not.

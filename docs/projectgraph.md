@@ -111,9 +111,11 @@ record by its language with `Uncertainty.Language`. It concerns a target
 under a module that a file of the family imports or gives on from outside
 the project, as `jsonschema` for `import { validate } from 'jsonschema'`
 or `plug` for `export * from 'plug'`, which `Graph.Imports` holds by
-family. The case `javascript/component-reexport-star` shows it. The key
-forms of npm and of Go coincide, so an import of `os` in JavaScript also
-concerns a Go target under `os`. It also concerns a target that a definition of the
+family. The case `javascript/component-reexport-star` shows it. A builtin
+module of Node.js, as `crypto` or `node:fs`, is not in that set. Its key
+can name a module of Go, as `crypto//tls//Client`, so an import of it
+does not make a target that only Go code calls uncertain, as the case
+`go/svelte-node-builtin` shows. It also concerns a target that a definition of the
 family is, or that an edge from a file of the family leads to, and a
 target with no node. A JavaScript project of
 component files thus reads `uncertain` for each JavaScript target that it

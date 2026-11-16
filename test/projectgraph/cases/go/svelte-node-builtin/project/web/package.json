@@ -1,0 +1,1 @@
+{ "name": "web", "dependencies": { "svelte": "^4.2.0" } }
