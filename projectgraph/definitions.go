@@ -205,7 +205,7 @@ func (b *builder) instanceMethods(key string, hops map[string][]string) []string
 					out = append(out, method)
 				}
 			}
-			if meta, ok := b.metaclass(k); ok {
+			for _, meta := range b.metaclasses(k) {
 				if method, ok := b.ownMethod(meta, p.metaclassCall); ok && b.isMethod(method) {
 					out = append(out, method)
 				}
@@ -216,19 +216,32 @@ func (b *builder) instanceMethods(key string, hops map[string][]string) []string
 	return out
 }
 
-// metaclass returns the class that a class of the MRO of a class names as
-// its metaclass.
-func (b *builder) metaclass(class string) (string, bool) {
+// metaclasses returns the metaclass of a class. Python takes the most
+// derived of the metaclasses that the classes of the MRO name, as M2 for
+// bases with metaclass=M1 and metaclass=M2 when M2 subclasses M1. When no
+// one of them derives from all the others, as when their common subclass
+// is a metaclass outside the graph, it returns each of them. A call of the
+// class then reaches each __call__ that Python can run.
+func (b *builder) metaclasses(class string) []string {
+	var metas []string
 	for _, c := range b.mro(class) {
 		for _, rec := range b.records(c) {
 			if rec.class.Metaclass == "" {
 				continue
 			}
 			key, ok := b.resolveNameIn(b.scopes[rec.ix.Path], fileindex.Parent(rec.class.Key), rec.class.Metaclass)
-			return key, ok && b.kindOf(key) == NodeClass
+			if ok && b.kindOf(key) == NodeClass && !slices.Contains(metas, key) {
+				metas = append(metas, key)
+			}
 		}
 	}
-	return "", false
+	for _, m := range metas {
+		order := b.mro(m)
+		if !slices.ContainsFunc(metas, func(other string) bool { return !slices.Contains(order, other) }) {
+			return []string{m}
+		}
+	}
+	return metas
 }
 
 // classCall is a call of the class of a method from the method itself, as

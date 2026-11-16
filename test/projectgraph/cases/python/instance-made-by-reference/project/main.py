@@ -48,6 +48,28 @@ class ByKlass:
         return inner()
 
 
+class Base1(type):
+    def __call__(cls, *args):
+        os.lchown("k", 0, 0)
+
+
+class Derived(Base1):
+    def __call__(cls, *args):
+        os.symlink("l", "m")
+
+
+class First(metaclass=Base1):
+    pass
+
+
+class Second(metaclass=Derived):
+    pass
+
+
+class Both(First, Second):
+    pass
+
+
 class Shadowed:
     def __call__(self):
         os.kill(0, 0)
@@ -120,6 +142,7 @@ if __name__ == "__main__":
     check(1)
     run(ByKlass.build())
     Shadowed.build()
+    Both()
     copies(None)
     fail()
     check_more(1, True)

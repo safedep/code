@@ -11,6 +11,9 @@ description: >-
   os.mkdir are not-found. Shadowed.build defines inner,
   whose parameter klass hides the class, and local, which assigns klass. Neither call of klass makes a
   Shadowed, so os.kill is not-found.
+  Both inherits the metaclass Base1 from First and the metaclass Derived, a subclass of Base1, from
+  Second. Python takes the most derived one, so Both() runs Derived.__call__, os.symlink is found and
+  os.lchown in Base1.__call__ is not-found.
 roots:
   - key: main.py
     kind: main
@@ -38,80 +41,105 @@ edges:
     confidence: low
     site: main.py:31
   - from: main.py
+    to: main.py//Base1
+    kind: reference
+    confidence: low
+    site: main.py:61
+  - from: main.py
+    to: main.py//Derived
+    kind: reference
+    confidence: low
+    site: main.py:65
+  - from: main.py
     to: main.py//run
     kind: direct
     confidence: high
-    site: main.py:117
+    site: main.py:139
   - from: main.py
     to: main.py//ByClassmethod//create
     kind: member
     confidence: high
-    site: main.py:117
+    site: main.py:139
   - from: main.py
     to: main.py//run
     kind: direct
     confidence: high
-    site: main.py:118
+    site: main.py:140
   - from: main.py
     to: functools//partial
     kind: direct
     confidence: high
-    site: main.py:118
+    site: main.py:140
   - from: main.py
     to: main.py//ByPartial
     kind: reference
     confidence: low
-    site: main.py:118
+    site: main.py:140
   - from: main.py
     to: main.py//ByPartial//__call__
     kind: reference
     confidence: low
-    site: main.py:118
+    site: main.py:140
   - from: main.py
     to: print
     kind: direct
     confidence: high
-    site: main.py:119
+    site: main.py:141
   - from: main.py
     to: main.py//Holder
     kind: direct
     confidence: high
-    site: main.py:119
+    site: main.py:141
   - from: main.py
     to: main.py//check
     kind: direct
     confidence: high
-    site: main.py:120
+    site: main.py:142
   - from: main.py
     to: main.py//run
     kind: direct
     confidence: high
-    site: main.py:121
+    site: main.py:143
   - from: main.py
     to: main.py//ByKlass//build
     kind: member
     confidence: high
-    site: main.py:121
+    site: main.py:143
   - from: main.py
     to: main.py//Shadowed//build
     kind: member
     confidence: high
-    site: main.py:122
+    site: main.py:144
+  - from: main.py
+    to: main.py//Both
+    kind: direct
+    confidence: high
+    site: main.py:145
+  - from: main.py
+    to: main.py//Derived//__call__
+    kind: reference
+    confidence: low
+    site: main.py:145
   - from: main.py
     to: main.py//copies
     kind: direct
     confidence: high
-    site: main.py:123
+    site: main.py:146
   - from: main.py
     to: main.py//fail
     kind: direct
     confidence: high
-    site: main.py:124
+    site: main.py:147
   - from: main.py
     to: main.py//check_more
     kind: direct
     confidence: high
-    site: main.py:125
+    site: main.py:148
+  - from: main.py//Base1//__call__
+    to: os//lchown
+    kind: direct
+    confidence: high
+    site: main.py:53
   - from: main.py//ByClassmethod//__call__
     to: os//remove
     kind: direct
@@ -131,12 +159,12 @@ edges:
     to: os//rename
     kind: direct
     confidence: high
-    site: main.py:69
+    site: main.py:91
   - from: main.py//ByInstanceClass//clone
     to: main.py//ByInstanceClass//__getattr__
     kind: reference
     confidence: low
-    site: main.py:72
+    site: main.py:94
   - from: main.py//ByKlass//__call__
     to: os//chmod
     kind: direct
@@ -161,27 +189,32 @@ edges:
     to: os//rmdir
     kind: direct
     confidence: high
-    site: main.py:77
+    site: main.py:99
   - from: main.py//ByType//dup
     to: type
     kind: direct
     confidence: high
-    site: main.py:80
+    site: main.py:102
   - from: main.py//ByType//dup
     to: main.py//ByType
     kind: reference
     confidence: low
-    site: main.py:80
+    site: main.py:102
   - from: main.py//ByType//dup
     to: main.py//ByType//__call__
     kind: reference
     confidence: low
-    site: main.py:80
+    site: main.py:102
   - from: main.py//Checked//__call__
     to: os//mkdir
     kind: direct
     confidence: high
-    site: main.py:90
+    site: main.py:112
+  - from: main.py//Derived//__call__
+    to: os//symlink
+    kind: direct
+    confidence: high
+    site: main.py:58
   - from: main.py//Meta//__call__
     to: tempfile//mkdtemp
     kind: direct
@@ -191,92 +224,92 @@ edges:
     to: os//unlink
     kind: direct
     confidence: high
-    site: main.py:85
+    site: main.py:107
   - from: main.py//Shadowed//__call__
     to: os//kill
     kind: direct
     confidence: high
-    site: main.py:53
+    site: main.py:75
   - from: main.py//Shadowed//build
     to: main.py//Shadowed//build//inner
     kind: direct
     confidence: high
-    site: main.py:64
+    site: main.py:86
   - from: main.py//Shadowed//build
     to: main.py//Shadowed//build//local
     kind: direct
     confidence: high
-    site: main.py:64
+    site: main.py:86
   - from: main.py//Shadowed//build//local
     to: int
     kind: assignment
     confidence: high
-    site: main.py:62
+    site: main.py:84
   - from: main.py//check
     to: isinstance
     kind: direct
     confidence: high
-    site: main.py:113
+    site: main.py:135
   - from: main.py//check
     to: main.py//Meta
     kind: reference
     confidence: low
-    site: main.py:113
+    site: main.py:135
   - from: main.py//check_more
     to: typing//cast
     kind: direct
     confidence: high
-    site: main.py:107
+    site: main.py:129
   - from: main.py//check_more
     to: main.py//Checked
     kind: reference
     confidence: low
-    site: main.py:107
+    site: main.py:129
   - from: main.py//check_more
     to: hasattr
     kind: direct
     confidence: high
-    site: main.py:108
+    site: main.py:130
   - from: main.py//check_more
     to: main.py//Checked
     kind: reference
     confidence: low
-    site: main.py:108
+    site: main.py:130
   - from: main.py//check_more
     to: isinstance
     kind: direct
     confidence: high
-    site: main.py:109
+    site: main.py:131
   - from: main.py//check_more
     to: main.py//Checked
     kind: reference
     confidence: low
-    site: main.py:109
+    site: main.py:131
   - from: main.py//check_more
     to: main.py//Meta
     kind: reference
     confidence: low
-    site: main.py:109
+    site: main.py:131
   - from: main.py//copies
     to: main.py//ByInstanceClass//clone
     kind: name
     confidence: low
-    site: main.py:102
+    site: main.py:124
   - from: main.py//copies
     to: main.py//ByType//dup
     kind: name
     confidence: low
-    site: main.py:103
+    site: main.py:125
   - from: main.py//fail
     to: main.py//Raised
     kind: reference
     confidence: low
-    site: main.py:98
+    site: main.py:120
   - from: main.py//fail
     to: main.py//Raised//__getattr__
     kind: reference
     confidence: low
-    site: main.py:98
+    site: main.py:120
 unresolved:
   - caller: main.py//ByClassmethod//create
     site: main.py:16
@@ -287,23 +320,23 @@ unresolved:
     reason: unknown-receiver
     method: klass
   - caller: main.py//Shadowed//build//inner
-    site: main.py:58
+    site: main.py:80
     reason: unknown-receiver
     method: klass
   - caller: main.py//ByInstanceClass//clone
-    site: main.py:72
+    site: main.py:94
     reason: no-definition
     method: __class__
   - caller: main.py//run
-    site: main.py:94
+    site: main.py:116
     reason: unknown-receiver
     method: f
   - caller: main.py//copies
-    site: main.py:102
+    site: main.py:124
     reason: unknown-receiver
     method: clone
   - caller: main.py//copies
-    site: main.py:103
+    site: main.py:125
     reason: unknown-receiver
     method: dup
 results:
@@ -312,7 +345,7 @@ results:
     path:
       - key: main.py
       - key: main.py//ByClassmethod//create
-        site: main.py:117
+        site: main.py:139
         kind: member
         confidence: high
       - key: main.py//ByClassmethod//__call__
@@ -332,7 +365,7 @@ results:
     path:
       - key: main.py
       - key: main.py//ByPartial//__call__
-        site: main.py:118
+        site: main.py:140
         kind: reference
         confidence: low
       - key: shutil//rmtree
@@ -370,7 +403,7 @@ results:
     path:
       - key: main.py
       - key: main.py//ByKlass//build
-        site: main.py:121
+        site: main.py:143
         kind: member
         confidence: high
       - key: main.py//ByKlass//build//inner
@@ -394,78 +427,100 @@ results:
     path:
       - key: main.py
       - key: main.py//copies
-        site: main.py:123
+        site: main.py:146
         kind: direct
         confidence: high
       - key: main.py//ByInstanceClass//clone
-        site: main.py:102
+        site: main.py:124
         kind: name
         confidence: low
       - key: main.py//ByInstanceClass//__getattr__
-        site: main.py:72
+        site: main.py:94
         kind: reference
         confidence: low
       - key: os//rename
-        site: main.py:69
+        site: main.py:91
         kind: direct
         confidence: high
     call_sites:
       - caller: main.py//ByInstanceClass//__getattr__
-        site: main.py:69
+        site: main.py:91
         reached: true
   - target: os//rmdir
     status: found
     path:
       - key: main.py
       - key: main.py//copies
-        site: main.py:123
+        site: main.py:146
         kind: direct
         confidence: high
       - key: main.py//ByType//dup
-        site: main.py:103
+        site: main.py:125
         kind: name
         confidence: low
       - key: main.py//ByType//__call__
-        site: main.py:80
+        site: main.py:102
         kind: reference
         confidence: low
       - key: os//rmdir
-        site: main.py:77
+        site: main.py:99
         kind: direct
         confidence: high
     call_sites:
       - caller: main.py//ByType//__call__
-        site: main.py:77
+        site: main.py:99
         reached: true
   - target: os//unlink
     status: found
     path:
       - key: main.py
       - key: main.py//fail
-        site: main.py:124
+        site: main.py:147
         kind: direct
         confidence: high
       - key: main.py//Raised//__getattr__
-        site: main.py:98
+        site: main.py:120
         kind: reference
         confidence: low
       - key: os//unlink
-        site: main.py:85
+        site: main.py:107
         kind: direct
         confidence: high
     call_sites:
       - caller: main.py//Raised//__getattr__
-        site: main.py:85
+        site: main.py:107
         reached: true
   - target: os//mkdir
     status: not-found
     call_sites:
       - caller: main.py//Checked//__call__
-        site: main.py:90
+        site: main.py:112
         reached: false
   - target: os//kill
     status: not-found
     call_sites:
       - caller: main.py//Shadowed//__call__
+        site: main.py:75
+        reached: false
+  - target: os//symlink
+    status: found
+    path:
+      - key: main.py
+      - key: main.py//Derived//__call__
+        site: main.py:145
+        kind: reference
+        confidence: low
+      - key: os//symlink
+        site: main.py:58
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: main.py//Derived//__call__
+        site: main.py:58
+        reached: true
+  - target: os//lchown
+    status: not-found
+    call_sites:
+      - caller: main.py//Base1//__call__
         site: main.py:53
         reached: false
