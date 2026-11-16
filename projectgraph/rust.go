@@ -905,7 +905,9 @@ func (b *builder) rustMacroCrate(ix *fileindex.Index, name string) (string, bool
 // for render after use dep::html::*, when a unit gives the crate and the
 // first name of the path in the module. A glob use of a crate that no unit
 // gives can bring any name, so the path then resolves with no glob path.
-// docs/projectgraph.md has the rules of the cycles of glob uses.
+// Crates can bring each other's names with glob uses, and globMemo.lookup
+// keeps each such read finite.
+// test/projectgraph/cases/rust/glob-use-crate-cycle pins a cycle.
 func (b *builder) rustGlobPath(importer, written string) (rustTarget, bool) {
 	sc := b.scopes[importer]
 	first := rustFirstName(written)
@@ -1148,8 +1150,10 @@ type globMemo struct {
 // with glob uses, so the outermost lookup reads each lookup once, and a
 // lookup that it reads again gives its first answer. An answer stays for
 // the build when each cut under it hit the lookup or a lookup under it, as
-// the low link of Tarjan tells. docs/projectgraph.md has the rules for the
-// visited answers under it.
+// the low link of Tarjan tells. A visited answer under a kept lookup stays
+// only when it found its item. Any other visited answer can lack an item that
+// the lookup found later, and a later read at another depth would keep it.
+// test/projectgraph/cases/rust/glob-use-stale-visit pins that case.
 func (g *globMemo) lookup(b *builder, k globKey, read func() globAnswer) globAnswer {
 	if a, ok := g.kept[k]; ok {
 		return a

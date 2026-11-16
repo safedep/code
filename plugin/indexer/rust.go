@@ -374,7 +374,9 @@ func (p *projection) rustDeclaredType(binder *sitter.Node, bounds map[string]str
 // name, as in fn run() { type Local = dep::Thing<u8>; let t: Local }, must
 // not take a struct Local of the root. So a type whose first name a scope
 // of the node declares is "", or the path of a use that declares the name.
-// docs/projectgraph.md has the rule.
+// A type of the wrong scope sends the call to a method that it does not run.
+// test/projectgraph/cases/rust/inline-module-types and
+// test/projectgraph/cases/rust/use-type-result pin the rule.
 func (p *projection) rustScopedType(node *sitter.Node, typ string) string {
 	first, rest, nested := strings.Cut(typ, "::")
 	if typ == "" || !p.rustScopeDeclares(node, nil, first) {

@@ -572,9 +572,12 @@ func (b *builder) copyUnresolved(ix *fileindex.Index) {
 			Method:   u.Method,
 			Reason:   u.Reason,
 		}
-		// The search reaches each function that a call of a function
-		// value can run, so the record names no target. See "A call of a
-		// function value" in docs/projectgraph.md.
+		// The search from the roots reaches each function that a call of
+		// a function value can run, through the reference edge of the code
+		// that stores the value. So the record names no target there. A
+		// search from a source or a summary counts it for every target.
+		// test/projectgraph/cases/go/function-value-call and
+		// test/projectgraph/cases/go/source-function-value pin both.
 		if u.Reason == fileindex.UnresolvedComputedName && profileOf(ix.Language).functionValues {
 			site.Reason = fileindex.UnresolvedFunctionValue
 		}

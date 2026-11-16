@@ -17,9 +17,13 @@ import (
 
 // goReference returns the per-file target of a Go value that can give a
 // function, or the member node of a method value whose receiver the index
-// cannot name. A call of a Go function value concerns no target. That is
-// sound only when the index records each function that a value can give,
-// in each form that docs/projectgraph.md lists.
+// cannot name. A call of a Go function value concerns no target in a search
+// from the roots. That is sound only when each form that can give a function
+// (an argument, an assignment, a return, an element, a send, a range
+// expression) records a reference. A form with no reference gives not-found
+// for a target that only the stored function reaches.
+// test/projectgraph/cases/go/function-value-call and
+// test/projectgraph/cases/go/range-over-func pin the forms.
 func goReference(p *projection, caller string, value *sitter.Node) (string, *sitter.Node) {
 	value = goValueName(value)
 	if value == nil {
@@ -516,7 +520,10 @@ func (p *projection) goTypedAt(caller, name string, at uint32) bool {
 // call. The call graph can keep a raw target, as x//run for a parameter x
 // of a function literal, or bind a local that shadows an import to the
 // import. Such a call gets the target of the local, under an alias when its
-// binding has a type of its own. docs/projectgraph.md has the cases.
+// binding has a type of its own. The link step reads the type of the first
+// binding of a name, so an inner binding of another type would give the call
+// the method of the wrong type and a not-found answer.
+// test/projectgraph/cases/go/typed-local-shadow pins the cases.
 func goTypedCall(p *projection, call *fileindex.Call) bool {
 	at := p.byteAt(call.Line, call.Column)
 	names := strings.Split(call.Receiver, ".")
@@ -590,7 +597,10 @@ func (p *projection) goAlias(caller, name string, at uint32) (string, bool) {
 // call record of its own: a range over a value that the source does not
 // show to be data, a call of a field of an anonymous struct of the file,
 // and a call of a dereference or a receive. The link step makes each record
-// a function-value record. docs/projectgraph.md has the forms.
+// a function-value record. A search from a source does not reach the code
+// that stores the value, so without the record such a call reads not-found.
+// test/projectgraph/cases/go/source-local-func and
+// test/projectgraph/cases/go/range-over-func pin the forms.
 func goValueVisitor(p *projection) visitor {
 	return func(node *sitter.Node, kind string) {
 		switch kind {
