@@ -4,7 +4,11 @@ description: >-
   cache::deep has use crate::store::Item, so x in by_new and in by_value holds the Item of the root, and x.save()
   runs Item::save of the root, which calls std::fs::write. The call graph reads no use, so it finds the Item of
   cache for Item::new() and for Item, and sends x.save() to cache::Item::save, which calls std::fs::create_dir.
-  Without the rule, std::fs::write reads not-found. The index gives the call the path of the use.
+  Without the rule, std::fs::write reads not-found. The index gives the call the path of the use. In main.rs,
+  qualified has use crate::b::Item and calls x.save() after let x = a::Item::new(). The path a::Item names its
+  type through a, and the use of Item does not bind a, so x.save() runs a::Item::save, which calls
+  std::fs::remove_file. A rule that rebinds the last name of the type sends the call to b::Item::save, so
+  std::fs::remove_dir reads found and std::fs::remove_file reads not-found.
 roots:
   - key: src/main.rs
     kind: main
@@ -23,7 +27,14 @@ edges:
     kind: member
     confidence: high
     site: src/store.rs:36
+  - from: src/main.rs//qualified
+    to: src/main.rs//a//Item//save
+    kind: member
+    confidence: high
+    site: src/main.rs:31
 no_edges:
+  - from: src/main.rs//qualified
+    to: src/main.rs//b//Item//save
   - from: src/store.rs//cache//deep//by_new
     to: src/store.rs//cache//Item//save
   - from: src/store.rs//cache//deep//by_value
@@ -35,7 +46,7 @@ results:
     path:
       - key: src/main.rs//main
       - key: src/store.rs//cache//deep//by_new
-        site: src/main.rs:4
+        site: src/main.rs:35
         kind: direct
         confidence: high
       - key: src/store.rs//Item//save
@@ -55,4 +66,30 @@ results:
     call_sites:
       - caller: src/store.rs//cache//Item//save
         site: src/store.rs:18
+        reached: false
+  - target: std//fs//remove_file
+    status: found
+    path:
+      - key: src/main.rs//main
+      - key: src/main.rs//qualified
+        site: src/main.rs:37
+        kind: direct
+        confidence: high
+      - key: src/main.rs//a//Item//save
+        site: src/main.rs:31
+        kind: member
+        confidence: high
+      - key: std//fs//remove_file
+        site: src/main.rs:12
+        kind: direct
+        confidence: high
+    call_sites:
+      - caller: src/main.rs//a//Item//save
+        site: src/main.rs:12
+        reached: true
+  - target: std//fs//remove_dir
+    status: not-found
+    call_sites:
+      - caller: src/main.rs//b//Item//save
+        site: src/main.rs:22
         reached: false

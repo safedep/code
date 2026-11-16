@@ -5,6 +5,7 @@ import (
 	"maps"
 	"slices"
 	"strings"
+	"sync"
 	"unicode"
 
 	"github.com/safedep/code/core/ast"
@@ -821,14 +822,18 @@ func rustBoundName(pattern *sitter.Node) *sitter.Node {
 func rustShadowed(ctx context.Context, p *projection, call *fileindex.Call, callee ast.NodePosition) bool {
 	node := p.descendant(callee)
 	if method := rustMethod(node); node != nil && method != nil {
-		// Only a target from a self or super path can change, so the walk
-		// of the binders of the function runs only for such a target.
-		if slices.ContainsFunc(call.Targets, rustFromModule) {
+		// The walk of the binders of the function runs only for a target
+		// that the path of the receiver can change.
+		written := sync.OnceValue(func() string {
 			if binders, ok := p.rustBinders(ctx, call.Caller); ok {
-				p.rustFromFile(call, node, p.rustReceiverPath(binders, method))
+				return p.rustReceiverPath(binders, method)
 			}
+			return ""
+		})
+		if slices.ContainsFunc(call.Targets, rustFromModule) {
+			p.rustFromFile(call, node, written())
 		}
-		return p.rustShadowedMethod(call, node)
+		return p.rustShadowedMethod(call, node, written)
 	}
 	if node != nil && node.Type() == "scoped_type_identifier" {
 		p.rustFromFile(call, node, p.text(node))
@@ -911,6 +916,9 @@ func (p *projection) rustReceiverPath(binders map[string][]*sitter.Node, method 
 	if let == nil {
 		return ""
 	}
+	if typ := let.ChildByFieldName("type"); typ != nil {
+		return p.text(typ)
+	}
 	value := let.ChildByFieldName("value")
 	switch {
 	case value == nil:
@@ -928,14 +936,21 @@ func (p *projection) rustReceiverPath(binders map[string][]*sitter.Node, method 
 // finds as a method of a type of an outer scope, when a scope between the
 // call and that scope binds the name of the type again, as x.save() after
 // let x = Item::new() and use crate::store::Item in mod deep. The call graph
-// reads no use, so it gives x.save() the Item of the parent of deep.
-func (p *projection) rustShadowedMethod(call *fileindex.Call, node *sitter.Node) bool {
+// reads no use, so it gives x.save() the Item of the parent of deep. A
+// receiver whose type the code writes with a path, as a::Item::new(), names
+// its type through the first name of the path. A use of Item does not bind
+// that name, so x.save() keeps a::Item::save. written gives that path.
+func (p *projection) rustShadowedMethod(call *fileindex.Call, node *sitter.Node, written func() string) bool {
 	for i, target := range call.Targets {
 		class := fileindex.Parent(target)
 		if def := p.defs[class]; def == nil || def.Kind != fileindex.DefClass || !fileindex.HasKeyPrefix(class, p.cg.FileName) {
 			continue
 		}
-		rebound, ok := p.rustUseTarget(node, p.syntax[fileindex.Parent(class)], fileindex.Last(class), fileindex.Last(target))
+		name := fileindex.Last(class)
+		rebound, ok := p.rustUseTarget(node, p.syntax[fileindex.Parent(class)], name, fileindex.Last(target))
+		if (rebound != "" || !ok) && rustQualified(written(), name) {
+			continue
+		}
 		if !ok {
 			return false
 		}
@@ -944,6 +959,13 @@ func (p *projection) rustShadowedMethod(call *fileindex.Call, node *sitter.Node)
 		}
 	}
 	return true
+}
+
+// rustQualified reports whether a type path that the code writes names its
+// type through another first name than the name of the type, as a::Item.
+func rustQualified(path, name string) bool {
+	first, _, _ := strings.Cut(path, "::")
+	return first != "" && first != name
 }
 
 // rustUseTarget returns the target of the names under a name that a use
